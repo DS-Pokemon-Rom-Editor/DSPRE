@@ -62,7 +62,7 @@ namespace DSPRE
             Helpers.Initialize(this);
             WireEditorsPopout();
 
-            SetMenuLayout(SettingsManager.Settings.menuLayout); //Read user settings for menu layout
+            SetMenuLayout((LayoutStyle) SettingsManager.Settings.menuLayout); //Read user settings for menu layout
             Text = "DS Pokémon Rom Editor Reloaded " + GetDSPREVersion();
 
             string romFolder = SettingsManager.Settings.openDefaultRom;
@@ -113,90 +113,95 @@ namespace DSPRE
 
         #region Subroutines
 
-        private void SetMenuLayout(byte layoutStyle)
+        private enum LayoutStyle : byte
         {
-            AppLogger.Debug("Setting menuLayout to" + layoutStyle);
+            Essential = 0,
+            Simple = 1,
+            Advanced = 2,
+            Complete = 3
+        }
+
+        private void SetMenuLayout(LayoutStyle layoutStyle)
+        {
+            AppLogger.Debug("Setting menuLayout to " + layoutStyle);
 
             IList list = menuViewToolStripMenuItem.DropDownItems;
             for (int i = 0; i < list.Count; i++)
             {
-                (list[i] as ToolStripMenuItem).Checked = (i == layoutStyle);
+                (list[i] as ToolStripMenuItem).Checked = (i == (int) layoutStyle);
             }
 
-            SettingsManager.Settings.menuLayout = layoutStyle;
+            SettingsManager.Settings.menuLayout = (byte) layoutStyle;
+
+            // Hide all buttons first so we can selectively show them later
+            foreach (ToolStripItem c in mainToolStrip.Items)
+            {
+                c.Visible = false;
+            }
 
             switch (layoutStyle)
             {
-                case 0:
-                    buildNarcFromFolderToolStripButton.Visible = false;
-                    unpackNARCtoFolderToolStripButton.Visible = false;
-                    separator_afterNarcUtils.Visible = false;
+                case LayoutStyle.Complete:
 
-                    listBasedBatchRenameToolStripButton.Visible = false;
-                    contentBasedBatchRenameToolStripButton.Visible = false;
-                    separator_afterRenameUtils.Visible = false;
+                    // Batch rename
+                    listBasedBatchRenameToolStripButton.Visible = true;
+                    contentBasedBatchRenameToolStripButton.Visible = true;
+                    separator_afterRenameUtils.Visible = true;
 
-                    enumBasedListBuilderToolStripButton.Visible = false;
-                    folderBasedListBuilderToolStriButton.Visible = false;
-                    separator_afterListUtils.Visible = false;
+                    // List Builders
+                    enumBasedListBuilderToolStripButton.Visible = true;
+                    folderBasedListBuilderToolStriButton.Visible = true;
+                    separator_afterListUtils.Visible = true;
 
-                    nsbmdAddTexButton.Visible = false;
-                    nsbmdRemoveTexButton.Visible = false;
-                    nsbmdExportTexButton.Visible = false;
-                    separator_afterNsbmdUtils.Visible = false;
+                    goto case LayoutStyle.Advanced;
 
-                    wildEditorButton.Visible = false;
-                    pokemonEditorButton.Visible = false;
-                    moveEditorButton.Visible = false;
-                    romToolboxToolStripButton.Visible = false;
-                    break;
-                case 1:
-                    buildNarcFromFolderToolStripButton.Visible = false;
-                    unpackNARCtoFolderToolStripButton.Visible = false;
-                    separator_afterNarcUtils.Visible = false;
+                case LayoutStyle.Advanced:
 
-                    listBasedBatchRenameToolStripButton.Visible = false;
-                    contentBasedBatchRenameToolStripButton.Visible = false;
-                    separator_afterRenameUtils.Visible = false;
-
-                    enumBasedListBuilderToolStripButton.Visible = false;
-                    folderBasedListBuilderToolStriButton.Visible = false;
-                    separator_afterListUtils.Visible = false;
-
+                    // NSBMD Buttons
                     nsbmdAddTexButton.Visible = true;
                     nsbmdRemoveTexButton.Visible = true;
                     nsbmdExportTexButton.Visible = true;
                     separator_afterNsbmdUtils.Visible = true;
 
-                    wildEditorButton.Visible = true;
-                    pokemonEditorButton.Visible = true;
-                    moveEditorButton.Visible = true;
-                    romToolboxToolStripButton.Visible = true;
-                    break;
-                case 2:
+                    goto case LayoutStyle.Simple;
+
+                case LayoutStyle.Simple:
+
+                    // Narc pack/unpack buttons
                     buildNarcFromFolderToolStripButton.Visible = true;
                     unpackNARCtoFolderToolStripButton.Visible = true;
                     separator_afterNarcUtils.Visible = true;
 
-                    listBasedBatchRenameToolStripButton.Visible = false;
-                    contentBasedBatchRenameToolStripButton.Visible = false;
-                    separator_afterRenameUtils.Visible = false;
+                    // Misc Buttons
+                    scriptCommandsButton.Visible = true;
+                    romToolboxToolStripButton.Visible = true;
+                    headerSearchToolStripButton.Visible = true;
+                    separator_afterMiscButtons.Visible = true;
 
-                    enumBasedListBuilderToolStripButton.Visible = false;
-                    folderBasedListBuilderToolStriButton.Visible = false;
-                    separator_afterListUtils.Visible = false;
+                    goto case LayoutStyle.Essential;
 
-                    nsbmdAddTexButton.Visible = true;
-                    nsbmdRemoveTexButton.Visible = true;
-                    nsbmdExportTexButton.Visible = true;
-                    separator_afterNsbmdUtils.Visible = true;
+                case LayoutStyle.Essential:
 
+                    // File Menu Buttons
+                    loadRomButton.Visible = true;
+                    readDataFromFolderButton.Visible = true;
+                    saveRomButton.Visible = true;
+                    separator_AfterOpenSave.Visible = true;
+
+                    // Narc and Building Narc buttons
+                    unpackAllButton.Visible = true;
+                    updateMapNarcsButton.Visible = true;
+                    separator_afterFolderUnpackers.Visible = true;
+
+                    // Editor Buttons <- As more buttons are added this should go here
+                    buildingEditorButton.Visible = true;
                     wildEditorButton.Visible = true;
                     pokemonEditorButton.Visible = true;
                     moveEditorButton.Visible = true;
-                    romToolboxToolStripButton.Visible = true;
+                    spawnEditorToolStripButton.Visible = true;
+                    separator_afterEditors.Visible = true;
+
                     break;
-                case 3:
                 default:
                     foreach (ToolStripItem c in mainToolStrip.Items)
                     {
@@ -204,7 +209,19 @@ namespace DSPRE
                     }
                     break;
             }
+
+            // Disable any editors that outright crash or which are overwritten when using HGE ROMs
+            if (RomInfo.isHGE)
+            {
+                wildEditorButton.Visible = false;
+                pokemonEditorButton.Visible = false;
+                moveEditorButton.Visible = false;
+            }
+
+            mainToolStrip.Update();
+
         }
+
         private void MainProgram_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (e.CloseReason != CloseReason.ApplicationExitCall && MessageBox.Show("Are you sure you want to quit?", "Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
@@ -1092,6 +1109,7 @@ namespace DSPRE
             headerSearchToolStripButton.Enabled = true;
             headerSearchToolStripMenuItem.Enabled = true;
             spawnEditorToolStripMenuItem.Enabled = true;
+            spawnEditorToolStripButton.Enabled = true;
             otherEditorsToolStripMenuItem.Enabled = true;
             pokemonEditorButton.Enabled = true;
             moveEditorButton.Enabled = true;
@@ -1854,7 +1872,7 @@ namespace DSPRE
         private void simpleToolStripMenuItem_MouseDown(object sender, MouseEventArgs e)
         {
             ToolStripMenuItem tsmi = (sender as ToolStripMenuItem);
-            SetMenuLayout((byte)tsmi.GetCurrentParent().Items.IndexOf(tsmi));
+            SetMenuLayout((LayoutStyle)tsmi.GetCurrentParent().Items.IndexOf(tsmi));
         }
 
         private void overlayEditorToolStripMenuItem_Click(object sender, EventArgs e)
