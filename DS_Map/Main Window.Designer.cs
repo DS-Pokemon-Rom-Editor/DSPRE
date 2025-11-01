@@ -105,10 +105,10 @@
             this.advancedStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fullViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.otherEditorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.personalDataEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pokemonEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.overlayEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.spawnEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.moveDataEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.moveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.flyWarpEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.itemEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.overworldEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -140,6 +140,8 @@
             this.separator_afterNsbmdUtils = new System.Windows.Forms.ToolStripSeparator();
             this.buildingEditorButton = new System.Windows.Forms.ToolStripButton();
             this.wildEditorButton = new System.Windows.Forms.ToolStripButton();
+            this.pokemonEditorButton = new System.Windows.Forms.ToolStripButton();
+            this.moveEditorButton = new System.Windows.Forms.ToolStripButton();
             this.scriptCommandsButton = new System.Windows.Forms.ToolStripButton();
             this.romToolboxToolStripButton = new System.Windows.Forms.ToolStripButton();
             this.headerSearchToolStripButton = new System.Windows.Forms.ToolStripButton();
@@ -927,14 +929,14 @@
             // essentialToolStripMenuItem
             // 
             this.essentialToolStripMenuItem.Name = "essentialToolStripMenuItem";
-            this.essentialToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.essentialToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.essentialToolStripMenuItem.Text = "Essential";
             this.essentialToolStripMenuItem.MouseDown += new System.Windows.Forms.MouseEventHandler(this.simpleToolStripMenuItem_MouseDown);
             // 
             // simpleToolStripMenuItem
             // 
             this.simpleToolStripMenuItem.Name = "simpleToolStripMenuItem";
-            this.simpleToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.simpleToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.simpleToolStripMenuItem.Text = "Simple";
             this.simpleToolStripMenuItem.MouseDown += new System.Windows.Forms.MouseEventHandler(this.simpleToolStripMenuItem_MouseDown);
             // 
@@ -943,24 +945,24 @@
             this.advancedStripMenuItem.Checked = true;
             this.advancedStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.advancedStripMenuItem.Name = "advancedStripMenuItem";
-            this.advancedStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.advancedStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.advancedStripMenuItem.Text = "Advanced";
             this.advancedStripMenuItem.MouseDown += new System.Windows.Forms.MouseEventHandler(this.simpleToolStripMenuItem_MouseDown);
             // 
             // fullViewToolStripMenuItem
             // 
             this.fullViewToolStripMenuItem.Name = "fullViewToolStripMenuItem";
-            this.fullViewToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.fullViewToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.fullViewToolStripMenuItem.Text = "Complete";
             this.fullViewToolStripMenuItem.MouseDown += new System.Windows.Forms.MouseEventHandler(this.simpleToolStripMenuItem_MouseDown);
             // 
             // otherEditorsToolStripMenuItem
             // 
             this.otherEditorsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.personalDataEditorToolStripMenuItem,
+            this.pokemonEditorToolStripMenuItem,
             this.overlayEditorToolStripMenuItem,
             this.spawnEditorToolStripMenuItem,
-            this.moveDataEditorToolStripMenuItem,
+            this.moveEditorToolStripMenuItem,
             this.flyWarpEditorToolStripMenuItem,
             this.itemEditorToolStripMenuItem,
             this.overworldEditorToolStripMenuItem,
@@ -970,59 +972,59 @@
             this.otherEditorsToolStripMenuItem.Size = new System.Drawing.Size(88, 20);
             this.otherEditorsToolStripMenuItem.Text = "Other Editors";
             // 
-            // personalDataEditorToolStripMenuItem
+            // pokemonEditorToolStripMenuItem
             // 
-            this.personalDataEditorToolStripMenuItem.Name = "personalDataEditorToolStripMenuItem";
-            this.personalDataEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.personalDataEditorToolStripMenuItem.Text = "Pokémon Editor";
-            this.personalDataEditorToolStripMenuItem.Click += new System.EventHandler(this.pokemonDataEditorToolStripMenuItem_Click);
+            this.pokemonEditorToolStripMenuItem.Name = "pokemonEditorToolStripMenuItem";
+            this.pokemonEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.pokemonEditorToolStripMenuItem.Text = "Pokémon Editor";
+            this.pokemonEditorToolStripMenuItem.Click += new System.EventHandler(this.pokemonEditorToolStripMenuItem_Click);
             // 
             // overlayEditorToolStripMenuItem
             // 
             this.overlayEditorToolStripMenuItem.Name = "overlayEditorToolStripMenuItem";
-            this.overlayEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.overlayEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.overlayEditorToolStripMenuItem.Text = "Overlay Editor";
             this.overlayEditorToolStripMenuItem.Click += new System.EventHandler(this.overlayEditorToolStripMenuItem_Click);
             // 
             // spawnEditorToolStripMenuItem
             // 
             this.spawnEditorToolStripMenuItem.Name = "spawnEditorToolStripMenuItem";
-            this.spawnEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.spawnEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.spawnEditorToolStripMenuItem.Text = "Spawn Point Editor";
             this.spawnEditorToolStripMenuItem.Click += new System.EventHandler(this.spawnEditorToolStripButton_Click);
             // 
-            // moveDataEditorToolStripMenuItem
+            // moveEditorToolStripMenuItem
             // 
-            this.moveDataEditorToolStripMenuItem.Name = "moveDataEditorToolStripMenuItem";
-            this.moveDataEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.moveDataEditorToolStripMenuItem.Text = "Move Data Editor";
-            this.moveDataEditorToolStripMenuItem.Click += new System.EventHandler(this.moveDataEditorToolStripMenuItem_Click);
+            this.moveEditorToolStripMenuItem.Name = "moveEditorToolStripMenuItem";
+            this.moveEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.moveEditorToolStripMenuItem.Text = "Move Editor";
+            this.moveEditorToolStripMenuItem.Click += new System.EventHandler(this.moveEditorToolStripMenuItem_Click);
             // 
             // flyWarpEditorToolStripMenuItem
             // 
             this.flyWarpEditorToolStripMenuItem.Name = "flyWarpEditorToolStripMenuItem";
-            this.flyWarpEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.flyWarpEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.flyWarpEditorToolStripMenuItem.Text = "Fly Warp Editor";
             this.flyWarpEditorToolStripMenuItem.Click += new System.EventHandler(this.flyWarpEditorToolStripMenuItem_Click);
             // 
             // itemEditorToolStripMenuItem
             // 
             this.itemEditorToolStripMenuItem.Name = "itemEditorToolStripMenuItem";
-            this.itemEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.itemEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.itemEditorToolStripMenuItem.Text = "Item Editor";
             this.itemEditorToolStripMenuItem.Click += new System.EventHandler(this.itemEditorToolStripMenuItem_Click);
             // 
             // overworldEditorToolStripMenuItem
             // 
             this.overworldEditorToolStripMenuItem.Name = "overworldEditorToolStripMenuItem";
-            this.overworldEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.overworldEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.overworldEditorToolStripMenuItem.Text = "Overworld Editor";
             this.overworldEditorToolStripMenuItem.Click += new System.EventHandler(this.overworldEditorToolStripMenuItem_Click);
             // 
             // tradeEditorToolStripMenuItem
             // 
             this.tradeEditorToolStripMenuItem.Name = "tradeEditorToolStripMenuItem";
-            this.tradeEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.tradeEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.tradeEditorToolStripMenuItem.Text = "Trade Editor";
             this.tradeEditorToolStripMenuItem.Click += new System.EventHandler(this.tradeEditorToolStripMenuItem_Click);
             // 
@@ -1087,6 +1089,8 @@
             this.separator_afterNsbmdUtils,
             this.buildingEditorButton,
             this.wildEditorButton,
+            this.pokemonEditorButton,
+            this.moveEditorButton,
             this.scriptCommandsButton,
             this.romToolboxToolStripButton,
             this.headerSearchToolStripButton,
@@ -1331,6 +1335,32 @@
             this.wildEditorButton.Text = "Wild Pokémon Editor";
             this.wildEditorButton.Click += new System.EventHandler(this.wildEditorButton_Click);
             // 
+            // pokemonEditorButton
+            // 
+            this.pokemonEditorButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.pokemonEditorButton.Enabled = false;
+            this.pokemonEditorButton.Image = global::DSPRE.Properties.Resources.pokemon_editor_icon;
+            this.pokemonEditorButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.pokemonEditorButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.pokemonEditorButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
+            this.pokemonEditorButton.Name = "pokemonEditorButton";
+            this.pokemonEditorButton.Size = new System.Drawing.Size(36, 36);
+            this.pokemonEditorButton.Text = "Pokémon Data Editor";
+            this.pokemonEditorButton.Click += new System.EventHandler(this.pokemonEditorButton_Click);
+            // 
+            // moveEditorButton
+            // 
+            this.moveEditorButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.moveEditorButton.Enabled = false;
+            this.moveEditorButton.Image = global::DSPRE.Properties.Resources.move_editor_icon;
+            this.moveEditorButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.moveEditorButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.moveEditorButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
+            this.moveEditorButton.Name = "moveEditorButton";
+            this.moveEditorButton.Size = new System.Drawing.Size(36, 36);
+            this.moveEditorButton.Text = "Move Editor";
+            this.moveEditorButton.Click += new System.EventHandler(this.moveEditorButton_Click);
+            // 
             // scriptCommandsButton
             // 
             this.scriptCommandsButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
@@ -1569,7 +1599,7 @@
         private System.Windows.Forms.ToolStripMenuItem extractNSBTXFromNSBMDToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem advancedStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem otherEditorsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem personalDataEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pokemonEditorToolStripMenuItem;
         public System.Windows.Forms.ToolStripStatusLabel statusLabel;
         public System.Windows.Forms.ToolStripProgressBar toolStripProgressBar;
         public System.Windows.Forms.TabPage tabPageScriptEditor;
@@ -1578,7 +1608,7 @@
         public System.Windows.Forms.TabPage tabPageEncountersEditor;
         private System.Windows.Forms.ToolStripMenuItem overlayEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem spawnEditorToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem moveDataEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem moveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem settingsToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton weatherMapEditor;
         private System.Windows.Forms.ToolStripMenuItem addressHelperToolStripMenuItem;
@@ -1620,6 +1650,8 @@
         private System.Windows.Forms.Label nsbtxEditorPopOutLabel;
         private System.Windows.Forms.Label eventEditorPopOutLabel;
         private System.Windows.Forms.Button popoutEventEditorButton;
+        private System.Windows.Forms.ToolStripButton pokemonEditorButton;
+        private System.Windows.Forms.ToolStripButton moveEditorButton;
     }
 }
 

@@ -1303,6 +1303,16 @@ namespace DSPRE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap move_editor_icon {
+            get {
+                object obj = ResourceManager.GetObject("move_editor_icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap muteIcon {
             get {
                 object obj = ResourceManager.GetObject("muteIcon", resourceCulture);
@@ -1376,6 +1386,16 @@ namespace DSPRE.Properties {
         internal static System.Drawing.Bitmap pasteIcon {
             get {
                 object obj = ResourceManager.GetObject("pasteIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap pokemon_editor_icon {
+            get {
+                object obj = ResourceManager.GetObject("pokemon_editor_icon", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
