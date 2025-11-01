@@ -198,6 +198,7 @@ namespace DSPRE
                     wildEditorButton.Visible = true;
                     pokemonEditorButton.Visible = true;
                     moveEditorButton.Visible = true;
+                    itemEditorButton.Visible = true;
                     spawnEditorToolStripButton.Visible = true;
                     separator_afterEditors.Visible = true;
 
@@ -1113,6 +1114,7 @@ namespace DSPRE
             otherEditorsToolStripMenuItem.Enabled = true;
             pokemonEditorButton.Enabled = true;
             moveEditorButton.Enabled = true;
+            itemEditorButton.Enabled = true;
 
             scriptCommandsButton.Enabled = true;
             if (!RomInfo.gameFamily.Equals(GameFamilies.HGSS))
@@ -2038,8 +2040,12 @@ namespace DSPRE
             moveEditorToolStripMenuItem_Click(sender, e);
         }
 
+
         #endregion
 
-
+        private void itemEditorButton_Click(object sender, EventArgs e)
+        {
+            itemEditorToolStripMenuItem_Click(sender, e);
+        }
     }
 }
