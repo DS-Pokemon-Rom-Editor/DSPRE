@@ -766,6 +766,7 @@
     <None Include="Resources\Graphics\Program Icons\pokemon_editor_icon.png" />
     <None Include="Resources\Graphics\Program Icons\move_editor_icon.png" />
     <None Include="Resources\Graphics\Program Icons\item_editor_icon.png" />
+    <None Include="Resources\Graphics\Program Icons\trade_editor_icon.png" />
     <Content Include="Tools\charmap.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

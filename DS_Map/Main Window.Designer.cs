@@ -131,9 +131,9 @@
             this.buildingEditorButton = new System.Windows.Forms.ToolStripButton();
             this.wildEditorButton = new System.Windows.Forms.ToolStripButton();
             this.pokemonEditorButton = new System.Windows.Forms.ToolStripButton();
-            this.itemEditorButton = new System.Windows.Forms.ToolStripButton();
             this.moveEditorButton = new System.Windows.Forms.ToolStripButton();
-            this.spawnEditorToolStripButton = new System.Windows.Forms.ToolStripButton();
+            this.tradeEditorButton = new System.Windows.Forms.ToolStripButton();
+            this.itemEditorButton = new System.Windows.Forms.ToolStripButton();
             this.separator_afterEditors = new System.Windows.Forms.ToolStripSeparator();
             this.scriptCommandsButton = new System.Windows.Forms.ToolStripButton();
             this.romToolboxToolStripButton = new System.Windows.Forms.ToolStripButton();
@@ -1084,7 +1084,7 @@
             this.pokemonEditorButton,
             this.moveEditorButton,
             this.itemEditorButton,
-            this.spawnEditorToolStripButton,
+            this.tradeEditorButton,
             this.separator_afterEditors,
             this.scriptCommandsButton,
             this.romToolboxToolStripButton,
@@ -1248,20 +1248,7 @@
             this.pokemonEditorButton.Name = "pokemonEditorButton";
             this.pokemonEditorButton.Size = new System.Drawing.Size(36, 36);
             this.pokemonEditorButton.Text = "Pokémon Data Editor";
-            this.pokemonEditorButton.Click += new System.EventHandler(this.pokemonEditorButton_Click);
-            // 
-            // itemEditorButton
-            // 
-            this.itemEditorButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.itemEditorButton.Enabled = false;
-            this.itemEditorButton.Image = global::DSPRE.Properties.Resources.item_editor_icon;
-            this.itemEditorButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.itemEditorButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.itemEditorButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
-            this.itemEditorButton.Name = "itemEditorButton";
-            this.itemEditorButton.Size = new System.Drawing.Size(36, 36);
-            this.itemEditorButton.Text = "Item Editor";
-            this.itemEditorButton.Click += new System.EventHandler(this.itemEditorButton_Click);
+            this.pokemonEditorButton.Click += new System.EventHandler(this.pokemonEditorToolStripMenuItem_Click);
             // 
             // moveEditorButton
             // 
@@ -1274,20 +1261,33 @@
             this.moveEditorButton.Name = "moveEditorButton";
             this.moveEditorButton.Size = new System.Drawing.Size(36, 36);
             this.moveEditorButton.Text = "Move Editor";
-            this.moveEditorButton.Click += new System.EventHandler(this.moveEditorButton_Click);
+            this.moveEditorButton.Click += new System.EventHandler(this.moveEditorToolStripMenuItem_Click);
             // 
-            // spawnEditorToolStripButton
+            // tradeEditorButton
             // 
-            this.spawnEditorToolStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.spawnEditorToolStripButton.Enabled = false;
-            this.spawnEditorToolStripButton.Image = global::DSPRE.Properties.Resources.spawnCoordsMatrixeditorIcon;
-            this.spawnEditorToolStripButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.spawnEditorToolStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.spawnEditorToolStripButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
-            this.spawnEditorToolStripButton.Name = "spawnEditorToolStripButton";
-            this.spawnEditorToolStripButton.Size = new System.Drawing.Size(57, 36);
-            this.spawnEditorToolStripButton.Text = "Spawn Point Editor";
-            this.spawnEditorToolStripButton.Click += new System.EventHandler(this.spawnEditorToolStripButton_Click);
+            this.tradeEditorButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.tradeEditorButton.Enabled = false;
+            this.tradeEditorButton.Image = global::DSPRE.Properties.Resources.trade_editor_icon;
+            this.tradeEditorButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.tradeEditorButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.tradeEditorButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
+            this.tradeEditorButton.Name = "tradeEditorButton";
+            this.tradeEditorButton.Size = new System.Drawing.Size(36, 36);
+            this.tradeEditorButton.Text = "Trade Editor";
+            this.tradeEditorButton.Click += new System.EventHandler(this.tradeEditorToolStripMenuItem_Click);
+            // 
+            // itemEditorButton
+            // 
+            this.itemEditorButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.itemEditorButton.Enabled = false;
+            this.itemEditorButton.Image = global::DSPRE.Properties.Resources.item_editor_icon;
+            this.itemEditorButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.itemEditorButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.itemEditorButton.Margin = new System.Windows.Forms.Padding(4, 6, 0, 2);
+            this.itemEditorButton.Name = "itemEditorButton";
+            this.itemEditorButton.Size = new System.Drawing.Size(36, 36);
+            this.itemEditorButton.Text = "Item Editor";
+            this.itemEditorButton.Click += new System.EventHandler(this.itemEditorToolStripMenuItem_Click);
             // 
             // separator_afterEditors
             // 
@@ -1545,7 +1545,6 @@
         private System.Windows.Forms.ToolStripMenuItem heartGoldAndSoulSilverToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageDatabasesToolStripMenuItem;
         private System.Windows.Forms.Label spriteIDlabel;
-        private System.Windows.Forms.ToolStripButton spawnEditorToolStripButton;
         private System.Windows.Forms.ToolStripButton nsbmdExportTexButton;
         private System.Windows.Forms.ToolStripButton nsbmdRemoveTexButton;
         private System.Windows.Forms.ToolStripButton nsbmdAddTexButton;
@@ -1676,6 +1675,7 @@
         private System.Windows.Forms.ToolStripButton moveEditorButton;
         private System.Windows.Forms.ToolStripSeparator separator_afterEditors;
         private System.Windows.Forms.ToolStripButton itemEditorButton;
+        private System.Windows.Forms.ToolStripButton tradeEditorButton;
     }
 }
 

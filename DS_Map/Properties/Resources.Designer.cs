@@ -2103,6 +2103,16 @@ namespace DSPRE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap trade_editor_icon {
+            get {
+                object obj = ResourceManager.GetObject("trade_editor_icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap trainer_editor {
             get {
                 object obj = ResourceManager.GetObject("trainer_editor", resourceCulture);

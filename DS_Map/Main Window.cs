@@ -198,7 +198,7 @@ namespace DSPRE
                     pokemonEditorButton.Visible = true;
                     moveEditorButton.Visible = true;
                     itemEditorButton.Visible = true;
-                    spawnEditorToolStripButton.Visible = true;
+                    tradeEditorButton.Visible = true;
                     separator_afterEditors.Visible = true;
 
                     break;
@@ -990,13 +990,12 @@ namespace DSPRE
             romToolboxToolStripButton.Enabled = true;
             romToolboxToolStripMenuItem.Enabled = true;
             headerSearchToolStripButton.Enabled = true;
-            headerSearchToolStripMenuItem.Enabled = true;
-            spawnEditorToolStripMenuItem.Enabled = true;
-            spawnEditorToolStripButton.Enabled = true;
-            otherEditorsToolStripMenuItem.Enabled = true;
             pokemonEditorButton.Enabled = true;
             moveEditorButton.Enabled = true;
             itemEditorButton.Enabled = true;
+            tradeEditorButton.Enabled = true;
+
+            otherEditorsToolStripMenuItem.Enabled = true;
 
             scriptCommandsButton.Enabled = true;
             if (!RomInfo.gameFamily.Equals(GameFamilies.HGSS))
@@ -1293,10 +1292,7 @@ namespace DSPRE
                 ed.ShowDialog();
             }
         }
-        private void spawnEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            spawnEditorToolStripButton_Click(null, null);
-        }
+
         private void wildEditorButton_Click(object sender, EventArgs e)
         {
             openWildEditor(loadCurrent: false);
@@ -1899,22 +1895,6 @@ namespace DSPRE
             }
         }
 
-        private void pokemonEditorButton_Click(object sender, EventArgs e)
-        {
-            pokemonEditorToolStripMenuItem_Click(sender, e);
-        }
-
-        private void moveEditorButton_Click(object sender, EventArgs e)
-        {
-            moveEditorToolStripMenuItem_Click(sender, e);
-        }
-
-
         #endregion
-
-        private void itemEditorButton_Click(object sender, EventArgs e)
-        {
-            itemEditorToolStripMenuItem_Click(sender, e);
-        }
     }
 }
