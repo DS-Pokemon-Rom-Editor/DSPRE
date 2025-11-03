@@ -79,7 +79,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (!OverlayUtils.OverlayTable.IsDefaultCompressed(1))
+                    if (!LegacyOverlayUtils.OverlayTable.IsDefaultCompressed(1))
                     {
                         DisableOverlay1patch("Already applied");
                         overlay1CB.Visible = true;
@@ -213,8 +213,8 @@ namespace DSPRE
                 return false;
             }
 
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-            OverlayUtils.Decompress(data.overlayNumber);
+            string overlayFilePath = LegacyOverlayUtils.GetPath(data.overlayNumber);
+            LegacyOverlayUtils.Decompress(data.overlayNumber);
 
             byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.overlayString1);
             byte[] overlayCode1Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset1, overlayCode1.Length);
@@ -454,9 +454,11 @@ namespace DSPRE
         {
             BDHCAMPatchData data = new BDHCAMPatchData();
 
-            if (RomInfo.gameFamily == GameFamilies.HGSS)
+            // Only prompt for overlay decompression in legacy mode
+            // In dsrom mode, overlays are always decompressed
+            if (RomInfo.gameFamily == GameFamilies.HGSS && DSUtils.legacyMode)
             {
-                if (OverlayUtils.OverlayTable.IsDefaultCompressed(data.overlayNumber))
+                if (LegacyOverlayUtils.OverlayTable.IsDefaultCompressed(data.overlayNumber))
                 {
                     DialogResult d1 = MessageBox.Show("It is STRONGLY recommended to configure Overlay1 as uncompressed before proceeding.\n\n" +
                         "More details in the following dialog.\n\n" + "Do you want to know more?",
@@ -512,10 +514,10 @@ namespace DSPRE
                     ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
 
                     /* Write to overlayfile */
-                    string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-                    if (OverlayUtils.IsCompressed(data.overlayNumber))
+                    string overlayFilePath = LegacyOverlayUtils.GetPath(data.overlayNumber);
+                    if (LegacyOverlayUtils.IsCompressed(data.overlayNumber))
                     {
-                        OverlayUtils.Decompress(data.overlayNumber);
+                        LegacyOverlayUtils.Decompress(data.overlayNumber);
                     }
 
                     DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString1), data.overlayOffset1); //Write new overlayCode1
@@ -531,8 +533,8 @@ namespace DSPRE
                     {
                         fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + expandedARMfileID.ToString("D4");
                     }
-                        /*Write Expanded ARM9 File*/
-                        DSUtils.WriteToFile(fullFilePath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
+                    /*Write Expanded ARM9 File*/
+                    DSUtils.WriteToFile(fullFilePath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
                 }
                 catch
                 {
@@ -568,7 +570,7 @@ namespace DSPRE
             bool isCompressed = false;
             string stringDecompressOverlay = "";
 
-            if (OverlayUtils.IsCompressed(1))
+            if (LegacyOverlayUtils.IsCompressed(1))
             {
                 isCompressed = true;
                 stringDecompressOverlay = "- Overlay 1 will be decompressed.\n\n";
@@ -582,10 +584,10 @@ namespace DSPRE
 
             if (d == DialogResult.Yes)
             {
-                OverlayUtils.OverlayTable.SetDefaultCompressed(1, false);
+                LegacyOverlayUtils.OverlayTable.SetDefaultCompressed(1, false);
                 if (isCompressed)
                 {
-                    OverlayUtils.Decompress(1);
+                    LegacyOverlayUtils.Decompress(1);
                 }
 
                 MessageBox.Show("Overlay1 is now configured as uncompressed.", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -658,12 +660,13 @@ namespace DSPRE
                         {
                             eventFile.SaveToFileDefaultDir(i, showSuccessMessage: false);
                         }
-                    };
+                    }
+                    ;
 
                     //Distortion world - turnback cave Griseous Orb fix
                     if (gameFamily.Equals(GameFamilies.Plat))
                     {
-                        string ow9path = OverlayUtils.GetPath(9);
+                        string ow9path = LegacyOverlayUtils.GetPath(9);
                         int ow9offs = 0x8E20 + 10;
 
                         int itemScriptID;
@@ -732,7 +735,8 @@ namespace DSPRE
                     "Do you wish to continue?",
                     "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             }
-            else {
+            else
+            {
                 d = MessageBox.Show("Confirming this process will apply the following changes:\n\n" +
                     "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
                     "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
@@ -758,7 +762,8 @@ namespace DSPRE
                     {
                         fullFilePath = RomInfo.overlayPath + '\\' + "overlay_" + expandedARMfileID.ToString("D4") + ".bin";
                     }
-                    else {
+                    else
+                    {
                         fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + expandedARMfileID.ToString("D4");
                         File.Delete(fullFilePath);
                     }

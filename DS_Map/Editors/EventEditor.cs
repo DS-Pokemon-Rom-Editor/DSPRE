@@ -31,7 +31,7 @@ namespace DSPRE.Editors
 
         #region Event Editor
 
-        #region Variables      
+        #region Variables
         public bool itemComboboxIsUpToDate = false;
         public static NSBMDGlRenderer eventMapRenderer = new NSBMDGlRenderer();
         public static NSBMDGlRenderer eventBuildingsRenderer = new NSBMDGlRenderer();
@@ -424,10 +424,10 @@ namespace DSPRE.Editors
                 for (int i = 0; i < eventMapFile.buildings.Count; i++)
                 {
                     eventMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(isInteriorMap)); // Load building nsbmd
-                    Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
+                    Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures
                 }
 
-                    Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
+                Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
                 eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
             }
             eventPictureBox.Invalidate();
@@ -702,11 +702,12 @@ namespace DSPRE.Editors
                         break;
                     default:
                         // HGSS Overlay 1 must be decompressed in order to read the overworld table
-                        if (OverlayUtils.OverlayTable.IsDefaultCompressed(1))
+                        // Only needed in legacy mode - in dsrom mode, overlays are always decompressed
+                        if (DSUtils.legacyMode && LegacyOverlayUtils.OverlayTable.IsDefaultCompressed(1))
                         {
-                            if (OverlayUtils.IsCompressed(1))
+                            if (LegacyOverlayUtils.IsCompressed(1))
                             {
-                                if (OverlayUtils.Decompress(1) < 0)
+                                if (LegacyOverlayUtils.Decompress(1) < 0)
                                 {
                                     MessageBox.Show("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event Editor will be " +
                                 "displayed incorrectly or not displayed at all.", "Unexpected EOF", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -841,7 +842,7 @@ namespace DSPRE.Editors
             selectEventComboBox.Items.Add("Event File " + selectEventComboBox.Items.Count);
             selectEventComboBox.SelectedIndex = selectEventComboBox.Items.Count - 1;
         }
- 
+
         private void eventMatrixPictureBox_Click(object sender, EventArgs e)
         {
             const int squareSize = 16;
@@ -1510,7 +1511,7 @@ namespace DSPRE.Editors
             {
                 return;
             }
-           
+
             // Find the smallest unused ID
             int newID = 0;
             while (currentEvFile.overworlds.Any(ow => ow.owID == newID))

@@ -18,8 +18,8 @@ namespace DSPRE
 
     public class RomInfo
     {
-        public const string folderSuffix = "_DSPRE_contents"; // changed back to public static string
-        private const string dataFolderName = @"data";
+        public static string folderSuffix = "_DSPRE_contents";
+        private static string dataFolderName = @"data";
 
         public static bool isHGE { get; private set; }
         public static string romID { get; private set; }
@@ -185,22 +185,17 @@ namespace DSPRE
 
         #region Constructors (1)
 
-        public RomInfo(string id, string romFolderName)
+        public RomInfo(string id, string romFolderName, bool useSuffix = true, bool legacyMode = false)
         {
+            if (!useSuffix)
+            {
+                folderSuffix = "";
+            }
 
-            string path = Path.GetFullPath(romFolderName);
+            string path = Path.GetDirectoryName(romFolderName) + "\\" + Path.GetFileNameWithoutExtension(romFolderName) + folderSuffix + "\\";
+            path = Path.GetFullPath(path);
 
-            workDir = path + "\\"; // This is required still. Ideally all paths should be combined with Path.Combine and not by string concatenation
-            arm9Path = Path.Combine(workDir, @"arm9.bin");
-            arm7Path = Path.Combine(workDir, @"arm7.bin");
-            overlayTablePath = Path.Combine(workDir, @"y9.bin");
-            y7Path = Path.Combine(workDir, @"y7.bin");
-            dataPath = Path.Combine(workDir, dataFolderName);
-            overlayPath = Path.Combine(workDir, @"overlay");
-            bannerPath = Path.Combine(workDir, @"banner.bin");
-            headerPath = Path.Combine(workDir, @"header.bin");
-            unpackedPath = Path.Combine(workDir, @"unpacked");
-            internalNamesPath = Path.Combine(workDir, $@"{dataFolderName}\fielddata\maptable\mapname.bin");
+            SetRomDirs(path, legacyMode);
 
             try
             {
@@ -214,9 +209,10 @@ namespace DSPRE
             }
 
             romID = id;
+            projectName = Path.GetFileNameWithoutExtension(romFolderName);
             if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
             {
-                string ov129path = OverlayUtils.GetPath(129);
+                string ov129path = LegacyOverlayUtils.GetPath(129);
                 if (File.Exists(ov129path))
                 {
                     using (DSUtils.EasyReader br = new DSUtils.EasyReader(ov129path))
@@ -230,8 +226,9 @@ namespace DSPRE
                         {
                             isHGE = false;
                         }
-                    }                    
-                } else
+                    }
+                }
+                else
                 {
                     isHGE = false;
                 }
@@ -596,7 +593,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    OWtablePath = OverlayUtils.GetPath(5);
+                    OWtablePath = LegacyOverlayUtils.GetPath(5);
                     switch (gameLanguage)
                     { // Go to the beginning of the overworld table
                         case GameLanguages.English:
@@ -614,7 +611,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    OWtablePath = OverlayUtils.GetPath(5);
+                    OWtablePath = LegacyOverlayUtils.GetPath(5);
                     switch (gameLanguage)
                     { // Go to the beginning of the overworld table
                         case GameLanguages.Italian:
@@ -641,11 +638,11 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (OverlayUtils.OverlayTable.IsDefaultCompressed(1))
+                    if (LegacyOverlayUtils.OverlayTable.IsDefaultCompressed(1))
                     {
-                        if (OverlayUtils.IsCompressed(1))
+                        if (LegacyOverlayUtils.IsCompressed(1))
                         {
-                            if (OverlayUtils.Decompress(1) < 0)
+                            if (LegacyOverlayUtils.Decompress(1) < 0)
                             {
                                 MessageBox.Show("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event Editor will be " +
                                 "displayed incorrectly or not displayed at all.", "Decompression error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -653,8 +650,8 @@ namespace DSPRE
                         }
                     }
 
-                    string ov1Path = OverlayUtils.GetPath(1);
-                    uint ov1Address = OverlayUtils.OverlayTable.GetRAMAddress(1);
+                    string ov1Path = LegacyOverlayUtils.GetPath(1);
+                    uint ov1Address = LegacyOverlayUtils.OverlayTable.GetRAMAddress(1);
 
                     int ramAddrOfPointer;
                     switch (gameLanguage)
@@ -691,11 +688,11 @@ namespace DSPRE
                             return;
                         }
 
-                        string ov131path = OverlayUtils.GetPath(131);
+                        string ov131path = LegacyOverlayUtils.GetPath(131);
                         if (File.Exists(ov131path))
                         {
                             // if HGE field extension overlay exists
-                            OWTableOffset = ramAddressOfTable - OverlayUtils.OverlayTable.GetRAMAddress(131);
+                            OWTableOffset = ramAddressOfTable - LegacyOverlayUtils.OverlayTable.GetRAMAddress(131);
                             OWtablePath = ov131path;
                         }
                         else if (ramAddressOfTable >= RomInfo.synthOverlayLoadAddress)
@@ -1406,6 +1403,42 @@ namespace DSPRE
                 default:
                     gameLanguage = GameLanguages.Japanese;
                     break;
+            }
+        }
+
+        private void SetRomDirs(string path, bool legacyMode)
+        {
+            // dsrom based folder structure
+            if (!legacyMode)
+            {
+                workDir = path;
+                dataFolderName = "files";
+                arm9Path = Path.Combine(workDir, @"arm9/arm9.bin");
+                arm7Path = Path.Combine(workDir, @"arm7/arm7.bin");
+                dataPath = Path.Combine(workDir, dataFolderName);
+                overlayPath = Path.Combine(workDir, @"arm9_overlays");
+                bannerPath = Path.Combine(workDir, @"banner/banner.yaml");
+                headerPath = Path.Combine(workDir, @"header.yaml");
+                overlayTablePath = Path.Combine(workDir, $@"{overlayPath}/overlays.yaml");
+                y7Path = Path.Combine(workDir, @"y7.bin");
+                unpackedPath = Path.Combine(workDir, @"unpacked");
+                internalNamesPath = Path.Combine(workDir, $@"{dataFolderName}\fielddata\maptable\mapname.bin");
+            }
+            // ndstool folder structure
+            else
+            {
+                workDir = path;
+                dataFolderName = "data";
+                arm9Path = Path.Combine(workDir, @"arm9.bin");
+                arm7Path = Path.Combine(workDir, @"arm7.bin");
+                overlayTablePath = Path.Combine(workDir, @"y9.bin");
+                y7Path = Path.Combine(workDir, @"y7.bin");
+                dataPath = Path.Combine(workDir, dataFolderName);
+                overlayPath = Path.Combine(workDir, @"overlay");
+                bannerPath = Path.Combine(workDir, @"banner.bin");
+                headerPath = Path.Combine(workDir, @"header.bin");
+                unpackedPath = Path.Combine(workDir, @"unpacked");
+                internalNamesPath = Path.Combine(workDir, $@"{dataFolderName}\fielddata\maptable\mapname.bin");
             }
         }
 
