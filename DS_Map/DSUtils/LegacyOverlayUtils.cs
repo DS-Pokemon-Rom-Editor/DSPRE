@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
@@ -137,17 +137,35 @@ namespace DSPRE
         }
         public static int Compress(int overlayNumber)
         {
-            if (DSUtils.legacyMode)
+            if (!DSUtils.legacyMode)
             {
-                // Show message only in legacy mode, this case occurs a lot if not in legacy mode but can be ignored
+                // Show message only when NOT in legacy mode (shouldn't happen, but just in case)
                 MessageBox.Show("Overlay compression has been deprecated.\n" +
                     "Please use the new folder structure instead.\n" +
-                    "You CAN still uncompress overlays in legacy mode but this is not recommended!\n" +
+                    "dsrom automatically handles overlay compression during ROM build.\n" +
                     "To fix this error you can configure Overlay " + overlayNumber + " as uncompressed.",
                     "Overlay Compression Deprecated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return 0;
             }
 
-            return 0;
+            // Legacy mode: actually compress the overlay using blz.exe
+            string overlayFilePath = GetPath(overlayNumber);
+
+            if (!File.Exists(overlayFilePath))
+            {
+                MessageBox.Show("Overlay to compress #" + overlayNumber + " doesn't exist",
+                    "Overlay not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return DSUtils.ERR_OVERLAY_NOTFOUND;
+            }
+
+            Process compress = new Process();
+            compress.StartInfo.FileName = @"Tools\blz.exe";
+            compress.StartInfo.Arguments = "-en " + '"' + overlayFilePath + '"';
+            compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            compress.StartInfo.CreateNoWindow = true;
+            compress.Start();
+            compress.WaitForExit();
+            return compress.ExitCode;
         }
 
         public static int Decompress(string overlayFilePath, bool makeBackup = true)

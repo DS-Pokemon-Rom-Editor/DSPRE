@@ -1,4 +1,4 @@
-﻿using Ekona.Images;
+using Ekona.Images;
 using Images;
 using LibNDSFormats.NSBMD;
 using Microsoft.WindowsAPICodePack.Dialogs;
@@ -15,7 +15,8 @@ using System.Windows.Forms;
 using YamlDotNet.RepresentationModel;
 using static DSPRE.RomInfo;
 
-namespace DSPRE {
+namespace DSPRE
+{
     public static class DSUtils
     {
         public const int ERR_OVERLAY_NOTFOUND = -1;
@@ -27,57 +28,78 @@ namespace DSPRE {
 
         public static bool legacyMode = false; // true if using legacy ndstool, false if using dsrom
 
-        public class EasyReader : BinaryReader {
-            public EasyReader(string path, long pos = 0) : base(File.OpenRead(path)) {
+        public class EasyReader : BinaryReader
+        {
+            public EasyReader(string path, long pos = 0) : base(File.OpenRead(path))
+            {
                 this.BaseStream.Position = pos;
             }
         }
-        public class EasyWriter : BinaryWriter {
-            public EasyWriter(string path, long pos = 0, FileMode fmode = FileMode.OpenOrCreate) : base(new FileStream(path, fmode, FileAccess.Write, FileShare.None)) {
+        public class EasyWriter : BinaryWriter
+        {
+            public EasyWriter(string path, long pos = 0, FileMode fmode = FileMode.OpenOrCreate) : base(new FileStream(path, fmode, FileAccess.Write, FileShare.None))
+            {
                 this.BaseStream.Position = pos;
             }
-            public void EditSize(int increment) {
+            public void EditSize(int increment)
+            {
                 this.BaseStream.SetLength(this.BaseStream.Length + increment);
             }
         }
 
-        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null, FileMode fmode = FileMode.OpenOrCreate) {
-            using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode)) {
+        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null, FileMode fmode = FileMode.OpenOrCreate)
+        {
+            using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode))
+            {
                 writer.Write(toOutput, indexFirstByteToWrite, indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite);
             }
         }
-        public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0) {
+        public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0)
+        {
             byte[] buffer = null;
 
-            using (EasyReader reader = new EasyReader(filepath, startOffset)) {
-                try {
+            using (EasyReader reader = new EasyReader(filepath, startOffset))
+            {
+                try
+                {
                     buffer = reader.ReadBytes(numberOfBytes == 0 ? (int)(reader.BaseStream.Length - reader.BaseStream.Position) : (int)numberOfBytes);
-                } catch (EndOfStreamException) {
+                }
+                catch (EndOfStreamException)
+                {
                     Console.WriteLine("Stream ended");
                 }
             }
 
             return buffer;
         }
-        public static byte[] ReadFromByteArray(byte[] input, long readFrom = 0, long numberOfBytes = 0) {
+        public static byte[] ReadFromByteArray(byte[] input, long readFrom = 0, long numberOfBytes = 0)
+        {
             byte[] buffer = null;
 
-            using (BinaryReader reader = new BinaryReader(new MemoryStream(input))) {
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(input)))
+            {
                 reader.BaseStream.Position = readFrom;
 
-                try {
-                    if (numberOfBytes == 0) {
+                try
+                {
+                    if (numberOfBytes == 0)
+                    {
                         buffer = reader.ReadBytes((int)(input.Length - reader.BaseStream.Position));
-                    } else {
+                    }
+                    else
+                    {
                         buffer = reader.ReadBytes((int)numberOfBytes);
                     }
-                } catch (EndOfStreamException) {
+                }
+                catch (EndOfStreamException)
+                {
                     Console.WriteLine("Stream ended");
                 }
             }
             return buffer;
         }
-        public static Process CreateDecompressProcess(string path) {
+        public static Process CreateDecompressProcess(string path)
+        {
             Process decompress = new Process();
             decompress.StartInfo.FileName = @"Tools\blz.exe";
             decompress.StartInfo.Arguments = @" -d " + '"' + path + '"';
@@ -87,29 +109,34 @@ namespace DSPRE {
 
         }
 
-        public static void RepackROMLegacy(string ndsFileName) {
+        public static void RepackROMLegacy(string ndsFileName)
+        {
             Process repack = new Process();
             repack.StartInfo.FileName = @"Tools\ndstool.exe";
             repack.StartInfo.Arguments = "-c " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + RomInfo.arm9Path + '"'
-                + " -7 " + '"' + RomInfo.workDir + "arm7.bin" + '"'
-                + " -y9 " + '"' + RomInfo.workDir + "y9.bin" + '"'
-                + " -y7 " + '"' + RomInfo.workDir + "y7.bin" + '"'
-                + " -d " + '"' + RomInfo.workDir + "data" + '"'
-                + " -y " + '"' + RomInfo.workDir + "overlay" + '"'
-                + " -t " + '"' + RomInfo.workDir + "banner.bin" + '"'
-                + " -h " + '"' + RomInfo.workDir + "header.bin" + '"';
+                + " -7 " + '"' + RomInfo.arm7Path + '"'
+                + " -y9 " + '"' + RomInfo.overlayTablePath + '"'
+                + " -y7 " + '"' + RomInfo.y7Path + '"'
+                + " -d " + '"' + RomInfo.dataPath + '"'
+                + " -y " + '"' + RomInfo.overlayPath + '"'
+                + " -t " + '"' + RomInfo.bannerPath + '"'
+                + " -h " + '"' + RomInfo.headerPath + '"';
 
             repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             repack.StartInfo.CreateNoWindow = true;
             repack.StartInfo.UseShellExecute = false;
+            repack.StartInfo.RedirectStandardError = true;
 
             AppLogger.Debug("Repacking ROM (legacy) with command: " + repack.StartInfo.FileName + " " + repack.StartInfo.Arguments);
             Application.DoEvents();
 
+            string errors = "";
+
             try
             {
                 repack.Start();
+                errors = repack.StandardError.ReadToEnd().Trim();
                 repack.WaitForExit();
             }
             catch (System.ComponentModel.Win32Exception ex)
@@ -121,6 +148,13 @@ namespace DSPRE {
             }
 
             AppLogger.Debug("ndstool.exe returned: " + repack.ExitCode);
+
+            if (!string.IsNullOrWhiteSpace(errors))
+            {
+                AppLogger.Error("ndstool.exe returned the following error(s): " + errors);
+                MessageBox.Show("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "ndstool Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         public static string WorkDirPathFromFile(string filePath)
@@ -431,7 +465,8 @@ namespace DSPRE {
             return true;
         }
 
-        public static byte[] StringToByteArray(String hex) {
+        public static byte[] StringToByteArray(String hex)
+        {
             //Ummm what?
             int NumberChars = hex.Length;
             byte[] bytes = new byte[NumberChars / 2];
@@ -439,7 +474,8 @@ namespace DSPRE {
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
-        public static byte[] HexStringToByteArray(string hexString) {
+        public static byte[] HexStringToByteArray(string hexString)
+        {
             //FC B5 05 48 C0 46 41 21
             //09 22 02 4D A8 47 00 20
             //03 21 FC BD F1 64 00 02
@@ -450,8 +486,10 @@ namespace DSPRE {
             hexString = hexString.Trim();
 
             byte[] b = new byte[hexString.Length / 3 + 1];
-            for (int i = 0; i < hexString.Length; i += 2) {
-                if (hexString[i] == ' ') {
+            for (int i = 0; i < hexString.Length; i += 2)
+            {
+                if (hexString[i] == ' ')
+                {
                     hexString = hexString.Substring(1, hexString.Length - 1);
                 }
 
@@ -460,27 +498,36 @@ namespace DSPRE {
             return b;
         }
 
-        public static void TryUnpackNarcs(List<DirNames> IDs) {
-            if (gameDirs == null || gameDirs.Count == 0) {
+        public static void TryUnpackNarcs(List<DirNames> IDs)
+        {
+            if (gameDirs == null || gameDirs.Count == 0)
+            {
                 return;
             }
-            Parallel.ForEach(IDs, id => {
-                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
+            Parallel.ForEach(IDs, id =>
+            {
+                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths))
+                {
                     DirectoryInfo di = new DirectoryInfo(paths.unpackedPath);
 
-                    if (!di.Exists || di.GetFiles().Length == 0) {
+                    if (!di.Exists || di.GetFiles().Length == 0)
+                    {
                         Narc opened = Narc.Open(paths.packedPath) ?? throw new NullReferenceException();
                         opened.ExtractToFolder(paths.unpackedPath);
                     }
                 }
             });
         }
-        public static void ForceUnpackNarcs(List<DirNames> IDs) {
-            Parallel.ForEach(IDs, id => {
-                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
+        public static void ForceUnpackNarcs(List<DirNames> IDs)
+        {
+            Parallel.ForEach(IDs, id =>
+            {
+                if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths))
+                {
                     Narc opened = Narc.Open(paths.packedPath);
 
-                    if (opened is null) {
+                    if (opened is null)
+                    {
                         throw new NullReferenceException();
                     }
 
@@ -489,14 +536,18 @@ namespace DSPRE {
             });
         }
 
-        public static Image GetPokePic(int species, int w, int h) {
+        public static Image GetPokePic(int species, int w, int h)
+        {
             PaletteBase paletteBase;
             bool fiveDigits = false; // some extreme future proofing
             string filename = "0000";
 
-            try {
+            try
+            {
                 paletteBase = new NCLR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + filename, 0, filename);
-            } catch (FileNotFoundException) {
+            }
+            catch (FileNotFoundException)
+            {
                 filename += '0';
                 paletteBase = new NCLR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + filename, 0, filename);
                 fiveDigits = true;
@@ -508,25 +559,32 @@ namespace DSPRE {
 
             int iconPalTableOffsetFromFileStart;
             string ov129path = LegacyOverlayUtils.GetPath(129);
-            if (File.Exists(ov129path)) {
+            if (File.Exists(ov129path))
+            {
                 // if overlay 129 exists, read it from there
                 iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - LegacyOverlayUtils.OverlayTable.GetRAMAddress(129));
                 iconTablePath = ov129path;
-            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+            }
+            else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0)
+            {
                 // if there is a synthetic overlay, read it from there
                 iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
                 iconTablePath = gameDirs[DirNames.synthOverlay].unpackedDir + "\\" + PatchToolboxDialog.expandedARMfileID.ToString("D4");
-            } else {
+            }
+            else
+            {
                 // default handling
                 iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
                 iconTablePath = RomInfo.arm9Path;
             }
 
-            using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
+            using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species))
+            {
                 paletteId = idReader.ReadByte();
             }
 
-            if (paletteId != 0) {
+            if (paletteId != 0)
+            {
                 paletteBase.Palette[0] = paletteBase.Palette[paletteId]; // update pal 0 to be the new pal
             }
 
@@ -543,14 +601,18 @@ namespace DSPRE {
             // copy this from the trainer
             int bank0OAMcount = spriteBase.Banks[0].oams.Length;
             int[] OAMenabled = new int[bank0OAMcount];
-            for (int i = 0; i < OAMenabled.Length; i++) {
+            for (int i = 0; i < OAMenabled.Length; i++)
+            {
                 OAMenabled[i] = i;
             }
 
             // finally compose image
-            try {
+            try
+            {
                 return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
-            } catch (FormatException) {
+            }
+            catch (FormatException)
+            {
                 return Properties.Resources.IconPokeball;
             }
         }

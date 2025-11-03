@@ -62,7 +62,7 @@ namespace DSPRE
             Helpers.Initialize(this);
             WireEditorsPopout();
 
-            SetMenuLayout((LayoutStyle) SettingsManager.Settings.menuLayout); //Read user settings for menu layout
+            SetMenuLayout((LayoutStyle)SettingsManager.Settings.menuLayout); //Read user settings for menu layout
             Text = "DS Pokémon Rom Editor Reloaded " + GetDSPREVersion();
 
             string romFolder = SettingsManager.Settings.openDefaultRom;
@@ -128,10 +128,10 @@ namespace DSPRE
             IList list = menuViewToolStripMenuItem.DropDownItems;
             for (int i = 0; i < list.Count; i++)
             {
-                (list[i] as ToolStripMenuItem).Checked = (i == (int) layoutStyle);
+                (list[i] as ToolStripMenuItem).Checked = (i == (int)layoutStyle);
             }
 
-            SettingsManager.Settings.menuLayout = (byte) layoutStyle;
+            SettingsManager.Settings.menuLayout = (byte)layoutStyle;
 
             // Hide all buttons first so we can selectively show them later
             foreach (ToolStripItem c in mainToolStrip.Items)
@@ -1054,28 +1054,9 @@ namespace DSPRE
 
         private bool CheckAndDecompressARM9()
         {
-            if (!ARM9.CheckCompressionMark())
-            {
-                return true; // ARM9 is not compressed, proceed normally
-            }
-
-            if (!RomInfo.gameFamily.Equals(GameFamilies.HGSS))
-            {
-                MessageBox.Show("Unexpected compressed ARM9. It is advised that you double check the ARM9.");
-                return false;
-            }
-
-            ARM9.EditSize(-12); // Fix ARM9 size before decompression
-
-            if (!ARM9.Decompress(RomInfo.arm9Path))
-            {
-                MessageBox.Show("ARM9 decompression failed. The program can't proceed.\nAborting.",
-                            "Error with ARM9 decompression", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
-
-            AppLogger.Info("ARM9 decompressed and size fixed.");
-
+            // When loading a ROM folder that was unpacked by ndstool, the ARM9 is already decompressed
+            // but the compression mark may still be set. We don't modify ARM9 during load - the user
+            // will be prompted to clear the mark during save if needed.
             return true;
         }
 
@@ -1209,8 +1190,8 @@ namespace DSPRE
 
             Helpers.statusLabelMessage("Repacking ROM...");
 
-            // Only handle overlay compression in legacy mode
-            // In dsrom mode, overlays are always decompressed and ds-rom handles compression during build
+            // Handle overlay 1 restoration/compression for patches (legacy mode only)
+            // In dsrom mode, ds-rom handles all compression automatically
             if (DSUtils.legacyMode)
             {
                 if (LegacyOverlayUtils.OverlayTable.IsDefaultCompressed(1))
@@ -1236,7 +1217,6 @@ namespace DSPRE
                     }
                 }
             }
-
 
             Update();
 
