@@ -846,6 +846,7 @@ namespace DSPRE
             string currentDir = AppDomain.CurrentDomain.BaseDirectory;
             if (currentDir.ToLower().Contains("onedrive"))
             {
+                AppLogger.Fatal("OneDrive detected in DSPRE installation path. Aborting startup.");
                 MessageBox.Show("OneDrive was detected in the DSPRE installation path. DSPRE is not compatible with OneDrive. " +
                     "Please move DSPRE to a local drive.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return true;
