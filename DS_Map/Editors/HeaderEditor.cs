@@ -836,7 +836,7 @@ namespace DSPRE.Editors
 
             Helpers.EnableHandlers();
 
-            EditorPanels.eventEditor.eventMatrixUpDown_ValueChanged(null, null);
+            EditorPanels.eventEditor.selectEventComboBox_SelectedIndexChanged(null, null);
         }
         private void openMatrixButton_Click(object sender, EventArgs e)
         {
