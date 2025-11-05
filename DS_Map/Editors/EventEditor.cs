@@ -425,7 +425,7 @@ namespace DSPRE.Editors
                 {
                     // Debug
                     uint modelID = eventMapFile.buildings[i].modelID;
-                    AppLogger.Debug($"Loading building with index {i} with model id {modelID} on map {mapIndex}.");
+                    AppLogger.Debug($"Loading building with index {i} with model id {modelID} on map {mapIndex}. isInteriorMap = {isInteriorMap}");
 
                     eventMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(isInteriorMap)); // Load building nsbmd
                     Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
@@ -433,6 +433,9 @@ namespace DSPRE.Editors
 
                     Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
                 eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+
+                AppLogger.Debug($"Rendering map {mapIndex} complete!");
+
             }
             eventPictureBox.Invalidate();
         }
@@ -1137,6 +1140,11 @@ namespace DSPRE.Editors
         }
         private void eventAreaDataUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled)
+            {
+                return;
+            }
+
             DisplayEventMap(readGraphicsFromHeader: false);
         }
         private void eventPictureBox_Click(object sender, EventArgs e)
