@@ -423,6 +423,10 @@ namespace DSPRE.Editors
 
                 for (int i = 0; i < eventMapFile.buildings.Count; i++)
                 {
+                    // Debug
+                    uint modelID = eventMapFile.buildings[i].modelID;
+                    AppLogger.Debug($"Loading building with index {i} with model id {modelID} on map {mapIndex}.");
+
                     eventMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(isInteriorMap)); // Load building nsbmd
                     Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
                 }
