@@ -423,18 +423,12 @@ namespace DSPRE.Editors
 
                 for (int i = 0; i < eventMapFile.buildings.Count; i++)
                 {
-                    // Debug
-                    uint modelID = eventMapFile.buildings[i].modelID;
-                    AppLogger.Debug($"Loading building with index {i} with model id {modelID} on map {mapIndex}. isInteriorMap = {isInteriorMap}");
-
                     eventMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(isInteriorMap)); // Load building nsbmd
                     Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
                 }
 
                     Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
                 eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
-
-                AppLogger.Debug($"Rendering map {mapIndex} complete!");
 
             }
             eventPictureBox.Invalidate();
