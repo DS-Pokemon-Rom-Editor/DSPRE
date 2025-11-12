@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DSPRE.ROMFiles;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,9 +14,10 @@ namespace DSPRE
 
     public partial class TMEditor : Form
     {
+        private static readonly int machineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
 
-        private int selectedTMIndex = -1;
-        private int[] curMachineMoves = new int[100]; // 92 TMs + 8 HMs
+        private int selectedTMIndex = -1;        
+        private int[] curMachineMoves = new int[machineCount];
 
         public TMEditor()
         {
@@ -36,8 +38,8 @@ namespace DSPRE
         {
             // Read 200 bytes (100 moves x 2 bytes each little endian) from ARM9
             var reader = new ARM9.Reader(GetMachineMoveOffset());
-            int[] moves = new int[100];
-            for (int i = 0; i < 100; i++)
+            int[] moves = new int[machineCount];
+            for (int i = 0; i < moves.Length; i++)
             {
                 moves[i] = reader.ReadUInt16();
             }
@@ -107,7 +109,7 @@ namespace DSPRE
         /// the format "HMYY", where "YY" is the index minus 91.</returns>
         public static string MachineLabelFromIndex(int index)
         {
-            return (index < 92) ? $"TM{index + 1:00}" : $"HM{index - 91}";
+            return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - 91}";
         }
 
         #endregion

@@ -452,13 +452,14 @@ namespace DSPRE
 
             sw.Write("ID,Name");
 
+            string[] machineMoveNames = TMEditor.ReadMachineMoveNames();
             int totalTMs = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
 
             // Write Header (List of all TMs/HMs)
-            for (int count = 0; count < totalTMs; count++)
+            for (int i = 0; i < totalTMs; i++)
             {
-                string currentItem = MachineNameFromIndex(count);
-                sw.Write($",{currentItem}");
+                string currentItem = TMEditor.MachineLabelFromIndex(i);
+                sw.Write($",{currentItem} - {machineMoveNames[i]}");
 
             }
 
@@ -540,19 +541,6 @@ namespace DSPRE
             return sb.ToString();
 
         }
-
-        // Slight code duplication to PersonalDataEditor here
-        private static string MachineNameFromIndex(int n)
-        {
-            //0-91 --> TMs
-            //>=92 --> HM
-            n += 1;
-            int diff = n - PokemonPersonalData.tmsCount;
-            string type = diff > 0 ? "HM" : "TM";
-            string item = $"{type}{(diff > 0 ? diff : n):D2}";
-            return item;
-        }
-
 
         private static void SetMonGendersAndAbilitiesAndNature(int trainerID, int trainerClassID, PartyPokemon[] partyPokemon,
             PartyPokemon.GenderAndAbilityFlags[] monFlags, ref string[] abilityNames,
