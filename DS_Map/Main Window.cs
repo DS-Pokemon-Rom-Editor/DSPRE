@@ -1828,6 +1828,17 @@ namespace DSPRE
             pde.Show();
         }
 
+        private void tMEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var tmEditor = new TMEditor();
+            tmEditor.ShowDialog();
+        }
+
+        private void openCharmapManagerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CharMaps.CharMapManagerForm charMapManager = new CharMaps.CharMapManagerForm();
+            charMapManager.ShowDialog();
+        }
 
         #endregion
 
@@ -1925,11 +1936,7 @@ namespace DSPRE
             }
         }
 
-        private void openCharmapManagerToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
-            CharMaps.CharMapManagerForm charMapManager = new CharMaps.CharMapManagerForm();
-            charMapManager.ShowDialog();
-        }
+
 
         #endregion
     }

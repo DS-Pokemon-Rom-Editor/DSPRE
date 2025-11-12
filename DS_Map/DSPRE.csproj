@@ -115,6 +115,12 @@
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\TMEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\TMEditor.Designer.cs">
+      <DependentUpon>TMEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\TrainerEditor\DVCalculator\DVCalc.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -533,6 +539,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\writeText.Designer.cs" />
+    <EmbeddedResource Include="Editors\TMEditor.resx">
+      <DependentUpon>TMEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Editors\TrainerEditor\DVCalculator\DVCalc.resx">
       <DependentUpon>DVCalc.cs</DependentUpon>
     </EmbeddedResource>
