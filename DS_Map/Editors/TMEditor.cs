@@ -14,14 +14,19 @@ namespace DSPRE
 
     public partial class TMEditor : Form
     {
+        // This should make it easier to change in the future if expanding the number of TMs/HMs becomes possible
         private static readonly int machineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
 
         private int selectedTMIndex = -1;        
         private int[] curMachineMoves = new int[machineCount];
+        private bool dirty = false;
 
         public TMEditor()
         {
             InitializeComponent();
+
+            PopulateMoveComboBox();
+
             curMachineMoves = ReadMachineMoves();
             RefreshMachineMoveList();
         }
@@ -36,14 +41,28 @@ namespace DSPRE
         /// <returns>An array of 100 integers representing the ids of the machine moves.</returns>
         public static int[] ReadMachineMoves()
         {
-            // Read 200 bytes (100 moves x 2 bytes each little endian) from ARM9
-            var reader = new ARM9.Reader(GetMachineMoveOffset());
+
             int[] moves = new int[machineCount];
-            for (int i = 0; i < moves.Length; i++)
+
+            try
             {
-                moves[i] = reader.ReadUInt16();
+                // Read 200 bytes (100 moves x 2 bytes each little endian) from ARM9
+                var reader = new ARM9.Reader(GetMachineMoveOffset());
+                
+                for (int i = 0; i < moves.Length; i++)
+                {
+                    moves[i] = reader.ReadUInt16();
+                }
+
+                reader.Close();
             }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"ReadMachineMoves: Failed to read machine moves. Exception: {ex.Message}");
+            }
+
             return moves;
+
         }
 
         /// <summary>
@@ -112,9 +131,7 @@ namespace DSPRE
             return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - 91}";
         }
 
-        #endregion
-
-        
+        #endregion       
 
         private static int GetMachineMoveOffset()
         {
@@ -182,6 +199,64 @@ namespace DSPRE
 
         }
 
+        private void SetDirty(bool isDirty)
+        {
+            dirty = isDirty;
+
+            if (dirty)
+            {
+                this.Text = "TM/HM Editor*";
+            }
+            else
+            {
+                this.Text = "TM/HM Editor";
+            }
+        }
+
+        private bool CheckDiscardChanges()
+        {
+            if (!dirty)
+                return true;
+
+            var result = MessageBox.Show("You have unsaved changes. Do you want to save them?",
+                "Unsaved Changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                // Save changes
+                SaveChanges();
+                return true;
+            }
+
+            if (result == DialogResult.No)
+            {
+                // Discard changes
+                return true;
+            }
+            
+            return false;
+        }
+
+        private void SaveChanges()
+        {
+            try
+            {
+                var writer = new ARM9.Writer(GetMachineMoveOffset());
+                for (int i = 0; i < curMachineMoves.Length; i++)
+                {
+                    writer.Write((ushort)curMachineMoves[i]);
+                }
+                writer.Close();
+                SetDirty(false);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TM Editor: Failed to save machine moves. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while saving the machine moves. Please try again.",
+                    "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void RefreshMachineMoveList()
         {
             machineListBox.Items.Clear();
@@ -194,6 +269,60 @@ namespace DSPRE
             }
         }
 
+        private void PopulateMoveComboBox()
+        {
+            moveComboBox.Items.Clear();
+            string[] moveNames = RomInfo.GetAttackNames();
+            for (int i = 0; i < moveNames.Length; i++)
+            {
+                moveComboBox.Items.Add($"{moveNames[i]}");
+            }
+        }
+
+        private void machineListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (machineListBox.SelectedIndex > 0 && machineListBox.SelectedIndex < curMachineMoves.Length)
+            {
+                Helpers.DisableHandlers();
+
+                selectedTMIndex = machineListBox.SelectedIndex;
+                int moveId = curMachineMoves[selectedTMIndex];
+                moveComboBox.SelectedIndex = moveId;
+
+                Helpers.EnableHandlers();
+            }
+        }
+
+        private void moveComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (Helpers.HandlersDisabled)
+                return;
+
+            if (selectedTMIndex < 0 || selectedTMIndex >= curMachineMoves.Length)
+                return;
+
+            int selectedMoveId = moveComboBox.SelectedIndex;
+            curMachineMoves[selectedTMIndex] = selectedMoveId;
+
+            // Update the listbox entry
+            string machineLabel = MachineLabelFromIndex(selectedTMIndex);
+            machineListBox.Items[selectedTMIndex] = $"{machineLabel} - {RomInfo.GetAttackNames()[selectedMoveId]}";
+
+            SetDirty(true);
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            SaveChanges();
+        }
+
+        private void TMEditor_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!CheckDiscardChanges())
+            {
+                e.Cancel = true;
+            }
+        }
     }
 
 }

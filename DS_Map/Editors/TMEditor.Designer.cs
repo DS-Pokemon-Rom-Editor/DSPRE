@@ -44,6 +44,7 @@
             this.machineListBox.Name = "machineListBox";
             this.machineListBox.Size = new System.Drawing.Size(225, 394);
             this.machineListBox.TabIndex = 0;
+            this.machineListBox.SelectedIndexChanged += new System.EventHandler(this.machineListBox_SelectedIndexChanged);
             // 
             // TMListLabel
             // 
@@ -61,6 +62,7 @@
             this.moveComboBox.Name = "moveComboBox";
             this.moveComboBox.Size = new System.Drawing.Size(121, 21);
             this.moveComboBox.TabIndex = 2;
+            this.moveComboBox.SelectedIndexChanged += new System.EventHandler(this.moveComboBox_SelectedIndexChanged);
             // 
             // saveButton
             // 
@@ -73,6 +75,7 @@
             this.saveButton.Text = "Save";
             this.saveButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.saveButton.UseVisualStyleBackColor = true;
+            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
             // 
             // moveLabel
             // 
@@ -113,7 +116,8 @@
             this.Controls.Add(this.TMListLabel);
             this.Controls.Add(this.machineListBox);
             this.Name = "TMEditor";
-            this.Text = "TMEditor";
+            this.Text = "TM/HM Editor";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.TMEditor_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 
