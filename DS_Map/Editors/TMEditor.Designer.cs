@@ -102,6 +102,7 @@
             this.paletteComboBox.Name = "paletteComboBox";
             this.paletteComboBox.Size = new System.Drawing.Size(121, 21);
             this.paletteComboBox.TabIndex = 6;
+            this.paletteComboBox.SelectedIndexChanged += new System.EventHandler(this.paletteComboBox_SelectedIndexChanged);
             // 
             // TMEditor
             // 

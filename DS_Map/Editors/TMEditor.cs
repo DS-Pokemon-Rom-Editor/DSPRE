@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace DSPRE
 
         private int selectedTMIndex = -1;        
         private int[] curMachineMoves = new int[machineCount];
+        private int[] curMachinePalettes = new int[machineCount];
         private bool dirty = false;
 
         public TMEditor()
@@ -26,8 +28,10 @@ namespace DSPRE
             InitializeComponent();
 
             PopulateMoveComboBox();
+            PopulateTypeComboBox();
 
             curMachineMoves = ReadMachineMoves();
+            curMachinePalettes = ReadMachinePalettes();
             RefreshMachineMoveList();
         }
 
@@ -131,6 +135,32 @@ namespace DSPRE
             return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - 91}";
         }
 
+        public static int[] ReadMachinePalettes()
+        {
+            uint itemTableOffset = RomInfo.GetItemTableOffset();
+            int startIndex = 328; // TMs/HMs start at item ID 328
+
+            int[] paletteIds = new int[machineCount];
+
+            try
+            {
+                for (int i = 0; i < machineCount; i++)
+                {
+                    paletteIds[i] = ARM9.ReadWordLE((uint)(itemTableOffset + (startIndex + i) * 8 + 4));
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TM Editor: Failed to read palette IDs. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while reading the palette IDs. There may have been an issue when reading the ARM9.",
+                    "Read Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return new int[machineCount];
+            }
+
+            return paletteIds;
+
+        }
+
         #endregion       
 
         private void SetDirty(bool isDirty)
@@ -175,18 +205,26 @@ namespace DSPRE
         {
             try
             {
+                // Write moves
                 var writer = new ARM9.Writer(RomInfo.GetMachineMoveOffset());
                 for (int i = 0; i < curMachineMoves.Length; i++)
                 {
                     writer.Write((ushort)curMachineMoves[i]);
                 }
                 writer.Close();
+
+                // Write palettes
+                for (int i = 0; i < curMachinePalettes.Length; i++)
+                {
+                    WritePaletteID(i, curMachinePalettes[i]);
+                }
+
                 SetDirty(false);
             }
             catch (Exception ex)
             {
-                AppLogger.Error($"TM Editor: Failed to save machine moves. Exception: {ex.Message}");
-                MessageBox.Show("An error occurred while saving the machine moves. Please try again.",
+                AppLogger.Error($"TM Editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while saving the machine moves or palettes. Please try again.",
                     "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -212,16 +250,110 @@ namespace DSPRE
                 moveComboBox.Items.Add($"{moveNames[i]}");
             }
         }
+        
+        private void PopulateTypeComboBox()
+        {
+            string[] typeNames = RomInfo.GetTypeNames();
+            for (int i = 0; i < typeNames.Length; i++)
+            {
+                paletteComboBox.Items.Add($"{typeNames[i]}");
+            }
+        }
+
+        private string GetMoveNameFromID(int moveId)
+        {
+            string[] moveNames = RomInfo.GetAttackNames();
+            if (moveId >= 0 && moveId < moveNames.Length)
+            {
+                return moveNames[moveId];
+            }
+            return $"UNK_{moveId}";
+        }
+
+        private void WritePaletteID(int machineIndex, int paletteID)
+        {
+            uint itemTableOffset = RomInfo.GetItemTableOffset();
+            int adjustedIndex = machineIndex + 328; // TMs/HMs start at item ID 328
+            try
+            {
+                ARM9.WriteBytes(BitConverter.GetBytes((ushort)paletteID), (uint)(itemTableOffset + adjustedIndex * 8 + 4));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TM Editor: Failed to write palette ID for machine index {machineIndex}. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while writing the palette ID. There may have been an issue when writing to the ARM9.",
+                    "Write Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private int PaletteToTypeIndex(int paletteID)
+        {
+            // Maps palette IDs to type indices, these have no sensible order nor are they sequential
+            switch (paletteID)
+            {
+                case 398: return 1;  // Fighting
+                case 399: return 16; // Dragon
+                case 400: return 11; // Water
+                case 401: return 14; // Psychic
+                case 402: return 0;  // Normal
+                case 403: return 3;  // Poison
+                case 404: return 15; // Ice
+                case 405: return 12; // Grass
+                case 406: return 10; // Fire
+                case 407: return 17; // Dark
+                case 408: return 8;  // Steel
+                case 409: return 13; // Electric
+                case 410: return 4;  // Ground
+                case 411: return 7;  // Ghost
+                case 412: return 5;  // Rock
+                case 413: return 2;  // Flying
+                case 610: return 6;  // Bug
+                default: return 0;   // Fallback to Normal
+            }
+        }
+
+        private int TypeIndexToPalette(int typeIndex)
+        {
+            // Reverse mapping of PaletteToTypeIndex
+            switch (typeIndex)
+            {
+                case 0: return 402;  // Normal
+                case 1: return 398;  // Fighting
+                case 2: return 413;  // Flying
+                case 3: return 403;  // Poison
+                case 4: return 410;  // Ground
+                case 5: return 405;  // Rock
+                case 6: return 610;  // Bug
+                case 7: return 411;  // Ghost
+                case 8: return 408;  // Steel
+                                     // Unknown type does not have a palette
+                case 10: return 406; // Fire
+                case 11: return 400; // Water
+                case 12: return 407; // Grass
+                case 13: return 409; // Electric
+                case 14: return 401; // Psychic
+                case 15: return 404; // Ice
+                case 16: return 399; // Dragon
+                case 17: return 410; // Dark
+                default: return 402; // Fallback to Normal
+            }
+        }
+
 
         private void machineListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (machineListBox.SelectedIndex > 0 && machineListBox.SelectedIndex < curMachineMoves.Length)
+            if (machineListBox.SelectedIndex >= 0 
+                && machineListBox.SelectedIndex < curMachineMoves.Length 
+                && machineListBox.SelectedIndex < curMachinePalettes.Length)
             {
                 Helpers.DisableHandlers();
 
                 selectedTMIndex = machineListBox.SelectedIndex;
                 int moveId = curMachineMoves[selectedTMIndex];
                 moveComboBox.SelectedIndex = moveId;
+
+                int paletteId = curMachinePalettes[selectedTMIndex];
+                paletteComboBox.SelectedIndex = PaletteToTypeIndex(paletteId);
 
                 Helpers.EnableHandlers();
             }
@@ -240,9 +372,22 @@ namespace DSPRE
 
             // Update the listbox entry
             string machineLabel = MachineLabelFromIndex(selectedTMIndex);
-            machineListBox.Items[selectedTMIndex] = $"{machineLabel} - {RomInfo.GetAttackNames()[selectedMoveId]}";
+            machineListBox.Items[selectedTMIndex] = $"{machineLabel} - {GetMoveNameFromID(selectedMoveId)}";
 
             SetDirty(true);
+        }
+        private void paletteComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (Helpers.HandlersDisabled)
+                return;
+
+            if (selectedTMIndex < 0 || selectedTMIndex >= curMachineMoves.Length)
+                return;
+
+            int selectedTypeIndex = paletteComboBox.SelectedIndex;
+            int paletteId = TypeIndexToPalette(selectedTypeIndex);
+
+            curMachinePalettes[selectedTMIndex] = paletteId;
         }
 
         private void saveButton_Click(object sender, EventArgs e)
