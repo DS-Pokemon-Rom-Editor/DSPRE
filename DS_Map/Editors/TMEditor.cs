@@ -47,7 +47,7 @@ namespace DSPRE
             try
             {
                 // Read 200 bytes (100 moves x 2 bytes each little endian) from ARM9
-                var reader = new ARM9.Reader(GetMachineMoveOffset());
+                var reader = new ARM9.Reader(RomInfo.GetMachineMoveOffset());
                 
                 for (int i = 0; i < moves.Length; i++)
                 {
@@ -133,72 +133,6 @@ namespace DSPRE
 
         #endregion       
 
-        private static int GetMachineMoveOffset()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF84EC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFA458;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF8530;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF8500;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF84A4;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF853C;
-                        default:
-                            return 0xF84EC;
-                    }
-                case RomInfo.GameFamilies.Plat:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF0BFC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xF028C;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF0C84;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF0C54;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF0C18;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF0C90;
-                        default:
-                            return 0xF0BFC;
-                    }
-                case RomInfo.GameFamilies.HGSS:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0x1000CC;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFF84C;
-                        case RomInfo.GameLanguages.French:
-                            return 0x1000B0;
-                        case RomInfo.GameLanguages.German:
-                            return 0x100080;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0x100044;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0x1000B4;
-                        default:
-                            return 0x1000CC;
-                    }
-                default:
-                    AppLogger.Error("GetMachineMoveOffset: Unsupported game family.");
-                    throw new NotImplementedException();
-            }
-
-
-        }
-
         private void SetDirty(bool isDirty)
         {
             dirty = isDirty;
@@ -241,7 +175,7 @@ namespace DSPRE
         {
             try
             {
-                var writer = new ARM9.Writer(GetMachineMoveOffset());
+                var writer = new ARM9.Writer(RomInfo.GetMachineMoveOffset());
                 for (int i = 0; i < curMachineMoves.Length; i++)
                 {
                     writer.Write((ushort)curMachineMoves[i]);

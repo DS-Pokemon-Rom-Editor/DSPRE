@@ -1266,6 +1266,134 @@ namespace DSPRE
             }
         }
 
+        public static int GetMachineMoveOffset()
+        {
+            switch (RomInfo.gameFamily)
+            {
+                case RomInfo.GameFamilies.DP:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0xF84EC;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xFA458;
+                        case RomInfo.GameLanguages.French:
+                            return 0xF8530;
+                        case RomInfo.GameLanguages.German:
+                            return 0xF8500;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0xF84A4;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0xF853C;
+                        default:
+                            return 0xF84EC;
+                    }
+                case RomInfo.GameFamilies.Plat:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0xF0BFC;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xF028C;
+                        case RomInfo.GameLanguages.French:
+                            return 0xF0C84;
+                        case RomInfo.GameLanguages.German:
+                            return 0xF0C54;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0xF0C18;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0xF0C90;
+                        default:
+                            return 0xF0BFC;
+                    }
+                case RomInfo.GameFamilies.HGSS:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0x1000CC;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xFF84C;
+                        case RomInfo.GameLanguages.French:
+                            return 0x1000B0;
+                        case RomInfo.GameLanguages.German:
+                            return 0x100080;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0x100044;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0x1000B4;
+                        default:
+                            return 0x1000CC;
+                    }
+                default:
+                    AppLogger.Error("GetMachineMoveOffset: Unsupported game family.");
+                    throw new NotImplementedException();
+            }
+        }
+
+        private uint GetNarcTableOffset()
+        {
+            switch (RomInfo.gameFamily)
+            {
+                case RomInfo.GameFamilies.DP:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0xF85B4;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xFA520;
+                        case RomInfo.GameLanguages.French:
+                            return 0xF85F8;
+                        case RomInfo.GameLanguages.German:
+                            return 0xF85C8;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0xF856C;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0xF8604;
+                        default:
+                            return 0xF85B4;
+                    }
+                case RomInfo.GameFamilies.Plat:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0xF0CC4;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xF0354;
+                        case RomInfo.GameLanguages.French:
+                            return 0xF0D4C;
+                        case RomInfo.GameLanguages.German:
+                            return 0xF0D1C;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0xF0CE0;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0xF0D58;
+                        default:
+                            return 0xF0CC4;
+                    }
+                case RomInfo.GameFamilies.HGSS:
+                    switch (RomInfo.gameLanguage)
+                    {
+                        case RomInfo.GameLanguages.English:
+                            return 0x100194;
+                        case RomInfo.GameLanguages.Japanese:
+                            return 0xFF914;
+                        case RomInfo.GameLanguages.French:
+                            return 0x100178;
+                        case RomInfo.GameLanguages.German:
+                            return 0x100148;
+                        case RomInfo.GameLanguages.Italian:
+                            return 0x10010C;
+                        case RomInfo.GameLanguages.Spanish:
+                            return 0x10017C;
+                        default:
+                            return 0x100194;
+                    }
+                default:
+                    AppLogger.Error("GetNarcTableOffset: Unsupported game");
+                    throw new NotSupportedException("Game not supported");
+            }
+        }
+
         public static int SetTrainerNameMaxLen()
         {
             int maxLength = TrainerFile.defaultNameLen;
