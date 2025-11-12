@@ -1330,7 +1330,7 @@ namespace DSPRE
             }
         }
 
-        private uint GetNarcTableOffset()
+        public static uint GetItemTableOffset()
         {
             switch (RomInfo.gameFamily)
             {
