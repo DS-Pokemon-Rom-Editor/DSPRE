@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static DSPRE.RomInfo;
 
 namespace DSPRE
 {
@@ -25,6 +26,8 @@ namespace DSPRE
 
         public TMEditor()
         {
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
+
             InitializeComponent();
 
             PopulateMoveComboBox();
@@ -322,21 +325,27 @@ namespace DSPRE
                 case 2: return 413;  // Flying
                 case 3: return 403;  // Poison
                 case 4: return 410;  // Ground
-                case 5: return 405;  // Rock
+                case 5: return 412;  // Rock
                 case 6: return 610;  // Bug
                 case 7: return 411;  // Ghost
                 case 8: return 408;  // Steel
                                      // Unknown type does not have a palette
                 case 10: return 406; // Fire
                 case 11: return 400; // Water
-                case 12: return 407; // Grass
+                case 12: return 405; // Grass
                 case 13: return 409; // Electric
                 case 14: return 401; // Psychic
                 case 15: return 404; // Ice
                 case 16: return 399; // Dragon
-                case 17: return 410; // Dark
+                case 17: return 407; // Dark
                 default: return 402; // Fallback to Normal
             }
+        }
+
+        private int GetMoveType(int moveId)
+        {
+            var moveData = new MoveData(moveId);
+            return (int)moveData.movetype;
         }
 
 
@@ -388,6 +397,8 @@ namespace DSPRE
             int paletteId = TypeIndexToPalette(selectedTypeIndex);
 
             curMachinePalettes[selectedTMIndex] = paletteId;
+
+            SetDirty(true);
         }
 
         private void saveButton_Click(object sender, EventArgs e)
@@ -401,6 +412,119 @@ namespace DSPRE
             {
                 e.Cancel = true;
             }
+        }
+
+        private void autoPaletteButton_Click(object sender, EventArgs e)
+        {            
+            if (selectedTMIndex < 0 || selectedTMIndex >= curMachineMoves.Length)
+                return;
+
+            int moveId = curMachineMoves[selectedTMIndex];
+            int typeIndex = GetMoveType(moveId);
+            paletteComboBox.SelectedIndex = typeIndex;
+        }
+
+        private void exportButton_Click(object sender, EventArgs e)
+        {
+
+            var saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+            saveFileDialog.Title = "Export Machine Data";
+
+            if (saveFileDialog.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }            
+            
+            string filePath = saveFileDialog.FileName;
+
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    writer.WriteLine("Machine,Move ID,Move Name,Palette ID");
+                    for (int i = 0; i < curMachineMoves.Length; i++)
+                    {
+                        string machineLabel = MachineLabelFromIndex(i);
+                        int moveId = curMachineMoves[i];
+                        string moveName = GetMoveNameFromID(moveId);
+                        int paletteId = curMachinePalettes[i];
+                        writer.WriteLine($"{machineLabel},{moveId},{moveName},{paletteId}");
+                    }
+                }
+                MessageBox.Show("Machine data exported successfully.", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TM Editor: Failed to export machine data. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while exporting the machine data. Please try again.",
+                    "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
+        private void importButton_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+            openFileDialog.Title = "Import Machine Data";
+
+            if (openFileDialog.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            string filePath = openFileDialog.FileName;
+
+            try
+            {
+                var lines = File.ReadAllLines(filePath);
+                for (int i = 1; i < lines.Length; i++) // Skip header
+                {
+                    var parts = lines[i].Split(',');
+
+                    if (parts.Length < 4)
+                        continue;
+
+                    // Read label, move ID, and palette ID
+                    string machineLabel = parts[0].Trim();
+                    int moveId = int.Parse(parts[1].Trim());
+                    int paletteId = int.Parse(parts[3].Trim());
+                    int machineIndex;
+
+                    if (machineLabel.StartsWith("TM"))
+                    {
+                        machineIndex = int.Parse(machineLabel.Substring(2)) - 1;
+                    }
+                    else if (machineLabel.StartsWith("HM"))
+                    {
+                        machineIndex = int.Parse(machineLabel.Substring(2)) + 91;
+                    }
+                    else
+                    {
+                        continue; // Invalid label
+                    }
+
+                    if (machineIndex >= 0 && machineIndex < curMachineMoves.Length)
+                    {
+                        curMachineMoves[machineIndex] = moveId;
+                        curMachinePalettes[machineIndex] = paletteId;
+                    }
+                }
+                RefreshMachineMoveList();
+                SetDirty(true);
+
+                MessageBox.Show("Machine data imported successfully.", "Import Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TM Editor: Failed to import machine data. Exception: {ex.Message}");
+                MessageBox.Show("An error occurred while importing the machine data. Please ensure the file format is correct.",
+                    "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+
         }
     }
 

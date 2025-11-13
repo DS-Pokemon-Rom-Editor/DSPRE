@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.machineListBox = new System.Windows.Forms.ListBox();
             this.TMListLabel = new System.Windows.Forms.Label();
             this.moveComboBox = new System.Windows.Forms.ComboBox();
@@ -35,6 +36,10 @@
             this.moveLabel = new System.Windows.Forms.Label();
             this.paletteLabel = new System.Windows.Forms.Label();
             this.paletteComboBox = new System.Windows.Forms.ComboBox();
+            this.autoPaletteButton = new System.Windows.Forms.Button();
+            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.exportButton = new System.Windows.Forms.Button();
+            this.importButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // machineListBox
@@ -68,9 +73,9 @@
             // 
             this.saveButton.Image = global::DSPRE.Properties.Resources.saveButton;
             this.saveButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.saveButton.Location = new System.Drawing.Point(246, 405);
+            this.saveButton.Location = new System.Drawing.Point(244, 398);
             this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(121, 23);
+            this.saveButton.Size = new System.Drawing.Size(121, 30);
             this.saveButton.TabIndex = 3;
             this.saveButton.Text = "Save";
             this.saveButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -102,13 +107,58 @@
             this.paletteComboBox.Name = "paletteComboBox";
             this.paletteComboBox.Size = new System.Drawing.Size(121, 21);
             this.paletteComboBox.TabIndex = 6;
+            this.toolTip.SetToolTip(this.paletteComboBox, "Select the type that will be used for the palette.\r\n??? type does not have a pale" +
+        "tte and will use Normal instead.");
             this.paletteComboBox.SelectedIndexChanged += new System.EventHandler(this.paletteComboBox_SelectedIndexChanged);
+            // 
+            // autoPaletteButton
+            // 
+            this.autoPaletteButton.Image = global::DSPRE.Properties.Resources.resetColorTable;
+            this.autoPaletteButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.autoPaletteButton.Location = new System.Drawing.Point(244, 122);
+            this.autoPaletteButton.Name = "autoPaletteButton";
+            this.autoPaletteButton.Size = new System.Drawing.Size(121, 30);
+            this.autoPaletteButton.TabIndex = 7;
+            this.autoPaletteButton.Text = "Auto Palette";
+            this.autoPaletteButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.toolTip.SetToolTip(this.autoPaletteButton, "Determine palette from move type");
+            this.autoPaletteButton.UseVisualStyleBackColor = true;
+            this.autoPaletteButton.Click += new System.EventHandler(this.autoPaletteButton_Click);
+            // 
+            // exportButton
+            // 
+            this.exportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
+            this.exportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.exportButton.Location = new System.Drawing.Point(244, 362);
+            this.exportButton.Name = "exportButton";
+            this.exportButton.Size = new System.Drawing.Size(121, 30);
+            this.exportButton.TabIndex = 8;
+            this.exportButton.Text = "Export";
+            this.exportButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.exportButton.UseVisualStyleBackColor = true;
+            this.exportButton.Click += new System.EventHandler(this.exportButton_Click);
+            // 
+            // importButton
+            // 
+            this.importButton.Image = global::DSPRE.Properties.Resources.importArrow;
+            this.importButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.importButton.Location = new System.Drawing.Point(244, 326);
+            this.importButton.Name = "importButton";
+            this.importButton.Size = new System.Drawing.Size(121, 30);
+            this.importButton.TabIndex = 9;
+            this.importButton.Text = "Import";
+            this.importButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.importButton.UseVisualStyleBackColor = true;
+            this.importButton.Click += new System.EventHandler(this.importButton_Click);
             // 
             // TMEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(379, 458);
+            this.Controls.Add(this.importButton);
+            this.Controls.Add(this.exportButton);
+            this.Controls.Add(this.autoPaletteButton);
             this.Controls.Add(this.paletteComboBox);
             this.Controls.Add(this.paletteLabel);
             this.Controls.Add(this.moveLabel);
@@ -133,5 +183,9 @@
         private System.Windows.Forms.Label moveLabel;
         private System.Windows.Forms.Label paletteLabel;
         private System.Windows.Forms.ComboBox paletteComboBox;
+        private System.Windows.Forms.Button autoPaletteButton;
+        private System.Windows.Forms.ToolTip toolTip;
+        private System.Windows.Forms.Button exportButton;
+        private System.Windows.Forms.Button importButton;
     }
 }
