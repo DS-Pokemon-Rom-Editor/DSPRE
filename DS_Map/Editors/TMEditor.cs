@@ -526,6 +526,38 @@ namespace DSPRE
 
 
         }
+
+        private void autoPaletteAllButton_Click(object sender, EventArgs e)
+        {
+
+            var result = MessageBox.Show("This will set the palette of all TMs and HMs based on their move types.\n" +
+                "If any of the moves have custom types (e.g. Fairy) they will receive the Normal type palette instead and " +
+                "may need to be manually corrected.\n" +
+                "Do you want to continue?",
+                "Auto-Set All Palettes", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+            {
+                return;
+            }
+
+            for (int i = 0; i < curMachineMoves.Length; i++)
+            {
+                int moveId = curMachineMoves[i];
+                int typeIndex = GetMoveType(moveId);
+                curMachinePalettes[i] = TypeIndexToPalette(typeIndex);
+            }
+
+            // Refresh UI if a machine is selected
+            if (selectedTMIndex >= 0 && selectedTMIndex < curMachineMoves.Length)
+            {
+                int paletteId = curMachinePalettes[selectedTMIndex];
+                paletteComboBox.SelectedIndex = PaletteToTypeIndex(paletteId);
+            }
+
+            SetDirty(true);
+
+        }
     }
 
 }

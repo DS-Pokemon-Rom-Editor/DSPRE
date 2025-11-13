@@ -40,6 +40,7 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.exportButton = new System.Windows.Forms.Button();
             this.importButton = new System.Windows.Forms.Button();
+            this.autoPaletteAllButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // machineListBox
@@ -151,6 +152,20 @@
             this.importButton.UseVisualStyleBackColor = true;
             this.importButton.Click += new System.EventHandler(this.importButton_Click);
             // 
+            // autoPaletteAllButton
+            // 
+            this.autoPaletteAllButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.autoPaletteAllButton.Location = new System.Drawing.Point(244, 158);
+            this.autoPaletteAllButton.Name = "autoPaletteAllButton";
+            this.autoPaletteAllButton.Size = new System.Drawing.Size(121, 30);
+            this.autoPaletteAllButton.TabIndex = 7;
+            this.autoPaletteAllButton.Text = "Auto Palette All";
+            this.autoPaletteAllButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.toolTip.SetToolTip(this.autoPaletteAllButton, "Apply automatic palette based on move type to all moves.\r\nCaution: TMs/HMs of mov" +
+        "es with unknown types (e.g. Fairy) will be assigned the Normal type palette.\r\n");
+            this.autoPaletteAllButton.UseVisualStyleBackColor = true;
+            this.autoPaletteAllButton.Click += new System.EventHandler(this.autoPaletteAllButton_Click);
+            // 
             // TMEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -158,6 +173,7 @@
             this.ClientSize = new System.Drawing.Size(379, 458);
             this.Controls.Add(this.importButton);
             this.Controls.Add(this.exportButton);
+            this.Controls.Add(this.autoPaletteAllButton);
             this.Controls.Add(this.autoPaletteButton);
             this.Controls.Add(this.paletteComboBox);
             this.Controls.Add(this.paletteLabel);
@@ -187,5 +203,6 @@
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Button exportButton;
         private System.Windows.Forms.Button importButton;
+        private System.Windows.Forms.Button autoPaletteAllButton;
     }
 }
