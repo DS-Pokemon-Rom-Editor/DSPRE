@@ -135,7 +135,7 @@ namespace DSPRE
         /// the format "HMYY", where "YY" is the index minus 91.</returns>
         public static string MachineLabelFromIndex(int index)
         {
-            return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - 91}";
+            return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - PokemonPersonalData.tmsCount + 1:00}";
         }
 
         public static int[] ReadMachinePalettes()
@@ -498,7 +498,7 @@ namespace DSPRE
                     }
                     else if (machineLabel.StartsWith("HM"))
                     {
-                        machineIndex = int.Parse(machineLabel.Substring(2)) + 91;
+                        machineIndex = int.Parse(machineLabel.Substring(2)) + PokemonPersonalData.tmsCount - 1;
                     }
                     else
                     {
