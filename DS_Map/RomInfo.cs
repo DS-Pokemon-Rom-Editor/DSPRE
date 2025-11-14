@@ -178,7 +178,9 @@ namespace DSPRE
             itemData,
             itemIcons,
 
-            tradeData
+            tradeData,
+
+            eggMoves,
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -1394,7 +1396,7 @@ namespace DSPRE
             }
         }
 
-        public static int GetEggTableMoveOffset()
+        public static int GetEggMoveTableOffset()
         {
             switch (RomInfo.gameFamily)
             {
@@ -1779,6 +1781,7 @@ namespace DSPRE
 
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
+                        [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9"
                     };
 
                     //Encounter archive is different for SS

@@ -114,6 +114,7 @@
             this.itemEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.overworldEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tradeEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.tMEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -153,7 +154,7 @@
             this.weatherMapEditor = new System.Windows.Forms.ToolStripButton();
             this.versionLabel = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.tMEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.eggMoveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mainTabControl.SuspendLayout();
             this.headerEditorTabPage.SuspendLayout();
             this.matrixEditorTabPage.SuspendLayout();
@@ -979,7 +980,8 @@
             this.itemEditorToolStripMenuItem,
             this.overworldEditorToolStripMenuItem,
             this.tradeEditorToolStripMenuItem,
-            this.tMEditorToolStripMenuItem});
+            this.tMEditorToolStripMenuItem,
+            this.eggMoveEditorToolStripMenuItem});
             this.otherEditorsToolStripMenuItem.Enabled = false;
             this.otherEditorsToolStripMenuItem.Name = "otherEditorsToolStripMenuItem";
             this.otherEditorsToolStripMenuItem.Size = new System.Drawing.Size(88, 20);
@@ -1040,6 +1042,13 @@
             this.tradeEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.tradeEditorToolStripMenuItem.Text = "Trade Editor";
             this.tradeEditorToolStripMenuItem.Click += new System.EventHandler(this.tradeEditorToolStripMenuItem_Click);
+            // 
+            // tMEditorToolStripMenuItem
+            // 
+            this.tMEditorToolStripMenuItem.Name = "tMEditorToolStripMenuItem";
+            this.tMEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.tMEditorToolStripMenuItem.Text = "TM Editor";
+            this.tMEditorToolStripMenuItem.Click += new System.EventHandler(this.tMEditorToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem1
             // 
@@ -1468,12 +1477,12 @@
             this.versionLabel.Text = "ROM:";
             this.versionLabel.Visible = false;
             // 
-            // tMEditorToolStripMenuItem
+            // eggMoveEditorToolStripMenuItem
             // 
-            this.tMEditorToolStripMenuItem.Name = "tMEditorToolStripMenuItem";
-            this.tMEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.tMEditorToolStripMenuItem.Text = "TM Editor";
-            this.tMEditorToolStripMenuItem.Click += new System.EventHandler(this.tMEditorToolStripMenuItem_Click);
+            this.eggMoveEditorToolStripMenuItem.Name = "eggMoveEditorToolStripMenuItem";
+            this.eggMoveEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.eggMoveEditorToolStripMenuItem.Text = "Egg Move Editor";
+            this.eggMoveEditorToolStripMenuItem.Click += new System.EventHandler(this.eggMoveEditorToolStripMenuItem_Click);
             // 
             // MainProgram
             // 
@@ -1696,6 +1705,7 @@
         private System.Windows.Forms.ToolStripButton tradeEditorButton;
         private System.Windows.Forms.ToolStripMenuItem openCharmapManagerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tMEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
     }
 }
 

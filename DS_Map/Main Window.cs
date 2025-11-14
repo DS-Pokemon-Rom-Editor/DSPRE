@@ -1840,6 +1840,12 @@ namespace DSPRE
             charMapManager.ShowDialog();
         }
 
+        private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {            
+            EggMoveEditor eggMoveEditor = new EggMoveEditor();
+            eggMoveEditor.ShowDialog();
+        }
+
         #endregion
 
         private void trainerEditorStatButton_Click(object sender, EventArgs e)
