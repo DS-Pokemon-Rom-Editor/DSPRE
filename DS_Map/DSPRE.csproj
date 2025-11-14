@@ -112,6 +112,12 @@
     <Compile Include="DSUtils\NSBUtils.cs" />
     <Compile Include="DSUtils\OverlayUtils.cs" />
     <Compile Include="DSUtils\TextConverter.cs" />
+    <Compile Include="Editors\EggMoveEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\EggMoveEditor.Designer.cs">
+      <DependentUpon>EggMoveEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -539,6 +545,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\writeText.Designer.cs" />
+    <EmbeddedResource Include="Editors\EggMoveEditor.resx">
+      <DependentUpon>EggMoveEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Editors\TMEditor.resx">
       <DependentUpon>TMEditor.cs</DependentUpon>
     </EmbeddedResource>
