@@ -59,19 +59,19 @@
             this.addMoveButton = new System.Windows.Forms.Button();
             this.moveLabel = new System.Windows.Forms.Label();
             this.moveComboBox = new System.Windows.Forms.ComboBox();
-            this.monListGroupBox = new System.Windows.Forms.GroupBox();
-            this.monListBox = new System.Windows.Forms.ListBox();
-            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.bulkEditGroupBox = new System.Windows.Forms.GroupBox();
             this.bulkEditTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.deleteAllComboBox = new System.Windows.Forms.ComboBox();
+            this.deleteAllLabel = new System.Windows.Forms.Label();
             this.replaceAllLabel = new System.Windows.Forms.Label();
             this.replaceeComboBox = new System.Windows.Forms.ComboBox();
             this.replacerComboBox = new System.Windows.Forms.ComboBox();
             this.withLabel = new System.Windows.Forms.Label();
             this.bulkReplaceButton = new System.Windows.Forms.Button();
-            this.deleteAllLabel = new System.Windows.Forms.Label();
-            this.deleteAllComboBox = new System.Windows.Forms.ComboBox();
             this.deleteAllButton = new System.Windows.Forms.Button();
+            this.monListGroupBox = new System.Windows.Forms.GroupBox();
+            this.monListBox = new System.Windows.Forms.ListBox();
+            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.mainTableLayoutPanel.SuspendLayout();
             this.editMonsGroupBox.SuspendLayout();
             this.editMonTableLayoutPanel.SuspendLayout();
@@ -79,9 +79,9 @@
             this.moveListGroupBox.SuspendLayout();
             this.editMovesGroupBox.SuspendLayout();
             this.editMoveTableLayoutPanel.SuspendLayout();
-            this.monListGroupBox.SuspendLayout();
             this.bulkEditGroupBox.SuspendLayout();
             this.bulkEditTableLayoutPanel.SuspendLayout();
+            this.monListGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
             // mainTableLayoutPanel
@@ -195,8 +195,8 @@
             this.listSizeLabel.Size = new System.Drawing.Size(162, 13);
             this.listSizeLabel.TabIndex = 38;
             this.listSizeLabel.Text = "Total List Size:";
-            this.toolTip.SetToolTip(this.listSizeLabel, "DPPt have a strictly limited list size. \r\nIn order to add new entries others have" +
-        " to be replaced or removed.");
+            this.toolTip.SetToolTip(this.listSizeLabel, "The Egg Move Table has a strictly limited size. \r\nIn order to add new entries oth" +
+        "ers have to be replaced or removed.");
             // 
             // deleteMonButton
             // 
@@ -387,8 +387,9 @@
             this.moveCountLabel.Size = new System.Drawing.Size(162, 13);
             this.moveCountLabel.TabIndex = 41;
             this.moveCountLabel.Text = "Move Count:";
-            this.toolTip.SetToolTip(this.moveCountLabel, "Amount of Egg Moves the currently selected Pokémon has.\r\nEach Egg Move needs at l" +
-        "east 2 Bytes of space in the list.\r\n");
+            this.toolTip.SetToolTip(this.moveCountLabel, "Amount of Egg Moves the currently selected Pokémon has.\r\nBy default each Pokémon " +
+        "can have at most 16 Egg Moves.\r\nEach Egg Move needs at least 2 Bytes of space in" +
+        " the list.\r\n");
             // 
             // moveStatusLabel
             // 
@@ -493,27 +494,6 @@
             this.moveComboBox.TabIndex = 2;
             this.moveComboBox.SelectedIndexChanged += new System.EventHandler(this.moveComboBox_SelectedIndexChanged);
             // 
-            // monListGroupBox
-            // 
-            this.monListGroupBox.Controls.Add(this.monListBox);
-            this.monListGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.monListGroupBox.Location = new System.Drawing.Point(3, 3);
-            this.monListGroupBox.Name = "monListGroupBox";
-            this.monListGroupBox.Size = new System.Drawing.Size(171, 417);
-            this.monListGroupBox.TabIndex = 2;
-            this.monListGroupBox.TabStop = false;
-            this.monListGroupBox.Text = "Pokémon List";
-            // 
-            // monListBox
-            // 
-            this.monListBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.monListBox.FormattingEnabled = true;
-            this.monListBox.Location = new System.Drawing.Point(3, 16);
-            this.monListBox.Name = "monListBox";
-            this.monListBox.Size = new System.Drawing.Size(165, 398);
-            this.monListBox.TabIndex = 1;
-            this.monListBox.SelectedIndexChanged += new System.EventHandler(this.monListBox_SelectedIndexChanged);
-            // 
             // bulkEditGroupBox
             // 
             this.editMoveTableLayoutPanel.SetColumnSpan(this.bulkEditGroupBox, 3);
@@ -551,6 +531,28 @@
             this.bulkEditTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.bulkEditTableLayoutPanel.Size = new System.Drawing.Size(242, 173);
             this.bulkEditTableLayoutPanel.TabIndex = 0;
+            // 
+            // deleteAllComboBox
+            // 
+            this.deleteAllComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.deleteAllComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            this.deleteAllComboBox.FormattingEnabled = true;
+            this.deleteAllComboBox.Location = new System.Drawing.Point(124, 29);
+            this.deleteAllComboBox.Name = "deleteAllComboBox";
+            this.deleteAllComboBox.Size = new System.Drawing.Size(115, 21);
+            this.deleteAllComboBox.TabIndex = 39;
+            // 
+            // deleteAllLabel
+            // 
+            this.deleteAllLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.deleteAllLabel.AutoSize = true;
+            this.deleteAllLabel.Location = new System.Drawing.Point(124, 0);
+            this.deleteAllLabel.Name = "deleteAllLabel";
+            this.deleteAllLabel.Size = new System.Drawing.Size(52, 25);
+            this.deleteAllLabel.TabIndex = 38;
+            this.deleteAllLabel.Text = "Delete All";
+            this.deleteAllLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // replaceAllLabel
             // 
@@ -611,28 +613,6 @@
             this.bulkReplaceButton.UseVisualStyleBackColor = true;
             this.bulkReplaceButton.Click += new System.EventHandler(this.bulkReplaceButton_Click);
             // 
-            // deleteAllLabel
-            // 
-            this.deleteAllLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.deleteAllLabel.AutoSize = true;
-            this.deleteAllLabel.Location = new System.Drawing.Point(124, 0);
-            this.deleteAllLabel.Name = "deleteAllLabel";
-            this.deleteAllLabel.Size = new System.Drawing.Size(52, 25);
-            this.deleteAllLabel.TabIndex = 38;
-            this.deleteAllLabel.Text = "Delete All";
-            this.deleteAllLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // deleteAllComboBox
-            // 
-            this.deleteAllComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.deleteAllComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
-            this.deleteAllComboBox.FormattingEnabled = true;
-            this.deleteAllComboBox.Location = new System.Drawing.Point(124, 29);
-            this.deleteAllComboBox.Name = "deleteAllComboBox";
-            this.deleteAllComboBox.Size = new System.Drawing.Size(115, 21);
-            this.deleteAllComboBox.TabIndex = 39;
-            // 
             // deleteAllButton
             // 
             this.deleteAllButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
@@ -647,6 +627,27 @@
             this.deleteAllButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.deleteAllButton.UseVisualStyleBackColor = true;
             this.deleteAllButton.Click += new System.EventHandler(this.deleteAllButton_Click);
+            // 
+            // monListGroupBox
+            // 
+            this.monListGroupBox.Controls.Add(this.monListBox);
+            this.monListGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.monListGroupBox.Location = new System.Drawing.Point(3, 3);
+            this.monListGroupBox.Name = "monListGroupBox";
+            this.monListGroupBox.Size = new System.Drawing.Size(171, 417);
+            this.monListGroupBox.TabIndex = 2;
+            this.monListGroupBox.TabStop = false;
+            this.monListGroupBox.Text = "Pokémon List";
+            // 
+            // monListBox
+            // 
+            this.monListBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.monListBox.FormattingEnabled = true;
+            this.monListBox.Location = new System.Drawing.Point(3, 16);
+            this.monListBox.Name = "monListBox";
+            this.monListBox.Size = new System.Drawing.Size(165, 398);
+            this.monListBox.TabIndex = 1;
+            this.monListBox.SelectedIndexChanged += new System.EventHandler(this.monListBox_SelectedIndexChanged);
             // 
             // EggMoveEditor
             // 
@@ -666,10 +667,10 @@
             this.editMovesGroupBox.ResumeLayout(false);
             this.editMoveTableLayoutPanel.ResumeLayout(false);
             this.editMoveTableLayoutPanel.PerformLayout();
-            this.monListGroupBox.ResumeLayout(false);
             this.bulkEditGroupBox.ResumeLayout(false);
             this.bulkEditTableLayoutPanel.ResumeLayout(false);
             this.bulkEditTableLayoutPanel.PerformLayout();
+            this.monListGroupBox.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

@@ -32,10 +32,11 @@ namespace DSPRE
 
     public partial class EggMoveEditor : Form
     {
-        private const int MAX_EGG_MOVES = 16; // Max number of egg moves per species
         private const int EGG_MOVE_OVERLAY_NUMBER = 5;
         private const int EGG_MOVES_SPECIES_CONSTANT = 20000; // Species IDs in egg move data are stored as speciesID + this constant
-        private int MAX_TABLE_SIZE; // in DPPt size is limited, in HGSS it's not
+
+        private int MAX_TABLE_SIZE; // Size limit for the table, game dependent
+        private int MAX_EGG_MOVES = 16; // Max number of egg moves per species, default is 16
 
         private readonly string[] monNames;
         private readonly string[] moveNames;
@@ -122,11 +123,14 @@ namespace DSPRE
 
                 // Try to determine if the special format is being used
                 int magicNumber = reader.ReadInt32();
-                reader.BaseStream.Seek(-4, SeekOrigin.Current);
+                int maxMoveCount = reader.ReadInt32();
+                reader.BaseStream.Seek(-8, SeekOrigin.Current);
 
                 if (magicNumber == 4671301) // "EGG\0" in ASCII
                 {
                     useSpecialFormat = true;
+                    MAX_EGG_MOVES = maxMoveCount;
+                    MAX_TABLE_SIZE = ushort.MaxValue;
                     return null; // reader will not be used in this case
                 }
             }
@@ -431,7 +435,6 @@ namespace DSPRE
             replacerComboBox.EndUpdate();
             deleteAllComboBox.EndUpdate();
         }
-
 
         private void UpdateMonStatus()
         {
@@ -814,6 +817,23 @@ namespace DSPRE
                 var result = MessageBox.Show("The egg move data exceeds the maximum allowed size. " +
                     "Saving now will corrupt the game data. Do you want to proceed?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (result != DialogResult.Yes) { return; }
+            }
+
+            foreach (var entry in eggMoveData)
+            {
+                List<string> affectedMons = new List<string>();
+
+                if (entry.moveIDs.Count > MAX_EGG_MOVES)
+                {                    
+                    affectedMons.Add(monNames[entry.speciesID]);
+                }
+
+                if (affectedMons.Count > 0)
+                {
+                    MessageBox.Show($"The following Pokémon have more than the maximum allowed Egg Moves ({MAX_EGG_MOVES}):\n" +
+                        $"{string.Join(", ", affectedMons)}\n" +
+                        $"This may cause issues in-game.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
 
             SaveEggMoveData();
