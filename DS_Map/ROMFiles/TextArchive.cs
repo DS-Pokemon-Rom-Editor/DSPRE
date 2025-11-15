@@ -239,6 +239,10 @@ namespace DSPRE.ROMFiles
                     messages = TextConverter.ReadMessageFromStream(fs, out key);
                     fs.Close();
                 }
+
+                // Create the .txt file for future use
+                SaveToExpandedDir(ID, false);
+
                 return true;
             }
             catch (Exception ex)
