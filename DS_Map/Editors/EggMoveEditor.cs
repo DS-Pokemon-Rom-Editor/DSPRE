@@ -106,7 +106,10 @@ namespace DSPRE
                 var baseStream = File.OpenRead(path);
                 reader = new EndianBinaryReader(baseStream, Endianness.LittleEndian);
 
-                MAX_TABLE_SIZE = ushort.MaxValue; // no real limit in HGSS
+                // maximum entry index is 0x7FD = 2045 -> 2046*2 = 4092 bytes will be read
+                // if the last halfword is a valid species ID, then another 16 * 2 = 32 bytes will be read
+                // finally, add 2 bytes for the end marker
+                MAX_TABLE_SIZE = 4126;
             }
             else
             {
@@ -121,7 +124,7 @@ namespace DSPRE
                 int magicNumber = reader.ReadInt32();
                 reader.BaseStream.Seek(-4, SeekOrigin.Current);
 
-                if (magicNumber == 0x45474700) // "EGG\0" in ASCII
+                if (magicNumber == 4671301) // "EGG\0" in ASCII
                 {
                     useSpecialFormat = true;
                     return null; // reader will not be used in this case
@@ -188,7 +191,37 @@ namespace DSPRE
         // This function accounts for that format
         private void ReadEggMoveDataSpecial()
         {
-            //ToDo: actually implement this
+            // Every Pokémon has a file in a narc containing its egg moves
+            string folderPath = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
+            string[] files = Directory.GetFiles(folderPath);
+
+            foreach (var filePath in files)
+            {
+                string fileName = Path.GetFileName(filePath);
+                if (int.TryParse(fileName, out int speciesID))
+                {
+                    List<ushort> moveIDs = new List<ushort>();
+                    using (EndianBinaryReader reader = new EndianBinaryReader(File.OpenRead(filePath), Endianness.LittleEndian))
+                    {
+                        while (reader.BaseStream.Position < reader.BaseStream.Length)
+                        {
+                            ushort moveID = reader.ReadUInt16();
+                            if (moveID == 0xFFFF)
+                            {
+                                break;
+                            }
+                            moveIDs.Add(moveID);
+                        }
+                    }
+                    EggMoveEntry eggMoveEntry = new EggMoveEntry(speciesID, moveIDs);
+                    eggMoveData.Add(eggMoveEntry);
+                }
+                else
+                {
+                    AppLogger.Warn($"Invalid egg move file name: {fileName}. Expected a numeric species ID.");
+                }
+            }
+
         }
 
         private void SaveEggMoveData()
@@ -214,6 +247,7 @@ namespace DSPRE
                     writer.Close();
                 }
                 else if (useSpecialFormat)
+                //else if (true) // Temporarily force special format for testing
                 {
                     WriteEggMoveDataSpecial();
                 }
@@ -253,7 +287,47 @@ namespace DSPRE
 
         private void WriteEggMoveDataSpecial()
         {
-            // ToDo: actually implement this
+            // Every Pokémon has a file in a narc containing its egg moves
+            string folderPath = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
+
+            // Create folder if it doesn't exist
+            Directory.CreateDirectory(folderPath);
+
+            // Create a temporary Set to track which species have egg move files
+            HashSet<int> speciesWithFiles = new HashSet<int>();
+
+            foreach (var entry in eggMoveData)
+            {
+                int speciesID = entry.speciesID;
+                string filePath = Path.Combine(folderPath, speciesID.ToString("D4"));
+                using (BinaryWriter writer = new BinaryWriter(File.OpenWrite(filePath)))
+                {
+                    // Write move IDs
+                    foreach (var moveID in entry.moveIDs)
+                    {
+                        writer.Write(moveID);
+                    }
+                    // Write end marker
+                    writer.Write((ushort)0xFFFF);
+                }
+
+                speciesWithFiles.Add(speciesID);
+            }
+
+            // Ensure that species without egg moves have an empty file with just the end marker
+            for (int i = 0; i < monNames.Length; i++)
+            {
+                if (!speciesWithFiles.Contains(i))
+                {
+                    string filePath = Path.Combine(folderPath, i.ToString("D4"));
+                    using (BinaryWriter writer = new BinaryWriter(File.OpenWrite(filePath)))
+                    {
+                        // Write only the end marker
+                        writer.Write((ushort)0xFFFF);
+                    }
+                }
+            }
+
         }
 
         private void SetDirty(bool value)
@@ -470,7 +544,15 @@ namespace DSPRE
         }
 
         private void UpdateListSizeLabel()
-        {         
+        {   
+            if (useSpecialFormat)
+            {
+                listSizeLabel.Text = "List Size: Special Format!";
+                listSizeLabel.ForeColor = Color.Green;
+                toolTip.SetToolTip(listSizeLabel, "Using special format for egg move data, size limits do not apply.");
+                return;
+            }
+
             listSizeLabel.Text = $"List Size: {totalSize} / {MAX_TABLE_SIZE} bytes";
 
             if (totalSize > MAX_TABLE_SIZE)

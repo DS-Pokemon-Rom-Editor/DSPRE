@@ -20,6 +20,7 @@ namespace DSPRE
     {
         public const string folderSuffix = "_DSPRE_contents"; // changed back to public static string
         private const string dataFolderName = @"data";
+        private const string customNarcFolderName = @"data/zcustom";
 
         public static bool isHGE { get; private set; }
         public static string romID { get; private set; }
@@ -1653,7 +1654,8 @@ namespace DSPRE
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
-                        [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc"
+                        [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc",
+                        [DirNames.eggMoves] = $@"{customNarcFolderName}/egg_moves.narc",
                     };
 
                     //Personal Data archive is different for Pearl
@@ -1715,7 +1717,8 @@ namespace DSPRE
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\pl_item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
-                        [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc"
+                        [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc",
+                        [DirNames.eggMoves] = $@"{customNarcFolderName}/egg_moves.narc",
                     };
 
                     if (gameLanguage != GameLanguages.Japanese && gameLanguage != GameLanguages.English)
