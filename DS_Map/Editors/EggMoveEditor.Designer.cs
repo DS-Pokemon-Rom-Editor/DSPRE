@@ -181,7 +181,7 @@
             this.entryIDLabel.Name = "entryIDLabel";
             this.entryIDLabel.Size = new System.Drawing.Size(78, 13);
             this.entryIDLabel.TabIndex = 39;
-            this.entryIDLabel.Text = "Entry ID:";
+            this.entryIDLabel.Text = "Entry Index:";
             // 
             // listSizeLabel
             // 
@@ -409,7 +409,7 @@
             this.moveIDLabel.Name = "moveIDLabel";
             this.moveIDLabel.Size = new System.Drawing.Size(78, 13);
             this.moveIDLabel.TabIndex = 39;
-            this.moveIDLabel.Text = "Move ID:";
+            this.moveIDLabel.Text = "Move Index:";
             // 
             // deleteMoveButton
             // 
@@ -656,6 +656,7 @@
             this.Controls.Add(this.mainTableLayoutPanel);
             this.Name = "EggMoveEditor";
             this.Text = "Egg Move Editor";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.EggMoveEditor_FormClosing);
             this.mainTableLayoutPanel.ResumeLayout(false);
             this.editMonsGroupBox.ResumeLayout(false);
             this.editMonTableLayoutPanel.ResumeLayout(false);

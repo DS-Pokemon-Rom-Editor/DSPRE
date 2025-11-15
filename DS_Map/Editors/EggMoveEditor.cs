@@ -46,8 +46,8 @@ namespace DSPRE
 
         public EggMoveEditor()
         {
-            monNames = RomInfo.GetPokemonNames().ToArray();
-            moveNames = RomInfo.GetAttackNames().ToArray();
+            monNames = RomInfo.GetPokemonNames();
+            moveNames = RomInfo.GetAttackNames();
 
             InitializeComponent();
             PopulateEggMoveData();
@@ -203,6 +203,14 @@ namespace DSPRE
                     var baseStream = File.OpenWrite(path);
                     writer = new BinaryWriter(baseStream);
                     WriteEggMoveDataNormal(writer);
+
+                    // Trim the file if the new data is smaller than the previous data
+                    long currentLength = baseStream.Length;
+                    if (baseStream.Position < currentLength)
+                    {
+                        baseStream.SetLength(baseStream.Position);
+                    }
+
                     writer.Close();
                 }
                 else if (useSpecialFormat)
@@ -260,6 +268,26 @@ namespace DSPRE
             {
                 this.Text = "Egg Move Editor";
             }
+        }
+
+        private bool CheckDiscardChanges()
+        {
+            if (dirty)
+            {
+                var result = MessageBox.Show("You have unsaved changes. Do you want to save them before exiting?", "Unsaved Changes",
+                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    // Call save button click handler to also get the entry count check
+                    saveDataButton_Click(null, null);
+                }
+                else if (result == DialogResult.Cancel)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void PopulateMonList()
@@ -399,12 +427,12 @@ namespace DSPRE
 
         private void UpdateEntryIDLabel()
         {
-            entryIDLabel.Text = $"Entry ID: {monListBox.SelectedIndex}";
+            entryIDLabel.Text = $"Entry Index: {monListBox.SelectedIndex}";
         }
 
         private void UpdateMoveIDLabel()
         {
-            moveIDLabel.Text = $"Move ID: {eggMoveListBox.SelectedIndex}";
+            moveIDLabel.Text = $"Move Index: {eggMoveListBox.SelectedIndex}";
         }
 
         private void UpdateEntryCountLabel()
@@ -873,6 +901,14 @@ namespace DSPRE
             else
             {
                 MessageBox.Show($"No occurrences of {moveNames[deleteMoveID]} were found.", "Bulk Delete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void EggMoveEditor_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!CheckDiscardChanges())
+            {
+                e.Cancel = true;
             }
         }
     }
