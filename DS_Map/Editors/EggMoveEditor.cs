@@ -97,8 +97,8 @@ namespace DSPRE
             else
             {
                 int offset = RomInfo.GetEggMoveTableOffset();
-                MAX_TABLE_SIZE = RomInfo.GetEggMoveTableLength();
-                
+                MAX_TABLE_SIZE = 0xEEC; // DPPt limit
+
                 var baseStream = File.OpenRead(OverlayUtils.GetPath(EGG_MOVE_OVERLAY_NUMBER));
                 reader = new EndianBinaryReader(baseStream, Endianness.LittleEndian);
                 reader.BaseStream.Seek(offset, SeekOrigin.Begin);

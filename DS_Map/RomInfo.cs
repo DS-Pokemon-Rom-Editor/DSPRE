@@ -1442,20 +1442,6 @@ namespace DSPRE
             }
         }
 
-        public static int GetEggMoveTableLength()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    return 0xEEA;
-                case RomInfo.GameFamilies.Plat:
-                    return 0xEEC;
-                default:
-                    AppLogger.Error("GetEggMoveTableLength: Unsupported game.");
-                    throw new NotSupportedException("Game not supported");
-            }
-        }
-
         public static int SetTrainerNameMaxLen()
         {
             int maxLength = TrainerFile.defaultNameLen;
