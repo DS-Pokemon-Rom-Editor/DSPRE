@@ -29,13 +29,14 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EggMoveEditor));
             this.mainTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             this.editMonsGroupBox = new System.Windows.Forms.GroupBox();
-            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.listSizeLabel = new System.Windows.Forms.Label();
+            this.editMonTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             this.monCountLabel = new System.Windows.Forms.Label();
             this.monStatusLabel = new System.Windows.Forms.Label();
             this.entryIDLabel = new System.Windows.Forms.Label();
+            this.listSizeLabel = new System.Windows.Forms.Label();
             this.deleteMonButton = new System.Windows.Forms.Button();
             this.replaceMonButton = new System.Windows.Forms.Button();
             this.addMonButton = new System.Windows.Forms.Button();
@@ -44,7 +45,7 @@
             this.moveListGroupBox = new System.Windows.Forms.GroupBox();
             this.eggMoveListBox = new System.Windows.Forms.ListBox();
             this.editMovesGroupBox = new System.Windows.Forms.GroupBox();
-            this.editTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.editMoveTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             this.moveCountLabel = new System.Windows.Forms.Label();
             this.moveStatusLabel = new System.Windows.Forms.Label();
             this.moveIDLabel = new System.Windows.Forms.Label();
@@ -56,13 +57,19 @@
             this.monListGroupBox = new System.Windows.Forms.GroupBox();
             this.monListBox = new System.Windows.Forms.ListBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.saveDataButton = new System.Windows.Forms.Button();
+            this.monSearchTextBox = new System.Windows.Forms.TextBox();
+            this.searchMonButton = new System.Windows.Forms.Button();
+            this.monSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.monSearchListBox = new System.Windows.Forms.ListBox();
             this.mainTableLayoutPanel.SuspendLayout();
             this.editMonsGroupBox.SuspendLayout();
-            this.tableLayoutPanel1.SuspendLayout();
+            this.editMonTableLayoutPanel.SuspendLayout();
             this.moveListGroupBox.SuspendLayout();
             this.editMovesGroupBox.SuspendLayout();
-            this.editTableLayoutPanel.SuspendLayout();
+            this.editMoveTableLayoutPanel.SuspendLayout();
             this.monListGroupBox.SuspendLayout();
+            this.monSearchGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
             // mainTableLayoutPanel
@@ -83,66 +90,58 @@
             this.mainTableLayoutPanel.Name = "mainTableLayoutPanel";
             this.mainTableLayoutPanel.RowCount = 1;
             this.mainTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.mainTableLayoutPanel.Size = new System.Drawing.Size(885, 420);
+            this.mainTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.mainTableLayoutPanel.Size = new System.Drawing.Size(885, 423);
             this.mainTableLayoutPanel.TabIndex = 0;
             // 
             // editMonsGroupBox
             // 
-            this.editMonsGroupBox.Controls.Add(this.tableLayoutPanel1);
+            this.editMonsGroupBox.Controls.Add(this.editMonTableLayoutPanel);
             this.editMonsGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.editMonsGroupBox.Location = new System.Drawing.Point(180, 3);
             this.editMonsGroupBox.Name = "editMonsGroupBox";
-            this.editMonsGroupBox.Size = new System.Drawing.Size(259, 414);
+            this.editMonsGroupBox.Size = new System.Drawing.Size(259, 417);
             this.editMonsGroupBox.TabIndex = 3;
             this.editMonsGroupBox.TabStop = false;
             this.editMonsGroupBox.Text = "Edit Pokémon";
             // 
-            // tableLayoutPanel1
+            // editMonTableLayoutPanel
             // 
-            this.tableLayoutPanel1.ColumnCount = 3;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel1.Controls.Add(this.monCountLabel, 0, 3);
-            this.tableLayoutPanel1.Controls.Add(this.monStatusLabel, 1, 1);
-            this.tableLayoutPanel1.Controls.Add(this.entryIDLabel, 0, 1);
-            this.tableLayoutPanel1.Controls.Add(this.listSizeLabel, 0, 4);
-            this.tableLayoutPanel1.Controls.Add(this.deleteMonButton, 2, 2);
-            this.tableLayoutPanel1.Controls.Add(this.replaceMonButton, 1, 2);
-            this.tableLayoutPanel1.Controls.Add(this.addMonButton, 0, 2);
-            this.tableLayoutPanel1.Controls.Add(this.monLabel, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.monComboBox, 1, 0);
-            this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(3, 16);
-            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 5;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(253, 395);
-            this.tableLayoutPanel1.TabIndex = 0;
-            // 
-            // listSizeLabel
-            // 
-            this.listSizeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.listSizeLabel.AutoSize = true;
-            this.tableLayoutPanel1.SetColumnSpan(this.listSizeLabel, 2);
-            this.listSizeLabel.Location = new System.Drawing.Point(3, 382);
-            this.listSizeLabel.Name = "listSizeLabel";
-            this.listSizeLabel.Size = new System.Drawing.Size(162, 13);
-            this.listSizeLabel.TabIndex = 38;
-            this.listSizeLabel.Text = "Total List Size:";
-            this.toolTip.SetToolTip(this.listSizeLabel, "DPPt have a strictly limited list size. \r\nIn order to add new entries others have" +
-        " to be replaced or removed.");
+            this.editMonTableLayoutPanel.ColumnCount = 3;
+            this.editMonTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMonTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMonTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMonTableLayoutPanel.Controls.Add(this.monCountLabel, 0, 3);
+            this.editMonTableLayoutPanel.Controls.Add(this.monStatusLabel, 1, 1);
+            this.editMonTableLayoutPanel.Controls.Add(this.entryIDLabel, 0, 1);
+            this.editMonTableLayoutPanel.Controls.Add(this.listSizeLabel, 0, 6);
+            this.editMonTableLayoutPanel.Controls.Add(this.deleteMonButton, 2, 2);
+            this.editMonTableLayoutPanel.Controls.Add(this.replaceMonButton, 1, 2);
+            this.editMonTableLayoutPanel.Controls.Add(this.addMonButton, 0, 2);
+            this.editMonTableLayoutPanel.Controls.Add(this.monLabel, 0, 0);
+            this.editMonTableLayoutPanel.Controls.Add(this.monComboBox, 1, 0);
+            this.editMonTableLayoutPanel.Controls.Add(this.monSearchTextBox, 0, 4);
+            this.editMonTableLayoutPanel.Controls.Add(this.searchMonButton, 2, 4);
+            this.editMonTableLayoutPanel.Controls.Add(this.monSearchGroupBox, 0, 5);
+            this.editMonTableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.editMonTableLayoutPanel.Location = new System.Drawing.Point(3, 16);
+            this.editMonTableLayoutPanel.Name = "editMonTableLayoutPanel";
+            this.editMonTableLayoutPanel.RowCount = 7;
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.editMonTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
+            this.editMonTableLayoutPanel.Size = new System.Drawing.Size(253, 398);
+            this.editMonTableLayoutPanel.TabIndex = 0;
             // 
             // monCountLabel
             // 
             this.monCountLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.monCountLabel.AutoSize = true;
-            this.tableLayoutPanel1.SetColumnSpan(this.monCountLabel, 2);
+            this.editMonTableLayoutPanel.SetColumnSpan(this.monCountLabel, 2);
             this.monCountLabel.Location = new System.Drawing.Point(3, 128);
             this.monCountLabel.Name = "monCountLabel";
             this.monCountLabel.Size = new System.Drawing.Size(162, 13);
@@ -155,7 +154,7 @@
             // 
             this.monStatusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.monStatusLabel.AutoSize = true;
-            this.tableLayoutPanel1.SetColumnSpan(this.monStatusLabel, 2);
+            this.editMonTableLayoutPanel.SetColumnSpan(this.monStatusLabel, 2);
             this.monStatusLabel.Location = new System.Drawing.Point(87, 48);
             this.monStatusLabel.Name = "monStatusLabel";
             this.monStatusLabel.Size = new System.Drawing.Size(163, 13);
@@ -171,6 +170,21 @@
             this.entryIDLabel.Size = new System.Drawing.Size(78, 13);
             this.entryIDLabel.TabIndex = 39;
             this.entryIDLabel.Text = "Entry ID:";
+            // 
+            // listSizeLabel
+            // 
+            this.listSizeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.listSizeLabel.AutoSize = true;
+            this.editMonTableLayoutPanel.SetColumnSpan(this.listSizeLabel, 2);
+            this.listSizeLabel.Location = new System.Drawing.Point(3, 380);
+            this.listSizeLabel.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
+            this.listSizeLabel.Name = "listSizeLabel";
+            this.listSizeLabel.Size = new System.Drawing.Size(162, 13);
+            this.listSizeLabel.TabIndex = 38;
+            this.listSizeLabel.Text = "Total List Size:";
+            this.toolTip.SetToolTip(this.listSizeLabel, "DPPt have a strictly limited list size. \r\nIn order to add new entries others have" +
+        " to be replaced or removed.");
             // 
             // deleteMonButton
             // 
@@ -233,7 +247,8 @@
             // monComboBox
             // 
             this.monComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.SetColumnSpan(this.monComboBox, 2);
+            this.monComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            this.editMonTableLayoutPanel.SetColumnSpan(this.monComboBox, 2);
             this.monComboBox.FormattingEnabled = true;
             this.monComboBox.Location = new System.Drawing.Point(87, 9);
             this.monComboBox.Name = "monComboBox";
@@ -247,7 +262,7 @@
             this.moveListGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.moveListGroupBox.Location = new System.Drawing.Point(445, 3);
             this.moveListGroupBox.Name = "moveListGroupBox";
-            this.moveListGroupBox.Size = new System.Drawing.Size(171, 414);
+            this.moveListGroupBox.Size = new System.Drawing.Size(171, 417);
             this.moveListGroupBox.TabIndex = 0;
             this.moveListGroupBox.TabStop = false;
             this.moveListGroupBox.Text = "Egg Move List";
@@ -258,52 +273,53 @@
             this.eggMoveListBox.FormattingEnabled = true;
             this.eggMoveListBox.Location = new System.Drawing.Point(3, 16);
             this.eggMoveListBox.Name = "eggMoveListBox";
-            this.eggMoveListBox.Size = new System.Drawing.Size(165, 395);
+            this.eggMoveListBox.Size = new System.Drawing.Size(165, 398);
             this.eggMoveListBox.TabIndex = 0;
             this.eggMoveListBox.SelectedIndexChanged += new System.EventHandler(this.eggMoveListBox_SelectedIndexChanged);
             // 
             // editMovesGroupBox
             // 
-            this.editMovesGroupBox.Controls.Add(this.editTableLayoutPanel);
+            this.editMovesGroupBox.Controls.Add(this.editMoveTableLayoutPanel);
             this.editMovesGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.editMovesGroupBox.Location = new System.Drawing.Point(622, 3);
             this.editMovesGroupBox.Name = "editMovesGroupBox";
-            this.editMovesGroupBox.Size = new System.Drawing.Size(260, 414);
+            this.editMovesGroupBox.Size = new System.Drawing.Size(260, 417);
             this.editMovesGroupBox.TabIndex = 1;
             this.editMovesGroupBox.TabStop = false;
             this.editMovesGroupBox.Text = "Edit Moves";
             // 
-            // editTableLayoutPanel
+            // editMoveTableLayoutPanel
             // 
-            this.editTableLayoutPanel.ColumnCount = 3;
-            this.editTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.editTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.editTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.editTableLayoutPanel.Controls.Add(this.moveCountLabel, 0, 3);
-            this.editTableLayoutPanel.Controls.Add(this.moveStatusLabel, 1, 1);
-            this.editTableLayoutPanel.Controls.Add(this.moveIDLabel, 0, 1);
-            this.editTableLayoutPanel.Controls.Add(this.deleteMoveButton, 2, 2);
-            this.editTableLayoutPanel.Controls.Add(this.replaceMoveButton, 1, 2);
-            this.editTableLayoutPanel.Controls.Add(this.addMoveButton, 0, 2);
-            this.editTableLayoutPanel.Controls.Add(this.moveLabel, 0, 0);
-            this.editTableLayoutPanel.Controls.Add(this.moveComboBox, 1, 0);
-            this.editTableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.editTableLayoutPanel.Location = new System.Drawing.Point(3, 16);
-            this.editTableLayoutPanel.Name = "editTableLayoutPanel";
-            this.editTableLayoutPanel.RowCount = 5;
-            this.editTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
-            this.editTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.editTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
-            this.editTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.editTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.editTableLayoutPanel.Size = new System.Drawing.Size(254, 395);
-            this.editTableLayoutPanel.TabIndex = 0;
+            this.editMoveTableLayoutPanel.ColumnCount = 3;
+            this.editMoveTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMoveTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMoveTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.editMoveTableLayoutPanel.Controls.Add(this.moveCountLabel, 0, 3);
+            this.editMoveTableLayoutPanel.Controls.Add(this.moveStatusLabel, 1, 1);
+            this.editMoveTableLayoutPanel.Controls.Add(this.moveIDLabel, 0, 1);
+            this.editMoveTableLayoutPanel.Controls.Add(this.deleteMoveButton, 2, 2);
+            this.editMoveTableLayoutPanel.Controls.Add(this.saveDataButton, 2, 4);
+            this.editMoveTableLayoutPanel.Controls.Add(this.replaceMoveButton, 1, 2);
+            this.editMoveTableLayoutPanel.Controls.Add(this.addMoveButton, 0, 2);
+            this.editMoveTableLayoutPanel.Controls.Add(this.moveLabel, 0, 0);
+            this.editMoveTableLayoutPanel.Controls.Add(this.moveComboBox, 1, 0);
+            this.editMoveTableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.editMoveTableLayoutPanel.Location = new System.Drawing.Point(3, 16);
+            this.editMoveTableLayoutPanel.Name = "editMoveTableLayoutPanel";
+            this.editMoveTableLayoutPanel.RowCount = 5;
+            this.editMoveTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 40F));
+            this.editMoveTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
+            this.editMoveTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
+            this.editMoveTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
+            this.editMoveTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.editMoveTableLayoutPanel.Size = new System.Drawing.Size(254, 398);
+            this.editMoveTableLayoutPanel.TabIndex = 0;
             // 
             // moveCountLabel
             // 
             this.moveCountLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.moveCountLabel.AutoSize = true;
-            this.editTableLayoutPanel.SetColumnSpan(this.moveCountLabel, 2);
+            this.editMoveTableLayoutPanel.SetColumnSpan(this.moveCountLabel, 2);
             this.moveCountLabel.Location = new System.Drawing.Point(3, 128);
             this.moveCountLabel.Name = "moveCountLabel";
             this.moveCountLabel.Size = new System.Drawing.Size(162, 13);
@@ -316,7 +332,7 @@
             // 
             this.moveStatusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.moveStatusLabel.AutoSize = true;
-            this.editTableLayoutPanel.SetColumnSpan(this.moveStatusLabel, 2);
+            this.editMoveTableLayoutPanel.SetColumnSpan(this.moveStatusLabel, 2);
             this.moveStatusLabel.Location = new System.Drawing.Point(87, 48);
             this.moveStatusLabel.Name = "moveStatusLabel";
             this.moveStatusLabel.Size = new System.Drawing.Size(164, 13);
@@ -394,7 +410,8 @@
             // moveComboBox
             // 
             this.moveComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.editTableLayoutPanel.SetColumnSpan(this.moveComboBox, 2);
+            this.moveComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            this.editMoveTableLayoutPanel.SetColumnSpan(this.moveComboBox, 2);
             this.moveComboBox.FormattingEnabled = true;
             this.moveComboBox.Location = new System.Drawing.Point(87, 9);
             this.moveComboBox.Name = "moveComboBox";
@@ -408,7 +425,7 @@
             this.monListGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.monListGroupBox.Location = new System.Drawing.Point(3, 3);
             this.monListGroupBox.Name = "monListGroupBox";
-            this.monListGroupBox.Size = new System.Drawing.Size(171, 414);
+            this.monListGroupBox.Size = new System.Drawing.Size(171, 417);
             this.monListGroupBox.TabIndex = 2;
             this.monListGroupBox.TabStop = false;
             this.monListGroupBox.Text = "Pokémon List";
@@ -419,27 +436,88 @@
             this.monListBox.FormattingEnabled = true;
             this.monListBox.Location = new System.Drawing.Point(3, 16);
             this.monListBox.Name = "monListBox";
-            this.monListBox.Size = new System.Drawing.Size(165, 395);
+            this.monListBox.Size = new System.Drawing.Size(165, 398);
             this.monListBox.TabIndex = 1;
             this.monListBox.SelectedIndexChanged += new System.EventHandler(this.monListBox_SelectedIndexChanged);
+            // 
+            // saveDataButton
+            // 
+            this.saveDataButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.saveDataButton.Image = ((System.Drawing.Image)(resources.GetObject("saveDataButton.Image")));
+            this.saveDataButton.Location = new System.Drawing.Point(207, 351);
+            this.saveDataButton.Name = "saveDataButton";
+            this.saveDataButton.Size = new System.Drawing.Size(44, 44);
+            this.saveDataButton.TabIndex = 31;
+            this.saveDataButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.saveDataButton.UseVisualStyleBackColor = true;
+            this.saveDataButton.Click += new System.EventHandler(this.saveDataButton_Click);
+            // 
+            // monSearchTextBox
+            // 
+            this.monSearchTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.editMonTableLayoutPanel.SetColumnSpan(this.monSearchTextBox, 2);
+            this.monSearchTextBox.Location = new System.Drawing.Point(3, 160);
+            this.monSearchTextBox.Name = "monSearchTextBox";
+            this.monSearchTextBox.Size = new System.Drawing.Size(162, 20);
+            this.monSearchTextBox.TabIndex = 42;
+            this.monSearchTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.monSearchTextBox_KeyDown);
+            // 
+            // searchMonButton
+            // 
+            this.searchMonButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.searchMonButton.Image = global::DSPRE.Properties.Resources.SearchMiniIcon;
+            this.searchMonButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.searchMonButton.Location = new System.Drawing.Point(170, 154);
+            this.searchMonButton.Margin = new System.Windows.Forms.Padding(2);
+            this.searchMonButton.Name = "searchMonButton";
+            this.searchMonButton.Size = new System.Drawing.Size(81, 32);
+            this.searchMonButton.TabIndex = 43;
+            this.searchMonButton.Text = "Search";
+            this.searchMonButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.searchMonButton.UseVisualStyleBackColor = true;
+            this.searchMonButton.Click += new System.EventHandler(this.searchMonButton_Click);
+            // 
+            // monSearchGroupBox
+            // 
+            this.editMonTableLayoutPanel.SetColumnSpan(this.monSearchGroupBox, 3);
+            this.monSearchGroupBox.Controls.Add(this.monSearchListBox);
+            this.monSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.monSearchGroupBox.Location = new System.Drawing.Point(3, 193);
+            this.monSearchGroupBox.Name = "monSearchGroupBox";
+            this.monSearchGroupBox.Size = new System.Drawing.Size(247, 172);
+            this.monSearchGroupBox.TabIndex = 44;
+            this.monSearchGroupBox.TabStop = false;
+            this.monSearchGroupBox.Text = "Pokémon Search";
+            // 
+            // monSearchListBox
+            // 
+            this.monSearchListBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.monSearchListBox.FormattingEnabled = true;
+            this.monSearchListBox.Location = new System.Drawing.Point(3, 16);
+            this.monSearchListBox.Name = "monSearchListBox";
+            this.monSearchListBox.Size = new System.Drawing.Size(241, 153);
+            this.monSearchListBox.TabIndex = 0;
+            this.toolTip.SetToolTip(this.monSearchListBox, "Double-click to select entry in main list");
+            this.monSearchListBox.DoubleClick += new System.EventHandler(this.monSearchListBox_DoubleClick);
             // 
             // EggMoveEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(909, 444);
+            this.ClientSize = new System.Drawing.Size(909, 447);
             this.Controls.Add(this.mainTableLayoutPanel);
             this.Name = "EggMoveEditor";
             this.Text = "Egg Move Editor";
             this.mainTableLayoutPanel.ResumeLayout(false);
             this.editMonsGroupBox.ResumeLayout(false);
-            this.tableLayoutPanel1.ResumeLayout(false);
-            this.tableLayoutPanel1.PerformLayout();
+            this.editMonTableLayoutPanel.ResumeLayout(false);
+            this.editMonTableLayoutPanel.PerformLayout();
             this.moveListGroupBox.ResumeLayout(false);
             this.editMovesGroupBox.ResumeLayout(false);
-            this.editTableLayoutPanel.ResumeLayout(false);
-            this.editTableLayoutPanel.PerformLayout();
+            this.editMoveTableLayoutPanel.ResumeLayout(false);
+            this.editMoveTableLayoutPanel.PerformLayout();
             this.monListGroupBox.ResumeLayout(false);
+            this.monSearchGroupBox.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -450,7 +528,7 @@
         private System.Windows.Forms.GroupBox moveListGroupBox;
         private System.Windows.Forms.GroupBox editMovesGroupBox;
         private System.Windows.Forms.ListBox eggMoveListBox;
-        private System.Windows.Forms.TableLayoutPanel editTableLayoutPanel;
+        private System.Windows.Forms.TableLayoutPanel editMoveTableLayoutPanel;
         private System.Windows.Forms.Label moveLabel;
         private System.Windows.Forms.ComboBox moveComboBox;
         private System.Windows.Forms.Button addMoveButton;
@@ -462,7 +540,7 @@
         private System.Windows.Forms.Label moveCountLabel;
         private System.Windows.Forms.GroupBox monListGroupBox;
         private System.Windows.Forms.GroupBox editMonsGroupBox;
-        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
+        private System.Windows.Forms.TableLayoutPanel editMonTableLayoutPanel;
         private System.Windows.Forms.Label monCountLabel;
         private System.Windows.Forms.Label monStatusLabel;
         private System.Windows.Forms.Label entryIDLabel;
@@ -473,5 +551,10 @@
         private System.Windows.Forms.ComboBox monComboBox;
         private System.Windows.Forms.ListBox monListBox;
         private System.Windows.Forms.ToolTip toolTip;
+        private System.Windows.Forms.Button saveDataButton;
+        private System.Windows.Forms.TextBox monSearchTextBox;
+        private System.Windows.Forms.Button searchMonButton;
+        private System.Windows.Forms.GroupBox monSearchGroupBox;
+        private System.Windows.Forms.ListBox monSearchListBox;
     }
 }

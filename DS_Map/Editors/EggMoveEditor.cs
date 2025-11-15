@@ -58,6 +58,20 @@ namespace DSPRE
             UpdateListSizeLabel();
         }
 
+        private int totalSize
+        {
+            get
+            {
+                int size = 0;
+                foreach (var entry in eggMoveData)
+                {
+                    size += entry.GetSizeInBytes();
+                }
+                size += 2; // for the end marker
+                return size;
+            }
+        }
+
         private void PopulateEggMoveData()
         {
             try 
@@ -188,6 +202,12 @@ namespace DSPRE
                     var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
                     var baseStream = File.OpenWrite(path);
                     writer = new BinaryWriter(baseStream);
+                    WriteEggMoveDataNormal(writer);
+                    writer.Close();
+                }
+                else if (useSpecialFormat)
+                {
+                    WriteEggMoveDataSpecial();
                 }
                 else
                 {
@@ -195,16 +215,9 @@ namespace DSPRE
                     var baseStream = File.OpenWrite(OverlayUtils.GetPath(EGG_MOVE_OVERLAY_NUMBER));
                     writer = new BinaryWriter(baseStream);
                     writer.BaseStream.Seek(offset, SeekOrigin.Begin);
-                }
-                if (useSpecialFormat)
-                {
-                    WriteEggMoveDataSpecial(writer);
-                }
-                else
-                {
                     WriteEggMoveDataNormal(writer);
+                    writer.Close();
                 }
-                writer.Close();
                 SetDirty(false);
             }
             catch (Exception ex)
@@ -230,7 +243,7 @@ namespace DSPRE
             writer.Write((ushort)0xFFFF);
         }
 
-        private void WriteEggMoveDataSpecial(BinaryWriter writer)
+        private void WriteEggMoveDataSpecial()
         {
             // ToDo: actually implement this
         }
@@ -401,15 +414,7 @@ namespace DSPRE
         }
 
         private void UpdateListSizeLabel()
-        {
-            int totalSize = 0;
-            foreach (var entry in eggMoveData)
-            {
-                totalSize += entry.GetSizeInBytes();
-            }
-
-            totalSize += 2; // for the end marker
-
+        {         
             listSizeLabel.Text = $"List Size: {totalSize} / {MAX_TABLE_SIZE} bytes";
 
             if (totalSize > MAX_TABLE_SIZE)
@@ -424,7 +429,6 @@ namespace DSPRE
             {
                 listSizeLabel.ForeColor = SystemColors.ControlText;
             }
-
         }
 
         private bool ListSelectedMonValid()
@@ -660,6 +664,75 @@ namespace DSPRE
 
             UpdateMoveCountLabel();
             UpdateListSizeLabel();
+
+            SetDirty(true);
+        }
+
+        private void saveDataButton_Click(object sender, EventArgs e)
+        {
+            if (totalSize > MAX_TABLE_SIZE)
+            {
+                var result = MessageBox.Show("The egg move data exceeds the maximum allowed size. " +
+                    "Saving now will corrupt the game data. Do you want to proceed?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result != DialogResult.Yes) { return; }
+            }
+
+            SaveEggMoveData();
+        }
+
+        private void searchMonButton_Click(object sender, EventArgs e)
+        {
+            monSearchListBox.BeginUpdate();
+
+            string searchText = monSearchTextBox.Text.Trim().ToLower();
+            monSearchListBox.Items.Clear();
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                monSearchListBox.EndUpdate();
+                return;
+            }
+
+            foreach (var entry in eggMoveData)
+            {
+                string monName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"UNK_{entry.speciesID})";
+                if (monName.ToLower().Contains(searchText))
+                {
+                    monSearchListBox.Items.Add(monName);
+                }
+            }
+
+            monSearchListBox.EndUpdate();
+        }
+
+        private void monSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                searchMonButton.PerformClick();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void monSearchListBox_DoubleClick(object sender, EventArgs e)
+        {
+            int selectedIndex = monSearchListBox.SelectedIndex;
+
+            if (selectedIndex < 0) { return; }
+
+            string selectedMonName = monSearchListBox.Items[selectedIndex].ToString();
+
+            // Try to find the mon in the main list
+            for (int i = 0; i < monListBox.Items.Count; i++)
+            {
+                if (monListBox.Items[i].ToString() == selectedMonName)
+                {
+                    monListBox.SelectedIndex = i;
+                    this.ActiveControl = monListBox;
+                    break;
+                }
+            }
 
         }
     }
