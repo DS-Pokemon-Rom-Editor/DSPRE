@@ -279,6 +279,13 @@ namespace DSPRE
             eggMoveListBox.BeginUpdate();
 
             eggMoveListBox.Items.Clear();
+
+            if (entryIndex < 0 || entryIndex >= eggMoveData.Count)
+            {
+                eggMoveListBox.EndUpdate();
+                return;
+            }
+
             var entry = eggMoveData[entryIndex];
             foreach (var moveID in entry.moveIDs)
             {
@@ -300,13 +307,29 @@ namespace DSPRE
             monComboBox.EndUpdate();
 
             monComboBox.BeginUpdate();
+            replaceeComboBox.BeginUpdate();
+            replacerComboBox.BeginUpdate();
+            deleteAllComboBox.BeginUpdate();
+
             moveComboBox.Items.Clear();
+            replaceeComboBox.Items.Clear();
+            replacerComboBox.Items.Clear();
+            deleteAllComboBox.Items.Clear();
+
             foreach (var moveName in moveNames)
             {
                 moveComboBox.Items.Add(moveName);
+                replaceeComboBox.Items.Add(moveName);
+                replacerComboBox.Items.Add(moveName);
+                deleteAllComboBox.Items.Add(moveName);
             }
+
             moveComboBox.EndUpdate();
+            replaceeComboBox.EndUpdate();
+            replacerComboBox.EndUpdate();
+            deleteAllComboBox.EndUpdate();
         }
+
 
         private void UpdateMonStatus()
         {
@@ -377,6 +400,11 @@ namespace DSPRE
         private void UpdateEntryIDLabel()
         {
             entryIDLabel.Text = $"Entry ID: {monListBox.SelectedIndex}";
+        }
+
+        private void UpdateMoveIDLabel()
+        {
+            moveIDLabel.Text = $"Move ID: {eggMoveListBox.SelectedIndex}";
         }
 
         private void UpdateEntryCountLabel()
@@ -518,6 +546,7 @@ namespace DSPRE
             }
 
             UpdateMoveStatus();
+            UpdateMoveIDLabel();
 
             Helpers.EnableHandlers();
 
@@ -734,6 +763,117 @@ namespace DSPRE
                 }
             }
 
+        }
+
+        private void bulkReplaceButton_Click(object sender, EventArgs e)
+        {
+            int replaceeIndex = replaceeComboBox.SelectedIndex;
+            int replacerIndex = replacerComboBox.SelectedIndex;
+
+            if (replaceeIndex < 0)
+            {
+                MessageBox.Show("Please select a valid move to replace.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (replacerIndex < 0)
+            {
+                MessageBox.Show("Please select a valid move to use as replacement.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            ushort replaceeMoveID = (ushort)replaceeIndex;
+            ushort replacerMoveID = (ushort)replacerIndex;
+
+            int replacementsMade = 0;
+            List<string> affectedMons = new List<string>();
+
+            foreach (var entry in eggMoveData)
+            {
+                for (int i = 0; i < entry.moveIDs.Count; i++)
+                {
+                    if (entry.moveIDs[i] == replaceeMoveID)
+                    {
+                        entry.moveIDs[i] = replacerMoveID;
+                        replacementsMade++;
+
+                        if (entry.speciesID >= 0 && entry.speciesID < monNames.Length)
+                        {
+                            affectedMons.Add(monNames[entry.speciesID]);
+                        }
+                        else
+                        {
+                            affectedMons.Add($"UNK_{entry.speciesID}");
+                        }
+                    }
+                }
+            }
+
+            if (replacementsMade > 0)
+            {
+                MessageBox.Show($"Replaced {replacementsMade} occurrences of {moveNames[replaceeMoveID]} with {moveNames[replacerMoveID]}.\n" +
+                    $"Affected Pokémon: {string.Join(", ", affectedMons)}",
+                    "Bulk Replace", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SetDirty(true);
+                PopulateMoveList(monListBox.SelectedIndex);
+            }
+            else
+            {
+                MessageBox.Show($"No occurrences of {moveNames[replaceeMoveID]} were found.", "Bulk Replace", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+        }
+
+        private void deleteAllButton_Click(object sender, EventArgs e)
+        {
+            int deleteMoveIndex = deleteAllComboBox.SelectedIndex;
+
+            if (deleteMoveIndex < 0)
+            {
+                MessageBox.Show("Please select a valid move to delete.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            ushort deleteMoveID = (ushort)deleteMoveIndex;
+            int deletionsMade = 0;
+            List<string> affectedMons = new List<string>();
+
+            foreach (var entry in eggMoveData)
+            {
+                int initialCount = entry.moveIDs.Count;
+                entry.moveIDs.RemoveAll(moveID => moveID == deleteMoveID);
+                int deletions = (initialCount - entry.moveIDs.Count);
+                deletionsMade += deletions;
+
+                if (deletions == 0)
+                {
+                    continue;
+                }
+
+                if (entry.speciesID >= 0 && entry.speciesID < monNames.Length)
+                {
+                    affectedMons.Add(monNames[entry.speciesID]);
+                }
+                else
+                {
+                    affectedMons.Add($"UNK_{entry.speciesID}");
+                }                
+            }
+
+            if (deletionsMade > 0)
+            {
+                MessageBox.Show($"Deleted {deletionsMade} occurrences of {moveNames[deleteMoveID]}.\n" +
+                    $"Affected Pokémon: {string.Join(", ", affectedMons)}",
+                    "Bulk Delete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SetDirty(true);
+                PopulateMoveList(monListBox.SelectedIndex);
+                UpdateMoveCountLabel();
+                UpdateListSizeLabel();
+            }
+            else
+            {
+                MessageBox.Show($"No occurrences of {moveNames[deleteMoveID]} were found.", "Bulk Delete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
     }
 }
