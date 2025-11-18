@@ -69,9 +69,11 @@
             this.withLabel = new System.Windows.Forms.Label();
             this.bulkReplaceButton = new System.Windows.Forms.Button();
             this.deleteAllButton = new System.Windows.Forms.Button();
+            this.importButton = new System.Windows.Forms.Button();
             this.monListGroupBox = new System.Windows.Forms.GroupBox();
             this.monListBox = new System.Windows.Forms.ListBox();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.exportButton = new System.Windows.Forms.Button();
             this.mainTableLayoutPanel.SuspendLayout();
             this.editMonsGroupBox.SuspendLayout();
             this.editMonTableLayoutPanel.SuspendLayout();
@@ -364,6 +366,8 @@
             this.editMoveTableLayoutPanel.Controls.Add(this.moveLabel, 0, 0);
             this.editMoveTableLayoutPanel.Controls.Add(this.moveComboBox, 1, 0);
             this.editMoveTableLayoutPanel.Controls.Add(this.bulkEditGroupBox, 0, 4);
+            this.editMoveTableLayoutPanel.Controls.Add(this.importButton, 0, 5);
+            this.editMoveTableLayoutPanel.Controls.Add(this.exportButton, 1, 5);
             this.editMoveTableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.editMoveTableLayoutPanel.Location = new System.Drawing.Point(3, 16);
             this.editMoveTableLayoutPanel.Name = "editMoveTableLayoutPanel";
@@ -628,6 +632,21 @@
             this.deleteAllButton.UseVisualStyleBackColor = true;
             this.deleteAllButton.Click += new System.EventHandler(this.deleteAllButton_Click);
             // 
+            // importButton
+            // 
+            this.importButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.importButton.Image = global::DSPRE.Properties.Resources.importArrow;
+            this.importButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.importButton.Location = new System.Drawing.Point(2, 357);
+            this.importButton.Margin = new System.Windows.Forms.Padding(2);
+            this.importButton.Name = "importButton";
+            this.importButton.Size = new System.Drawing.Size(80, 32);
+            this.importButton.TabIndex = 43;
+            this.importButton.Text = "Import";
+            this.importButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.importButton.UseVisualStyleBackColor = true;
+            this.importButton.Click += new System.EventHandler(this.importButton_Click);
+            // 
             // monListGroupBox
             // 
             this.monListGroupBox.Controls.Add(this.monListBox);
@@ -648,6 +667,21 @@
             this.monListBox.Size = new System.Drawing.Size(165, 398);
             this.monListBox.TabIndex = 1;
             this.monListBox.SelectedIndexChanged += new System.EventHandler(this.monListBox_SelectedIndexChanged);
+            // 
+            // exportButton
+            // 
+            this.exportButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.exportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
+            this.exportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.exportButton.Location = new System.Drawing.Point(86, 357);
+            this.exportButton.Margin = new System.Windows.Forms.Padding(2);
+            this.exportButton.Name = "exportButton";
+            this.exportButton.Size = new System.Drawing.Size(80, 32);
+            this.exportButton.TabIndex = 44;
+            this.exportButton.Text = "Export";
+            this.exportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.exportButton.UseVisualStyleBackColor = true;
+            this.exportButton.Click += new System.EventHandler(this.exportButton_Click);
             // 
             // EggMoveEditor
             // 
@@ -719,5 +753,7 @@
         private System.Windows.Forms.ComboBox deleteAllComboBox;
         private System.Windows.Forms.Label deleteAllLabel;
         private System.Windows.Forms.Button deleteAllButton;
+        private System.Windows.Forms.Button importButton;
+        private System.Windows.Forms.Button exportButton;
     }
 }

@@ -374,7 +374,7 @@ namespace DSPRE
             monListBox.Items.Clear();
             foreach (var entry in eggMoveData)
             {
-                string monName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"UNK_{entry.speciesID})";
+                string monName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
                 monListBox.Items.Add(monName);
             }
             monListBox.EndUpdate();
@@ -395,7 +395,7 @@ namespace DSPRE
             var entry = eggMoveData[entryIndex];
             foreach (var moveID in entry.moveIDs)
             {
-                string moveName = (moveID < moveNames.Length) ? moveNames[moveID] : $"UNK_{moveID}";
+                string moveName = (moveID < moveNames.Length) ? moveNames[moveID] : $"MOVE_{moveID}";
                 eggMoveListBox.Items.Add(moveName);
             }
 
@@ -594,6 +594,70 @@ namespace DSPRE
         {
             int selectedMoveIndex = moveComboBox.SelectedIndex;
             return (selectedMoveIndex >= 0 && selectedMoveIndex < moveNames.Length);
+        }
+
+        private bool ExportEggMoveDataToCSV(string filePath)
+        {
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Write CSV header
+                    writer.WriteLine("SpeciesID,SpeciesName,MoveID,MoveName");
+
+                    // Write egg move data
+                    foreach (var entry in eggMoveData)
+                    {
+                        string speciesName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
+                        foreach (var moveID in entry.moveIDs)
+                        {
+                            string moveName = (moveID >= 0 && moveID < moveNames.Length) ? moveNames[moveID] : $"MOVE_{moveID}";
+                            writer.WriteLine($"{entry.speciesID},{speciesName},{moveID},{moveName}");
+                        }
+                    }
+
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Failed to export egg move data to CSV: {ex.Message}");
+                return false;
+            }
+        }
+
+        private bool ImportEggMoveDataFromCSV(string filePath)
+        {
+            try
+            {
+                var lines = File.ReadAllLines(filePath);
+                var speciesDict = new Dictionary<int, EggMoveEntry>();
+
+                foreach (var line in lines.Skip(1))
+                {
+                    var values = line.Split(',');
+                    if (values.Length < 4) continue;
+
+                    int speciesID = int.Parse(values[0].Trim());
+                    int moveID = int.Parse(values[2].Trim());
+
+                    if (!speciesDict.ContainsKey(speciesID))
+                    {
+                        speciesDict[speciesID] = new EggMoveEntry(speciesID, new List<ushort>());
+                    }
+
+                    speciesDict[speciesID].moveIDs.Add((ushort)moveID);
+                }
+
+                eggMoveData = speciesDict.Values.ToList();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Failed to import egg move data from CSV: {ex.Message}");
+                return false;
+            }
         }
 
         private void monListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -854,7 +918,7 @@ namespace DSPRE
 
             foreach (var entry in eggMoveData)
             {
-                string monName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"UNK_{entry.speciesID})";
+                string monName = (entry.speciesID >= 0 && entry.speciesID < monNames.Length) ? monNames[entry.speciesID] : $"MOVE{entry.speciesID})";
                 if (monName.ToLower().Contains(searchText))
                 {
                     monSearchListBox.Items.Add(monName);
@@ -933,7 +997,7 @@ namespace DSPRE
                         }
                         else
                         {
-                            affectedMons.Add($"UNK_{entry.speciesID}");
+                            affectedMons.Add($"SPECIES_{entry.speciesID}");
                         }
                     }
                 }
@@ -986,7 +1050,7 @@ namespace DSPRE
                 }
                 else
                 {
-                    affectedMons.Add($"UNK_{entry.speciesID}");
+                    affectedMons.Add($"SPECIES_{entry.speciesID}");
                 }                
             }
 
@@ -1011,6 +1075,58 @@ namespace DSPRE
             if (!CheckDiscardChanges())
             {
                 e.Cancel = true;
+            }
+        }
+
+        private void exportButton_Click(object sender, EventArgs e)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Title = "Export Egg Move Data",
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = "csv",
+                FileName = "egg_moves.csv"
+            };
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                bool success = ExportEggMoveDataToCSV(saveFileDialog.FileName);
+                if (success)
+                {
+                    MessageBox.Show("Egg move data exported successfully.", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to export egg move data. Please check the logs for more details.", "Export Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void importButton_Click(object sender, EventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "Import Egg Move Data",
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = "csv"
+            };
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                bool success = ImportEggMoveDataFromCSV(openFileDialog.FileName);
+                if (success)
+                {
+                    PopulateMonList();
+                    UpdateEntryCountLabel();
+                    UpdateListSizeLabel();
+                    SetDirty(true);
+                    MessageBox.Show("Egg move data imported successfully.", "Import Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to import egg move data. Please check the logs for more details.", "Import Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                }
             }
         }
     }
