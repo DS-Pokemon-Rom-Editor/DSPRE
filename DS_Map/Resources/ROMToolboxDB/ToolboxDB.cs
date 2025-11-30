@@ -284,7 +284,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
         public static Dictionary<GameFamilies, uint> syntheticOverlayFileNumbersDB = new Dictionary<GameFamilies, uint>() {
             [GameFamilies.DP] = 9,
-            [GameFamilies.Plat] = 122,
+            [GameFamilies.Plat] = 9,
             [GameFamilies.HGSS] = 0,
         };
 
