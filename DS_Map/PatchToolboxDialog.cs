@@ -739,12 +739,28 @@ namespace DSPRE
                     ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset); //Write new initOffset
 
                     string fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + expandedARMfileID.ToString("D4");
-                    File.Delete(fullFilePath);
-                    using (BinaryWriter f = new BinaryWriter(File.Create(fullFilePath)))
+
+                    // Do a file size check first just in case the file is already expanded so we don't nuke existing data
+                    if (File.Exists(fullFilePath))
                     {
-                        for (int i = 0; i < 0x16000; i++)
-                            f.Write((byte)0x00); // Write Expanded ARM9 File
-                    }
+                        FileInfo fi = new FileInfo(fullFilePath);
+                        if (fi.Length >= 0x16000)
+                        {
+                            MessageBox.Show("The synthetic Overlay already exists. " +
+                                "This may be due to a previous application of the ARM9 expansion patch. " +
+                                "No changes have been made to the file to avoid data loss.\n\n" +
+                                "Double check to make sure this is correct!", "Synthetic Overlay Exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            File.Delete(fullFilePath);
+                            using (BinaryWriter f = new BinaryWriter(File.Create(fullFilePath)))
+                            {
+                                for (int i = 0; i < 0x16000; i++)
+                                    f.Write((byte)0x00);
+                            }
+                        }
+                    }                    
 
                     DisableARM9patch("Already applied");
                     arm9patchCB.Visible = true;
