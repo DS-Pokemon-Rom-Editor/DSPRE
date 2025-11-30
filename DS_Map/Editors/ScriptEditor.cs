@@ -943,7 +943,7 @@ namespace DSPRE.Editors
                 ScriptCommandContainer scriptCommandContainer = commandList[i];
 
                 /* Write header */
-                string header = containerType + " " + (i + 1);
+                string header = containerType + " " + scriptCommandContainer.manualUserID;
                 buffer += header + ':' + Environment.NewLine;
                 navListBox.Items.Add(header);
 
@@ -982,7 +982,7 @@ namespace DSPRE.Editors
             {
                 ScriptActionContainer currentCommand = commandList[i];
 
-                string header = containerType + " " + (i + 1);
+                string header = containerType + " " + currentCommand.manualUserID;
                 buffer += header + ':' + Environment.NewLine;
                 navListBox.Items.Add(header);
 
