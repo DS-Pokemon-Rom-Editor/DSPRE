@@ -408,6 +408,134 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        private void RenumberContainers()
+        {
+            // Maps to store OldID -> NewID
+            Dictionary<uint, uint> scriptMap = new Dictionary<uint, uint>();
+            Dictionary<uint, uint> functionMap = new Dictionary<uint, uint>();
+            Dictionary<uint, uint> actionMap = new Dictionary<uint, uint>();
+
+            // 1. Build Maps and Renumber Definitions
+            if (allScripts != null)
+            {
+                for (int i = 0; i < allScripts.Count; i++)
+                {
+                    uint oldID = allScripts[i].manualUserID;
+                    uint newID = (uint)(i + 1);
+                    if (!scriptMap.ContainsKey(oldID))
+                    {
+                        scriptMap.Add(oldID, newID);
+                    }
+                    allScripts[i].manualUserID = newID;
+                }
+            }
+
+            if (allFunctions != null)
+            {
+                for (int i = 0; i < allFunctions.Count; i++)
+                {
+                    uint oldID = allFunctions[i].manualUserID;
+                    uint newID = (uint)(i + 1);
+                    if (!functionMap.ContainsKey(oldID))
+                    {
+                        functionMap.Add(oldID, newID);
+                    }
+                    allFunctions[i].manualUserID = newID;
+                }
+            }
+
+            if (allActions != null)
+            {
+                for (int i = 0; i < allActions.Count; i++)
+                {
+                    uint oldID = allActions[i].manualUserID;
+                    uint newID = (uint)(i + 1);
+                    if (!actionMap.ContainsKey(oldID))
+                    {
+                        actionMap.Add(oldID, newID);
+                    }
+                    allActions[i].manualUserID = newID;
+                }
+            }
+
+            // 2. Update References in Scripts and Functions
+            List<ScriptCommandContainer> containersToUpdate = new List<ScriptCommandContainer>();
+            if (allScripts != null) containersToUpdate.AddRange(allScripts);
+            if (allFunctions != null) containersToUpdate.AddRange(allFunctions);
+
+            foreach (var container in containersToUpdate)
+            {
+                // Update UseScript reference
+                if (container.usedScriptID > 0)
+                {
+                    if (scriptMap.TryGetValue((uint)container.usedScriptID, out uint newScriptID))
+                    {
+                        container.usedScriptID = (int)newScriptID;
+                    }
+                }
+
+                // Update Command References
+                for (int i = 0; i < container.commands.Count; i++)
+                {
+                    ScriptCommand cmd = container.commands[i];
+                    bool commandUpdated = false;
+
+                    if (cmd.cmdParams != null)
+                    {
+                        var cmdInfo = RomInfo.GetScriptCommandInfoDict()?[cmd.id ?? 0];
+                        if (cmdInfo != null && cmdInfo.ParameterTypes != null)
+                        {
+                            for (int p = 0; p < Math.Min(cmd.cmdParams.Count, cmdInfo.ParameterTypes.Count); p++)
+                            {
+                                var paramType = cmdInfo.ParameterTypes[p];
+                                uint oldVal = 0;
+                                
+                                if (cmd.cmdParams[p].Length == 1) oldVal = cmd.cmdParams[p][0];
+                                else if (cmd.cmdParams[p].Length == 2) oldVal = BitConverter.ToUInt16(cmd.cmdParams[p], 0);
+                                else if (cmd.cmdParams[p].Length == 4) oldVal = BitConverter.ToUInt32(cmd.cmdParams[p], 0);
+
+                                uint newVal = oldVal;
+                                bool valChanged = false;
+
+                                if (paramType == ScriptParameter.ParameterType.Function)
+                                {
+                                    if (functionMap.TryGetValue(oldVal, out uint mappedVal))
+                                    {
+                                        newVal = mappedVal;
+                                        valChanged = true;
+                                    }
+                                }
+                                else if (paramType == ScriptParameter.ParameterType.Action)
+                                {
+                                    if (actionMap.TryGetValue(oldVal, out uint mappedVal))
+                                    {
+                                        newVal = mappedVal;
+                                        valChanged = true;
+                                    }
+                                }
+
+                                if (valChanged && newVal != oldVal)
+                                {
+                                    // Update byte array
+                                    if (cmd.cmdParams[p].Length == 1) cmd.cmdParams[p] = new byte[] { (byte)newVal };
+                                    else if (cmd.cmdParams[p].Length == 2) cmd.cmdParams[p] = BitConverter.GetBytes((ushort)newVal);
+                                    else if (cmd.cmdParams[p].Length == 4) cmd.cmdParams[p] = BitConverter.GetBytes(newVal);
+                                    
+                                    commandUpdated = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (commandUpdated)
+                    {
+                        // Re-create command to update the 'name' property (text representation)
+                        container.commands[i] = new ScriptCommand((ushort)cmd.id, cmd.cmdParams);
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Helper method to format script/function containers to plaintext (matches ScriptEditor.displayScriptFile logic)
         /// </summary>
@@ -506,6 +634,9 @@ namespace DSPRE.ROMFiles
                 content.AppendLine($" * Generated: {DateTime.Now}");
                 content.AppendLine(" */");
                 content.AppendLine();
+
+                // Renumber containers and update references before writing
+                RenumberContainers();
 
                 // Add Scripts section
                 content.AppendLine("//===== SCRIPTS =====//");
