@@ -469,43 +469,21 @@ namespace DSPRE
                 }
             }
 
-            DialogResult d2;
-            if (RomInfo.gameVersion == GameVersions.Platinum)
-            {
-                d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
-                "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Backup Overlay" + "122" + " file (overlay_0122" + ".bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
-                "- Replace " + (data.overlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + " with " + '\n' + data.overlayString1 + "\n\n" +
-                "- Replace " + (data.overlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + " with " + '\n' + data.overlayString2 + "\n\n" +
-                "- Replace bytes " + "0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " to 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length).ToString("X") + " inside Overlay122" + '\n' + "to insert the BDHCAM routine" + "\n\n" +
-                "Do you wish to continue?",
-                "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            }
-            else
-            {
-                d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
-                "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
-                "- Replace " + (data.overlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + " with " + '\n' + data.overlayString1 + "\n\n" +
-                "- Replace " + (data.overlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + " with " + '\n' + data.overlayString2 + "\n\n" +
-                "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " and 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length).ToString("X") + " will be overwritten)." + "\n\n" +
-                "Do you wish to continue?",
-                "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            }
+            var d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
+            "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
+            "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
+            "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
+            "- Replace " + (data.overlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + " with " + '\n' + data.overlayString1 + "\n\n" +
+            "- Replace " + (data.overlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + " with " + '\n' + data.overlayString2 + "\n\n" +
+            "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " and 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length).ToString("X") + " will be overwritten)." + "\n\n" +
+            "Do you wish to continue?",
+            "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (d2 == DialogResult.Yes)
             {
                 File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + backupSuffix, overwrite: true);
                 string ov5path = RomInfo.overlayPath + '\\' + "overlay_0005.bin";
                 File.Copy(ov5path, ov5path + backupSuffix, overwrite: true);
-                if (RomInfo.gameFamily == GameFamilies.Plat)
-                {
-                    string ov122path = RomInfo.overlayPath + '\\' + "overlay_" + expandedARMfileID.ToString("D4") + ".bin";
-                    File.Copy(ov122path, ov122path + backupSuffix, overwrite: true);
-                }
 
                 try
                 {
@@ -522,17 +500,8 @@ namespace DSPRE
                     DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString2), data.overlayOffset2); //Write new overlayCode2
                     overlay1MustBeRestoredFromBackup = false;
 
-                    String fullFilePath;
-                    if (RomInfo.gameVersion == GameVersions.Platinum)
-                    {
-                        fullFilePath = RomInfo.overlayPath + '\\' + "overlay_" + expandedARMfileID.ToString("D4") + ".bin";
-                    }
-                    else
-                    {
-                        fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + expandedARMfileID.ToString("D4");
-                    }
-                        /*Write Expanded ARM9 File*/
-                        DSUtils.WriteToFile(fullFilePath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
+                    /*Write Expanded ARM9 File*/
+                    DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
                 }
                 catch
                 {
