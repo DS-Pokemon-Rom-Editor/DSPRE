@@ -705,7 +705,7 @@ namespace DSPRE
                         {
                             // if the pointer shows the table was moved to the synthetic overlay
                             OWTableOffset = ramAddressOfTable - RomInfo.synthOverlayLoadAddress;
-                            OWtablePath = gameDirs[DirNames.synthOverlay].unpackedDir + "\\" + PatchToolboxDialog.expandedARMfileID.ToString("D4");
+                            OWtablePath = Filesystem.expArmPath;
                         }
                         else
                         {

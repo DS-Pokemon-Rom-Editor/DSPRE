@@ -226,7 +226,7 @@ namespace DSPRE
             if (overlayCode2.Length != overlayCode2Read.Length || !overlayCode2.SequenceEqual(overlayCode2Read))
                 return false; //0 means BDHCAM patch has not been applied
 
-            String fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + PatchToolboxDialog.expandedARMfileID.ToString("D4");
+            String fullFilePath = Filesystem.expArmPath;
             byte[] subroutineRead = DSUtils.ReadFromFile(fullFilePath, BDHCAMPatchData.BDHCamSubroutineOffset, data.subroutine.Length); //Write new overlayCode1
             if (data.subroutine.Length != subroutineRead.Length || !data.subroutine.SequenceEqual(subroutineRead))
                 return false; //0 means BDHCAM patch has not been applied
@@ -738,7 +738,7 @@ namespace DSPRE
                     ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
                     ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset); //Write new initOffset
 
-                    string fullFilePath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\\' + expandedARMfileID.ToString("D4");
+                    string fullFilePath = Filesystem.expArmPath;
 
                     // Do a file size check first just in case the file is already expanded so we don't nuke existing data
                     if (File.Exists(fullFilePath))
