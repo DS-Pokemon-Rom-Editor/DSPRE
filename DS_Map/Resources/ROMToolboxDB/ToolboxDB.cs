@@ -16,6 +16,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
             internal string y9String;
 
             public static Dictionary<string, string> arm9ExpansionCodeDB = new Dictionary<string, string>() {
+                // Branches
                 // DP
                 ["branchString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.English] = "05 F1 5C FF",
                 ["branchString" + "_" + RomInfo.GameFamilies.DP + "_" + RomInfo.GameLanguages.Spanish] = "06 F1 2C F8",
@@ -31,6 +32,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.German] = "00 F1 2C FD", 
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Japanese] = "FF F0 58 FE",
 
+                // Initialization Routines
                 // HGSS
                 ["branchString" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.English] = "0F F1 30 FB",
                 ["branchString" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.Spanish] = "0F F1 40 FB",
@@ -50,7 +52,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["initString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Japanese] = "FC B5 04 48 41 21 09 22 06 F7 38 F8 00 20 03 21 FC BD 00 00 00 80 3C 02 00",
 
                 // HGSS
-                ["initString" + "_" + RomInfo.GameFamilies.HGSS] = "FC B5 05 48 C0 46 1C 21 00 22 02 4D A8 47 00 20 03 21 FC BD 09 75 00 02 00 80 3C 02" //Valid for ENG and ESP, also for SS
+                ["initString" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.English] = "FC B5 05 48 C0 46 1C 21 00 22 02 4D A8 47 00 20 03 21 FC BD 09 75 00 02 00 80 3C 02"
             };
             public static Dictionary<string, uint> arm9ExpansionOffsetsDB = new Dictionary<string, uint>() {
                 // Branch offsets
@@ -82,12 +84,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 branchOffset = arm9ExpansionOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily] - ARM9.address;
                 initOffset = arm9ExpansionOffsetsDB[nameof(initOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage] - ARM9.address;
                 branchString = arm9ExpansionCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-
-                if (RomInfo.gameFamily != GameFamilies.HGSS) {
-                    initString = arm9ExpansionCodeDB[nameof(initString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                } else {
-                    initString = arm9ExpansionCodeDB[nameof(initString) + "_" + RomInfo.gameFamily];
-                }
+                initString = arm9ExpansionCodeDB[nameof(initString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
             }
         }
         internal class BDHCAMPatchData {
