@@ -234,7 +234,7 @@ namespace DSPRE
                         }
                     }
                     // Handle single character escape sequences
-                    else if (i + 1 < message.Length)
+                    if (i + 1 < message.Length)
                     {
                         string escapeSeq = message.Substring(i, 2);
                         if (CharMapManager.GetEncodingMap().ContainsKey(escapeSeq))
@@ -244,12 +244,9 @@ namespace DSPRE
                             continue;
                         }
                     }
-                    // No match add null char
-                    else
-                    {
-                        encodedMessage.Add(0);
-                        i++;
-                    }
+                    // No match add null char and skip
+                    encodedMessage.Add(0);
+                    i++;
                 }
                 // Commands
                 else if (message[i] == '{')
@@ -289,10 +286,10 @@ namespace DSPRE
                             i = endIndex + 1;
                             continue;
                         }
-                        // No match add null char
-                        encodedMessage.Add(0);
-                        i++;
                     }
+                    // No match add null char
+                    encodedMessage.Add(0);
+                    i++;
                 }
                 // No match
                 else
@@ -343,12 +340,12 @@ namespace DSPRE
 
             // Special case for string buffer vars that have 1 byte command ids
             int specialByte = 0;
-            
-            if (!CharMapManager.GetCommandMap().ContainsKey(commandID) && CharMapManager.GetCommandMap().ContainsKey((ushort)(commandID & 0xFF00))) 
+
+            if (!CharMapManager.GetCommandMap().ContainsKey(commandID) && CharMapManager.GetCommandMap().ContainsKey((ushort)(commandID & 0xFF00)))
             {
                 specialByte = (ushort)(commandID & 0x00FF);
                 commandID = (ushort)(commandID & 0xFF00);
-                           
+
             }
 
             StringBuilder sb = new StringBuilder();
@@ -389,7 +386,7 @@ namespace DSPRE
                 AppLogger.Error($"Invalid text command format for command: {command} ");
                 return new UInt16[] { 0 };
             }
-            
+
             string[] parts = command.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
             // parts[0] = command name or hex ID
@@ -412,7 +409,7 @@ namespace DSPRE
             encodedCommand.Add(0xFFFE);
 
             // Get ID from name or parse hex
-            if (CharMapManager.GetCommandMap().ContainsValue(commandName)) 
+            if (CharMapManager.GetCommandMap().ContainsValue(commandName))
             {
                 encodedCommand.Add(CharMapManager.GetCommandMap().Reverse()[commandName]);
             }

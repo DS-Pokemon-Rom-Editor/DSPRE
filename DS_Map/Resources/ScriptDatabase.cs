@@ -276,6 +276,21 @@ namespace DSPRE.Resources
                         : $"TRAINER_{FormatStringForScripting(names[index])}_{index:D3}"
             );
         }
+        internal static void InitializePokemonNamesIfNeeded()
+        {
+            if(pokemonNames.Count == 0)
+            {
+                InitializePokemonNames();
+            }
+        }
+
+        internal static void InitializeMoveNamesIfNeeded()
+        {
+            if(moveNames.Count == 0)
+            {
+                InitializeMoveNames();
+            }
+        }
 
         /// <summary>
         /// Exports all enum dictionaries to individual JSON files in the ROM-specific database folder.
@@ -321,4 +336,5 @@ namespace DSPRE.Resources
             string json = JsonSerializer.Serialize(exportDict, options);
             File.WriteAllText(filePath, json);
     }
+}
 }

@@ -231,6 +231,34 @@ namespace DSPRE.Editors
             buttonRemove.Enabled = true;
         }
 
+        private int SmartParse(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                throw new ArgumentException("Input cannot be empty.");
+
+            string s = input.Trim();
+
+            // Explicit hex with 0x prefix
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                string hexPart = s.Substring(2);
+                return Convert.ToInt32(hexPart, 16);
+            }
+
+            // Try to parse as hex using built-in HexNumber style
+            if (int.TryParse(s, System.Globalization.NumberStyles.HexNumber,
+                             System.Globalization.CultureInfo.InvariantCulture, out int hexValue))
+            {
+                // Heuristic: if the hex interpretation is >= 256 (0x100), it's almost certainly meant as hex
+                // This catches bare hex like: 4002, DEAD, FFFF, etc.
+                if (hexValue >= 0x100)
+                    return hexValue;
+            }
+
+            // Fallback to decimal
+            return Convert.ToInt32(s, 10);
+        }
+
         private void buttonAdd_Click(object sender, EventArgs e)
         {
             // try {
@@ -247,11 +275,27 @@ namespace DSPRE.Editors
 
             if (radioButtonVariableValue.Checked)
             {
-                int scriptID = Convert.ToInt16(textBoxScriptID.Text, convertBase);
-                int variableName = Convert.ToInt16(textBoxVariableName.Text, convertBase);
-                int variableValue = Convert.ToInt16(textBoxVariableValue.Text, convertBase);
-                VariableValueTrigger variableValueTrigger = new VariableValueTrigger(scriptID, variableName, variableValue);
-                _levelScriptFile.bufferSet.Add(variableValueTrigger);
+                string scriptIDRaw = radioButtonVariableValue.Text;
+                string variableNameRaw = textBoxVariableName.Text;
+                string variableValueRaw = textBoxVariableValue.Text;
+
+                try
+                {
+                    int scriptID = SmartParse(scriptIDRaw);
+                    int variableName = SmartParse(variableNameRaw);
+                    int variableValue = SmartParse(variableValueRaw);
+
+                    VariableValueTrigger trigger = new VariableValueTrigger(scriptID, variableName, variableValue);
+                    _levelScriptFile.bufferSet.Add(trigger);
+                }
+                catch (FormatException ex)
+                {
+                    MessageBox.Show($"Invalid number format: {ex.Message}");
+                }
+                catch (OverflowException)
+                {
+                    MessageBox.Show("Number is too large.");
+                }
             }
             else
             {
