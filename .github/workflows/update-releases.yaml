@@ -38,8 +38,23 @@ jobs:
         id: get_version
         shell: bash
         run: |
-            version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9]+\.){1,3}[0-9]+"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
-            echo "version=$version" >> $GITHUB_OUTPUT
+            # Extract 4-part version from AssemblyInfo.cs
+            version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+            
+            # Convert 1.14.2.1 to 1.14.2+1
+            if echo "$version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
+                # 4-part version found, convert to SemVer with build metadata
+                semver_part=$(echo "$version" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$/\1/')
+                revision=$(echo "$version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
+                semver_version="${semver_part}+${revision}"
+            else
+                # Already 3-part or different format
+                semver_version="$version"
+            fi
+            
+            echo "version=$semver_version" >> $GITHUB_OUTPUT
+            echo "full_version=$version" >> $GITHUB_OUTPUT
+            echo "Using SemVer: $semver_version (from .NET version: $version)"
 
 
       - name: Debug Output
@@ -78,9 +93,11 @@ jobs:
           ls publish/
 
       - name: Create Velopack Release
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.full_version) }}
         run: |
-          dotnet tool install -g vpk
-          vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
-          vpk pack -u DSPRE -v ${{ steps.get_version.outputs.version }} -p publish --mainExe DSPRE.exe --channel win
-          vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.version }}" --tag v${{ steps.get_version.outputs.version }} --token ${{ secrets.GH_TOKEN }}
+            dotnet tool install -g vpk
+            vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
+            # Use SemVer version (1.14.2+1) for Velopack package
+            vpk pack -u DSPRE -v ${{ steps.get_version.outputs.version }} -p publish --mainExe DSPRE.exe --channel win
+            # Use full version (1.14.2.1) for GitHub release name and tag
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.full_version }}" --tag v${{ steps.get_version.outputs.full_version }} --token ${{ secrets.GH_TOKEN }}
