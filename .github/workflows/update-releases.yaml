@@ -22,8 +22,8 @@ jobs:
          - uses: oprypin/find-latest-tag@v1
            with:
             repository: ${{ github.repository }}
-            releases-only: true  # We know that all relevant tags have a GitHub release for them.
-           id: get_latest_tag  # The step ID to refer to later.
+            releases-only: true
+           id: get_latest_tag
 
   deploy_to_github_releases:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
@@ -54,36 +54,34 @@ jobs:
             
             echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
             echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
-            echo "Using SemVer: $semver_version (from .NET version: $dotnet_version)"
-
 
       - name: Debug Output
         run: |
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
-          echo "Project version: ${{ steps.get_version.outputs.version }}"
-
+          echo "SemVer version: ${{ steps.get_version.outputs.semver_version }}"
+          echo "DotNet version: ${{ steps.get_version.outputs.dotnet_version }}"
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
 
       - name: Clone Database Repository
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
         run: |
           git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
 
       - name: Restore NuGet packages
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
 
       - name: Build DSPRE
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
 
       - name: Copy output manually
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
         run: |
           mkdir -p publish
           cp -r DS_Map/bin/${{env.BUILD_CONFIGURATION}}/* publish/
@@ -93,11 +91,16 @@ jobs:
           ls publish/
 
       - name: Create Velopack Release
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.full_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
         run: |
             dotnet tool install -g vpk
             vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
-            # Use SemVer version (1.14.2+1) for Velopack package
-            vpk pack -u DSPRE -v ${{ steps.get_version.outputs.version }} -p publish --mainExe DSPRE.exe --channel win
-            # Use full version (1.14.2.1) for GitHub release name and tag
-            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.full_version }}" --tag v${{ steps.get_version.outputs.full_version }} --token ${{ secrets.GH_TOKEN }}
+            
+            # First, check if we need to delete existing Velopack release for same base version
+            echo "Checking for existing Velopack releases with same base version..."
+            
+            # Use the correct syntax for vpk pack
+            vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
+            
+            # Upload to GitHub releases
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --token ${{ secrets.GH_TOKEN }}
