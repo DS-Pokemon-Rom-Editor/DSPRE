@@ -38,7 +38,8 @@ jobs:
         id: get_version
         shell: bash
         run: |
-            version=$(grep -oE '\[assembly: AssemblyVersion\("[0-9\.]+"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+            # This regex will capture 1-4 part version numbers
+            version=$(grep -oP '\[assembly: AssemblyVersion\("\K[0-9]+(?:\.[0-9]+){0,3}' DS_Map/Properties/AssemblyInfo.cs)
             echo "version=$version" >> $GITHUB_OUTPUT
 
 
