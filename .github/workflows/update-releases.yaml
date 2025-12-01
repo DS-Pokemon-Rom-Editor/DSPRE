@@ -39,22 +39,22 @@ jobs:
         shell: bash
         run: |
             # Extract 4-part version from AssemblyInfo.cs
-            version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+            dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
             
-            # Convert 1.14.2.1 to 1.14.2+1
-            if echo "$version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
-                # 4-part version found, convert to SemVer with build metadata
-                semver_part=$(echo "$version" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$/\1/')
-                revision=$(echo "$version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
-                semver_version="${semver_part}+${revision}"
+            # Convert 1.14.2.1 to 1.14.2-rev1 for Velopack
+            if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
+                # 4-part version found, convert to SemVer with prerelease tag
+                semver_part=$(echo "$dotnet_version" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$/\1/')
+                revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
+                semver_version="${semver_part}-rev${revision}"
             else
                 # Already 3-part or different format
-                semver_version="$version"
+                semver_version="$dotnet_version"
             fi
             
-            echo "version=$semver_version" >> $GITHUB_OUTPUT
-            echo "full_version=$version" >> $GITHUB_OUTPUT
-            echo "Using SemVer: $semver_version (from .NET version: $version)"
+            echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
+            echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
+            echo "Using SemVer: $semver_version (from .NET version: $dotnet_version)"
 
 
       - name: Debug Output
