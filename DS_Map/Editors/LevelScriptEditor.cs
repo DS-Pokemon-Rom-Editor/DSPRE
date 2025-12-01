@@ -275,7 +275,7 @@ namespace DSPRE.Editors
 
             if (radioButtonVariableValue.Checked)
             {
-                string scriptIDRaw = radioButtonVariableValue.Text;
+                string scriptIDRaw = textBoxScriptID.Text;
                 string variableNameRaw = textBoxVariableName.Text;
                 string variableValueRaw = textBoxVariableValue.Text;
 
