@@ -244,7 +244,7 @@ namespace DSPRE
         public static string GetDSPREVersion()
         {
             return "" + Assembly.GetExecutingAssembly().GetName().Version.Major + "." + Assembly.GetExecutingAssembly().GetName().Version.Minor +
-                "." + Assembly.GetExecutingAssembly().GetName().Version.Build;
+                "." + Assembly.GetExecutingAssembly().GetName().Version.Build + "." + Assembly.GetExecutingAssembly().GetName().Version.Revision;
         }
 
         public static void statusLabelMessage(string msg = "Ready")
