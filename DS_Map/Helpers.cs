@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
@@ -44,25 +45,57 @@ namespace DSPRE
         public static void CheckForUpdates(bool silent = true)
         {
             AppLogger.Info("Checking for updates...");
-            var mgr = new UpdateManager(new GithubSource("https://github.com/DS-Pokemon-Rom-Editor/DSPRE", "", prerelease: false));
 
-            var newVersion = mgr.CheckForUpdates();
-            if (newVersion == null)
+            try
             {
-                AppLogger.Info("No updates available.");
-                if (!silent)
-                    MessageBox.Show("No update is available.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            else
-            {
-                DialogResult update = MessageBox.Show($"A new DSPRE version is available: {newVersion.TargetFullRelease.Version}.\nDo you want to install it?", "New update", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                var mgr = new UpdateManager(new GithubSource("https://github.com/DS-Pokemon-Rom-Editor/DSPRE", "", prerelease: false));
+                var newVersion = mgr.CheckForUpdates();
+
+                if (newVersion == null)
+                {
+                    AppLogger.Info("No updates available.");
+                    if (!silent)
+                        MessageBox.Show("No update is available.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Get current version (e.g., "1.14.2.0")
+                string currentVersion = GetDSPREVersion();
+
+                // Convert Velopack version back to .NET version for display
+                string velopackVersion = newVersion.TargetFullRelease.Version.ToString();
+                string displayVersion = ConvertVelopackToDotNetVersion(velopackVersion);
+
+                // Determine update type
+                string updateType = GetUpdateType(currentVersion, displayVersion);
+
+                // Fetch changelog for this release
+                string changelog = FetchChangelogForTag($"v{displayVersion}");
+
+                // Build update message
+                string updateMessage = $"A new DSPRE version is available!\n\n" +
+                                      $"Current: {currentVersion}\n" +
+                                      $"Available: {displayVersion}\n" +
+                                      $"Update Type: {updateType}\n\n";
+
+                if (!string.IsNullOrEmpty(changelog))
+                {
+                    updateMessage += $"Changelog:\n{changelog}\n\n";
+                }
+
+                updateMessage += "Do you want to install it now?";
+
+                DialogResult update = MessageBox.Show(updateMessage,
+                    "New Update Available",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
                 if (update == DialogResult.Yes)
                 {
-                    AppLogger.Info($"New version available: {newVersion.TargetFullRelease.Version} (Current: {mgr.CurrentVersion})");
+                    AppLogger.Info($"New version available: {displayVersion} (Velopack: {velopackVersion}, Current: {currentVersion})");
                     mgr.DownloadUpdates(newVersion);
 
-                    AppLogger.Info($"Installing update {newVersion.TargetFullRelease.Version} and restarting app...");
+                    AppLogger.Info($"Installing update {displayVersion} and restarting app...");
                     mgr.ApplyUpdatesAndRestart(newVersion);
                 }
                 else
@@ -70,6 +103,168 @@ namespace DSPRE
                     AppLogger.Info("User declined to update the application.");
                 }
             }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error checking for updates: {ex.Message}");
+                if (!silent)
+                {
+                    MessageBox.Show($"Error checking for updates: {ex.Message}",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Convert Velopack version back to .NET AssemblyVersion format
+        /// </summary>
+        private static string ConvertVelopackToDotNetVersion(string velopackVersion)
+        {
+            try
+            {
+                // Handle prerelease format (1.14.3-rev1)
+                if (velopackVersion.Contains("-rev"))
+                {
+                    var parts = velopackVersion.Split('-');
+                    string versionPart = parts[0]; // "1.14.3"
+                    string revisionPart = parts[1]; // "rev1"
+
+                    // Extract revision number
+                    int revision = int.Parse(revisionPart.Replace("rev", ""));
+
+                    // Parse version
+                    var versionParts = versionPart.Split('.');
+                    int major = int.Parse(versionParts[0]);
+                    int minor = int.Parse(versionParts[1]);
+                    int patch = int.Parse(versionParts[2]);
+
+                    // Convert back: patch was incremented for Velopack, so decrement it
+                    int originalPatch = patch - 1;
+
+                    return $"{major}.{minor}.{originalPatch}.{revision}";
+                }
+                else
+                {
+                    // Regular version (1.14.3) add .0 revision
+                    var versionParts = velopackVersion.Split('.');
+                    if (versionParts.Length == 3)
+                    {
+                        return $"{velopackVersion}.0";
+                    }
+                    return velopackVersion;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn($"Failed to convert Velopack version '{velopackVersion}': {ex.Message}");
+                return velopackVersion; // Return as-is if conversion fails
+            }
+        }
+
+        /// <summary>
+        /// Determine the type of update (Major, Minor, Build, or Revision)
+        /// </summary>
+        private static string GetUpdateType(string currentVersion, string newVersion)
+        {
+            try
+            {
+                var current = ParseVersion(currentVersion);
+                var update = ParseVersion(newVersion);
+
+                if (current == null || update == null)
+                    return "Update";
+
+                if (update.Major > current.Major)
+                    return "Major Update";
+                else if (update.Minor > current.Minor)
+                    return "Minor Update";
+                else if (update.Build > current.Build)
+                    return "Build Update";
+                else if (update.Revision > current.Revision)
+                    return "Revision Update";
+                else
+                    return "Update";
+            }
+            catch
+            {
+                return "Update";
+            }
+        }
+
+        /// <summary>
+        /// Parse version string into components
+        /// </summary>
+        private static VersionParts ParseVersion(string version)
+        {
+            try
+            {
+                var parts = version.Split('.');
+                return new VersionParts
+                {
+                    Major = parts.Length > 0 ? int.Parse(parts[0]) : 0,
+                    Minor = parts.Length > 1 ? int.Parse(parts[1]) : 0,
+                    Build = parts.Length > 2 ? int.Parse(parts[2]) : 0,
+                    Revision = parts.Length > 3 ? int.Parse(parts[3]) : 0
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private class VersionParts
+        {
+            public int Major { get; set; }
+            public int Minor { get; set; }
+            public int Build { get; set; }
+            public int Revision { get; set; }
+        }
+
+        /// <summary>
+        /// Fetch changelog from GitHub for a specific tag
+        /// </summary>
+        private static string FetchChangelogForTag(string tag)
+        {
+            try
+            {
+                const string owner = "DS-Pokemon-Rom-Editor";
+                const string repo = "DSPRE";
+
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent", "DSPRE");
+                    client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+
+                    string url = $"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}";
+
+                    var response = client.GetAsync(url).Result;
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string json = response.Content.ReadAsStringAsync().Result;
+
+                        int bodyStart = json.IndexOf("\"body\":\"") + 8;
+                        if (bodyStart > 8)
+                        {
+                            int bodyEnd = json.IndexOf("\",\"", bodyStart);
+                            if (bodyEnd > bodyStart)
+                            {
+                                string body = json.Substring(bodyStart, bodyEnd - bodyStart);
+                                // Unescape JSON
+                                return System.Text.RegularExpressions.Regex.Unescape(body);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn($"Failed to fetch changelog: {ex.Message}");
+            }
+
+            return "Changelog not available.";
         }
 
         public static void CheckForDatabaseUpdates(bool silent = true)
