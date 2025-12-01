@@ -475,15 +475,17 @@ namespace DSPRE.ROMFiles
                 }
 
                 // Update Command References
-                for (int i = 0; i < container.commands.Count; i++)
+                if (container.commands != null)
                 {
-                    ScriptCommand cmd = container.commands[i];
-                    bool commandUpdated = false;
-
-                    if (cmd.cmdParams != null)
+                    for (int i = 0; i < container.commands.Count; i++)
                     {
-                        var cmdInfo = RomInfo.GetScriptCommandInfoDict()?[cmd.id ?? 0];
-                        if (cmdInfo != null && cmdInfo.ParameterTypes != null)
+                        ScriptCommand cmd = container.commands[i];
+                        bool commandUpdated = false;
+
+                        if (cmd.cmdParams != null && cmd.id.HasValue)
+                    {
+                        var dict = RomInfo.GetScriptCommandInfoDict();
+                        if (dict != null && dict.TryGetValue(cmd.id.Value, out var cmdInfo) && cmdInfo.ParameterTypes != null)
                         {
                             for (int p = 0; p < Math.Min(cmd.cmdParams.Count, cmdInfo.ParameterTypes.Count); p++)
                             {
@@ -535,6 +537,7 @@ namespace DSPRE.ROMFiles
                 }
             }
         }
+    }
 
         /// <summary>
         /// Helper method to format script/function containers to plaintext (matches ScriptEditor.displayScriptFile logic)
