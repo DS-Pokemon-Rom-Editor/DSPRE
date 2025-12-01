@@ -38,23 +38,28 @@ jobs:
         id: get_version
         shell: bash
         run: |
-            # Extract 4-part version from AssemblyInfo.cs
-            dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
-            
-            # Convert 1.14.2.1 to 1.14.2-rev1 for Velopack
-            if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
-                # 4-part version found, convert to SemVer with prerelease tag
-                semver_part=$(echo "$dotnet_version" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$/\1/')
-                revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
-                semver_version="${semver_part}-rev${revision}"
-            else
-                # Already 3-part or different format
-                semver_version="$dotnet_version"
-            fi
-            
-            echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
-            echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
-
+          dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+          
+          if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
+              major=$(echo "$dotnet_version" | sed -E 's/^([0-9]+)\..*$/\1/')
+              minor=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.([0-9]+)\..*$/\1/')
+              patch=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.([0-9]+)\..*$/\1/')
+              revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
+              
+              if [ "$revision" -eq "0" ]; then
+                  # Main release: 1.14.3.0 -> 1.14.3
+                  semver_version="${major}.${minor}.${patch}"
+              else
+                  # Revision release: 1.14.2.1 -> 1.14.3-rev1
+                  incremented_patch=$((patch + 1))
+                  semver_version="${major}.${minor}.${incremented_patch}-rev${revision}"
+              fi
+          else
+              semver_version="$dotnet_version"
+          fi
+          
+          echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
+          echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
       - name: Debug Output
         run: |
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
