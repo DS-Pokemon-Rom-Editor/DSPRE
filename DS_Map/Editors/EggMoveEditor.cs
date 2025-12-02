@@ -198,6 +198,8 @@ namespace DSPRE
         // This function accounts for that format
         private void ReadEggMoveDataSpecial()
         {
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
+
             // Every Pokémon has a file in a narc containing its egg moves
             string folderPath = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
             string[] files = Directory.GetFiles(folderPath);

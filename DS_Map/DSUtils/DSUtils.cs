@@ -258,10 +258,18 @@ namespace DSPRE {
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
                     DirectoryInfo di = new DirectoryInfo(paths.unpackedPath);
 
-                    if (!di.Exists || di.GetFiles().Length == 0) {
-                        Narc opened = Narc.Open(paths.packedPath) ?? throw new NullReferenceException();
-                        opened.ExtractToFolder(paths.unpackedPath);
+                    if (di.Exists && di.GetFiles().Length > 0) {
+                        return;
                     }
+
+                    if (!File.Exists(paths.packedPath)) {
+                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
+                        return;
+                    }
+
+                    Narc opened = Narc.Open(paths.packedPath) ?? throw new NullReferenceException();
+                    opened.ExtractToFolder(paths.unpackedPath);
+
                 }
             });
         }
