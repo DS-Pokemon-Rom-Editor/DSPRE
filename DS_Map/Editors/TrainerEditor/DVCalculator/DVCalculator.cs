@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
@@ -182,116 +183,97 @@ namespace DSPRE
             "Quirky: Neutral"
             };
 
-    public static class TrainerClassGender
-    {
-
-        // true represents male, false represents female
-        private static List<bool> trainerClassGenders = new List<bool>();
-
-        private static bool tableLoaded = false;
-
-        public static bool GetTrainerClassGender(int trainerClassID)
+        public static class TrainerClassGender
         {
-            if (!tableLoaded)
+
+            // true represents male, false represents female
+            private static List<bool> trainerClassGenders = new List<bool>();
+
+            private static bool tableLoaded = false;
+
+            private static readonly Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int> genderTableOffsets = new Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int>
             {
-                ReadTrainerClassGenderTable();
+                // D/P
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.English), 0xF8010 },
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Japanese), 0xF9F7C },
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.French), 0xF8054 },
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.German), 0xF8024 },
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Italian), 0xF7FC8 },
+                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Spanish), 0xF8060 },
+
+                // Plat
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.English), 0xF0714 },
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Japanese), 0xEFDA4 },
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.French), 0xF079C },
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.German), 0xF076C },
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Italian), 0xF0730 },
+                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Spanish), 0xF07A8 },
+
+                // HG/SS
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.English), 0xFFB90 },
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Japanese), 0xFF310 },
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.French), 0xFFB74 },
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.German), 0xFFB44 },
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Italian), 0xFFB08 },
+                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Spanish), 0xFFB78 },
+            };
+
+            public static bool GetTrainerClassGender(int trainerClassID)
+            {
+                if (!tableLoaded)
+                {
+                    ReadTrainerClassGenderTable();
+                }
+                return trainerClassGenders[trainerClassID];
             }
-            return trainerClassGenders[trainerClassID];
-        }
                 
-        public static void ReadTrainerClassGenderTable()
-        {
-            uint offset = GetTableOffset();
-            uint length = GetTableLength();
-            if (offset == 0 || length == 0)
+            public static void ReadTrainerClassGenderTable()
             {
-                MessageBox.Show("Couldn't load trainer class gender table from arm9." +
-                    "\nTrainers will default to male when calculating natures.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                uint offset = GetTableOffset();
+                uint length = GetTableLength();
+                if (offset == 0 || length == 0)
+                {
+                    MessageBox.Show("Couldn't load trainer class gender table from arm9." +
+                        "\nTrainers will default to male when calculating natures.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    tableLoaded = true;
+                    return;
+                }
+
+                byte[] table = ARM9.ReadBytes(offset, length);
+
+                for (int i = 0; i < table.Length; i++)
+                {
+                    trainerClassGenders.Add(table[i] == 1 ? false : true);
+                }
                 tableLoaded = true;
-                return;
+
             }
 
-            byte[] table = ARM9.ReadBytes(offset, length);
-
-            for (int i = 0; i < table.Length; i++)
+            private static uint GetTableLength()
             {
-                trainerClassGenders.Add(table[i] == 1 ? false : true);
-            }
-            tableLoaded = true;
-
-        }
-
-        private static uint GetTableLength()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.Plat:
-                    return 105; // Platinum has 105 trainer classes
-                case RomInfo.GameFamilies.HGSS:
-                    return 128;
-                case RomInfo.GameFamilies.DP:
-                    return 0;
-                default:
-                    // Unknown game family
-                    return 0;
-            }
+                switch (RomInfo.gameFamily)
+                {
+                    case RomInfo.GameFamilies.Plat:
+                        return 105; // Platinum has 105 trainer classes
+                    case RomInfo.GameFamilies.HGSS:
+                        return 128;
+                    case RomInfo.GameFamilies.DP:
+                        return 98;
+                    default:
+                        // Unknown game family
+                        return 0;
+                }
                     
-        }
-
-        private static uint GetTableOffset()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.Plat:
-                    switch(RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF0714;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xEFDA4;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF078A;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF076C;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF079C;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF0730;
-                        default:
-                            // Unknown game language
-                            return 0;
-                    }
-                case RomInfo.GameFamilies.HGSS:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xFFB90;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFF310;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xFFB90;
-                        case RomInfo.GameLanguages.German:
-                            return 0xFFB44;
-                        case RomInfo.GameLanguages.French:
-                            return 0xFFB74;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xFFB08;
-                        default:
-                            // Unknown game language
-                            return 0;
-                    }
-                case RomInfo.GameFamilies.DP:
-                    // Dummy offset for DP
-                    return 0;
-                default:
-                    // Unknown game family
-                    return 0;
             }
-        }
 
-    }
+            private static uint GetTableOffset()
+            {
+                int offset = 0;
+                genderTableOffsets.TryGetValue((RomInfo.gameFamily, RomInfo.gameLanguage), out offset);
+                return (uint)offset;
+            }
 
-            
+        }         
 
     }
 }
