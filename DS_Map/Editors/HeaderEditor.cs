@@ -877,7 +877,7 @@ namespace DSPRE.Editors
             }
             else
             {
-                uint headerOffset = (uint)(RomInfo.headerTableOffset + MapHeader.length * currentHeader.ID);
+                uint headerOffset = (uint)(OffsetUtils.headerTableOffset + MapHeader.length * currentHeader.ID);
                 ARM9.WriteBytes(currentHeader.ToByteArray(), headerOffset);
             }
             Helpers.DisableHandlers();
@@ -1173,7 +1173,7 @@ namespace DSPRE.Editors
             }
             else
             {
-                uint headerOffset = (uint)(RomInfo.headerTableOffset + MapHeader.length * currentHeader.ID);
+                uint headerOffset = (uint)(OffsetUtils.headerTableOffset + MapHeader.length * currentHeader.ID);
                 ARM9.WriteBytes(currentHeader.ToByteArray(), headerOffset);
             }
 

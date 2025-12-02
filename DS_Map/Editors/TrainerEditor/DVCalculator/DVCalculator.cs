@@ -191,33 +191,6 @@ namespace DSPRE
 
             private static bool tableLoaded = false;
 
-            private static readonly Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int> genderTableOffsets = new Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int>
-            {
-                // D/P
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.English), 0xF8010 },
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Japanese), 0xF9F7C },
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.French), 0xF8054 },
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.German), 0xF8024 },
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Italian), 0xF7FC8 },
-                { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Spanish), 0xF8060 },
-
-                // Plat
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.English), 0xF0714 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Japanese), 0xEFDA4 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.French), 0xF079C },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.German), 0xF076C },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Italian), 0xF0730 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Spanish), 0xF07A8 },
-
-                // HG/SS
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.English), 0xFFB90 },
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Japanese), 0xFF310 },
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.French), 0xFFB74 },
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.German), 0xFFB44 },
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Italian), 0xFFB08 },
-                { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.Spanish), 0xFFB78 },
-            };
-
             public static bool GetTrainerClassGender(int trainerClassID)
             {
                 if (!tableLoaded)
@@ -229,7 +202,7 @@ namespace DSPRE
                 
             public static void ReadTrainerClassGenderTable()
             {
-                uint offset = GetTableOffset();
+                uint offset = OffsetUtils.genderTableOffsets.GetOffset();
                 uint length = GetTableLength();
                 if (offset == 0 || length == 0)
                 {
@@ -264,13 +237,6 @@ namespace DSPRE
                         return 0;
                 }
                     
-            }
-
-            private static uint GetTableOffset()
-            {
-                int offset = 0;
-                genderTableOffsets.TryGetValue((RomInfo.gameFamily, RomInfo.gameLanguage), out offset);
-                return (uint)offset;
             }
 
         }         

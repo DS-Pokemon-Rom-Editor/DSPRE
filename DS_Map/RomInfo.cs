@@ -49,8 +49,6 @@ namespace DSPRE
         public static int cameraTblOverlayNumber { get; private set; }
         public static uint[] cameraTblOffsetsToRAMaddress { get; private set; }
 
-        public static uint headerTableOffset { get; private set; }
-
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
 
@@ -363,99 +361,6 @@ namespace DSPRE
                 [101] = "dawn_platinum",
                 //[174] = "dppt_suitcase",
             };
-        }
-
-        public static void SetHeaderTableOffset()
-        {
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xEEDBC;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = 0xEEE08;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xEED70;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xEEDFC;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xEEDCC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = gameVersion == GameVersions.Diamond ? (uint)0xF0D68 : 0xF0D6C;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xE601C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = 0xE60B0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xE6038;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xE60A4;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xE6074;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = 0xE56F0;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            headerTableOffset = 0xF6BE0;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            headerTableOffset = gameVersion == GameVersions.HeartGold ? 0xF6BC8 : (uint)0xF6BD0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            headerTableOffset = 0xF6B58;
-                            break;
-
-                        case GameLanguages.French:
-                            headerTableOffset = 0xF6BC4;
-                            break;
-
-                        case GameLanguages.German:
-                            headerTableOffset = 0xF6B94;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            headerTableOffset = 0xF6390;
-                            break;
-                    }
-                    break;
-            }
         }
 
         public static void SetupSpawnSettings()

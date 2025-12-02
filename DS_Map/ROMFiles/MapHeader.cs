@@ -160,7 +160,7 @@ namespace DSPRE.ROMFiles {
         }
 
         public static MapHeader LoadFromARM9(ushort headerNumber, RomInfo.GameFamilies gameFamily = RomInfo.GameFamilies.NULL) {
-            long headerOffset = RomInfo.headerTableOffset + MapHeader.length * headerNumber;
+            long headerOffset = OffsetUtils.headerTableOffset + MapHeader.length * headerNumber;
             return LoadFromFile(RomInfo.arm9Path, headerNumber, headerOffset, gameFamily);
         }
 
@@ -200,7 +200,7 @@ namespace DSPRE.ROMFiles {
                 string path = Filesystem.GetDynamicHeaderPath(ID);
                 DSUtils.WriteToFile(path, this.ToByteArray(), 0, 0, fmode: FileMode.Create);
             } else {
-                uint headerOffset = (uint)(RomInfo.headerTableOffset + MapHeader.length * this.ID);
+                uint headerOffset = (uint)(OffsetUtils.headerTableOffset + MapHeader.length * this.ID);
                 ARM9.WriteBytes(this.ToByteArray(), headerOffset);
             }
         }
