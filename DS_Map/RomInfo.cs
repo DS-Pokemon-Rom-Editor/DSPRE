@@ -243,7 +243,6 @@ namespace DSPRE
             LoadGameLanguage();
 
             SetNarcDirs();
-            SetHeaderTableOffset();
             SetNullEncounterID();
 
             SetAbilityNamesTextNumber();

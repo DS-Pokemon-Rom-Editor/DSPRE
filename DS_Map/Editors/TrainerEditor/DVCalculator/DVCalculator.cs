@@ -202,7 +202,7 @@ namespace DSPRE
                 
             public static void ReadTrainerClassGenderTable()
             {
-                uint offset = OffsetUtils.genderTableOffsets.GetOffset();
+                uint offset = OffsetUtils.genderTableOffset;
                 uint length = GetTableLength();
                 if (offset == 0 || length == 0)
                 {
