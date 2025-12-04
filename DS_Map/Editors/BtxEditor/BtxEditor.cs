@@ -30,6 +30,8 @@ namespace DSPRE.Editors.BtxEditor
                 overworldList.Items.Add("OW Entry " + key);
             }
 
+            overworldList.SelectedIndex = 0;
+
             this.FormClosing += BtxEditor_FormClosing;
         }
 
