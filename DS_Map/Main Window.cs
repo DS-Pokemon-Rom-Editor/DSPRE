@@ -1554,7 +1554,7 @@ namespace DSPRE
 
         private void overworldEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
             BtxEditor form = new BtxEditor();
             form.Show();
         }
