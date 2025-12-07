@@ -24,7 +24,7 @@ namespace DSPRE {
                 Overlay ovl = new Overlay
                 {
                     number = i,
-                    //isCompressed = OverlayUtils.IsCompressed(i),
+                    isCompressed = OverlayUtils.IsCompressed(i),
                     isMarkedCompressed = OverlayUtils.OverlayTable.IsDefaultCompressed(i),
                     RAMAddress = OverlayUtils.OverlayTable.GetRAMAddress(i),
                     uncompressedSize = OverlayUtils.OverlayTable.GetUncompressedSize(i)
