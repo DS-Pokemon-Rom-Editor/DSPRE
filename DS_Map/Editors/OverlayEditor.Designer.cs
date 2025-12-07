@@ -22,7 +22,8 @@
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent() {
+        private void InitializeComponent()
+        {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OverlayEditor));
             this.overlayDataGrid = new System.Windows.Forms.DataGridView();
             this.isCompressedButton = new System.Windows.Forms.Button();
@@ -102,7 +103,6 @@
             this.Text = "OverlayEditor";
             ((System.ComponentModel.ISupportInitialize)(this.overlayDataGrid)).EndInit();
             this.ResumeLayout(false);
-
         }
 
         #endregion

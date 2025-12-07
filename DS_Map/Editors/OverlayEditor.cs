@@ -24,7 +24,7 @@ namespace DSPRE {
                 Overlay ovl = new Overlay
                 {
                     number = i,
-                    isCompressed = OverlayUtils.IsCompressed(i),
+                    //isCompressed = OverlayUtils.IsCompressed(i),
                     isMarkedCompressed = OverlayUtils.OverlayTable.IsDefaultCompressed(i),
                     RAMAddress = OverlayUtils.OverlayTable.GetRAMAddress(i),
                     uncompressedSize = OverlayUtils.OverlayTable.GetUncompressedSize(i)
@@ -42,7 +42,18 @@ namespace DSPRE {
             overlayDataGrid.Columns[0].ReadOnly = true;
             overlayDataGrid.Columns[3].ReadOnly = true;
             overlayDataGrid.Columns[4].ReadOnly = true;
-
+            
+            
+            // ====================================================
+            // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED
+            // ====================================================
+            overlayDataGrid.Columns[1].Visible = false;
+            isCompressedButton.Enabled = false;
+            // ====================================================
+            // ====================================================
+            // ====================================================
+            
+            
             // Register the new event handler for real-time checkbox updates
             overlayDataGrid.CurrentCellDirtyStateChanged += overlayDataGrid_CurrentCellDirtyStateChanged;
             overlayDataGrid.DataBindingComplete += overlayDataGrid_DataBindingComplete;
