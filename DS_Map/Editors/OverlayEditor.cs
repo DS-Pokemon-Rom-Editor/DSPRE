@@ -47,8 +47,7 @@ namespace DSPRE {
             // ====================================================
             // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED
             // ====================================================
-            overlayDataGrid.Columns[1].Visible = false;
-            isCompressedButton.Enabled = false;
+            isCompressedButton.Text = "Decompress All";
             // ====================================================
             // ====================================================
             // ====================================================
@@ -156,15 +155,40 @@ namespace DSPRE {
                 + String.Join(", ", modifiedNumbers)
                 + "\nProceed?", "Confirmation required", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
+            // ====================================================
+            // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED
+            // ====================================================
+            bool hasCompressing = false;
+            // ====================================================
+            // ====================================================
+            // ====================================================
+            
             if (d == DialogResult.Yes) {
                 foreach (Overlay overlay in modifiedOverlays) {
                     OverlayUtils.OverlayTable.SetDefaultCompressed(overlay.number, overlay.isMarkedCompressed);
                     if (overlay.isCompressed && !OverlayUtils.IsCompressed(overlay.number))
-                        OverlayUtils.Compress(overlay.number);
+                        // OverlayUtils.Compress(overlay.number);
+                        
+                        // ====================================================
+                        // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED
+                        // ====================================================
+                        hasCompressing = true;
+                        // ====================================================
+                        // ====================================================
+                        // ====================================================
                     if (!overlay.isCompressed && OverlayUtils.IsCompressed(overlay.number))
                         OverlayUtils.Decompress(overlay.number);
                 }
             }
+            // ====================================================
+            // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED
+            // ====================================================
+            if(hasCompressing) 
+                MessageBox.Show("Compression is temporarily disabled until we work on a fix.", "Warning", 
+                    MessageBoxButtons.OK);
+            // ====================================================
+            // ====================================================
+            // ====================================================
         }
 
         private bool FindMismatches(bool paintThem = true) {
