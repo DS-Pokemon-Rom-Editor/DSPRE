@@ -22,8 +22,7 @@ namespace DSPRE {
             }
 
             playerDirCombobox.SelectedIndex = 0;
-            matrixxUpDown.Value = matrixX;
-            matrixyUpDown.Value = matrixY;
+            SetMatrixXYSafe(matrixX, matrixY);
         }
         public SpawnEditor(List<string> allNames) {
             InitializeComponent();
@@ -45,6 +44,38 @@ namespace DSPRE {
             playerDirCombobox.Items.Clear();
             playerDirCombobox.Items.AddRange(new string[4] { "Up", "Down", "Left", "Right" });
         }
+
+        private void SetMatrixXYSafe(int matrixX, int matrixY)
+        {
+            bool outOfRangeCaught = false;
+
+            try
+            {
+                matrixxUpDown.Value = matrixX;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                matrixxUpDown.Value = matrixxUpDown.Maximum;
+                outOfRangeCaught = true;
+            }
+            try
+            {
+                matrixyUpDown.Value = matrixY;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                matrixyUpDown.Value = matrixyUpDown.Maximum;
+                outOfRangeCaught = true;
+            }
+
+            if (outOfRangeCaught)
+            {
+                MessageBox.Show("The specified matrix coordinates are out of range for the selected map header. " +
+                    "They have been set to the maximum allowed values.\n" +
+                    "This usually means you forgot to assign this matrix to the header in the header editor.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
         private void saveSpawnEditorButton_Click(object sender, EventArgs e) {
             DialogResult d = MessageBox.Show("This operation will overwrite: " + Environment.NewLine
                 + "- 10 bytes of data at ARM9 offset 0x" + RomInfo.arm9spawnOffset.ToString("X") + Environment.NewLine
