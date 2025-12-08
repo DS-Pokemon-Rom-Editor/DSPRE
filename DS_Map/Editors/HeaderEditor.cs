@@ -185,7 +185,50 @@ namespace DSPRE.Editors
 
             // Select new header
             headerListBox.SelectedIndex = headerListBox.Items.Count - 1;
+
+            var dialogResult = MessageBox.Show("Do you also want to create the following associated files?\n\n" +
+                "- Text Archive\n" +
+                "- Script File\n" +
+                "- Level Script File\n" +
+                "- Event File\n" +
+                "\nThese files will be blank templates. Remember that removing the header will not(!) remove the associated files.", "Create associated files?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (dialogResult == DialogResult.Yes)
+            {
+                Helpers.statusLabelMessage("Creating supporting files for new header... Please wait.");
+                _parent.Update();
+                CreateSupportingFiles();
+                Helpers.statusLabelMessage();
+            }
+
         }
+
+        private void CreateSupportingFiles()
+        {
+            // Text Archive
+            EditorPanels.textEditor.SetupTextEditor(_parent);
+            int archiveID = EditorPanels.textEditor.AddArchive();
+            currentHeader.textArchiveID = (ushort)archiveID;
+
+            // Script File
+            EditorPanels.scriptEditor.SetupScriptEditor(_parent);
+            int scriptID = EditorPanels.scriptEditor.AddScriptFile();
+            currentHeader.scriptFileID = (ushort)scriptID;
+
+            // Level Script File
+            EditorPanels.levelScriptEditor.SetUpLevelScriptEditor(_parent);
+            int levelScriptID = EditorPanels.levelScriptEditor.AddLevelScript();
+            currentHeader.levelScriptID = (ushort)levelScriptID;
+
+            // Event File
+            EditorPanels.eventEditor.SetupEventEditor(_parent);
+            int eventFileID = EditorPanels.eventEditor.AddEventFile();
+            currentHeader.eventFileID = (ushort)eventFileID;
+
+            saveHeaderButton_Click(null, null);
+            RefreshHeaderEditorFields();
+        }
+
         private void removeLastHeaderBTN_Click(object sender, EventArgs e)
         {
             /* Check if currently selected file is the last one, and in that case select the one before it */
@@ -909,10 +952,19 @@ namespace DSPRE.Editors
             string elem = headerID.ToString("D3") + MapHeader.nameSeparator + internalNames[headerID];
             headerListBoxNames[headerID] = elem;
 
-            if (EditorPanels.eventEditor.eventEditorIsReady)
+            if (!EditorPanels.eventEditor.eventEditorIsReady)
             {
-                EditorPanels.eventEditor.eventEditorWarpHeaderListBox.Items[headerID] = elem;
+                return;
             }
+
+            if (headerID >= EditorPanels.eventEditor.eventEditorWarpHeaderListBox.Items.Count)
+            {
+                EditorPanels.eventEditor.eventEditorWarpHeaderListBox.Items.Add(elem);
+                return;
+            }
+
+            EditorPanels.eventEditor.eventEditorWarpHeaderListBox.Items[headerID] = elem;
+
         }
         private void updateHeaderNameShown(int thisIndex)
         {

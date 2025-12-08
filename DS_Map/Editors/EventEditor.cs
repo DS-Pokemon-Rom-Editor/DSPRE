@@ -833,14 +833,23 @@ namespace DSPRE.Editors
 
             Helpers.statusLabelMessage();
         }
-        private void addEventFileButton_Click(object sender, EventArgs e)
+
+        public int AddEventFile()
         {
             /* Add copy of event 0 to event folder */
-            new EventFile().SaveToFileDefaultDir(selectEventComboBox.Items.Count);
+            int newEventFileID = selectEventComboBox.Items.Count;
+            new EventFile().SaveToFileDefaultDir(newEventFileID, false);
 
             /* Update ComboBox and select new file */
-            selectEventComboBox.Items.Add("Event File " + selectEventComboBox.Items.Count);
-            selectEventComboBox.SelectedIndex = selectEventComboBox.Items.Count - 1;
+            selectEventComboBox.Items.Add("Event File " + newEventFileID);
+
+            return newEventFileID;
+        }
+
+        private void addEventFileButton_Click(object sender, EventArgs e)
+        {
+            int newEventFileID = AddEventFile();
+            selectEventComboBox.SelectedIndex = newEventFileID;
         }
  
         private void eventMatrixPictureBox_Click(object sender, EventArgs e)

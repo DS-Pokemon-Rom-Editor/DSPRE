@@ -1051,11 +1051,16 @@ namespace DSPRE.Editors
                 {
                     selectScriptFileComboBox.SelectedIndex--;
                 }
+
                 /* Remove item from ComboBox */
                 selectScriptFileComboBox.Items.RemoveAt(lastIndex);
+
+                /* Refresh Level Script Editor to prevent desync */
+                EditorPanels.levelScriptEditor.populate_selectScriptFileComboBox();
             }
         }
-        private void addScriptFileButton_Click(object sender, EventArgs e)
+
+        public int AddScriptFile()
         {
             /* Add new event file to event folder */
             int fileID = selectScriptFileComboBox.Items.Count;
@@ -1072,8 +1077,15 @@ namespace DSPRE.Editors
             {
                 /* Update ComboBox and select new file */
                 selectScriptFileComboBox.Items.Add(scriptFile);
-                selectScriptFileComboBox.SelectedItem = scriptFile;
             }
+
+            return fileID;
+        }
+
+        private void addScriptFileButton_Click(object sender, EventArgs e)
+        {
+            int scriptFileID = AddScriptFile();
+            selectScriptFileComboBox.SelectedItem = scriptFileID;
         }
 
         private void saveScriptFileButton_Click(object sender, EventArgs e)

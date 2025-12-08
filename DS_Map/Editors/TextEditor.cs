@@ -150,16 +150,25 @@ namespace DSPRE.Editors
 
         #endregion
 
-        private void addTextArchiveButton_Click(object sender, EventArgs e)
+        public int AddArchive()
         {
             /* Add copy of message 0 to text archives folder */
-            var textArchive = new TextArchive(selectTextFileComboBox.Items.Count, new List<string>() { "Your text here." });
-            textArchive.SaveToExpandedDir(selectTextFileComboBox.Items.Count);
-            textArchive.SaveToDefaultDir(selectTextFileComboBox.Items.Count, false);
+            int newArchiveID = selectTextFileComboBox.Items.Count;
+            var textArchive = new TextArchive(newArchiveID, new List<string>() { "Your text here." });
+            textArchive.SaveToExpandedDir(newArchiveID);
+            textArchive.SaveToDefaultDir(newArchiveID, false);
 
             /* Update ComboBox and select new file */
-            selectTextFileComboBox.Items.Add("Text Archive " + selectTextFileComboBox.Items.Count);
-            selectTextFileComboBox.SelectedIndex = selectTextFileComboBox.Items.Count - 1;
+            selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);
+            
+
+            return newArchiveID;
+        }
+
+        private void addTextArchiveButton_Click(object sender, EventArgs e)
+        {
+            int newArchiveID =  AddArchive();
+            selectTextFileComboBox.SelectedIndex = newArchiveID;
         }
 
         private void locateCurrentTextArchive_Click(object sender, EventArgs e)
@@ -762,7 +771,6 @@ namespace DSPRE.Editors
         #endregion
         public void OpenTextEditor(MainProgram parent, int TextArchiveID, ComboBox locationNameComboBox)
         {
-
             SetupTextEditor(parent);
 
             selectTextFileComboBox.SelectedIndex = TextArchiveID;
@@ -774,8 +782,6 @@ namespace DSPRE.Editors
             {
                 EditorPanels.mainTabControl.SelectedTab = EditorPanels.textEditorTabPage;
             }
-
-
         }
 
         public void SetupTextEditor(MainProgram parent, bool force = false)

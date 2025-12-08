@@ -54,7 +54,22 @@ namespace DSPRE.Editors
             }
         }
 
-        private void populate_selectScriptFileComboBox(int selectedIndex = 0)
+        public int AddLevelScript() 
+        {
+            // need to add a script file through the script editor to keep them in sync
+            int newScriptID = _parent.scriptEditor.AddScriptFile();
+            var levelScriptFile = new LevelScriptFile();
+
+            // Add a default trigger so the level script is not empty
+            var trigger = new MapScreenLoadTrigger(LevelScriptTrigger.MAPCHANGE, 1);
+            levelScriptFile.bufferSet.Add(trigger);
+            levelScriptFile.write_file(Filesystem.GetScriptPath(newScriptID));
+
+            selectScriptFileComboBox.Items.Add($"Script File {newScriptID}");
+
+            return newScriptID;
+        }
+        public void populate_selectScriptFileComboBox(int selectedIndex = 0)
         {
             selectScriptFileComboBox.Items.Clear();
             int scriptCount = Filesystem.GetScriptCount();
