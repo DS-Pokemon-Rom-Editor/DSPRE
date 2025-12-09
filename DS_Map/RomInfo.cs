@@ -360,9 +360,16 @@ namespace DSPRE
                 [94] = "route_sign",
                 [95] = "blue_sign", //to fix this one (gym_sign)
                 [96] = "blue_sign",
-                [101] = "dawn_platinum",
+                [101] = "dawn_platinum", // depends on value of variable 0x4020
                 //[174] = "dppt_suitcase",
             };
+
+            // Special Objects whose sprites depend on a variable value (0x4021-0x402F)
+            for (uint i = 102; i <= 116; i++)
+            {
+                ow3DSpriteDict[i] = "overworld";
+            }
+
         }
 
         public static void SetHeaderTableOffset()
