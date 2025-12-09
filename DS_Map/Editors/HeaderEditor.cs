@@ -179,8 +179,8 @@ namespace DSPRE.Editors
             DSUtils.WriteToFile(RomInfo.internalNamesPath, StringToInternalName(newmap), (uint)RomInfo.GetHeaderCount() * RomInfo.internalNameLength);
 
             // Update headers ListBox and internal names list
-            headerListBox.Items.Add(headerListBox.Items.Count + MapHeader.nameSeparator + " " + newmap);
-            headerListBoxNames.Add(headerListBox.Items.Count + MapHeader.nameSeparator + " " + newmap);
+            headerListBox.Items.Add(headerListBox.Items.Count + MapHeader.nameSeparator + newmap);
+            headerListBoxNames.Add(headerListBox.Items.Count + MapHeader.nameSeparator + newmap);
             internalNames.Add(newmap);
 
             // Select new header
@@ -195,11 +195,19 @@ namespace DSPRE.Editors
 
             if (dialogResult == DialogResult.Yes)
             {
+                // Try to prevent the user from clicking during the setup process
                 Helpers.statusLabelMessage("Creating supporting files for new header... Please wait.");
+                this.Enabled = false;
+                _parent.Enabled = false;
                 _parent.Update();
                 CreateSupportingFiles();
+                this.Enabled = true;
+                _parent.Enabled = true;
                 Helpers.statusLabelMessage();
             }
+
+            saveHeaderButton_Click(null, null);
+            RefreshHeaderEditorFields();
 
         }
 
@@ -224,9 +232,6 @@ namespace DSPRE.Editors
             EditorPanels.eventEditor.SetupEventEditor(_parent);
             int eventFileID = EditorPanels.eventEditor.AddEventFile();
             currentHeader.eventFileID = (ushort)eventFileID;
-
-            saveHeaderButton_Click(null, null);
-            RefreshHeaderEditorFields();
         }
 
         private void removeLastHeaderBTN_Click(object sender, EventArgs e)

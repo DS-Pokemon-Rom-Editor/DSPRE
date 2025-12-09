@@ -1077,6 +1077,8 @@ namespace DSPRE.Editors
             {
                 /* Update ComboBox and select new file */
                 selectScriptFileComboBox.Items.Add(scriptFile);
+                /* Refresh Level Script Editor to prevent desync */
+                EditorPanels.levelScriptEditor.populate_selectScriptFileComboBox();
             }
 
             return fileID;
