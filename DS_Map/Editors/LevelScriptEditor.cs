@@ -65,8 +65,6 @@ namespace DSPRE.Editors
             levelScriptFile.bufferSet.Add(trigger);
             levelScriptFile.write_file(Filesystem.GetScriptPath(newScriptID));
 
-            selectScriptFileComboBox.Items.Add($"Script File {newScriptID}");
-
             return newScriptID;
         }
         public void populate_selectScriptFileComboBox(int selectedIndex = 0)
