@@ -173,11 +173,11 @@ namespace DSPRE.Editors
 
         private void locateCurrentTextArchive_Click(object sender, EventArgs e)
         {
-            Helpers.ExplorerSelect(TextArchive.GetFilePaths(currentTextArchive.ID).txtPath);
+            Helpers.ExplorerSelect(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
         private void openCurrentTxtButton_Click(object sender, EventArgs e)
         {
-            Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).txtPath);
+            Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
 
         private void addStringButton_Click(object sender, EventArgs e)
@@ -315,7 +315,7 @@ namespace DSPRE.Editors
             /* Prompt user to select .msg or .txt file */
             OpenFileDialog of = new OpenFileDialog
             {
-                Filter = "Text Archive (*.msg;*.txt)|*.msg;*.txt|Gen IV Text Archive (*.msg)|*.msg|Plaintext file (*.txt)|*.txt"
+                Filter = "Text Archive (*.msg;*.txt)|*.msg;*.txt|Gen IV Text Archive (*.msg)|*.msg|JSON Text Archive (*.json)|*.json",
             };
             if (of.ShowDialog(this) != DialogResult.OK)
             {
@@ -324,7 +324,7 @@ namespace DSPRE.Editors
 
             /* Update Text Archive object in memory */
             string binPath = TextArchive.GetFilePaths(currentTextArchive.ID).binPath;
-            string txtPath = TextArchive.GetFilePaths(currentTextArchive.ID).txtPath;
+            string jsonPath = TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath;
             string selectedExtension = Path.GetExtension(of.FileName);
 
             if (selectedExtension == ".msg")
@@ -332,10 +332,10 @@ namespace DSPRE.Editors
                 // Handle .msg case
                 File.Copy(of.FileName, binPath, true);
             }
-            else if (selectedExtension == ".txt")
+            else if (selectedExtension == ".json")
             {
-                // Handle .txt case
-                File.Copy(of.FileName, txtPath, true);
+                // Handle .json case
+                File.Copy(of.FileName, jsonPath, true);
             }
 
             /* Refresh controls */
@@ -353,7 +353,7 @@ namespace DSPRE.Editors
                 /* Delete Text Archive */
                 try
                 {
-                    File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).txtPath);
+                    File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).jsonPath);
                     File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).binPath);
                 }
                 catch (Exception ex)
@@ -812,10 +812,10 @@ namespace DSPRE.Editors
                         
                         try {
 
-                            string expandedPath = TextArchive.GetFilePaths(i).txtPath;
+                            string expandedPath = TextArchive.GetFilePaths(i).jsonPath;
                             string binPath = TextArchive.GetFilePaths(i).binPath;
 
-                            // Skip if .txt is newer than .bin
+                            // Skip if .json is newer than .bin
                             if (!File.Exists(expandedPath) || File.GetLastWriteTimeUtc(expandedPath) < File.GetLastWriteTimeUtc(binPath)) 
                             {
                                 var temp = new TextArchive(i);

@@ -1,3 +1,4 @@
+using DSPRE.CharMaps;
 using DSPRE.Editors;
 using DSPRE.Resources;
 using System;
@@ -16,7 +17,7 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// Class to store message data from DS Pokémon games
     /// </summary>
-    public class TextArchive : RomFile
+    public class TextArchive
     {
         #region Fields
 
@@ -39,7 +40,7 @@ namespace DSPRE.ROMFiles
             }
 
             // First try to read from plain text file if it exists
-            if (TryReadPlainTextFile())
+            if (TryReadJsonFile())
             {
                 return;
             }
@@ -59,13 +60,13 @@ namespace DSPRE.ROMFiles
 
         #region Methods (2)
 
-        public static (string binPath, string txtPath) GetFilePaths(int ID)
+        public static (string binPath, string jsonPath) GetFilePaths(int ID)
         {
             string baseDir = gameDirs[DirNames.textArchives].unpackedDir;
             string binPath = Path.Combine(baseDir, $"{ID:D4}");
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "textArchives");
-            string txtPath = Path.Combine(expandedDir, $"{ID:D4}.txt");
-            return (binPath, txtPath);
+            string expandedDir = TextConverter.GetExpandedFolderPath();
+            string jsonPath = Path.Combine(expandedDir, $"{ID:D4}.json");
+            return (binPath, jsonPath);
         }
 
         public static bool BuildRequiredBins()
@@ -144,7 +145,7 @@ namespace DSPRE.ROMFiles
             }
 
             string currentMessage = messages[messageIndex];
-            string updatedMessage = TextConverter.GetProperTrainerName(currentMessage, newSimpleName);
+            string updatedMessage = TextConverter.ReplaceTrainerName(currentMessage, newSimpleName);
             if (updatedMessage == currentMessage)
             {
                 // No change made
@@ -154,9 +155,9 @@ namespace DSPRE.ROMFiles
             return true;
         }
 
-        private bool TryReadPlainTextFile()
+        private bool TryReadJsonFile()
         {
-            string txtPath = GetFilePaths(ID).txtPath;
+            string txtPath = GetFilePaths(ID).jsonPath;
             string binPath = GetFilePaths(ID).binPath;
 
             if (!File.Exists(txtPath))
@@ -164,69 +165,22 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            // If the .txt file is older than the .bin file, ignore it and re-extract from .bin
+            // If the .json file is older than the .bin file, ignore it and re-extract from .bin
             if (File.GetLastWriteTimeUtc(txtPath) < File.GetLastWriteTimeUtc(binPath))
             {
                 return false;
             }
 
-            try
-            {
-                List<string> lines = File.ReadAllLines(txtPath).ToList();
-                if (lines.Count == 0)
-                {
-                    AppLogger.Error($"Text file {txtPath} is empty. Bin file will be reextracted.");
-                    return false;
-                }
+            
 
-                // First line should be the key
-                string firstLine = lines[0];
-                if (!firstLine.StartsWith("# Key: "))
-                {
-                    AppLogger.Error($"Text file {txtPath} is missing the key in the first line. Bin file will be reextracted.");
-                    return false;
-                }
-
-                string keyHex = firstLine.Substring(7).Trim();
-                if (!UInt16.TryParse(keyHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out key))
-                {
-                    AppLogger.Error($"Text file {txtPath} has an invalid key format. Bin file will be reextracted.");
-                    return false;
-                }
-
-                // Check for newline character in last line and add a blank line if needed
-                // Since ReadAllLines() trims the newline, we read the last character of the file directly
-                // I hate this - Yako
-                using (FileStream fs = new FileStream(txtPath, FileMode.Open, FileAccess.Read))
-                {
-                    if (fs.Length > 0)
-                    {
-                        fs.Seek(-1, SeekOrigin.End);
-                        int lastByte = fs.ReadByte();
-                        if (lastByte == '\n' || lastByte == '\r')
-                        {
-                            lines.Add(string.Empty);
-                        }
-                    }
-                    fs.Close();
-                }
-
-                // Remove the first line (the key) from the messages
-                lines.RemoveAt(0);
-
-                messages = lines;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Error reading text file {txtPath}: {ex.Message}. Bin file will be reextracted.");
-                return false;
-            }
         }
 
         private bool ReadFromBinFile()
         {
             string binPath = GetFilePaths(ID).binPath;
+            string jsonPath = GetFilePaths(ID).jsonPath;
+            string charmapPath = CharMapManager.GetCharMapPath();
+
             if (!File.Exists(binPath))
             {
                 MessageBox.Show($"The .bin file for Text Archive ID {ID:D4} does not exist at the expected path: {binPath}", "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -234,15 +188,7 @@ namespace DSPRE.ROMFiles
             }
             try
             {
-                using (FileStream fs = new FileStream(binPath, FileMode.Open, FileAccess.Read))
-                {
-                    messages = TextConverter.ReadMessageFromStream(fs, out key);
-                    fs.Close();
-                }
-
-                // Create the .txt file for future use
-                SaveToExpandedDir(ID, false);
-
+                TextConverter.BinToJSON(binPath, jsonPath, charmapPath);
                 return true;
             }
             catch (Exception ex)
@@ -257,17 +203,6 @@ namespace DSPRE.ROMFiles
             return string.Join(Environment.NewLine, messages);
         }
 
-        public override byte[] ToByteArray()
-        {
-            Stream stream = new MemoryStream();
-            if (!TextConverter.WriteMessagesToStream(ref stream, messages, key))
-            {
-                AppLogger.Error($"Failed to convert Text Archive ID {ID:D4} to byte array.");
-            }
-
-            return ((MemoryStream)stream).ToArray();
-        }
-
         public void SaveToExpandedDir(int IDtoReplace, bool showSuccessMessage = true)
         {
             string baseDir = gameDirs[DirNames.textArchives].unpackedDir;
@@ -278,7 +213,7 @@ namespace DSPRE.ROMFiles
                 Directory.CreateDirectory(expandedDir);
             }
 
-            string expandedPath = GetFilePaths(IDtoReplace).txtPath;
+            string expandedPath = GetFilePaths(IDtoReplace).jsonPath;
 
             var utf8WithoutBom = new UTF8Encoding(false);
 
@@ -287,16 +222,6 @@ namespace DSPRE.ROMFiles
             textToSave = firstLine + Environment.NewLine + textToSave;
 
             File.WriteAllText(expandedPath, textToSave, utf8WithoutBom);
-        }
-
-        public void SaveToDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
-        {
-            SaveToFileDefaultDir(DirNames.textArchives, IDtoReplace, showSuccessMessage);
-        }
-
-        public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
-        {
-            SaveToFileExplorePath("Gen IV Text Archive", "msg", suggestedFileName, showSuccessMessage);
         }
 
         #endregion Methods (2)
