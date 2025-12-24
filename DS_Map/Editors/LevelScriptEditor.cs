@@ -69,6 +69,7 @@ namespace DSPRE.Editors
         }
         public void populate_selectScriptFileComboBox(int selectedIndex = 0)
         {
+            selectScriptFileComboBox.BeginUpdate();
             selectScriptFileComboBox.Items.Clear();
             int scriptCount = Filesystem.GetScriptCount();
             for (int i = 0; i < scriptCount; i++)
@@ -77,6 +78,7 @@ namespace DSPRE.Editors
                 // selectScriptFileComboBox.Items.Add(currentScriptFile);
                 selectScriptFileComboBox.Items.Add($"Script File {i}");
             }
+            selectScriptFileComboBox.EndUpdate();
 
             selectScriptFileComboBox.SelectedIndex = selectedIndex;
         }
@@ -244,7 +246,7 @@ namespace DSPRE.Editors
             buttonRemove.Enabled = true;
         }
 
-        private int SmartParse(string input)
+        private int SmartParse(string input, int configuredBase = 10)
         {
             if (string.IsNullOrWhiteSpace(input))
                 throw new ArgumentException("Input cannot be empty.");
@@ -258,18 +260,18 @@ namespace DSPRE.Editors
                 return Convert.ToInt32(hexPart, 16);
             }
 
-            // Try to parse as hex using built-in HexNumber style
-            if (int.TryParse(s, System.Globalization.NumberStyles.HexNumber,
-                             System.Globalization.CultureInfo.InvariantCulture, out int hexValue))
+            // Try parsing based on the configured base
+            try
             {
-                // Heuristic: if the hex interpretation is >= 256 (0x100), it's almost certainly meant as hex
-                // This catches bare hex like: 4002, DEAD, FFFF, etc.
-                if (hexValue >= 0x100)
-                    return hexValue;
+                int candidate = Convert.ToInt32(s, configuredBase);
+                return candidate;
             }
-
-            // Fallback to decimal
-            return Convert.ToInt32(s, 10);
+            catch (FormatException)
+            {
+                // If parsing fails, try the other base
+                int alternateBase = (configuredBase == 10) ? 16 : 10;
+                return Convert.ToInt32(s, alternateBase);
+            }
         }
 
         private void buttonAdd_Click(object sender, EventArgs e)
@@ -294,9 +296,9 @@ namespace DSPRE.Editors
 
                 try
                 {
-                    int scriptID = SmartParse(scriptIDRaw);
-                    int variableName = SmartParse(variableNameRaw);
-                    int variableValue = SmartParse(variableValueRaw);
+                    int scriptID = SmartParse(scriptIDRaw, convertBase);
+                    int variableName = SmartParse(variableNameRaw, convertBase);
+                    int variableValue = SmartParse(variableValueRaw, convertBase);
 
                     VariableValueTrigger trigger = new VariableValueTrigger(scriptID, variableName, variableValue);
                     _levelScriptFile.bufferSet.Add(trigger);
