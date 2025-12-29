@@ -1,58 +1,62 @@
-Pikachu is the mascot of the Pokemon franchise!
-Bulbasaur is the first Pokemon in the National Pokedex.
+Pikachu is the mascot of the Pokémon franchise!
+Bulbasaur is the first Pokémon in the National Pokédex.
 Mewtwo was created by scientists in a lab on Cinnabar Island.
-Eevee has eight different evolutions, known as Eeveelutions!
+Eevee has eight different evolutions, colloquially known as Eeveelutions!
 Charizard's tail flame burns brighter when it's healthy.
 Gengar is said to steal the shadows of its victims.
-The Pokemon world has eight regions, from Kanto to Paldea!
-Snorlax can sleep for days and only wakes up to eat.
-Magikarp is weak but evolves into the powerful Gyarados.
+The Pokémon world has nine regions, from Kanto to Paldea!
+Snorlax can sleep for days. It only wakes up to eat.
+Magikarp is weak, but it evolves into the powerful Gyarados.
 Jigglypuff loves to sing, but its song puts others to sleep!
 Lucario can sense auras to read emotions and intentions.
-Wailord is the largest Pokemon, over 47 feet long!
-Arceus is considered the creator of the Pokemon universe.
+Wailord is the largest Pokémon -- over 47 feet long!
+Arceus is considered the creator of the Pokémon universe.
 Gyarados can cause storms when it appears in the wild.
 Pidgeot can fly at speeds up to Mach 2!
 Mimikyu dresses as Pikachu to make friends.
-The Sinnoh region, home of Platinum, is based on Hokkaido, Japan.
+The Kanto region is based on Kanto, Japan.
+The Johto region is based on Kansai, Japan.
+The Hoenn region is based on Kyushu, Japan.
+The Sinnoh region is based on Hokkaido, Japan.
 Dragonite can circle the globe in just 16 hours.
 Clefairy is rumored to have come from the moon.
 Garchomp's speed rivals that of a jet plane.
-Mew is said to contain the DNA of every Pokemon.
+Mew is said to contain the DNA of every Pokémon.
 The move Hyper Beam requires a recharge after use.
 Togepi evolves with high friendship, not just levels.
 Alakazam has an IQ of over 5,000!
-The Poke Ball was invented by Professor Westwood V.
+The Poké Ball was invented by Professor Westwood V.
 Vaporeon's tail resembles a mermaid's.
 Ho-Oh's feathers glow in seven colors.
 Rayquaza lives in the ozone layer and rarely descends.
 The Elite Four challenge trainers to prove their strength.
-Porygon was the first Pokemon created by programming.
+Porygon was the first Pokémon created by programming.
 Sylveon can calm others with its soothing ribbons.
-Ditto can transform into any Pokemon it sees.
-The Pokedex is a high-tech encyclopedia of Pokemon.
+Ditto can transform into any Pokémon it sees.
+The Pokedéx is a high-tech encyclopedia of Pokémon.
 Latias and Latios can communicate telepathically.
 Groudon can cause droughts and expand landmasses.
 Kyogre can summon rain and expand oceans.
 Turtwig's shell is made of soil and hardens with water.
-Piplup is based on a penguin and loves to swim.
+Piplup is based on a penguin. It loves to swim.
+Chimchar's flame changes based on what it eats and how it feels.
 Staraptor can carry heavy loads while flying.
-The Move Tutor teaches Pokemon new moves for a price.
+The Move Tutor teaches Pokémon new moves for a price.
 Eevee's unstable DNA allows multiple evolutions.
 Shaymin can purify polluted areas with its flowers.
 Darkrai can trap people in nightmares.
-The Battle Frontier is an ultimate test for trainers.
+The Battle Frontier is the ultimate test for trainers.
 Psyduck gets headaches that unleash psychic powers.
 Geodude is often mistaken for a regular rock.
 Chikorita's leaf indicates its health and mood.
 Munchlax eats ten times its weight in food daily.
-The Day-Care Center helps Pokemon breed and level up.
-Legendary Pokemon are often tied to myths and legends.
-Giratina guards the Distortion World in Platinum.
-The HM Surf lets Pokemon swim across water.
+The Day-Care Center helps Pokémon breed and level up.
+Legendary Pokémon are often tied to myths and legends.
+Giratina guards the Distortion World.
+The HM Surf lets Pokémon swim across water.
 Bidoof is a fan-favorite for its goofy charm.
-Cynthia is the Champion of the Sinnoh region in Platinum.
-The move Earthquake can hit multiple Pokemon at once.
+Cynthia is the Champion of the Sinnoh region.
+The move Earthquake can hit multiple Pokémon at once.
 Palkia controls space and lives in a parallel dimension.
 Dialga controls time and is revered in Sinnoh lore.
 The Underground in Sinnoh lets trainers dig for treasures.
@@ -60,44 +64,44 @@ Abomasnow can summon blizzards with its presence.
 Rotom can possess appliances to change its form.
 The move Flamethrower is super effective against Grass types.
 Meowth can learn Pay Day to scatter coins in battle.
-The Safari Zone lets trainers catch rare Pokemon.
+The Safari Zone lets trainers catch rare Pokémon.
 Jolteon's electric shocks can reach 10,000 volts.
 Scyther's blades are as sharp as samurai swords.
 Lapras is known for ferrying people across bodies of water.
-The move Psychic can lower an opponent's defenses.
+The move Psychic can lower an opponent's special defense.
 Blastoise has water cannons that can pierce steel.
-The Pokemon Tower in Lavender Town is a memorial for departed Pokemon.
+The Pokémon Tower in Lavender Town is a memorial for departed Pokémon.
 Cubone wears its mother's skull as a helmet.
 The move Thunderbolt has a chance to paralyze foes.
 Happiny carries a stone that looks like an egg.
-The Distortion World in Platinum has reversed gravity.
-Glaceon evolves near an Ice Rock in cold regions.
+The Distortion World has irregular gravity.
+Glaceon evolves near an Ice Rock in cold areas.
 Leafeon evolves near a Moss Rock in lush forests.
 The move Surf is both a battle move and a field ability.
 Mr. Mime creates invisible walls with its mime skills.
 The Battle Tower challenges trainers with tough battles.
-Miltank's milk is highly nutritious and heals Pokemon.
+Miltank's milk is highly nutritious and heals Pokémon.
 The move Solar Beam needs sunlight to charge.
 Drifloon is said to carry children to the afterlife.
-The Pokemon League is the ultimate goal for trainers.
-Aerodactyl is a fossil Pokemon revived from amber.
+The Pokémon League is the ultimate goal for trainers.
+Aerodactyl is a fossil Pokémon revived from the Old Amber.
 The move Ice Beam can freeze opponents solid.
 Magmar lives in active volcanoes and thrives in heat.
-The Sinnoh Pokedex has 210 Pokemon in Platinum.
+The Sinnoh Pokedex has 210 Pokémon in Platinum, but only 151 in Diamond and Pearl.
 Riolu evolves into Lucario with high friendship during the day.
 The move Shadow Ball is super effective against Ghost types.
 Tropius grows fruit on its neck that kids love to eat.
-The Poke Flute can wake sleeping Pokemon like Snorlax.
-Sudowoodo pretends to be a tree but is actually a Rock type.
-The move Metronome randomly uses any move in the game.
+The Poké Flute can wake sleeping Pokémon like Snorlax.
+Sudowoodo pretends to be a tree but is actually a Rock-type.
+The move Metronome randomly selects a move to use in battle.
 Ninetales can curse foes with its mystical tails.
-The Old Chateau in Sinnoh is haunted by Ghost Pokemon.
+The Old Chateau in Sinnoh is haunted by ghost Pokémon.
 Pachirisu stores electricity in its cheeks like Pikachu.
-The move Protect shields Pokemon from attacks for one turn.
+The move Protect shields Pokémon from attacks for one turn.
 Skarmory's feathers are as hard as steel.
 The Eterna Galactic Building hides Team Galactic's plans.
 Lopunny's fluffy fur is popular in fashion.
-DSPRE is a major overhaul of Nomura's 2020 DS Pokemon ROM Editor.
+DSPRE is a major overhaul of Nomura's 2020 DS Pokémon ROM Editor.
 Did you know? DSPRE significantly shortened load and save times - no more waiting like a Snorlax!
 In DSPRE, the Script Editor now has syntax highlighting - code like a pro trainer!
 DSPRE added a new Advanced Header Search feature - find what you need faster than a Pidgeot!
@@ -110,7 +114,7 @@ Xzonn updated Chinese character support in DSPRE - making it multilingual master
 DSPRE's Event Editor now supports mouse dragging for buildings - drag and drop like a boss!
 In DSPRE, the Text Editor shows row numbers in hex - for those who think in code!
 DSPRE fixed the 'stupid bug' in some commits - because even tools have off days!
-Did you know? DSPRE's contributors like Yako, Kuha and Kalaay keep the project evolving!
+Did you know? DSPRE's contributors like Yako, Kuha, and Kalaay keep the project evolving!
 DSPRE's Wild Encounters Editor can repair corrupted files - a lifesaver for hackers!
 In DSPRE, the Matrix Editor supports custom color tables - paint your world!
 DSPRE's Trainer Editor got a partial overhaul - train harder, hack smarter!
@@ -120,18 +124,18 @@ DSPRE's Map Editor has a flood fill for permissions - cover ground quickly!
 In a DSPRE commit, 'Fixed stupid bug' was the message - self-roast level high!
 DSPRE added support for BDHCAM import/export - camera work like a director!
 DSPRE's NSBTX Editor has a palette match algorithm - colors just click!
-Did you know? AdAstra yeeted buggy versions - only the best for ROM hackers!
+Did you know? Old DSPRE versions could be quite buggy, but AdAstra and many others have worked to squash those bugs - only the best for ROM hackers!
 DSPRE's Event Editor can duplicate events - clone your way to victory!
 DSPRE fixed ARM9 mismatch warnings - keeping your ROM stable!
 In DSPRE, the Spawn Settings Editor lets you change starting money - rich from the start!
-Need Heart Scales in Johto? Rock Smash outside Earl's Pokemon School for the best odds!
-For a Dragon Tamer, Lance sure has a lot of Flying-type Pokemon...
+Need Heart Scales in Johto? Rock Smash outside Earl's Pokémon School for the best odds!
+For a Dragon Tamer, Lance sure has a lot of Flying-type Pokémon...
 Jasmine is the only Johto Gym Leader who doesn't unlock the use of a HM.
-Pryce claims that the Glacier Badge will increase the Special stats of Pokemon, didn't he get the memo?
-Professor Elm is known for research into Pokemon Eggs, but Professor Oak calls him an expert in Evolution!
+Pryce claims that the Glacier Badge will increase the Special stats of Pokémon. Didn't he get the memo?
+Professor Elm is known for research into Pokémon Eggs, but Professor Oak calls him an expert in Evolution!
 Solar-powered Sunflora rushes about in the daylight, then closes its petals and stops completely at sunset.
-Shuckie the Shuckle was one of a Cianwood City PokeManiac's two rare Pokemon, the other was stolen by Silver!
-The only Pokemon with higher Defense and Special Defense stats than Shuckle, is Eternamax Eternatus!
-Shuckle's base stats are the most uneven of all Pokemon, measured by standard deviation.
-In Pokemon Gold & Silver, Shuckle will sometimes turn a held berry into Berry Juice!
+Shuckie the Shuckle was one of a Cianwood City PokeManiac's two rare Pokémon, but the other was stolen by Silver!
+The only Pokémon with higher Defense and Special Defense stats than Shuckle, is Eternamax Eternatus!
+Shuckle's base stats are the most uneven of all Pokémon, measured by standard deviation.
+In Pokémon Gold & Silver, Shuckle will sometimes turn a held berry into Berry Juice!
 It's theorised that a Shuckle-Regigigas hybrid could vie with Arceus for supremecy.
