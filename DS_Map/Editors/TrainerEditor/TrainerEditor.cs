@@ -1137,7 +1137,11 @@ namespace DSPRE.Editors
             // In DPPt just show ability 1 and do not allow editing
             if (RomInfo.gameFamily != GameFamilies.HGSS && !RomInfo.AIBackportEnabled)
             {
+                // Add 3 copies of ability 1 to prevent issues with saved data having ability flags set
                 partyAbilityComboBoxList[partyPokemonPosition].Items.Add(ability1);
+                partyAbilityComboBoxList[partyPokemonPosition].Items.Add(ability1);
+                partyAbilityComboBoxList[partyPokemonPosition].Items.Add(ability1);
+
                 partyAbilityComboBoxList[partyPokemonPosition].Enabled = false;
                 return;
             }
