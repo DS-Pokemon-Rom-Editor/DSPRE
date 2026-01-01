@@ -121,6 +121,9 @@
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\StrVarHelpForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\TMEditor.cs">
       <SubType>Form</SubType>
     </Compile>

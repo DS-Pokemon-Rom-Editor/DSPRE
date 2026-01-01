@@ -180,6 +180,14 @@ namespace DSPRE.Editors
             Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).txtPath);
         }
 
+        private void strvarHelpButton_Click(object sender, EventArgs e)
+        {
+            using (var helpForm = new StrVarHelpForm())
+            {
+                helpForm.ShowDialog(this);
+            }
+        }
+
         private void addStringButton_Click(object sender, EventArgs e)
         {
             currentTextArchive.messages.Add("");

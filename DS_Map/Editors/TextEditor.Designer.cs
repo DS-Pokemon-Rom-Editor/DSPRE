@@ -63,6 +63,7 @@
             this.removeStringButton = new System.Windows.Forms.Button();
             this.addStringButton = new System.Windows.Forms.Button();
             this.openCurrentTxtButton = new System.Windows.Forms.Button();
+            this.strvarHelpButton = new System.Windows.Forms.Button();
             this.tableLayoutPanel1.SuspendLayout();
             this.LineNumbersFormatgroupBox.SuspendLayout();
             this.groupBox13.SuspendLayout();
@@ -492,10 +493,22 @@
             this.openCurrentTxtButton.UseVisualStyleBackColor = true;
             this.openCurrentTxtButton.Click += new System.EventHandler(this.openCurrentTxtButton_Click);
             // 
+            // strvarHelpButton
+            // 
+            this.strvarHelpButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.strvarHelpButton.Location = new System.Drawing.Point(243, 588);
+            this.strvarHelpButton.Name = "strvarHelpButton";
+            this.strvarHelpButton.Size = new System.Drawing.Size(120, 34);
+            this.strvarHelpButton.TabIndex = 72;
+            this.strvarHelpButton.Text = "STRVAR Help...";
+            this.strvarHelpButton.UseVisualStyleBackColor = true;
+            this.strvarHelpButton.Click += new System.EventHandler(this.strvarHelpButton_Click);
+            // 
             // TextEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.strvarHelpButton);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.groupBox13);
             this.Controls.Add(this.textEditorDataGridView);
@@ -548,6 +561,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn messageColumn;
         private System.Windows.Forms.Button removeStringButton;
         private System.Windows.Forms.Button addStringButton;
-        private System.Windows.Forms.Button openCurrentTxtButton;
-    }
-}
+                private System.Windows.Forms.Button openCurrentTxtButton;
+                private System.Windows.Forms.Button strvarHelpButton;
+            }
+        }
