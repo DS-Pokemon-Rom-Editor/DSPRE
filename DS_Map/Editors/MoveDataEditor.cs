@@ -22,6 +22,22 @@ namespace DSPRE {
         private static bool dirty = false;
         private static readonly string formName = "Move Data Editor";
 
+        // User-friendly range descriptions mapped to their flag values
+        private static readonly (ushort value, string description)[] RangeOptions = new (ushort, string)[] {
+            (0, "Opponent or Ally: May target one adjacent opponent or ally"),
+            ((1 << 0), "Varies: Variable based on move effect"),
+            ((1 << 1), "One Random Opponent: Affects a random opponent"),
+            ((1 << 2), "All Opponents: Affects all adjacent opponents"),
+            ((1 << 3), "All Others: Affects all adjacent opponents and allies"),
+            ((1 << 4), "User: Affects the user"),
+            ((1 << 5), "User Side: Affects the user's side of the field"),
+            ((1 << 6), "All Sides: Affects the user's and opponent's sides of the field"),
+            ((1 << 7), "Opponent Side: Affects the opponent's side of the field"),
+            ((1 << 8), "One Ally: May target one adjacent ally"),
+            ((1 << 9), "User or Ally: May target the user or one adjacent ally"),
+            ((1 << 10), "One Opponent: May target any one adjacent opponent")
+        };
+
         public MoveDataEditor(string[] fileNames, string[] moveDescriptions) {
             this.fileNames = fileNames.ToArray();
             this.moveDescriptions = moveDescriptions;
@@ -46,16 +62,14 @@ namespace DSPRE {
 
             moveSplitComboBox.Items.AddRange(Enum.GetNames(typeof(MoveData.MoveSplit)));
 
-            string[] names = Enum.GetNames(typeof(MoveData.AttackRange));
-            System.Collections.IList list = rangesTableLayoutPanel.Controls;
-            for (int i = 0; i < list.Count; i++) {
-                CheckBox cb = list[i] as CheckBox;
-                cb.Text = names[i + 1];
-                cb.CheckedChanged += AttackRangeCheckBox_CheckedChanged;
+            // Setup range ComboBox with user-friendly descriptions
+            rangeComboBox.Items.Clear();
+            foreach (var option in RangeOptions) {
+                rangeComboBox.Items.Add(option.description);
             }
 
-            names = Enum.GetNames(typeof(MoveData.MoveFlags));
-            list = flagsTableLayoutPanel.Controls;
+            string[] names = Enum.GetNames(typeof(MoveData.MoveFlags));
+            System.Collections.IList list = flagsTableLayoutPanel.Controls;
             for (int i = 0; i < list.Count; i++) {
                 CheckBox cb = list[i] as CheckBox;
                 cb.Text = names[i + 1];
@@ -69,6 +83,15 @@ namespace DSPRE {
             disableHandlers = false;
 
             moveNameInputComboBox.SelectedIndex = 1;
+
+            // Focus the move name input when the form is shown
+            this.Shown += MoveDataEditor_Shown;
+        }
+
+        private void MoveDataEditor_Shown(object sender, EventArgs e) {
+            // Give focus to the move name combobox so user can immediately start typing
+            moveNameInputComboBox.Focus();
+            moveNameInputComboBox.SelectAll();
         }
         private void setDirty(bool status) {
             if (status) {
@@ -104,12 +127,17 @@ namespace DSPRE {
         private void PopulateAllFromCurrentFile() {
             moveTypeComboBox.SelectedIndex = (int)currentLoadedFile.movetype;
 
-            System.Collections.IList list = rangesTableLayoutPanel.Controls;
-            for (int i = 0; i < list.Count; i++) {
-                (list[i] as CheckBox).Checked = ((currentLoadedFile.target & (1 << i)) != 0);
+            // Find the matching range option
+            int rangeIndex = 0;
+            for (int i = 0; i < RangeOptions.Length; i++) {
+                if (RangeOptions[i].value == currentLoadedFile.target) {
+                    rangeIndex = i;
+                    break;
+                }
             }
+            rangeComboBox.SelectedIndex = rangeIndex;
 
-            list = flagsTableLayoutPanel.Controls;
+            System.Collections.IList list = flagsTableLayoutPanel.Controls;
             for (int i = 0; i < list.Count; i++) {
                 (list[i] as CheckBox).Checked = ((currentLoadedFile.flagField & (1 << i)) != 0);
             }
@@ -153,23 +181,17 @@ namespace DSPRE {
             setDirty(true);
             disableHandlers = false;
         }
-        private void AttackRangeCheckBox_CheckedChanged(object sender, EventArgs e) {
+
+        private void rangeComboBox_SelectedIndexChanged(object sender, EventArgs e) {
             if (disableHandlers) {
                 return;
             }
 
-            disableHandlers = true;
-
-            System.Collections.IList list = rangesTableLayoutPanel.Controls;
-
-            currentLoadedFile.target = 0;
-            for (int i = 0; i < list.Count; i++) {
-                int en = (list[i] as CheckBox).Checked ? 1 : 0;
-                currentLoadedFile.target |= (ushort)(en << i);
+            int selectedIndex = rangeComboBox.SelectedIndex;
+            if (selectedIndex >= 0 && selectedIndex < RangeOptions.Length) {
+                currentLoadedFile.target = RangeOptions[selectedIndex].value;
+                setDirty(true);
             }
-
-            setDirty(true);
-            disableHandlers = false;
         }
         private void moveNameInputComboBox_SelectedIndexChanged(object sender, EventArgs e) {
             if (disableHandlers) {

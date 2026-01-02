@@ -55,18 +55,7 @@
             this.moveSplitComboBox = new System.Windows.Forms.ComboBox();
             this.moveTypePictureBox = new System.Windows.Forms.PictureBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.rangesTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.checkBox20 = new System.Windows.Forms.CheckBox();
-            this.checkBox19 = new System.Windows.Forms.CheckBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
-            this.checkBox3 = new System.Windows.Forms.CheckBox();
-            this.checkBox4 = new System.Windows.Forms.CheckBox();
-            this.checkBox5 = new System.Windows.Forms.CheckBox();
-            this.checkBox6 = new System.Windows.Forms.CheckBox();
-            this.checkBox7 = new System.Windows.Forms.CheckBox();
-            this.checkBox8 = new System.Windows.Forms.CheckBox();
-            this.checkBox9 = new System.Windows.Forms.CheckBox();
-            this.checkBox10 = new System.Windows.Forms.CheckBox();
+            this.rangeComboBox = new System.Windows.Forms.ComboBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
@@ -91,7 +80,6 @@
             this.flagsTableLayoutPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.moveTypePictureBox)).BeginInit();
             this.groupBox1.SuspendLayout();
-            this.rangesTableLayoutPanel.SuspendLayout();
             this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.powerNumericUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.accuracyNumericUpDown)).BeginInit();
@@ -516,7 +504,7 @@
             // groupBox1
             // 
             this.tableLayoutPanel3.SetColumnSpan(this.groupBox1, 4);
-            this.groupBox1.Controls.Add(this.rangesTableLayoutPanel);
+            this.groupBox1.Controls.Add(this.rangeComboBox);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox1.Location = new System.Drawing.Point(305, 193);
             this.groupBox1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
@@ -526,157 +514,21 @@
             this.groupBox1.Size = new System.Drawing.Size(658, 192);
             this.groupBox1.TabIndex = 12;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Range of action";
+            this.groupBox1.Text = "Range of Action";
             // 
-            // rangesTableLayoutPanel
+            // rangeComboBox
             // 
-            this.rangesTableLayoutPanel.ColumnCount = 3;
-            this.rangesTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33332F));
-            this.rangesTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33334F));
-            this.rangesTableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33334F));
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox20, 1, 3);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox19, 0, 3);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox2, 0, 0);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox3, 1, 0);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox4, 2, 0);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox5, 0, 1);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox6, 1, 1);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox7, 2, 1);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox8, 0, 2);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox9, 1, 2);
-            this.rangesTableLayoutPanel.Controls.Add(this.checkBox10, 2, 2);
-            this.rangesTableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.rangesTableLayoutPanel.Location = new System.Drawing.Point(4, 19);
-            this.rangesTableLayoutPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.rangesTableLayoutPanel.Name = "rangesTableLayoutPanel";
-            this.rangesTableLayoutPanel.RowCount = 4;
-            this.rangesTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.rangesTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.rangesTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.rangesTableLayoutPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.rangesTableLayoutPanel.Size = new System.Drawing.Size(650, 169);
-            this.rangesTableLayoutPanel.TabIndex = 11;
-            // 
-            // checkBox20
-            // 
-            this.checkBox20.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox20.Location = new System.Drawing.Point(220, 130);
-            this.checkBox20.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox20.Name = "checkBox20";
-            this.checkBox20.Size = new System.Drawing.Size(208, 35);
-            this.checkBox20.TabIndex = 11;
-            this.checkBox20.Text = "checkBox20";
-            this.checkBox20.UseVisualStyleBackColor = true;
-            // 
-            // checkBox19
-            // 
-            this.checkBox19.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox19.Location = new System.Drawing.Point(4, 130);
-            this.checkBox19.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox19.Name = "checkBox19";
-            this.checkBox19.Size = new System.Drawing.Size(208, 35);
-            this.checkBox19.TabIndex = 10;
-            this.checkBox19.Text = "checkBox19";
-            this.checkBox19.UseVisualStyleBackColor = true;
-            // 
-            // checkBox2
-            // 
-            this.checkBox2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox2.Location = new System.Drawing.Point(4, 4);
-            this.checkBox2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(208, 34);
-            this.checkBox2.TabIndex = 1;
-            this.checkBox2.Text = "checkBox2";
-            this.checkBox2.UseVisualStyleBackColor = true;
-            // 
-            // checkBox3
-            // 
-            this.checkBox3.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox3.Location = new System.Drawing.Point(220, 4);
-            this.checkBox3.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox3.Name = "checkBox3";
-            this.checkBox3.Size = new System.Drawing.Size(208, 34);
-            this.checkBox3.TabIndex = 2;
-            this.checkBox3.Text = "checkBox3";
-            this.checkBox3.UseVisualStyleBackColor = true;
-            // 
-            // checkBox4
-            // 
-            this.checkBox4.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox4.Location = new System.Drawing.Point(436, 4);
-            this.checkBox4.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox4.Name = "checkBox4";
-            this.checkBox4.Size = new System.Drawing.Size(210, 34);
-            this.checkBox4.TabIndex = 3;
-            this.checkBox4.Text = "checkBox4";
-            this.checkBox4.UseVisualStyleBackColor = true;
-            // 
-            // checkBox5
-            // 
-            this.checkBox5.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox5.Location = new System.Drawing.Point(4, 46);
-            this.checkBox5.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox5.Name = "checkBox5";
-            this.checkBox5.Size = new System.Drawing.Size(208, 34);
-            this.checkBox5.TabIndex = 4;
-            this.checkBox5.Text = "checkBox5";
-            this.checkBox5.UseVisualStyleBackColor = true;
-            // 
-            // checkBox6
-            // 
-            this.checkBox6.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox6.Location = new System.Drawing.Point(220, 46);
-            this.checkBox6.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox6.Name = "checkBox6";
-            this.checkBox6.Size = new System.Drawing.Size(208, 34);
-            this.checkBox6.TabIndex = 5;
-            this.checkBox6.Text = "checkBox6";
-            this.checkBox6.UseVisualStyleBackColor = true;
-            // 
-            // checkBox7
-            // 
-            this.checkBox7.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox7.Location = new System.Drawing.Point(436, 46);
-            this.checkBox7.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox7.Name = "checkBox7";
-            this.checkBox7.Size = new System.Drawing.Size(210, 34);
-            this.checkBox7.TabIndex = 6;
-            this.checkBox7.Text = "checkBox7";
-            this.checkBox7.UseVisualStyleBackColor = true;
-            // 
-            // checkBox8
-            // 
-            this.checkBox8.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox8.Location = new System.Drawing.Point(4, 88);
-            this.checkBox8.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox8.Name = "checkBox8";
-            this.checkBox8.Size = new System.Drawing.Size(208, 34);
-            this.checkBox8.TabIndex = 7;
-            this.checkBox8.Text = "checkBox8";
-            this.checkBox8.UseVisualStyleBackColor = true;
-            // 
-            // checkBox9
-            // 
-            this.checkBox9.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox9.Location = new System.Drawing.Point(220, 88);
-            this.checkBox9.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox9.Name = "checkBox9";
-            this.checkBox9.Size = new System.Drawing.Size(208, 34);
-            this.checkBox9.TabIndex = 8;
-            this.checkBox9.Text = "checkBox9";
-            this.checkBox9.UseVisualStyleBackColor = true;
-            // 
-            // checkBox10
-            // 
-            this.checkBox10.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkBox10.Location = new System.Drawing.Point(436, 88);
-            this.checkBox10.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.checkBox10.Name = "checkBox10";
-            this.checkBox10.Size = new System.Drawing.Size(210, 34);
-            this.checkBox10.TabIndex = 9;
-            this.checkBox10.Text = "checkBox10";
-            this.checkBox10.UseVisualStyleBackColor = true;
+            this.rangeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.rangeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.rangeComboBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.rangeComboBox.FormattingEnabled = true;
+            this.rangeComboBox.Location = new System.Drawing.Point(8, 24);
+            this.rangeComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.rangeComboBox.Name = "rangeComboBox";
+            this.rangeComboBox.Size = new System.Drawing.Size(638, 28);
+            this.rangeComboBox.TabIndex = 0;
+            this.rangeComboBox.SelectedIndexChanged += new System.EventHandler(this.rangeComboBox_SelectedIndexChanged);
             // 
             // groupBox2
             // 
@@ -862,7 +714,6 @@
             this.flagsTableLayoutPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.moveTypePictureBox)).EndInit();
             this.groupBox1.ResumeLayout(false);
-            this.rangesTableLayoutPanel.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.powerNumericUpDown)).EndInit();
@@ -890,17 +741,8 @@
         private System.Windows.Forms.ComboBox moveSplitComboBox;
         private System.Windows.Forms.ComboBox moveTypeComboBox;
         private System.Windows.Forms.NumericUpDown ppUpDown;
-        private System.Windows.Forms.CheckBox checkBox2;
-        private System.Windows.Forms.CheckBox checkBox3;
-        private System.Windows.Forms.CheckBox checkBox4;
-        private System.Windows.Forms.CheckBox checkBox5;
-        private System.Windows.Forms.CheckBox checkBox6;
-        private System.Windows.Forms.CheckBox checkBox7;
-        private System.Windows.Forms.CheckBox checkBox8;
-        private System.Windows.Forms.CheckBox checkBox9;
-        private System.Windows.Forms.CheckBox checkBox10;
-        private System.Windows.Forms.TableLayoutPanel rangesTableLayoutPanel;
         private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.ComboBox rangeComboBox;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.NumericUpDown powerNumericUpDown;
         private System.Windows.Forms.Label label5;
@@ -918,8 +760,6 @@
         private System.Windows.Forms.CheckBox checkBox15;
         private System.Windows.Forms.CheckBox checkBox16;
         private System.Windows.Forms.CheckBox checkBox17;
-        private System.Windows.Forms.CheckBox checkBox20;
-        private System.Windows.Forms.CheckBox checkBox19;
         private System.Windows.Forms.PictureBox moveSplitPictureBox;
         private System.Windows.Forms.NumericUpDown contestAppealNumericUpDown;
         private System.Windows.Forms.Label label6;
