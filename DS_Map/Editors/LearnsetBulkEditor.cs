@@ -19,6 +19,7 @@ namespace DSPRE.Editors
         private ContextMenuStrip contextMenu;
         private bool isDirty = false;
         private bool changesSaved = false;
+        private string currentFilterText = "";
 
         public LearnsetBulkEditor(BindingList<LearnsetEntry> learnsetData, string[] pokemonNames, string[] moveNames)
         {
@@ -216,19 +217,25 @@ namespace DSPRE.Editors
             if (e.Button == MouseButtons.Right)
             {
                 var hitTest = dataGridView.HitTest(e.X, e.Y);
-                if (hitTest.RowIndex >= 0 && hitTest.RowIndex < learnsetData.Count)
+                if (hitTest.RowIndex >= 0 && hitTest.RowIndex < dataGridView.Rows.Count)
                 {
-                    dataGridView.ClearSelection();
-                    dataGridView.Rows[hitTest.RowIndex].Selected = true;
+                    var row = dataGridView.Rows[hitTest.RowIndex];
+                    if (!row.IsNewRow)
+                    {
+                        dataGridView.ClearSelection();
+                        row.Selected = true;
+                    }
                 }
             }
         }
 
         private void DataGridView_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0 || e.RowIndex >= learnsetData.Count) return;
+            if (e.RowIndex < 0) return;
 
-            var entry = learnsetData[e.RowIndex];
+            // Get the actual entry from the row's DataBoundItem
+            var row = dataGridView.Rows[e.RowIndex];
+            if (row.IsNewRow || !(row.DataBoundItem is LearnsetEntry entry)) return;
 
             // Validate level since there is no level 0 thing in gen4 afaik
             if (entry.Level < 1) entry.Level = 1;
@@ -308,11 +315,20 @@ namespace DSPRE.Editors
                                        "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                foreach (DataGridViewRow row in dataGridView.SelectedRows)
+                // Get the actual LearnsetEntry objects from the selected rows
+                var entriesToRemove = dataGridView.SelectedRows
+                    .OfType<DataGridViewRow>()
+                    .Where(row => !row.IsNewRow && row.DataBoundItem is LearnsetEntry)
+                    .Select(row => (LearnsetEntry)row.DataBoundItem)
+                    .ToList();
+
+                foreach (var entry in entriesToRemove)
                 {
-                    if (!row.IsNewRow)
-                        learnsetData.RemoveAt(row.Index);
+                    learnsetData.Remove(entry);
                 }
+
+                // Refresh the filter if one is active
+                RefreshCurrentFilter();
                 UpdateStatus();
                 SetDirty();
             }
@@ -343,6 +359,8 @@ namespace DSPRE.Editors
 
         private void FilterData(string filterText)
         {
+            currentFilterText = filterText ?? "";
+
             if (string.IsNullOrWhiteSpace(filterText))
             {
                 dataGridView.DataSource = learnsetData;
@@ -358,6 +376,11 @@ namespace DSPRE.Editors
                 dataGridView.DataSource = filtered;
             }
             UpdateStatus();
+        }
+
+        private void RefreshCurrentFilter()
+        {
+            FilterData(currentFilterText);
         }
 
         private void SaveAllChanges()
@@ -495,11 +518,15 @@ namespace DSPRE.Editors
                     var adjustment = form.LevelAdjustment;
                     var operation = form.AdjustmentOperation;
 
-                    foreach (DataGridViewRow row in dataGridView.SelectedRows)
-                    {
-                        if (row.IsNewRow) continue;
+                    // Get the actual LearnsetEntry objects from the selected rows
+                    var selectedEntries = dataGridView.SelectedRows
+                        .OfType<DataGridViewRow>()
+                        .Where(row => !row.IsNewRow && row.DataBoundItem is LearnsetEntry)
+                        .Select(row => (LearnsetEntry)row.DataBoundItem)
+                        .ToList();
 
-                        var entry = learnsetData[row.Index];
+                    foreach (var entry in selectedEntries)
+                    {
                         switch (operation)
                         {
                             case LevelOperation.Add:
@@ -515,7 +542,7 @@ namespace DSPRE.Editors
                     }
 
                     dataGridView.Refresh();
-                    UpdateStatus($"Adjusted levels for {dataGridView.SelectedRows.Count} moves.");
+                    UpdateStatus($"Adjusted levels for {selectedEntries.Count} moves.");
                     SetDirty();
                 }
             }
@@ -559,8 +586,8 @@ namespace DSPRE.Editors
         {
             return dataGridView.SelectedRows
                 .OfType<DataGridViewRow>()
-                .Where(row => !row.IsNewRow)
-                .Select(row => learnsetData[row.Index].PokemonID)
+                .Where(row => !row.IsNewRow && row.DataBoundItem is LearnsetEntry)
+                .Select(row => ((LearnsetEntry)row.DataBoundItem).PokemonID)
                 .Distinct()
                 .ToList();
         }
