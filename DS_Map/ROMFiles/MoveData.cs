@@ -47,6 +47,41 @@ namespace DSPRE {
             DEL_SHADOW = (1 << 7)
         }
 
+        // User-friendly range descriptions mapped to their flag values
+        public static readonly (ushort value, string name, string description)[] AttackRangeDescriptions = new (ushort, string, string)[] {
+            (0, "Opponent or Ally", "May target one adjacent opponent or ally"),
+            ((1 << 0), "Varies", "Variable based on move effect"),
+            ((1 << 1), "One Random Opponent", "Affects a random opponent"),
+            ((1 << 2), "All Opponents", "Affects all adjacent opponents"),
+            ((1 << 3), "All Others", "Affects all adjacent opponents and allies"),
+            ((1 << 4), "User", "Affects the user"),
+            ((1 << 5), "User Side", "Affects the user's side of the field"),
+            ((1 << 6), "All Sides", "Affects the user's and opponent's sides of the field"),
+            ((1 << 7), "Opponent Side", "Affects the opponent's side of the field"),
+            ((1 << 8), "One Ally", "May target one adjacent ally"),
+            ((1 << 9), "User or Ally", "May target the user or one adjacent ally"),
+            ((1 << 10), "One Opponent", "May target any one adjacent opponent")
+        };
+
+        /// <summary>
+        /// Gets the user-friendly name for an attack range value.
+        /// </summary>
+        public static string GetAttackRangeName(ushort targetValue) {
+            foreach (var range in AttackRangeDescriptions) {
+                if (range.value == targetValue) {
+                    return range.name;
+                }
+            }
+            // If no exact match, build a combined string for multiple flags (shouldn't happen in vanilla)
+            var names = new List<string>();
+            for (int i = 0; i < AttackRangeDescriptions.Length; i++) {
+                if (AttackRangeDescriptions[i].value != 0 && (targetValue & AttackRangeDescriptions[i].value) != 0) {
+                    names.Add(AttackRangeDescriptions[i].name);
+                }
+            }
+            return names.Count > 0 ? string.Join("|", names) : "Unknown";
+        }
+
 
         public ushort battleeffect;
         public MoveSplit split;

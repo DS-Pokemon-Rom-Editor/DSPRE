@@ -265,6 +265,7 @@
             // contestConditionComboBox
             // 
             this.contestConditionComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.contestConditionComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.contestConditionComboBox.FormattingEnabled = true;
             this.contestConditionComboBox.Location = new System.Drawing.Point(82, 109);
             this.contestConditionComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
@@ -425,6 +426,7 @@
             // moveTypeComboBox
             // 
             this.moveTypeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.moveTypeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.moveTypeComboBox.FormattingEnabled = true;
             this.moveTypeComboBox.Location = new System.Drawing.Point(82, 15);
             this.moveTypeComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
@@ -436,6 +438,7 @@
             // battleSeqComboBox
             // 
             this.battleSeqComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.battleSeqComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.battleSeqComboBox.FormattingEnabled = true;
             this.battleSeqComboBox.Location = new System.Drawing.Point(394, 15);
             this.battleSeqComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
@@ -483,6 +486,7 @@
             // moveSplitComboBox
             // 
             this.moveSplitComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.moveSplitComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.moveSplitComboBox.FormattingEnabled = true;
             this.moveSplitComboBox.Location = new System.Drawing.Point(82, 64);
             this.moveSplitComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
@@ -521,12 +525,11 @@
             this.rangeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.rangeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.rangeComboBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rangeComboBox.FormattingEnabled = true;
             this.rangeComboBox.Location = new System.Drawing.Point(8, 24);
             this.rangeComboBox.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.rangeComboBox.Name = "rangeComboBox";
-            this.rangeComboBox.Size = new System.Drawing.Size(638, 28);
+            this.rangeComboBox.Size = new System.Drawing.Size(638, 24);
             this.rangeComboBox.TabIndex = 0;
             this.rangeComboBox.SelectedIndexChanged += new System.EventHandler(this.rangeComboBox_SelectedIndexChanged);
             // 

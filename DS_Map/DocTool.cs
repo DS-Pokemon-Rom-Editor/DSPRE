@@ -481,10 +481,9 @@ namespace DSPRE
             StreamWriter sw = new StreamWriter(moveDataPath);
 
             string[] moveFlags = Enum.GetNames(typeof(MoveData.MoveFlags));
-            string[] attackRange = Enum.GetNames(typeof(MoveData.AttackRange));
             string[] battleSeqDesc = PokeDatabase.MoveData.battleSequenceDescriptions;
 
-            sw.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Ranges,Flags,Effect Description");
+            sw.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range,Flags,Effect Description");
 
             for (int i = 0; i < moveNames.Length; i++)
             {
@@ -494,8 +493,8 @@ namespace DSPRE
                 string moveFlagsString = string.Join("|", moveFlags.Skip(1).Select((flag, index)
                     => (curMoveDataFile.flagField & (1 << index)) != 0 ? flag : "").Where(flag => !string.IsNullOrEmpty(flag)));
 
-                string attackRangeString = string.Join("|", attackRange.Skip(1).Select((range, index)
-                    => (curMoveDataFile.target & (1 << index)) != 0 ? range : "").Where(range => !string.IsNullOrEmpty(range)));
+                // Use user-friendly range name from MoveData
+                string attackRangeString = MoveData.GetAttackRangeName(curMoveDataFile.target);
 
                 string battleSeqDescString = curMoveDataFile.battleeffect < battleSeqDesc.Length ?
                     battleSeqDesc[curMoveDataFile.battleeffect] : "UnknownEffect_" + curMoveDataFile.battleeffect;
@@ -506,7 +505,7 @@ namespace DSPRE
                 sw.WriteLine($"{i},{moveNames[i]},{typeString},{curMoveDataFile.split}," +
                              $"{curMoveDataFile.damage},{curMoveDataFile.accuracy},{curMoveDataFile.priority}," +
                              $"{curMoveDataFile.sideEffectProbability},{curMoveDataFile.pp}," +
-                             $"[{attackRangeString}],[{moveFlagsString}],{battleSeqDescString}");
+                             $"{attackRangeString},[{moveFlagsString}],{battleSeqDescString}");
             }
 
             sw.Close();
