@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 using DSPRE.Editors.Utils;
+using DSPRE.CharMaps;
 
 namespace DSPRE.Editors
 {
@@ -156,7 +157,9 @@ namespace DSPRE.Editors
             int newArchiveID = selectTextFileComboBox.Items.Count;
             var textArchive = new TextArchive(newArchiveID, new List<string>() { "Your text here." });
             textArchive.SaveToExpandedDir(newArchiveID);
-            textArchive.SaveToDefaultDir(newArchiveID, false);
+
+            (string binPath, string jsonPath) = TextArchive.GetFilePaths(newArchiveID);
+            TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
 
             /* Update ComboBox and select new file */
             selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);
@@ -205,16 +208,17 @@ namespace DSPRE.Editors
         }
         private void exportTextFileButton_Click(object sender, EventArgs e)
         {
-            int textSelection = selectTextFileComboBox.SelectedIndex;
+            int selectedArchiveID = selectTextFileComboBox.SelectedIndex;
 
             string msgFileType = "Gen IV Text Archive";
             string txtFileType = "Plaintext file";
-            string suggestedFileName = "Text Archive " + textSelection;
+            string jsonFileType = "JSON Text Archive";
+            string suggestedFileName = "Text Archive " + selectedArchiveID;
             bool showSuccessMessage = true;
 
             SaveFileDialog sf = new SaveFileDialog
             {
-                Filter = $"{msgFileType} (*.msg)|*.msg|{txtFileType} (*.txt)|*.txt"
+                Filter = $"{msgFileType} (*.bin)|*.bin|{txtFileType} (*.txt)|*.txt |{jsonFileType} (*.json)|*.json",
             };
 
             if (!string.IsNullOrWhiteSpace(suggestedFileName))
@@ -230,10 +234,18 @@ namespace DSPRE.Editors
             string selectedExtension = Path.GetExtension(sf.FileName);
             string type = currentTextArchive.GetType().Name;
 
-            if (selectedExtension == ".msg")
+            if (selectedExtension == ".bin")
             {
-                // Handle .msg case
-                currentTextArchive.SaveToFile(sf.FileName, showSuccessMessage);
+                // Handle .bin case
+                string binPath = sf.FileName;
+                string jsonPath = TextArchive.GetFilePaths(selectedArchiveID).jsonPath;
+
+                TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
+            }
+            else if (selectedExtension == ".json")
+            {
+                // Handle .json case
+                File.Copy(TextArchive.GetFilePaths(selectedArchiveID).jsonPath, sf.FileName, true);
             }
             else if (selectedExtension == ".txt")
             {
@@ -255,7 +267,7 @@ namespace DSPRE.Editors
                 }
             }
 
-            if (textSelection == RomInfo.locationNamesTextNumber)
+            if (selectedArchiveID == RomInfo.locationNamesTextNumber)
             {
                 ReloadHeaderEditorLocationsList(currentTextArchive.messages, _parent);
             }
@@ -806,36 +818,54 @@ namespace DSPRE.Editors
                     var time = DateTime.Now;
                     int expandedCount = 0;
 
-                    selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Clear()));
+                    string unpackedPath = RomInfo.gameDirs[DirNames.textArchives].unpackedDir;
+                    string expandedPath = TextConverter.GetExpandedFolderPath();
+
+                    // Create expanded directory if it doesn't exist
+                    if (!Directory.Exists(expandedPath))
+                    {
+                        Directory.CreateDirectory(expandedPath);
+                    }
+                    TextConverter.FolderToJSON(unpackedPath, expandedPath, CharMapManager.GetCharMapPath());
+
+                    selectTextFileComboBox.Invoke((Action)(() =>
+                    {
+                        selectTextFileComboBox.BeginUpdate();
+                        selectTextFileComboBox.Items.Clear();
+                    }));
+
                     for (int i = 0; i < textCount; i++)
                     {
-                        
-                        try {
+                        // Due to the way DSPRE is built all archives need to be added to the combobox, regardless of whether they are actually present or not
+                        // This is a potential point for improvement
+                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(i + 1)));
+                        selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Add("Text Archive " + i)));
 
-                            string expandedPath = TextArchive.GetFilePaths(i).jsonPath;
-                            string binPath = TextArchive.GetFilePaths(i).binPath;
+                        (string binPath, string jsonPath) = TextArchive.GetFilePaths(i);
 
-                            // Skip if .json is newer than .bin
-                            if (!File.Exists(expandedPath) || File.GetLastWriteTimeUtc(expandedPath) < File.GetLastWriteTimeUtc(binPath)) 
-                            {
-                                var temp = new TextArchive(i);
-                                temp.SaveToExpandedDir(i, false);
-                                expandedCount++;
-                            }                       
-                                                     
-                        }
-                        catch (Exception ex)
+                        if (!File.Exists(binPath))
                         {
-                            AppLogger.Error($"Failed to load Text Archive {i}: {ex.Message}");
+                            AppLogger.Error($"Decoding text archive {i} failed: binary file not found at {binPath}");
                             continue;
                         }
 
-                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(i + 1)));
-                        selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Add("Text Archive " + i)));
+                        if (!File.Exists(jsonPath))
+                        {
+                            AppLogger.Error($"Decoding text archive {i} failed: JSON file not found at {jsonPath}");
+                            continue;
+                        }
+
+                        // Update last write of bin file to prevent needless decoding
+                        var jsonLastWrite = File.GetLastWriteTimeUtc(jsonPath);
+                        File.SetLastWriteTimeUtc(binPath, jsonLastWrite);
+
+                        expandedCount++;
+
                     }
 
                     _parent.Invoke((Action)(() =>
                     {
+                        selectTextFileComboBox.EndUpdate();
                         loadingForm.UpdateProgress(textCount);
                         Helpers.DisableHandlers();
                         hexRadiobutton.Checked = SettingsManager.Settings.textEditorPreferHex;
@@ -844,7 +874,7 @@ namespace DSPRE.Editors
                         var elapsed = DateTime.Now - time;
                         Helpers.statusLabelMessage($"Loaded text archives in { elapsed.TotalSeconds.ToString("F2") } s");
                         AppLogger.Info($"Loaded text archives in {elapsed.TotalMilliseconds} ms. " +
-                            $"{expandedCount} of {textCount} total files converted to plain text.");
+                            $"{expandedCount} of {textCount} total files converted to json.");
                         loadingForm.Close();
                     }));
                 });

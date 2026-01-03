@@ -26,7 +26,7 @@ namespace DSPRE
         private static readonly ConcurrentQueue<string> _recentLogBuffer = new ConcurrentQueue<string>();
         private static string _logFilePath;
         private static MainProgram _mainProgram;
-        private const int MaxLogFileLines = 500;
+        private const int MaxLogFileLines = 2000;
         private static int _writesSinceLastTrim = 0;
         private const int TrimInterval = 10; 
         public static LogLevel MinimumLevel { get; set; } = LogLevel.Debug;

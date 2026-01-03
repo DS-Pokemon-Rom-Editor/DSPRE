@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
+using System.Text.Json;
 
 namespace DSPRE.CharMaps
 {
@@ -39,11 +35,13 @@ namespace DSPRE.CharMaps
             if (File.Exists(customCharmapFilePath))
             {
                 AppLogger.Info("Loading custom charmap from user data directory.");
+                loadedCharmapPath = customCharmapFilePath;
                 return customCharmapFilePath;
             }
             else if (File.Exists(charmapFilePath))
             {
                 AppLogger.Info("Loading default charmap from application directory.");
+                loadedCharmapPath = charmapFilePath;
                 return charmapFilePath;
             }
             else
@@ -54,7 +52,21 @@ namespace DSPRE.CharMaps
 
         
         public static Version GetCharMapVersion(string path)
-        {            
+        {   
+            string charmapContent = File.ReadAllText(path);
+            JsonDocument charmap = JsonDocument.Parse(charmapContent);
+
+            string version = null;
+
+            // Get the metadata object and extract the version property
+            if (charmap.RootElement.TryGetProperty("metadata", out JsonElement metadataElement))
+            {
+                if (metadataElement.TryGetProperty("version", out JsonElement versionElement))
+                {
+                    version = versionElement.GetString();
+                }
+            }
+
             if (version != null && Version.TryParse(version, out Version ver))
             {
                 return ver;

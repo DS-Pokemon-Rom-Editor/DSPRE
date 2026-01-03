@@ -377,7 +377,7 @@ namespace DSPRE.CharMaps
                 return;
             }
 
-            CharMapManager.SaveCustomCharMap(currentMap);
+            //CharMapManager.SaveCustomCharMap(currentMap);
             SetDirty(false);
         }
 

@@ -826,10 +826,15 @@ namespace DSPRE
                 toolsMissing = true;
                 missingToolsList.Add("apicula.exe");
             }
+            if (!File.Exists(@"Tools\chatot.exe"))
+            {
+                toolsMissing = true;
+                missingToolsList.Add("chatot.exe");
+            }
             if (!File.Exists(CharMaps.CharMapManager.charmapFilePath))
             {
                 toolsMissing = true;
-                missingToolsList.Add("charmap.xml");
+                missingToolsList.Add("charmap.json");
             }
 
             if (toolsMissing)
