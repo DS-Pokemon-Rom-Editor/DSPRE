@@ -756,6 +756,9 @@ namespace DSPRE.Editors
                     
                         // Collect warnings even from valid rows
                         result.Warnings.AddRange(rowResult.Warnings);
+                        
+                        // Collect name mismatches
+                        result.NameMismatches.AddRange(rowResult.NameMismatches);
                     
                         if (rowResult.IsValid)
                         {
@@ -829,9 +832,22 @@ namespace DSPRE.Editors
                 string expectedName = pokemonNames[result.Entry.PokemonID];
                 if (!pokemonName.Equals(expectedName, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Name doesn't match ID - this is a warning but we'll use the ID
+                    // Name doesn't match ID at all - this is a warning but we'll use the ID
                     result.Warnings.Add(new ImportWarning(lineNumber, 
                         $"Pokemon name '{pokemonName}' doesn't match ID {result.Entry.PokemonID} (expected '{expectedName}'). Using ID."));
+                    
+                    // Track as potential name rename (user might want to rename the Pokemon in ROM)
+                    result.NameMismatches.Add(new NameMismatch(
+                        NameMismatch.MismatchType.Pokemon,
+                        result.Entry.PokemonID,
+                        expectedName,
+                        pokemonName,
+                        lineNumber));
+                }
+                else if (!pokemonName.Equals(expectedName, StringComparison.Ordinal))
+                {
+                    // Names match case-insensitively but differ in case - not a true mismatch, just case difference
+                    // Don't add to NameMismatches since it's just a case difference
                 }
                 result.Entry.PokemonName = expectedName;
             }
@@ -882,7 +898,22 @@ namespace DSPRE.Editors
             if (moveNameToId.TryGetValue(moveName, out int moveId))
             {
                 result.Entry.MoveID = moveId;
-                result.Entry.MoveName = moveNames[moveId];
+                string romMoveName = moveNames[moveId];
+                result.Entry.MoveName = romMoveName;
+                
+                // Check if the CSV name differs from ROM name (beyond just case)
+                if (!moveName.Equals(romMoveName, StringComparison.Ordinal) && 
+                    !moveName.Equals(romMoveName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // This shouldn't happen since we matched case-insensitively, but just in case
+                }
+                else if (!moveName.Equals(romMoveName, StringComparison.Ordinal))
+                {
+                    // Matched case-insensitively but text differs (e.g., "POUND" vs "Pound" - just case)
+                    // Only track if it's a real text difference, not just case
+                    // Actually, we want to detect if user typed something like "pound them" vs "Pound"
+                    // The case-insensitive match means they're the same text, different case only
+                }
             }
             else
             {
@@ -1308,8 +1339,32 @@ namespace DSPRE.Editors
             public LearnsetEntry Entry { get; set; } = new LearnsetEntry();
             public List<ImportError> Errors { get; set; } = new List<ImportError>();
             public List<ImportWarning> Warnings { get; set; } = new List<ImportWarning>();
+            public List<NameMismatch> NameMismatches { get; set; } = new List<NameMismatch>();
             public bool IsValid { get; set; }
             public bool IsEmptyRow { get; set; }
+        }
+
+        public class NameMismatch
+        {
+            public enum MismatchType { Pokemon, Move }
+            
+            public MismatchType Type { get; }
+            public int Id { get; }
+            public string RomName { get; }
+            public string CsvName { get; }
+            public int LineNumber { get; }
+
+            public NameMismatch(MismatchType type, int id, string romName, string csvName, int lineNumber)
+            {
+                Type = type;
+                Id = id;
+                RomName = romName;
+                CsvName = csvName;
+                LineNumber = lineNumber;
+            }
+
+            public override string ToString() => 
+                $"{Type} ID {Id}: ROM has '{RomName}', CSV has '{CsvName}' (Line {LineNumber})";
         }
 
         public class LearnsetImportResult
@@ -1317,12 +1372,34 @@ namespace DSPRE.Editors
             public List<LearnsetEntry> ValidEntries { get; set; } = new List<LearnsetEntry>();
             public List<ImportError> Errors { get; set; } = new List<ImportError>();
             public List<ImportWarning> Warnings { get; set; } = new List<ImportWarning>();
+            public List<NameMismatch> NameMismatches { get; set; } = new List<NameMismatch>();
             public int TotalRowsRead { get; set; }
 
             public bool HasErrors => Errors.Count > 0;
             public bool HasWarnings => Warnings.Count > 0;
+            public bool HasNameMismatches => NameMismatches.Count > 0;
             public int ValidCount => ValidEntries.Count;
             public int ErrorCount => Errors.Count;
+            
+            /// <summary>
+            /// Gets unique move name mismatches (by move ID, taking first occurrence)
+            /// </summary>
+            public List<NameMismatch> UniqueMoveNameMismatches => 
+                NameMismatches
+                    .Where(m => m.Type == NameMismatch.MismatchType.Move)
+                    .GroupBy(m => m.Id)
+                    .Select(g => g.First())
+                    .ToList();
+            
+            /// <summary>
+            /// Gets unique Pokemon name mismatches (by Pokemon ID, taking first occurrence)
+            /// </summary>
+            public List<NameMismatch> UniquePokemonNameMismatches => 
+                NameMismatches
+                    .Where(m => m.Type == NameMismatch.MismatchType.Pokemon)
+                    .GroupBy(m => m.Id)
+                    .Select(g => g.First())
+                    .ToList();
         }
 
         public class LearnsetImportPreviewForm : Form
@@ -1331,6 +1408,11 @@ namespace DSPRE.Editors
             private TextBox txtSummary;
             private TextBox txtErrors;
             private TextBox txtChanges;
+            private TextBox txtValidValues;
+            private TextBox txtNameMismatches;
+            private CheckedListBox chkPokemonRenames;
+            private CheckedListBox chkMoveRenames;
+            private CheckBox chkUseTitleCase;
             private Button btnApply;
             private Button btnCancel;
             private LearnsetImportResult importResult;
@@ -1409,7 +1491,61 @@ namespace DSPRE.Editors
                 };
                 changesTab.Controls.Add(txtChanges);
 
-                tabControl.TabPages.AddRange(new TabPage[] { summaryTab, errorsTab, changesTab });
+                // Name Mismatches tab (new)
+                var nameMismatchesTab = new TabPage("Name Mismatches");
+                var mismatchLayout = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    RowCount = 4,
+                    ColumnCount = 1
+                };
+                mismatchLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));
+                mismatchLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+                mismatchLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+                mismatchLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+
+                txtNameMismatches = new TextBox
+                {
+                    Dock = DockStyle.Fill,
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Vertical,
+                    Font = new Font("Consolas", 9f),
+                    WordWrap = true
+                };
+
+                var pokemonGroup = new GroupBox { Text = "Pokemon Name Mismatches (check to rename in ROM)", Dock = DockStyle.Fill };
+                chkPokemonRenames = new CheckedListBox { Dock = DockStyle.Fill };
+                pokemonGroup.Controls.Add(chkPokemonRenames);
+
+                var moveGroup = new GroupBox { Text = "Move Name Mismatches (check to rename in ROM)", Dock = DockStyle.Fill };
+                chkMoveRenames = new CheckedListBox { Dock = DockStyle.Fill };
+                moveGroup.Controls.Add(chkMoveRenames);
+
+                var optionsPanel = new FlowLayoutPanel { Dock = DockStyle.Fill };
+                chkUseTitleCase = new CheckBox { Text = "Convert names to Title Case", Checked = true, AutoSize = true };
+                optionsPanel.Controls.Add(chkUseTitleCase);
+
+                mismatchLayout.Controls.Add(txtNameMismatches, 0, 0);
+                mismatchLayout.Controls.Add(pokemonGroup, 0, 1);
+                mismatchLayout.Controls.Add(moveGroup, 0, 2);
+                mismatchLayout.Controls.Add(optionsPanel, 0, 3);
+                nameMismatchesTab.Controls.Add(mismatchLayout);
+
+                // Valid Values Reference tab
+                var validValuesTab = new TabPage("Valid Values Reference");
+                txtValidValues = new TextBox
+                {
+                    Dock = DockStyle.Fill,
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Both,
+                    Font = new Font("Consolas", 9f),
+                    WordWrap = false
+                };
+                validValuesTab.Controls.Add(txtValidValues);
+
+                tabControl.TabPages.AddRange(new TabPage[] { summaryTab, errorsTab, changesTab, nameMismatchesTab, validValuesTab });
 
                 // Button panel
                 var buttonPanel = new FlowLayoutPanel
@@ -1443,11 +1579,19 @@ namespace DSPRE.Editors
                 this.CancelButton = btnCancel;
             }
 
+            private string ToTitleCase(string input)
+            {
+                if (string.IsNullOrEmpty(input)) return input;
+                return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
+            }
+
             private void PopulateData()
             {
                 var summary = new StringBuilder();
                 var errors = new StringBuilder();
                 var changes = new StringBuilder();
+                var validValues = new StringBuilder();
+                var nameMismatches = new StringBuilder();
 
                 // Summary
                 summary.AppendLine("═══════════════════════════════════════════════════════════════");
@@ -1458,6 +1602,7 @@ namespace DSPRE.Editors
                 summary.AppendLine($"  Valid entries:       {importResult.ValidCount}");
                 summary.AppendLine($"  Errors found:        {importResult.ErrorCount}");
                 summary.AppendLine($"  Warnings:            {importResult.Warnings.Count}");
+                summary.AppendLine($"  Name mismatches:     {importResult.NameMismatches.Count}");
                 summary.AppendLine();
 
                 // Pokemon summary
@@ -1475,6 +1620,7 @@ namespace DSPRE.Editors
                 {
                     summary.AppendLine("  ⚠️  ERRORS FOUND - Please review the 'Errors & Warnings' tab");
                     summary.AppendLine("      Some entries could not be imported due to validation errors.");
+                    summary.AppendLine("      Check the 'Valid Values Reference' tab for accepted values.");
                     btnApply.Enabled = true; // Still allow import of valid entries
                 }
                 else
@@ -1485,6 +1631,12 @@ namespace DSPRE.Editors
                 if (importResult.Warnings.Count > 0)
                 {
                     summary.AppendLine($"  ⚠️  {importResult.Warnings.Count} warning(s) - some data was auto-corrected.");
+                }
+
+                if (importResult.HasNameMismatches)
+                {
+                    summary.AppendLine($"  📝  {importResult.UniquePokemonNameMismatches.Count + importResult.UniqueMoveNameMismatches.Count} name mismatch(es) detected.");
+                    summary.AppendLine("      Check the 'Name Mismatches' tab to optionally rename in ROM.");
                 }
 
                 summary.AppendLine();
@@ -1521,6 +1673,33 @@ namespace DSPRE.Editors
                 else
                 {
                     errors.AppendLine("No errors or warnings found.");
+                }
+
+                // Name Mismatches tab
+                if (importResult.HasNameMismatches)
+                {
+                    nameMismatches.AppendLine("Name mismatches detected between CSV and ROM data.");
+                    nameMismatches.AppendLine("Check the items below to rename them in the ROM.");
+                    nameMismatches.AppendLine("Note: Only mismatches with DIFFERENT text (not just case) are shown.");
+
+                    // Populate Pokemon name mismatches checklist
+                    foreach (var mismatch in importResult.UniquePokemonNameMismatches)
+                    {
+                        string display = $"ID {mismatch.Id}: '{mismatch.RomName}' → '{mismatch.CsvName}'";
+                        chkPokemonRenames.Items.Add(mismatch, false);
+                    }
+
+                    // Populate Move name mismatches checklist
+                    foreach (var mismatch in importResult.UniqueMoveNameMismatches)
+                    {
+                        string display = $"ID {mismatch.Id}: '{mismatch.RomName}' → '{mismatch.CsvName}'";
+                        chkMoveRenames.Items.Add(mismatch, false);
+                    }
+                }
+                else
+                {
+                    nameMismatches.AppendLine("No name mismatches detected.");
+                    nameMismatches.AppendLine("All names in CSV match the ROM data (case-insensitive comparison).");
                 }
 
                 // Changes preview - show only what's ACTUALLY different
@@ -1629,9 +1808,59 @@ namespace DSPRE.Editors
                     }
                 }
 
+                // Valid Values Reference
+                validValues.AppendLine("═══════════════════════════════════════════════════════════════");
+                validValues.AppendLine("                   VALID VALUES REFERENCE");
+                validValues.AppendLine("═══════════════════════════════════════════════════════════════");
+                validValues.AppendLine();
+                validValues.AppendLine("  This tab shows all valid values that can be used in the CSV.");
+                validValues.AppendLine("  Note: All text values are CASE-INSENSITIVE.");
+                validValues.AppendLine();
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine("  COLUMN: ID (Pokemon ID)");
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine($"  Range: 0 to {pokemonNames.Length - 1}");
+                validValues.AppendLine();
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine("  COLUMN: Level");
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine("  Range: 1 to 100");
+                validValues.AppendLine();
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine("  COLUMN: Name (Pokemon Names)");
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine($"  Total: {pokemonNames.Length} Pokemon (case-insensitive)");
+                validValues.AppendLine();
+                // Show a few random examples instead of full list
+                var pokemonExamples = new[] { 1, 25, 150 }.Where(i => i < pokemonNames.Length).ToList();
+                validValues.AppendLine("  Examples:");
+                foreach (var i in pokemonExamples)
+                {
+                    validValues.AppendLine($"    {i,4}: {pokemonNames[i]}");
+                }
+                validValues.AppendLine();
+                validValues.AppendLine($"  Any Pokemon name from ROM data is valid.");
+                validValues.AppendLine();
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine("  COLUMN: Move (Move Names)");
+                validValues.AppendLine("───────────────────────────────────────────────────────────────");
+                validValues.AppendLine($"  Total: {moveNames.Length} Moves (case-insensitive)");
+                validValues.AppendLine();
+                // Show a few random examples instead of full list
+                var moveExamples = new[] { 1, 10, 100 }.Where(i => i < moveNames.Length).ToList();
+                validValues.AppendLine("  Examples:");
+                foreach (var i in moveExamples)
+                {
+                    validValues.AppendLine($"    {i,4}: {moveNames[i]}");
+                }
+                validValues.AppendLine();
+                validValues.AppendLine($"  Any move name from ROM data is valid.");
+
                 txtSummary.Text = summary.ToString();
                 txtErrors.Text = errors.ToString();
                 txtChanges.Text = changes.ToString();
+                txtValidValues.Text = validValues.ToString();
+                txtNameMismatches.Text = nameMismatches.ToString();
 
                 // Update tab colors based on content
                 if (importResult.HasErrors)
@@ -1657,11 +1886,24 @@ namespace DSPRE.Editors
                     return;
                 }
 
+                // Check if any renames are selected
+                int pokemonRenameCount = chkPokemonRenames.CheckedItems.Count;
+                int moveRenameCount = chkMoveRenames.CheckedItems.Count;
+                bool hasRenames = pokemonRenameCount > 0 || moveRenameCount > 0;
+
                 var confirmMessage = $"This will replace all current learnset data with {importResult.ValidCount} imported entries.\n\n";
             
                 if (importResult.HasErrors)
                 {
                     confirmMessage += $"⚠️ Warning: {importResult.ErrorCount} rows had errors and will be skipped.\n\n";
+                }
+
+                if (hasRenames)
+                {
+                    confirmMessage += $"📝 The following names will be changed in ROM:\n";
+                    if (pokemonRenameCount > 0) confirmMessage += $"   - {pokemonRenameCount} Pokemon name(s)\n";
+                    if (moveRenameCount > 0) confirmMessage += $"   - {moveRenameCount} Move name(s)\n";
+                    confirmMessage += $"   Title Case: {(chkUseTitleCase.Checked ? "Yes" : "No")}\n\n";
                 }
 
                 confirmMessage += "Are you sure you want to proceed?";
@@ -1671,8 +1913,82 @@ namespace DSPRE.Editors
 
                 if (result == DialogResult.Yes)
                 {
+                    // Apply name renames if any are selected
+                    if (hasRenames)
+                    {
+                        try
+                        {
+                            ApplyNameRenames();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error applying name renames: {ex.Message}\n\nThe import will continue without renaming.",
+                                "Rename Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }
+
                     this.DialogResult = DialogResult.OK;
                     this.Close();
+                }
+            }
+
+            private void ApplyNameRenames()
+            {
+                bool useTitleCase = chkUseTitleCase.Checked;
+                bool pokemonNamesChanged = false;
+                bool moveNamesChanged = false;
+
+                // Apply Pokemon name renames
+                if (chkPokemonRenames.CheckedItems.Count > 0)
+                {
+                    var pokemonNameArchive = new DSPRE.ROMFiles.TextArchive(RomInfo.pokemonNamesTextNumbers[0]);
+
+                    foreach (NameMismatch mismatch in chkPokemonRenames.CheckedItems)
+                    {
+                        if (mismatch.Id >= 0 && mismatch.Id < pokemonNameArchive.messages.Count)
+                        {
+                            string newName = useTitleCase ? ToTitleCase(mismatch.CsvName) : mismatch.CsvName;
+                            pokemonNameArchive.messages[mismatch.Id] = newName;
+                            pokemonNamesChanged = true;
+                        }
+                    }
+
+                    if (pokemonNamesChanged)
+                    {
+                        pokemonNameArchive.SaveToDefaultDir(RomInfo.pokemonNamesTextNumbers[0], false);
+                        pokemonNameArchive.SaveToExpandedDir(RomInfo.pokemonNamesTextNumbers[0], false);
+                    }
+                }
+
+                // Apply Move name renames
+                if (chkMoveRenames.CheckedItems.Count > 0)
+                {
+                    var moveNameArchive = new DSPRE.ROMFiles.TextArchive(RomInfo.attackNamesTextNumber);
+
+                    foreach (NameMismatch mismatch in chkMoveRenames.CheckedItems)
+                    {
+                        if (mismatch.Id >= 0 && mismatch.Id < moveNameArchive.messages.Count)
+                        {
+                            string newName = useTitleCase ? ToTitleCase(mismatch.CsvName) : mismatch.CsvName;
+                            moveNameArchive.messages[mismatch.Id] = newName;
+                            moveNamesChanged = true;
+                        }
+                    }
+
+                    if (moveNamesChanged)
+                    {
+                        moveNameArchive.SaveToDefaultDir(RomInfo.attackNamesTextNumber, false);
+                        moveNameArchive.SaveToExpandedDir(RomInfo.attackNamesTextNumber, false);
+                    }
+                }
+
+                if (pokemonNamesChanged || moveNamesChanged)
+                {
+                    MessageBox.Show(
+                        $"Name changes applied:\n" +
+                        $"- Pokemon names: {chkPokemonRenames.CheckedItems.Count}\n" +
+                        $"- Move names: {chkMoveRenames.CheckedItems.Count}",
+                        "Names Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
