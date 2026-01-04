@@ -427,6 +427,7 @@
     <Compile Include="ROMFiles\MapScreenLoadTrigger.cs" />
     <Compile Include="ROMFiles\ScriptAction.cs" />
     <Compile Include="ROMFiles\TradeData.cs" />
+    <Compile Include="ScreenshotTool.cs" />
     <Compile Include="Script\ScriptCommandPosition.cs" />
     <Compile Include="Script\ScriptLabeledSection.cs" />
     <Compile Include="Script\ScriptParameter.cs" />

@@ -24,6 +24,12 @@ namespace DSPRE
             VelopackApp.Build().Run();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+#if DEBUG
+            // Enable Ctrl+Click screenshot capture on all forms
+            ScreenshotTool.EnableGlobally();
+#endif
+
             MainProgram mainProgram = new MainProgram();
             CrashReporter.Initialize(mainProgram);
             Application.Run(mainProgram);
