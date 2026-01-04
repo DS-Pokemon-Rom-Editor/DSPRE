@@ -3,7 +3,9 @@ using DSPRE.Resources;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -24,6 +26,8 @@ namespace DSPRE {
         private LearnsetData currentLoadedFile = null;
 
         private readonly string formName = "Learnset Editor";
+
+        private const string LearnsetWarningDismissedFile = ".learnset_warning_dismissed";
 
         private readonly string[] editButtonNames = new string[] {
             "Edit",
@@ -213,8 +217,47 @@ namespace DSPRE {
             if (currentLoadedFile == null) {
                 return;
             }
+
+            // Check if learnset exceeds vanilla limit and show warning if not dismissed
+            if (currentLoadedFile.list.Count > LearnsetData.VanillaLimit && !IsLearnsetWarningDismissed()) {
+                if (!ShowLearnsetLimitWarning()) {
+                    return; // User cancelled the save
+                }
+            }
+
             currentLoadedFile.SaveToFileDefaultDir(currentLoadedId, false);
             SetDirty(false);
+        }
+
+        private bool IsLearnsetWarningDismissed() {
+            string markerPath = Path.Combine(RomInfo.workDir, "unpacked", LearnsetWarningDismissedFile);
+            return File.Exists(markerPath);
+        }
+
+        private void DismissLearnsetWarning() {
+            try {
+                string unpackedDir = Path.Combine(RomInfo.workDir, "unpacked");
+                if (!Directory.Exists(unpackedDir)) {
+                    Directory.CreateDirectory(unpackedDir);
+                }
+                string markerPath = Path.Combine(unpackedDir, LearnsetWarningDismissedFile);
+                File.WriteAllText(markerPath, DateTime.Now.ToString());
+                AppLogger.Info("Learnset limit warning dismissed for this project.");
+            } catch (Exception ex) {
+                AppLogger.Warn($"Failed to save learnset warning dismissal: {ex.Message}");
+            }
+        }
+
+        private bool ShowLearnsetLimitWarning() {
+            using (var warningForm = new LearnsetLimitWarningForm(currentLoadedFile.list.Count)) {
+                var result = warningForm.ShowDialog(this);
+
+                if (warningForm.DontShowAgain) {
+                    DismissLearnsetWarning();
+                }
+
+                return result == DialogResult.OK;
+            }
         }
 
         private void SetDirty(bool status) {
