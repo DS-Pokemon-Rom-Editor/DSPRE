@@ -1,12 +1,12 @@
-# DSPRE - DS Pokémon ROM Editor Reloaded
+# DSPRE - DS PokÃ©mon ROM Editor Reloaded
 
 <p align="center">
   <img src="readmeImages/Map%20Editor.png" alt="DSPRE" width="700"/>
 </p>
 
-**DSPRE (DS Pokémon ROM Editor Reloaded)** is a tool for editing Nintendo DS Pokémon games (Generation IV). It allows you to modify maps, scripts, events, Pokémon data, trainers, and more.
+**DSPRE (DS PokÃ©mon ROM Editor Reloaded)** is a tool for editing Nintendo DS PokÃ©mon games (Generation IV). It allows you to modify maps, scripts, events, PokÃ©mon data, trainers, and more.
 
-For additional documentation, tutorials, and research on DS Pokémon ROM hacking, see the **[DS Pokémon Hacking Wiki](https://ds-pokemon-hacking.github.io/)**.
+For additional documentation, tutorials, and research on DS PokÃ©mon ROM hacking, see the **[DS PokÃ©mon Hacking Wiki](https://ds-pokemon-hacking.github.io/)**.
 
 ---
 
@@ -31,12 +31,12 @@ For additional documentation, tutorials, and research on DS Pokémon ROM hacking,
 
 | Game | EN | ES/IT/FR/DE | JP | KR | Notes |
 |------|-----|----------------|-----|-----|-------|
-| **Diamond** | Full | Mostly Full | Partial | Mostly Unsupported | |
-| **Pearl** | Full | Mostly Full | Partial | Mostly Unsupported | |
-| **Platinum** | Full | Mostly Full | Partial | Mostly Unsupported | |
-| **HeartGold** | Full | Mostly Full | Partial | Mostly Unsupported | |
-| **SoulSilver** | Full | Mostly Full | Partial | Mostly Unsupported | |
-| **hg-engine ROMs** | Partial | Unsupported | Unsupported | Unsupported | Some editors disabled |
+| **Diamond** | Full Support | Extensive Support | Partial Support | Minimal Support | |
+| **Pearl** | Full Support | Extensive Support | Partial Support | Minimal Support | |
+| **Platinum** | Full Support | Extensive Support | Partial Support | Minimal Support | |
+| **HeartGold** | Full Support | Extensive Support | Partial Support | Minimal Support | |
+| **SoulSilver** | Full Support | Extensive Support | Partial Support | Minimal Support | |
+| **hg-engine ROMs** | Partial Support | N/A | N/A | N/A | Some editors disabled |
 
 ---
 
@@ -44,7 +44,7 @@ For additional documentation, tutorials, and research on DS Pokémon ROM hacking,
 
 ### Map Editor
 
-View and edit 3D map data including collisions, permissions, and building placement.
+View and edit 3D map-related data including collisions, permissions, building placement, import and export of map models.
 
 - OpenGL 3D visualization
 - Mouse-based building placement and movement
@@ -52,13 +52,13 @@ View and edit 3D map data including collisions, permissions, and building placem
 - Permissions editing with flood fill
 - BGS (Background Sound) section editing
 - BDHCAM import/export
-- Map BIN import/export
-- DAE, GLB, and OBJ model export
-- 512x map screenshot export (for PDSMS backgrounds)
+- Map NSBMD and BIN import/export
+- DAE, GLB, and NSBMD model export
+- 512px map screenshot export (for PDSMS backgrounds)
 
 <img src="readmeImages/Map%20Editor.png" width="450" alt="Map Editor"/>
 
-**Note:** To create new maps from scratch, use **[Pokémon DS Map Studio (PDSMS)](https://github.com/Trifindo/Pokemon-DS-Map-Studio)**.
+**Note:** To create new maps from scratch, use **[PokÃ©mon DS Map Studio (PDSMS)](https://github.com/Trifindo/Pokemon-DS-Map-Studio)**.
 
 ---
 
@@ -93,12 +93,14 @@ Edit map header properties.
 
 - Copy and paste headers
 - Import and export
+- Add and remove headers (if relevant patch applied)
 - Location search
 - WorldMap Coordinates (HGSS)
 - Weather effects with preview
 - Internal names editing
-- Battle BG and Following Pokémon properties
+- Battle Background and Following PokÃ©mon properties
 - Camera settings
+- Music settings
 
 ---
 
@@ -124,6 +126,7 @@ Place and configure NPCs, warps, triggers, and spawnables.
 - Event duplication
 - Selective event import from other files
 - Overworld sprite rendering
+- 512px customisable map and event data screenshot export
 
 <img src="readmeImages/Event%20Editor.png" width="450" alt="Event Editor"/>
 
@@ -131,9 +134,11 @@ Place and configure NPCs, warps, triggers, and spawnables.
 
 ### Wild Encounters Editor
 
-Configure wild Pokémon encounters.
+Configure wild PokÃ©mon encounters.
 
 - Encounter slot editing
+- Import and export
+- Add and remove encounter files
 - Broken encounter file repair
 - Separate editors for DPPt and HGSS formats
 
@@ -146,24 +151,26 @@ Configure wild Pokémon encounters.
 Edit trainer data including party, AI, and items.
 
 - Trainer Class editing
-- Party composition (up to 6 Pokémon)
+- Party composition (up to 6 PokÃ©mon)
 - Custom movesets
 - AI flags
-- Held items
+- Trainer and held items
 - Party reordering
-- DV Calculator
+- DV Calculator (IV & Nature determination)
 - Export to Showdown format
 
 <img src="readmeImages/Trainer%20Editor.png" width="450" alt="Trainer Editor"/>
 
 **Note:** For more advanced trainer editing features, see **[VSMaker2](https://github.com/Chvlkie/VSMaker2)**, which supports DSPRE unpacked ROMs.
 
+**Note:** See [Generation IV Trainer Move Selection AI Reference](https://gist.github.com/lhearachel/ff61af1f58c84c96592b0b8184dba096) for details on AI flags.
+
 ---
 
-### Pokémon Data Editors
+### PokÃ©mon Data Editors
 
 #### Personal Data Editor
-Edit Pokémon base stats and attributes.
+Edit PokÃ©mon base stats and attributes.
 
 - Base stats (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed)
 - Types
@@ -182,10 +189,11 @@ Edit level-up moves.
 
 - Add, edit, and delete moves
 - Auto-sorting by level
+- Manual sorting of moves learned at the same level
 - Entry count warning for 20+ moves (see [maximum move threshold](https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/#maximum-move-threshold))
 - Bulk Learnset Editor with:
   - CSV import/export
-  - Copy learnset to other Pokémon
+  - Copy learnset to other PokÃ©mon
   - Global move replacement
   - Level adjustment
   - Filter and search
@@ -205,7 +213,7 @@ Edit evolution methods and targets.
 Edit egg moves by species.
 
 - Bulk replace and delete
-- Search by Pokémon name
+- Search by PokÃ©mon name
 - CSV import/export
 - Size limit tracking
 
@@ -227,7 +235,7 @@ Edit move properties.
 
 <img src="readmeImages/Move%20Data%20Editor.png" width="450" alt="Move Data Editor"/>
 
-For more information, see the [DS Pokémon Hacking Wiki - Editing Moves](https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/).
+For more information, see the [DS PokÃ©mon Hacking Wiki - Editing Moves](https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/).
 
 ---
 
@@ -249,13 +257,13 @@ Edit item data and effects.
 
 ### TM Editor
 
-Edit TM/HM move assignments.
+Edit TM/HM move assignments and item palettes.
 
 ---
 
 ### Trade Editor
 
-Edit in-game trade Pokémon.
+Edit in-game trade PokÃ©mon.
 
 - Species (given and requested)
 - IVs
@@ -319,14 +327,18 @@ View and manage 3D building models.
 
 - Interior and exterior models
 - NSBMD model viewing
+- Building NSBMD import/export
+- DAE building export
 
 ---
 
 ### NSBTX Editor
 
-Edit textures and palettes.
+Add, edit and delete AreaData and texture packs.
 
-- Add and remove textures/palettes
+- Add and remove map and building texture packs (NSBTX)
+- Add, edit and remove AreaData files
+- Import/export NSBTX and AreaData
 - Palette matching
 - Texture preview
 
@@ -365,7 +377,7 @@ Edit various game tables.
 View and manage overlays.
 
 - Compression status
-- Decompress/compress operations
+- Decompression operations
 - RAM address mapping
 
 ---
@@ -395,7 +407,7 @@ Apply patches to expand ROM capabilities:
 | Expand ARM9 Memory | Increase usable ARM9 memory |
 | Dynamic Cameras | BDH camera positioning |
 | Overlay1 Uncompressed | Keep Overlay1 uncompressed |
-| Sentence Case Names | Convert Pokémon names to sentence case |
+| Sentence Case Names | Convert PokÃ©mon names to sentence case |
 | Standardize Items | Standardize item numbers across games |
 | Expand Matrix 0 | Larger world map matrices |
 | Dynamic Headers | Extended header functionality |
@@ -411,7 +423,7 @@ Apply patches to expand ROM capabilities:
 
 | Tool | Purpose |
 |------|---------|
-| **[Pokémon DS Map Studio](https://github.com/Trifindo/Pokemon-DS-Map-Studio)** | Create new 3D maps from scratch |
+| **[PokÃ©mon DS Map Studio](https://github.com/Trifindo/Pokemon-DS-Map-Studio)** | Create new 3D maps from scratch |
 | **[VSMaker2](https://github.com/Chvlkie/VSMaker2)** | Advanced trainer editor (supports DSPRE unpacked ROMs) |
 | **[VS Code Extension](https://github.com/DS-Pokemon-Rom-Editor/vsc-dspre-script-compat)** | Syntax highlighting for DSPRE scripts |
 
@@ -435,8 +447,9 @@ Apply patches to expand ROM capabilities:
 1. Open DSPRE and click "Open ROM" or drag-drop a `.nds` file
 2. Wait for ROM extraction (first-time setup)
 3. Select an editor tab to begin editing
-4. Save your work frequently - click "Save ROM" to repack changes
-5. Test your ROM in an emulator
+4. Save your work frequently in each editor
+5. Click "Save ROM" to repack changes to a modified `.nds` file
+6. Test your ROM in an emulator
 
 ---
 
@@ -792,8 +805,8 @@ private void myEditorToolStripMenuItem_Click(object sender, EventArgs e)
 
 ## External Resources
 
-### DS Pokémon Hacking Wiki
-The **[DS Pokémon Hacking Wiki](https://ds-pokemon-hacking.github.io/)** is the primary documentation resource for DS Pokémon ROM hacking:
+### DS PokÃ©mon Hacking Wiki
+The **[DS PokÃ©mon Hacking Wiki](https://ds-pokemon-hacking.github.io/)** is the primary documentation resource for DS PokÃ©mon ROM hacking:
 
 - **[Generation IV Guides](https://ds-pokemon-hacking.github.io/docs/category/guides)**
 - **[Generation IV Resources](https://ds-pokemon-hacking.github.io/docs/category/resources)**
@@ -816,4 +829,4 @@ This project is open source. See the repository for license details.
 
 - Original DSPRE by Nomura
 - All contributors to the DSPRE Reloaded project
-- The DS Pokémon ROM hacking community
+- The DS PokÃ©mon ROM hacking community
