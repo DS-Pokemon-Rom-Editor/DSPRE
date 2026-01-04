@@ -276,6 +276,13 @@ namespace DSPRE {
         public static void ForceUnpackNarcs(List<DirNames> IDs) {
             Parallel.ForEach(IDs, id => {
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
+
+                    if (!File.Exists(paths.packedPath))
+                    {
+                        AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
+                        return;
+                    }
+
                     Narc opened = Narc.Open(paths.packedPath);
 
                     if (opened is null) {
