@@ -96,14 +96,10 @@ namespace DSPRE.Editors
             AppendText("TYPE REFERENCE\n", Color.DarkGreen, FontStyle.Bold, 11);
             AppendText("===============================================================\n\n", Color.DarkGray);
 
-            AddTypeEntry("0", "{STRVAR_1, 0, ?, 0}", "Pokemon Species", new[] {
-                "TextPokemon", "TextPokeNickname (also Type 1)", "TextPokemonStored",
+            AddTypeEntry("0, 1", "{STRVAR_1, 0, ?, 0}", "Pokemon Species / Nickname", new[] {
+                "TextPokemon", "TextPokeNickname", "TextPokemonStored",
                 "TextStarterPokemon", "TextRivalStarter", "TextCounterpartStarter",
-                "TextPartyPokemonDefault (HGSS)"
-            });
-
-            AddTypeEntry("1", "{STRVAR_1, 1, ?, 0}", "Pokemon Nickname", new[] {
-                "TextPokeNickname (also Type 0)", "TextBugContestPokeNickname (HGSS)"
+                "TextPartyPokemonDefault (HGSS)", "TextBugContestPokeNickname (HGSS)"
             });
 
             AddTypeEntry("3", "{STRVAR_1, 3, ?, 0}", "Player/Character Names", new[] {
@@ -150,12 +146,11 @@ namespace DSPRE.Editors
 
             AddTypeEntry("39", "{STRVAR_1, 39, ?, 0}", "Ribbon", new[] { "TextRibbon" });
 
-            AddTypeEntry("50-54", "{STRVAR_1, 50, ?, 0}", "Number", new[] {
+            AddTypeEntry("50-55", "{STRVAR_1, 50, ?, 0}", "Number", new[] {
                 "TextNumber", "TextPartyPokemonSize", "TextPokemonSizeRecord",
-                "TextNumberSp", "TextBugContestRemainingTime (HGSS)"
+                "TextNumberSp", "TextBugContestRemainingTime (HGSS)",
+                "TextBattleHallStreak (HGSS)"
             });
-
-            AddTypeEntry("55", "{STRVAR_1, 55, ?, 0}", "Battle Hall", new[] { "TextBattleHallStreak (HGSS)" });
 
             AppendText("\n", Color.Black);
             AppendText("STRVAR_4 Types:\n", Color.DarkBlue, FontStyle.Bold);
