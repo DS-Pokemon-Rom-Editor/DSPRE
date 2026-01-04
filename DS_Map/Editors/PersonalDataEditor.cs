@@ -1192,6 +1192,8 @@ namespace DSPRE {
             private string[] pokemonNames;
             private string[] typeNames;
             private string[] abilityNames;
+            private bool hasViewedErrorsTab = false;
+            private int errorsTabIndex = 1; // Index of the Errors & Warnings tab
 
             public PersonalDataImportPreviewForm(PersonalDataImportResult result, string[] pokemonNames, string[] typeNames, string[] abilityNames) {
                 this.importResult = result;
@@ -1266,6 +1268,13 @@ namespace DSPRE {
                 validValuesTab.Controls.Add(txtValidValues);
 
                 tabControl.TabPages.AddRange(new TabPage[] { summaryTab, errorsTab, changesTab, validValuesTab });
+
+                // Track when user views the errors tab
+                tabControl.SelectedIndexChanged += (s, args) => {
+                    if (tabControl.SelectedIndex == errorsTabIndex) {
+                        hasViewedErrorsTab = true;
+                    }
+                };
 
                 var buttonPanel = new FlowLayoutPanel {
                     Dock = DockStyle.Fill,
@@ -1548,6 +1557,15 @@ namespace DSPRE {
                     if (importResult.ValidCount == 0) {
                         MessageBox.Show("No valid entries to import.", "Import Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // If there are errors and user hasn't viewed the errors tab, redirect them there first
+                    if (importResult.HasErrors && !hasViewedErrorsTab) {
+                        MessageBox.Show("Let's at least open the Errors tab first, no?", "Review Errors",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        tabControl.SelectedIndex = errorsTabIndex;
+                        hasViewedErrorsTab = true;
                         return;
                     }
 

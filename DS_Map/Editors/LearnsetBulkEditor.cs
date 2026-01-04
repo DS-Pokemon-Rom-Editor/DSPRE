@@ -1419,6 +1419,8 @@ namespace DSPRE.Editors
             private BindingList<LearnsetEntry> currentData;
             private string[] pokemonNames;
             private string[] moveNames;
+            private bool hasViewedErrorsTab = false;
+            private int errorsTabIndex = 1; // Index of the Errors & Warnings tab
 
             public LearnsetImportPreviewForm(LearnsetImportResult result, string[] pokemonNames, string[] moveNames, BindingList<LearnsetEntry> currentData)
             {
@@ -1546,6 +1548,13 @@ namespace DSPRE.Editors
                 validValuesTab.Controls.Add(txtValidValues);
 
                 tabControl.TabPages.AddRange(new TabPage[] { summaryTab, errorsTab, changesTab, nameMismatchesTab, validValuesTab });
+
+                // Track when user views the errors tab
+                tabControl.SelectedIndexChanged += (s, args) => {
+                    if (tabControl.SelectedIndex == errorsTabIndex) {
+                        hasViewedErrorsTab = true;
+                    }
+                };
 
                 // Button panel
                 var buttonPanel = new FlowLayoutPanel
@@ -1883,6 +1892,16 @@ namespace DSPRE.Editors
                 {
                     MessageBox.Show("No valid entries to import.", "Import Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // If there are errors and user hasn't viewed the errors tab, redirect them there first
+                if (importResult.HasErrors && !hasViewedErrorsTab)
+                {
+                    MessageBox.Show("Let's at least open the Errors tab first, no?", "Review Errors",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    tabControl.SelectedIndex = errorsTabIndex;
+                    hasViewedErrorsTab = true;
                     return;
                 }
 
