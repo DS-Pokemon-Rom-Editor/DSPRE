@@ -395,6 +395,8 @@ namespace DSPRE.Editors
                     "If the ratio is 50/50 the Pokémon's gender will match the trainer's.");
             }
 
+            // AI Info Button Tooltip
+            toolTip.SetToolTip(aiInfoButton, "Open a link to Lhea's detailed explanation of Gen IV move selection AI");
         }
 
         private void trainerComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -451,9 +453,13 @@ namespace DSPRE.Editors
             }
 
             IList trainerAI = TrainerAIGroupBox.Controls;
+            int aiIndex = 0;
             for (int i = 0; i < trainerAI.Count; i++)
             {
-                (trainerAI[i] as CheckBox).Checked = currentTrainerFile.trp.AI[i];
+                if (trainerAI[i] is CheckBox cb)
+                {
+                    cb.Checked = currentTrainerFile.trp.AI[aiIndex++];
+                }
             }
         }
         public void RefreshTrainerPartyGUI()
@@ -1288,6 +1294,21 @@ namespace DSPRE.Editors
 
             currentTrainerFile = reorderForm.trainerFile;
             RefreshTrainerPartyGUI();
+        }
+
+        private void aiInfoButton_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Do you want to open a link to Lhea's Gen IV Move Selection AI reference document?",
+                "Confirm Open Website", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+
+            if (result == DialogResult.OK)
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://gist.github.com/lhearachel/ff61af1f58c84c96592b0b8184dba096",
+                    UseShellExecute = true
+                });
+            }
         }
     }
 }

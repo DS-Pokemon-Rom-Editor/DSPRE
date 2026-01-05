@@ -101,6 +101,7 @@
             this.partyPokemon4PictureBox = new System.Windows.Forms.PictureBox();
             this.partyPokemon4ComboBox = new DSPRE.InputComboBox();
             this.TrainerAIGroupBox = new System.Windows.Forms.GroupBox();
+            this.aiInfoButton = new System.Windows.Forms.Button();
             this.trainerAI1CheckBox = new System.Windows.Forms.CheckBox();
             this.trainerAI2CheckBox = new System.Windows.Forms.CheckBox();
             this.trainerAI3CheckBox = new System.Windows.Forms.CheckBox();
@@ -1098,6 +1099,7 @@
             // 
             // TrainerAIGroupBox
             // 
+            this.TrainerAIGroupBox.Controls.Add(this.aiInfoButton);
             this.TrainerAIGroupBox.Controls.Add(this.trainerAI1CheckBox);
             this.TrainerAIGroupBox.Controls.Add(this.trainerAI2CheckBox);
             this.TrainerAIGroupBox.Controls.Add(this.trainerAI3CheckBox);
@@ -1115,6 +1117,16 @@
             this.TrainerAIGroupBox.TabIndex = 27;
             this.TrainerAIGroupBox.TabStop = false;
             this.TrainerAIGroupBox.Text = "AI";
+            // 
+            // aiInfoButton
+            // 
+            this.aiInfoButton.Location = new System.Drawing.Point(184, 87);
+            this.aiInfoButton.Name = "aiInfoButton";
+            this.aiInfoButton.Size = new System.Drawing.Size(82, 23);
+            this.aiInfoButton.TabIndex = 11;
+            this.aiInfoButton.Text = "AI Info";
+            this.aiInfoButton.UseVisualStyleBackColor = true;
+            this.aiInfoButton.Click += new System.EventHandler(this.aiInfoButton_Click);
             // 
             // trainerAI1CheckBox
             // 
@@ -2552,5 +2564,6 @@
         public System.Windows.Forms.PictureBox trainerClassPicBox;
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Button reorderButton;
+        private System.Windows.Forms.Button aiInfoButton;
     }
 }
