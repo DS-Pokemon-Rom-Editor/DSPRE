@@ -79,7 +79,7 @@ Edit game scripts in binary or plaintext format.
 
 <img src="readmeImages/Script%20Editor.png" width="550" alt="Script Editor"/>
 
-**VS Code Extension:** Install the **[DSPRE Script Compatibility extension](https://github.com/DS-Pokemon-Rom-Editor/vsc-dspre-script-compat)** for syntax highlighting when editing scripts externally.
+**VS Code Extension:** Install the **[DSPRE Script Compatibility extension](https://github.com/DS-Pokemon-Rom-Editor/vsc-dspre-script-compat)** for syntax highlighting when editing scripts externally. This can be installed directly in VS Code by searching "DSPRE" in the Extensions: Marketplace.
 
 **Script Command Databases:** The command databases are maintained at **[scrcmd-database](https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database)**. Contributions are welcome.
 
