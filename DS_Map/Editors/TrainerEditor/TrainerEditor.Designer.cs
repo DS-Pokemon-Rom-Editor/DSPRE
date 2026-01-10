@@ -2548,7 +2548,7 @@
         private System.Windows.Forms.Button addTrainerButton;
         private System.Windows.Forms.Label label42;
         private System.Windows.Forms.Button trainerSaveCurrentButton;
-        private InputComboBox trainerComboBox;
+        public InputComboBox trainerComboBox;
         private System.Windows.Forms.CheckBox trainerItemsCheckBox;
         private System.Windows.Forms.TextBox trainerNameTextBox;
         private System.Windows.Forms.NumericUpDown partyCountUpDown;

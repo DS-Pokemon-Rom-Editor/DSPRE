@@ -787,6 +787,7 @@
             this.spawnablesListBox.Size = new System.Drawing.Size(208, 303);
             this.spawnablesListBox.TabIndex = 0;
             this.spawnablesListBox.SelectedIndexChanged += new System.EventHandler(this.spawnablesListBox_SelectedIndexChanged);
+            this.spawnablesListBox.DoubleClick += new System.EventHandler(this.spawnablesListBox_DoubleClick);
             // 
             // overworldsTabPage
             // 
@@ -1417,6 +1418,7 @@
             this.overworldsListBox.Size = new System.Drawing.Size(180, 160);
             this.overworldsListBox.TabIndex = 3;
             this.overworldsListBox.SelectedIndexChanged += new System.EventHandler(this.overworldsListBox_SelectedIndexChanged);
+            this.overworldsListBox.DoubleClick += new System.EventHandler(this.overworldsListBox_DoubleClick);
             // 
             // warpsTabPage
             // 
@@ -2091,6 +2093,7 @@
             this.triggersListBox.Size = new System.Drawing.Size(190, 290);
             this.triggersListBox.TabIndex = 4;
             this.triggersListBox.SelectedIndexChanged += new System.EventHandler(this.triggersListBox_SelectedIndexChanged);
+            this.triggersListBox.DoubleClick += new System.EventHandler(this.triggersListBox_DoubleClick);
             // 
             // eventPanel
             // 

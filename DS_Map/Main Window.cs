@@ -109,6 +109,38 @@ namespace DSPRE
         public Dictionary<ushort /*evFile*/, ushort /*header*/> eventToHeader = new Dictionary<ushort, ushort>();
         public Dictionary<ushort /*scriptFile*/, List<ushort> /*headers*/> scriptToHeaders = new Dictionary<ushort, List<ushort>>();
 
+        /// <summary>
+        /// Opens the Script Editor and navigates to a specific script number within a script file.
+        /// </summary>
+        /// <param name="scriptFileID">The script file ID to open</param>
+        /// <param name="scriptNumber">The script number to navigate to within the file</param>
+        public void GoToScript(int scriptFileID, int scriptNumber)
+        {
+            EditorPanels.scriptEditor.OpenScriptEditorAndNavigate(this, scriptFileID, scriptNumber);
+        }
+
+        /// <summary>
+        /// Opens the Trainer Editor and navigates to a specific trainer.
+        /// </summary>
+        /// <param name="trainerID">The trainer ID to open (0-based index in trainer combobox)</param>
+        public void GoToTrainer(int trainerID)
+        {
+            EditorPanels.trainerEditor.SetupTrainerEditor(this);
+            if (trainerID >= 0 && trainerID < EditorPanels.trainerEditor.trainerComboBox.Items.Count)
+            {
+                EditorPanels.trainerEditor.trainerComboBox.SelectedIndex = trainerID;
+            }
+            
+            if (EditorPanels.PopoutRegistry.TryGetHost(EditorPanels.trainerEditor, out var host))
+            {
+                host.Focus();
+            }
+            else
+            {
+                EditorPanels.mainTabControl.SelectedTab = EditorPanels.trainerEditorTabPage;
+            }
+        }
+
         #endregion
 
         #region Subroutines

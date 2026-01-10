@@ -1273,6 +1273,60 @@ namespace DSPRE.Editors
                     }
                 }
             }
+            // Shift+Click: Navigate to associated script/trainer for the event under cursor
+            else if (mea.Button == MouseButtons.Left && Control.ModifierKeys == Keys.Shift)
+            {
+                // Check spawnables (not hidden items)
+                if (showSpawnablesCheckBox.Checked)
+                {
+                    for (int i = 0; i < currentEvFile.spawnables.Count; i++)
+                    {
+                        Spawnable ev = currentEvFile.spawnables[i];
+                        if (isEventUnderMouse(ev, mouseTilePos))
+                        {
+                            if (ev.type != Spawnable.TYPE_HIDDENITEM)
+                            {
+                                NavigateToScript(ev.scriptNumber, "spawnable");
+                            }
+                            else
+                            {
+                                MessageBox.Show("This spawnable is a Hidden Item.\n" +
+                                    "Hidden items use preset scripts and cannot be navigated to.",
+                                    "Hidden Item", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            return;
+                        }
+                    }
+                }
+
+                // Check overworlds
+                if (showOwsCheckBox.Checked)
+                {
+                    for (int i = 0; i < currentEvFile.overworlds.Count; i++)
+                    {
+                        Overworld ev = currentEvFile.overworlds[i];
+                        if (isEventUnderMouse(ev, mouseTilePos))
+                        {
+                            NavigateToOverworldTarget(ev);
+                            return;
+                        }
+                    }
+                }
+
+                // Check triggers
+                if (showTriggersCheckBox.Checked)
+                {
+                    for (int i = 0; i < currentEvFile.triggers.Count; i++)
+                    {
+                        Trigger ev = currentEvFile.triggers[i];
+                        if (isEventUnderMouse(ev, mouseTilePos, ev.widthX - 1, ev.heightY - 1))
+                        {
+                            NavigateToScript(ev.scriptNumber, "trigger");
+                            return;
+                        }
+                    }
+                }
+            }
             else if (mea.Button == MouseButtons.Middle)
             {
                 for (int i = 0; i < currentEvFile.warps.Count; i++)
@@ -1977,6 +2031,169 @@ namespace DSPRE.Editors
             eventMatrixPictureBox.Image = new Bitmap(eventMatrixPictureBox.Width, eventMatrixPictureBox.Height);
             MarkActiveCell((int)eventMatrixXUpDown.Value, (int)eventMatrixYUpDown.Value);
             DisplayActiveEvents();
+        }
+
+        /// <summary>
+        /// Double-click on an overworld to navigate to its script in the Script Editor,
+        /// or to its trainer in the Trainer Editor.
+        /// </summary>
+        private void overworldsListBox_DoubleClick(object sender, EventArgs e)
+        {
+            int selection = overworldsListBox.SelectedIndex;
+            if (selection < 0)
+                return;
+
+            Overworld ow = currentEvFile.overworlds[selection];
+            NavigateToOverworldTarget(ow);
+        }
+
+        /// <summary>
+        /// Navigates to the appropriate editor based on overworld type.
+        /// </summary>
+        private void NavigateToOverworldTarget(Overworld ow)
+        {
+            // Handle trainers - navigate to Trainer Editor
+            if (ow.type == (ushort)Overworld.OwType.TRAINER)
+            {
+                int trainerID = ow.scriptNumber - 2999;
+                if (ow.scriptNumber >= 4999)
+                {
+                    trainerID = ow.scriptNumber - 4999; // Partner trainer
+                }
+                
+                if (trainerID > RomInfo.trainerFunnyScriptNumber - 1)
+                {
+                    trainerID--;
+                }
+                
+                // Check if trainer ID is valid
+                EditorPanels.trainerEditor.SetupTrainerEditor(_parent);
+                int trainerCount = EditorPanels.trainerEditor.trainerComboBox.Items.Count;
+                
+                if (trainerID < 0 || trainerID >= trainerCount)
+                {
+                    MessageBox.Show($"This overworld is assigned a Trainer ID ({trainerID}) that does not exist.\n" +
+                        $"Valid trainer IDs are 0 to {trainerCount - 1}.",
+                        "Invalid Trainer ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                _parent.GoToTrainer(trainerID);
+                Helpers.statusLabelMessage($"Navigated to Trainer {trainerID}");
+                return;
+            }
+
+            // Items don't have scripts to navigate to
+            if (ow.type == (ushort)Overworld.OwType.ITEM)
+            {
+                MessageBox.Show("This overworld is an Item pickup.\n" +
+                    "Item overworlds use preset scripts and cannot be navigated to.",
+                    "Item Overworld", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Normal NPC - navigate to Script Editor
+            NavigateToScript(ow.scriptNumber, "overworld");
+        }
+
+        /// <summary>
+        /// Double-click on a spawnable to navigate to its script in the Script Editor.
+        /// </summary>
+        private void spawnablesListBox_DoubleClick(object sender, EventArgs e)
+        {
+            int selection = spawnablesListBox.SelectedIndex;
+            if (selection < 0)
+                return;
+
+            Spawnable sp = currentEvFile.spawnables[selection];
+
+            // Hidden items don't have meaningful scripts to navigate to
+            if (sp.type == Spawnable.TYPE_HIDDENITEM)
+            {
+                MessageBox.Show("This spawnable is a Hidden Item.\n" +
+                    "Hidden items use preset scripts and cannot be navigated to.",
+                    "Hidden Item", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            NavigateToScript(sp.scriptNumber, "spawnable");
+        }
+
+        /// <summary>
+        /// Double-click on a trigger to navigate to its script in the Script Editor.
+        /// </summary>
+        private void triggersListBox_DoubleClick(object sender, EventArgs e)
+        {
+            int selection = triggersListBox.SelectedIndex;
+            if (selection < 0)
+                return;
+
+            Trigger tr = currentEvFile.triggers[selection];
+            NavigateToScript(tr.scriptNumber, "trigger");
+        }
+
+        /// <summary>
+        /// Common method to navigate to a script in the Script Editor.
+        /// </summary>
+        /// <param name="scriptNumber">The script number to navigate to</param>
+        /// <param name="eventType">The type of event (for error messages): "overworld", "spawnable", or "trigger"</param>
+        private void NavigateToScript(ushort scriptNumber, string eventType = "event")
+        {
+            if (scriptNumber == 0)
+            {
+                MessageBox.Show($"This {eventType} has no script assigned (Script 0).",
+                    "No Script Assigned", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Try to find the associated header and script file
+            if (!_parent.eventToHeader.TryGetValue((ushort)selectEventComboBox.SelectedIndex, out ushort headerID))
+            {
+                MessageBox.Show($"This event file does not have an associated header.\n" +
+                    "Cannot determine which script file to open.",
+                    "No Associated Header", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MapHeader header;
+            if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied || PatchToolboxDialog.CheckFilesDynamicHeadersPatchApplied())
+            {
+                header = MapHeader.LoadFromFile(RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + headerID.ToString("D4"), headerID, 0);
+            }
+            else
+            {
+                header = MapHeader.LoadFromARM9(headerID);
+            }
+
+            ushort scriptFileID = header.scriptFileID;
+
+            // Load the script file to check if the script number exists
+            try
+            {
+                ScriptFile scriptFile = new ScriptFile(scriptFileID);
+                
+                // Check if the script number exists in this file
+                bool scriptExists = scriptFile.allScripts.Any(s => s.manualUserID == scriptNumber);
+                
+                if (!scriptExists)
+                {
+                    MessageBox.Show($"This {eventType} is assigned Script {scriptNumber}, which is outside the bounds of Script File {scriptFileID}.\n\n" +
+                        "This script is likely using a common script or calling a script from another file.",
+                        "Script Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Navigate to the Script Editor and open the script
+                _parent.GoToScript(scriptFileID, scriptNumber);
+                Helpers.statusLabelMessage($"Navigated to Script {scriptNumber} in Script File {scriptFileID}");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error loading script file {scriptFileID}: {ex.Message}");
+                MessageBox.Show($"Error loading Script File {scriptFileID}.\n\n" +
+                    "The script file may be corrupted or missing.",
+                    "Script File Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         #endregion

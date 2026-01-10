@@ -295,6 +295,40 @@ namespace DSPRE.Editors
                 EditorPanels.mainTabControl.SelectedTab = EditorPanels.scriptEditorTabPage;
             }
         }
+
+        /// <summary>
+        /// Opens the Script Editor, loads a specific script file, and navigates to a specific script number.
+        /// </summary>
+        /// <param name="parent">The parent MainProgram instance</param>
+        /// <param name="scriptFileID">The script file ID to open</param>
+        /// <param name="scriptNumber">The script number to navigate to within the file</param>
+        public void OpenScriptEditorAndNavigate(MainProgram parent, int scriptFileID, int scriptNumber)
+        {
+            OpenScriptEditor(parent, scriptFileID);
+            
+            // Navigate to the specific script number
+            NavigateToScript(scriptNumber);
+        }
+
+        /// <summary>
+        /// Navigates to a specific script number within the currently loaded script file.
+        /// </summary>
+        /// <param name="scriptNumber">The script number to navigate to (1-based)</param>
+        public void NavigateToScript(int scriptNumber)
+        {
+            if (currentScriptFile == null || currentScriptFile.isLevelScript)
+                return;
+
+            // Select the Scripts tab
+            scriptEditorTabControl.SelectedTab = scriptsTabPage;
+
+            // Search for the script header (e.g., "Script 5:")
+            string scriptHeader = $"Script {scriptNumber}:";
+            scriptSearchManager.Find(true, false, scriptHeader);
+            scrollResultToTop(scriptSearchManager);
+
+            Helpers.statusLabelMessage($"Navigated to Script {scriptNumber}");
+        }
         private void SetupScriptEditorTextAreas()
         {
             //PREPARE SCRIPT EDITOR KEYWORDS
