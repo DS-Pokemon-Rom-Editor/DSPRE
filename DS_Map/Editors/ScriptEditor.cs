@@ -374,15 +374,185 @@ namespace DSPRE.Editors
             InitHotkeys(FunctionTextArea, functionSearchManager);
             InitHotkeys(ActionTextArea, actionSearchManager);
 
-            // INIT TOOLTIPS DWELLING
-            /*
-            ScriptTextArea.MouseDwellTime = 300;
+            // INIT TOOLTIPS DWELLING for Message preview
+            ScriptTextArea.MouseDwellTime = 400;
             ScriptTextArea.DwellEnd += TextArea_DwellEnd;
             ScriptTextArea.DwellStart += TextArea_DwellStart;
-            FunctionTextArea.MouseDwellTime = 300;
+            FunctionTextArea.MouseDwellTime = 400;
             FunctionTextArea.DwellEnd += TextArea_DwellEnd;
             FunctionTextArea.DwellStart += TextArea_DwellStart;
-            */
+        }
+
+        private void TextArea_DwellStart(object sender, DwellEventArgs e)
+        {
+            if (!(sender is Scintilla textArea) || e.Position < 0)
+                return;
+
+            // Get the word at the hover position
+            int wordStart = textArea.WordStartPosition(e.Position, true);
+            int wordEnd = textArea.WordEndPosition(e.Position, true);
+            
+            if (wordStart >= wordEnd)
+                return;
+
+            // Check if we're hovering over a Message command line
+            int lineNumber = textArea.LineFromPosition(e.Position);
+            string lineText = textArea.Lines[lineNumber].Text.Trim();
+
+            // Look for Message command patterns (e.g., "Message 5" or "message 0x5")
+            string tooltipText = TryGetMessageTooltip(lineText);
+            
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                textArea.CallTipShow(e.Position, tooltipText);
+            }
+        }
+
+        private void TextArea_DwellEnd(object sender, DwellEventArgs e)
+        {
+            if (sender is Scintilla textArea)
+            {
+                textArea.CallTipCancel();
+            }
+        }
+
+        /// <summary>
+        /// Attempts to extract message content for a Message command line
+        /// </summary>
+        private string TryGetMessageTooltip(string lineText)
+        {
+            // Check if this line contains a Message command
+            // Common patterns: "Message N", "message N", "Message 0xN"
+            string[] messageCmdNames = { "message", "message2", "messagenowait", "messagesilent" };
+            
+            string lineLower = lineText.ToLowerInvariant();
+            string foundCmd = null;
+            
+            foreach (var cmdName in messageCmdNames)
+            {
+                if (lineLower.StartsWith(cmdName + " ") || lineLower.Contains("\t" + cmdName + " "))
+                {
+                    foundCmd = cmdName;
+                    break;
+                }
+            }
+
+            if (foundCmd == null)
+                return null;
+
+            // Extract the message ID from the line
+            // Find the command and get the first parameter
+            int cmdIndex = lineLower.IndexOf(foundCmd);
+            if (cmdIndex < 0)
+                return null;
+
+            string afterCmd = lineText.Substring(cmdIndex + foundCmd.Length).Trim();
+            string[] parts = afterCmd.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            if (parts.Length == 0)
+                return null;
+
+            string msgIdStr = parts[0];
+            int messageId;
+
+            // Parse the message ID (supports decimal and hex with 0x prefix)
+            if (msgIdStr.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!int.TryParse(msgIdStr.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out messageId))
+                    return null;
+            }
+            else
+            {
+                if (!int.TryParse(msgIdStr, out messageId))
+                    return null;
+            }
+
+            // Get the text archive ID for this script file
+            int? textArchiveId = GetTextArchiveIdForCurrentScript();
+            
+            if (textArchiveId == null)
+                return $"[Message {messageId}]\n(No associated header found for this script)";
+
+            // Load the text archive and get the message
+            try
+            {
+                var textArchive = new ROMFiles.TextArchive(textArchiveId.Value);
+                
+                if (messageId < 0 || messageId >= textArchive.messages.Count)
+                    return $"[Message {messageId}]\n(Message ID out of range for Text Archive {textArchiveId})";
+
+                string message = textArchive.messages[messageId];
+                
+                // Convert game-specific line break sequences to actual newlines for display
+                // \n = newline, \f = form feed (new textbox), \r = carriage return
+                message = message.Replace("\\n", "\n")
+                                 .Replace("\\f", "\n")
+                                 .Replace("\\r", "\n");
+                
+                // Truncate very long messages
+                const int maxLength = 500;
+                if (message.Length > maxLength)
+                    message = message.Substring(0, maxLength) + "...";
+
+                return $"[Message {messageId} from Text Archive {textArchiveId}]\n{message}";
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Failed to load text archive {textArchiveId} for message tooltip: {ex.Message}");
+                return $"[Message {messageId}]\n(Failed to load Text Archive {textArchiveId})";
+            }
+        }
+
+        /// <summary>
+        /// Gets the text archive ID associated with the current script file by looking up headers
+        /// </summary>
+        private int? GetTextArchiveIdForCurrentScript()
+        {
+            if (currentScriptFile == null)
+                return null;
+
+            ushort scriptFileId = (ushort)currentScriptFile.fileID;
+
+            // Check if we have a mapping from script to headers
+            if (_parent?.scriptToHeaders != null && _parent.scriptToHeaders.TryGetValue(scriptFileId, out var headerIds))
+            {
+                if (headerIds.Count > 0)
+                {
+                    // Use the first header's text archive (most scripts only have one associated header)
+                    var header = ROMFiles.MapHeader.GetMapHeader(headerIds[0]);
+                    return header?.textArchiveID;
+                }
+            }
+
+            // Fallback: Build mapping on-the-fly if not available
+            // This is slower but ensures we always try to find a match
+            return FindTextArchiveForScript(scriptFileId);
+        }
+
+        /// <summary>
+        /// Finds the text archive ID for a script by scanning headers (fallback method)
+        /// </summary>
+        private int? FindTextArchiveForScript(ushort scriptFileId)
+        {
+            try
+            {
+                int headerCount = RomInfo.GetHeaderCount();
+                
+                for (ushort i = 0; i < headerCount; i++)
+                {
+                    var header = ROMFiles.MapHeader.GetMapHeader(i);
+                    if (header != null && header.scriptFileID == scriptFileId)
+                    {
+                        return header.textArchiveID;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error searching for text archive for script {scriptFileId}: {ex.Message}");
+            }
+
+            return null;
         }
 
         private void populate_selectScriptFileComboBox(int selectedIndex = 0)

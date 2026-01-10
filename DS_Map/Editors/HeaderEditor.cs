@@ -159,12 +159,59 @@ namespace DSPRE.Editors
             {
                 headerListBox.SelectedIndex = 0;
             }
+
+            // Build script-to-headers mapping for Script Editor message tooltips
+            BuildScriptToHeadersMapping(headerCount);
+
             Helpers.statusLabelMessage();
         }
 
         private void openWildEditorWithIdButtonClick(object sender, EventArgs e)
         {
             _parent.openWildEditor(loadCurrent: true);
+        }
+
+        /// <summary>
+        /// Builds a mapping from script file IDs to the headers that use them.
+        /// This is used by the Script Editor to show message tooltips.
+        /// </summary>
+        private void BuildScriptToHeadersMapping(int headerCount)
+        {
+            _parent.scriptToHeaders.Clear();
+
+            for (ushort i = 0; i < headerCount; i++)
+            {
+                MapHeader header;
+                try
+                {
+                    if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied || PatchToolboxDialog.CheckFilesDynamicHeadersPatchApplied())
+                    {
+                        header = MapHeader.LoadFromFile(RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + i.ToString("D4"), i, 0);
+                    }
+                    else
+                    {
+                        header = MapHeader.LoadFromARM9(i);
+                    }
+
+                    if (header == null)
+                        continue;
+
+                    ushort scriptFileId = header.scriptFileID;
+
+                    if (!_parent.scriptToHeaders.ContainsKey(scriptFileId))
+                    {
+                        _parent.scriptToHeaders[scriptFileId] = new List<ushort>();
+                    }
+
+                    _parent.scriptToHeaders[scriptFileId].Add(i);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error($"Error reading header {i} for script mapping: {ex.Message}");
+                }
+            }
+
+            AppLogger.Info($"Built script-to-headers mapping: {_parent.scriptToHeaders.Count} script files mapped");
         }
 
         private void addHeaderBTN_Click(object sender, EventArgs e)

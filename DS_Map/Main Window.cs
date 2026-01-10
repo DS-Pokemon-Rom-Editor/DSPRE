@@ -107,6 +107,7 @@ namespace DSPRE
         public static byte revisionByte;
         public RomInfo romInfo;
         public Dictionary<ushort /*evFile*/, ushort /*header*/> eventToHeader = new Dictionary<ushort, ushort>();
+        public Dictionary<ushort /*scriptFile*/, List<ushort> /*headers*/> scriptToHeaders = new Dictionary<ushort, List<ushort>>();
 
         #endregion
 
