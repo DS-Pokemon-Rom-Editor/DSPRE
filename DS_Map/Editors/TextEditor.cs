@@ -211,14 +211,12 @@ namespace DSPRE.Editors
             int selectedArchiveID = selectTextFileComboBox.SelectedIndex;
 
             string msgFileType = "Gen IV Text Archive";
-            string txtFileType = "Plaintext file";
             string jsonFileType = "JSON Text Archive";
             string suggestedFileName = "Text Archive " + selectedArchiveID;
-            bool showSuccessMessage = true;
 
             SaveFileDialog sf = new SaveFileDialog
             {
-                Filter = $"{msgFileType} (*.bin)|*.bin|{txtFileType} (*.txt)|*.txt |{jsonFileType} (*.json)|*.json",
+                Filter = $"{msgFileType} (*.bin)|*.bin|{jsonFileType} (*.json)|*.json",
             };
 
             if (!string.IsNullOrWhiteSpace(suggestedFileName))
@@ -234,9 +232,9 @@ namespace DSPRE.Editors
             string selectedExtension = Path.GetExtension(sf.FileName);
             string type = currentTextArchive.GetType().Name;
 
-            if (selectedExtension == ".bin")
+            if (selectedExtension == ".bin" || selectedExtension == "")
             {
-                // Handle .bin case
+                // Handle binary case
                 string binPath = sf.FileName;
                 string jsonPath = TextArchive.GetFilePaths(selectedArchiveID).jsonPath;
 
@@ -246,25 +244,6 @@ namespace DSPRE.Editors
             {
                 // Handle .json case
                 File.Copy(TextArchive.GetFilePaths(selectedArchiveID).jsonPath, sf.FileName, true);
-            }
-            else if (selectedExtension == ".txt")
-            {
-                // Handle .txt case
-                const int txtLinesWarningThreshold = 300;
-                if (currentTextArchive.messages.Count > txtLinesWarningThreshold)
-                {
-                    DialogResult result = MessageBox.Show($"This {type} has over {txtLinesWarningThreshold} messages. Writing a large text file may take a long time, especially on slow machines.\n\nAre you sure you want to proceed?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (result == DialogResult.No)
-                    {
-                        return;
-                    }
-                }
-                File.WriteAllText(sf.FileName, currentTextArchive.ToString());
-
-                if (showSuccessMessage)
-                {
-                    MessageBox.Show($"{type} saved successfully!", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
             }
 
             if (selectedArchiveID == RomInfo.locationNamesTextNumber)
@@ -854,10 +833,6 @@ namespace DSPRE.Editors
                             AppLogger.Error($"Decoding text archive {i} failed: JSON file not found at {jsonPath}");
                             continue;
                         }
-
-                        // Update last write of bin file to prevent needless decoding
-                        var jsonLastWrite = File.GetLastWriteTimeUtc(jsonPath);
-                        File.SetLastWriteTimeUtc(binPath, jsonLastWrite);
 
                         expandedCount++;
 

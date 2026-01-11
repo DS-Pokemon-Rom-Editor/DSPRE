@@ -73,42 +73,13 @@ namespace DSPRE.ROMFiles
                 return true;
             }
 
-            var expandedTextFiles = Directory.GetFiles(expandedDir, "*.json", SearchOption.AllDirectories);
-            int unchangedBinCount = 0;
-
-            for (int i = 0; i < expandedTextFiles.Length; i++)
+            if (!Directory.Exists(gameDirs[DirNames.textArchives].unpackedDir))
             {
-                string expandedTextFile = expandedTextFiles[i];
-                string fileName = Path.GetFileNameWithoutExtension(expandedTextFile);
-
-                int archiveID;
-
-                try
-                {
-                    archiveID = int.Parse(fileName);
-                }
-                catch
-                {
-                    AppLogger.Error($"Skipping invalid text archive file name: {fileName}");
-                    continue;
-                }
-
-                string binPath = GetFilePaths(archiveID).binPath;
-
-                // Skip if .bin is newer than .json or if there are no changes
-                if (File.Exists(binPath) && File.GetLastWriteTimeUtc(binPath) >= File.GetLastWriteTimeUtc(expandedTextFile))
-                {
-                    unchangedBinCount++;
-                    continue;
-                }
-
-                TextConverter.JSONToBin(expandedTextFile, binPath, CharMapManager.GetCharMapPath());
-                // Update .json last write time to prevent it being overwritten when reopening the ROM
-                File.SetLastWriteTimeUtc(expandedTextFile, DateTime.UtcNow);
+                Directory.CreateDirectory(gameDirs[DirNames.textArchives].unpackedDir);
+                AppLogger.Info($"Text Archive: Unpacked folder was unexpectedly missing. Created directory at {gameDirs[DirNames.textArchives].unpackedDir}");
             }
-
-            AppLogger.Info($"Text Archive: {expandedTextFiles.Length - unchangedBinCount} .bin files built from .json. " +
-                $"{unchangedBinCount} .bin files skipped because they were newer than the .json or because there were no changes.");
+            
+            TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir, CharMapManager.GetCharMapPath());
 
             return true;
         }
@@ -158,12 +129,6 @@ namespace DSPRE.ROMFiles
             {
                 return false;
             }
-
-            // If the .json file is older than the .bin file, ignore it and re-extract from .bin
-            //if (File.GetLastWriteTimeUtc(jsonPath) < File.GetLastWriteTimeUtc(binPath))
-            //{
-            //    return false;
-            //}
 
             try
             {
@@ -298,81 +263,146 @@ namespace DSPRE.ROMFiles
                 Directory.CreateDirectory(TextConverter.GetExpandedFolderPath());
             }
 
-            // Create JSON structure using System.Text.Json's native types
-            using (var stream = new MemoryStream())
-            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+            string langCode = TextConverter.langCodes[RomInfo.gameLanguage];
+            
+            // Read existing JSON if it exists to preserve other languages
+            Dictionary<string, JsonElement> existingMessages = new Dictionary<string, JsonElement>();
+            UInt16 existingKey = key;
+            
+            if (File.Exists(jsonPath))
             {
-                writer.WriteStartObject();
-                writer.WriteNumber("key", key);
-                writer.WriteStartArray("messages");
+                try
+                {
+                    string existingJson = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
+                    JsonDocument existingDoc = JsonDocument.Parse(existingJson);
+                    
+                    // Preserve the existing key
+                    if (existingDoc.RootElement.TryGetProperty("key", out JsonElement existingKeyElement))
+                    {
+                        existingKey = (UInt16)existingKeyElement.GetInt32();
+                    }
+                    
+                    // Store existing messages to merge with current language
+                    if (existingDoc.RootElement.TryGetProperty("messages", out JsonElement existingMessagesElement) &&
+                        existingMessagesElement.ValueKind == JsonValueKind.Array)
+                    {
+                        int index = 0;
+                        foreach (JsonElement messageElement in existingMessagesElement.EnumerateArray())
+                        {
+                            existingMessages[$"msg_{ID:D4}_{index:D5}"] = messageElement.Clone();
+                            index++;
+                        }
+                    }
+                    
+                    existingDoc.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn($"Could not read existing JSON file {jsonPath} for merging: {ex.Message}. Creating new file.");
+                    existingMessages.Clear();
+                }
+            }
 
-                int messageIndex = 0;
-                foreach (string message in messages)
+            // Create JSON structure using System.Text.Json's native types with Unicode support
+            using (var stream = new MemoryStream())
+            {
+                var options = new JsonWriterOptions 
+                { 
+                    Indented = true,
+                    // Don't escape Unicode characters, this is primarily for readability by humans
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
+                };
+                
+                using (var writer = new Utf8JsonWriter(stream, options))
                 {
                     writer.WriteStartObject();
-                    writer.WriteString("id", $"msg_{ID:D4}_{messageIndex:D5}");
-                    
-                    string langCode = TextConverter.langCodes[RomInfo.gameLanguage];
+                    writer.WriteNumber("key", existingKey);
+                    writer.WriteStartArray("messages");
 
-                    // Check if message contains any newline control characters
-                    if (message.Contains("\\n") || message.Contains("\\r") || message.Contains("\\f"))
+                    int messageIndex = 0;
+                    foreach (string message in messages)
                     {
-                        // Split by newline types but preserve the delimiter in the output
-                        List<string> lines = new List<string>();
-                        string currentLine = "";
+                        writer.WriteStartObject();
                         
-                        for (int i = 0; i < message.Length; i++)
+                        string msgId = $"msg_{ID:D4}_{messageIndex:D5}";
+                        writer.WriteString("id", msgId);
+                        
+                        // If this message exists in the file, copy all language properties except the current one
+                        if (existingMessages.ContainsKey(msgId))
                         {
-                            if (i < message.Length - 1 && message[i] == '\\')
+                            JsonElement existingMessage = existingMessages[msgId];
+                            
+                            // Copy all properties except "id" and the current language
+                            foreach (JsonProperty prop in existingMessage.EnumerateObject())
                             {
-                                char nextChar = message[i + 1];
-                                if (nextChar == 'n' || nextChar == 'r' || nextChar == 'f')
+                                if (prop.Name != "id" && prop.Name != langCode)
                                 {
-                                    // Add the escape sequence to current line
-                                    currentLine += message.Substring(i, 2);
-                                    lines.Add(currentLine);
-                                    currentLine = "";
-                                    i++; // Skip the next character since we already processed it
-                                    continue;
+                                    prop.WriteTo(writer);
                                 }
                             }
-                            currentLine += message[i];
                         }
-                        
-                        // Add any remaining text
-                        if (currentLine.Length > 0)
+
+                        // Now write the current language
+                        // Check if message contains any newline control characters
+                        if (message.Contains("\\n") || message.Contains("\\r") || message.Contains("\\f"))
                         {
-                            lines.Add(currentLine);
+                            // Split by newline types but preserve the delimiter in the output
+                            List<string> lines = new List<string>();
+                            string currentLine = "";
+                            
+                            for (int i = 0; i < message.Length; i++)
+                            {
+                                if (i < message.Length - 1 && message[i] == '\\')
+                                {
+                                    char nextChar = message[i + 1];
+                                    if (nextChar == 'n' || nextChar == 'r' || nextChar == 'f')
+                                    {
+                                        // Add the escape sequence to current line
+                                        currentLine += message.Substring(i, 2);
+                                        lines.Add(currentLine);
+                                        currentLine = "";
+                                        i++; // Skip the next character since we already processed it
+                                        continue;
+                                    }
+                                }
+                                currentLine += message[i];
+                            }
+                            
+                            // Add any remaining text
+                            if (currentLine.Length > 0)
+                            {
+                                lines.Add(currentLine);
+                            }
+                            
+                            // Write as array
+                            writer.WriteStartArray(langCode);
+                            foreach (string line in lines)
+                            {
+                                writer.WriteStringValue(line);
+                            }
+                            writer.WriteEndArray();
                         }
-                        
-                        // Write as array
-                        writer.WriteStartArray(langCode);
-                        foreach (string line in lines)
+                        else
                         {
-                            writer.WriteStringValue(line);
+                            // Write as simple string
+                            writer.WriteString(langCode, message);
                         }
-                        writer.WriteEndArray();
-                    }
-                    else
-                    {
-                        // Write as simple string
-                        writer.WriteString(langCode, message);
+
+                        writer.WriteEndObject();
+                        messageIndex++;
                     }
 
+                    writer.WriteEndArray();
                     writer.WriteEndObject();
-                    messageIndex++;
+                    writer.Flush();
+
+                    string jsonString = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+                    
+                    // Write with UTF-8 encoding WITHOUT BOM
+                    File.WriteAllText(jsonPath, jsonString, new System.Text.UTF8Encoding(false));
+                    
+                    AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
                 }
-
-                writer.WriteEndArray();
-                writer.WriteEndObject();
-                writer.Flush();
-
-                string jsonString = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-                
-                // Write with UTF-8 encoding WITHOUT BOM
-                File.WriteAllText(jsonPath, jsonString, new System.Text.UTF8Encoding(false));
-                
-                AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
             }
 
             if (showSuccessMessage)
