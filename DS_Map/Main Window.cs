@@ -244,6 +244,8 @@ namespace DSPRE
             {
                 MessageBox.Show("Your custom character map is based on an outdated version of the default map.\n" +
                     "Please update it to avoid potential issues when editing text.\n" +
+                    "You can do this by opening the Charmap Manager and clicking the \"Rebase\" button, " +
+                    "DSPRE will attempt to merge your custom map and the base map for you.\n" +
                     "You may need to manually copy or recreate your custom mappings.", 
                     "Outdated Character Map", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }

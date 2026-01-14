@@ -140,7 +140,7 @@
   <data name="addAliasButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        vgAADr4B6kKxwAAAAGJJREFUOE9j+P//P1bMMEXuHxD/Z5gm+x/ExqYGhLEKgjDYgAUK/8F41AD8BoAV
+        vQAADr0BR/uQrQAAAGJJREFUOE9j+P//P1bMMEXuHxD/Z5gm+x/ExqYGhLEKgjDYgAUK/8F41AD8BoAV
         gkIbAwNDH24AJCawYhSFpGJQFFPBACzOAmMkg/F5AVvAgDBYEm7AaEIi3wBEwsJhwH8GAOQLbolFp0OS
         AAAAAElFTkSuQmCC
 </value>
@@ -148,7 +148,7 @@
   <data name="removeAliasButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        vwAADr8BOAVTJAAAAFFJREFUOE+l0bENgEAMQ1ErG7AR69Ej9rnFMKL/BcbFa750UZST7QrGBMYExgTG
+        vgAADr4B6kKxwAAAAFFJREFUOE+l0bENgEAMQ1ErG7AR69Ej9rnFMKL/BcbFa750UZST7QrGBMYExgTG
         hI7R3tCpuRu6NF7afnnf9gNorUR/RPqaBMYExgTGBMbvrAex4mNXAFOuwQAAAABJRU5ErkJggg==
 </value>
   </data>
@@ -190,7 +190,7 @@
   <data name="createCustomMapButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        vgAADr4B6kKxwAAAAGJJREFUOE9j+P//P1bMMEXuHxD/Z5gm+x/ExqYGhLEKgjDYgAUK/8F41AD8BoAV
+        vQAADr0BR/uQrQAAAGJJREFUOE9j+P//P1bMMEXuHxD/Z5gm+x/ExqYGhLEKgjDYgAUK/8F41AD8BoAV
         gkIbAwNDH24AJCawYhSFpGJQFFPBACzOAmMkg/F5AVvAgDBYEm7AaEIi3wBEwsJhwH8GAOQLbolFp0OS
         AAAAAElFTkSuQmCC
 </value>
@@ -198,7 +198,7 @@
   <data name="deleteCustomMapButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        vwAADr8BOAVTJAAAAFFJREFUOE+l0bENgEAMQ1ErG7AR69Ej9rnFMKL/BcbFa750UZST7QrGBMYExgTG
+        vgAADr4B6kKxwAAAAFFJREFUOE+l0bENgEAMQ1ErG7AR69Ej9rnFMKL/BcbFa750UZST7QrGBMYExgTG
         hI7R3tCpuRu6NF7afnnf9gNorUR/RPqaBMYExgTGBMbvrAex4mNXAFOuwQAAAABJRU5ErkJggg==
 </value>
   </data>

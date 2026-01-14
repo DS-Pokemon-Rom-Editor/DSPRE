@@ -41,6 +41,7 @@
             this.aliasGroupBox = new System.Windows.Forms.GroupBox();
             this.removeAliasButton = new System.Windows.Forms.Button();
             this.charmapGroupBox = new System.Windows.Forms.GroupBox();
+            this.openFileButton = new System.Windows.Forms.Button();
             this.searchButton = new System.Windows.Forms.Button();
             this.searchTextBox = new System.Windows.Forms.TextBox();
             this.charmapLabel = new System.Windows.Forms.Label();
@@ -49,7 +50,7 @@
             this.createCustomMapButton = new System.Windows.Forms.Button();
             this.deleteCustomMapButton = new System.Windows.Forms.Button();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.openFileButton = new System.Windows.Forms.Button();
+            this.rebaseButton = new System.Windows.Forms.Button();
             this.aliasGroupBox.SuspendLayout();
             this.charmapGroupBox.SuspendLayout();
             this.SuspendLayout();
@@ -70,7 +71,7 @@
             this.aliasListBox.ItemHeight = 20;
             this.aliasListBox.Location = new System.Drawing.Point(6, 46);
             this.aliasListBox.Name = "aliasListBox";
-            this.aliasListBox.Size = new System.Drawing.Size(204, 224);
+            this.aliasListBox.Size = new System.Drawing.Size(202, 284);
             this.aliasListBox.TabIndex = 1;
             // 
             // reloadButton
@@ -92,7 +93,7 @@
             // 
             this.addAliasButton.Image = ((System.Drawing.Image)(resources.GetObject("addAliasButton.Image")));
             this.addAliasButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.addAliasButton.Location = new System.Drawing.Point(219, 132);
+            this.addAliasButton.Location = new System.Drawing.Point(214, 121);
             this.addAliasButton.Name = "addAliasButton";
             this.addAliasButton.Size = new System.Drawing.Size(151, 23);
             this.addAliasButton.TabIndex = 3;
@@ -104,7 +105,7 @@
             // 
             // newAliasTextBox
             // 
-            this.newAliasTextBox.Location = new System.Drawing.Point(219, 62);
+            this.newAliasTextBox.Location = new System.Drawing.Point(214, 51);
             this.newAliasTextBox.Name = "newAliasTextBox";
             this.newAliasTextBox.Size = new System.Drawing.Size(151, 20);
             this.newAliasTextBox.TabIndex = 4;
@@ -112,7 +113,7 @@
             // newAliasLabel
             // 
             this.newAliasLabel.AutoSize = true;
-            this.newAliasLabel.Location = new System.Drawing.Point(216, 46);
+            this.newAliasLabel.Location = new System.Drawing.Point(211, 35);
             this.newAliasLabel.Name = "newAliasLabel";
             this.newAliasLabel.Size = new System.Drawing.Size(29, 13);
             this.newAliasLabel.TabIndex = 5;
@@ -121,7 +122,7 @@
             // charLabel
             // 
             this.charLabel.AutoSize = true;
-            this.charLabel.Location = new System.Drawing.Point(216, 86);
+            this.charLabel.Location = new System.Drawing.Point(211, 75);
             this.charLabel.Name = "charLabel";
             this.charLabel.Size = new System.Drawing.Size(53, 13);
             this.charLabel.TabIndex = 6;
@@ -131,7 +132,7 @@
             // 
             this.codeComboBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.codeComboBox.FormattingEnabled = true;
-            this.codeComboBox.Location = new System.Drawing.Point(219, 102);
+            this.codeComboBox.Location = new System.Drawing.Point(214, 91);
             this.codeComboBox.Name = "codeComboBox";
             this.codeComboBox.Size = new System.Drawing.Size(151, 24);
             this.codeComboBox.TabIndex = 7;
@@ -148,7 +149,7 @@
             this.aliasGroupBox.Controls.Add(this.newAliasTextBox);
             this.aliasGroupBox.Location = new System.Drawing.Point(12, 12);
             this.aliasGroupBox.Name = "aliasGroupBox";
-            this.aliasGroupBox.Size = new System.Drawing.Size(380, 280);
+            this.aliasGroupBox.Size = new System.Drawing.Size(380, 333);
             this.aliasGroupBox.TabIndex = 8;
             this.aliasGroupBox.TabStop = false;
             this.aliasGroupBox.Text = "Manage Aliases";
@@ -157,7 +158,7 @@
             // 
             this.removeAliasButton.Image = ((System.Drawing.Image)(resources.GetObject("removeAliasButton.Image")));
             this.removeAliasButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.removeAliasButton.Location = new System.Drawing.Point(219, 161);
+            this.removeAliasButton.Location = new System.Drawing.Point(214, 150);
             this.removeAliasButton.Name = "removeAliasButton";
             this.removeAliasButton.Size = new System.Drawing.Size(151, 23);
             this.removeAliasButton.TabIndex = 8;
@@ -169,6 +170,7 @@
             // 
             // charmapGroupBox
             // 
+            this.charmapGroupBox.Controls.Add(this.rebaseButton);
             this.charmapGroupBox.Controls.Add(this.openFileButton);
             this.charmapGroupBox.Controls.Add(this.searchButton);
             this.charmapGroupBox.Controls.Add(this.searchTextBox);
@@ -180,10 +182,21 @@
             this.charmapGroupBox.Controls.Add(this.reloadButton);
             this.charmapGroupBox.Location = new System.Drawing.Point(398, 12);
             this.charmapGroupBox.Name = "charmapGroupBox";
-            this.charmapGroupBox.Size = new System.Drawing.Size(320, 280);
+            this.charmapGroupBox.Size = new System.Drawing.Size(320, 333);
             this.charmapGroupBox.TabIndex = 9;
             this.charmapGroupBox.TabStop = false;
             this.charmapGroupBox.Text = "Manage Custom Charmap";
+            // 
+            // openFileButton
+            // 
+            this.openFileButton.Location = new System.Drawing.Point(133, 20);
+            this.openFileButton.Name = "openFileButton";
+            this.openFileButton.Size = new System.Drawing.Size(75, 23);
+            this.openFileButton.TabIndex = 16;
+            this.openFileButton.Text = "Open File";
+            this.toolTip.SetToolTip(this.openFileButton, "Open file in default JSON editor");
+            this.openFileButton.UseVisualStyleBackColor = true;
+            this.openFileButton.Click += new System.EventHandler(this.openFileButton_Click);
             // 
             // searchButton
             // 
@@ -220,7 +233,7 @@
             this.charMapListBox.ItemHeight = 20;
             this.charMapListBox.Location = new System.Drawing.Point(6, 45);
             this.charMapListBox.Name = "charMapListBox";
-            this.charMapListBox.Size = new System.Drawing.Size(202, 224);
+            this.charMapListBox.Size = new System.Drawing.Size(202, 284);
             this.charMapListBox.TabIndex = 12;
             this.toolTip.SetToolTip(this.charMapListBox, "List of all mappings. Double-click to select character and copy it to clipboard\r\n" +
         "");
@@ -231,7 +244,7 @@
             this.saveButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveButton.Image = ((System.Drawing.Image)(resources.GetObject("saveButton.Image")));
             this.saveButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.saveButton.Location = new System.Drawing.Point(214, 219);
+            this.saveButton.Location = new System.Drawing.Point(214, 275);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(100, 50);
             this.saveButton.TabIndex = 11;
@@ -269,22 +282,26 @@
             this.deleteCustomMapButton.UseVisualStyleBackColor = true;
             this.deleteCustomMapButton.Click += new System.EventHandler(this.deleteCustomMapButton_Click);
             // 
-            // openFileButton
+            // rebaseButton
             // 
-            this.openFileButton.Location = new System.Drawing.Point(133, 20);
-            this.openFileButton.Name = "openFileButton";
-            this.openFileButton.Size = new System.Drawing.Size(75, 23);
-            this.openFileButton.TabIndex = 16;
-            this.openFileButton.Text = "Open File";
-            this.toolTip.SetToolTip(this.openFileButton, "Open file in default XML editor");
-            this.openFileButton.UseVisualStyleBackColor = true;
-            this.openFileButton.Click += new System.EventHandler(this.openFileButton_Click);
+            this.rebaseButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.rebaseButton.Image = global::DSPRE.Properties.Resources.wrenchIcon;
+            this.rebaseButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.rebaseButton.Location = new System.Drawing.Point(214, 219);
+            this.rebaseButton.Name = "rebaseButton";
+            this.rebaseButton.Size = new System.Drawing.Size(100, 50);
+            this.rebaseButton.TabIndex = 17;
+            this.rebaseButton.Text = "Rebase\r\nMap";
+            this.rebaseButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.toolTip.SetToolTip(this.rebaseButton, "Save edits to file");
+            this.rebaseButton.UseVisualStyleBackColor = true;
+            this.rebaseButton.Click += new System.EventHandler(this.rebaseButton_Click);
             // 
             // CharMapManagerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(726, 303);
+            this.ClientSize = new System.Drawing.Size(726, 357);
             this.Controls.Add(this.charmapGroupBox);
             this.Controls.Add(this.aliasGroupBox);
             this.Name = "CharMapManagerForm";
@@ -320,5 +337,6 @@
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.TextBox searchTextBox;
         private System.Windows.Forms.Button openFileButton;
+        private System.Windows.Forms.Button rebaseButton;
     }
 }

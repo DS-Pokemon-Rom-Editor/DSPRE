@@ -162,8 +162,7 @@ namespace DSPRE.Editors
             TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
 
             /* Update ComboBox and select new file */
-            selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);
-            
+            selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);            
 
             return newArchiveID;
         }
@@ -178,7 +177,8 @@ namespace DSPRE.Editors
         {
             Helpers.ExplorerSelect(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
-        private void openCurrentTxtButton_Click(object sender, EventArgs e)
+
+        private void openCurrentButton_Click(object sender, EventArgs e)
         {
             Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
