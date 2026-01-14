@@ -216,7 +216,7 @@ namespace DSPRE.Editors
 
             SaveFileDialog sf = new SaveFileDialog
             {
-                Filter = $"{msgFileType} (*.bin)|*.bin|{jsonFileType} (*.json)|*.json",
+                Filter = $"{msgFileType} (*.msg)|*.msg|{jsonFileType} (*.json)|*.json",
             };
 
             if (!string.IsNullOrWhiteSpace(suggestedFileName))
@@ -232,7 +232,7 @@ namespace DSPRE.Editors
             string selectedExtension = Path.GetExtension(sf.FileName);
             string type = currentTextArchive.GetType().Name;
 
-            if (selectedExtension == ".bin" || selectedExtension == "")
+            if (selectedExtension == ".msg" || selectedExtension == "")
             {
                 // Handle binary case
                 string binPath = sf.FileName;
@@ -303,10 +303,10 @@ namespace DSPRE.Editors
         }
         private void importTextFileButton_Click(object sender, EventArgs e)
         {
-            /* Prompt user to select .msg or .txt file */
+            /* Prompt user to select .msg or .json file */
             OpenFileDialog of = new OpenFileDialog
             {
-                Filter = "Text Archive (*.msg;*.txt)|*.msg;*.txt|Gen IV Text Archive (*.msg)|*.msg|JSON Text Archive (*.json)|*.json",
+                Filter = "Gen IV Text Archive (*.msg)|*.msg|JSON Text Archive (*.json)|*.json",
             };
             if (of.ShowDialog(this) != DialogResult.OK)
             {
@@ -318,10 +318,11 @@ namespace DSPRE.Editors
             string jsonPath = TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath;
             string selectedExtension = Path.GetExtension(of.FileName);
 
-            if (selectedExtension == ".msg")
+            if (selectedExtension == ".msg" || selectedExtension == "")
             {
                 // Handle .msg case
                 File.Copy(of.FileName, binPath, true);
+                TextConverter.BinToJSON(binPath, jsonPath, CharMapManager.GetCharMapPath());
             }
             else if (selectedExtension == ".json")
             {
@@ -835,7 +836,6 @@ namespace DSPRE.Editors
                         }
 
                         expandedCount++;
-
                     }
 
                     _parent.Invoke((Action)(() =>
