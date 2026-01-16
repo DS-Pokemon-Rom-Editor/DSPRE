@@ -806,12 +806,21 @@ namespace DSPRE.Editors
 
                     // Unpack text archives, JSON files will only be overwritten if they are missing or older
                     loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Unpacking text archives...")));
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
 
                     // Create expanded directory if it doesn't exist
                     if (!Directory.Exists(expandedPath))
                     {
                         Directory.CreateDirectory(expandedPath);
+
+                        // Since we can't just build from expanded, the binary files need to be unpacked as well
+                        // This function is ran before this point anyway so this is all kind of moot :(
+                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+                    }
+
+                    // Ensure the unpacked directory exists (is this even necessary?)
+                    if (!Directory.Exists(unpackedPath)) 
+                    {
+                        Directory.CreateDirectory(unpackedPath);
                     }
 
                     progress = 20;
