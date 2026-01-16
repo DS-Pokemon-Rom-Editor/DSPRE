@@ -27,6 +27,7 @@ namespace DSPRE
         public bool automaticallyCheckForUpdates { get; set; } = true;
         public bool automaticallyUpdateDBs { get; set; } = true;
         public bool useDecompNames { get; set; } = false;
+        public bool convertLegacyText { get; set; } = true;
     }
 
     public static class SettingsManager

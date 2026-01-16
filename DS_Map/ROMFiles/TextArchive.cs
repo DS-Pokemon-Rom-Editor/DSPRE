@@ -2,6 +2,7 @@ using DSPRE.CharMaps;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
@@ -33,19 +34,10 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            // First try to read from plain text file if it exists
-            if (TryReadJsonFile())
-            {
-                return;
-            }
-
-            // If not, extract from the .bin file
-            if (!ReadFromBinFile())
-            {
-                MessageBox.Show($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                messages = new List<string> { "" };
-                return;
-            }
+            string jsonPath = GetFilePaths(ID).jsonPath;
+            string binPath = GetFilePaths(ID).binPath;
+            
+            ReadMessages(jsonPath, binPath);
 
         }
 
@@ -53,6 +45,29 @@ namespace DSPRE.ROMFiles
         #endregion Constructors (1)
 
         #region Methods (2)
+
+        private void ReadMessages(string jsonPath, string binPath)
+        {
+            // First try to read from json file if it exists
+            if (TryReadJsonFile(jsonPath))
+            {
+                return;
+            }
+
+            // Next try to read from legacy plain text file if it exists
+            if (TryReadPlainTextFile(jsonPath))
+            {
+                return;
+            }
+
+            // If not, extract from the .bin file
+            if (!ReadFromBinFile(jsonPath, binPath))
+            {
+                MessageBox.Show($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                messages = new List<string> { "" };
+                return;
+            }
+        }
 
         public static (string binPath, string jsonPath) GetFilePaths(int ID)
         {
@@ -120,11 +135,8 @@ namespace DSPRE.ROMFiles
             return true;
         }
 
-        private bool TryReadJsonFile()
+        private bool TryReadJsonFile(string jsonPath)
         {
-            string jsonPath = GetFilePaths(ID).jsonPath;
-            string binPath = GetFilePaths(ID).binPath;
-
             if (!File.Exists(jsonPath))
             {
                 return false;
@@ -194,6 +206,76 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
+        /// Attempts to read and parse a plain text file containing message data and a key in a specific format.
+        /// </summary>
+        /// <remarks>This method exists as legacy support for old projects to enable conversion.</remarks>
+        /// <returns>true if the text file exists, is properly formatted, and its contents are successfully read and parsed;
+        /// otherwise, false.</returns>
+        private bool TryReadPlainTextFile(string jsonPath)
+        {
+            // Convert .json path to .txt path
+            string txtPath = Path.ChangeExtension(jsonPath, ".txt");
+
+            if (!File.Exists(txtPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                List<string> lines = File.ReadAllLines(txtPath).ToList();
+                if (lines.Count == 0)
+                {
+                    AppLogger.Error($"Text file {txtPath} is empty. Bin file will be reextracted.");
+                    return false;
+                }
+
+                // First line should be the key
+                string firstLine = lines[0];
+                if (!firstLine.StartsWith("# Key: "))
+                {
+                    AppLogger.Error($"Text file {txtPath} is missing the key in the first line. Bin file will be reextracted.");
+                    return false;
+                }
+
+                string keyHex = firstLine.Substring(7).Trim();
+                if (!UInt16.TryParse(keyHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out key))
+                {
+                    AppLogger.Error($"Text file {txtPath} has an invalid key format. Bin file will be reextracted.");
+                    return false;
+                }
+
+                // Check for newline character in last line and add a blank line if needed
+                // Since ReadAllLines() trims the newline, we read the last character of the file directly
+                // I hate this - Yako
+                using (FileStream fs = new FileStream(txtPath, FileMode.Open, FileAccess.Read))
+                {
+                    if (fs.Length > 0)
+                    {
+                        fs.Seek(-1, SeekOrigin.End);
+                        int lastByte = fs.ReadByte();
+                        if (lastByte == '\n' || lastByte == '\r')
+                        {
+                            lines.Add(string.Empty);
+                        }
+                    }
+                    fs.Close();
+                }
+
+                // Remove the first line (the key) from the messages
+                lines.RemoveAt(0);
+
+                messages = lines;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error reading text file {txtPath}: {ex.Message}. Bin file will be reextracted.");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Parse a JSON message value that can be either a string or an array of strings
         /// </summary>
         private string ParseMessageValue(JsonElement element)
@@ -219,10 +301,8 @@ namespace DSPRE.ROMFiles
             return "";
         }
 
-        private bool ReadFromBinFile()
+        private bool ReadFromBinFile(string jsonPath, string binPath)
         {
-            string binPath = GetFilePaths(ID).binPath;
-            string jsonPath = GetFilePaths(ID).jsonPath;
             string charmapPath = CharMapManager.GetCharMapPath();
 
             if (!File.Exists(binPath))
@@ -240,7 +320,7 @@ namespace DSPRE.ROMFiles
                 TextConverter.BinToJSON(binPath, jsonPath, charmapPath);
                 
                 // After conversion, try to read the JSON file
-                return TryReadJsonFile();
+                return TryReadJsonFile(jsonPath);
             }
             catch (Exception ex)
             {

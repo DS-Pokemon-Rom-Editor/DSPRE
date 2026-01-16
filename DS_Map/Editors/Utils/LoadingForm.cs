@@ -90,6 +90,17 @@ namespace DSPRE.Editors.Utils
             }
         }
 
+        public void UpdateStatusText(string text)
+        {
+            Text = text;
+        }
+
+        public void UpdateStatusAndProgress(int current, string text)
+        {
+            UpdateProgress(current);
+            UpdateStatusText(text);
+        }
+
         private string GetRandomFact()
         {
             return pokemonFacts[random.Next(pokemonFacts.Length)];

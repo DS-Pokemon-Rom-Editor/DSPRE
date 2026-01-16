@@ -1,4 +1,6 @@
-﻿using DSPRE.ROMFiles;
+﻿using DSPRE.CharMaps;
+using DSPRE.Editors.Utils;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,8 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
-using DSPRE.Editors.Utils;
-using DSPRE.CharMaps;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace DSPRE.Editors
 {
@@ -778,78 +779,140 @@ namespace DSPRE.Editors
 
         public void SetupTextEditor(MainProgram parent, bool force = false)
         {
-            if (textEditorIsReady && !force) { return; }
-            textEditorIsReady = true;
-            this._parent = parent;
+            // If text editor is already set up, skip
+            if (textEditorIsReady && !force) 
+            { 
+                return; 
+            }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+            var setupStart = DateTime.Now;
+
             Helpers.statusLabelMessage("Setting up Text Editor...");
             Update();
 
-            selectTextFileComboBox.Items.Clear();
-            int textCount = parent.romInfo.GetTextArchivesCount();
+            this._parent = parent;
+            textEditorIsReady = true;
 
-            using (var loadingForm = new LoadingForm(textCount, "Loading text archives..."))
+            string unpackedPath = RomInfo.gameDirs[DirNames.textArchives].unpackedDir;
+            string expandedPath = TextConverter.GetExpandedFolderPath();
+
+            int maxProgress = 100;
+
+            using (var loadingForm = new LoadingForm(maxProgress, "Loading text archives..."))
             {
-                Helpers.statusLabelMessage("Setting up Text Editor...");
-
                 Task.Run(() =>
                 {
-                    var time = DateTime.Now;
-                    int expandedCount = 0;
+                    int progress = 0;
 
-                    string unpackedPath = RomInfo.gameDirs[DirNames.textArchives].unpackedDir;
-                    string expandedPath = TextConverter.GetExpandedFolderPath();
+                    // Unpack text archives, JSON files will only be overwritten if they are missing or older
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Unpacking text archives...")));
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
 
                     // Create expanded directory if it doesn't exist
                     if (!Directory.Exists(expandedPath))
                     {
                         Directory.CreateDirectory(expandedPath);
                     }
+
+                    progress = 20;
+
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Converting to JSON format...")));
                     TextConverter.FolderToJSON(unpackedPath, expandedPath, CharMapManager.GetCharMapPath());
+
+                    // If converting legacy plain text files is enabled, check if the expanded folder contains any .txt files
+                    if (SettingsManager.Settings.convertLegacyText)
+                    {
+                        var txtFiles = Directory.GetFiles(expandedPath, "*.txt", SearchOption.TopDirectoryOnly);
+                        int txtFileCount = txtFiles.Length;
+                        int convertedCount = 0;
+
+                        if (txtFileCount > 0)
+                        {
+                            bool shouldConvert = false;
+                            _parent.Invoke((Action)(() =>
+                            {
+                                DialogResult d = MessageBox.Show("Legacy .txt text files detected in the expanded text folder.\n" +
+                                    "Do you want to convert them to JSON format now?\n\n" +
+                                    "Selecting 'No' will skip conversion and leave the .txt files as-is. This may cause problems eventually.",
+                                    "Convert legacy text files", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                                shouldConvert = (d == DialogResult.Yes);
+                            }));
+
+                            if (shouldConvert)
+                            {
+                                loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Converting legacy .txt files to JSON format...")));
+                                
+                                foreach (var txtFile in txtFiles)
+                                {
+                                    // Try to get the ID from the filename
+                                    string fileName = Path.GetFileNameWithoutExtension(txtFile);
+                                    
+                                    if (int.TryParse(fileName, out int archiveID))
+                                    {
+                                        var textArchive = new TextArchive(archiveID);
+                                        textArchive.SaveToExpandedDir(archiveID, showSuccessMessage: false);
+                                        File.Delete(txtFile); // Delete legacy .txt file after conversion
+
+                                        convertedCount++;
+
+                                        // Update progress
+                                        int conversionProgress = Math.Max(1, convertedCount * 50 / txtFileCount ) + progress; 
+                                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(conversionProgress)));
+                                    }
+                                    else
+                                    {
+                                        AppLogger.Error($"Failed to convert legacy text file to JSON: could not parse archive ID from filename {fileName}");
+                                    }
+                                }
+
+                                _parent.Invoke((Action)(() =>
+                                {
+                                    MessageBox.Show($"Converted {convertedCount} of {txtFileCount} legacy .txt files to JSON format.\n" +
+                                        $"In order to increase performance you can disable this check in the settings."
+                                        , "Conversion complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }));
+                            }
+                        }
+                    } // End legacy .txt conversion
+
+                    progress += 50;
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Populating text archive list...")));
 
                     selectTextFileComboBox.Invoke((Action)(() =>
                     {
+                        Helpers.DisableHandlers();
                         selectTextFileComboBox.BeginUpdate();
                         selectTextFileComboBox.Items.Clear();
                     }));
 
+                    int textCount = _parent.romInfo.GetTextArchivesCount();
+                    int baseProgress = progress;
                     for (int i = 0; i < textCount; i++)
                     {
                         // Due to the way DSPRE is built all archives need to be added to the combobox, regardless of whether they are actually present or not
                         // This is a potential point for improvement
-                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(i + 1)));
                         selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Add("Text Archive " + i)));
-
-                        (string binPath, string jsonPath) = TextArchive.GetFilePaths(i);
-
-                        if (!File.Exists(binPath))
-                        {
-                            AppLogger.Error($"Decoding text archive {i} failed: binary file not found at {binPath}");
-                            continue;
-                        }
-
-                        if (!File.Exists(jsonPath))
-                        {
-                            AppLogger.Error($"Decoding text archive {i} failed: JSON file not found at {jsonPath}");
-                            continue;
-                        }
-
-                        expandedCount++;
+                        
+                        progress = baseProgress + (i * 30 / textCount);
+                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(progress)));
                     }
 
                     _parent.Invoke((Action)(() =>
                     {
                         selectTextFileComboBox.EndUpdate();
-                        loadingForm.UpdateProgress(textCount);
-                        Helpers.DisableHandlers();
+                        
                         hexRadiobutton.Checked = SettingsManager.Settings.textEditorPreferHex;
+                        
                         Helpers.EnableHandlers();
                         selectTextFileComboBox.SelectedIndex = 0;
-                        var elapsed = DateTime.Now - time;
-                        Helpers.statusLabelMessage($"Loaded text archives in { elapsed.TotalSeconds.ToString("F2") } s");
-                        AppLogger.Info($"Loaded text archives in {elapsed.TotalMilliseconds} ms. " +
-                            $"{expandedCount} of {textCount} total files converted to json.");
+
+                        loadingForm.UpdateProgress(textCount);
+                        
+                        var elapsed = DateTime.Now - setupStart;
+                        Helpers.statusLabelMessage($"Loaded text archives in {elapsed.TotalSeconds.ToString("F2")} s");
+
+                        AppLogger.Info($"Loaded text archives in {elapsed.TotalMilliseconds} ms. {textCount} total text files found.");
+                        
                         loadingForm.Close();
                     }));
                 });
@@ -858,7 +921,6 @@ namespace DSPRE.Editors
                 loadingForm.ShowDialog();
             }
         }
-
         
     }
 }
