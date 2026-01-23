@@ -100,7 +100,7 @@ namespace DSPRE.Editors
             }
         }
 
-        public int AddLevelScript() 
+        public int AddLevelScript()
         {
             // need to add a script file through the script editor to keep them in sync
             int newScriptID = _parent.scriptEditor.AddScriptFile();

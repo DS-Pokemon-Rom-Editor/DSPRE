@@ -2,12 +2,12 @@
 {
     partial class MapEditor
     {
-        /// <summary> 
+        /// <summary>
         /// Variable nécessaire au concepteur.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
+        /// <summary>
         /// Nettoyage des ressources utilisées.
         /// </summary>
         /// <param name="disposing">true si les ressources managées doivent être supprimées ; sinon, false.</param>
@@ -22,8 +22,8 @@
 
         #region Code généré par le Concepteur de composants
 
-        /// <summary> 
-        /// Méthode requise pour la prise en charge du concepteur - ne modifiez pas 
+        /// <summary>
+        /// Méthode requise pour la prise en charge du concepteur - ne modifiez pas
         /// le contenu de cette méthode avec l'éditeur de code.
         /// </summary>
         private void InitializeComponent()
@@ -42,7 +42,7 @@
             this.exportCurrentMapBinButton = new System.Windows.Forms.Button();
             this.saveMapButton = new System.Windows.Forms.Button();
             this.mapRenderPanel = new System.Windows.Forms.Panel();
-            this.mapOpenGlControl = new Tao.Platform.Windows.SimpleOpenGlControl();
+            this.mapOpenGlControl = new DSPRE.GLControl2();
             this.movPictureBox = new System.Windows.Forms.PictureBox();
             this.label26 = new System.Windows.Forms.Label();
             this.buildTextureComboBox = new System.Windows.Forms.ComboBox();
@@ -175,9 +175,9 @@
             this.terrainTabPage.SuspendLayout();
             this.bgsTabPage.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // flowLayoutPanel1
-            // 
+            //
             this.flowLayoutPanel1.Controls.Add(this.mapScreenshotButton);
             this.flowLayoutPanel1.Controls.Add(this.wireframeCheckBox);
             this.flowLayoutPanel1.Controls.Add(this.radio3D);
@@ -188,9 +188,9 @@
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
             this.flowLayoutPanel1.Size = new System.Drawing.Size(48, 646);
             this.flowLayoutPanel1.TabIndex = 42;
-            // 
+            //
             // mapScreenshotButton
-            // 
+            //
             this.mapScreenshotButton.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.mapScreenshotButton.Image = global::DSPRE.Properties.Resources.cameraIcon;
             this.mapScreenshotButton.Location = new System.Drawing.Point(3, 603);
@@ -200,9 +200,9 @@
             this.mapScreenshotButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.mapScreenshotButton.UseVisualStyleBackColor = true;
             this.mapScreenshotButton.Click += new System.EventHandler(this.mapScreenshotButton_Click);
-            // 
+            //
             // wireframeCheckBox
-            // 
+            //
             this.wireframeCheckBox.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.wireframeCheckBox.Appearance = System.Windows.Forms.Appearance.Button;
             this.wireframeCheckBox.AutoSize = true;
@@ -214,9 +214,9 @@
             this.wireframeCheckBox.Text = " W";
             this.wireframeCheckBox.UseVisualStyleBackColor = true;
             this.wireframeCheckBox.CheckedChanged += new System.EventHandler(this.wireframeCheckBox_CheckedChanged);
-            // 
+            //
             // radio3D
-            // 
+            //
             this.radio3D.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.radio3D.Appearance = System.Windows.Forms.Appearance.Button;
             this.radio3D.AutoSize = true;
@@ -230,9 +230,9 @@
             this.radio3D.Text = "3D";
             this.radio3D.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.radio3D.UseVisualStyleBackColor = true;
-            // 
+            //
             // radio2D
-            // 
+            //
             this.radio2D.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.radio2D.Appearance = System.Windows.Forms.Appearance.Button;
             this.radio2D.AutoSize = true;
@@ -245,9 +245,9 @@
             this.radio2D.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.radio2D.UseVisualStyleBackColor = true;
             this.radio2D.CheckedChanged += new System.EventHandler(this.radio2D_CheckedChanged);
-            // 
+            //
             // tableLayoutPanel3
-            // 
+            //
             this.tableLayoutPanel3.ColumnCount = 4;
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
@@ -267,9 +267,9 @@
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel3.Size = new System.Drawing.Size(199, 129);
             this.tableLayoutPanel3.TabIndex = 41;
-            // 
+            //
             // addMapFileButton
-            // 
+            //
             this.tableLayoutPanel3.SetColumnSpan(this.addMapFileButton, 2);
             this.addMapFileButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.addMapFileButton.Image = ((System.Drawing.Image)(resources.GetObject("addMapFileButton.Image")));
@@ -282,9 +282,9 @@
             this.addMapFileButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.addMapFileButton.UseVisualStyleBackColor = true;
             this.addMapFileButton.Click += new System.EventHandler(this.addMapFileButton_Click);
-            // 
+            //
             // locateCurrentMapBin
-            // 
+            //
             this.locateCurrentMapBin.Dock = System.Windows.Forms.DockStyle.Fill;
             this.locateCurrentMapBin.Image = global::DSPRE.Properties.Resources.open_file;
             this.locateCurrentMapBin.Location = new System.Drawing.Point(150, 89);
@@ -294,9 +294,9 @@
             this.locateCurrentMapBin.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.locateCurrentMapBin.UseVisualStyleBackColor = true;
             this.locateCurrentMapBin.Click += new System.EventHandler(this.locateCurrentMapBin_Click);
-            // 
+            //
             // removeMapFileButton
-            // 
+            //
             this.tableLayoutPanel3.SetColumnSpan(this.removeMapFileButton, 2);
             this.removeMapFileButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.removeMapFileButton.Image = global::DSPRE.Properties.Resources.deleteIcon;
@@ -309,9 +309,9 @@
             this.removeMapFileButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.removeMapFileButton.UseVisualStyleBackColor = true;
             this.removeMapFileButton.Click += new System.EventHandler(this.removeLastMapFileButton_Click);
-            // 
+            //
             // replaceMapBinButton
-            // 
+            //
             this.tableLayoutPanel3.SetColumnSpan(this.replaceMapBinButton, 2);
             this.replaceMapBinButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.replaceMapBinButton.Image = ((System.Drawing.Image)(resources.GetObject("replaceMapBinButton.Image")));
@@ -324,9 +324,9 @@
             this.replaceMapBinButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.replaceMapBinButton.UseVisualStyleBackColor = true;
             this.replaceMapBinButton.Click += new System.EventHandler(this.replaceMapBinButton_Click);
-            // 
+            //
             // exportCurrentMapBinButton
-            // 
+            //
             this.tableLayoutPanel3.SetColumnSpan(this.exportCurrentMapBinButton, 2);
             this.exportCurrentMapBinButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.exportCurrentMapBinButton.Image = ((System.Drawing.Image)(resources.GetObject("exportCurrentMapBinButton.Image")));
@@ -339,9 +339,9 @@
             this.exportCurrentMapBinButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.exportCurrentMapBinButton.UseVisualStyleBackColor = true;
             this.exportCurrentMapBinButton.Click += new System.EventHandler(this.exportCurrentMapBinButton_Click);
-            // 
+            //
             // saveMapButton
-            // 
+            //
             this.tableLayoutPanel3.SetColumnSpan(this.saveMapButton, 3);
             this.saveMapButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.saveMapButton.Image = global::DSPRE.Properties.Resources.save_rom;
@@ -354,9 +354,9 @@
             this.saveMapButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.saveMapButton.UseVisualStyleBackColor = true;
             this.saveMapButton.Click += new System.EventHandler(this.saveMapButton_Click);
-            // 
+            //
             // mapRenderPanel
-            // 
+            //
             this.mapRenderPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.mapRenderPanel.Controls.Add(this.mapOpenGlControl);
             this.mapRenderPanel.Controls.Add(this.movPictureBox);
@@ -364,9 +364,9 @@
             this.mapRenderPanel.Name = "mapRenderPanel";
             this.mapRenderPanel.Size = new System.Drawing.Size(610, 610);
             this.mapRenderPanel.TabIndex = 23;
-            // 
+            //
             // mapOpenGlControl
-            // 
+            //
             this.mapOpenGlControl.AccumBits = ((byte)(0));
             this.mapOpenGlControl.AutoCheckErrors = false;
             this.mapOpenGlControl.AutoFinish = false;
@@ -386,9 +386,9 @@
             this.mapOpenGlControl.Click += new System.EventHandler(this.mapOpenGlControl_Click);
             this.mapOpenGlControl.KeyUp += new System.Windows.Forms.KeyEventHandler(this.mapOpenGlControl_KeyUp);
             this.mapOpenGlControl.PreviewKeyDown += new System.Windows.Forms.PreviewKeyDownEventHandler(this.mapOpenGlControl_PreviewKeyDown);
-            // 
+            //
             // movPictureBox
-            // 
+            //
             this.movPictureBox.BackColor = System.Drawing.Color.White;
             this.movPictureBox.Location = new System.Drawing.Point(0, 0);
             this.movPictureBox.Name = "movPictureBox";
@@ -397,18 +397,18 @@
             this.movPictureBox.TabStop = false;
             this.movPictureBox.Click += new System.EventHandler(this.movPictureBox_Click);
             this.movPictureBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.movPictureBox_MouseMove);
-            // 
+            //
             // label26
-            // 
+            //
             this.label26.AutoSize = true;
             this.label26.Location = new System.Drawing.Point(16, 574);
             this.label26.Name = "label26";
             this.label26.Size = new System.Drawing.Size(84, 13);
             this.label26.TabIndex = 33;
             this.label26.Text = "Buildings texture";
-            // 
+            //
             // buildTextureComboBox
-            // 
+            //
             this.buildTextureComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.buildTextureComboBox.FormattingEnabled = true;
             this.buildTextureComboBox.Location = new System.Drawing.Point(19, 588);
@@ -416,18 +416,18 @@
             this.buildTextureComboBox.Size = new System.Drawing.Size(233, 21);
             this.buildTextureComboBox.TabIndex = 32;
             this.buildTextureComboBox.SelectedIndexChanged += new System.EventHandler(this.buildTextureComboBox_SelectedIndexChanged);
-            // 
+            //
             // mapFileLabel
-            // 
+            //
             this.mapFileLabel.AutoSize = true;
             this.mapFileLabel.Location = new System.Drawing.Point(16, 486);
             this.mapFileLabel.Name = "mapFileLabel";
             this.mapFileLabel.Size = new System.Drawing.Size(44, 13);
             this.mapFileLabel.TabIndex = 31;
             this.mapFileLabel.Text = "Map file";
-            // 
+            //
             // mapTextureComboBox
-            // 
+            //
             this.mapTextureComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.mapTextureComboBox.FormattingEnabled = true;
             this.mapTextureComboBox.Location = new System.Drawing.Point(19, 544);
@@ -435,18 +435,18 @@
             this.mapTextureComboBox.Size = new System.Drawing.Size(233, 21);
             this.mapTextureComboBox.TabIndex = 30;
             this.mapTextureComboBox.SelectedIndexChanged += new System.EventHandler(this.mapTextureComboBox_SelectedIndexChanged);
-            // 
+            //
             // mapTextureLabel
-            // 
+            //
             this.mapTextureLabel.AutoSize = true;
             this.mapTextureLabel.Location = new System.Drawing.Point(16, 530);
             this.mapTextureLabel.Name = "mapTextureLabel";
             this.mapTextureLabel.Size = new System.Drawing.Size(63, 13);
             this.mapTextureLabel.TabIndex = 29;
             this.mapTextureLabel.Text = "Map texture";
-            // 
+            //
             // selectMapComboBox
-            // 
+            //
             this.selectMapComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.selectMapComboBox.FormattingEnabled = true;
             this.selectMapComboBox.Location = new System.Drawing.Point(19, 500);
@@ -454,9 +454,9 @@
             this.selectMapComboBox.Size = new System.Drawing.Size(233, 21);
             this.selectMapComboBox.TabIndex = 28;
             this.selectMapComboBox.SelectedIndexChanged += new System.EventHandler(this.selectMapComboBox_SelectedIndexChanged);
-            // 
+            //
             // mapPartsTabControl
-            // 
+            //
             this.mapPartsTabControl.Controls.Add(this.buildingsTabPage);
             this.mapPartsTabControl.Controls.Add(this.permissionsTabPage);
             this.mapPartsTabControl.Controls.Add(this.modelTabPage);
@@ -468,9 +468,9 @@
             this.mapPartsTabControl.Size = new System.Drawing.Size(489, 476);
             this.mapPartsTabControl.TabIndex = 24;
             this.mapPartsTabControl.SelectedIndexChanged += new System.EventHandler(this.mapPartsTabControl_SelectedIndexChanged);
-            // 
+            //
             // buildingsTabPage
-            // 
+            //
             this.buildingsTabPage.Controls.Add(this.groupBox33);
             this.buildingsTabPage.Controls.Add(this.yLabel);
             this.buildingsTabPage.Controls.Add(this.lockXZgroupbox);
@@ -494,9 +494,9 @@
             this.buildingsTabPage.TabIndex = 0;
             this.buildingsTabPage.Text = "Buildings";
             this.buildingsTabPage.UseVisualStyleBackColor = true;
-            // 
+            //
             // groupBox33
-            // 
+            //
             this.groupBox33.Controls.Add(this.yRotDegBldUpDown);
             this.groupBox33.Controls.Add(this.xRotDegBldUpDown);
             this.groupBox33.Controls.Add(this.zRotDegBldUpDown);
@@ -510,9 +510,9 @@
             this.groupBox33.TabIndex = 44;
             this.groupBox33.TabStop = false;
             this.groupBox33.Text = "Rotation";
-            // 
+            //
             // yRotDegBldUpDown
-            // 
+            //
             this.yRotDegBldUpDown.DecimalPlaces = 2;
             this.yRotDegBldUpDown.Location = new System.Drawing.Point(66, 56);
             this.yRotDegBldUpDown.Maximum = new decimal(new int[] {
@@ -524,9 +524,9 @@
             this.yRotDegBldUpDown.Size = new System.Drawing.Size(58, 20);
             this.yRotDegBldUpDown.TabIndex = 27;
             this.yRotDegBldUpDown.ValueChanged += new System.EventHandler(this.yRotDegBldUpDown_ValueChanged);
-            // 
+            //
             // xRotDegBldUpDown
-            // 
+            //
             this.xRotDegBldUpDown.DecimalPlaces = 2;
             this.xRotDegBldUpDown.Location = new System.Drawing.Point(66, 20);
             this.xRotDegBldUpDown.Maximum = new decimal(new int[] {
@@ -538,9 +538,9 @@
             this.xRotDegBldUpDown.Size = new System.Drawing.Size(58, 20);
             this.xRotDegBldUpDown.TabIndex = 25;
             this.xRotDegBldUpDown.ValueChanged += new System.EventHandler(this.xRotDegBldUpDown_ValueChanged);
-            // 
+            //
             // zRotDegBldUpDown
-            // 
+            //
             this.zRotDegBldUpDown.DecimalPlaces = 2;
             this.zRotDegBldUpDown.Location = new System.Drawing.Point(66, 93);
             this.zRotDegBldUpDown.Maximum = new decimal(new int[] {
@@ -552,9 +552,9 @@
             this.zRotDegBldUpDown.Size = new System.Drawing.Size(58, 20);
             this.zRotDegBldUpDown.TabIndex = 26;
             this.zRotDegBldUpDown.ValueChanged += new System.EventHandler(this.zRotDegBldUpDown_ValueChanged);
-            // 
+            //
             // yRotBuildUpDown
-            // 
+            //
             this.yRotBuildUpDown.Location = new System.Drawing.Point(6, 56);
             this.yRotBuildUpDown.Maximum = new decimal(new int[] {
             65536,
@@ -565,9 +565,9 @@
             this.yRotBuildUpDown.Size = new System.Drawing.Size(56, 20);
             this.yRotBuildUpDown.TabIndex = 24;
             this.yRotBuildUpDown.ValueChanged += new System.EventHandler(this.yRotBuildUpDown_ValueChanged);
-            // 
+            //
             // xRotBuildUpDown
-            // 
+            //
             this.xRotBuildUpDown.Location = new System.Drawing.Point(6, 20);
             this.xRotBuildUpDown.Maximum = new decimal(new int[] {
             65536,
@@ -578,9 +578,9 @@
             this.xRotBuildUpDown.Size = new System.Drawing.Size(56, 20);
             this.xRotBuildUpDown.TabIndex = 22;
             this.xRotBuildUpDown.ValueChanged += new System.EventHandler(this.xRotBuildUpDown_ValueChanged);
-            // 
+            //
             // zRotBuildUpDown
-            // 
+            //
             this.zRotBuildUpDown.Location = new System.Drawing.Point(6, 93);
             this.zRotBuildUpDown.Maximum = new decimal(new int[] {
             65536,
@@ -591,9 +591,9 @@
             this.zRotBuildUpDown.Size = new System.Drawing.Size(56, 20);
             this.zRotBuildUpDown.TabIndex = 23;
             this.zRotBuildUpDown.ValueChanged += new System.EventHandler(this.zRotBuildUpDown_ValueChanged);
-            // 
+            //
             // yLabel
-            // 
+            //
             this.yLabel.AutoSize = true;
             this.yLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.yLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
@@ -602,9 +602,9 @@
             this.yLabel.Size = new System.Drawing.Size(15, 15);
             this.yLabel.TabIndex = 10;
             this.yLabel.Text = "Y";
-            // 
+            //
             // lockXZgroupbox
-            // 
+            //
             this.lockXZgroupbox.Controls.Add(this.bldPlaceLockXcheckbox);
             this.lockXZgroupbox.Controls.Add(this.bldPlaceLockZcheckbox);
             this.lockXZgroupbox.Enabled = false;
@@ -613,9 +613,9 @@
             this.lockXZgroupbox.Size = new System.Drawing.Size(154, 36);
             this.lockXZgroupbox.TabIndex = 43;
             this.lockXZgroupbox.TabStop = false;
-            // 
+            //
             // bldPlaceLockXcheckbox
-            // 
+            //
             this.bldPlaceLockXcheckbox.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldPlaceLockXcheckbox.AutoSize = true;
             this.bldPlaceLockXcheckbox.Enabled = false;
@@ -628,9 +628,9 @@
             this.bldPlaceLockXcheckbox.Text = "Lock X";
             this.bldPlaceLockXcheckbox.UseVisualStyleBackColor = true;
             this.bldPlaceLockXcheckbox.CheckedChanged += new System.EventHandler(this.bldPlaceLockXcheckbox_CheckedChanged);
-            // 
+            //
             // bldPlaceLockZcheckbox
-            // 
+            //
             this.bldPlaceLockZcheckbox.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldPlaceLockZcheckbox.AutoSize = true;
             this.bldPlaceLockZcheckbox.Enabled = false;
@@ -643,9 +643,9 @@
             this.bldPlaceLockZcheckbox.Text = "Lock Z";
             this.bldPlaceLockZcheckbox.UseVisualStyleBackColor = true;
             this.bldPlaceLockZcheckbox.CheckedChanged += new System.EventHandler(this.bldPlaceLockZcheckbox_CheckedChanged);
-            // 
+            //
             // zLabel
-            // 
+            //
             this.zLabel.AutoSize = true;
             this.zLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.zLabel.ForeColor = System.Drawing.Color.Blue;
@@ -654,9 +654,9 @@
             this.zLabel.Size = new System.Drawing.Size(15, 15);
             this.zLabel.TabIndex = 9;
             this.zLabel.Text = "Z";
-            // 
+            //
             // xLabel
-            // 
+            //
             this.xLabel.AutoSize = true;
             this.xLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.xLabel.ForeColor = System.Drawing.Color.Red;
@@ -665,9 +665,9 @@
             this.xLabel.Size = new System.Drawing.Size(16, 15);
             this.xLabel.TabIndex = 8;
             this.xLabel.Text = "X";
-            // 
+            //
             // bldRoundGroupbox
-            // 
+            //
             this.bldRoundGroupbox.Controls.Add(this.tableLayoutPanel2);
             this.bldRoundGroupbox.Enabled = false;
             this.bldRoundGroupbox.Location = new System.Drawing.Point(195, 316);
@@ -676,9 +676,9 @@
             this.bldRoundGroupbox.TabIndex = 40;
             this.bldRoundGroupbox.TabStop = false;
             this.bldRoundGroupbox.Text = "Round";
-            // 
+            //
             // tableLayoutPanel2
-            // 
+            //
             this.tableLayoutPanel2.ColumnCount = 3;
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
@@ -697,9 +697,9 @@
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.Size = new System.Drawing.Size(263, 64);
             this.tableLayoutPanel2.TabIndex = 45;
-            // 
+            //
             // bldRoundDecmil
-            // 
+            //
             this.bldRoundDecmil.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundDecmil.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bldRoundDecmil.Location = new System.Drawing.Point(90, 35);
@@ -710,9 +710,9 @@
             this.bldRoundDecmil.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundDecmil.UseVisualStyleBackColor = true;
             this.bldRoundDecmil.CheckedChanged += new System.EventHandler(this.bldRoundDecmil_CheckedChanged);
-            // 
+            //
             // bldRoundCentMil
-            // 
+            //
             this.bldRoundCentMil.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundCentMil.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bldRoundCentMil.Location = new System.Drawing.Point(177, 35);
@@ -723,9 +723,9 @@
             this.bldRoundCentMil.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundCentMil.UseVisualStyleBackColor = true;
             this.bldRoundCentMil.CheckedChanged += new System.EventHandler(this.bldRoundCentMil_CheckedChanged);
-            // 
+            //
             // bldRoundWhole
-            // 
+            //
             this.bldRoundWhole.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundWhole.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bldRoundWhole.Location = new System.Drawing.Point(3, 3);
@@ -736,9 +736,9 @@
             this.bldRoundWhole.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundWhole.UseVisualStyleBackColor = true;
             this.bldRoundWhole.CheckedChanged += new System.EventHandler(this.bldRoundWhole_CheckedChanged);
-            // 
+            //
             // bldRoundDec
-            // 
+            //
             this.bldRoundDec.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundDec.Checked = true;
             this.bldRoundDec.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -751,9 +751,9 @@
             this.bldRoundDec.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundDec.UseVisualStyleBackColor = true;
             this.bldRoundDec.CheckedChanged += new System.EventHandler(this.bldRoundDec_CheckedChanged);
-            // 
+            //
             // bldRoundCent
-            // 
+            //
             this.bldRoundCent.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundCent.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bldRoundCent.Location = new System.Drawing.Point(177, 3);
@@ -764,9 +764,9 @@
             this.bldRoundCent.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundCent.UseVisualStyleBackColor = true;
             this.bldRoundCent.CheckedChanged += new System.EventHandler(this.bldRoundCent_CheckedChanged);
-            // 
+            //
             // bldRoundMil
-            // 
+            //
             this.bldRoundMil.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldRoundMil.Dock = System.Windows.Forms.DockStyle.Fill;
             this.bldRoundMil.Location = new System.Drawing.Point(3, 35);
@@ -777,9 +777,9 @@
             this.bldRoundMil.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.bldRoundMil.UseVisualStyleBackColor = true;
             this.bldRoundMil.CheckedChanged += new System.EventHandler(this.bldRoundMil_CheckedChanged);
-            // 
+            //
             // bldPlaceWithMouseCheckbox
-            // 
+            //
             this.bldPlaceWithMouseCheckbox.Appearance = System.Windows.Forms.Appearance.Button;
             this.bldPlaceWithMouseCheckbox.Enabled = false;
             this.bldPlaceWithMouseCheckbox.Image = global::DSPRE.Properties.Resources.selectBldWithMouse;
@@ -789,9 +789,9 @@
             this.bldPlaceWithMouseCheckbox.TabIndex = 40;
             this.bldPlaceWithMouseCheckbox.UseVisualStyleBackColor = true;
             this.bldPlaceWithMouseCheckbox.CheckedChanged += new System.EventHandler(this.bldPlaceWithMouseCheckbox_CheckedChanged);
-            // 
+            //
             // importBuildingsButton
-            // 
+            //
             this.importBuildingsButton.Image = ((System.Drawing.Image)(resources.GetObject("importBuildingsButton.Image")));
             this.importBuildingsButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.importBuildingsButton.Location = new System.Drawing.Point(193, 11);
@@ -802,9 +802,9 @@
             this.importBuildingsButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.importBuildingsButton.UseVisualStyleBackColor = true;
             this.importBuildingsButton.Click += new System.EventHandler(this.importBuildingsButton_Click);
-            // 
+            //
             // groupBox20
-            // 
+            //
             this.groupBox20.Controls.Add(this.interiorbldRadioButton);
             this.groupBox20.Controls.Add(this.exteriorbldRadioButton);
             this.groupBox20.Controls.Add(this.buildIndexComboBox);
@@ -814,9 +814,9 @@
             this.groupBox20.TabIndex = 26;
             this.groupBox20.TabStop = false;
             this.groupBox20.Text = "Building Selector";
-            // 
+            //
             // interiorbldRadioButton
-            // 
+            //
             this.interiorbldRadioButton.Appearance = System.Windows.Forms.Appearance.Button;
             this.interiorbldRadioButton.AutoSize = true;
             this.interiorbldRadioButton.Enabled = false;
@@ -827,9 +827,9 @@
             this.interiorbldRadioButton.Text = "Interior List";
             this.interiorbldRadioButton.UseVisualStyleBackColor = true;
             this.interiorbldRadioButton.CheckedChanged += new System.EventHandler(this.interiorRadioButton_CheckedChanged);
-            // 
+            //
             // exteriorbldRadioButton
-            // 
+            //
             this.exteriorbldRadioButton.Appearance = System.Windows.Forms.Appearance.Button;
             this.exteriorbldRadioButton.AutoSize = true;
             this.exteriorbldRadioButton.Checked = true;
@@ -841,9 +841,9 @@
             this.exteriorbldRadioButton.TabStop = true;
             this.exteriorbldRadioButton.Text = "Exterior List";
             this.exteriorbldRadioButton.UseVisualStyleBackColor = true;
-            // 
+            //
             // buildIndexComboBox
-            // 
+            //
             this.buildIndexComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.buildIndexComboBox.FormattingEnabled = true;
             this.buildIndexComboBox.Location = new System.Drawing.Point(9, 48);
@@ -851,9 +851,9 @@
             this.buildIndexComboBox.Size = new System.Drawing.Size(264, 21);
             this.buildIndexComboBox.TabIndex = 1;
             this.buildIndexComboBox.SelectedIndexChanged += new System.EventHandler(this.buildIndexComboBox_SelectedIndexChanged);
-            // 
+            //
             // groupBox19
-            // 
+            //
             this.groupBox19.Controls.Add(this.buildingHeightUpDown);
             this.groupBox19.Controls.Add(this.buildingWidthUpDown);
             this.groupBox19.Controls.Add(this.buildingLengthUpDown);
@@ -863,33 +863,33 @@
             this.groupBox19.TabIndex = 12;
             this.groupBox19.TabStop = false;
             this.groupBox19.Text = "Scale";
-            // 
+            //
             // buildingHeightUpDown
-            // 
+            //
             this.buildingHeightUpDown.Location = new System.Drawing.Point(4, 56);
             this.buildingHeightUpDown.Name = "buildingHeightUpDown";
             this.buildingHeightUpDown.Size = new System.Drawing.Size(43, 20);
             this.buildingHeightUpDown.TabIndex = 24;
             this.buildingHeightUpDown.ValueChanged += new System.EventHandler(this.buildingHeightUpDown_ValueChanged);
-            // 
+            //
             // buildingWidthUpDown
-            // 
+            //
             this.buildingWidthUpDown.Location = new System.Drawing.Point(4, 20);
             this.buildingWidthUpDown.Name = "buildingWidthUpDown";
             this.buildingWidthUpDown.Size = new System.Drawing.Size(43, 20);
             this.buildingWidthUpDown.TabIndex = 22;
             this.buildingWidthUpDown.ValueChanged += new System.EventHandler(this.buildingWidthUpDown_ValueChanged);
-            // 
+            //
             // buildingLengthUpDown
-            // 
+            //
             this.buildingLengthUpDown.Location = new System.Drawing.Point(4, 93);
             this.buildingLengthUpDown.Name = "buildingLengthUpDown";
             this.buildingLengthUpDown.Size = new System.Drawing.Size(43, 20);
             this.buildingLengthUpDown.TabIndex = 23;
             this.buildingLengthUpDown.ValueChanged += new System.EventHandler(this.buildingLengthUpDown_ValueChanged);
-            // 
+            //
             // duplicateBuildingButton
-            // 
+            //
             this.duplicateBuildingButton.Image = global::DSPRE.Properties.Resources.copyIcon_small;
             this.duplicateBuildingButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.duplicateBuildingButton.Location = new System.Drawing.Point(352, 405);
@@ -900,9 +900,9 @@
             this.duplicateBuildingButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.duplicateBuildingButton.UseVisualStyleBackColor = true;
             this.duplicateBuildingButton.Click += new System.EventHandler(this.duplicateBuildingButton_Click);
-            // 
+            //
             // exportBuildingsButton
-            // 
+            //
             this.exportBuildingsButton.Image = ((System.Drawing.Image)(resources.GetObject("exportBuildingsButton.Image")));
             this.exportBuildingsButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.exportBuildingsButton.Location = new System.Drawing.Point(298, 11);
@@ -913,9 +913,9 @@
             this.exportBuildingsButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.exportBuildingsButton.UseVisualStyleBackColor = true;
             this.exportBuildingsButton.Click += new System.EventHandler(this.exportBuildingsButton_Click);
-            // 
+            //
             // removeBuildingButton
-            // 
+            //
             this.removeBuildingButton.Image = global::DSPRE.Properties.Resources.deleteIcon;
             this.removeBuildingButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.removeBuildingButton.Location = new System.Drawing.Point(281, 405);
@@ -926,9 +926,9 @@
             this.removeBuildingButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.removeBuildingButton.UseVisualStyleBackColor = true;
             this.removeBuildingButton.Click += new System.EventHandler(this.removeBuildingButton_Click);
-            // 
+            //
             // addBuildingButton
-            // 
+            //
             this.addBuildingButton.Image = ((System.Drawing.Image)(resources.GetObject("addBuildingButton.Image")));
             this.addBuildingButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.addBuildingButton.Location = new System.Drawing.Point(224, 405);
@@ -939,9 +939,9 @@
             this.addBuildingButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.addBuildingButton.UseVisualStyleBackColor = true;
             this.addBuildingButton.Click += new System.EventHandler(this.addBuildingButton_Click);
-            // 
+            //
             // buildPositionGroupBox
-            // 
+            //
             this.buildPositionGroupBox.Controls.Add(this.yBuildUpDown);
             this.buildPositionGroupBox.Controls.Add(this.xBuildUpDown);
             this.buildPositionGroupBox.Controls.Add(this.zBuildUpDown);
@@ -951,9 +951,9 @@
             this.buildPositionGroupBox.TabIndex = 11;
             this.buildPositionGroupBox.TabStop = false;
             this.buildPositionGroupBox.Text = "Position";
-            // 
+            //
             // yBuildUpDown
-            // 
+            //
             this.yBuildUpDown.DecimalPlaces = 5;
             this.yBuildUpDown.Location = new System.Drawing.Point(6, 56);
             this.yBuildUpDown.Maximum = new decimal(new int[] {
@@ -970,9 +970,9 @@
             this.yBuildUpDown.Size = new System.Drawing.Size(69, 20);
             this.yBuildUpDown.TabIndex = 7;
             this.yBuildUpDown.ValueChanged += new System.EventHandler(this.yBuildUpDown_ValueChanged);
-            // 
+            //
             // xBuildUpDown
-            // 
+            //
             this.xBuildUpDown.DecimalPlaces = 5;
             this.xBuildUpDown.Location = new System.Drawing.Point(6, 20);
             this.xBuildUpDown.Maximum = new decimal(new int[] {
@@ -989,9 +989,9 @@
             this.xBuildUpDown.Size = new System.Drawing.Size(69, 20);
             this.xBuildUpDown.TabIndex = 5;
             this.xBuildUpDown.ValueChanged += new System.EventHandler(this.xBuildUpDown_ValueChanged);
-            // 
+            //
             // zBuildUpDown
-            // 
+            //
             this.zBuildUpDown.DecimalPlaces = 5;
             this.zBuildUpDown.Location = new System.Drawing.Point(6, 93);
             this.zBuildUpDown.Maximum = new decimal(new int[] {
@@ -1008,18 +1008,18 @@
             this.zBuildUpDown.Size = new System.Drawing.Size(69, 20);
             this.zBuildUpDown.TabIndex = 6;
             this.zBuildUpDown.ValueChanged += new System.EventHandler(this.zBuildUpDown_ValueChanged);
-            // 
+            //
             // buildingsListBox
-            // 
+            //
             this.buildingsListBox.FormattingEnabled = true;
             this.buildingsListBox.Location = new System.Drawing.Point(9, 7);
             this.buildingsListBox.Name = "buildingsListBox";
             this.buildingsListBox.Size = new System.Drawing.Size(168, 433);
             this.buildingsListBox.TabIndex = 0;
             this.buildingsListBox.SelectedIndexChanged += new System.EventHandler(this.buildingsListBox_SelectedIndexChanged);
-            // 
+            //
             // permissionsTabPage
-            // 
+            //
             this.permissionsTabPage.Controls.Add(this.transparencyBar);
             this.permissionsTabPage.Controls.Add(this.scanUnusedCollisionTypesButton);
             this.permissionsTabPage.Controls.Add(this.clearCurrentButton);
@@ -1038,9 +1038,9 @@
             this.permissionsTabPage.TabIndex = 1;
             this.permissionsTabPage.Text = "Move Permissions";
             this.permissionsTabPage.UseVisualStyleBackColor = true;
-            // 
+            //
             // transparencyBar
-            // 
+            //
             this.transparencyBar.BackColor = System.Drawing.SystemColors.Menu;
             this.transparencyBar.Location = new System.Drawing.Point(12, 391);
             this.transparencyBar.Margin = new System.Windows.Forms.Padding(3, 3, 3, 0);
@@ -1051,9 +1051,9 @@
             this.transparencyBar.TickFrequency = 255;
             this.transparencyBar.TickStyle = System.Windows.Forms.TickStyle.None;
             this.transparencyBar.Scroll += new System.EventHandler(this.transparencyBar_Scroll);
-            // 
+            //
             // scanUnusedCollisionTypesButton
-            // 
+            //
             this.scanUnusedCollisionTypesButton.Image = global::DSPRE.Properties.Resources.SearchMiniIcon;
             this.scanUnusedCollisionTypesButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.scanUnusedCollisionTypesButton.Location = new System.Drawing.Point(345, 108);
@@ -1064,9 +1064,9 @@
             this.scanUnusedCollisionTypesButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.scanUnusedCollisionTypesButton.UseVisualStyleBackColor = true;
             this.scanUnusedCollisionTypesButton.Click += new System.EventHandler(this.scanUsedCollisionTypesButton_Click);
-            // 
+            //
             // clearCurrentButton
-            // 
+            //
             this.clearCurrentButton.Location = new System.Drawing.Point(11, 134);
             this.clearCurrentButton.Name = "clearCurrentButton";
             this.clearCurrentButton.Size = new System.Drawing.Size(212, 23);
@@ -1074,9 +1074,9 @@
             this.clearCurrentButton.Text = "Clear current";
             this.clearCurrentButton.UseVisualStyleBackColor = true;
             this.clearCurrentButton.Click += new System.EventHandler(this.clearCurrentButton_Click);
-            // 
+            //
             // typeLabel
-            // 
+            //
             this.typeLabel.AutoSize = true;
             this.typeLabel.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this.typeLabel.Location = new System.Drawing.Point(155, 9);
@@ -1084,9 +1084,9 @@
             this.typeLabel.Size = new System.Drawing.Size(31, 13);
             this.typeLabel.TabIndex = 29;
             this.typeLabel.Text = "Type";
-            // 
+            //
             // collisionLabel
-            // 
+            //
             this.collisionLabel.AutoSize = true;
             this.collisionLabel.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this.collisionLabel.Location = new System.Drawing.Point(40, 9);
@@ -1094,9 +1094,9 @@
             this.collisionLabel.Size = new System.Drawing.Size(45, 13);
             this.collisionLabel.TabIndex = 28;
             this.collisionLabel.Text = "Collision";
-            // 
+            //
             // typeGroupBox
-            // 
+            //
             this.typeGroupBox.Controls.Add(this.knownTypesRadioButton);
             this.typeGroupBox.Controls.Add(this.valueTypeRadioButton);
             this.typeGroupBox.Controls.Add(this.typePainterUpDown);
@@ -1109,9 +1109,9 @@
             this.typeGroupBox.TabIndex = 25;
             this.typeGroupBox.TabStop = false;
             this.typeGroupBox.Text = "Type Painter";
-            // 
+            //
             // knownTypesRadioButton
-            // 
+            //
             this.knownTypesRadioButton.AutoSize = true;
             this.knownTypesRadioButton.Checked = true;
             this.knownTypesRadioButton.Location = new System.Drawing.Point(135, 21);
@@ -1122,9 +1122,9 @@
             this.knownTypesRadioButton.Text = "Known Types";
             this.knownTypesRadioButton.UseVisualStyleBackColor = true;
             this.knownTypesRadioButton.CheckedChanged += new System.EventHandler(this.typesRadioButton_CheckedChanged);
-            // 
+            //
             // valueTypeRadioButton
-            // 
+            //
             this.valueTypeRadioButton.AutoSize = true;
             this.valueTypeRadioButton.Location = new System.Drawing.Point(341, 19);
             this.valueTypeRadioButton.Name = "valueTypeRadioButton";
@@ -1133,9 +1133,9 @@
             this.valueTypeRadioButton.Text = "Value";
             this.valueTypeRadioButton.UseVisualStyleBackColor = true;
             this.valueTypeRadioButton.CheckedChanged += new System.EventHandler(this.valueTypeRadioButton_CheckedChanged);
-            // 
+            //
             // typePainterUpDown
-            // 
+            //
             this.typePainterUpDown.Enabled = false;
             this.typePainterUpDown.Hexadecimal = true;
             this.typePainterUpDown.Location = new System.Drawing.Point(341, 45);
@@ -1148,9 +1148,9 @@
             this.typePainterUpDown.Size = new System.Drawing.Size(78, 20);
             this.typePainterUpDown.TabIndex = 3;
             this.typePainterUpDown.ValueChanged += new System.EventHandler(this.typePainterUpDown_ValueChanged);
-            // 
+            //
             // collisionTypePainterComboBox
-            // 
+            //
             this.collisionTypePainterComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.collisionTypePainterComboBox.FormattingEnabled = true;
             this.collisionTypePainterComboBox.IntegralHeight = false;
@@ -1160,9 +1160,9 @@
             this.collisionTypePainterComboBox.Size = new System.Drawing.Size(200, 21);
             this.collisionTypePainterComboBox.TabIndex = 2;
             this.collisionTypePainterComboBox.SelectedIndexChanged += new System.EventHandler(this.typePainterComboBox_SelectedIndexChanged);
-            // 
+            //
             // typePainterPictureBox
-            // 
+            //
             this.typePainterPictureBox.BackColor = System.Drawing.Color.White;
             this.typePainterPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.typePainterPictureBox.Location = new System.Drawing.Point(18, 31);
@@ -1170,9 +1170,9 @@
             this.typePainterPictureBox.Size = new System.Drawing.Size(66, 64);
             this.typePainterPictureBox.TabIndex = 1;
             this.typePainterPictureBox.TabStop = false;
-            // 
+            //
             // collisionGroupBox
-            // 
+            //
             this.collisionGroupBox.Controls.Add(this.collisionPainterComboBox);
             this.collisionGroupBox.Controls.Add(this.collisionPainterPictureBox);
             this.collisionGroupBox.Location = new System.Drawing.Point(12, 167);
@@ -1181,9 +1181,9 @@
             this.collisionGroupBox.TabIndex = 24;
             this.collisionGroupBox.TabStop = false;
             this.collisionGroupBox.Text = "Collision Painter";
-            // 
+            //
             // collisionPainterComboBox
-            // 
+            //
             this.collisionPainterComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.collisionPainterComboBox.FormattingEnabled = true;
             this.collisionPainterComboBox.Location = new System.Drawing.Point(134, 23);
@@ -1191,9 +1191,9 @@
             this.collisionPainterComboBox.Size = new System.Drawing.Size(284, 21);
             this.collisionPainterComboBox.TabIndex = 1;
             this.collisionPainterComboBox.SelectedIndexChanged += new System.EventHandler(this.collisionPainterComboBox_SelectedIndexChange);
-            // 
+            //
             // collisionPainterPictureBox
-            // 
+            //
             this.collisionPainterPictureBox.BackColor = System.Drawing.Color.White;
             this.collisionPainterPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.collisionPainterPictureBox.Location = new System.Drawing.Point(18, 23);
@@ -1201,17 +1201,17 @@
             this.collisionPainterPictureBox.Size = new System.Drawing.Size(66, 64);
             this.collisionPainterPictureBox.TabIndex = 0;
             this.collisionPainterPictureBox.TabStop = false;
-            // 
+            //
             // selectCollisionPanel
-            // 
+            //
             this.selectCollisionPanel.Controls.Add(this.collisionPictureBox);
             this.selectCollisionPanel.Location = new System.Drawing.Point(10, 23);
             this.selectCollisionPanel.Name = "selectCollisionPanel";
             this.selectCollisionPanel.Size = new System.Drawing.Size(102, 102);
             this.selectCollisionPanel.TabIndex = 30;
-            // 
+            //
             // collisionPictureBox
-            // 
+            //
             this.collisionPictureBox.BackColor = System.Drawing.Color.White;
             this.collisionPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.collisionPictureBox.Location = new System.Drawing.Point(3, 3);
@@ -1220,17 +1220,17 @@
             this.collisionPictureBox.TabIndex = 26;
             this.collisionPictureBox.TabStop = false;
             this.collisionPictureBox.Click += new System.EventHandler(this.collisionPictureBox_Click);
-            // 
+            //
             // selectTypePanel
-            // 
+            //
             this.selectTypePanel.Controls.Add(this.typePictureBox);
             this.selectTypePanel.Location = new System.Drawing.Point(122, 23);
             this.selectTypePanel.Name = "selectTypePanel";
             this.selectTypePanel.Size = new System.Drawing.Size(102, 102);
             this.selectTypePanel.TabIndex = 31;
-            // 
+            //
             // typePictureBox
-            // 
+            //
             this.typePictureBox.BackColor = System.Drawing.Color.White;
             this.typePictureBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.typePictureBox.Location = new System.Drawing.Point(3, 3);
@@ -1239,9 +1239,9 @@
             this.typePictureBox.TabIndex = 27;
             this.typePictureBox.TabStop = false;
             this.typePictureBox.Click += new System.EventHandler(this.typePictureBox_Click);
-            // 
+            //
             // ImportMovButton
-            // 
+            //
             this.ImportMovButton.Image = global::DSPRE.Properties.Resources.importArrow;
             this.ImportMovButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.ImportMovButton.Location = new System.Drawing.Point(318, 22);
@@ -1252,9 +1252,9 @@
             this.ImportMovButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.ImportMovButton.UseVisualStyleBackColor = true;
             this.ImportMovButton.Click += new System.EventHandler(this.importMovButton_Click);
-            // 
+            //
             // exportMovButton
-            // 
+            //
             this.exportMovButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.exportMovButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.exportMovButton.Location = new System.Drawing.Point(318, 64);
@@ -1265,9 +1265,9 @@
             this.exportMovButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.exportMovButton.UseVisualStyleBackColor = true;
             this.exportMovButton.Click += new System.EventHandler(this.exportMovButton_Click);
-            // 
+            //
             // modelTabPage
-            // 
+            //
             this.modelTabPage.Controls.Add(this.glbExportButton);
             this.modelTabPage.Controls.Add(this.daeExportButton);
             this.modelTabPage.Controls.Add(this.embedTexturesInMapModelCheckBox);
@@ -1283,9 +1283,9 @@
             this.modelTabPage.TabIndex = 2;
             this.modelTabPage.Text = "3D Model";
             this.modelTabPage.UseVisualStyleBackColor = true;
-            // 
+            //
             // glbExportButton
-            // 
+            //
             this.glbExportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.glbExportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.glbExportButton.Location = new System.Drawing.Point(351, 156);
@@ -1297,9 +1297,9 @@
             this.glbExportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.glbExportButton.UseVisualStyleBackColor = true;
             this.glbExportButton.Click += new System.EventHandler(this.glbExportButton_Click);
-            // 
+            //
             // daeExportButton
-            // 
+            //
             this.daeExportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.daeExportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.daeExportButton.Location = new System.Drawing.Point(351, 111);
@@ -1310,9 +1310,9 @@
             this.daeExportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.daeExportButton.UseVisualStyleBackColor = true;
             this.daeExportButton.Click += new System.EventHandler(this.daeExportButton_Click);
-            // 
+            //
             // embedTexturesInMapModelCheckBox
-            // 
+            //
             this.embedTexturesInMapModelCheckBox.AutoSize = true;
             this.embedTexturesInMapModelCheckBox.Checked = true;
             this.embedTexturesInMapModelCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
@@ -1322,9 +1322,9 @@
             this.embedTexturesInMapModelCheckBox.TabIndex = 29;
             this.embedTexturesInMapModelCheckBox.Text = "Textured";
             this.embedTexturesInMapModelCheckBox.UseVisualStyleBackColor = true;
-            // 
+            //
             // modelSizeLBL
-            // 
+            //
             this.modelSizeLBL.AutoSize = true;
             this.modelSizeLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.modelSizeLBL.ForeColor = System.Drawing.SystemColors.ControlText;
@@ -1333,9 +1333,9 @@
             this.modelSizeLBL.Size = new System.Drawing.Size(97, 16);
             this.modelSizeLBL.TabIndex = 28;
             this.modelSizeLBL.Text = "ModelSizeTXT";
-            // 
+            //
             // nsbmdSizeLabel
-            // 
+            //
             this.nsbmdSizeLabel.AutoSize = true;
             this.nsbmdSizeLabel.BackColor = System.Drawing.Color.Transparent;
             this.nsbmdSizeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -1345,9 +1345,9 @@
             this.nsbmdSizeLabel.Size = new System.Drawing.Size(100, 16);
             this.nsbmdSizeLabel.TabIndex = 27;
             this.nsbmdSizeLabel.Text = "3D Model Size: ";
-            // 
+            //
             // unsupported3DModelEditLBL
-            // 
+            //
             this.unsupported3DModelEditLBL.AutoSize = true;
             this.unsupported3DModelEditLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
             this.unsupported3DModelEditLBL.ForeColor = System.Drawing.SystemColors.ControlText;
@@ -1358,9 +1358,9 @@
             this.unsupported3DModelEditLBL.Text = "DSPRE cannot edit nor create 3D models.\r\nPlease use Blender, Sketchup, or \r\nTrifi" +
     "ndo\'s Pokemon DS Map Studio.";
             this.unsupported3DModelEditLBL.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
+            //
             // importMapButton
-            // 
+            //
             this.importMapButton.Image = global::DSPRE.Properties.Resources.importArrow;
             this.importMapButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.importMapButton.Location = new System.Drawing.Point(351, 9);
@@ -1371,9 +1371,9 @@
             this.importMapButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.importMapButton.UseVisualStyleBackColor = true;
             this.importMapButton.Click += new System.EventHandler(this.importMapButton_Click);
-            // 
+            //
             // exportMapButton
-            // 
+            //
             this.exportMapButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.exportMapButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.exportMapButton.Location = new System.Drawing.Point(351, 54);
@@ -1384,9 +1384,9 @@
             this.exportMapButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.exportMapButton.UseVisualStyleBackColor = true;
             this.exportMapButton.Click += new System.EventHandler(this.exportMapButton_Click);
-            // 
+            //
             // terrainTabPage
-            // 
+            //
             this.terrainTabPage.Controls.Add(this.terrainSizeLBL);
             this.terrainTabPage.Controls.Add(this.terrainDataLBL);
             this.terrainTabPage.Controls.Add(this.unsupportedBDHCEditLBL);
@@ -1399,9 +1399,9 @@
             this.terrainTabPage.TabIndex = 3;
             this.terrainTabPage.Text = "Terrain Data";
             this.terrainTabPage.UseVisualStyleBackColor = true;
-            // 
+            //
             // terrainSizeLBL
-            // 
+            //
             this.terrainSizeLBL.AutoSize = true;
             this.terrainSizeLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.terrainSizeLBL.Location = new System.Drawing.Point(124, 9);
@@ -1409,9 +1409,9 @@
             this.terrainSizeLBL.Size = new System.Drawing.Size(102, 16);
             this.terrainSizeLBL.TabIndex = 30;
             this.terrainSizeLBL.Text = "TerrainSizeTXT";
-            // 
+            //
             // terrainDataLBL
-            // 
+            //
             this.terrainDataLBL.AutoSize = true;
             this.terrainDataLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.terrainDataLBL.Location = new System.Drawing.Point(6, 9);
@@ -1419,9 +1419,9 @@
             this.terrainDataLBL.Size = new System.Drawing.Size(117, 16);
             this.terrainDataLBL.TabIndex = 29;
             this.terrainDataLBL.Text = "Terrain Data Size: ";
-            // 
+            //
             // unsupportedBDHCEditLBL
-            // 
+            //
             this.unsupportedBDHCEditLBL.AutoSize = true;
             this.unsupportedBDHCEditLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.unsupportedBDHCEditLBL.Location = new System.Drawing.Point(113, 257);
@@ -1431,9 +1431,9 @@
             this.unsupportedBDHCEditLBL.Text = "DSPRE cannot edit nor create BDHC data.\r\nPlease use Trifindo\'s Pokemon DS Map Stu" +
     "dio.";
             this.unsupportedBDHCEditLBL.TextAlign = System.Drawing.ContentAlignment.TopCenter;
-            // 
+            //
             // bdhcImportButton
-            // 
+            //
             this.bdhcImportButton.Image = global::DSPRE.Properties.Resources.importArrow;
             this.bdhcImportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.bdhcImportButton.Location = new System.Drawing.Point(351, 9);
@@ -1444,9 +1444,9 @@
             this.bdhcImportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.bdhcImportButton.UseVisualStyleBackColor = true;
             this.bdhcImportButton.Click += new System.EventHandler(this.bdhcImportButton_Click);
-            // 
+            //
             // bdhcExportButton
-            // 
+            //
             this.bdhcExportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.bdhcExportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.bdhcExportButton.Location = new System.Drawing.Point(351, 54);
@@ -1457,9 +1457,9 @@
             this.bdhcExportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.bdhcExportButton.UseVisualStyleBackColor = true;
             this.bdhcExportButton.Click += new System.EventHandler(this.bdhcExportButton_Click);
-            // 
+            //
             // bgsTabPage
-            // 
+            //
             this.bgsTabPage.Controls.Add(this.blankBGSButton);
             this.bgsTabPage.Controls.Add(this.BGSSizeLBL);
             this.bgsTabPage.Controls.Add(this.bgsDataLBL);
@@ -1472,9 +1472,9 @@
             this.bgsTabPage.TabIndex = 4;
             this.bgsTabPage.Text = "Sound Plates";
             this.bgsTabPage.UseVisualStyleBackColor = true;
-            // 
+            //
             // blankBGSButton
-            // 
+            //
             this.blankBGSButton.Image = global::DSPRE.Properties.Resources.muteIcon;
             this.blankBGSButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.blankBGSButton.Location = new System.Drawing.Point(344, 112);
@@ -1485,9 +1485,9 @@
             this.blankBGSButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.blankBGSButton.UseVisualStyleBackColor = true;
             this.blankBGSButton.Click += new System.EventHandler(this.soundPlatesBlankButton_Click);
-            // 
+            //
             // BGSSizeLBL
-            // 
+            //
             this.BGSSizeLBL.AutoSize = true;
             this.BGSSizeLBL.BackColor = System.Drawing.Color.Transparent;
             this.BGSSizeLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -1497,9 +1497,9 @@
             this.BGSSizeLBL.Size = new System.Drawing.Size(84, 16);
             this.BGSSizeLBL.TabIndex = 33;
             this.BGSSizeLBL.Text = "BGSSizeLBL";
-            // 
+            //
             // bgsDataLBL
-            // 
+            //
             this.bgsDataLBL.AutoSize = true;
             this.bgsDataLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.bgsDataLBL.Location = new System.Drawing.Point(7, 9);
@@ -1507,9 +1507,9 @@
             this.bgsDataLBL.Size = new System.Drawing.Size(73, 16);
             this.bgsDataLBL.TabIndex = 32;
             this.bgsDataLBL.Text = "BGS Data: ";
-            // 
+            //
             // unsupportedBGSEditLBL
-            // 
+            //
             this.unsupportedBGSEditLBL.AutoSize = true;
             this.unsupportedBGSEditLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.unsupportedBGSEditLBL.Location = new System.Drawing.Point(73, 266);
@@ -1519,9 +1519,9 @@
             this.unsupportedBGSEditLBL.Text = "DSPRE cannot edit nor create Background Sound Files.\r\nPlease use Trifindo\'s Pokem" +
     "on DS Map Studio.\r\n";
             this.unsupportedBGSEditLBL.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
+            //
             // soundPlatesImportButton
-            // 
+            //
             this.soundPlatesImportButton.Image = global::DSPRE.Properties.Resources.importArrow;
             this.soundPlatesImportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.soundPlatesImportButton.Location = new System.Drawing.Point(344, 10);
@@ -1532,9 +1532,9 @@
             this.soundPlatesImportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.soundPlatesImportButton.UseVisualStyleBackColor = true;
             this.soundPlatesImportButton.Click += new System.EventHandler(this.soundPlatesImportButton_Click);
-            // 
+            //
             // soundPlatesExportButton
-            // 
+            //
             this.soundPlatesExportButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.soundPlatesExportButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.soundPlatesExportButton.Location = new System.Drawing.Point(344, 55);
@@ -1545,9 +1545,9 @@
             this.soundPlatesExportButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.soundPlatesExportButton.UseVisualStyleBackColor = true;
             this.soundPlatesExportButton.Click += new System.EventHandler(this.soundPlatesExportButton_Click);
-            // 
+            //
             // MapEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.flowLayoutPanel1);
@@ -1630,7 +1630,7 @@
         private System.Windows.Forms.Button exportCurrentMapBinButton;
         private System.Windows.Forms.Button saveMapButton;
         private System.Windows.Forms.Panel mapRenderPanel;
-        public Tao.Platform.Windows.SimpleOpenGlControl mapOpenGlControl;
+        public DSPRE.GLControl2 mapOpenGlControl;
         private System.Windows.Forms.PictureBox movPictureBox;
         private System.Windows.Forms.Label label26;
         public System.Windows.Forms.ComboBox buildTextureComboBox;
