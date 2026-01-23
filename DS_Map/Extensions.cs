@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.ComponentModel;
 using OpenTK.GLControl;
+using OpenTK.Windowing.Common;
 
 namespace DSPRE
 {
@@ -179,8 +180,19 @@ namespace DSPRE
     public class GLControl2 : GLControl
     {
         private bool designMode;
+        private bool contextInitialized = false;
 
-        public GLControl2() : base()
+        private static GLControlSettings CreateSettings()
+        {
+            return new GLControlSettings
+            {
+                API = ContextAPI.OpenGL,
+                Profile = ContextProfile.Compatability,
+                Flags = ContextFlags.Default
+            };
+        }
+
+        public GLControl2() : base(CreateSettings())
         {
             designMode = LicenseManager.UsageMode == LicenseUsageMode.Designtime;
         }
@@ -195,6 +207,17 @@ namespace DSPRE
         public byte ColorBits { get; set; } = 32;
         public byte DepthBits { get; set; } = 24;
         public byte StencilBits { get; set; } = 0;
+
+        public bool IsContextInitialized => contextInitialized;
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            if (!DesignMode && !contextInitialized)
+            {
+                InitializeContexts();
+            }
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -218,7 +241,22 @@ namespace DSPRE
 
         public void InitializeContexts()
         {
+            if (DesignMode || !IsHandleCreated)
+                return;
+
+            if (contextInitialized)
+                return;
+
             MakeCurrent();
+            contextInitialized = true;
+        }
+
+        public void EnsureContext()
+        {
+            if (!contextInitialized)
+                InitializeContexts();
+            else
+                MakeCurrent();
         }
     }
 }

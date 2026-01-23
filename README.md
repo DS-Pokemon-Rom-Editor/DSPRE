@@ -433,7 +433,9 @@ Apply patches to expand ROM capabilities:
 
 ### Requirements
 - Windows 7 or later
-- .NET Framework 4.8
+- .NET 8.0 Desktop Runtime ([download](https://dotnet.microsoft.com/download/dotnet/8.0))
+
+> **Note:** DSPRE was migrated from .NET Framework 4.8 to .NET 8. The HelixToolkit.Wpf dependency (used for OBJ model export) still targets .NET Framework but works via .NET's compatibility layer.
 
 ### Download
 1. Download the latest release from [GitHub Releases](https://github.com/DS-Pokemon-Rom-Editor/DSPRE/releases)
@@ -475,15 +477,15 @@ These improvements were made compared to the original DSPRE by Nomura:
 ## Development Guide
 
 ### Prerequisites
-- Visual Studio 2019 or later
-- .NET Framework 4.8 SDK
+- Visual Studio 2022 or later
+- .NET 8.0 SDK
 - Git
 
 ### Building from Source
 ```powershell
 git clone https://github.com/DS-Pokemon-Rom-Editor/DSPRE.git
 cd DSPRE
-msbuild DSPRE.sln /p:Configuration=Release
+dotnet build DS_Map.sln -c Release
 ```
 
 ### Solution Structure

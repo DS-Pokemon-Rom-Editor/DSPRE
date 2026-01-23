@@ -30,7 +30,7 @@ namespace DSPRE.Editors
 
         #region Map Editor
 
-        #region Variables & Constants 
+        #region Variables & Constants
         public const int mapEditorSquareSize = 19;
 
         /* Map Rotation vars */
@@ -119,7 +119,7 @@ namespace DSPRE.Editors
             }
             catch { }
         }
-        
+
         private void ScaleTranslateRotateBuilding(Building building)
         {
             float fullXcoord = building.xPosition + building.xFraction / 65536f;
@@ -175,7 +175,7 @@ namespace DSPRE.Editors
             Gl.glClear(Gl.GL_COLOR_BUFFER_BIT | Gl.GL_DEPTH_BUFFER_BIT);
         }
         #endregion
-        public void SetupMapEditor(MainProgram parent, bool force=false)
+        public void SetupMapEditor(MainProgram parent, bool force = false)
         {
             mapOpenGlControl.InitializeContexts();
             mapOpenGlControl.MakeCurrent();
@@ -796,7 +796,7 @@ namespace DSPRE.Editors
                 currentMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(interiorbldRadioButton.Checked)); // Load building nsbmd
                 if (buildTextureComboBox.SelectedIndex > 0)
                 {
-                    MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures                
+                    MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures
                 }
             }
 
@@ -1103,7 +1103,7 @@ namespace DSPRE.Editors
             for (int i = 0; i < currentMapFile.buildings.Count; i++)
             {
                 currentMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(interiorbldRadioButton.Checked)); // Load building nsbmd
-                MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures                
+                MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures
             }
 
             Helpers.RenderMap(ref mapRenderer, ref buildingsRenderer, ref currentMapFile, ang, dist, elev, perspective, mapOpenGlControl.Width, mapOpenGlControl.Height, mapTexturesOn, bldTexturesOn);
@@ -1134,7 +1134,7 @@ namespace DSPRE.Editors
             for (int i = 0; i < currentMapFile.buildings.Count; i++)
             {
                 currentMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(interiorbldRadioButton.Checked)); // Load building nsbmd
-                MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures                
+                MW_LoadModelTextures(currentMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, buildTextureComboBox.SelectedIndex - 1); // Load building textures
             }
 
             /* Render the map */
@@ -1238,6 +1238,7 @@ namespace DSPRE.Editors
         #region Subroutines
         private Bitmap GrabMapScreenshot(int width, int height)
         {
+            mapOpenGlControl.EnsureContext();
             Bitmap bmp = new Bitmap(width, height);
             System.Drawing.Imaging.BitmapData data = bmp.LockBits(new Rectangle(0, 0, width, height), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Gl.glReadPixels(0, 0, width, height, Gl.GL_BGR, Gl.GL_UNSIGNED_BYTE, data.Scan0);
@@ -1444,7 +1445,7 @@ namespace DSPRE.Editors
         }
         private void FloodFillUtil(byte[,] screen, int x, int y, byte prevC, byte newC, int sizeX, int sizeY)
         {
-            // Base cases 
+            // Base cases
             if (x < 0 || x >= sizeX || y < 0 || y >= sizeY)
             {
                 return;
@@ -1455,10 +1456,10 @@ namespace DSPRE.Editors
                 return;
             }
 
-            // Replace the color at (x, y) 
+            // Replace the color at (x, y)
             screen[y, x] = newC;
 
-            // Recur for north, east, south and west 
+            // Recur for north, east, south and west
             FloodFillUtil(screen, x + 1, y, prevC, newC, sizeX, sizeY);
             FloodFillUtil(screen, x - 1, y, prevC, newC, sizeX, sizeY);
             FloodFillUtil(screen, x, y + 1, prevC, newC, sizeX, sizeY);
@@ -1543,7 +1544,7 @@ namespace DSPRE.Editors
                     paintPen = new Pen(Color.FromArgb(Transparency, Color.Red));
                     paintBrush = new SolidBrush(Color.FromArgb(Transparency, Color.Red));
                     break;
-                default: // 0x00 - Walkeable               
+                default: // 0x00 - Walkeable
                     paintPen = new Pen(Color.FromArgb(32, Color.White));
                     paintBrush = new SolidBrush(Color.FromArgb(32, Color.White));
                     break;
@@ -1768,7 +1769,7 @@ namespace DSPRE.Editors
 
             if (selectCollisionPanel.BackColor == Color.MidnightBlue)
             {
-                currentMapFile.collisions = new byte[32, 32]; // Set all collision bytes to clear (0x0)               
+                currentMapFile.collisions = new byte[32, 32]; // Set all collision bytes to clear (0x0)
             }
             else
             {
