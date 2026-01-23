@@ -1,6 +1,6 @@
 ﻿namespace MKDS_Course_Editor.Export3DTools
 {
-    using OpenTK;
+    using OpenTK.Mathematics;
     using System;
     using System.Collections.Generic;
 
@@ -35,4 +35,3 @@
         }
     }
 }
-

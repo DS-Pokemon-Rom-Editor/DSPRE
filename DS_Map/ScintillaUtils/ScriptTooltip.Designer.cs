@@ -1,6 +1,8 @@
 ﻿
-namespace DSPRE.ScintillaUtils {
-    partial class ScriptTooltip {
+namespace DSPRE.ScintillaUtils
+{
+    partial class ScriptTooltip
+    {
         /// <summary>
         /// Required designer variable.
         /// </summary>
@@ -10,8 +12,10 @@ namespace DSPRE.ScintillaUtils {
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing) {
-            if (disposing && (components != null)) {
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
                 components.Dispose();
             }
             base.Dispose(disposing);
@@ -23,14 +27,15 @@ namespace DSPRE.ScintillaUtils {
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent() {
+        private void InitializeComponent()
+        {
             this.panel1 = new System.Windows.Forms.Panel();
             this.ctrl = new ScintillaNET.Scintilla();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // panel1
-            // 
+            //
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(47)))), ((int)(((byte)(47)))), ((int)(((byte)(47)))));
             this.panel1.Controls.Add(this.ctrl);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -39,16 +44,16 @@ namespace DSPRE.ScintillaUtils {
             this.panel1.Padding = new System.Windows.Forms.Padding(15);
             this.panel1.Size = new System.Drawing.Size(326, 126);
             this.panel1.TabIndex = 1;
-            // 
+            //
             // ctrl
-            // 
-            this.ctrl.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            //
+            this.ctrl.BorderStyle = ScintillaNET.BorderStyle.None;
             this.ctrl.CaretPeriod = 500;
             this.ctrl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ctrl.EdgeColor = System.Drawing.Color.White;
             this.ctrl.EdgeMode = ScintillaNET.EdgeMode.MultiLine;
             this.ctrl.HScrollBar = false;
-            this.ctrl.Lexer = ScintillaNET.Lexer.Cpp;
+            this.ctrl.LexerName = "cpp";
             this.ctrl.Location = new System.Drawing.Point(15, 15);
             this.ctrl.Margin = new System.Windows.Forms.Padding(0);
             this.ctrl.Margins.Capacity = 0;
@@ -65,9 +70,9 @@ namespace DSPRE.ScintillaUtils {
             this.ctrl.VScrollBar = false;
             this.ctrl.WrapIndentMode = ScintillaNET.WrapIndentMode.Same;
             this.ctrl.WrapMode = ScintillaNET.WrapMode.Word;
-            // 
+            //
             // ScriptTooltip
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(47)))), ((int)(((byte)(47)))), ((int)(((byte)(47)))));

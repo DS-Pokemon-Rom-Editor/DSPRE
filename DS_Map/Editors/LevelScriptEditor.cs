@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Messaging;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
@@ -54,7 +53,7 @@ namespace DSPRE.Editors
             }
         }
 
-        public int AddLevelScript() 
+        public int AddLevelScript()
         {
             // need to add a script file through the script editor to keep them in sync
             int newScriptID = _parent.scriptEditor.AddScriptFile();

@@ -12,7 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.UI.WebControls.WebParts;
+
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
@@ -36,7 +36,7 @@ namespace DSPRE.Editors
         public List<string> internalNames;
         public List<string> headerListBoxNames;
         #endregion
-        public void SetupHeaderEditor(MainProgram parent, bool force=false)
+        public void SetupHeaderEditor(MainProgram parent, bool force = false)
         {
 
             if (isHeaderEditorReady && !force) return;
