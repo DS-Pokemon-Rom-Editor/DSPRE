@@ -2107,10 +2107,11 @@
             //
             // eventPictureBox
             //
-            this.eventPictureBox.BackColor = System.Drawing.Color.White;
-            this.eventPictureBox.Location = new System.Drawing.Point(0, 0);
+            this.eventPictureBox.BackColor = System.Drawing.Color.Transparent;
+            this.eventPictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.eventPictureBox.Name = "eventPictureBox";
-            this.eventPictureBox.Size = new System.Drawing.Size(544, 544);
+            this.eventPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.eventPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.eventPictureBox.TabIndex = 3;
             this.eventPictureBox.TabStop = false;
             this.eventPictureBox.Click += new System.EventHandler(this.eventPictureBox_Click);

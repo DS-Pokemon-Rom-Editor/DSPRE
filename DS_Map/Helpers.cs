@@ -527,7 +527,7 @@ namespace DSPRE
             }
 
             string texturePath = Filesystem.GetPath(textureFolder, fileID);
-            
+
             try
             {
                 model.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(System.IO.File.ReadAllBytes(texturePath)), out model.Textures, out model.Palettes);
@@ -590,6 +590,11 @@ namespace DSPRE
 
         public static void RenderMap(ref NSBMDGlRenderer mapRenderer, ref NSBMDGlRenderer buildingsRenderer, ref MapFile mapFile, float ang, float dist, float elev, float perspective, int width, int height, bool mapTexturesON = true, bool buildingTexturesON = true)
         {
+            RenderMap(ref mapRenderer, ref buildingsRenderer, ref mapFile, ang, dist, elev, perspective, width, height, mapTexturesON, buildingTexturesON, EditorPanels.mapEditor.mapOpenGlControl);
+        }
+
+        public static void RenderMap(ref NSBMDGlRenderer mapRenderer, ref NSBMDGlRenderer buildingsRenderer, ref MapFile mapFile, float ang, float dist, float elev, float perspective, int width, int height, bool mapTexturesON, bool buildingTexturesON, GLControl2 targetControl)
+        {
             #region Useless variables that the rendering API still needs
             MKDS_Course_Editor.NSBTA.NSBTA.NSBTA_File ani = new MKDS_Course_Editor.NSBTA.NSBTA.NSBTA_File();
             MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File tp = new MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File();
@@ -597,9 +602,10 @@ namespace DSPRE
             int[] aniframeS = new int[0];
             #endregion
 
+            targetControl.EnsureContext();
+
             /* Invalidate drawing surfaces */
-            EditorPanels.mapEditor.mapOpenGlControl.Invalidate();
-            EditorPanels.eventEditor.eventOpenGlControl.Invalidate();
+            targetControl.Invalidate();
 
             /* Adjust rendering settings */
             SetupRenderer(ang, dist, elev, perspective, width, height);
@@ -650,6 +656,12 @@ namespace DSPRE
 
         public static Bitmap GrabMapScreenshot(int width, int height)
         {
+            return GrabMapScreenshot(width, height, EditorPanels.mapEditor.mapOpenGlControl);
+        }
+
+        public static Bitmap GrabMapScreenshot(int width, int height, GLControl2 targetControl)
+        {
+            targetControl.EnsureContext();
             Bitmap bmp = new Bitmap(width, height);
             System.Drawing.Imaging.BitmapData data = bmp.LockBits(new Rectangle(0, 0, width, height), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Gl.glReadPixels(0, 0, width, height, Gl.GL_BGR, Gl.GL_UNSIGNED_BYTE, data.Scan0);

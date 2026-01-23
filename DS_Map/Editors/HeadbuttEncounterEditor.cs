@@ -401,8 +401,8 @@ namespace DSPRE.Editors
                 Helpers.MW_LoadModelTextures(building, areaData.buildingsTileset); // Load building textures
             }
 
-            Helpers.RenderMap(ref mapRenderer, ref buildingsRenderer, ref currentMapFile, ang, dist, elev, perspective, openGlControl.Width, openGlControl.Height);
-            return Helpers.GrabMapScreenshot(width, height);
+            Helpers.RenderMap(ref mapRenderer, ref buildingsRenderer, ref currentMapFile, ang, dist, elev, perspective, openGlControl.Width, openGlControl.Height, true, true, openGlControl);
+            return Helpers.GrabMapScreenshot(width, height, openGlControl);
         }
 
         private void MarkTrees(Graphics g, BindingList<HeadbuttTreeGroup> treeGroups, HeadbuttTree.Types treeType)

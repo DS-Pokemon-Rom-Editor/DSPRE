@@ -2,12 +2,12 @@
 {
     partial class HeaderEditor
     {
-        /// <summary> 
+        /// <summary>
         /// Variable nécessaire au concepteur.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary> 
+        /// <summary>
         /// Nettoyage des ressources utilisées.
         /// </summary>
         /// <param name="disposing">true si les ressources managées doivent être supprimées ; sinon, false.</param>
@@ -22,8 +22,8 @@
 
         #region Code généré par le Concepteur de composants
 
-        /// <summary> 
-        /// Méthode requise pour la prise en charge du concepteur - ne modifiez pas 
+        /// <summary>
+        /// Méthode requise pour la prise en charge du concepteur - ne modifiez pas
         /// le contenu de cette méthode avec l'éditeur de code.
         /// </summary>
         private void InitializeComponent()
@@ -174,9 +174,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.cameraPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.weatherPictureBox)).BeginInit();
             this.SuspendLayout();
-            // 
+            //
             // removeLastHeaderBTN
-            // 
+            //
             this.removeLastHeaderBTN.Enabled = false;
             this.removeLastHeaderBTN.Image = global::DSPRE.Properties.Resources.deleteIcon;
             this.removeLastHeaderBTN.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -187,9 +187,9 @@
             this.removeLastHeaderBTN.Text = "Remove Last";
             this.removeLastHeaderBTN.UseVisualStyleBackColor = true;
             this.removeLastHeaderBTN.Click += new System.EventHandler(this.removeLastHeaderBTN_Click);
-            // 
+            //
             // addHeaderBTN
-            // 
+            //
             this.addHeaderBTN.Enabled = false;
             this.addHeaderBTN.Image = global::DSPRE.Properties.Resources.addIcon;
             this.addHeaderBTN.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -200,9 +200,9 @@
             this.addHeaderBTN.Text = "Add Header";
             this.addHeaderBTN.UseVisualStyleBackColor = true;
             this.addHeaderBTN.Click += new System.EventHandler(this.addHeaderBTN_Click);
-            // 
+            //
             // worldmapCoordsGroupBox
-            // 
+            //
             this.worldmapCoordsGroupBox.Controls.Add(this.worldmapCoordsPasteButton);
             this.worldmapCoordsGroupBox.Controls.Add(this.label1);
             this.worldmapCoordsGroupBox.Controls.Add(this.worldmapCoordsCopyButton);
@@ -216,9 +216,9 @@
             this.worldmapCoordsGroupBox.TabIndex = 34;
             this.worldmapCoordsGroupBox.TabStop = false;
             this.worldmapCoordsGroupBox.Text = "Worldmap";
-            // 
+            //
             // worldmapCoordsPasteButton
-            // 
+            //
             this.worldmapCoordsPasteButton.Enabled = false;
             this.worldmapCoordsPasteButton.Image = ((System.Drawing.Image)(resources.GetObject("worldmapCoordsPasteButton.Image")));
             this.worldmapCoordsPasteButton.Location = new System.Drawing.Point(43, 93);
@@ -227,18 +227,18 @@
             this.worldmapCoordsPasteButton.TabIndex = 49;
             this.worldmapCoordsPasteButton.UseVisualStyleBackColor = true;
             this.worldmapCoordsPasteButton.Click += new System.EventHandler(this.worldmapCoordsPasteButton_Click);
-            // 
+            //
             // label1
-            // 
+            //
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(22, 52);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(14, 13);
             this.label1.TabIndex = 27;
             this.label1.Text = "Y";
-            // 
+            //
             // worldmapCoordsCopyButton
-            // 
+            //
             this.worldmapCoordsCopyButton.Image = ((System.Drawing.Image)(resources.GetObject("worldmapCoordsCopyButton.Image")));
             this.worldmapCoordsCopyButton.Location = new System.Drawing.Point(6, 93);
             this.worldmapCoordsCopyButton.Name = "worldmapCoordsCopyButton";
@@ -246,9 +246,9 @@
             this.worldmapCoordsCopyButton.TabIndex = 50;
             this.worldmapCoordsCopyButton.UseVisualStyleBackColor = true;
             this.worldmapCoordsCopyButton.Click += new System.EventHandler(this.worldmapCoordsCopyButton_Click);
-            // 
+            //
             // worldmapYCoordUpDown
-            // 
+            //
             this.worldmapYCoordUpDown.Location = new System.Drawing.Point(25, 67);
             this.worldmapYCoordUpDown.Maximum = new decimal(new int[] {
             63,
@@ -259,18 +259,18 @@
             this.worldmapYCoordUpDown.Size = new System.Drawing.Size(38, 20);
             this.worldmapYCoordUpDown.TabIndex = 26;
             this.worldmapYCoordUpDown.ValueChanged += new System.EventHandler(this.worldmapYCoordUpDown_ValueChanged);
-            // 
+            //
             // label36
-            // 
+            //
             this.label36.AutoSize = true;
             this.label36.Location = new System.Drawing.Point(22, 14);
             this.label36.Name = "label36";
             this.label36.Size = new System.Drawing.Size(14, 13);
             this.label36.TabIndex = 25;
             this.label36.Text = "X";
-            // 
+            //
             // worldmapXCoordUpDown
-            // 
+            //
             this.worldmapXCoordUpDown.Location = new System.Drawing.Point(25, 29);
             this.worldmapXCoordUpDown.Maximum = new decimal(new int[] {
             63,
@@ -281,9 +281,9 @@
             this.worldmapXCoordUpDown.Size = new System.Drawing.Size(38, 20);
             this.worldmapXCoordUpDown.TabIndex = 24;
             this.worldmapXCoordUpDown.ValueChanged += new System.EventHandler(this.worldmapXCoordUpDown_ValueChanged);
-            // 
+            //
             // groupBox18
-            // 
+            //
             this.groupBox18.Controls.Add(this.openWildEditorWithIdButton);
             this.groupBox18.Controls.Add(this.pasteWildEncountersButton);
             this.groupBox18.Controls.Add(this.wildPokeUpDown);
@@ -294,9 +294,9 @@
             this.groupBox18.TabIndex = 51;
             this.groupBox18.TabStop = false;
             this.groupBox18.Text = "Wild Pokémon";
-            // 
+            //
             // openWildEditorWithIdButton
-            // 
+            //
             this.openWildEditorWithIdButton.Location = new System.Drawing.Point(10, 46);
             this.openWildEditorWithIdButton.Name = "openWildEditorWithIdButton";
             this.openWildEditorWithIdButton.Size = new System.Drawing.Size(73, 41);
@@ -304,9 +304,9 @@
             this.openWildEditorWithIdButton.Text = "Open Editor";
             this.openWildEditorWithIdButton.UseVisualStyleBackColor = true;
             this.openWildEditorWithIdButton.Click += new System.EventHandler(this.openWildEditorWithIdButtonClick);
-            // 
+            //
             // pasteWildEncountersButton
-            // 
+            //
             this.pasteWildEncountersButton.Enabled = false;
             this.pasteWildEncountersButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteWildEncountersButton.Image")));
             this.pasteWildEncountersButton.Location = new System.Drawing.Point(48, 91);
@@ -315,9 +315,9 @@
             this.pasteWildEncountersButton.TabIndex = 42;
             this.pasteWildEncountersButton.UseVisualStyleBackColor = true;
             this.pasteWildEncountersButton.Click += new System.EventHandler(this.pasteWildEncountersButton_Click);
-            // 
+            //
             // wildPokeUpDown
-            // 
+            //
             this.wildPokeUpDown.Location = new System.Drawing.Point(11, 20);
             this.wildPokeUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -328,9 +328,9 @@
             this.wildPokeUpDown.Size = new System.Drawing.Size(72, 20);
             this.wildPokeUpDown.TabIndex = 24;
             this.wildPokeUpDown.ValueChanged += new System.EventHandler(this.wildPokeUpDown_ValueChanged);
-            // 
+            //
             // copyWildEncountersButton
-            // 
+            //
             this.copyWildEncountersButton.Image = ((System.Drawing.Image)(resources.GetObject("copyWildEncountersButton.Image")));
             this.copyWildEncountersButton.Location = new System.Drawing.Point(10, 91);
             this.copyWildEncountersButton.Name = "copyWildEncountersButton";
@@ -338,9 +338,9 @@
             this.copyWildEncountersButton.TabIndex = 41;
             this.copyWildEncountersButton.UseVisualStyleBackColor = true;
             this.copyWildEncountersButton.Click += new System.EventHandler(this.copyWildEncountersButton_Click);
-            // 
+            //
             // importHeaderFromFileButton
-            // 
+            //
             this.importHeaderFromFileButton.Image = global::DSPRE.Properties.Resources.importArrow;
             this.importHeaderFromFileButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.importHeaderFromFileButton.Location = new System.Drawing.Point(912, 518);
@@ -351,9 +351,9 @@
             this.importHeaderFromFileButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.importHeaderFromFileButton.UseVisualStyleBackColor = true;
             this.importHeaderFromFileButton.Click += new System.EventHandler(this.importHeaderFromFileButton_Click);
-            // 
+            //
             // exportHeaderToFileButton
-            // 
+            //
             this.exportHeaderToFileButton.Image = global::DSPRE.Properties.Resources.exportArrow;
             this.exportHeaderToFileButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.exportHeaderToFileButton.Location = new System.Drawing.Point(992, 518);
@@ -364,9 +364,9 @@
             this.exportHeaderToFileButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.exportHeaderToFileButton.UseVisualStyleBackColor = true;
             this.exportHeaderToFileButton.Click += new System.EventHandler(this.exportHeaderToFileButton_Click);
-            // 
+            //
             // pasteHeaderButton
-            // 
+            //
             this.pasteHeaderButton.Enabled = false;
             this.pasteHeaderButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteHeaderButton.Image")));
             this.pasteHeaderButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -378,9 +378,9 @@
             this.pasteHeaderButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.pasteHeaderButton.UseVisualStyleBackColor = true;
             this.pasteHeaderButton.Click += new System.EventHandler(this.pasteHeaderButton_Click);
-            // 
+            //
             // groupBox10
-            // 
+            //
             this.groupBox10.Controls.Add(this.pasteTextsButton);
             this.groupBox10.Controls.Add(this.openMessageFileButton);
             this.groupBox10.Controls.Add(this.copyTextsButton);
@@ -397,9 +397,9 @@
             this.groupBox10.TabIndex = 31;
             this.groupBox10.TabStop = false;
             this.groupBox10.Text = "Events && Texts";
-            // 
+            //
             // pasteTextsButton
-            // 
+            //
             this.pasteTextsButton.Enabled = false;
             this.pasteTextsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteTextsButton.Image")));
             this.pasteTextsButton.Location = new System.Drawing.Point(616, 28);
@@ -408,9 +408,9 @@
             this.pasteTextsButton.TabIndex = 33;
             this.pasteTextsButton.UseVisualStyleBackColor = true;
             this.pasteTextsButton.Click += new System.EventHandler(this.pasteTextsButton_Click);
-            // 
+            //
             // openMessageFileButton
-            // 
+            //
             this.openMessageFileButton.Location = new System.Drawing.Point(495, 27);
             this.openMessageFileButton.Name = "openMessageFileButton";
             this.openMessageFileButton.Size = new System.Drawing.Size(79, 40);
@@ -418,9 +418,9 @@
             this.openMessageFileButton.Text = "Open &Texts";
             this.openMessageFileButton.UseVisualStyleBackColor = true;
             this.openMessageFileButton.Click += new System.EventHandler(this.openTextArchiveButton_Click);
-            // 
+            //
             // copyTextsButton
-            // 
+            //
             this.copyTextsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyTextsButton.Image")));
             this.copyTextsButton.Location = new System.Drawing.Point(578, 29);
             this.copyTextsButton.Name = "copyTextsButton";
@@ -428,9 +428,9 @@
             this.copyTextsButton.TabIndex = 32;
             this.copyTextsButton.UseVisualStyleBackColor = true;
             this.copyTextsButton.Click += new System.EventHandler(this.copyTextsButton_Click);
-            // 
+            //
             // pasteEventsButton
-            // 
+            //
             this.pasteEventsButton.Enabled = false;
             this.pasteEventsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteEventsButton.Image")));
             this.pasteEventsButton.Location = new System.Drawing.Point(252, 29);
@@ -439,9 +439,9 @@
             this.pasteEventsButton.TabIndex = 31;
             this.pasteEventsButton.UseVisualStyleBackColor = true;
             this.pasteEventsButton.Click += new System.EventHandler(this.pasteEventsButton_Click);
-            // 
+            //
             // textFileUpDown
-            // 
+            //
             this.textFileUpDown.Location = new System.Drawing.Point(376, 36);
             this.textFileUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -452,9 +452,9 @@
             this.textFileUpDown.Size = new System.Drawing.Size(107, 20);
             this.textFileUpDown.TabIndex = 47;
             this.textFileUpDown.ValueChanged += new System.EventHandler(this.textFileUpDown_ValueChanged);
-            // 
+            //
             // copyEventsButton
-            // 
+            //
             this.copyEventsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyEventsButton.Image")));
             this.copyEventsButton.Location = new System.Drawing.Point(215, 29);
             this.copyEventsButton.Name = "copyEventsButton";
@@ -462,18 +462,18 @@
             this.copyEventsButton.TabIndex = 30;
             this.copyEventsButton.UseVisualStyleBackColor = true;
             this.copyEventsButton.Click += new System.EventHandler(this.copyEventsButton_Click);
-            // 
+            //
             // textLabel
-            // 
+            //
             this.textLabel.AutoSize = true;
             this.textLabel.Location = new System.Drawing.Point(374, 20);
             this.textLabel.Name = "textLabel";
             this.textLabel.Size = new System.Drawing.Size(80, 13);
             this.textLabel.TabIndex = 45;
             this.textLabel.Text = "Text Archive #:";
-            // 
+            //
             // openEventsButton
-            // 
+            //
             this.openEventsButton.Location = new System.Drawing.Point(133, 28);
             this.openEventsButton.Name = "openEventsButton";
             this.openEventsButton.Size = new System.Drawing.Size(79, 40);
@@ -481,18 +481,18 @@
             this.openEventsButton.Text = "Open &Events";
             this.openEventsButton.UseVisualStyleBackColor = true;
             this.openEventsButton.Click += new System.EventHandler(this.openEventsButton_Click);
-            // 
+            //
             // eventLabel
-            // 
+            //
             this.eventLabel.AutoSize = true;
             this.eventLabel.Location = new System.Drawing.Point(12, 20);
             this.eventLabel.Name = "eventLabel";
             this.eventLabel.Size = new System.Drawing.Size(67, 13);
             this.eventLabel.TabIndex = 43;
             this.eventLabel.Text = "Event File #:";
-            // 
+            //
             // eventFileUpDown
-            // 
+            //
             this.eventFileUpDown.Location = new System.Drawing.Point(14, 39);
             this.eventFileUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -503,9 +503,9 @@
             this.eventFileUpDown.Size = new System.Drawing.Size(107, 20);
             this.eventFileUpDown.TabIndex = 42;
             this.eventFileUpDown.ValueChanged += new System.EventHandler(this.eventFileUpDown_ValueChanged);
-            // 
+            //
             // groupBox4
-            // 
+            //
             this.groupBox4.Controls.Add(this.pasteAreaDataButton);
             this.groupBox4.Controls.Add(this.copyAreaDataButton);
             this.groupBox4.Controls.Add(this.pasteMatrixButton);
@@ -522,9 +522,9 @@
             this.groupBox4.TabIndex = 31;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Map matrix && Tileset";
-            // 
+            //
             // pasteAreaDataButton
-            // 
+            //
             this.pasteAreaDataButton.Enabled = false;
             this.pasteAreaDataButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteAreaDataButton.Image")));
             this.pasteAreaDataButton.Location = new System.Drawing.Point(239, 87);
@@ -533,9 +533,9 @@
             this.pasteAreaDataButton.TabIndex = 33;
             this.pasteAreaDataButton.UseVisualStyleBackColor = true;
             this.pasteAreaDataButton.Click += new System.EventHandler(this.pasteAreaDataButton_Click);
-            // 
+            //
             // copyAreaDataButton
-            // 
+            //
             this.copyAreaDataButton.Image = ((System.Drawing.Image)(resources.GetObject("copyAreaDataButton.Image")));
             this.copyAreaDataButton.Location = new System.Drawing.Point(201, 87);
             this.copyAreaDataButton.Name = "copyAreaDataButton";
@@ -543,9 +543,9 @@
             this.copyAreaDataButton.TabIndex = 32;
             this.copyAreaDataButton.UseVisualStyleBackColor = true;
             this.copyAreaDataButton.Click += new System.EventHandler(this.copyAreaDataButton_Click);
-            // 
+            //
             // pasteMatrixButton
-            // 
+            //
             this.pasteMatrixButton.Enabled = false;
             this.pasteMatrixButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteMatrixButton.Image")));
             this.pasteMatrixButton.Location = new System.Drawing.Point(239, 29);
@@ -554,9 +554,9 @@
             this.pasteMatrixButton.TabIndex = 31;
             this.pasteMatrixButton.UseVisualStyleBackColor = true;
             this.pasteMatrixButton.Click += new System.EventHandler(this.pasteMatrixButton_Click);
-            // 
+            //
             // openAreaDataButton
-            // 
+            //
             this.openAreaDataButton.Location = new System.Drawing.Point(118, 85);
             this.openAreaDataButton.Name = "openAreaDataButton";
             this.openAreaDataButton.Size = new System.Drawing.Size(79, 40);
@@ -564,9 +564,9 @@
             this.openAreaDataButton.Text = "Open &Area Data";
             this.openAreaDataButton.UseVisualStyleBackColor = true;
             this.openAreaDataButton.Click += new System.EventHandler(this.openAreaDataButton_Click);
-            // 
+            //
             // copyMatrixButton
-            // 
+            //
             this.copyMatrixButton.Image = ((System.Drawing.Image)(resources.GetObject("copyMatrixButton.Image")));
             this.copyMatrixButton.Location = new System.Drawing.Point(201, 29);
             this.copyMatrixButton.Name = "copyMatrixButton";
@@ -574,9 +574,9 @@
             this.copyMatrixButton.TabIndex = 30;
             this.copyMatrixButton.UseVisualStyleBackColor = true;
             this.copyMatrixButton.Click += new System.EventHandler(this.copyMatrixButton_Click);
-            // 
+            //
             // openMatrixButton
-            // 
+            //
             this.openMatrixButton.Location = new System.Drawing.Point(118, 28);
             this.openMatrixButton.Name = "openMatrixButton";
             this.openMatrixButton.Size = new System.Drawing.Size(79, 39);
@@ -584,18 +584,18 @@
             this.openMatrixButton.Text = "Open &Matrix";
             this.openMatrixButton.UseVisualStyleBackColor = true;
             this.openMatrixButton.Click += new System.EventHandler(this.openMatrixButton_Click);
-            // 
+            //
             // areaDataLabel
-            // 
+            //
             this.areaDataLabel.AutoSize = true;
             this.areaDataLabel.Location = new System.Drawing.Point(10, 80);
             this.areaDataLabel.Name = "areaDataLabel";
             this.areaDataLabel.Size = new System.Drawing.Size(56, 13);
             this.areaDataLabel.TabIndex = 27;
             this.areaDataLabel.Text = "Area data:";
-            // 
+            //
             // areaDataUpDown
-            // 
+            //
             this.areaDataUpDown.Location = new System.Drawing.Point(13, 98);
             this.areaDataUpDown.Maximum = new decimal(new int[] {
             255,
@@ -606,18 +606,18 @@
             this.areaDataUpDown.Size = new System.Drawing.Size(93, 20);
             this.areaDataUpDown.TabIndex = 26;
             this.areaDataUpDown.ValueChanged += new System.EventHandler(this.areaDataUpDown_ValueChanged);
-            // 
+            //
             // matrixLabel
-            // 
+            //
             this.matrixLabel.AutoSize = true;
             this.matrixLabel.Location = new System.Drawing.Point(10, 23);
             this.matrixLabel.Name = "matrixLabel";
             this.matrixLabel.Size = new System.Drawing.Size(53, 13);
             this.matrixLabel.TabIndex = 25;
             this.matrixLabel.Text = "Matrix no.";
-            // 
+            //
             // matrixUpDown
-            // 
+            //
             this.matrixUpDown.Location = new System.Drawing.Point(13, 40);
             this.matrixUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -628,9 +628,9 @@
             this.matrixUpDown.Size = new System.Drawing.Size(93, 20);
             this.matrixUpDown.TabIndex = 24;
             this.matrixUpDown.ValueChanged += new System.EventHandler(this.matrixUpDown_ValueChanged);
-            // 
+            //
             // groupBox9
-            // 
+            //
             this.groupBox9.Controls.Add(this.resetButton);
             this.groupBox9.Controls.Add(this.searchHeaderButton);
             this.groupBox9.Controls.Add(this.searchLocationTextBox);
@@ -640,9 +640,9 @@
             this.groupBox9.TabIndex = 29;
             this.groupBox9.TabStop = false;
             this.groupBox9.Text = "Search Location Name:";
-            // 
+            //
             // resetButton
-            // 
+            //
             this.resetButton.Location = new System.Drawing.Point(161, 17);
             this.resetButton.Name = "resetButton";
             this.resetButton.Size = new System.Drawing.Size(47, 23);
@@ -650,9 +650,9 @@
             this.resetButton.Text = "Reset";
             this.resetButton.UseVisualStyleBackColor = true;
             this.resetButton.Click += new System.EventHandler(this.resetButton_Click);
-            // 
+            //
             // searchHeaderButton
-            // 
+            //
             this.searchHeaderButton.Location = new System.Drawing.Point(131, 17);
             this.searchHeaderButton.Name = "searchHeaderButton";
             this.searchHeaderButton.Size = new System.Drawing.Size(29, 23);
@@ -660,17 +660,17 @@
             this.searchHeaderButton.Text = "Go";
             this.searchHeaderButton.UseVisualStyleBackColor = true;
             this.searchHeaderButton.Click += new System.EventHandler(this.searchHeaderButton_Click);
-            // 
+            //
             // searchLocationTextBox
-            // 
+            //
             this.searchLocationTextBox.Location = new System.Drawing.Point(8, 19);
             this.searchLocationTextBox.Name = "searchLocationTextBox";
             this.searchLocationTextBox.Size = new System.Drawing.Size(119, 20);
             this.searchLocationTextBox.TabIndex = 0;
             this.searchLocationTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.searchHeaderTextBox_KeyPress);
-            // 
+            //
             // copyHeaderButton
-            // 
+            //
             this.copyHeaderButton.Image = ((System.Drawing.Image)(resources.GetObject("copyHeaderButton.Image")));
             this.copyHeaderButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.copyHeaderButton.Location = new System.Drawing.Point(912, 563);
@@ -681,9 +681,9 @@
             this.copyHeaderButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.copyHeaderButton.UseVisualStyleBackColor = true;
             this.copyHeaderButton.Click += new System.EventHandler(this.copyHeaderButton_Click);
-            // 
+            //
             // areaIconPictureBox
-            // 
+            //
             this.areaIconPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.areaIconPictureBox.Location = new System.Drawing.Point(912, 28);
             this.areaIconPictureBox.Name = "areaIconPictureBox";
@@ -691,18 +691,18 @@
             this.areaIconPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.areaIconPictureBox.TabIndex = 35;
             this.areaIconPictureBox.TabStop = false;
-            // 
+            //
             // areaImageLabel
-            // 
+            //
             this.areaImageLabel.AutoSize = true;
             this.areaImageLabel.Location = new System.Drawing.Point(909, 13);
             this.areaImageLabel.Name = "areaImageLabel";
             this.areaImageLabel.Size = new System.Drawing.Size(52, 13);
             this.areaImageLabel.TabIndex = 34;
             this.areaImageLabel.Text = "Area icon";
-            // 
+            //
             // nameGroupBox
-            // 
+            //
             this.nameGroupBox.Controls.Add(this.internalNameLenLabel);
             this.nameGroupBox.Controls.Add(this.pasteLocationNameButton);
             this.nameGroupBox.Controls.Add(this.copyLocationNameButton);
@@ -726,18 +726,18 @@
             this.nameGroupBox.TabIndex = 28;
             this.nameGroupBox.TabStop = false;
             this.nameGroupBox.Text = "Location Info";
-            // 
+            //
             // internalNameLenLabel
-            // 
+            //
             this.internalNameLenLabel.ForeColor = System.Drawing.Color.Green;
             this.internalNameLenLabel.Location = new System.Drawing.Point(434, 41);
             this.internalNameLenLabel.Name = "internalNameLenLabel";
             this.internalNameLenLabel.Size = new System.Drawing.Size(32, 16);
             this.internalNameLenLabel.TabIndex = 44;
             this.internalNameLenLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            // 
+            //
             // pasteLocationNameButton
-            // 
+            //
             this.pasteLocationNameButton.Enabled = false;
             this.pasteLocationNameButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteLocationNameButton.Image")));
             this.pasteLocationNameButton.Location = new System.Drawing.Point(215, 32);
@@ -746,9 +746,9 @@
             this.pasteLocationNameButton.TabIndex = 43;
             this.pasteLocationNameButton.UseVisualStyleBackColor = true;
             this.pasteLocationNameButton.Click += new System.EventHandler(this.pasteLocationNameButton_Click);
-            // 
+            //
             // copyLocationNameButton
-            // 
+            //
             this.copyLocationNameButton.Image = global::DSPRE.Properties.Resources.copyIcon;
             this.copyLocationNameButton.Location = new System.Drawing.Point(178, 32);
             this.copyLocationNameButton.Name = "copyLocationNameButton";
@@ -756,9 +756,9 @@
             this.copyLocationNameButton.TabIndex = 42;
             this.copyLocationNameButton.UseVisualStyleBackColor = true;
             this.copyLocationNameButton.Click += new System.EventHandler(this.copyLocationNameButton_Click);
-            // 
+            //
             // pasteInternalNameButton
-            // 
+            //
             this.pasteInternalNameButton.Enabled = false;
             this.pasteInternalNameButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteInternalNameButton.Image")));
             this.pasteInternalNameButton.Location = new System.Drawing.Point(511, 31);
@@ -767,9 +767,9 @@
             this.pasteInternalNameButton.TabIndex = 41;
             this.pasteInternalNameButton.UseVisualStyleBackColor = true;
             this.pasteInternalNameButton.Click += new System.EventHandler(this.pasteInternalNameButton_Click);
-            // 
+            //
             // copyInternalNameButton
-            // 
+            //
             this.copyInternalNameButton.Image = ((System.Drawing.Image)(resources.GetObject("copyInternalNameButton.Image")));
             this.copyInternalNameButton.Location = new System.Drawing.Point(474, 31);
             this.copyInternalNameButton.Name = "copyInternalNameButton";
@@ -777,9 +777,9 @@
             this.copyInternalNameButton.TabIndex = 40;
             this.copyInternalNameButton.UseVisualStyleBackColor = true;
             this.copyInternalNameButton.Click += new System.EventHandler(this.copyInternalNameButton_Click);
-            // 
+            //
             // pasteAreaIconButton
-            // 
+            //
             this.pasteAreaIconButton.Enabled = false;
             this.pasteAreaIconButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteAreaIconButton.Image")));
             this.pasteAreaIconButton.Location = new System.Drawing.Point(511, 91);
@@ -788,9 +788,9 @@
             this.pasteAreaIconButton.TabIndex = 39;
             this.pasteAreaIconButton.UseVisualStyleBackColor = true;
             this.pasteAreaIconButton.Click += new System.EventHandler(this.pasteAreaIconButton_Click);
-            // 
+            //
             // copyAreaIconButton
-            // 
+            //
             this.copyAreaIconButton.Image = ((System.Drawing.Image)(resources.GetObject("copyAreaIconButton.Image")));
             this.copyAreaIconButton.Location = new System.Drawing.Point(474, 91);
             this.copyAreaIconButton.Name = "copyAreaIconButton";
@@ -798,9 +798,9 @@
             this.copyAreaIconButton.TabIndex = 38;
             this.copyAreaIconButton.UseVisualStyleBackColor = true;
             this.copyAreaIconButton.Click += new System.EventHandler(this.copyAreaIconButton_Click);
-            // 
+            //
             // pasteAreaSettingsButton
-            // 
+            //
             this.pasteAreaSettingsButton.Enabled = false;
             this.pasteAreaSettingsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteAreaSettingsButton.Image")));
             this.pasteAreaSettingsButton.Location = new System.Drawing.Point(215, 91);
@@ -809,18 +809,18 @@
             this.pasteAreaSettingsButton.TabIndex = 37;
             this.pasteAreaSettingsButton.UseVisualStyleBackColor = true;
             this.pasteAreaSettingsButton.Click += new System.EventHandler(this.pasteAreaSettingsButton_Click);
-            // 
+            //
             // areaSettingsLabel
-            // 
+            //
             this.areaSettingsLabel.AutoSize = true;
             this.areaSettingsLabel.Location = new System.Drawing.Point(11, 86);
             this.areaSettingsLabel.Name = "areaSettingsLabel";
             this.areaSettingsLabel.Size = new System.Drawing.Size(73, 13);
             this.areaSettingsLabel.TabIndex = 27;
             this.areaSettingsLabel.Text = "Area Settings:";
-            // 
+            //
             // copyAreaSettingsButton
-            // 
+            //
             this.copyAreaSettingsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyAreaSettingsButton.Image")));
             this.copyAreaSettingsButton.Location = new System.Drawing.Point(178, 91);
             this.copyAreaSettingsButton.Name = "copyAreaSettingsButton";
@@ -828,45 +828,45 @@
             this.copyAreaSettingsButton.TabIndex = 36;
             this.copyAreaSettingsButton.UseVisualStyleBackColor = true;
             this.copyAreaSettingsButton.Click += new System.EventHandler(this.copyAreaSettingsButton_Click);
-            // 
+            //
             // label3
-            // 
+            //
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(11, 24);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(79, 13);
             this.label3.TabIndex = 28;
             this.label3.Text = "Location Name";
-            // 
+            //
             // label14
-            // 
+            //
             this.label14.AutoSize = true;
             this.label14.Location = new System.Drawing.Point(307, 24);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(71, 13);
             this.label14.TabIndex = 27;
             this.label14.Text = "Internal name";
-            // 
+            //
             // internalNameBox
-            // 
+            //
             this.internalNameBox.Location = new System.Drawing.Point(310, 40);
             this.internalNameBox.MaxLength = 16;
             this.internalNameBox.Name = "internalNameBox";
             this.internalNameBox.Size = new System.Drawing.Size(157, 20);
             this.internalNameBox.TabIndex = 6;
             this.internalNameBox.TextChanged += new System.EventHandler(this.internalNameBox_TextChanged);
-            // 
+            //
             // label2
-            // 
+            //
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(307, 86);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(55, 13);
             this.label2.TabIndex = 4;
             this.label2.Text = "Area icon:";
-            // 
+            //
             // areaIconComboBox
-            // 
+            //
             this.areaIconComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.areaIconComboBox.FormattingEnabled = true;
             this.areaIconComboBox.IntegralHeight = false;
@@ -875,9 +875,9 @@
             this.areaIconComboBox.Size = new System.Drawing.Size(157, 21);
             this.areaIconComboBox.TabIndex = 3;
             this.areaIconComboBox.SelectedIndexChanged += new System.EventHandler(this.areaIconComboBox_SelectedIndexChanged);
-            // 
+            //
             // areaSettingsComboBox
-            // 
+            //
             this.areaSettingsComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.areaSettingsComboBox.FormattingEnabled = true;
             this.areaSettingsComboBox.IntegralHeight = false;
@@ -886,9 +886,9 @@
             this.areaSettingsComboBox.Size = new System.Drawing.Size(157, 21);
             this.areaSettingsComboBox.TabIndex = 1;
             this.areaSettingsComboBox.SelectedIndexChanged += new System.EventHandler(this.areaSettingsComboBox_SelectedIndexChanged);
-            // 
+            //
             // locationNameComboBox
-            // 
+            //
             this.locationNameComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.locationNameComboBox.FormattingEnabled = true;
             this.locationNameComboBox.Location = new System.Drawing.Point(14, 40);
@@ -896,9 +896,9 @@
             this.locationNameComboBox.Size = new System.Drawing.Size(157, 21);
             this.locationNameComboBox.TabIndex = 0;
             this.locationNameComboBox.SelectedIndexChanged += new System.EventHandler(this.mapNameComboBox_SelectedIndexChanged);
-            // 
+            //
             // groupBox2
-            // 
+            //
             this.groupBox2.BackColor = System.Drawing.SystemColors.Window;
             this.groupBox2.Controls.Add(this.cameraUpDown);
             this.groupBox2.Controls.Add(this.weatherUpDown);
@@ -926,9 +926,9 @@
             this.groupBox2.TabIndex = 29;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Appearance && Sound";
-            // 
+            //
             // cameraUpDown
-            // 
+            //
             this.cameraUpDown.Location = new System.Drawing.Point(376, 108);
             this.cameraUpDown.Maximum = new decimal(new int[] {
             255,
@@ -939,9 +939,9 @@
             this.cameraUpDown.Size = new System.Drawing.Size(45, 20);
             this.cameraUpDown.TabIndex = 41;
             this.cameraUpDown.ValueChanged += new System.EventHandler(this.cameraUpDown_ValueChanged);
-            // 
+            //
             // weatherUpDown
-            // 
+            //
             this.weatherUpDown.Location = new System.Drawing.Point(14, 108);
             this.weatherUpDown.Maximum = new decimal(new int[] {
             255,
@@ -952,9 +952,9 @@
             this.weatherUpDown.Size = new System.Drawing.Size(45, 20);
             this.weatherUpDown.TabIndex = 40;
             this.weatherUpDown.ValueChanged += new System.EventHandler(this.weatherUpDown_ValueChanged);
-            // 
+            //
             // musicNightUpDown
-            // 
+            //
             this.musicNightUpDown.Location = new System.Drawing.Point(376, 40);
             this.musicNightUpDown.Maximum = new decimal(new int[] {
             9999,
@@ -965,9 +965,9 @@
             this.musicNightUpDown.Size = new System.Drawing.Size(45, 20);
             this.musicNightUpDown.TabIndex = 39;
             this.musicNightUpDown.ValueChanged += new System.EventHandler(this.musicNightUpDown_ValueChanged);
-            // 
+            //
             // musicDayUpDown
-            // 
+            //
             this.musicDayUpDown.Location = new System.Drawing.Point(14, 41);
             this.musicDayUpDown.Maximum = new decimal(new int[] {
             9999,
@@ -978,9 +978,9 @@
             this.musicDayUpDown.Size = new System.Drawing.Size(45, 20);
             this.musicDayUpDown.TabIndex = 38;
             this.musicDayUpDown.ValueChanged += new System.EventHandler(this.musicDayUpDown_ValueChanged);
-            // 
+            //
             // pasteCameraAngleButton
-            // 
+            //
             this.pasteCameraAngleButton.Enabled = false;
             this.pasteCameraAngleButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteCameraAngleButton.Image")));
             this.pasteCameraAngleButton.Location = new System.Drawing.Point(616, 97);
@@ -989,9 +989,9 @@
             this.pasteCameraAngleButton.TabIndex = 37;
             this.pasteCameraAngleButton.UseVisualStyleBackColor = true;
             this.pasteCameraAngleButton.Click += new System.EventHandler(this.pasteCameraAngleButton_Click);
-            // 
+            //
             // copyCameraAngleButton
-            // 
+            //
             this.copyCameraAngleButton.Image = ((System.Drawing.Image)(resources.GetObject("copyCameraAngleButton.Image")));
             this.copyCameraAngleButton.Location = new System.Drawing.Point(578, 97);
             this.copyCameraAngleButton.Name = "copyCameraAngleButton";
@@ -999,9 +999,9 @@
             this.copyCameraAngleButton.TabIndex = 36;
             this.copyCameraAngleButton.UseVisualStyleBackColor = true;
             this.copyCameraAngleButton.Click += new System.EventHandler(this.copyCameraAngleButton_Click);
-            // 
+            //
             // pasteWeatherButton
-            // 
+            //
             this.pasteWeatherButton.Enabled = false;
             this.pasteWeatherButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteWeatherButton.Image")));
             this.pasteWeatherButton.Location = new System.Drawing.Point(252, 99);
@@ -1010,9 +1010,9 @@
             this.pasteWeatherButton.TabIndex = 35;
             this.pasteWeatherButton.UseVisualStyleBackColor = true;
             this.pasteWeatherButton.Click += new System.EventHandler(this.pasteWeatherButton_Click);
-            // 
+            //
             // copyWeatherButton
-            // 
+            //
             this.copyWeatherButton.Image = ((System.Drawing.Image)(resources.GetObject("copyWeatherButton.Image")));
             this.copyWeatherButton.Location = new System.Drawing.Point(215, 99);
             this.copyWeatherButton.Name = "copyWeatherButton";
@@ -1020,9 +1020,9 @@
             this.copyWeatherButton.TabIndex = 34;
             this.copyWeatherButton.UseVisualStyleBackColor = true;
             this.copyWeatherButton.Click += new System.EventHandler(this.copyWeatherButton_Click);
-            // 
+            //
             // pasteMusicNightButton
-            // 
+            //
             this.pasteMusicNightButton.Enabled = false;
             this.pasteMusicNightButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteMusicNightButton.Image")));
             this.pasteMusicNightButton.Location = new System.Drawing.Point(616, 31);
@@ -1031,9 +1031,9 @@
             this.pasteMusicNightButton.TabIndex = 33;
             this.pasteMusicNightButton.UseVisualStyleBackColor = true;
             this.pasteMusicNightButton.Click += new System.EventHandler(this.pasteMusicNightButton_Click);
-            // 
+            //
             // copyMusicNightButton
-            // 
+            //
             this.copyMusicNightButton.Image = ((System.Drawing.Image)(resources.GetObject("copyMusicNightButton.Image")));
             this.copyMusicNightButton.Location = new System.Drawing.Point(578, 31);
             this.copyMusicNightButton.Name = "copyMusicNightButton";
@@ -1041,9 +1041,9 @@
             this.copyMusicNightButton.TabIndex = 32;
             this.copyMusicNightButton.UseVisualStyleBackColor = true;
             this.copyMusicNightButton.Click += new System.EventHandler(this.copyMusicNightButton_Click);
-            // 
+            //
             // pasteMusicDayButton
-            // 
+            //
             this.pasteMusicDayButton.Enabled = false;
             this.pasteMusicDayButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteMusicDayButton.Image")));
             this.pasteMusicDayButton.Location = new System.Drawing.Point(252, 32);
@@ -1052,9 +1052,9 @@
             this.pasteMusicDayButton.TabIndex = 31;
             this.pasteMusicDayButton.UseVisualStyleBackColor = true;
             this.pasteMusicDayButton.Click += new System.EventHandler(this.pasteMusicDayButton_Click);
-            // 
+            //
             // copyMusicDayButton
-            // 
+            //
             this.copyMusicDayButton.Image = ((System.Drawing.Image)(resources.GetObject("copyMusicDayButton.Image")));
             this.copyMusicDayButton.Location = new System.Drawing.Point(215, 32);
             this.copyMusicDayButton.Name = "copyMusicDayButton";
@@ -1062,9 +1062,9 @@
             this.copyMusicDayButton.TabIndex = 30;
             this.copyMusicDayButton.UseVisualStyleBackColor = true;
             this.copyMusicDayButton.Click += new System.EventHandler(this.copyMusicDayButton_Click);
-            // 
+            //
             // weatherComboBox
-            // 
+            //
             this.weatherComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.weatherComboBox.FormattingEnabled = true;
             this.weatherComboBox.IntegralHeight = false;
@@ -1074,9 +1074,9 @@
             this.weatherComboBox.Size = new System.Drawing.Size(145, 21);
             this.weatherComboBox.TabIndex = 26;
             this.weatherComboBox.SelectedIndexChanged += new System.EventHandler(this.weatherComboBox_SelectedIndexChanged);
-            // 
+            //
             // musicNightComboBox
-            // 
+            //
             this.musicNightComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.musicNightComboBox.FormattingEnabled = true;
             this.musicNightComboBox.IntegralHeight = false;
@@ -1086,36 +1086,36 @@
             this.musicNightComboBox.Size = new System.Drawing.Size(145, 21);
             this.musicNightComboBox.TabIndex = 25;
             this.musicNightComboBox.SelectedIndexChanged += new System.EventHandler(this.musicNightComboBox_SelectedIndexChanged);
-            // 
+            //
             // weatherLabel
-            // 
+            //
             this.weatherLabel.AutoSize = true;
             this.weatherLabel.Location = new System.Drawing.Point(11, 88);
             this.weatherLabel.Name = "weatherLabel";
             this.weatherLabel.Size = new System.Drawing.Size(51, 13);
             this.weatherLabel.TabIndex = 12;
             this.weatherLabel.Text = "Weather:";
-            // 
+            //
             // cameraLabel
-            // 
+            //
             this.cameraLabel.AutoSize = true;
             this.cameraLabel.Location = new System.Drawing.Point(373, 88);
             this.cameraLabel.Name = "cameraLabel";
             this.cameraLabel.Size = new System.Drawing.Size(76, 13);
             this.cameraLabel.TabIndex = 10;
             this.cameraLabel.Text = "Camera Angle:";
-            // 
+            //
             // musicNightLabel
-            // 
+            //
             this.musicNightLabel.AutoSize = true;
             this.musicNightLabel.Location = new System.Drawing.Point(373, 21);
             this.musicNightLabel.Name = "musicNightLabel";
             this.musicNightLabel.Size = new System.Drawing.Size(72, 13);
             this.musicNightLabel.TabIndex = 8;
             this.musicNightLabel.Text = "Music (Night):";
-            // 
+            //
             // cameraComboBox
-            // 
+            //
             this.cameraComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cameraComboBox.FormattingEnabled = true;
             this.cameraComboBox.Location = new System.Drawing.Point(427, 107);
@@ -1123,18 +1123,18 @@
             this.cameraComboBox.Size = new System.Drawing.Size(145, 21);
             this.cameraComboBox.TabIndex = 9;
             this.cameraComboBox.SelectedIndexChanged += new System.EventHandler(this.cameraComboBox_SelectedIndexChanged);
-            // 
+            //
             // musicDayLabel
-            // 
+            //
             this.musicDayLabel.AutoSize = true;
             this.musicDayLabel.Location = new System.Drawing.Point(11, 22);
             this.musicDayLabel.Name = "musicDayLabel";
             this.musicDayLabel.Size = new System.Drawing.Size(66, 13);
             this.musicDayLabel.TabIndex = 6;
             this.musicDayLabel.Text = "Music (Day):";
-            // 
+            //
             // musicDayComboBox
-            // 
+            //
             this.musicDayComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.musicDayComboBox.FormattingEnabled = true;
             this.musicDayComboBox.IntegralHeight = false;
@@ -1144,9 +1144,9 @@
             this.musicDayComboBox.Size = new System.Drawing.Size(145, 21);
             this.musicDayComboBox.TabIndex = 0;
             this.musicDayComboBox.SelectedIndexChanged += new System.EventHandler(this.musicDayComboBox_SelectedIndexChanged);
-            // 
+            //
             // groupBox3
-            // 
+            //
             this.groupBox3.Controls.Add(this.pasteLevelScriptsButton);
             this.groupBox3.Controls.Add(this.copyLevelScriptsButton);
             this.groupBox3.Controls.Add(this.pasteScriptsButton);
@@ -1163,9 +1163,9 @@
             this.groupBox3.TabIndex = 30;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Scripts";
-            // 
+            //
             // pasteLevelScriptsButton
-            // 
+            //
             this.pasteLevelScriptsButton.Enabled = false;
             this.pasteLevelScriptsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteLevelScriptsButton.Image")));
             this.pasteLevelScriptsButton.Location = new System.Drawing.Point(616, 30);
@@ -1174,9 +1174,9 @@
             this.pasteLevelScriptsButton.TabIndex = 29;
             this.pasteLevelScriptsButton.UseVisualStyleBackColor = true;
             this.pasteLevelScriptsButton.Click += new System.EventHandler(this.pasteLevelScriptsButton_Click);
-            // 
+            //
             // copyLevelScriptsButton
-            // 
+            //
             this.copyLevelScriptsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyLevelScriptsButton.Image")));
             this.copyLevelScriptsButton.Location = new System.Drawing.Point(578, 30);
             this.copyLevelScriptsButton.Name = "copyLevelScriptsButton";
@@ -1184,9 +1184,9 @@
             this.copyLevelScriptsButton.TabIndex = 28;
             this.copyLevelScriptsButton.UseVisualStyleBackColor = true;
             this.copyLevelScriptsButton.Click += new System.EventHandler(this.copyLevelScriptsButton_Click);
-            // 
+            //
             // pasteScriptsButton
-            // 
+            //
             this.pasteScriptsButton.Enabled = false;
             this.pasteScriptsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteScriptsButton.Image")));
             this.pasteScriptsButton.Location = new System.Drawing.Point(252, 30);
@@ -1195,9 +1195,9 @@
             this.pasteScriptsButton.TabIndex = 27;
             this.pasteScriptsButton.UseVisualStyleBackColor = true;
             this.pasteScriptsButton.Click += new System.EventHandler(this.pasteScriptsButton_Click);
-            // 
+            //
             // copyScriptsButton
-            // 
+            //
             this.copyScriptsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyScriptsButton.Image")));
             this.copyScriptsButton.Location = new System.Drawing.Point(215, 30);
             this.copyScriptsButton.Name = "copyScriptsButton";
@@ -1205,9 +1205,9 @@
             this.copyScriptsButton.TabIndex = 26;
             this.copyScriptsButton.UseVisualStyleBackColor = true;
             this.copyScriptsButton.Click += new System.EventHandler(this.copyScriptsButton_Click);
-            // 
+            //
             // levelScriptUpDown
-            // 
+            //
             this.levelScriptUpDown.Location = new System.Drawing.Point(377, 39);
             this.levelScriptUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -1218,9 +1218,9 @@
             this.levelScriptUpDown.Size = new System.Drawing.Size(107, 20);
             this.levelScriptUpDown.TabIndex = 25;
             this.levelScriptUpDown.ValueChanged += new System.EventHandler(this.levelScriptUpDown_ValueChanged);
-            // 
+            //
             // openLevelScriptButton
-            // 
+            //
             this.openLevelScriptButton.Location = new System.Drawing.Point(495, 28);
             this.openLevelScriptButton.Name = "openLevelScriptButton";
             this.openLevelScriptButton.Size = new System.Drawing.Size(79, 40);
@@ -1228,18 +1228,18 @@
             this.openLevelScriptButton.Text = "Open Level Scripts";
             this.openLevelScriptButton.UseVisualStyleBackColor = true;
             this.openLevelScriptButton.Click += new System.EventHandler(this.openLevelScriptButton_Click);
-            // 
+            //
             // levelScriptLabel
-            // 
+            //
             this.levelScriptLabel.AutoSize = true;
             this.levelScriptLabel.Location = new System.Drawing.Point(374, 21);
             this.levelScriptLabel.Name = "levelScriptLabel";
             this.levelScriptLabel.Size = new System.Drawing.Size(95, 13);
             this.levelScriptLabel.TabIndex = 16;
             this.levelScriptLabel.Text = "Level Script File #:";
-            // 
+            //
             // openScriptButton
-            // 
+            //
             this.openScriptButton.Location = new System.Drawing.Point(133, 28);
             this.openScriptButton.Name = "openScriptButton";
             this.openScriptButton.Size = new System.Drawing.Size(79, 40);
@@ -1247,18 +1247,18 @@
             this.openScriptButton.Text = "Open &Scripts";
             this.openScriptButton.UseVisualStyleBackColor = true;
             this.openScriptButton.Click += new System.EventHandler(this.openScriptButton_Click);
-            // 
+            //
             // scriptLabel
-            // 
+            //
             this.scriptLabel.AutoSize = true;
             this.scriptLabel.Location = new System.Drawing.Point(12, 21);
             this.scriptLabel.Name = "scriptLabel";
             this.scriptLabel.Size = new System.Drawing.Size(66, 13);
             this.scriptLabel.TabIndex = 13;
             this.scriptLabel.Text = "Script File #:";
-            // 
+            //
             // scriptFileUpDown
-            // 
+            //
             this.scriptFileUpDown.Location = new System.Drawing.Point(14, 39);
             this.scriptFileUpDown.Maximum = new decimal(new int[] {
             65535,
@@ -1269,9 +1269,9 @@
             this.scriptFileUpDown.Size = new System.Drawing.Size(107, 20);
             this.scriptFileUpDown.TabIndex = 0;
             this.scriptFileUpDown.ValueChanged += new System.EventHandler(this.scriptFileUpDown_ValueChanged);
-            // 
+            //
             // headerListBox
-            // 
+            //
             this.headerListBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.headerListBox.FormattingEnabled = true;
             this.headerListBox.ItemHeight = 15;
@@ -1281,9 +1281,9 @@
             this.headerListBox.TabIndex = 2;
             this.headerListBox.SelectedValueChanged += new System.EventHandler(this.headerListBox_SelectedValueChanged);
             this.headerListBox.Leave += new System.EventHandler(this.headerListBox_Leave);
-            // 
+            //
             // saveHeaderButton
-            // 
+            //
             this.saveHeaderButton.Image = global::DSPRE.Properties.Resources.save_rom;
             this.saveHeaderButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.saveHeaderButton.Location = new System.Drawing.Point(1072, 517);
@@ -1294,9 +1294,9 @@
             this.saveHeaderButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.saveHeaderButton.UseVisualStyleBackColor = true;
             this.saveHeaderButton.Click += new System.EventHandler(this.saveHeaderButton_Click);
-            // 
+            //
             // flagsGroupBox
-            // 
+            //
             this.flagsGroupBox.Controls.Add(this.followModeComboBox);
             this.flagsGroupBox.Controls.Add(this.johtoRadioButton);
             this.flagsGroupBox.Controls.Add(this.kantoRadioButton);
@@ -1318,9 +1318,9 @@
             this.flagsGroupBox.TabIndex = 32;
             this.flagsGroupBox.TabStop = false;
             this.flagsGroupBox.Text = "Map Settings";
-            // 
+            //
             // followModeComboBox
-            // 
+            //
             this.followModeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.followModeComboBox.FormattingEnabled = true;
             this.followModeComboBox.IntegralHeight = false;
@@ -1335,9 +1335,9 @@
             this.followModeComboBox.TabIndex = 57;
             this.followModeComboBox.Visible = false;
             this.followModeComboBox.SelectedIndexChanged += new System.EventHandler(this.followModeComboBox_SelectedIndexChanged);
-            // 
+            //
             // johtoRadioButton
-            // 
+            //
             this.johtoRadioButton.AutoSize = true;
             this.johtoRadioButton.Location = new System.Drawing.Point(148, 105);
             this.johtoRadioButton.Name = "johtoRadioButton";
@@ -1347,9 +1347,9 @@
             this.johtoRadioButton.Text = "Johto";
             this.johtoRadioButton.UseVisualStyleBackColor = true;
             this.johtoRadioButton.Visible = false;
-            // 
+            //
             // kantoRadioButton
-            // 
+            //
             this.kantoRadioButton.AutoSize = true;
             this.kantoRadioButton.Location = new System.Drawing.Point(92, 105);
             this.kantoRadioButton.Name = "kantoRadioButton";
@@ -1360,9 +1360,9 @@
             this.kantoRadioButton.UseVisualStyleBackColor = true;
             this.kantoRadioButton.Visible = false;
             this.kantoRadioButton.CheckedChanged += new System.EventHandler(this.kantoRadioButton_CheckedChanged);
-            // 
+            //
             // followModeLabel
-            // 
+            //
             this.followModeLabel.AutoSize = true;
             this.followModeLabel.Location = new System.Drawing.Point(150, 13);
             this.followModeLabel.Name = "followModeLabel";
@@ -1370,9 +1370,9 @@
             this.followModeLabel.TabIndex = 58;
             this.followModeLabel.Text = "Following Pokemon:";
             this.followModeLabel.Visible = false;
-            // 
+            //
             // pasteMapSettingsButton
-            // 
+            //
             this.pasteMapSettingsButton.Enabled = false;
             this.pasteMapSettingsButton.Image = ((System.Drawing.Image)(resources.GetObject("pasteMapSettingsButton.Image")));
             this.pasteMapSettingsButton.Location = new System.Drawing.Point(239, 74);
@@ -1381,18 +1381,18 @@
             this.pasteMapSettingsButton.TabIndex = 52;
             this.pasteMapSettingsButton.UseVisualStyleBackColor = true;
             this.pasteMapSettingsButton.Click += new System.EventHandler(this.pasteMapSettingsButton_Click);
-            // 
+            //
             // battleBackgroundLabel
-            // 
+            //
             this.battleBackgroundLabel.AutoSize = true;
             this.battleBackgroundLabel.Location = new System.Drawing.Point(151, 58);
             this.battleBackgroundLabel.Name = "battleBackgroundLabel";
             this.battleBackgroundLabel.Size = new System.Drawing.Size(52, 13);
             this.battleBackgroundLabel.TabIndex = 37;
             this.battleBackgroundLabel.Text = "Battle BG";
-            // 
+            //
             // copyFlagsButton
-            // 
+            //
             this.copyFlagsButton.Image = ((System.Drawing.Image)(resources.GetObject("copyFlagsButton.Image")));
             this.copyFlagsButton.Location = new System.Drawing.Point(239, 31);
             this.copyFlagsButton.Name = "copyFlagsButton";
@@ -1400,9 +1400,9 @@
             this.copyFlagsButton.TabIndex = 53;
             this.copyFlagsButton.UseVisualStyleBackColor = true;
             this.copyFlagsButton.Click += new System.EventHandler(this.copyMapSettingsButton_Click);
-            // 
+            //
             // battleBackgroundUpDown
-            // 
+            //
             this.battleBackgroundUpDown.Location = new System.Drawing.Point(154, 73);
             this.battleBackgroundUpDown.Maximum = new decimal(new int[] {
             31,
@@ -1413,9 +1413,9 @@
             this.battleBackgroundUpDown.Size = new System.Drawing.Size(75, 20);
             this.battleBackgroundUpDown.TabIndex = 36;
             this.battleBackgroundUpDown.ValueChanged += new System.EventHandler(this.battleBackgroundUpDown_ValueChanged);
-            // 
+            //
             // flag3CheckBox
-            // 
+            //
             this.flag3CheckBox.AutoSize = true;
             this.flag3CheckBox.Location = new System.Drawing.Point(11, 26);
             this.flag3CheckBox.Name = "flag3CheckBox";
@@ -1424,9 +1424,9 @@
             this.flag3CheckBox.Text = "Fly";
             this.flag3CheckBox.UseVisualStyleBackColor = true;
             this.flag3CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag2CheckBox
-            // 
+            //
             this.flag2CheckBox.AutoSize = true;
             this.flag2CheckBox.Location = new System.Drawing.Point(11, 53);
             this.flag2CheckBox.Name = "flag2CheckBox";
@@ -1435,9 +1435,9 @@
             this.flag2CheckBox.Text = "Esc. Rope";
             this.flag2CheckBox.UseVisualStyleBackColor = true;
             this.flag2CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag1CheckBox
-            // 
+            //
             this.flag1CheckBox.AutoSize = true;
             this.flag1CheckBox.Location = new System.Drawing.Point(11, 79);
             this.flag1CheckBox.Name = "flag1CheckBox";
@@ -1446,9 +1446,9 @@
             this.flag1CheckBox.Text = "Run";
             this.flag1CheckBox.UseVisualStyleBackColor = true;
             this.flag1CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag0CheckBox
-            // 
+            //
             this.flag0CheckBox.AutoSize = true;
             this.flag0CheckBox.Location = new System.Drawing.Point(11, 105);
             this.flag0CheckBox.Name = "flag0CheckBox";
@@ -1457,9 +1457,9 @@
             this.flag0CheckBox.Text = "Bicycle";
             this.flag0CheckBox.UseVisualStyleBackColor = true;
             this.flag0CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag6CheckBox
-            // 
+            //
             this.flag6CheckBox.AutoSize = true;
             this.flag6CheckBox.Location = new System.Drawing.Point(92, 28);
             this.flag6CheckBox.Name = "flag6CheckBox";
@@ -1468,9 +1468,9 @@
             this.flag6CheckBox.UseVisualStyleBackColor = true;
             this.flag6CheckBox.Visible = false;
             this.flag6CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag5CheckBox
-            // 
+            //
             this.flag5CheckBox.AutoSize = true;
             this.flag5CheckBox.Location = new System.Drawing.Point(92, 54);
             this.flag5CheckBox.Name = "flag5CheckBox";
@@ -1479,9 +1479,9 @@
             this.flag5CheckBox.UseVisualStyleBackColor = true;
             this.flag5CheckBox.Visible = false;
             this.flag5CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // flag4CheckBox
-            // 
+            //
             this.flag4CheckBox.AutoSize = true;
             this.flag4CheckBox.Location = new System.Drawing.Point(92, 80);
             this.flag4CheckBox.Name = "flag4CheckBox";
@@ -1490,45 +1490,47 @@
             this.flag4CheckBox.UseVisualStyleBackColor = true;
             this.flag4CheckBox.Visible = false;
             this.flag4CheckBox.CheckedChanged += new System.EventHandler(this.headerFlagsCheckBoxes_CheckedChanged);
-            // 
+            //
             // cameraPicLabel
-            // 
+            //
             this.cameraPicLabel.AutoSize = true;
             this.cameraPicLabel.Location = new System.Drawing.Point(909, 304);
             this.cameraPicLabel.Name = "cameraPicLabel";
             this.cameraPicLabel.Size = new System.Drawing.Size(72, 13);
             this.cameraPicLabel.TabIndex = 3;
             this.cameraPicLabel.Text = "Camera angle";
-            // 
+            //
             // cameraPictureBox
-            // 
+            //
             this.cameraPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.cameraPictureBox.Location = new System.Drawing.Point(912, 320);
             this.cameraPictureBox.Name = "cameraPictureBox";
             this.cameraPictureBox.Size = new System.Drawing.Size(256, 192);
+            this.cameraPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.cameraPictureBox.TabIndex = 2;
             this.cameraPictureBox.TabStop = false;
-            // 
+            //
             // weatherPicLabel
-            // 
+            //
             this.weatherPicLabel.AutoSize = true;
             this.weatherPicLabel.Location = new System.Drawing.Point(909, 90);
             this.weatherPicLabel.Name = "weatherPicLabel";
             this.weatherPicLabel.Size = new System.Drawing.Size(48, 13);
             this.weatherPicLabel.TabIndex = 1;
             this.weatherPicLabel.Text = "Weather";
-            // 
+            //
             // weatherPictureBox
-            // 
+            //
             this.weatherPictureBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.weatherPictureBox.Location = new System.Drawing.Point(912, 106);
             this.weatherPictureBox.Name = "weatherPictureBox";
             this.weatherPictureBox.Size = new System.Drawing.Size(256, 192);
+            this.weatherPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.weatherPictureBox.TabIndex = 0;
             this.weatherPictureBox.TabStop = false;
-            // 
+            //
             // HeaderEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.removeLastHeaderBTN);

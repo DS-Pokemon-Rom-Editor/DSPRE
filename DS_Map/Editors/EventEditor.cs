@@ -31,7 +31,7 @@ namespace DSPRE.Editors
 
         #region Event Editor
 
-        #region Variables      
+        #region Variables
         public bool itemComboboxIsUpToDate = false;
         public static NSBMDGlRenderer eventMapRenderer = new NSBMDGlRenderer();
         public static NSBMDGlRenderer eventBuildingsRenderer = new NSBMDGlRenderer();
@@ -40,8 +40,23 @@ namespace DSPRE.Editors
         public GameMatrix eventMatrix;
 
         public const byte tileSize = 16;
+        public const int MapRenderSize = 544;
         public EventFile currentEvFile;
         public Event selectedEvent;
+
+        private Point ScreenToMapTilePosition(Point screenCoordinates)
+        {
+            int controlSize = Math.Min(eventPictureBox.Width, eventPictureBox.Height);
+            float scale = (float)controlSize / MapRenderSize;
+
+            int offsetX = (eventPictureBox.Width - controlSize) / 2;
+            int offsetY = (eventPictureBox.Height - controlSize) / 2;
+
+            int mapX = (int)((screenCoordinates.X - offsetX) / scale);
+            int mapY = (int)((screenCoordinates.Y - offsetY) / scale);
+
+            return new Point(mapX / (tileSize + 1), mapY / (tileSize + 1));
+        }
 
         /* Painters to draw the matrix grid */
         public Pen eventPen;
@@ -213,13 +228,13 @@ namespace DSPRE.Editors
         private void eventPictureBox_MouseMove(object sender, MouseEventArgs e)
         {
             Point coordinates = eventPictureBox.PointToClient(Cursor.Position);
-            Point mouseTilePos = new Point(coordinates.X / (tileSize + 1), coordinates.Y / (tileSize + 1));
+            Point mouseTilePos = ScreenToMapTilePosition(coordinates);
             Helpers.statusLabelMessage("Local: " + mouseTilePos.X + ", " + mouseTilePos.Y + "   |   " + "Global: " + (eventMatrixXUpDown.Value * MapFile.mapSize + mouseTilePos.X).ToString() + ", " + (eventMatrixYUpDown.Value * MapFile.mapSize + mouseTilePos.Y).ToString());
         }
 
         private void DisplayActiveEvents()
         {
-            eventPictureBox.Image = new Bitmap(eventPictureBox.Width, eventPictureBox.Height);
+            eventPictureBox.Image = new Bitmap(MapRenderSize, MapRenderSize);
 
             using (Graphics g = Graphics.FromImage(eventPictureBox.Image))
             {
@@ -424,11 +439,11 @@ namespace DSPRE.Editors
                 for (int i = 0; i < eventMapFile.buildings.Count; i++)
                 {
                     eventMapFile.buildings[i].LoadModelData(_parent.romInfo.GetBuildingModelsDirPath(isInteriorMap)); // Load building nsbmd
-                    Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
+                    Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures
                 }
 
-                    Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
-                eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+                Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, MapRenderSize, MapRenderSize, true, true, eventOpenGlControl);
+                eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(MapRenderSize, MapRenderSize, eventOpenGlControl);
 
             }
             eventPictureBox.Invalidate();
@@ -851,7 +866,7 @@ namespace DSPRE.Editors
             int newEventFileID = AddEventFile();
             selectEventComboBox.SelectedIndex = newEventFileID;
         }
- 
+
         private void eventMatrixPictureBox_Click(object sender, EventArgs e)
         {
             const int squareSize = 16;
@@ -1153,7 +1168,7 @@ namespace DSPRE.Editors
         private void eventPictureBox_Click(object sender, EventArgs e)
         {
             Point coordinates = eventPictureBox.PointToClient(Cursor.Position);
-            Point mouseTilePos = new Point(coordinates.X / (tileSize + 1), coordinates.Y / (tileSize + 1));
+            Point mouseTilePos = ScreenToMapTilePosition(coordinates);
             MouseEventArgs mea = (MouseEventArgs)e;
 
             if (mea.Button == MouseButtons.Left)
@@ -1579,7 +1594,7 @@ namespace DSPRE.Editors
             {
                 return;
             }
-           
+
             // Find the smallest unused ID
             int newID = 0;
             while (currentEvFile.overworlds.Any(ow => ow.owID == newID))
@@ -2060,16 +2075,16 @@ namespace DSPRE.Editors
                 {
                     trainerID = ow.scriptNumber - 4999; // Partner trainer
                 }
-                
+
                 if (trainerID > RomInfo.trainerFunnyScriptNumber - 1)
                 {
                     trainerID--;
                 }
-                
+
                 // Check if trainer ID is valid
                 EditorPanels.trainerEditor.SetupTrainerEditor(_parent);
                 int trainerCount = EditorPanels.trainerEditor.trainerComboBox.Items.Count;
-                
+
                 if (trainerID < 0 || trainerID >= trainerCount)
                 {
                     MessageBox.Show($"This overworld is assigned a Trainer ID ({trainerID}) that does not exist.\n" +
@@ -2077,7 +2092,7 @@ namespace DSPRE.Editors
                         "Invalid Trainer ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                
+
                 _parent.GoToTrainer(trainerID);
                 Helpers.statusLabelMessage($"Navigated to Trainer {trainerID}");
                 return;
@@ -2171,10 +2186,10 @@ namespace DSPRE.Editors
             try
             {
                 ScriptFile scriptFile = new ScriptFile(scriptFileID);
-                
+
                 // Check if the script number exists in this file
                 bool scriptExists = scriptFile.allScripts.Any(s => s.manualUserID == scriptNumber);
-                
+
                 if (!scriptExists)
                 {
                     MessageBox.Show($"This {eventType} is assigned Script {scriptNumber}, which is outside the bounds of Script File {scriptFileID}.\n\n" +
@@ -2704,8 +2719,8 @@ namespace DSPRE.Editors
             }
 
 
-            Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
-            eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+            Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, MapRenderSize, MapRenderSize, true, true, eventOpenGlControl);
+            eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(MapRenderSize, MapRenderSize, eventOpenGlControl);
 
             int newW = 512, newH = 512;
             Bitmap newImage = new Bitmap(newW, newH);
