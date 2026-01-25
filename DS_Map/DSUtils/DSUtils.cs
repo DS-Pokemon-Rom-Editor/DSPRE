@@ -1,4 +1,4 @@
-﻿using Ekona.Images;
+using Ekona.Images;
 using Images;
 using LibNDSFormats.NSBMD;
 using Microsoft.WindowsAPICodePack.Dialogs;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -91,6 +92,11 @@ namespace DSPRE {
 
         public static bool UnpackRom(string ndsFileName, string workDir)
         {
+            return UnpackRomDsRom(ndsFileName, workDir);
+        }
+
+        public static bool UnpackRomNdstool(string ndsFileName, string workDir)
+        {
             Directory.CreateDirectory(workDir);
 
             string arm9Path = Path.Combine(workDir, "arm9.bin");
@@ -151,7 +157,150 @@ namespace DSPRE {
             return true;
         }
 
+        public static bool UnpackRomDsRom(string ndsFileName, string workDir)
+        {
+            Directory.CreateDirectory(workDir);
+
+            Process unpack = new Process();
+            unpack.StartInfo.FileName = @"Tools\dsrom.exe";
+            unpack.StartInfo.Arguments = $"extract -r \"{ndsFileName}\" -o \"{workDir}\"";
+            unpack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            unpack.StartInfo.CreateNoWindow = true;
+            unpack.StartInfo.RedirectStandardError = true;
+            unpack.StartInfo.RedirectStandardOutput = true;
+            unpack.StartInfo.UseShellExecute = false;
+
+            AppLogger.Info("Unpacking ROM with command: " + unpack.StartInfo.FileName + " " + unpack.StartInfo.Arguments);
+
+            string output = "";
+            string errors = "";
+
+            try
+            {
+                unpack.Start();
+                output = unpack.StandardOutput.ReadToEnd();
+                errors = unpack.StandardError.ReadToEnd().Trim();
+                unpack.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    AppLogger.Info("dsrom stdout: " + output);
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                MessageBox.Show("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (unpack.ExitCode != 0)
+            {
+                AppLogger.Error("dsrom returned the following error(s): " + errors);
+                MessageBox.Show("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(errors))
+            {
+                AppLogger.Info("dsrom stderr: " + errors);
+            }
+
+            if (!File.Exists(Path.Combine(workDir, "config.yaml")))
+            {
+                AppLogger.Error("Validation failed: config.yaml not found after extraction");
+                MessageBox.Show("ROM extraction failed: config.yaml not found in output directory.",
+                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!File.Exists(Path.Combine(workDir, "arm9", "arm9.bin")))
+            {
+                AppLogger.Error("Validation failed: arm9/arm9.bin not found after extraction");
+                MessageBox.Show("ROM extraction failed: arm9/arm9.bin not found in output directory.",
+                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!Directory.Exists(Path.Combine(workDir, "files")))
+            {
+                AppLogger.Error("Validation failed: files/ directory not found after extraction");
+                MessageBox.Show("ROM extraction failed: files/ directory not found in output directory.",
+                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool RepackROMDsRom(string ndsFileName)
+        {
+            string configPath = Path.Combine(workDir, "config.yaml");
+
+            if (!File.Exists(configPath))
+            {
+                AppLogger.Error("config.yaml not found, cannot build with ds-rom");
+                MessageBox.Show("Cannot build ROM: config.yaml not found in the working directory.",
+                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            Process repack = new Process();
+            repack.StartInfo.FileName = @"Tools\dsrom.exe";
+            repack.StartInfo.Arguments = $"build -c \"{configPath}\" -o \"{ndsFileName}\"";
+            repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            repack.StartInfo.CreateNoWindow = true;
+            repack.StartInfo.RedirectStandardError = true;
+            repack.StartInfo.RedirectStandardOutput = true;
+            repack.StartInfo.UseShellExecute = false;
+
+            AppLogger.Info("Repacking ROM with command: " + repack.StartInfo.FileName + " " + repack.StartInfo.Arguments);
+
+            string output = "";
+            string errors = "";
+
+            try
+            {
+                repack.Start();
+                output = repack.StandardOutput.ReadToEnd();
+                errors = repack.StandardError.ReadToEnd().Trim();
+                repack.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    AppLogger.Info("dsrom stdout: " + output);
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                MessageBox.Show("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (repack.ExitCode != 0)
+            {
+                AppLogger.Error("dsrom returned the following error(s): " + errors);
+                MessageBox.Show("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(errors))
+            {
+                AppLogger.Info("dsrom stderr: " + errors);
+            }
+
+            return true;
+        }
+
         public static bool RepackROM(string ndsFileName) {
+            // Route to ds-rom if this is a ds-rom project
+            if (RomInfo.IsDsRomProject)
+            {
+                return RepackROMDsRom(ndsFileName);
+            }
 
             string arm9Path = Path.Combine(workDir, "arm9.bin");
             string arm7Path = Path.Combine(workDir, "arm7.bin");
@@ -221,7 +370,204 @@ namespace DSPRE {
 
         }
 
-        public static byte[] StringToByteArray(String hex) {
+        public static bool ConvertNdstoolToDsRom(string workDir)
+        {
+            // 1. Verify project is ndstool format
+            if (GetFolderType(workDir) != 1)
+            {
+                MessageBox.Show("This project is not in ndstool format.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // 2. Create ZIP backup
+            string backupPath = workDir + ".ndstool_backup.zip";
+            try
+            {
+                if (File.Exists(backupPath))
+                    File.Delete(backupPath);
+                ZipFile.CreateFromDirectory(workDir, backupPath);
+                AppLogger.Info($"Created ndstool backup at: {backupPath}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to create backup: {ex.Message}", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            // 3. Build temp ROM using ndstool (the project is still in ndstool format)
+            string tempRomPath = Path.Combine(Path.GetDirectoryName(workDir), "temp_conversion.nds");
+            string tempDsRomDir = workDir + "_dsrom_temp";
+
+            try
+            {
+                // Use ndstool directly to build temp ROM
+                Process buildTemp = new Process();
+                buildTemp.StartInfo.FileName = @"Tools\ndstool.exe";
+                buildTemp.StartInfo.Arguments = "-c \"" + tempRomPath + "\""
+                    + " -9 \"" + Path.Combine(workDir, "arm9.bin") + "\""
+                    + " -7 \"" + Path.Combine(workDir, "arm7.bin") + "\""
+                    + " -y9 \"" + Path.Combine(workDir, "y9.bin") + "\""
+                    + " -y7 \"" + Path.Combine(workDir, "y7.bin") + "\""
+                    + " -d \"" + Path.Combine(workDir, "data") + "\""
+                    + " -y \"" + Path.Combine(workDir, "overlay") + "\""
+                    + " -t \"" + Path.Combine(workDir, "banner.bin") + "\""
+                    + " -h \"" + Path.Combine(workDir, "header.bin") + "\"";
+                buildTemp.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                buildTemp.StartInfo.CreateNoWindow = true;
+                buildTemp.StartInfo.UseShellExecute = false;
+                buildTemp.StartInfo.RedirectStandardError = true;
+
+                AppLogger.Info("Building temp ROM: " + buildTemp.StartInfo.Arguments);
+                buildTemp.Start();
+                string errors = buildTemp.StandardError.ReadToEnd();
+                buildTemp.WaitForExit();
+
+                if (buildTemp.ExitCode != 0)
+                {
+                    AppLogger.Error("ndstool build failed: " + errors);
+                    MessageBox.Show("Failed to build temporary ROM: " + errors, "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+
+                // 4. Extract with ds-rom to get new structure
+                if (!UnpackRomDsRom(tempRomPath, tempDsRomDir))
+                {
+                    AppLogger.Error("ds-rom extraction failed during conversion. This may indicate overlay compression issues.");
+                    
+                    var result = MessageBox.Show(
+                        "Conversion to ds-rom format failed during ROM extraction.\n\n" +
+                        "This is usually caused by corrupted or incompatible overlay compression in the ndstool project.\n\n" +
+                        "Would you like to:\n" +
+                        "• Yes: Continue loading with ndstool format (no conversion)\n" +
+                        "• No: Cancel and restore from backup",
+                        "Conversion Failed",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    
+                    if (Directory.Exists(tempDsRomDir))
+                        Directory.Delete(tempDsRomDir, true);
+                    if (File.Exists(tempRomPath))
+                        File.Delete(tempRomPath);
+                    
+                    if (result == DialogResult.Yes)
+                    {
+                        AppLogger.Info("User chose to continue with ndstool format.");
+                        return false;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath, 
+                            "Conversion Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return false;
+                    }
+                }
+
+                // 5. Validate temp output
+                if (!File.Exists(Path.Combine(tempDsRomDir, "config.yaml")))
+                {
+                    MessageBox.Show("Conversion validation failed: config.yaml not found.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Directory.Delete(tempDsRomDir, true);
+                    File.Delete(tempRomPath);
+                    return false;
+                }
+
+                // 6. Delete old ndstool files from workDir
+                string[] oldFiles = { "arm9.bin", "arm7.bin", "y9.bin", "y7.bin", "banner.bin", "header.bin" };
+                string[] oldDirs = { "data", "overlay" };
+
+                foreach (var f in oldFiles)
+                {
+                    string path = Path.Combine(workDir, f);
+                    if (File.Exists(path)) File.Delete(path);
+                }
+                foreach (var d in oldDirs)
+                {
+                    string path = Path.Combine(workDir, d);
+                    if (Directory.Exists(path)) Directory.Delete(path, true);
+                }
+
+                // 7. Move temp contents to workDir
+                foreach (var entry in Directory.GetFileSystemEntries(tempDsRomDir))
+                {
+                    string destPath = Path.Combine(workDir, Path.GetFileName(entry));
+                    if (File.Exists(entry))
+                    {
+                        if (File.Exists(destPath)) File.Delete(destPath);
+                        File.Move(entry, destPath);
+                    }
+                    else if (Directory.Exists(entry))
+                    {
+                        if (Directory.Exists(destPath)) Directory.Delete(destPath, true);
+                        Directory.Move(entry, destPath);
+                    }
+                }
+
+                // 8. Cleanup
+                Directory.Delete(tempDsRomDir, true);
+                File.Delete(tempRomPath);
+
+                AppLogger.Info("Successfully converted project to ds-rom format.");
+                MessageBox.Show("Project converted to ds-rom format successfully.\n\nBackup saved at:\n" + backupPath,
+                    "Conversion Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Conversion failed: " + ex.Message);
+                MessageBox.Show($"Conversion failed: {ex.Message}\n\nYour backup is at:\n{backupPath}",
+                    "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                // Cleanup temp files on failure
+                if (Directory.Exists(tempDsRomDir))
+                    Directory.Delete(tempDsRomDir, true);
+                if (File.Exists(tempRomPath))
+                    File.Delete(tempRomPath);
+
+            return false;
+        }
+    }
+
+    public static bool RestoreFromNdstoolBackup(string workDir)
+    {
+        string backupPath = workDir + ".ndstool_backup.zip";
+        
+        if (!File.Exists(backupPath))
+        {
+            MessageBox.Show("Backup file not found:\n" + backupPath, 
+                "Restore Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+        
+        try
+        {
+            // Delete current contents
+            foreach (var file in Directory.GetFiles(workDir))
+            {
+                File.Delete(file);
+            }
+            foreach (var dir in Directory.GetDirectories(workDir))
+            {
+                Directory.Delete(dir, true);
+            }
+            
+            // Extract backup
+            ZipFile.ExtractToDirectory(backupPath, workDir);
+            
+            AppLogger.Info("Successfully restored from backup: " + backupPath);
+            MessageBox.Show("Project restored from backup successfully.", 
+                "Restore Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("Restore failed: " + ex.Message);
+            MessageBox.Show($"Restore failed: {ex.Message}", 
+                "Restore Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
+
+    public static byte[] StringToByteArray(String hex) {
             //Ummm what?
             int NumberChars = hex.Length;
             byte[] bytes = new byte[NumberChars / 2];

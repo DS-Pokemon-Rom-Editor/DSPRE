@@ -19,9 +19,10 @@ namespace DSPRE
     public class RomInfo
     {
         public const string folderSuffix = "_DSPRE_contents"; // changed back to public static string
-        private const string dataFolderName = @"data";
-        private const string customNarcFolderName = @"data/zcustom";
+        private static string dataFolderName;
+        private static string customNarcFolderName;
 
+        public static bool IsDsRomProject { get; internal set; }
         public static bool isHGE { get; private set; }
         public static string romID { get; private set; }
         public static string projectName { get; private set; }
@@ -193,17 +194,45 @@ namespace DSPRE
 
             string path = Path.GetFullPath(romFolderName);
 
+            IsDsRomProject = DSUtils.GetFolderType(romFolderName) == 0;
+            
+            if (IsDsRomProject)
+            {
+                dataFolderName = "files";
+                customNarcFolderName = "files/zcustom";
+            }
+            else
+            {
+                dataFolderName = "data";
+                customNarcFolderName = "data/zcustom";
+            }
+
             workDir = path + "\\"; // This is required still. Ideally all paths should be combined with Path.Combine and not by string concatenation
-            arm9Path = Path.Combine(workDir, @"arm9.bin");
-            arm7Path = Path.Combine(workDir, @"arm7.bin");
-            overlayTablePath = Path.Combine(workDir, @"y9.bin");
-            y7Path = Path.Combine(workDir, @"y7.bin");
-            dataPath = Path.Combine(workDir, dataFolderName);
-            overlayPath = Path.Combine(workDir, @"overlay");
-            bannerPath = Path.Combine(workDir, @"banner.bin");
-            headerPath = Path.Combine(workDir, @"header.bin");
+            
+            if (IsDsRomProject)
+            {
+                arm9Path = Path.Combine(workDir, @"arm9\arm9.bin");
+                arm7Path = Path.Combine(workDir, @"arm7\arm7.bin");
+                overlayTablePath = Path.Combine(workDir, @"arm9_overlays\overlays.yaml");
+                y7Path = Path.Combine(workDir, @"arm7_overlays\overlays.yaml");
+                dataPath = Path.Combine(workDir, @"files");
+                overlayPath = Path.Combine(workDir, @"arm9_overlays");
+                bannerPath = Path.Combine(workDir, @"banner");
+                headerPath = Path.Combine(workDir, @"header.yaml");
+            }
+            else
+            {
+                arm9Path = Path.Combine(workDir, @"arm9.bin");
+                arm7Path = Path.Combine(workDir, @"arm7.bin");
+                overlayTablePath = Path.Combine(workDir, @"y9.bin");
+                y7Path = Path.Combine(workDir, @"y7.bin");
+                dataPath = Path.Combine(workDir, dataFolderName);
+                overlayPath = Path.Combine(workDir, @"overlay");
+                bannerPath = Path.Combine(workDir, @"banner.bin");
+                headerPath = Path.Combine(workDir, @"header.bin");
+            }
             unpackedPath = Path.Combine(workDir, @"unpacked");
-            internalNamesPath = Path.Combine(workDir, $@"{dataFolderName}\fielddata\maptable\mapname.bin");
+            internalNamesPath = Path.Combine(dataPath, @"fielddata\maptable\mapname.bin");
 
             try
             {

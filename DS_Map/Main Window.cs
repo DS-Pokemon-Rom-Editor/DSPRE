@@ -285,21 +285,57 @@ namespace DSPRE
 
         private void PaintGameIcon(object sender, PaintEventArgs e)
         {
-            if (iconON)
+            if (!iconON)
+                return;
+
+            if (RomInfo.IsDsRomProject)
             {
-                FileStream banner;
+                PaintGameIconFromDsRomBanner(e);
+            }
+            else
+            {
+                PaintGameIconFromNdstoolBanner(e);
+            }
+        }
 
-                try
-                {
-                    banner = File.OpenRead(RomInfo.workDir + @"banner.bin");
-                }
-                catch (FileNotFoundException)
-                {
-                    MessageBox.Show("Couldn't load " + '"' + "banner.bin" + '"' + '.', "Open Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
+        private void PaintGameIconFromDsRomBanner(PaintEventArgs e)
+        {
+            string bitmapPath = Path.Combine(RomInfo.workDir, "banner", "bitmap.png");
+            
+            if (!File.Exists(bitmapPath))
+            {
+                AppLogger.Debug("ds-rom banner bitmap.png not found, skipping icon display");
+                return;
+            }
 
-                BinaryReader readIcon = new BinaryReader(banner);
+            try
+            {
+                using (Image iconImage = Image.FromFile(bitmapPath))
+                {
+                    e.Graphics.DrawImage(iconImage, 0, 0, 32, 32);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn($"Failed to load icon from banner/bitmap.png: {ex.Message}");
+            }
+        }
+
+        private void PaintGameIconFromNdstoolBanner(PaintEventArgs e)
+        {
+            FileStream banner;
+
+            try
+            {
+                banner = File.OpenRead(RomInfo.bannerPath);
+            }
+            catch (FileNotFoundException)
+            {
+                MessageBox.Show("Couldn't load " + '"' + "banner.bin" + '"' + '.', "Open Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            BinaryReader readIcon = new BinaryReader(banner);
                 #region Read Icon Palette
                 readIcon.BaseStream.Position = 0x220;
                 byte firstByte, secondByte;
@@ -386,7 +422,6 @@ namespace DSPRE
                 }
                 #endregion
                 readIcon.Close();
-            }
         }
 
         public void SetupScriptEditor()
@@ -844,15 +879,10 @@ namespace DSPRE
             bool toolsMissing = false;
             List<string> missingToolsList = new List<string>();
 
-            if (!File.Exists(@"Tools\ndstool.exe"))
+            if (!File.Exists(@"Tools\dsrom.exe"))
             {
                 toolsMissing = true;
-                missingToolsList.Add("ndstool.exe");
-            }
-            if (!File.Exists(@"Tools\blz.exe"))
-            {
-                toolsMissing = true;
-                missingToolsList.Add("blz.exe");
+                missingToolsList.Add("dsrom.exe");
             }
             if (!File.Exists(@"Tools\apicula.exe"))
             {
@@ -953,17 +983,64 @@ namespace DSPRE
                 return;
             }
 
-            DetectAndHandleWSL(romFolderPath);
+        DetectAndHandleWSL(romFolderPath);
 
-            if (DSUtils.GetFolderType(romFolderPath) == -1)
+        if (DSUtils.GetFolderType(romFolderPath) == -1)
+        {
+            AppLogger.Error("The selected folder does not contain a valid ROM folder structure.");
+            MessageBox.Show("The selected folder does not contain a valid ROM folder structure.", "Invalid Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return; // Invalid folder, abort loading
+        }
+
+        // Check if this is an ndstool project and prompt for conversion
+        if (DSUtils.GetFolderType(romFolderPath) == 1)
+        {
+            DialogResult convertResult = MessageBox.Show(
+                "Legacy ndstool format detected.\n\n" +
+                "Would you like to convert to ds-rom format? (Recommended)\n" +
+                "A backup will be created automatically.\n\n" +
+                "• Yes: Upgrade to ds-rom format\n" +
+                "• No: Continue with ndstool format\n" +
+                "• Cancel: Abort loading",
+                "Convert to ds-rom?",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+            
+            if (convertResult == DialogResult.Cancel)
             {
-                AppLogger.Error("The selected folder does not contain a valid ROM folder structure.");
-                MessageBox.Show("The selected folder does not contain a valid ROM folder structure.", "Invalid Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return; // Invalid folder, abort loading
+                AppLogger.Debug("User cancelled loading from conversion dialog.");
+                return;
             }
+            
+            if (convertResult == DialogResult.Yes)
+            {
+                Helpers.statusLabelMessage("Converting project to ds-rom format...");
+                Update();
+                
+                if (!DSUtils.ConvertNdstoolToDsRom(romFolderPath))
+                {
+                    // Conversion failed - user was already notified by ConvertNdstoolToDsRom
+                    Helpers.statusLabelMessage("Conversion failed. Loading aborted.");
+                    return;
+                }
+                
+                AppLogger.Info("Conversion to ds-rom format successful.");
+            }
+            // If No, just continue with ndstool loading
+        }
 
-            SetupROMLanguage(Path.Combine(romFolderPath, "header.bin"));
+            string headerFile = DSUtils.GetFolderType(romFolderPath) == 0 ? "header.yaml" : "header.bin";
+            gameCode = null;
+            SetupROMLanguage(Path.Combine(romFolderPath, headerFile));
             AppLogger.Debug("ROM language setup completed.");
+
+            if (string.IsNullOrEmpty(gameCode))
+            {
+                AppLogger.Error("Failed to read game code from ROM header. Aborting.");
+                MessageBox.Show("Failed to read game code from ROM header. Please ensure the ROM is properly extracted.",
+                    "ROM Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             romInfo = new RomInfo(gameCode, romFolderPath);
 
@@ -995,11 +1072,42 @@ namespace DSPRE
 
         private void SetupROMLanguage(string headerPath)
         {
+            AppLogger.Debug($"SetupROMLanguage called with headerPath: {headerPath}");
+            
+            if (headerPath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase))
+            {
+                AppLogger.Debug("Header file is YAML format, attempting to parse...");
+                var result = YamlUtils.ReadGameCodeFromHeaderYaml(headerPath);
+                if (result.HasValue)
+                {
+                    gameCode = result.Value.gamecode;
+                    revisionByte = result.Value.revision;
+                    AppLogger.Info($"Successfully loaded game code from YAML: {gameCode}");
+                    return;
+                }
+                
+                // YAML parsing failed, try binary fallback
+                AppLogger.Warn("YAML parsing failed, attempting binary fallback...");
+                string binaryPath = headerPath.Replace(".yaml", ".bin");
+                if (File.Exists(binaryPath))
+                {
+                    AppLogger.Info($"Found binary fallback at: {binaryPath}");
+                    headerPath = binaryPath;
+                }
+                else
+                {
+                    AppLogger.Warn($"Failed to parse header.yaml and no header.bin fallback exists at: {binaryPath}");
+                    return;
+                }
+            }
+            
+            AppLogger.Debug($"Reading binary header from: {headerPath}");
             using (DSUtils.EasyReader br = new DSUtils.EasyReader(headerPath, 0xC))
             {
                 gameCode = Encoding.UTF8.GetString(br.ReadBytes(4));
                 br.BaseStream.Position = 0x1E;
                 revisionByte = br.ReadByte();
+                AppLogger.Info($"Successfully read game code from binary header: {gameCode}");
             }
         }
 

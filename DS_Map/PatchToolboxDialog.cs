@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Resources;
@@ -482,7 +482,7 @@ namespace DSPRE
             if (d2 == DialogResult.Yes)
             {
                 File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + backupSuffix, overwrite: true);
-                string ov5path = RomInfo.overlayPath + '\\' + "overlay_0005.bin";
+                string ov5path = OverlayUtils.GetPath(5);
                 File.Copy(ov5path, ov5path + backupSuffix, overwrite: true);
 
                 try
