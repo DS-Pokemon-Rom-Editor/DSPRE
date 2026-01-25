@@ -491,7 +491,7 @@
             this.openCurrentTxtButton.TabIndex = 67;
             this.openCurrentTxtButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.openCurrentTxtButton.UseVisualStyleBackColor = true;
-            this.openCurrentTxtButton.Click += new System.EventHandler(this.openCurrentTxtButton_Click);
+            this.openCurrentTxtButton.Click += new System.EventHandler(this.openCurrentButton_Click);
             // 
             // strvarHelpButton
             // 

@@ -1,4 +1,6 @@
-﻿using DSPRE.ROMFiles;
+﻿using DSPRE.CharMaps;
+using DSPRE.Editors.Utils;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
-using DSPRE.Editors.Utils;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace DSPRE.Editors
 {
@@ -156,11 +158,12 @@ namespace DSPRE.Editors
             int newArchiveID = selectTextFileComboBox.Items.Count;
             var textArchive = new TextArchive(newArchiveID, new List<string>() { "Your text here." });
             textArchive.SaveToExpandedDir(newArchiveID);
-            textArchive.SaveToDefaultDir(newArchiveID, false);
+
+            (string binPath, string jsonPath) = TextArchive.GetFilePaths(newArchiveID);
+            TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
 
             /* Update ComboBox and select new file */
-            selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);
-            
+            selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);            
 
             return newArchiveID;
         }
@@ -173,11 +176,12 @@ namespace DSPRE.Editors
 
         private void locateCurrentTextArchive_Click(object sender, EventArgs e)
         {
-            Helpers.ExplorerSelect(TextArchive.GetFilePaths(currentTextArchive.ID).txtPath);
+            Helpers.ExplorerSelect(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
-        private void openCurrentTxtButton_Click(object sender, EventArgs e)
+
+        private void openCurrentButton_Click(object sender, EventArgs e)
         {
-            Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).txtPath);
+            Helpers.OpenFileWithDefaultApp(TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath);
         }
 
         private void strvarHelpButton_Click(object sender, EventArgs e)
@@ -213,16 +217,15 @@ namespace DSPRE.Editors
         }
         private void exportTextFileButton_Click(object sender, EventArgs e)
         {
-            int textSelection = selectTextFileComboBox.SelectedIndex;
+            int selectedArchiveID = selectTextFileComboBox.SelectedIndex;
 
             string msgFileType = "Gen IV Text Archive";
-            string txtFileType = "Plaintext file";
-            string suggestedFileName = "Text Archive " + textSelection;
-            bool showSuccessMessage = true;
+            string jsonFileType = "JSON Text Archive";
+            string suggestedFileName = "Text Archive " + selectedArchiveID;
 
             SaveFileDialog sf = new SaveFileDialog
             {
-                Filter = $"{msgFileType} (*.msg)|*.msg|{txtFileType} (*.txt)|*.txt"
+                Filter = $"{msgFileType} (*.msg)|*.msg|{jsonFileType} (*.json)|*.json",
             };
 
             if (!string.IsNullOrWhiteSpace(suggestedFileName))
@@ -238,32 +241,21 @@ namespace DSPRE.Editors
             string selectedExtension = Path.GetExtension(sf.FileName);
             string type = currentTextArchive.GetType().Name;
 
-            if (selectedExtension == ".msg")
+            if (selectedExtension == ".msg" || selectedExtension == "")
             {
-                // Handle .msg case
-                currentTextArchive.SaveToFile(sf.FileName, showSuccessMessage);
-            }
-            else if (selectedExtension == ".txt")
-            {
-                // Handle .txt case
-                const int txtLinesWarningThreshold = 300;
-                if (currentTextArchive.messages.Count > txtLinesWarningThreshold)
-                {
-                    DialogResult result = MessageBox.Show($"This {type} has over {txtLinesWarningThreshold} messages. Writing a large text file may take a long time, especially on slow machines.\n\nAre you sure you want to proceed?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (result == DialogResult.No)
-                    {
-                        return;
-                    }
-                }
-                File.WriteAllText(sf.FileName, currentTextArchive.ToString());
+                // Handle binary case
+                string binPath = sf.FileName;
+                string jsonPath = TextArchive.GetFilePaths(selectedArchiveID).jsonPath;
 
-                if (showSuccessMessage)
-                {
-                    MessageBox.Show($"{type} saved successfully!", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
+            }
+            else if (selectedExtension == ".json")
+            {
+                // Handle .json case
+                File.Copy(TextArchive.GetFilePaths(selectedArchiveID).jsonPath, sf.FileName, true);
             }
 
-            if (textSelection == RomInfo.locationNamesTextNumber)
+            if (selectedArchiveID == RomInfo.locationNamesTextNumber)
             {
                 ReloadHeaderEditorLocationsList(currentTextArchive.messages, _parent);
             }
@@ -320,10 +312,10 @@ namespace DSPRE.Editors
         }
         private void importTextFileButton_Click(object sender, EventArgs e)
         {
-            /* Prompt user to select .msg or .txt file */
+            /* Prompt user to select .msg or .json file */
             OpenFileDialog of = new OpenFileDialog
             {
-                Filter = "Text Archive (*.msg;*.txt)|*.msg;*.txt|Gen IV Text Archive (*.msg)|*.msg|Plaintext file (*.txt)|*.txt"
+                Filter = "Gen IV Text Archive (*.msg)|*.msg|JSON Text Archive (*.json)|*.json",
             };
             if (of.ShowDialog(this) != DialogResult.OK)
             {
@@ -332,18 +324,19 @@ namespace DSPRE.Editors
 
             /* Update Text Archive object in memory */
             string binPath = TextArchive.GetFilePaths(currentTextArchive.ID).binPath;
-            string txtPath = TextArchive.GetFilePaths(currentTextArchive.ID).txtPath;
+            string jsonPath = TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath;
             string selectedExtension = Path.GetExtension(of.FileName);
 
-            if (selectedExtension == ".msg")
+            if (selectedExtension == ".msg" || selectedExtension == "")
             {
                 // Handle .msg case
                 File.Copy(of.FileName, binPath, true);
+                TextConverter.BinToJSON(binPath, jsonPath, CharMapManager.GetCharMapPath());
             }
-            else if (selectedExtension == ".txt")
+            else if (selectedExtension == ".json")
             {
-                // Handle .txt case
-                File.Copy(of.FileName, txtPath, true);
+                // Handle .json case
+                File.Copy(of.FileName, jsonPath, true);
             }
 
             /* Refresh controls */
@@ -361,7 +354,7 @@ namespace DSPRE.Editors
                 /* Delete Text Archive */
                 try
                 {
-                    File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).txtPath);
+                    File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).jsonPath);
                     File.Delete(TextArchive.GetFilePaths(selectTextFileComboBox.Items.Count - 1).binPath);
                 }
                 catch (Exception ex)
@@ -794,65 +787,149 @@ namespace DSPRE.Editors
 
         public void SetupTextEditor(MainProgram parent, bool force = false)
         {
-            if (textEditorIsReady && !force) { return; }
-            textEditorIsReady = true;
-            this._parent = parent;
+            // If text editor is already set up, skip
+            if (textEditorIsReady && !force) 
+            { 
+                return; 
+            }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+            var setupStart = DateTime.Now;
+
             Helpers.statusLabelMessage("Setting up Text Editor...");
             Update();
 
-            selectTextFileComboBox.Items.Clear();
-            int textCount = parent.romInfo.GetTextArchivesCount();
+            this._parent = parent;
+            textEditorIsReady = true;
 
-            using (var loadingForm = new LoadingForm(textCount, "Loading text archives..."))
+            string unpackedPath = RomInfo.gameDirs[DirNames.textArchives].unpackedDir;
+            string expandedPath = TextConverter.GetExpandedFolderPath();
+
+            int maxProgress = 100;
+
+            using (var loadingForm = new LoadingForm(maxProgress, "Loading text archives..."))
             {
-                Helpers.statusLabelMessage("Setting up Text Editor...");
-
                 Task.Run(() =>
                 {
-                    var time = DateTime.Now;
-                    int expandedCount = 0;
+                    int progress = 0;
 
-                    selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Clear()));
+                    // Unpack text archives, JSON files will only be overwritten if they are missing or older
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Unpacking text archives...")));
+
+                    // Create expanded directory if it doesn't exist
+                    if (!Directory.Exists(expandedPath))
+                    {
+                        Directory.CreateDirectory(expandedPath);
+
+                        // Since we can't just build from expanded, the binary files need to be unpacked as well
+                        // This function is ran before this point anyway so this is all kind of moot :(
+                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+                    }
+
+                    // Ensure the unpacked directory exists (is this even necessary?)
+                    if (!Directory.Exists(unpackedPath)) 
+                    {
+                        Directory.CreateDirectory(unpackedPath);
+                    }
+
+                    progress = 20;
+
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Converting to JSON format...")));
+                    TextConverter.FolderToJSON(unpackedPath, expandedPath, CharMapManager.GetCharMapPath());
+
+                    // If converting legacy plain text files is enabled, check if the expanded folder contains any .txt files
+                    if (SettingsManager.Settings.convertLegacyText)
+                    {
+                        var txtFiles = Directory.GetFiles(expandedPath, "*.txt", SearchOption.TopDirectoryOnly);
+                        int txtFileCount = txtFiles.Length;
+                        int convertedCount = 0;
+
+                        if (txtFileCount > 0)
+                        {
+                            bool shouldConvert = false;
+                            _parent.Invoke((Action)(() =>
+                            {
+                                DialogResult d = MessageBox.Show("Legacy .txt text files detected in the expanded text folder.\n" +
+                                    "Do you want to convert them to JSON format now?\n\n" +
+                                    "Selecting 'No' will skip conversion and leave the .txt files as-is. This may cause problems eventually.",
+                                    "Convert legacy text files", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                                shouldConvert = (d == DialogResult.Yes);
+                            }));
+
+                            if (shouldConvert)
+                            {
+                                loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Converting legacy .txt files to JSON format...")));
+                                
+                                foreach (var txtFile in txtFiles)
+                                {
+                                    // Try to get the ID from the filename
+                                    string fileName = Path.GetFileNameWithoutExtension(txtFile);
+                                    
+                                    if (int.TryParse(fileName, out int archiveID))
+                                    {
+                                        var textArchive = new TextArchive(archiveID);
+                                        textArchive.SaveToExpandedDir(archiveID, showSuccessMessage: false);
+                                        File.Delete(txtFile); // Delete legacy .txt file after conversion
+
+                                        convertedCount++;
+
+                                        // Update progress
+                                        int conversionProgress = Math.Max(1, convertedCount * 50 / txtFileCount ) + progress; 
+                                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(conversionProgress)));
+                                    }
+                                    else
+                                    {
+                                        AppLogger.Error($"Failed to convert legacy text file to JSON: could not parse archive ID from filename {fileName}");
+                                    }
+                                }
+
+                                _parent.Invoke((Action)(() =>
+                                {
+                                    MessageBox.Show($"Converted {convertedCount} of {txtFileCount} legacy .txt files to JSON format.\n" +
+                                        $"In order to increase performance you can disable this check in the settings."
+                                        , "Conversion complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }));
+                            }
+                        }
+                    } // End legacy .txt conversion
+
+                    progress += 50;
+                    loadingForm.Invoke((Action)(() => loadingForm.UpdateStatusAndProgress(progress, "Populating text archive list...")));
+
+                    selectTextFileComboBox.Invoke((Action)(() =>
+                    {
+                        Helpers.DisableHandlers();
+                        selectTextFileComboBox.BeginUpdate();
+                        selectTextFileComboBox.Items.Clear();
+                    }));
+
+                    int textCount = _parent.romInfo.GetTextArchivesCount();
+                    int baseProgress = progress;
                     for (int i = 0; i < textCount; i++)
                     {
-                        
-                        try {
-
-                            string expandedPath = TextArchive.GetFilePaths(i).txtPath;
-                            string binPath = TextArchive.GetFilePaths(i).binPath;
-
-                            // Skip if .txt is newer than .bin
-                            if (!File.Exists(expandedPath) || File.GetLastWriteTimeUtc(expandedPath) < File.GetLastWriteTimeUtc(binPath)) 
-                            {
-                                var temp = new TextArchive(i);
-                                temp.SaveToExpandedDir(i, false);
-                                expandedCount++;
-                            }                       
-                                                     
-                        }
-                        catch (Exception ex)
-                        {
-                            AppLogger.Error($"Failed to load Text Archive {i}: {ex.Message}");
-                            continue;
-                        }
-
-                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(i + 1)));
+                        // Due to the way DSPRE is built all archives need to be added to the combobox, regardless of whether they are actually present or not
+                        // This is a potential point for improvement
                         selectTextFileComboBox.Invoke((Action)(() => selectTextFileComboBox.Items.Add("Text Archive " + i)));
+                        
+                        progress = baseProgress + (i * 30 / textCount);
+                        loadingForm.Invoke((Action)(() => loadingForm.UpdateProgress(progress)));
                     }
 
                     _parent.Invoke((Action)(() =>
                     {
-                        loadingForm.UpdateProgress(textCount);
-                        Helpers.DisableHandlers();
+                        selectTextFileComboBox.EndUpdate();
+                        
                         hexRadiobutton.Checked = SettingsManager.Settings.textEditorPreferHex;
+                        
                         Helpers.EnableHandlers();
                         selectTextFileComboBox.SelectedIndex = 0;
-                        var elapsed = DateTime.Now - time;
-                        Helpers.statusLabelMessage($"Loaded text archives in { elapsed.TotalSeconds.ToString("F2") } s");
-                        AppLogger.Info($"Loaded text archives in {elapsed.TotalMilliseconds} ms. " +
-                            $"{expandedCount} of {textCount} total files converted to plain text.");
+
+                        loadingForm.UpdateProgress(textCount);
+                        
+                        var elapsed = DateTime.Now - setupStart;
+                        Helpers.statusLabelMessage($"Loaded text archives in {elapsed.TotalSeconds.ToString("F2")} s");
+
+                        AppLogger.Info($"Loaded text archives in {elapsed.TotalMilliseconds} ms. {textCount} total text files found.");
+                        
                         loadingForm.Close();
                     }));
                 });
@@ -861,7 +938,6 @@ namespace DSPRE.Editors
                 loadingForm.ShowDialog();
             }
         }
-
         
     }
 }

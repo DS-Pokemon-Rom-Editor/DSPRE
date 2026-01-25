@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -9,560 +10,140 @@ using DSPRE.CharMaps;
 namespace DSPRE
 {
     internal class TextConverter
-    {
-
-        public static List<string> ReadMessageFromStream(Stream stream, out UInt16 key)
+    {   
+        public static readonly Dictionary<RomInfo.GameLanguages, string> langCodes = new Dictionary<RomInfo.GameLanguages, string>
         {
-            List<string> messages = new List<string>();
-            key = 0;
+            { RomInfo.GameLanguages.English, "en_US" },
+            { RomInfo.GameLanguages.French, "fr_FR" },
+            { RomInfo.GameLanguages.Italian, "it_IT" },
+            { RomInfo.GameLanguages.German, "de_DE" },
+            { RomInfo.GameLanguages.Spanish, "es_ES" },
+            { RomInfo.GameLanguages.Japanese, "ja_JP" },
+        };
 
-            using (BinaryReader reader = new BinaryReader(stream))
-            {
-                try
-                {
-                    // Read message count and key
-                    UInt16 messageCount = reader.ReadUInt16();
-                    key = reader.ReadUInt16();
-
-                    var messageTable = new List<(int offset, int length)>(messageCount);
-
-                    // Read and decrypt message table to obtain offsets and lengths
-                    for (int i = 0; i < messageCount; i++)
-                    {
-                        int offset = reader.ReadInt32();
-                        int length = reader.ReadInt32();
-
-                        // Decrypt length and offset
-                        int localKey = (765 * (i+1) * key) & 0xFFFF;
-                        localKey |= (localKey << 16);
-                        offset ^= localKey;
-                        length ^= localKey;
-
-                        messageTable.Add((offset, length));
-                    }
-
-                    int msgIndex = 1;
-
-                    // Read, decrypt and decode each message
-                    foreach (var (offset, length) in messageTable)
-                    {
-                        if (offset < 0 || length < 0 || offset + length * 2 > stream.Length)
-                        {
-                            AppLogger.Error($"Invalid message offset/length for message {msgIndex}: offset={offset}, length={length}");
-                            msgIndex++;
-                            break;
-                        }
-
-                        byte[] encryptedBytes = reader.ReadBytes(length * 2);
-                        UInt16[] encryptedData = new UInt16[length];
-                        for (int j = 0; j < length; j++)
-                        {
-                            encryptedData[j] = BitConverter.ToUInt16(encryptedBytes, j * 2);
-                        }
-                        string message = DecryptMessage(encryptedData, msgIndex);
-                        messages.Add(message);
-                        msgIndex++;
-                    }
-
-                    // Get remaining bytes in the stream
-                    long remainingBytes = reader.BaseStream.Length - reader.BaseStream.Position;
-                    if (remainingBytes > 0)
-                    {
-                        AppLogger.Warn($"There are {remainingBytes} unread bytes remaining in the message stream. This indicates a possible issue with the message offsets/lengths.");
-                        throw new Exception("Unread bytes remaining in message stream.");
-                    }
-
-                }
-                catch (EndOfStreamException)
-                {
-                    MessageBox.Show("Unexpected end of file while reading messages.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-
-            return messages;
-
+        public static string GetExpandedFolderPath()
+        {
+            // ToDo: Don't hardcode "expanded" and "textArchives" folders
+            return Path.Combine(RomInfo.workDir, "expanded", "textArchives");
         }
 
-        public static bool WriteMessagesToStream(ref Stream stream, List<string> messages, UInt16 key)
+        public static void BinToJSON(string inputFilePath, string outputFilePath, string charMapPath)
         {
-            using (BinaryWriter writer = new BinaryWriter(stream))
-            {
-                try
-                {
-                    UInt16 messageCount = (UInt16)messages.Count;
-                    writer.Write(messageCount);
-                    writer.Write(key);
-                    long tableStartPos = writer.BaseStream.Position;
-                    writer.Seek(messageCount * 8, SeekOrigin.Current); // Reserve space for the message table
-                    var messageTable = new List<(int offset, int length)>(messageCount);
-                    for (int i = 0; i < messageCount; i++)
-                    {
-                        UInt16[] encryptedMessage = EncryptMessage(messages[i], (i+1));
-                        int offset = (int)writer.BaseStream.Position;
-                        int length = encryptedMessage.Length;
-                        // Write encrypted message
-                        foreach (var code in encryptedMessage)
-                        {
-                            writer.Write(code);
-                        }
-                        // Encrypt length and offset for the table
-                        int localKey = (765 * (i+1) * key) & 0xFFFF;
-                        localKey |= (localKey << 16);
-                        int encOffset = offset ^ localKey;
-                        int encLength = length ^ localKey;
-                        messageTable.Add((encOffset, encLength));
-                    }
-                    long endPos = writer.BaseStream.Position;
-                    // Write the message table
-                    writer.Seek((int)tableStartPos, SeekOrigin.Begin);
-                    foreach (var (offset, length) in messageTable)
-                    {
-                        writer.Write(offset);
-                        writer.Write(length);
-                    }
-
-                    writer.Seek((int)endPos, SeekOrigin.Begin); // Move back to the end
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error writing messages: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
-            }
+            ChatotWrapper(outputFilePath, inputFilePath, charMapPath, "decode", false, true);
         }
 
-        private static string DecryptMessage(UInt16[] message, int index)
+        public static void JSONToBin(string inputFilePath, string outputFilePath, string charMapPath)
         {
-            ushort localKey = (ushort)(index * 596947);
-
-            for (int i = 0; i < message.Length; i++)
-            {
-                message[i] ^= localKey;
-                localKey = (ushort)((localKey + 18749) & 0xFFFF);
-            }
-
-            return DecodeMessage(message);
-
+            ChatotWrapper(inputFilePath, outputFilePath, charMapPath, "encode", false, true);
         }
 
-        private static UInt16[] EncryptMessage(string message, int index)
+        public static void BinToPlainText(string inputFilePath, string outputFilePath, string charMapPath)
         {
-            UInt16[] encodedMessage = EncodeMessage(message);
-            ushort localKey = (ushort)(index * 596947);
-            for (int i = 0; i < encodedMessage.Length; i++)
-            {
-                encodedMessage[i] ^= localKey;
-                localKey = (ushort)((localKey + 18749) & 0xFFFF);
-            }
-            return encodedMessage;
+            ChatotWrapper(outputFilePath, inputFilePath, charMapPath, "decode", false, false);
         }
 
-        private static string DecodeMessage(UInt16[] message)
+        public static void PlainTextToBin(string inputFilePath, string outputFilePath, string charMapPath)
         {
-            StringBuilder decodedMessage = new StringBuilder();
-
-            int i = 0;
-
-            while (i < message.Length)
-            {
-                ushort code = message[i];
-                // Regular characters and escape sequences
-                if (CharMapManager.GetDecodingMap().ContainsKey(code))
-                {
-                    decodedMessage.Append(CharMapManager.GetDecodingMap()[code]);
-                    i++;
-                }
-                // Commands
-                else if (code == 0xFFFE)
-                {
-                    var (command, toSkip) = DecodeCommand(message, i);
-                    decodedMessage.Append(command);
-                    i += toSkip;
-                    i++; // Initial 0xFFFE
-                }
-                // Trainer Name
-                else if (code == 0xF100)
-                {
-                    var (trainerName, toSkip) = DecodeTrainerName(message, i);
-                    decodedMessage.Append(trainerName);
-                    i += toSkip;
-                    i++; // Initial 0xF100
-                }
-                // String terminator
-                else if (code == 0xFFFF)
-                {
-                    break;
-                }
-                // Hexadecimal representation for unknown codes
-                else
-                {
-                    decodedMessage.Append(ToHex(code));
-                    i++;
-                }
-            }
-
-            return decodedMessage.ToString();
+            ChatotWrapper(inputFilePath, outputFilePath, charMapPath, "encode", false, false);
         }
 
-        private static UInt16[] EncodeMessage(string message)
+        public static void FolderToJSON(string inputFolderPath, string outputFolderPath, string charMapPath)
         {
-            List<UInt16> encodedMessage = new List<UInt16>();
-
-            int i = 0;
-
-            while (i < message.Length)
-            {
-                // Regular characters
-                if (CharMapManager.GetEncodingMap().ContainsKey(message[i].ToString()))
-                {
-                    encodedMessage.Add(CharMapManager.GetEncodingMap()[message[i].ToString()]);
-                    i++;
-                }
-                // Escape sequences
-                else if (message[i] == '\\')
-                {
-                    // Handle hex escape sequences like \x1234
-                    if (i + 5 < message.Length && message[i + 1] == 'x')
-                    {
-                        string hexSeq = message.Substring(i + 2, 4);
-                        if (ushort.TryParse(hexSeq, System.Globalization.NumberStyles.HexNumber, null, out ushort hexValue))
-                        {
-                            encodedMessage.Add(hexValue);
-                            i += 6;
-                            continue;
-                        }
-                    }
-                    // Handle single character escape sequences
-                    if (i + 1 < message.Length)
-                    {
-                        string escapeSeq = message.Substring(i, 2);
-                        if (CharMapManager.GetEncodingMap().ContainsKey(escapeSeq))
-                        {
-                            encodedMessage.Add(CharMapManager.GetEncodingMap()[escapeSeq]);
-                            i += 2;
-                            continue;
-                        }
-                    }
-                    // No match add null char and skip
-                    encodedMessage.Add(0);
-                    i++;
-                }
-                // Commands
-                else if (message[i] == '{')
-                {
-                    int endIndex = message.IndexOf('}', i);
-                    if (endIndex != -1)
-                    {
-                        string command = message.Substring(i, endIndex - i + 1);
-
-                        // Trainer Name special case
-                        if (command.StartsWith("{TRAINER_NAME:") && command.EndsWith("}"))
-                        {
-                            encodedMessage.AddRange(EncodeTrainerName(command));
-                            i = endIndex + 1;
-                            continue;
-                        }
-
-                        // Regular command
-                        encodedMessage.AddRange(EncodeCommand(command));
-                        i = endIndex + 1;
-                        continue;
-                    }
-                    // No match add null char
-                    encodedMessage.Add(0);
-                    i++;
-                }
-                // Multi character sequences
-                else if (message[i] == '[')
-                {
-                    int endIndex = message.IndexOf(']', i);
-                    if (endIndex != -1)
-                    {
-                        string multiCharSeq = message.Substring(i, endIndex - i + 1);
-                        if (CharMapManager.GetEncodingMap().ContainsKey(multiCharSeq))
-                        {
-                            encodedMessage.Add(CharMapManager.GetEncodingMap()[multiCharSeq]);
-                            i = endIndex + 1;
-                            continue;
-                        }
-                    }
-                    // No match add null char
-                    encodedMessage.Add(0);
-                    i++;
-                }
-                // No match
-                else
-                {
-                    encodedMessage.Add(0);
-                    i++;
-                }
-            }
-
-            // Add string terminator
-            encodedMessage.Add(0xFFFF);
-
-            return encodedMessage.ToArray();
-
+            ChatotWrapperDirectory(outputFolderPath, inputFolderPath, charMapPath, "decode", true, "--newer");
         }
 
-        private static (string command, int toSkip) DecodeCommand(UInt16[] message, int startIndex)
+        public static void FolderToBin(string inputFolderPath, string outputFolderPath, string charMapPath)
         {
-            // We need at least two more codes (command ID and param count)
-            if (startIndex + 1 >= message.Length)
-            {
-                return (ToHex(0), 0);
-            }
-            else if (startIndex + 2 >= message.Length)
-            {
-                return (ToHex(message[startIndex + 1]), 1);
-            }
+            ChatotWrapperDirectory(inputFolderPath, outputFolderPath, charMapPath, "encode", true, "--newer");
+        }
 
-            // Number of UInt16 codes to skip not including the initial 0xFFFE
-            // We always skip at least the command ID and param count
-            int skip = 2;
+        private static void ChatotWrapperDirectory(string plainTextPath, string binaryPath, string charMapPath, string mode, bool json, string extraArgs = "")
+        {
+            ChatotWrapper(plainTextPath, binaryPath, charMapPath, mode, true, json, extraArgs);
+        }
 
-            ushort commandID = message[startIndex + 1];
-            ushort paramCount = message[startIndex + 2];
+        private static void ChatotWrapper(string plainTextPath, string binaryPath, string charMapPath, string mode, bool isDirectory, bool isJson, string extraArgs = "")
+        {
+            // Ensure all paths are absolute
+            plainTextPath = Path.GetFullPath(plainTextPath);
+            binaryPath = Path.GetFullPath(binaryPath);
+            charMapPath = Path.GetFullPath(charMapPath);
 
-            // We need to make sure we have enough codes for the parameters
-            if (startIndex + 2 + paramCount >= message.Length)
+            string chatotPath = Path.Combine(Application.StartupPath, "Tools", "chatot.exe");
+            string plainTextArg = "";
+            string binaryArg = "";
+
+            if (!File.Exists(chatotPath))
             {
-                return (ToHex(commandID, paramCount), skip);
-            }
-
-            ushort[] parameters = new ushort[paramCount];
-            for (int i = 0; i < paramCount; i++)
-            {
-                parameters[i] = message[startIndex + 3 + i];
-                skip++;
+                MessageBox.Show("chatot.exe not found in Tools folder.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
 
-            // Special case for string buffer vars that have 1 byte command ids
-            int specialByte = 0;
-
-            if (!CharMapManager.GetCommandMap().ContainsKey(commandID) && CharMapManager.GetCommandMap().ContainsKey((ushort)(commandID & 0xFF00)))
+            if (isDirectory)
             {
-                specialByte = (ushort)(commandID & 0x00FF);
-                commandID = (ushort)(commandID & 0xFF00);
-
-            }
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.Append("{");
-            if (CharMapManager.GetCommandMap().ContainsKey(commandID))
-            {
-                sb.Append($"{CharMapManager.GetCommandMap()[commandID]}");
-                sb.Append($", {specialByte}");
-
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    sb.Append($", {parameters[i]}");
-                }
+                plainTextArg = $"-d \"{plainTextPath}\"";
+                binaryArg = $"-a \"{binaryPath}\"";
             }
             else
             {
-                // Unknown command, represent as raw number
-                sb.Append($"0x{commandID:X4}");
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    sb.Append($", {parameters[i]}");
-                }
+                plainTextArg = $"-t \"{plainTextPath}\"";
+                binaryArg = $"-b \"{binaryPath}\"";
             }
-            sb.Append("}");
-            return (sb.ToString(), skip);
-        }
 
-        private static UInt16[] EncodeCommand(string command)
-        {
-            // Strip the braces
-            if (command.StartsWith("{") && command.EndsWith("}"))
+            Process chatot = new Process();
+            chatot.StartInfo.FileName = chatotPath;
+            chatot.StartInfo.Arguments = $"{mode} -m \"{charMapPath}\" {plainTextArg} {binaryArg}";
+            chatot.StartInfo.UseShellExecute = false;
+            chatot.StartInfo.CreateNoWindow = true;
+            chatot.StartInfo.RedirectStandardError = true;
+            chatot.StartInfo.RedirectStandardOutput = true;
+
+            if (isJson)
             {
-                command = command.Substring(1, command.Length - 2);
+                chatot.StartInfo.Arguments += " --json";
             }
-            else
+
+            if (!string.IsNullOrEmpty(extraArgs))
             {
-                AppLogger.Error($"Invalid text command format for command: {command} ");
-                return new UInt16[] { 0 };
+                chatot.StartInfo.Arguments += " " + extraArgs;
             }
 
-            string[] parts = command.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            // Set working directory to the directory containing chatot.exe
+            chatot.StartInfo.WorkingDirectory = Path.GetDirectoryName(chatotPath);
 
-            // parts[0] = command name or hex ID
-            // parts[1] = special byte (0 if none)
-            // parts[2..] = parameters
+            // Debug
+            string commandText = $"{chatot.StartInfo.FileName} {chatot.StartInfo.Arguments}";
+            AppLogger.Debug("Executing command: " + commandText);
 
-            if (parts.Length < 2)
+            string errorOutput = "";
+            string standardOutput = "";
+
+            try
             {
-                AppLogger.Error($"Empty text command: {command}. Replaced with null character.");
-                return new UInt16[] { 0 };
+                chatot.Start();
+
+                // Only read error stream for logging purposes
+                errorOutput = chatot.StandardError.ReadToEnd();
+                standardOutput = chatot.StandardOutput.ReadToEnd();
+
+                // Wait for the process to finish
+                chatot.WaitForExit();
             }
-
-            string commandName = parts[0].Trim();
-            string specialByteStr = parts[1].Trim();
-            ushort parameterCount = (ushort)(parts.Length - 2);
-
-            List<UInt16> encodedCommand = new List<UInt16>();
-
-            // Command start
-            encodedCommand.Add(0xFFFE);
-
-            // Get ID from name or parse hex
-            if (CharMapManager.GetCommandMap().ContainsValue(commandName))
+            catch (Exception e)
             {
-                encodedCommand.Add(CharMapManager.GetCommandMap().Reverse()[commandName]);
+                MessageBox.Show("An error occurred while converting JSON/TXT to BIN:\n" + e.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            else if (ushort.TryParse(commandName, out ushort commandID))
+
+            if (errorOutput.Length > 0)
             {
-                encodedCommand.Add(commandID);
+                AppLogger.Warn($"chatot.exe reported the following warnings/errors while converting JSON/TXT to BIN:\n{errorOutput}");
             }
-            else
+
+            if (standardOutput.Length > 0)
             {
-                AppLogger.Error($"Unknown text command: {commandName}");
-                return new UInt16[] { 0 };
+                AppLogger.Info($"chatot.exe output:\n{standardOutput}");
             }
-
-            ushort specialByte;
-            if (!ushort.TryParse(specialByteStr, out specialByte))
-            {
-                AppLogger.Error($"Invalid special byte '{specialByteStr}' in command: {command}. Replaced with value '0'");
-                specialByte = 0;
-            }
-
-            encodedCommand[1] |= (ushort)(specialByte & 0x00FF);
-            encodedCommand.Add(parameterCount);
-
-            for (int i = 2; i < parts.Length; i++)
-            {
-                string paramStr = parts[i].Trim();
-                if (ushort.TryParse(paramStr, out ushort paramValue))
-                {
-                    encodedCommand.Add(paramValue);
-                }
-                else
-                {
-                    AppLogger.Error($"Invalid parameter '{paramStr}' in command: {command}. Replaced with value '0'");
-                    encodedCommand.Add(0);
-                }
-            }
-
-            return encodedCommand.ToArray();
-
-        }
-
-        private static (string trainerName, int toSkip) DecodeTrainerName(UInt16[] message, int startIndex)
-        {
-            StringBuilder decoded = new StringBuilder();
-            int bit = 0;
-            int arrayIndex = startIndex + 1;
-            int codesConsumed = 1;
-
-            decoded.Append("{TRAINER_NAME:");
-
-            // This code is completely stole from pokeplatinum's msgenc
-            ushort curChar;
-            while (arrayIndex < message.Length)
-            {
-                curChar = (ushort)((message[arrayIndex] >> bit) & 0x1FF);
-                bit += 9;
-
-                if (bit >= 15)
-                {
-                    arrayIndex++;
-                    codesConsumed++;
-                    bit -= 15;
-                    if (bit != 0 && arrayIndex < message.Length)
-                    {
-                        curChar |= (ushort)(((message[arrayIndex] << (9 - bit)) & 0x1FF));
-                    }
-                }
-
-                if (curChar == 0x1FF)
-                    break;
-
-                if (CharMapManager.GetDecodingMap().ContainsKey(curChar))
-                {
-                    decoded.Append(CharMapManager.GetDecodingMap()[curChar]);
-                }
-                else
-                {
-                    decoded.Append(ToHex(curChar));
-                }
-
-            }
-
-            decoded.Append("}");
-
-            return (decoded.ToString(), codesConsumed);
-        }
-
-        private static UInt16[] EncodeTrainerName(string trainerName)
-        {
-            string nameContent = trainerName.Substring(14, trainerName.Length - 15); // Strip {TRAINER_NAME: and }
-            List<ushort> encodedChars = new List<ushort>();
-            List<ushort> packedCodes = new List<ushort>();
-
-            // Get list of characters to encode
-            foreach (char c in nameContent)
-            {
-                if (CharMapManager.GetEncodingMap().ContainsKey(c.ToString()))
-                {
-                    var code = CharMapManager.GetEncodingMap()[c.ToString()];
-
-                    // Ensure code fits in 9 bits
-                    if (code >> 9 != 0)
-                    {
-                        AppLogger.Error($"Character '{c}' in trainer name encodes to value larger than 9 bits. Replaced with null char.");
-                        encodedChars.Add(0);
-                    }
-                    else
-                    {
-                        encodedChars.Add(code);
-                    }
-                }
-                else
-                {
-                    AppLogger.Error($"Unknown character '{c}' in trainer name. Replaced with null char.");
-                    encodedChars.Add(0);
-                }
-            }
-
-            // Add trainer name special indicator
-            packedCodes.Add(0xF100);
-
-            int bitBuffer = 0;
-            int bitOffset = 0;
-
-            // Pack 9-bit codes into 15-bit ushort values. MSB is always 0 except for terminator
-            foreach (var code in encodedChars)
-            {
-                bitBuffer |= (code << bitOffset);
-                bitOffset += 9;
-
-                // Check for rollover
-                if (bitOffset >= 15)
-                {
-                    // We have enough bits to write a new ushort
-                    packedCodes.Add((ushort)(bitBuffer & 0x7FFF));
-                    bitBuffer >>= 15;
-                    bitOffset -= 15;
-                }
-            }
-
-            // Add terminator if required
-            // Side Note: All implementations of this that I've seen skip the terminator if there are no more bits to write
-            // This means that if the name length is a multiple of 5 characters, there is no terminator
-            // The regular message terminator (0xFFFF) is still added after the trainer name which ends up catching this but I am unsure whether this is intentional
-            if (bitOffset != 0)
-            {
-                // Shift the remaining 9‑bit terminator (0x1FF) into the buffer, then emit the last 15‑bit word
-                bitBuffer |= (0x1FF << bitOffset);
-                packedCodes.Add((ushort)(bitBuffer & 0x7FFF));
-            }
-
-            return packedCodes.ToArray();
-        }
+        }        
 
         public static string GetSimpleTrainerName(string message)
         {
@@ -577,7 +158,7 @@ namespace DSPRE
             return message;
         }
 
-        public static string GetProperTrainerName(string message, string simpleName)
+        public static string ReplaceTrainerName(string message, string simpleName)
         {
             if (string.IsNullOrEmpty(message))
                 return message;
@@ -588,16 +169,6 @@ namespace DSPRE
             }
 
             return message;
-        }
-
-        private static string ToHex(params ushort[] codes)
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach (var code in codes)
-            {
-                sb.Append($"\\x{code:X4}");
-            }
-            return sb.ToString();
         }
 
     }

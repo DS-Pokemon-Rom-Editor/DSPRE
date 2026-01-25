@@ -3,33 +3,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace DSPRE.CharMaps
 {
     public partial class CharMapManagerForm : Form
     {
-
-        private XmlDocument currentMap;
-        Dictionary<ushort, string> decodeDict = new Dictionary<ushort, string>();
-        Dictionary<string, ushort> aliasDict = new Dictionary<string, ushort>();
-
+        private CharMap currentMap;
         private bool dirty = false;
 
         public CharMapManagerForm()
         {
             InitializeComponent();
-            LoadCustomMap();
-            ReadCurrentMap();
-            PopulateListsFromDict();
+            LoadCharMap();
+            PopulateListsFromMap();
         }
 
         private void SetDirty(bool isDirty)
         {
             dirty = isDirty;
-            
+
             if (dirty)
             {
                 this.Text = "Character Map Manager*";
@@ -40,12 +34,12 @@ namespace DSPRE.CharMaps
             }
         }
 
-        private void LoadCustomMap()
+        private void LoadCharMap()
         {
-            // If file exists, try loading it
+            // Check if custom charmap exists
             if (!File.Exists(CharMapManager.customCharmapFilePath))
             {
-                // File does not exist, this is okay and a valid state
+                // No custom map exists
                 currentMap = null;
                 EnableDisableControls(false);
                 return;
@@ -53,91 +47,66 @@ namespace DSPRE.CharMaps
 
             try
             {
-                currentMap = new XmlDocument();
-                currentMap.PreserveWhitespace = true;
-                currentMap.Load(CharMapManager.customCharmapFilePath);
+                currentMap = CharMapManager.DeserializeCharMap(CharMapManager.customCharmapFilePath);
                 EnableDisableControls(true);
-                return;
+                SetDirty(false);
             }
             catch (Exception ex)
             {
-                // File is somehow invalid, this should be considered a valid state
                 currentMap = null;
                 EnableDisableControls(false);
                 AppLogger.Error("Failed to load custom charmap: " + ex.ToString());
                 MessageBox.Show("Failed to load custom charmap: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
             }
         }
 
-        private void ReadCurrentMap()
+        private void PopulateListsFromMap()
         {
             charMapListBox.Items.Clear();
             aliasListBox.Items.Clear();
             codeComboBox.Items.Clear();
             codeComboBox.SelectedIndex = -1;
-            decodeDict.Clear();
-
-            SetDirty(false);
 
             if (currentMap == null)
             {
                 return;
             }
 
-            foreach (XmlNode entry in currentMap.SelectNodes("//entry"))
+            // Get all codes sorted
+            var sortedCodes = currentMap.GetAllCodes().OrderBy(c => c).ToList();
+
+            charMapListBox.BeginUpdate();
+            aliasListBox.BeginUpdate();
+            codeComboBox.BeginUpdate();
+
+            foreach (ushort code in sortedCodes)
             {
-                string codeString = entry.Attributes["code"]?.Value;
-                string kind = entry.Attributes["kind"]?.Value;
-                string text = entry.InnerText;
+                CharMapEntry entry = currentMap.GetEntry(code);
+                if (entry == null) continue;
 
-                if (codeString == null || kind == null || text == null)
-                {
-                    AppLogger.Warn("Found charmap entry with null value in custom map. Skipping.");
-                    continue;
-                }
+                string codeStr = $"0x{code:X4}";
+                string displayStr = $"{codeStr} <-> {entry.Character}";
 
-                ushort code;
+                charMapListBox.Items.Add(displayStr);
+                codeComboBox.Items.Add(displayStr);
 
-                if (!ushort.TryParse(codeString, System.Globalization.NumberStyles.HexNumber, null, out code))
+                // Add aliases if present
+                if (entry.Aliases != null && entry.Aliases.Count > 0)
                 {
-                    AppLogger.Error($"Invalid code value in charmap: {codeString}");
-                    continue;
-                }
+                    foreach (string alias in entry.Aliases)
+                    {
+                        string aliasDisplayStr = $"{codeStr} <- {alias} (alias)";
+                        charMapListBox.Items.Add(aliasDisplayStr);
 
-                if (kind == "char")
-                {
-                    decodeDict[code] = text;
-                }
-                else if (kind == "alias")
-                {
-                    aliasDict[text] = code;
+                        string aliasListDisplayStr = $"{alias} -> {entry.Character} <-> {codeStr}";
+                        aliasListBox.Items.Add(aliasListDisplayStr);
+                    }
                 }
             }
-        }
 
-        private void PopulateListsFromDict()
-        {
-            charMapListBox.Items.Clear();
-            aliasListBox.Items.Clear();
-            codeComboBox.Items.Clear();
-            foreach (var kvp in decodeDict)
-            {
-                ushort code = kvp.Key;
-                string value = kvp.Value;
-                charMapListBox.Items.Add($"0x{code:X4} <-> {value}");
-                codeComboBox.Items.Add($"0x{code:X4} <-> {value}");
-            }
-            foreach (var kvp in aliasDict)
-            {
-                string alias = kvp.Key;
-                ushort code = kvp.Value;
-                if (decodeDict.TryGetValue(code, out string originalValue))
-                {
-                    charMapListBox.Items.Add($"0x{code:X4} <- {alias} (alias)");
-                    aliasListBox.Items.Add($"{alias} -> {originalValue} <-> 0x{code:X4}");
-                }
-            }
+            charMapListBox.EndUpdate();
+            aliasListBox.EndUpdate();
+            codeComboBox.EndUpdate();
         }
 
         private void EnableDisableControls(bool enableControls)
@@ -146,16 +115,18 @@ namespace DSPRE.CharMaps
             removeAliasButton.Enabled = enableControls;
             saveButton.Enabled = enableControls;
             deleteCustomMapButton.Enabled = enableControls;
+            rebaseButton.Enabled = enableControls;
         }
 
         private bool CheckUnsavedChanges()
         {
             if (dirty)
             {
-                var result = MessageBox.Show("You have unsaved changes. Do you want to save them before proceeding?", "Unsaved Changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                var result = MessageBox.Show("You have unsaved changes. Do you want to save them before proceeding?",
+                    "Unsaved Changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
                 if (result == DialogResult.Yes)
                 {
-                    // For some reason perform click doesn't work here
                     saveButton_Click(null, null);
                     return true;
                 }
@@ -191,6 +162,7 @@ namespace DSPRE.CharMaps
             {
                 var result = MessageBox.Show("Unbracketed single character aliases are not recommended and may lead to encoding issues. " +
                     "Do you want to enclose the character in brackets?", "Single Character Alias", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
                 if (result == DialogResult.Yes)
                 {
                     alias = "[" + alias + "]";
@@ -200,16 +172,17 @@ namespace DSPRE.CharMaps
                     return;
                 }
             }
-            // Ensure that multi character aliased are enclosed in []
+            // Ensure that multi character aliases are enclosed in []
             else if (alias.Length > 1 && !(alias.StartsWith("[") && alias.EndsWith("]")))
             {
                 alias = "[" + alias + "]";
             }
 
-            // Check if alias already exists
-            if (aliasDict.ContainsKey(alias))
+            // Check if alias already exists anywhere in the charmap
+            ushort? existingCode = currentMap.FindCode(alias);
+            if (existingCode != null)
             {
-                MessageBox.Show("Alias already exists in the charmap.", "Duplicate Alias", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("This alias or character already exists in the charmap.", "Duplicate Alias", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -223,56 +196,28 @@ namespace DSPRE.CharMaps
             string selectedCodeStr = codeComboBox.SelectedItem.ToString().Split(' ')[0];
             ushort selectedCode = ushort.Parse(selectedCodeStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
 
-            // Add new alias entry to XML
-            try
+            // Add alias to the entry
+            CharMapEntry entry = currentMap.GetEntry(selectedCode);
+            if (entry != null)
             {
-                var root = currentMap.DocumentElement;
-                XmlElement newEntry = currentMap.CreateElement("entry");
-                newEntry.SetAttribute("code", selectedCode.ToString("X4"));
-                newEntry.SetAttribute("kind", "alias");
-                newEntry.InnerText = alias;
+                entry.AddAlias(alias);
+                SetDirty(true);
 
-                // Find the last entry element
-                XmlNode lastEntry = root.SelectSingleNode("entry[last()]");
+                // Refresh the display
+                PopulateListsFromMap();
 
-                if (lastEntry != null)
+                // Select the newly added alias in the list
+                for (int i = 0; i < aliasListBox.Items.Count; i++)
                 {
-                    // Get the whitespace (newline + indent) before the last entry
-                    XmlNode whitespaceBeforeLast = lastEntry.PreviousSibling;
-
-                    // Insert: whitespace, then new entry
-                    if (whitespaceBeforeLast != null && whitespaceBeforeLast.NodeType == XmlNodeType.Whitespace)
+                    if (aliasListBox.Items[i].ToString().StartsWith(alias + " "))
                     {
-                        // Clone the whitespace pattern
-                        XmlNode newWhitespace = currentMap.CreateTextNode(whitespaceBeforeLast.Value);
-                        root.InsertAfter(newWhitespace, lastEntry);
-                        root.InsertAfter(newEntry, newWhitespace);
-                    }
-                    else
-                    {
-                        // Fallback: add newline + 2 spaces
-                        root.InsertAfter(currentMap.CreateTextNode("\n  "), lastEntry);
-                        root.InsertAfter(newEntry, lastEntry.NextSibling);
+                        aliasListBox.SelectedIndex = i;
+                        break;
                     }
                 }
-                else
-                {
-                    root.AppendChild(newEntry);
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("Failed to add alias to charmap: " + ex.ToString());
-                MessageBox.Show("Failed to add alias to charmap: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
 
-            // Add alias to listbox and dictionary
-            aliasDict[alias] = selectedCode;
-            aliasListBox.Items.Add($"{alias} <-> 0x{selectedCode:X4}");
-            aliasListBox.SelectedIndex = aliasListBox.Items.Count - 1;
-
-            SetDirty(true);
+                newAliasTextBox.Clear();
+            }
         }
 
         private void removeAliasButton_Click(object sender, EventArgs e)
@@ -289,85 +234,86 @@ namespace DSPRE.CharMaps
             }
 
             string selectedAliasStr = aliasListBox.SelectedItem.ToString();
-            string aliasName = selectedAliasStr.Split(' ')[0];
+            string aliasName = selectedAliasStr.Split(new string[] { " -> " }, StringSplitOptions.None)[0];
 
-            // Find and remove the alias entry from XML
-            try
+            // Find the code for this alias
+            ushort? code = currentMap.FindCode(aliasName);
+
+            if (code == null)
             {
-                var entryToRemove = currentMap.DocumentElement.SelectSingleNode($"entry[@kind='alias' and text()='{aliasName}']");
-                if (entryToRemove != null)
-                {
-                    // Remove the whitespace after the entry (the newline following it)
-                    // this is just to keep the XML tidy
-                    XmlNode nextNode = entryToRemove.NextSibling;
-
-                    entryToRemove.ParentNode.RemoveChild(entryToRemove);
-
-                    // If next node was whitespace (newline + indent for next entry), remove it
-                    if (nextNode != null && nextNode.NodeType == XmlNodeType.Whitespace)
-                    {
-                        nextNode.ParentNode.RemoveChild(nextNode);
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("Selected alias not found in charmap XML. " +
-                        "This indicates some mismatch between display and the internal data.", "Alias Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("Failed to remove alias from charmap: " + ex.ToString());
-                MessageBox.Show("Failed to remove alias from charmap: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Could not find the code for this alias.", "Alias Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Remove alias from listbox and dictionary
-            aliasListBox.Items.Remove(aliasListBox.SelectedItem);
-            aliasListBox.SelectedIndex = aliasListBox.Items.Count - 1;
-
-            aliasDict.Remove(aliasName);
-
-            SetDirty(true);
+            // Remove the alias
+            CharMapEntry entry = currentMap.GetEntry(code.Value);
+            if (entry != null && entry.RemoveAlias(aliasName))
+            {
+                SetDirty(true);
+                PopulateListsFromMap();
+            }
+            else
+            {
+                MessageBox.Show("Failed to remove alias.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void createCustomMapButton_Click(object sender, EventArgs e)
         {
             if (File.Exists(CharMapManager.customCharmapFilePath))
             {
-                var result = MessageBox.Show("A custom charmap already exists. Do you want to overwrite it?", "Custom Charmap Exists", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                var result = MessageBox.Show("A custom charmap already exists. Do you want to overwrite it?",
+                    "Custom Charmap Exists", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
                 if (result != DialogResult.Yes)
                 {
                     return;
                 }
             }
 
-            CharMapManager.CreateCustomCharMapFile();
-            LoadCustomMap();
-            ReadCurrentMap();
-            PopulateListsFromDict();
+            if (CharMapManager.CreateCustomCharMapFile())
+            {
+                LoadCharMap();
+                PopulateListsFromMap();
+                MessageBox.Show("Custom charmap created successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Failed to create custom charmap.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void deleteCustomMapButton_Click(object sender, EventArgs e)
         {
-            var result = MessageBox.Show("Are you sure you want to delete the custom charmap? This action cannot be undone.", "Delete Custom Charmap", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var result = MessageBox.Show("Are you sure you want to delete the custom charmap? This action cannot be undone.",
+                "Delete Custom Charmap", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
             if (result == DialogResult.Yes)
             {
-                CharMapManager.DeleteCustomCharMapFile();
+                if (CharMapManager.DeleteCustomCharMapFile())
+                {
+                    currentMap = null;
+                    EnableDisableControls(false);
+                    PopulateListsFromMap();
+                    SetDirty(false);
+                    MessageBox.Show("Custom charmap deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to delete custom charmap.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
         private void reloadButton_Click(object sender, EventArgs e)
         {
-            var result = MessageBox.Show("Are you sure you want to reload the custom charmap? All unsaved changes will be lost.", "Reload Custom Charmap", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (result == DialogResult.Yes)
+            if (!CheckUnsavedChanges())
             {
-                LoadCustomMap();
-                ReadCurrentMap();
-                PopulateListsFromDict();
+                return;
             }
+
+            LoadCharMap();
+            PopulateListsFromMap();
         }
 
         private void saveButton_Click(object sender, EventArgs e)
@@ -377,8 +323,17 @@ namespace DSPRE.CharMaps
                 return;
             }
 
-            CharMapManager.SaveCustomCharMap(currentMap);
-            SetDirty(false);
+            try
+            {
+                CharMapManager.SaveCharMap(currentMap, saveToCustomPath: true);
+                SetDirty(false);
+                MessageBox.Show("Charmap saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to save custom charmap: " + ex.ToString());
+                MessageBox.Show("Failed to save custom charmap: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void charMapListBox_DoubleClick(object sender, EventArgs e)
@@ -391,9 +346,11 @@ namespace DSPRE.CharMaps
 
             string selectedItemStr = charMapListBox.SelectedItem.ToString();
 
-            // Try to select corresponding code in combo box
+            // Extract code
             string codeStr = selectedItemStr.Split(' ')[0];
+            ushort code = ushort.Parse(codeStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
 
+            // Try to select corresponding code in combo box
             for (int i = 0; i < codeComboBox.Items.Count; i++)
             {
                 string comboItemStr = codeComboBox.Items[i].ToString();
@@ -405,26 +362,20 @@ namespace DSPRE.CharMaps
             }
 
             // Copy value to clipboard
-            ushort code = ushort.Parse(codeStr.Substring(2), System.Globalization.NumberStyles.HexNumber);
-
             if (selectedItemStr.Contains("(alias)"))
             {
                 // It's an alias, copy the alias name
-                foreach (var kvp in aliasDict)
-                {
-                    if (kvp.Value == code)
-                    {
-                        Clipboard.SetText(kvp.Key);
-                        break;
-                    }
-                }
+                string alias = selectedItemStr.Split(new string[] { " <- " }, StringSplitOptions.None)[1]
+                    .Replace(" (alias)", "");
+                Clipboard.SetText(alias);
             }
             else
             {
-                // It's a normal char, copy the value
-                if (decodeDict.TryGetValue(code, out string value))
+                // It's a normal char, copy the character
+                CharMapEntry entry = currentMap.GetEntry(code);
+                if (entry != null)
                 {
-                    Clipboard.SetText(value);
+                    Clipboard.SetText(entry.Character);
                 }
             }
         }
@@ -436,40 +387,65 @@ namespace DSPRE.CharMaps
             // Remove any filter if search term is empty
             if (string.IsNullOrEmpty(searchTerm))
             {
-                PopulateListsFromDict();
+                PopulateListsFromMap();
                 return;
             }
 
             // Filter charmap list based on search term
             charMapListBox.Items.Clear();
-            foreach (var kvp in decodeDict)
-            {
-                ushort code = kvp.Key;
-                string codeStr = $"0x{code.ToString("X4").ToLower()}";
-                string value = kvp.Value;
 
-                // If value contains search term or code matches, add to list
-                if (value.Contains(searchTerm) || codeStr.Equals(searchTerm.ToLower()))
+            string searchTermLower = searchTerm.ToLower();
+            bool searchByCode = searchTermLower.StartsWith("0x");
+
+            foreach (ushort code in currentMap.GetAllCodes().OrderBy(c => c))
+            {
+                CharMapEntry entry = currentMap.GetEntry(code);
+                if (entry == null) continue;
+
+                string codeStr = $"0x{code:X4}";
+                bool matches = false;
+
+                // Check if code matches
+                if (searchByCode && codeStr.ToLower().Contains(searchTermLower))
                 {
-                    charMapListBox.Items.Add($"0x{code:X4} <-> {value}");
+                    matches = true;
                 }
-            }
-
-            foreach (var kvp in aliasDict)
-            {
-                string alias = kvp.Key;
-                ushort code = kvp.Value;
-                if (decodeDict.TryGetValue(code, out string originalValue))
+                // Check if character contains search term
+                else if (!searchByCode && entry.Character.Contains(searchTerm))
                 {
-                    string codeStr = $"0x{code.ToString("X4")}";
-                    // If alias or original value contains search term or code matches, add to list
-                    if (alias.Contains(searchTerm) || originalValue.Contains(searchTerm) || codeStr.Equals(searchTerm.ToLower()))
+                    matches = true;
+                }
+
+                if (matches)
+                {
+                    string displayStr = $"{codeStr} <-> {entry.Character}";
+                    charMapListBox.Items.Add(displayStr);
+                }
+
+                // Check aliases
+                if (entry.Aliases != null && entry.Aliases.Count > 0)
+                {
+                    foreach (string alias in entry.Aliases)
                     {
-                        charMapListBox.Items.Add($"0x{code:X4} <- {alias} (alias)");
+                        bool aliasMatches = false;
+
+                        if (searchByCode && codeStr.ToLower().Contains(searchTermLower))
+                        {
+                            aliasMatches = true;
+                        }
+                        else if (!searchByCode && (alias.Contains(searchTerm) || entry.Character.Contains(searchTerm)))
+                        {
+                            aliasMatches = true;
+                        }
+
+                        if (aliasMatches)
+                        {
+                            string aliasDisplayStr = $"{codeStr} <- {alias} (alias)";
+                            charMapListBox.Items.Add(aliasDisplayStr);
+                        }
                     }
                 }
             }
-
         }
 
         private void searchTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -492,7 +468,197 @@ namespace DSPRE.CharMaps
 
         private void openFileButton_Click(object sender, EventArgs e)
         {
+            if (!File.Exists(CharMapManager.customCharmapFilePath))
+            {
+                MessageBox.Show("No custom charmap file exists to open.", "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             Helpers.OpenFileWithDefaultApp(CharMapManager.customCharmapFilePath);
+        }
+
+        private void rebaseButton_Click(object sender, EventArgs e)
+        {
+            if (!File.Exists(CharMapManager.customCharmapFilePath))
+            {
+                MessageBox.Show("No custom charmap exists to merge. Please create one first.",
+                    "No Custom Charmap", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Confirm rebase if custom map is not outdated
+            if (!CharMapManager.IsCustomMapOutdated())
+            {
+                var result = MessageBox.Show("The custom charmap is already up to date with the default charmap. Do you still want to rebase it?",
+                    "Rebase Charmap", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result != DialogResult.Yes) return;
+            }
+
+            // Open merge dialog
+            var mergeDialog = new MergeCharmapDialog();
+            mergeDialog.ShowDialog();
+
+            if (mergeDialog.DialogResult != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                MergeResult result = CharMapManager.MergeCustomWithDefault(mergeDialog.SelectedStrategy);
+
+                ShowMergeResultDialog(result);
+
+                currentMap = result.MergedMap;
+                PopulateListsFromMap();
+                SetDirty(true);
+                MessageBox.Show("Custom charmap rebased successfully!\n" +
+                    "Remember to save.", "Rebase Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to rebase charmap: " + ex.ToString());
+                MessageBox.Show("Failed to rebase charmap: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+
+        private void ShowMergeResultDialog(MergeResult result)
+        {
+            StringBuilder messageBuilder = new StringBuilder();
+            messageBuilder.AppendLine("Charmap Merge Summary:");
+            messageBuilder.AppendLine(result.GetSummary());
+            
+            if (result.Conflicts.Count > 0)
+            {
+                messageBuilder.AppendLine();
+                messageBuilder.AppendLine("There were conflicts, do you want to view them?");
+                var viewConflictsResult = MessageBox.Show(messageBuilder.ToString(), "Merge Result", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (viewConflictsResult != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                // Show conflicts in a scrollable dialog
+                Form conflictForm = new Form
+                {
+                    Text = "Merge Conflicts",
+                    Size = new System.Drawing.Size(600, 400),
+                    StartPosition = FormStartPosition.CenterParent
+                };
+
+                TextBox conflictTextBox = new TextBox
+                {
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Vertical,
+                    Dock = DockStyle.Fill,
+                    Text = result.GetConflictDetails(),
+                    Font = new System.Drawing.Font("Consolas", 14),
+                };
+
+                conflictForm.Controls.Add(conflictTextBox);
+                conflictForm.ShowDialog();
+
+            }
+            else
+            {
+                MessageBox.Show(messageBuilder.ToString(), "Merge Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+                
+        }
+
+        // Dialog for selecting merge strategy
+        internal class MergeCharmapDialog : Form
+        {
+            private RadioButton rbPreferCustom;
+            private RadioButton rbPreferBase;
+            private RadioButton rbReplaceBase;
+            private Button btnOK;
+            private Button btnCancel;
+
+            public MergeStrategy SelectedStrategy { get; private set; }
+
+            public MergeCharmapDialog()
+            {
+                InitializeComponent();
+            }
+
+            private void InitializeComponent()
+            {
+                this.Text = "Merge Charmap";
+                this.Size = new System.Drawing.Size(450, 280);
+                this.FormBorderStyle = FormBorderStyle.FixedDialog;
+                this.StartPosition = FormStartPosition.CenterParent;
+                this.MaximizeBox = false;
+                this.MinimizeBox = false;
+
+                Label lblTitle = new Label
+                {
+                    Text = "Select merge strategy for conflicting entries:",
+                    Location = new System.Drawing.Point(20, 20),
+                    Size = new System.Drawing.Size(400, 20),
+                    Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Bold)
+                };
+
+                rbPreferCustom = new RadioButton
+                {
+                    Text = "Prefer Custom (Keep your custom characters, merge aliases)",
+                    Location = new System.Drawing.Point(30, 50),
+                    Size = new System.Drawing.Size(390, 50),
+                    Checked = true
+                };
+
+                rbPreferBase = new RadioButton
+                {
+                    Text = "Prefer Base (Keep default characters, add your custom aliases)",
+                    Location = new System.Drawing.Point(30, 100),
+                    Size = new System.Drawing.Size(390, 50)
+                };
+
+                rbReplaceBase = new RadioButton
+                {
+                    Text = "Replace Base (Use only your custom characters and aliases)",
+                    Location = new System.Drawing.Point(30, 150),
+                    Size = new System.Drawing.Size(390, 50)
+                };
+
+                btnOK = new Button
+                {
+                    Text = "OK",
+                    DialogResult = DialogResult.OK,
+                    Location = new System.Drawing.Point(250, 210),
+                    Size = new System.Drawing.Size(75, 25)
+                };
+
+                btnCancel = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Location = new System.Drawing.Point(335, 210),
+                    Size = new System.Drawing.Size(75, 25)
+                };
+
+                btnOK.Click += (s, e) =>
+                {
+                    if (rbPreferCustom.Checked)
+                        SelectedStrategy = MergeStrategy.PreferCustom;
+                    else if (rbPreferBase.Checked)
+                        SelectedStrategy = MergeStrategy.PreferBase;
+                    else
+                        SelectedStrategy = MergeStrategy.ReplaceBase;
+                };
+
+                this.Controls.AddRange(new Control[] {
+                lblTitle, rbPreferCustom, rbPreferBase, rbReplaceBase, btnOK, btnCancel
+            });
+
+                this.AcceptButton = btnOK;
+                this.CancelButton = btnCancel;
+            }
         }
     }
 }
+

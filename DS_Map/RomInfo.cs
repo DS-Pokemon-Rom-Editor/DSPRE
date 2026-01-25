@@ -1535,7 +1535,7 @@ namespace DSPRE
 
         public int GetMatrixCount() => Directory.GetFiles(gameDirs[DirNames.matrices].unpackedDir).Length;
 
-        public int GetTextArchivesCount() => Directory.GetFiles(gameDirs[DirNames.textArchives].unpackedDir).Length;
+        public int GetTextArchivesCount() => Directory.GetFiles(TextConverter.GetExpandedFolderPath()).Length;
 
         public int GetMapCount() => Directory.GetFiles(gameDirs[DirNames.maps].unpackedDir).Length;
 
