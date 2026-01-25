@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -1974,7 +1974,6 @@ namespace DSPRE.Editors
 
                     if (pokemonNamesChanged)
                     {
-                        pokemonNameArchive.SaveToDefaultDir(RomInfo.pokemonNamesTextNumbers[0], false);
                         pokemonNameArchive.SaveToExpandedDir(RomInfo.pokemonNamesTextNumbers[0], false);
                     }
                 }
@@ -1996,7 +1995,6 @@ namespace DSPRE.Editors
 
                     if (moveNamesChanged)
                     {
-                        moveNameArchive.SaveToDefaultDir(RomInfo.attackNamesTextNumber, false);
                         moveNameArchive.SaveToExpandedDir(RomInfo.attackNamesTextNumber, false);
                     }
                 }

@@ -1,4 +1,4 @@
-﻿using DSPRE.Resources;
+using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
@@ -670,7 +670,7 @@ namespace DSPRE {
                         }
 
                         // Save the text archive
-                        textArchive.SaveToDefaultDir(moveNamesTextArchiveId, showSuccessMessage: false);
+                        textArchive.SaveToExpandedDir(moveNamesTextArchiveId, showSuccessMessage: false);
 
                         // Refresh the combo box
                         disableHandlers = true;
