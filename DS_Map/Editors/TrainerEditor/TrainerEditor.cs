@@ -39,6 +39,7 @@ namespace DSPRE.Editors
         private List<GroupBox> partyGroupboxList = new List<GroupBox>();
         private List<PictureBox> partyPokemonPictureBoxList = new List<PictureBox>();
         private List<PictureBox> partyPokemonItemIconList = new List<PictureBox>();
+        private List<CheckBox> aiFlagCheckBoxList = new List<CheckBox>();
 
         private const int TRAINER_PARTY_POKEMON_GENDER_DEFAULT_INDEX = 0;
         private const int TRAINER_PARTY_POKEMON_GENDER_MALE_INDEX = 1;
@@ -268,6 +269,19 @@ namespace DSPRE.Editors
             partyPokemonItemIconList.Add(partyPokemonItemPictureBox5);
             partyPokemonItemIconList.Add(partyPokemonItemPictureBox6);
 
+            aiFlagCheckBoxList.Clear();
+            aiFlagCheckBoxList.Add(trainerAI1CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI2CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI3CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI4CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI5CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI6CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI7CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI8CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI9CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI10CheckBox);
+            aiFlagCheckBoxList.Add(trainerAI11CheckBox);
+
             int trainerCount = Directory.GetFiles(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir).Length;
             trainerComboBox.Items.Clear();
             trainerComboBox.Items.AddRange(Helpers.GetTrainerNames());
@@ -452,13 +466,16 @@ namespace DSPRE.Editors
                 (trainerItems[i] as ComboBox).SelectedIndex = currentTrainerFile.trp.trainerItems[i];
             }
 
-            IList trainerAI = TrainerAIGroupBox.Controls;
-            int aiIndex = 0;
-            for (int i = 0; i < trainerAI.Count; i++)
+            for (int i = 0; i < aiFlagCheckBoxList.Count; i++)
             {
-                if (trainerAI[i] is CheckBox cb)
+                if (currentTrainerFile.trp.AI.Length > i)
                 {
-                    cb.Checked = currentTrainerFile.trp.AI[aiIndex++];
+                    aiFlagCheckBoxList[i].Checked = currentTrainerFile.trp.AI[i];
+                }
+                else
+                {
+                    aiFlagCheckBoxList[i].Checked = false;
+                    AppLogger.Warn("Trainer AI flag index " + i + " is out of range for trainer " + currentTrainerFile.name);
                 }
             }
         }
@@ -763,10 +780,9 @@ namespace DSPRE.Editors
                 currentTrainerFile.trp.trainerItems[i] = (ushort)(trainerItems[i] as ComboBox).SelectedIndex;
             }
 
-            IList trainerAI = TrainerAIGroupBox.Controls;
-            for (int i = 0; i < trainerAI.Count; i++)
+            for (int i = 0; i < aiFlagCheckBoxList.Count; i++)
             {
-                currentTrainerFile.trp.AI[i] = (trainerAI[i] as CheckBox).Checked;
+                currentTrainerFile.trp.AI[i] = aiFlagCheckBoxList[i].Checked;
             }
 
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
