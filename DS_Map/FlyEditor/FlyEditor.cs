@@ -1,4 +1,4 @@
-﻿using DSPRE.Editors.Data;
+using DSPRE.Editors.Data;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,12 +17,12 @@ namespace DSPRE.Editors
         private const uint DPitOffset = 0xF21D8;
         private const uint DPspOffset = 0xF2270;
         private const int DiamondPearlTableSize = 20;
-        private const uint HGSSjpOffset = 0xF9632;
-        private const uint HGSSusOffset = 0xF9E82;
-        private const uint HGSSfrOffset = 0xF9E66;
-        private const uint HGSSdeOffset = 0xF9E36;
-        private const uint HGSSitOffset = 0xF9DFA;
-        private const uint HGSSspOffset = 0xF9E6A;
+        private const uint HGSSjpOffset = 0xF9630;
+        private const uint HGSSusOffset = 0xF9E80;
+        private const uint HGSSfrOffset = 0xF9E64;
+        private const uint HGSSdeOffset = 0xF9E34;
+        private const uint HGSSitOffset = 0xF9DF8;
+        private const uint HGSSspOffset = 0xF9E68;
         private const int HeartGoldSoulSilverTableSize = 30;
         private const uint PTjpOffset = 0xE8E88;
         private const uint PTusOffset = 0xE97B4;
@@ -148,8 +148,16 @@ namespace DSPRE.Editors
                     {
                         if (GameFamily == GameFamilies.HGSS)
                         {
+                            byte flagIdx = await ReadByteAsync(reader);
+                            byte flags = await ReadByteAsync(reader);
+                            bool isBlackoutSpawn = (flags & 0x01) != 0;
+                            bool isFlyPoint = (flags & 0x02) != 0;
+
                             FlyTableRowHgss row = new FlyTableRowHgss
                             {
+                                FlagIdx = flagIdx,
+                                IsBlackoutSpawn = isBlackoutSpawn,
+                                IsFlyPoint = isFlyPoint,
                                 HeaderIdGameOver = await ReadUInt16Async(reader),
                                 LocalX = await ReadByteAsync(reader),
                                 LocalY = await ReadByteAsync(reader),
@@ -159,8 +167,6 @@ namespace DSPRE.Editors
                                 HeaderIdUnlockWarp = await ReadUInt16Async(reader),
                                 GlobalXUnlock = await ReadUInt16Async(reader),
                                 GlobalYUnlock = await ReadUInt16Async(reader),
-                                UnlockId = await ReadByteAsync(reader),
-                                WarpCondition = await ReadByteAsync(reader)
                             };
                             TableDataHgss.Add(row);
                         }
@@ -239,17 +245,14 @@ namespace DSPRE.Editors
                     row.GlobalY
                 );
 
-                int newRowIndex = dt_UnlockSettings.Rows.Add(
+                dt_UnlockSettings.Rows.Add(
                     Headers[row.HeaderIdUnlockWarp],
                     row.GlobalXUnlock,
                     row.GlobalYUnlock,
-                    row.UnlockId
-                    );
-
-                DataGridViewRow newRow = dt_UnlockSettings.Rows[newRowIndex];
-                DataGridViewComboBoxCell comboBoxCell = (DataGridViewComboBoxCell)newRow.Cells["warpCondition"];
-
-                comboBoxCell.Value = comboBoxCell.Items[row.WarpCondition];
+                    row.FlagIdx,
+                    row.IsBlackoutSpawn,
+                    row.IsFlyPoint
+                );
             }
 
             await Task.CompletedTask;
@@ -450,19 +453,24 @@ namespace DSPRE.Editors
                 });
                 dt_UnlockSettings.Columns.Add(new DataGridViewTextBoxColumn
                 {
-                    Name = "unlockId",
-                    HeaderText = "Unlock ID",
+                    Name = "flagIdx",
+                    HeaderText = "Flag Index",
                     ValueType = typeof(byte)
                 });
 
-                DataGridViewComboBoxColumn warpConditionColumn = new DataGridViewComboBoxColumn
+                DataGridViewCheckBoxColumn isBlackoutSpawnColumn = new DataGridViewCheckBoxColumn
                 {
-                    Name = "warpCondition",
-                    HeaderText = "Warp Condition"
+                    Name = "isBlackoutSpawn",
+                    HeaderText = "Is Blackout Spawn"
                 };
-                warpConditionColumn.Items.AddRange(0, 1, 2, 3);
-                warpConditionColumn.ValueType = typeof(int);
-                dt_UnlockSettings.Columns.Add(warpConditionColumn);
+                dt_UnlockSettings.Columns.Add(isBlackoutSpawnColumn);
+
+                DataGridViewCheckBoxColumn isFlyPointColumn = new DataGridViewCheckBoxColumn
+                {
+                    Name = "isFlyPoint",
+                    HeaderText = "Is Fly Point"
+                };
+                dt_UnlockSettings.Columns.Add(isFlyPointColumn);
             }
             else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
             {
@@ -559,6 +567,16 @@ namespace DSPRE.Editors
                 {
                     if (GameFamily == GameFamilies.HGSS)
                     {
+                        // Write FlagIdx and flags byte first (offset 0-1)
+                        byte flagIdx = Convert.ToByte(dt_UnlockSettings.Rows[i].Cells[3].Value);
+                        writer.Write(flagIdx);
+
+                        bool isBlackoutSpawn = (bool)dt_UnlockSettings.Rows[i].Cells[4].Value;
+                        bool isFlyPoint = (bool)dt_UnlockSettings.Rows[i].Cells[5].Value;
+                        byte flags = (byte)((isBlackoutSpawn ? 0x01 : 0x00) | (isFlyPoint ? 0x02 : 0x00));
+                        writer.Write(flags);
+
+                        // Write GameOver/Death warp data (offset 2-5)
                         DataGridViewComboBoxCell comboBoxCell = (DataGridViewComboBoxCell)dt_GameOverWarps.Rows[i].Cells[0];
                         ushort gameOverHeaderId = (ushort)comboBoxCell.Items.IndexOf(comboBoxCell.Value);
                         writer.Write(gameOverHeaderId);
@@ -569,6 +587,7 @@ namespace DSPRE.Editors
                         byte localY = Convert.ToByte(dt_GameOverWarps.Rows[i].Cells[2].Value);
                         writer.Write(localY);
 
+                        // Write Fly warp data (offset 6-11)
                         DataGridViewComboBoxCell comboBoxCellFly = (DataGridViewComboBoxCell)dt_FlyWarps.Rows[i].Cells[0];
                         ushort flyHeaderId = (ushort)comboBoxCellFly.Items.IndexOf(comboBoxCellFly.Value);
                         writer.Write(flyHeaderId);
@@ -579,6 +598,7 @@ namespace DSPRE.Editors
                         ushort globalY = (ushort)dt_FlyWarps.Rows[i].Cells[2].Value;
                         writer.Write(globalY);
 
+                        // Write Special/Unlock warp data (offset 12-17)
                         DataGridViewComboBoxCell comboBoxCellUnlock = (DataGridViewComboBoxCell)dt_UnlockSettings.Rows[i].Cells[0];
                         ushort unlockHeaderId = (ushort)comboBoxCellUnlock.Items.IndexOf(comboBoxCellUnlock.Value);
                         writer.Write(unlockHeaderId);
@@ -588,12 +608,6 @@ namespace DSPRE.Editors
 
                         ushort unlockGlobalY = (ushort)dt_UnlockSettings.Rows[i].Cells[2].Value;
                         writer.Write(unlockGlobalY);
-
-                        byte unlockId = Convert.ToByte(dt_UnlockSettings.Rows[i].Cells[3].Value);
-                        writer.Write(unlockId);
-
-                        byte warpCondition = Convert.ToByte(dt_UnlockSettings.Rows[i].Cells[4].Value);
-                        writer.Write(warpCondition);
                     }
                     else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                     {
