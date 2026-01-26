@@ -1265,7 +1265,6 @@ namespace DSPRE.ROMFiles
 
         private void addParametersToList(ref List<byte[]> parameterList, ushort id, BinaryReader dataReader)
         {
-            AppLogger.Debug("Loaded command id: " + id.ToString("X4"));
             try
             {
                 foreach (int bytesToRead in RomInfo.ScriptCommandParametersDict[id])
