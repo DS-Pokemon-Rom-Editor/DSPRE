@@ -1,0 +1,3 @@
+[submodule "ds-rom"]
+	path = ds-rom
+	url = https://github.com/KalaayPT/ds-rom.git
