@@ -376,13 +376,25 @@ namespace DSPRE {
 
         }
 
-        public static bool ConvertNdstoolToDsRom(string workDir)
+        /// <summary>
+        /// Converts a project directory from ndstool format to ds-rom format in place, creating a backup of
+        /// the original project.
+        /// </summary>
+        /// <remarks>A ZIP backup of the original ndstool project is created in the same location as the
+        /// project directory before any changes are made. If the conversion fails, the project directory remains
+        /// unchanged and can be restored from the backup. User interaction may be required during the process to
+        /// confirm actions or handle errors. The method displays message boxes to inform the user of progress and
+        /// errors.</remarks>
+        /// <param name="workDir">The full path to the project directory in ndstool format to be converted. Must be a valid directory path.</param>
+        /// <returns>1 if the conversion to ds-rom format succeeds; 2 if the conversion fails but the user chooses to continue
+        /// with the original ndstool format; 0 if the conversion fails and no changes are made.</returns>
+        public static int ConvertNdstoolToDsRom(string workDir)
         {
             // 1. Verify project is ndstool format
             if (GetFolderType(workDir) != 1)
             {
                 MessageBox.Show("This project is not in ndstool format.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
+                return 0;
             }
 
             // 2. Create ZIP backup
@@ -397,7 +409,7 @@ namespace DSPRE {
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to create backup: {ex.Message}", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                return 0;
             }
 
             // 3. Build temp ROM using ndstool (the project is still in ndstool format)
@@ -434,7 +446,7 @@ namespace DSPRE {
                 {
                     AppLogger.Error("ndstool build failed: " + errors);
                     MessageBox.Show("Failed to build temporary ROM: " + errors, "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
+                    return 0;
                 }
 
                 // 4. Extract with ds-rom to get new structure
@@ -447,9 +459,10 @@ namespace DSPRE {
                         "This is usually caused by corrupted or incompatible overlay compression in the ndstool project.\n\n" +
                         "Would you like to:\n" +
                         "• Yes: Continue loading with ndstool format (no conversion)\n" +
-                        "• No: Cancel and restore from backup",
+                        "• No: Cancel and restore from backup\n" +
+                        "• Cancel: Abort loading",
                         "Conversion Failed",
-                        MessageBoxButtons.YesNo,
+                        MessageBoxButtons.YesNoCancel,
                         MessageBoxIcon.Warning);
                     
                     if (Directory.Exists(tempDsRomDir))
@@ -460,13 +473,20 @@ namespace DSPRE {
                     if (result == DialogResult.Yes)
                     {
                         AppLogger.Info("User chose to continue with ndstool format.");
-                        return false;
+                        return 2;
+                    }
+                    else if (result == DialogResult.No)
+                    {
+                        AppLogger.Info("User chose to restore from backup.");
+                        RestoreFromNdstoolBackup(workDir);
+                        return 0;
                     }
                     else
                     {
-                        MessageBox.Show("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath, 
+
+                        MessageBox.Show("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath,
                             "Conversion Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return false;
+                        return 0;
                     }
                 }
 
@@ -476,7 +496,7 @@ namespace DSPRE {
                     MessageBox.Show("Conversion validation failed: config.yaml not found.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     Directory.Delete(tempDsRomDir, true);
                     File.Delete(tempRomPath);
-                    return false;
+                    return 0;
                 }
 
                 // 6. Delete old ndstool files from workDir
@@ -517,7 +537,7 @@ namespace DSPRE {
                 AppLogger.Info("Successfully converted project to ds-rom format.");
                 MessageBox.Show("Project converted to ds-rom format successfully.\n\nBackup saved at:\n" + backupPath,
                     "Conversion Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return true;
+                return 1;
             }
             catch (Exception ex)
             {
@@ -531,7 +551,7 @@ namespace DSPRE {
                 if (File.Exists(tempRomPath))
                     File.Delete(tempRomPath);
 
-            return false;
+            return 0;
         }
     }
 

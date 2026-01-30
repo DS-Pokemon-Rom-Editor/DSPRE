@@ -990,51 +990,56 @@ namespace DSPRE
                 return;
             }
 
-        DetectAndHandleWSL(romFolderPath);
+            DetectAndHandleWSL(romFolderPath);
 
-        if (DSUtils.GetFolderType(romFolderPath) == -1)
-        {
-            AppLogger.Error("The selected folder does not contain a valid ROM folder structure.");
-            MessageBox.Show("The selected folder does not contain a valid ROM folder structure.", "Invalid Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return; // Invalid folder, abort loading
-        }
-
-        // Check if this is an ndstool project and prompt for conversion
-        if (DSUtils.GetFolderType(romFolderPath) == 1)
-        {
-            DialogResult convertResult = MessageBox.Show(
-                "Legacy ndstool format detected.\n\n" +
-                "Would you like to convert to ds-rom format? (Recommended)\n" +
-                "A backup will be created automatically.\n\n" +
-                "• Yes: Upgrade to ds-rom format\n" +
-                "• No: Continue with ndstool format\n" +
-                "• Cancel: Abort loading",
-                "Convert to ds-rom?",
-                MessageBoxButtons.YesNoCancel,
-                MessageBoxIcon.Question);
-            
-            if (convertResult == DialogResult.Cancel)
+            if (DSUtils.GetFolderType(romFolderPath) == -1)
             {
-                AppLogger.Debug("User cancelled loading from conversion dialog.");
-                return;
+                AppLogger.Error("The selected folder does not contain a valid ROM folder structure.");
+                MessageBox.Show("The selected folder does not contain a valid ROM folder structure.", "Invalid Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return; // Invalid folder, abort loading
             }
-            
-            if (convertResult == DialogResult.Yes)
+
+            // Check if this is an ndstool project and prompt for conversion
+            if (DSUtils.GetFolderType(romFolderPath) == 1)
             {
-                Helpers.statusLabelMessage("Converting project to ds-rom format...");
-                Update();
-                
-                if (!DSUtils.ConvertNdstoolToDsRom(romFolderPath))
+                DialogResult convertResult = MessageBox.Show(
+                    "Legacy ndstool format detected.\n\n" +
+                    "Would you like to convert to ds-rom format? (Recommended)\n" +
+                    "A backup will be created automatically.\n\n" +
+                    "• Yes: Upgrade to ds-rom format\n" +
+                    "• No: Continue with ndstool format\n" +
+                    "• Cancel: Abort loading",
+                    "Convert to ds-rom?",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question);
+            
+                if (convertResult == DialogResult.Cancel)
                 {
-                    // Conversion failed - user was already notified by ConvertNdstoolToDsRom
-                    Helpers.statusLabelMessage("Conversion failed. Loading aborted.");
+                    AppLogger.Debug("User cancelled loading from conversion dialog.");
                     return;
                 }
-                
-                AppLogger.Info("Conversion to ds-rom format successful.");
+            
+                if (convertResult == DialogResult.Yes)
+                {
+                    Helpers.statusLabelMessage("Converting project to ds-rom format...");
+                    Update();
+
+                    int result = DSUtils.ConvertNdstoolToDsRom(romFolderPath);
+
+                    if (result == 0)
+                    {
+                        // Conversion failed, abort loading
+                        Helpers.statusLabelError("Conversion to ds-rom format failed. Loading aborted.");
+                        return;
+                    }
+                    else if (result == 1)
+                    {
+                        AppLogger.Info("Conversion to ds-rom format successful.");
+                    }
+
+                }
+                // If No, just continue with ndstool loading
             }
-            // If No, just continue with ndstool loading
-        }
 
             string headerFile = DSUtils.GetFolderType(romFolderPath) == 0 ? "header.yaml" : "header.bin";
             gameCode = null;
