@@ -227,6 +227,7 @@ namespace DSPRE.Resources
             stripped = stripped.Replace("&", "AND");
             stripped = stripped.Replace(".", "");
             stripped = stripped.Replace("-", "_");
+            stripped = stripped.Replace("’", "");
             return stripped;
         }
 
