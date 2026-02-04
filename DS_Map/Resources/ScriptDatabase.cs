@@ -228,6 +228,8 @@ namespace DSPRE.Resources
             stripped = stripped.Replace(".", "");
             stripped = stripped.Replace("-", "_");
             stripped = stripped.Replace("’", "");
+            stripped = stripped.Replace("♂","M");
+            stripped = stripped.Replace("♀","F");
             return stripped;
         }
 
