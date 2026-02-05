@@ -285,6 +285,71 @@ namespace DSPRE.ROMFiles
             return (binPath, txtPath);
         }
 
+        // ScriptFile.cs (inside the ScriptFile class)
+
+        public string ToPlainText(bool includeActions)
+        {
+            if (fileID < 0) return string.Empty;
+
+            // If parsing stopped due to invalid commands, don't emit partial output.
+            // Matches the safety behavior in WritePlainTextFile().
+            if (parseFailedDueToInvalidCommand)
+            {
+                AppLogger.Warn($"Script file {fileID:D4} was not fully parsed due to invalid commands. Skipping plaintext generation to prevent data loss.");
+                return string.Empty;
+            }
+
+            var content = new StringBuilder();
+
+            // Header (same style as WritePlainTextFile())
+            content.AppendLine("/*");
+            content.AppendLine(" * DSPRE Script File");
+
+            string romFileName = Path.GetFileNameWithoutExtension(RomInfo.projectName);
+            string romFileNameClean = romFileName.EndsWith("_DSPRE_contents")
+                ? romFileName.Substring(0, romFileName.Length - "_DSPRE_contents".Length)
+                : romFileName;
+
+            content.AppendLine(" * Rom ID: " + romFileNameClean);
+            content.AppendLine(" * Game: " + RomInfo.gameFamily);
+            content.AppendLine($" * File: {fileID:D4}");
+            content.AppendLine($" * Generated: {DateTime.Now}");
+            content.AppendLine(" */");
+            content.AppendLine();
+
+            // Ensure IDs/references are stable before emitting text
+            RenumberContainers();
+
+            // Scripts
+            content.AppendLine("//===== SCRIPTS =====//");
+            AppendContainerList(content, allScripts, ScriptFile.ContainerTypes.Script);
+
+            // Functions
+            content.AppendLine("//===== FUNCTIONS =====//");
+            AppendContainerList(content, allFunctions, ScriptFile.ContainerTypes.Function);
+
+            // Optional actions (you’ll pass false from DocTool)
+            if (includeActions)
+            {
+                content.AppendLine("//===== ACTIONS =====//");
+                AppendActionList(content, allActions, ScriptFile.ContainerTypes.Action);
+            }
+
+            return content.ToString();
+        }
+
+        public void WritePlainTextFile(string outputPath, bool includeActions)
+        {
+            if (string.IsNullOrWhiteSpace(outputPath)) return;
+
+            var txt = ToPlainText(includeActions);
+            if (string.IsNullOrEmpty(txt)) return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            File.WriteAllText(outputPath, txt);
+        }
+
+
         /// <summary>
         /// Tries to read the script file from plaintext ONLY if it's newer than the binary
         /// This is used during batch operations (like search) to respect external edits without slowdown

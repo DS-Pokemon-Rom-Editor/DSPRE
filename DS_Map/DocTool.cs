@@ -11,6 +11,8 @@ using System.Windows.Forms;
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
 using static Images.NCOB.sNCOB;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DSPRE
 {
@@ -31,7 +33,28 @@ namespace DSPRE
             string TMHMDataPath = Path.Combine(docsFolderPath, "TMHMData.csv");
             string eggMoveDataPath = Path.Combine(docsFolderPath, "EggMoveData.csv");
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.evolutions, DirNames.trainerParty, DirNames.trainerProperties, DirNames.moveData, DirNames.itemData});
+
+            // NEW
+            string eventOverworldsPath = Path.Combine(docsFolderPath, "EventOverworlds.csv");
+            string mapHeadersPath = Path.Combine(docsFolderPath, "MapHeaders.csv");
+            string encounterJsonPath = Path.Combine(docsFolderPath, "Encounters.json");
+
+            DSUtils.TryUnpackNarcs(new List<DirNames> {
+                DirNames.personalPokeData,
+                DirNames.learnsets,
+                DirNames.evolutions,
+                DirNames.trainerParty,
+                DirNames.trainerProperties,
+                DirNames.moveData,
+                DirNames.itemData,
+
+                // NEW
+                DirNames.eventFiles,
+                DirNames.encounters,
+                DirNames.scripts,
+                DirNames.eventFiles
+
+            });
 
             string[] pokeNames = RomInfo.GetPokemonNames();
             string[] itemNames = RomInfo.GetItemNames();
@@ -70,8 +93,462 @@ namespace DSPRE
             eggMoveEditor.PopulateEggMoveData();
             ExportEggMoveDataToCSV(eggMoveEditor.GetEggMoveData(), eggMoveDataPath, pokeNames, moveNames);
 
-            MessageBox.Show($"CSV files exported successfully to path: {docsFolderPath}");
+            // NEW
+            ExportEventOverworldsToCSV(eventOverworldsPath);
+            ExportMapHeadersToCSV(mapHeadersPath);
+            ExportEncountersToJson(encounterJsonPath);
 
+            // Must load Scripts tab first
+            ExportScriptsToDocs(Path.Combine(docsFolderPath, "scripts"));
+
+            MessageBox.Show($"CSV files exported successfully to path: {docsFolderPath}");
+        }
+
+        private static void ExportEncountersToJson(string outputPath)
+        {
+            string encountersDir = RomInfo.gameDirs[RomInfo.DirNames.encounters].unpackedDir;
+
+            var files = Directory.GetFiles(encountersDir)
+                .Where(p => int.TryParse(Path.GetFileName(p), out _))
+                .OrderBy(p => int.Parse(Path.GetFileName(p)))
+                .ToList();
+
+  
+            string[] pokeNames = GetPokemonNamesWithForms();
+
+            var root = new
+            {
+                generatedAt = DateTime.UtcNow,
+                projectName = RomInfo.projectName,
+                romID = RomInfo.romID,
+                gameFamily = RomInfo.gameFamily.ToString(),
+                gameVersion = RomInfo.gameVersion.ToString(),
+                gameLanguage = RomInfo.gameLanguage.ToString(),
+                encounters = new List<object>()
+            };
+
+            foreach (var path in files)
+            {
+                int fileId = int.Parse(Path.GetFileName(path));
+
+                object encObj;
+
+                if (RomInfo.gameFamily == RomInfo.GameFamilies.DP ||
+                    RomInfo.gameFamily == RomInfo.GameFamilies.Plat)
+                {
+                    encObj = ExportDPPt(fileId, path, pokeNames);
+                }
+                else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+                {
+                    encObj = ExportHGSS(fileId, path, pokeNames);
+                }
+                else
+                {
+                    encObj = new { fileId = fileId, unsupported = true };
+                }
+
+                root.encounters.Add(encObj);
+            }
+
+            var opts = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            };
+
+            File.WriteAllText(outputPath, System.Text.Json.JsonSerializer.Serialize(root, opts));
+        }
+
+
+        private static object ExportDPPt(int fileId, string path, string[] pokeNames)
+        {
+            EncounterFileDPPt enc;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                enc = new EncounterFileDPPt(fs);
+
+            return new
+            {
+                fileId,
+
+                rates = new
+                {
+                    walking = enc.walkingRate,
+                    surf = enc.surfRate,
+                    oldRod = enc.oldRodRate,
+                    goodRod = enc.goodRodRate,
+                    superRod = enc.superRodRate
+                },
+
+                walking = ExportWalkingDPPtNamed(enc, pokeNames),
+
+                timeSpecific = new
+                {
+                    day = ExportU32SpeciesNamed(enc.dayPokemon, pokeNames),
+                    night = ExportU32SpeciesNamed(enc.nightPokemon, pokeNames)
+                },
+
+                radar = ExportU32SpeciesNamed(enc.radarPokemon, pokeNames),
+
+                dualSlot = new
+                {
+                    ruby = ExportU32SpeciesNamed(enc.rubyPokemon, pokeNames),
+                    sapphire = ExportU32SpeciesNamed(enc.sapphirePokemon, pokeNames),
+                    emerald = ExportU32SpeciesNamed(enc.emeraldPokemon, pokeNames),
+                    fireRed = ExportU32SpeciesNamed(enc.fireRedPokemon, pokeNames),
+                    leafGreen = ExportU32SpeciesNamed(enc.leafGreenPokemon, pokeNames)
+                },
+
+                // (keep regionalForms/unknownTable as-is; those are not species ids in DSPRE’s UI)
+
+                swarms = ExportU16Named(enc.swarmPokemon, pokeNames),
+
+
+
+                forms = new
+                {
+                    regionalForms = ExportU32(enc.regionalForms), // 5
+                    unknownTable = enc.unknownTable
+                },
+
+                surf = ExportMinMaxU16Named(enc.surfPokemon, enc.surfMinLevels, enc.surfMaxLevels, pokeNames),
+                oldRod = ExportMinMaxU16Named(enc.oldRodPokemon, enc.oldRodMinLevels, enc.oldRodMaxLevels, pokeNames),
+                goodRod = ExportMinMaxU16Named(enc.goodRodPokemon, enc.goodRodMinLevels, enc.goodRodMaxLevels, pokeNames),
+                superRod = ExportMinMaxU16Named(enc.superRodPokemon, enc.superRodMinLevels, enc.superRodMaxLevels, pokeNames),
+            };
+        }
+
+        private static List<object> ExportU32SpeciesNamed(uint[] arr, string[] pokeNames)
+        {
+            if (arr == null || arr.Length == 0) return null;
+
+            var list = new List<object>(arr.Length);
+            for (int i = 0; i < arr.Length; i++)
+            {
+                int speciesId = unchecked((int)arr[i]);
+                list.Add(SpeciesObj(i, speciesId, pokeNames));
+            }
+            return list;
+        }
+
+        private static object ExportWalkingDPPtNamed(EncounterFileDPPt enc, string[] pokeNames)
+        {
+            var slots = new List<object>(12);
+            for (int i = 0; i < 12; i++)
+            {
+                int speciesId = unchecked((int)enc.walkingPokemon[i]);
+                slots.Add(new
+                {
+                    slot = i,
+                    level = enc.walkingLevels[i],
+                    species = speciesId,
+                    speciesName = NameForSpecies(speciesId, pokeNames)
+                });
+            }
+            return slots;
+        }
+
+        private static object ExportWalkingDPPt(EncounterFileDPPt enc)
+        {
+            var slots = new List<object>();
+
+            for (int i = 0; i < 12; i++)
+            {
+                uint raw = enc.walkingPokemon[i];
+
+                ushort species = (ushort)(raw & 0xFFFF);
+                byte minLv = (byte)((raw >> 16) & 0xFF);
+                byte maxLv = (byte)((raw >> 24) & 0xFF);
+
+                slots.Add(new
+                {
+                    slot = i,
+                    raw,
+                    species,
+                    minLv,
+                    maxLv,
+                    levelTableEntry = enc.walkingLevels[i]
+                });
+            }
+
+            return slots;
+        }
+
+
+        private static object ExportHGSS(int fileId, string path, string[] pokeNames)
+        {
+            EncounterFileHGSS enc;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                enc = new EncounterFileHGSS(fs);
+
+            return new
+            {
+                fileId,
+
+                rates = new
+                {
+                    walking = enc.walkingRate,
+                    surf = enc.surfRate,
+                    rockSmash = enc.rockSmashRate,
+                    oldRod = enc.oldRodRate,
+                    goodRod = enc.goodRodRate,
+                    superRod = enc.superRodRate
+                },
+
+                walkingLevels = ExportU8(enc.walkingLevels), // 12
+
+                grass = new
+                {
+                    morning = ExportU16Named(enc.morningPokemon, pokeNames),
+                    day = ExportU16Named(enc.dayPokemon, pokeNames),
+                    night = ExportU16Named(enc.nightPokemon, pokeNames)
+                },
+
+                surf = ExportMinMaxU16Named(enc.surfPokemon, enc.surfMinLevels, enc.surfMaxLevels, pokeNames),
+                rockSmash = ExportMinMaxU16Named(enc.rockSmashPokemon, enc.rockSmashMinLevels, enc.rockSmashMaxLevels, pokeNames),
+                oldRod = ExportMinMaxU16Named(enc.oldRodPokemon, enc.oldRodMinLevels, enc.oldRodMaxLevels, pokeNames),
+                goodRod = ExportMinMaxU16Named(enc.goodRodPokemon, enc.goodRodMinLevels, enc.goodRodMaxLevels, pokeNames),
+                superRod = ExportMinMaxU16Named(enc.superRodPokemon, enc.superRodMinLevels, enc.superRodMaxLevels, pokeNames),
+
+                swarms = ExportU16Named(enc.swarmPokemon, pokeNames),
+                pokegearMusic = new
+                {
+                    hoenn = ExportU16Named(enc.hoennMusicPokemon, pokeNames),
+                    sinnoh = ExportU16Named(enc.sinnohMusicPokemon, pokeNames)
+                }
+            };
+        }
+
+
+
+        private static string NameForSpecies(int speciesId, string[] pokeNames)
+        {
+            if (speciesId < 0 || speciesId >= pokeNames.Length) return $"UNKNOWN_{speciesId}";
+            return pokeNames[speciesId];
+        }
+
+        private static object SpeciesObj(int slot, int speciesId, string[] pokeNames)
+        {
+            return new
+            {
+                slot,
+                species = speciesId,
+                speciesName = NameForSpecies(speciesId, pokeNames)
+            };
+        }
+
+        private static string[] GetPokemonNamesWithForms()
+        {
+            // Base names from text archive
+            string[] pokeNames = RomInfo.GetPokemonNames();
+
+            // Append extra personal files (forms) like DocTool.ExportAll already does
+            int extraCount = RomInfo.GetPersonalFilesCount() - pokeNames.Length;
+            if (extraCount <= 0) return pokeNames;
+
+            string[] extraNames = new string[extraCount];
+
+            for (int i = 0; i < extraCount; i++)
+            {
+                var extraEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
+                string baseName = (extraEntry.monId >= 0 && extraEntry.monId < pokeNames.Length)
+                    ? pokeNames[extraEntry.monId]
+                    : $"UNKNOWN_{extraEntry.monId}";
+
+                extraNames[i] = $"{baseName} - {extraEntry.description}";
+            }
+
+            return pokeNames.Concat(extraNames).ToArray();
+        }
+
+        private static List<object> ExportMinMaxU16Named(ushort[] mons, byte[] minLv, byte[] maxLv, string[] pokeNames)
+        {
+            if (mons == null || minLv == null || maxLv == null) return null;
+
+            int n = Math.Min(mons.Length, Math.Min(minLv.Length, maxLv.Length));
+            var list = new List<object>(n);
+
+            for (int i = 0; i < n; i++)
+            {
+                int speciesId = mons[i];
+                list.Add(new
+                {
+                    slot = i,
+                    species = speciesId,
+                    speciesName = NameForSpecies(speciesId, pokeNames),
+                    minLv = minLv[i],
+                    maxLv = maxLv[i]
+                });
+            }
+            return list;
+        }
+
+        private static List<object> ExportU16Named(ushort[] arr, string[] pokeNames)
+        {
+            if (arr == null || arr.Length == 0) return null;
+            var list = new List<object>(arr.Length);
+            for (int i = 0; i < arr.Length; i++)
+                list.Add(SpeciesObj(i, arr[i], pokeNames));
+            return list;
+        }
+
+
+        private static List<object> ExportMinMaxU16(ushort[] mons, byte[] minLv, byte[] maxLv)
+        {
+            if (mons == null || minLv == null || maxLv == null) return null;
+
+            int n = Math.Min(mons.Length, Math.Min(minLv.Length, maxLv.Length));
+            var list = new List<object>(n);
+
+            for (int i = 0; i < n; i++)
+            {
+                list.Add(new
+                {
+                    slot = i,
+                    species = mons[i],
+                    minLv = minLv[i],
+                    maxLv = maxLv[i]
+                });
+            }
+            return list;
+        }
+
+        private static ushort[] ExportU16(ushort[] arr) => arr == null ? null : (ushort[])arr.Clone();
+        private static uint[] ExportU32(uint[] arr) => arr == null ? null : (uint[])arr.Clone();
+        private static byte[] ExportU8(byte[] arr) => arr == null ? null : (byte[])arr.Clone();
+
+
+
+        private static void ExportScriptsToDocs(string scriptsDocsDir)
+        {
+            Directory.CreateDirectory(scriptsDocsDir);
+
+            // Make sure text archives + name dictionaries are available so ScriptCommand.name
+            // can render friendly enums (TRAINER_, SPECIES_, ITEM_, MOVE_, etc.) consistently.
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
+
+            Resources.ScriptDatabase.InitializePokemonNames();
+            Resources.ScriptDatabase.InitializeItemNames();
+            Resources.ScriptDatabase.InitializeMoveNames();
+            Resources.ScriptDatabase.InitializeTrainerNames();
+
+            int scriptCount = Filesystem.GetScriptCount();
+            int exported = 0;
+
+            for (int i = 0; i < scriptCount; i++)
+            {
+                try
+                {
+                    // Read scripts + functions only (no actions)
+                    var sf = new ScriptFile(i, readFunctions: true, readActions: false);
+
+                    // Skip “level scripts” / empty script files
+                    if (sf.isLevelScript || sf.hasNoScripts)
+                        continue;
+
+                    // Emit Scripts + Functions only
+                    string outPath = Path.Combine(scriptsDocsDir, $"{i:D4}.txt");
+                    sf.WritePlainTextFile(outPath, includeActions: false);
+                    exported++;
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error($"Doc export: failed to export script {i:D4}: {ex.Message}");
+                }
+            }
+
+            AppLogger.Info($"Doc export: wrote {exported} script plaintext files to {scriptsDocsDir}");
+        }
+
+        private static void ExportMapHeadersToCSV(string mapHeadersPath)
+        {
+            int headerCount = MapHeader.GetHeaderCount(); // handles dynamic headers patch vs ARM9 table :contentReference[oaicite:3]{index=3}
+
+            using (var sw = new StreamWriter(mapHeadersPath))
+            {
+                sw.WriteLine("HeaderID,ScriptFileID,EventFileID,MapNameIndexInTextArchive,WildPokemonFileID,WeatherID");
+
+                for (ushort headerId = 0; headerId < headerCount; headerId++)
+                {
+                    MapHeader h = MapHeader.GetMapHeader(headerId); // loads from ARM9 or dynamic headers path :contentReference[oaicite:4]{index=4}
+                    if (h == null) continue;
+
+                    int mapNameIndex = GetMapNameIndex(h);
+
+                    sw.WriteLine(
+                        $"{headerId}," +
+                        $"{h.scriptFileID}," +
+                        $"{h.eventFileID}," +
+                        $"{mapNameIndex}," +
+                        $"{h.wildPokemon}," +
+                        $"{h.weatherID}"
+                    );
+                }
+            }
+        }
+
+        private static int GetMapNameIndex(MapHeader h)
+        {
+            // DP: locationName is ushort; Pt/HGSS: locationName is byte :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
+            if (h is HeaderDP dp) return dp.locationName;     // read as UInt16 in DP :contentReference[oaicite:7]{index=7}
+            if (h is HeaderPt pt) return pt.locationName;     // read as Byte in Pt :contentReference[oaicite:8]{index=8}
+            if (h is HeaderHGSS hgss) return hgss.locationName; // read as Byte in HGSS :contentReference[oaicite:9]{index=9}
+
+            return -1; // should not happen, but keeps export robust
+        }
+
+        private static void ExportEventOverworldsToCSV(string eventOverworldsPath)
+        {
+            string eventsDir = RomInfo.gameDirs[DirNames.eventFiles].unpackedDir;
+
+            if (!Directory.Exists(eventsDir))
+                throw new DirectoryNotFoundException($"Event files directory not found: {eventsDir}");
+
+            var files = Directory.GetFiles(eventsDir)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            using (var sw = new StreamWriter(eventOverworldsPath))
+            {
+                sw.WriteLine(
+                    "EventFileID,OverworldIndex," +
+                    "OwID,OverlayTableEntry,Movement,Type,Flag,ScriptNumber,Orientation,SightRange,Unknown1,Unknown2,XRange,YRange," +
+                    "XMatrix,YMatrix,XMap,YMap,XCoord,YCoord,ZPosition,IsAlias"
+                );
+
+                foreach (var filePath in files)
+                {
+                    string name = Path.GetFileName(filePath);
+
+                    // Event files are typically named "0000", "0001", ...
+                    if (!int.TryParse(name, out int eventFileId))
+                        continue;
+
+                    EventFile ev;
+                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        ev = new EventFile(fs);
+                    }
+
+                    for (int i = 0; i < ev.overworlds.Count; i++)
+                    {
+                        var ow = ev.overworlds[i];
+
+                        // Combined coordinates (same scheme used in serialization)
+                        int xCoord = ow.xMapPosition + (MapFile.mapSize * ow.xMatrixPosition);
+                        int yCoord = ow.yMapPosition + (MapFile.mapSize * ow.yMatrixPosition);
+
+                        bool isAlias = ow.scriptNumber == 0xFFFF;
+
+                        sw.WriteLine(
+                            $"{eventFileId},{i}," +
+                            $"{ow.owID},{ow.overlayTableEntry},{ow.movement},{ow.type},{ow.flag},{ow.scriptNumber}," +
+                            $"{ow.orientation},{ow.sightRange},{ow.unknown1},{ow.unknown2},{ow.xRange},{ow.yRange}," +
+                            $"{ow.xMatrixPosition},{ow.yMatrixPosition},{ow.xMapPosition},{ow.yMapPosition}," +
+                            $"{xCoord},{yCoord},{ow.zPosition},{(isAlias ? 1 : 0)}"
+                        );
+                    }
+                }
+            }
         }
 
         private static void ExportPersonalDataToCSV(string pokePersonalDataPath, string[] pokeNames, string[] abilityNames, string[] typeNames)
