@@ -93,10 +93,67 @@ namespace DSPRE.ROMFiles
                 Directory.CreateDirectory(gameDirs[DirNames.textArchives].unpackedDir);
                 AppLogger.Info($"Text Archive: Unpacked folder was unexpectedly missing. Created directory at {gameDirs[DirNames.textArchives].unpackedDir}");
             }
+
+            if (SettingsManager.Settings.convertLegacyText)
+            {
+                if (!ConvertLegacyText())
+                {
+                    MessageBox.Show("One or more legacy text files could not be converted. " +
+                        "The build will be aborted.", "Legacy Text Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+            }
             
             TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir, CharMapManager.GetCharMapPath());
 
             return true;
+        }
+
+        private static bool ConvertLegacyText()
+        {
+
+            string expandedDir = TextConverter.GetExpandedFolderPath();
+
+            // Convert any legacy .txt files to .json first
+            string[] txtFiles = Directory.GetFiles(expandedDir, "*.txt", SearchOption.TopDirectoryOnly);
+
+            if (txtFiles.Length > 0)
+            {
+                AppLogger.Info($"Found {txtFiles.Length} legacy text files to convert to JSON format.");
+
+                MessageBox.Show($"Found {txtFiles.Length} legacy text files in the expanded text archive directory.\n" +
+                    "These files need to be converted to the new JSON format to ensure compatibility with the current version of the tool.\n" +
+                    "DSPRE will now convert the files.",
+                    "Legacy Text Files Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                AppLogger.Info("No legacy text files found for conversion.");
+                return true;
+            }
+
+            bool failed = false;
+
+            foreach (string txtFile in txtFiles)
+            {
+                int id;
+
+                string fileName = Path.GetFileNameWithoutExtension(txtFile);
+                
+                if (int.TryParse(fileName, out id))
+                {
+                    TextArchive archive = new TextArchive(id);
+                    archive.SaveToExpandedDir(id, showSuccessMessage: false);
+                    File.Delete(txtFile); // Delete legacy .txt file after conversion
+                }
+                else
+                {
+                    AppLogger.Error($"Could not parse Text Archive ID from legacy text file name: {fileName}. Skipping conversion for this file.");
+                    failed = true;
+                }
+            }
+
+            return !failed;
         }
 
         public List<string> GetSimpleTrainerNames()
