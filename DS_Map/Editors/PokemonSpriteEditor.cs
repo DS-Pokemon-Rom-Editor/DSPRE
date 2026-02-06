@@ -851,29 +851,80 @@ namespace DSPRE.Editors {
             if (!OpenPngs.Enabled) {
                 return;
             }
-            
-            int baseOffset = IndexBox.SelectedIndex * 6;
-            
-            for (int i = 0; i < 4; i++) {
-                if (narcReader.fe[baseOffset + i].Size == 6448) {
-                    narcReader.OpenEntry(baseOffset + i);
-                    SaveBin(narcReader.fs, currentSprites.Sprites[i]);
+            int selectedIndex = IndexBox.SelectedIndex;
+
+            // If editing main sprites, files are organized as groups of 6 entries per pokemon
+            if (!isLoadingOtherForms) {
+                int baseOffset = selectedIndex * 6;
+
+                for (int i = 0; i < 4; i++) {
+                    if (currentSprites.Sprites[i] == null) continue;
+                    if (narcReader.fe[baseOffset + i].Size == 6448) {
+                        narcReader.OpenEntry(baseOffset + i);
+                        SaveBin(narcReader.fs, currentSprites.Sprites[i]);
+                        narcReader.Close();
+                    }
+                }
+
+                if (narcReader.fe[baseOffset + 4].Size == 72 && currentSprites.Normal != null) {
+                    narcReader.OpenEntry(baseOffset + 4);
+                    SavePal(narcReader.fs, currentSprites.Normal);
+                    narcReader.Close();
+                }
+
+                if (narcReader.fe[baseOffset + 5].Size == 72 && currentSprites.Shiny != null) {
+                    narcReader.OpenEntry(baseOffset + 5);
+                    SavePal(narcReader.fs, currentSprites.Shiny);
                     narcReader.Close();
                 }
             }
-            
-            if (narcReader.fe[baseOffset + 4].Size == 72) {
-                narcReader.OpenEntry(baseOffset + 4);
-                SavePal(narcReader.fs, currentSprites.Normal);
-                narcReader.Close();
+            else {
+                // Other-forms NARC uses arbitrary indices defined in currentFormData
+                if (currentFormData == null || selectedIndex < 0 || selectedIndex >= currentFormData.Length) {
+                    MessageBox.Show("Invalid form data selected. Save aborted.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                FormSpriteData form = currentFormData[selectedIndex];
+
+                // Back sprite index -> write appropriate image. Many forms reuse same file for both genders.
+                if (form.BackSpriteIndex >= 0 && form.BackSpriteIndex < narcReader.fe.Length && currentSprites.Sprites[0] != null) {
+                    if (narcReader.fe[form.BackSpriteIndex].Size == 6448) {
+                        narcReader.OpenEntry(form.BackSpriteIndex);
+                        // Some forms store a single image used for both back slots; write using Sprites[0] which was loaded
+                        SaveBin(narcReader.fs, currentSprites.Sprites[0]);
+                        narcReader.Close();
+                    }
+                }
+
+                // Front sprite index
+                if (form.FrontSpriteIndex >= 0 && form.FrontSpriteIndex < narcReader.fe.Length && currentSprites.Sprites[2] != null) {
+                    if (narcReader.fe[form.FrontSpriteIndex].Size == 6448) {
+                        narcReader.OpenEntry(form.FrontSpriteIndex);
+                        SaveBin(narcReader.fs, currentSprites.Sprites[2]);
+                        narcReader.Close();
+                    }
+                }
+
+                // Normal palette
+                if (form.NormalPaletteIndex >= 0 && form.NormalPaletteIndex < narcReader.fe.Length && currentSprites.Normal != null) {
+                    if (narcReader.fe[form.NormalPaletteIndex].Size == 72) {
+                        narcReader.OpenEntry(form.NormalPaletteIndex);
+                        SavePal(narcReader.fs, currentSprites.Normal);
+                        narcReader.Close();
+                    }
+                }
+
+                // Shiny palette
+                if (form.ShinyPaletteIndex >= 0 && form.ShinyPaletteIndex < narcReader.fe.Length && currentSprites.Shiny != null) {
+                    if (narcReader.fe[form.ShinyPaletteIndex].Size == 72) {
+                        narcReader.OpenEntry(form.ShinyPaletteIndex);
+                        SavePal(narcReader.fs, currentSprites.Shiny);
+                        narcReader.Close();
+                    }
+                }
             }
-            
-            if (narcReader.fe[baseOffset + 5].Size == 72) {
-                narcReader.OpenEntry(baseOffset + 5);
-                SavePal(narcReader.fs, currentSprites.Shiny);
-                narcReader.Close();
-            }
-            
+
             SetDirty(false);
         }
 
