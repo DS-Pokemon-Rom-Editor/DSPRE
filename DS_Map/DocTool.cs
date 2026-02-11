@@ -77,7 +77,7 @@ namespace DSPRE
                 Directory.CreateDirectory(docsFolderPath);
             }
 
-            ExportPersonalDataToCSV(pokePersonalDataPath, pokeNames, abilityNames, typeNames);
+            ExportPersonalDataToCSV(pokePersonalDataPath, pokeNames, abilityNames, typeNames, itemNames);
             ExportLearnsetDataToCSV(learnsetDataPath, pokeNames, moveNames);
             ExportEvolutionDataToCSV(evolutionDataPath, pokeNames, itemNames, moveNames);
             ExportTrainersToText(trainerDataPath, trainerNames, trainerClassNames, pokeNames, itemNames, moveNames, abilityNames);
@@ -516,7 +516,7 @@ namespace DSPRE
             {
                 sw.WriteLine(
                     "EventFileID,OverworldIndex," +
-                    "OwID,OverlayTableEntry,Movement,Type,Flag,ScriptNumber,Orientation,SightRange,Unknown1,Unknown2,XRange,YRange," +
+                    "OwID,OverlayTableEntry,OwSpriteID,Movement,Type,Flag,ScriptNumber,Orientation,SightRange,Unknown1,Unknown2,XRange,YRange," +
                     "XMatrix,YMatrix,XMap,YMap,XCoord,YCoord,ZPosition,IsAlias"
                 );
 
@@ -544,9 +544,29 @@ namespace DSPRE
 
                         bool isAlias = ow.scriptNumber == 0xFFFF;
 
+                        // Match EventEditor.GetOverworldImage(...) logic:
+                        // - If 3D overworld dict contains entry, there is no OWSprites file id.
+                        // - Else use OverworldTable -> (spriteID, properties)
+                        string owSpriteIdStr = "";
+                        if (RomInfo.ow3DSpriteDict.TryGetValue(ow.overlayTableEntry, out _))
+                        {
+                            // 3D overworld (image comes from Resources). No OWSprites sprite ID.
+                            owSpriteIdStr = "";
+                        }
+                        else if (RomInfo.OverworldTable.TryGetValue(ow.overlayTableEntry, out var result))
+                        {
+                            owSpriteIdStr = result.spriteID.ToString();
+                        }
+                        else
+                        {
+                            // No match; keep empty (or you could use "-1")
+                            owSpriteIdStr = "";
+                        }
+
                         sw.WriteLine(
                             $"{eventFileId},{i}," +
-                            $"{ow.owID},{ow.overlayTableEntry},{ow.movement},{ow.type},{ow.flag},{ow.scriptNumber}," +
+                            $"{ow.owID},{ow.overlayTableEntry},{owSpriteIdStr}," +
+                            $"{ow.movement},{ow.type},{ow.flag},{ow.scriptNumber}," +
                             $"{ow.orientation},{ow.sightRange},{ow.unknown1},{ow.unknown2},{ow.xRange},{ow.yRange}," +
                             $"{ow.xMatrixPosition},{ow.yMatrixPosition},{ow.xMapPosition},{ow.yMapPosition}," +
                             $"{xCoord},{yCoord},{ow.zPosition},{(isAlias ? 1 : 0)}"
@@ -556,14 +576,15 @@ namespace DSPRE
             }
         }
 
-        private static void ExportPersonalDataToCSV(string pokePersonalDataPath, string[] pokeNames, string[] abilityNames, string[] typeNames)
+
+        private static void ExportPersonalDataToCSV(string pokePersonalDataPath, string[] pokeNames, string[] abilityNames, string[] typeNames, string[] itemNames)
         {
             // Write the Pokemon Personal Data to the CSV file
             PokemonPersonalData curPersonalData = null;
             StreamWriter sw = new StreamWriter(pokePersonalDataPath);
 
             sw.WriteLine("ID,Name,Type1,Type2,BaseHP,BaseAttack,BaseDefense,BaseSpecialAttack,BaseSpecialDefense,BaseSpeed," +
-                "Ability1,Ability2");
+                "Ability1,Ability2,Item1,Item2");
 
             for (int i = 0; i < RomInfo.GetPersonalFilesCount(); i++)
             {
@@ -575,7 +596,8 @@ namespace DSPRE
                 sw.WriteLine($"{i},{pokeNames[i]},{type1String},{type2String}," +
                     $"{curPersonalData.baseHP},{curPersonalData.baseAtk},{curPersonalData.baseDef}, " +
                     $"{curPersonalData.baseSpAtk},{curPersonalData.baseSpDef},{curPersonalData.baseSpeed}," +
-                    $"{abilityNames[curPersonalData.firstAbility]},{abilityNames[curPersonalData.secondAbility]}");
+                    $"{abilityNames[curPersonalData.firstAbility]},{abilityNames[curPersonalData.secondAbility]}," +
+                    $"{itemNames[curPersonalData.item1]},{itemNames[curPersonalData.item2]}");
             }
 
             sw.Close();
@@ -583,28 +605,48 @@ namespace DSPRE
 
         private static void ExportLearnsetDataToCSV(string learnsetDataPath, string[] pokeNames, string[] moveNames)
         {
-            // Write the Learnset Data to the CSV file
-            LearnsetData curLearnsetData = null;
-            StreamWriter sw = new StreamWriter(learnsetDataPath);
-
-            sw.WriteLine("ID,Name,[Level,Move]");
-
-            for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
+            using (StreamWriter sw = new StreamWriter(learnsetDataPath))
             {
-                curLearnsetData = new LearnsetData(i);
+                // ---- Write Header ----
+                sw.Write("ID,Name");
 
-                sw.Write($"{i},{pokeNames[i]}");
-
-                foreach (var entry in curLearnsetData.list)
+                for (int i = 0; i < 20; i++)
                 {
-                    sw.Write($",[{entry.level},{moveNames[entry.move]}]");
+                    sw.Write($",LevelMove{i}");
                 }
 
                 sw.WriteLine();
-            }
 
-            sw.Close();
+                // ---- Write Data ----
+                for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
+                {
+                    LearnsetData curLearnsetData = new LearnsetData(i);
+
+                    sw.Write($"{i},{pokeNames[i]}");
+
+                    int entryIndex = 0;
+                    // Write up to 20 entries
+                    foreach (var entry in curLearnsetData.list)
+                    {
+                        if (entryIndex >= 20)
+                            break;
+                        string moveName = moveNames[entry.move];
+
+                        sw.Write($",{entry.level}|{moveName}");
+
+                        entryIndex++;
+                    }
+                    // Pad remaining columns if less than 20
+                    while (entryIndex < 20)
+                    {
+                        sw.Write(",");
+                        entryIndex++;
+                    }
+                    sw.WriteLine();
+                }
+            }
         }
+
 
         public static string ExportEditableLearnsetDataToCSV()
         {
