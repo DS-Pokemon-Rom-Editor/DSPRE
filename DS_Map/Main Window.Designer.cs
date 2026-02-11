@@ -926,7 +926,19 @@
             this.generateCSVToolStripMenuItem.Name = "generateCSVToolStripMenuItem";
             this.generateCSVToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.generateCSVToolStripMenuItem.Text = "Generate CSV";
-            this.generateCSVToolStripMenuItem.Click += new System.EventHandler(this.generateCSVToolStripMenuItem_Click);
+            // 
+            // generateDexExportsToolStripMenuItem
+            // 
+            this.generateDexExportsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.generateDexExportsToolStripMenuItem.Name = "generateDexExportsToolStripMenuItem";
+            this.generateDexExportsToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.generateDexExportsToolStripMenuItem.Text = "Generate Dex Exports";
+            this.generateDexExportsToolStripMenuItem.Click += new System.EventHandler(this.generateDexExportsToolStripMenuItem_Click);
+            this.generateCSVToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+    new System.Windows.Forms.ToolStripMenuItem("Generate CSV", null, new System.EventHandler(this.generateCSVToolStripMenuItem_Click)),
+    this.generateDexExportsToolStripMenuItem
+});
+
             // 
             // menuViewToolStripMenuItem
             // 
@@ -1706,6 +1718,7 @@
         private System.Windows.Forms.ToolStripMenuItem openCharmapManagerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tMEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
     }
 }
 

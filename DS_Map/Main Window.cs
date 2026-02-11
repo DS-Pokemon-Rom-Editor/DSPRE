@@ -1716,7 +1716,17 @@ namespace DSPRE
         {
             Helpers.statusLabelMessage("Exporting to CSV...");
             Update();
-            DocTool.ExportAll();
+            DocTool.ExportCsv();
+
+            Helpers.statusLabelMessage();
+            Update();
+        }
+
+        private void generateDexExportsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Helpers.statusLabelMessage("Exporting CSV/JSON/Scripts...");
+            Update();
+            DocTool.ExportDexExports();
 
             Helpers.statusLabelMessage();
             Update();
