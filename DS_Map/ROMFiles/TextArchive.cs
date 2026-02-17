@@ -104,6 +104,7 @@ namespace DSPRE.ROMFiles
                 }
             }
             
+            AppLogger.Info("Building .bin files for Text Archives from expanded directory...");
             TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir, CharMapManager.GetCharMapPath());
 
             return true;
