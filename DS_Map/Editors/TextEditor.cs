@@ -160,7 +160,7 @@ namespace DSPRE.Editors
             textArchive.SaveToExpandedDir(newArchiveID);
 
             (string binPath, string jsonPath) = TextArchive.GetFilePaths(newArchiveID);
-            TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
+            TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
 
             /* Update ComboBox and select new file */
             selectTextFileComboBox.Items.Add("Text Archive " + newArchiveID);            
