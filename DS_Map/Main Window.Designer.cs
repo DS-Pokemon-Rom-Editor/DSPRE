@@ -100,6 +100,8 @@
             this.extractNSBTXFromNSBMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openCharmapManagerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateCSVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.generateDexExportsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.researchHelperToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.essentialToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.simpleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -115,6 +117,7 @@
             this.overworldEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tradeEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tMEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.eggMoveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -154,7 +157,6 @@
             this.weatherMapEditor = new System.Windows.Forms.ToolStripButton();
             this.versionLabel = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.eggMoveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mainTabControl.SuspendLayout();
             this.headerEditorTabPage.SuspendLayout();
             this.matrixEditorTabPage.SuspendLayout();
@@ -720,9 +722,10 @@
             this.listBuilderToolStripMenuItem,
             this.nSBMDUtilityToolStripMenuItem,
             this.openCharmapManagerToolStripMenuItem,
-            this.generateCSVToolStripMenuItem});
+            this.generateCSVToolStripMenuItem,
+            this.researchHelperToolStripMenuItem});
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
             this.aboutToolStripMenuItem.Text = "Tools";
             // 
             // romToolboxToolStripMenuItem
@@ -810,7 +813,7 @@
             this.buildFomFolderToolStripMenuItem.Image = global::DSPRE.Properties.Resources.folderToNarcIcon;
             this.buildFomFolderToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.buildFomFolderToolStripMenuItem.Name = "buildFomFolderToolStripMenuItem";
-            this.buildFomFolderToolStripMenuItem.Size = new System.Drawing.Size(214, 38);
+            this.buildFomFolderToolStripMenuItem.Size = new System.Drawing.Size(228, 38);
             this.buildFomFolderToolStripMenuItem.Text = "Build from Folder";
             this.buildFomFolderToolStripMenuItem.Click += new System.EventHandler(this.buildFromFolderToolStripMenuItem_Click);
             // 
@@ -819,7 +822,7 @@
             this.unpackToFolderToolStripMenuItem.Image = global::DSPRE.Properties.Resources.narcToFolderIcon;
             this.unpackToFolderToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.unpackToFolderToolStripMenuItem.Name = "unpackToFolderToolStripMenuItem";
-            this.unpackToFolderToolStripMenuItem.Size = new System.Drawing.Size(214, 38);
+            this.unpackToFolderToolStripMenuItem.Size = new System.Drawing.Size(228, 38);
             this.unpackToFolderToolStripMenuItem.Text = "Unpack to Folder";
             this.unpackToFolderToolStripMenuItem.Click += new System.EventHandler(this.unpackToFolderToolStripMenuItem_Click);
             // 
@@ -837,7 +840,7 @@
             this.listBasedToolStripMenuItem.Image = global::DSPRE.Properties.Resources.listbasedRenameIcon;
             this.listBasedToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.listBasedToolStripMenuItem.Name = "listBasedToolStripMenuItem";
-            this.listBasedToolStripMenuItem.Size = new System.Drawing.Size(185, 38);
+            this.listBasedToolStripMenuItem.Size = new System.Drawing.Size(212, 38);
             this.listBasedToolStripMenuItem.Text = "List-Based";
             this.listBasedToolStripMenuItem.Click += new System.EventHandler(this.listBasedToolStripMenuItem_Click);
             // 
@@ -846,7 +849,7 @@
             this.contentBasedToolStripMenuItem.Image = global::DSPRE.Properties.Resources.contentbasedRenameIcon;
             this.contentBasedToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.contentBasedToolStripMenuItem.Name = "contentBasedToolStripMenuItem";
-            this.contentBasedToolStripMenuItem.Size = new System.Drawing.Size(185, 38);
+            this.contentBasedToolStripMenuItem.Size = new System.Drawing.Size(212, 38);
             this.contentBasedToolStripMenuItem.Text = "Content-Based";
             this.contentBasedToolStripMenuItem.Click += new System.EventHandler(this.contentBasedToolStripMenuItem_Click);
             // 
@@ -883,6 +886,7 @@
             this.texturizeNSBMDToolStripMenuItem,
             this.untexturizeToolStripMenuItem,
             this.extractNSBTXFromNSBMDToolStripMenuItem});
+            this.nSBMDUtilityToolStripMenuItem.Enabled = false;
             this.nSBMDUtilityToolStripMenuItem.Name = "nSBMDUtilityToolStripMenuItem";
             this.nSBMDUtilityToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.nSBMDUtilityToolStripMenuItem.Text = "NSBMD Utility";
@@ -892,7 +896,7 @@
             this.texturizeNSBMDToolStripMenuItem.Image = global::DSPRE.Properties.Resources.addTextureToNSBMD;
             this.texturizeNSBMDToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.texturizeNSBMDToolStripMenuItem.Name = "texturizeNSBMDToolStripMenuItem";
-            this.texturizeNSBMDToolStripMenuItem.Size = new System.Drawing.Size(251, 38);
+            this.texturizeNSBMDToolStripMenuItem.Size = new System.Drawing.Size(250, 38);
             this.texturizeNSBMDToolStripMenuItem.Text = "Add/Replace NSBMD textures";
             this.texturizeNSBMDToolStripMenuItem.Click += new System.EventHandler(this.nsbmdAddTexButton_Click);
             // 
@@ -901,7 +905,7 @@
             this.untexturizeToolStripMenuItem.Image = global::DSPRE.Properties.Resources.removeTextureNSBMD;
             this.untexturizeToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.untexturizeToolStripMenuItem.Name = "untexturizeToolStripMenuItem";
-            this.untexturizeToolStripMenuItem.Size = new System.Drawing.Size(251, 38);
+            this.untexturizeToolStripMenuItem.Size = new System.Drawing.Size(250, 38);
             this.untexturizeToolStripMenuItem.Text = "Remove textures from NSBMD";
             this.untexturizeToolStripMenuItem.Click += new System.EventHandler(this.nsbmdRemoveTexButton_Click);
             // 
@@ -910,7 +914,7 @@
             this.extractNSBTXFromNSBMDToolStripMenuItem.Image = global::DSPRE.Properties.Resources.saveTextureFromNSBMD;
             this.extractNSBTXFromNSBMDToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.extractNSBTXFromNSBMDToolStripMenuItem.Name = "extractNSBTXFromNSBMDToolStripMenuItem";
-            this.extractNSBTXFromNSBMDToolStripMenuItem.Size = new System.Drawing.Size(251, 38);
+            this.extractNSBTXFromNSBMDToolStripMenuItem.Size = new System.Drawing.Size(250, 38);
             this.extractNSBTXFromNSBMDToolStripMenuItem.Text = "Save textures from NSBMD";
             this.extractNSBTXFromNSBMDToolStripMenuItem.Click += new System.EventHandler(this.nsbmdExportTexButton_Click);
             // 
@@ -923,22 +927,27 @@
             // 
             // generateCSVToolStripMenuItem
             // 
+            this.generateCSVToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.generateDexExportsToolStripMenuItem});
+            this.generateCSVToolStripMenuItem.Enabled = false;
             this.generateCSVToolStripMenuItem.Name = "generateCSVToolStripMenuItem";
             this.generateCSVToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.generateCSVToolStripMenuItem.Text = "Generate CSV";
             // 
             // generateDexExportsToolStripMenuItem
             // 
-            this.generateDexExportsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateDexExportsToolStripMenuItem.Name = "generateDexExportsToolStripMenuItem";
-            this.generateDexExportsToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.generateDexExportsToolStripMenuItem.Size = new System.Drawing.Size(184, 22);
             this.generateDexExportsToolStripMenuItem.Text = "Generate Dex Exports";
             this.generateDexExportsToolStripMenuItem.Click += new System.EventHandler(this.generateDexExportsToolStripMenuItem_Click);
-            this.generateCSVToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-    new System.Windows.Forms.ToolStripMenuItem("Generate CSV", null, new System.EventHandler(this.generateCSVToolStripMenuItem_Click)),
-    this.generateDexExportsToolStripMenuItem
-});
-
+            // 
+            // researchHelperToolStripMenuItem
+            // 
+            this.researchHelperToolStripMenuItem.Enabled = false;
+            this.researchHelperToolStripMenuItem.Name = "researchHelperToolStripMenuItem";
+            this.researchHelperToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.researchHelperToolStripMenuItem.Text = "Research Helper";
+            this.researchHelperToolStripMenuItem.Click += new System.EventHandler(this.researchHelperToolStripMenuItem_Click);
             // 
             // menuViewToolStripMenuItem
             // 
@@ -1002,65 +1011,72 @@
             // pokemonEditorToolStripMenuItem
             // 
             this.pokemonEditorToolStripMenuItem.Name = "pokemonEditorToolStripMenuItem";
-            this.pokemonEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.pokemonEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.pokemonEditorToolStripMenuItem.Text = "Pokémon Editor";
             this.pokemonEditorToolStripMenuItem.Click += new System.EventHandler(this.pokemonEditorToolStripMenuItem_Click);
             // 
             // overlayEditorToolStripMenuItem
             // 
             this.overlayEditorToolStripMenuItem.Name = "overlayEditorToolStripMenuItem";
-            this.overlayEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.overlayEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.overlayEditorToolStripMenuItem.Text = "Overlay Editor";
             this.overlayEditorToolStripMenuItem.Click += new System.EventHandler(this.overlayEditorToolStripMenuItem_Click);
             // 
             // spawnEditorToolStripMenuItem
             // 
             this.spawnEditorToolStripMenuItem.Name = "spawnEditorToolStripMenuItem";
-            this.spawnEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.spawnEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.spawnEditorToolStripMenuItem.Text = "Spawn Point Editor";
             this.spawnEditorToolStripMenuItem.Click += new System.EventHandler(this.spawnEditorToolStripButton_Click);
             // 
             // moveEditorToolStripMenuItem
             // 
             this.moveEditorToolStripMenuItem.Name = "moveEditorToolStripMenuItem";
-            this.moveEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.moveEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.moveEditorToolStripMenuItem.Text = "Move Editor";
             this.moveEditorToolStripMenuItem.Click += new System.EventHandler(this.moveEditorToolStripMenuItem_Click);
             // 
             // flyWarpEditorToolStripMenuItem
             // 
             this.flyWarpEditorToolStripMenuItem.Name = "flyWarpEditorToolStripMenuItem";
-            this.flyWarpEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.flyWarpEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.flyWarpEditorToolStripMenuItem.Text = "Fly Warp Editor";
             this.flyWarpEditorToolStripMenuItem.Click += new System.EventHandler(this.flyWarpEditorToolStripMenuItem_Click);
             // 
             // itemEditorToolStripMenuItem
             // 
             this.itemEditorToolStripMenuItem.Name = "itemEditorToolStripMenuItem";
-            this.itemEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.itemEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.itemEditorToolStripMenuItem.Text = "Item Editor";
             this.itemEditorToolStripMenuItem.Click += new System.EventHandler(this.itemEditorToolStripMenuItem_Click);
             // 
             // overworldEditorToolStripMenuItem
             // 
             this.overworldEditorToolStripMenuItem.Name = "overworldEditorToolStripMenuItem";
-            this.overworldEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.overworldEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.overworldEditorToolStripMenuItem.Text = "Overworld Editor";
             this.overworldEditorToolStripMenuItem.Click += new System.EventHandler(this.overworldEditorToolStripMenuItem_Click);
             // 
             // tradeEditorToolStripMenuItem
             // 
             this.tradeEditorToolStripMenuItem.Name = "tradeEditorToolStripMenuItem";
-            this.tradeEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.tradeEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.tradeEditorToolStripMenuItem.Text = "Trade Editor";
             this.tradeEditorToolStripMenuItem.Click += new System.EventHandler(this.tradeEditorToolStripMenuItem_Click);
             // 
             // tMEditorToolStripMenuItem
             // 
             this.tMEditorToolStripMenuItem.Name = "tMEditorToolStripMenuItem";
-            this.tMEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.tMEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.tMEditorToolStripMenuItem.Text = "TM Editor";
             this.tMEditorToolStripMenuItem.Click += new System.EventHandler(this.tMEditorToolStripMenuItem_Click);
+            // 
+            // eggMoveEditorToolStripMenuItem
+            // 
+            this.eggMoveEditorToolStripMenuItem.Name = "eggMoveEditorToolStripMenuItem";
+            this.eggMoveEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.eggMoveEditorToolStripMenuItem.Text = "Egg Move Editor";
+            this.eggMoveEditorToolStripMenuItem.Click += new System.EventHandler(this.eggMoveEditorToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem1
             // 
@@ -1489,13 +1505,6 @@
             this.versionLabel.Text = "ROM:";
             this.versionLabel.Visible = false;
             // 
-            // eggMoveEditorToolStripMenuItem
-            // 
-            this.eggMoveEditorToolStripMenuItem.Name = "eggMoveEditorToolStripMenuItem";
-            this.eggMoveEditorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.eggMoveEditorToolStripMenuItem.Text = "Egg Move Editor";
-            this.eggMoveEditorToolStripMenuItem.Click += new System.EventHandler(this.eggMoveEditorToolStripMenuItem_Click);
-            // 
             // MainProgram
             // 
             this.AllowDrop = true;
@@ -1719,6 +1728,7 @@
         private System.Windows.Forms.ToolStripMenuItem tMEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem researchHelperToolStripMenuItem;
     }
 }
 

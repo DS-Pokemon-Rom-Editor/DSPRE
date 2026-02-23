@@ -366,6 +366,10 @@
     <Compile Include="ReopenProjectConfirmation.Designer.cs">
       <DependentUpon>ReopenProjectConfirmation.cs</DependentUpon>
     </Compile>
+    <Compile Include="ResearchHelper.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ResearchHelper.Designer.cs" />
     <Compile Include="Resources\CharMaps\CharMapManager.cs" />
     <Compile Include="Resources\CharMaps\CharMapManagerForm.cs">
       <SubType>Form</SubType>
@@ -661,6 +665,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="ReopenProjectConfirmation.resx">
       <DependentUpon>ReopenProjectConfirmation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ResearchHelper.resx">
+      <DependentUpon>ResearchHelper.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\CharMaps\CharMapManagerForm.resx">
       <DependentUpon>CharMapManagerForm.cs</DependentUpon>
