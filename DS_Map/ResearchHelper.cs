@@ -186,6 +186,9 @@ namespace DSPRE
             PopulateScriptsDataGridView(allScriptStats);
             PopulateLevelScriptsDataGridView(allLevelScriptStats);
 
+            // Populate the ID Watcher script file dropdown
+            PopulateIdWatcherScriptFileComboBox();
+
             statusLabel.Text = $"Ready - {allScriptStats.Count} scripts, {allLevelScriptStats.Count} level scripts, {cachedEventFiles.Count} events loaded";
         }
 
@@ -746,6 +749,8 @@ namespace DSPRE
 
                     #endregion
 
+                    #region Data Classes
+
                     /// <summary>
                     /// Data class to hold script file statistics
                     /// </summary>
@@ -780,5 +785,561 @@ namespace DSPRE
                         public int FileID { get; set; }
                         public int UsageCount { get; set; }
                     }
+
+                    /// <summary>
+                    /// Data class to hold flag usage search results
+                    /// </summary>
+                    private class FlagUsageResult
+                    {
+                        public string FileType { get; set; }
+                        public int FileID { get; set; }
+                        public string Details { get; set; }
+                        public int UsageCount { get; set; }
+                        public int EventIndex { get; set; }  // For navigation
+                    }
+
+                    /// <summary>
+                    /// Data class to hold script file reference results
+                    /// </summary>
+                    private class ScriptFileReferenceResult
+                    {
+                        public string ReferenceType { get; set; }  // Header, Event
+                        public int ReferenceID { get; set; }
+                        public string Field { get; set; }  // scriptFileID, levelScriptID, etc.
+                    }
+
+                    /// <summary>
+                    /// Data class to hold script ID usage results
+                    /// </summary>
+                    private class ScriptIdUsageResult
+                    {
+                        public int EventFileID { get; set; }
+                        public string EventType { get; set; }  // Overworld, Spawnable, Trigger
+                        public int EventIndex { get; set; }
+                        public string Details { get; set; }
+                    }
+
+                    #endregion
+
+                    #region Flag Watcher Tab
+
+                    private List<FlagUsageResult> allFlagUsageResults = new List<FlagUsageResult>();
+
+                    private void flagSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchFlagUsage();
+                    }
+
+                    private void flagClearButton_Click(object sender, EventArgs e)
+                    {
+                        flagSearchTextBox.Text = "";
+                        flagWatcherDataGridView.Rows.Clear();
+                        allFlagUsageResults.Clear();
+                        statusLabel.Text = "Flag search cleared";
+                    }
+
+                    private void SearchFlagUsage()
+                    {
+                        if (!dataLoaded)
+                        {
+                            MessageBox.Show("Please wait for data to finish loading.", "Data Not Ready", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        string searchText = flagSearchTextBox.Text.Trim();
+                        if (string.IsNullOrEmpty(searchText))
+                        {
+                            MessageBox.Show("Please enter a flag number to search.", "Empty Search", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        // Parse the flag number based on mode
+                        int flagNumber;
+                        bool parseSuccess;
+
+                        if (flagHexRadioButton.Checked)
+                        {
+                            string hexValue = searchText;
+                            if (hexValue.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
+                                hexValue.StartsWith("0X", StringComparison.OrdinalIgnoreCase))
+                            {
+                                hexValue = hexValue.Substring(2);
+                            }
+                            parseSuccess = int.TryParse(hexValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out flagNumber);
+                        }
+                        else
+                        {
+                            parseSuccess = int.TryParse(searchText, out flagNumber);
+                        }
+
+                        if (!parseSuccess)
+                        {
+                            MessageBox.Show("Invalid flag number format.", "Parse Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        statusLabel.Text = $"Searching for flag {flagNumber} (0x{flagNumber:X})...";
+                        Application.DoEvents();
+
+                        allFlagUsageResults.Clear();
+                        flagWatcherDataGridView.Rows.Clear();
+
+                        // Search in Event files (Overworld flags)
+                        for (int eventIndex = 0; eventIndex < cachedEventFiles.Count; eventIndex++)
+                        {
+                            var eventFile = cachedEventFiles[eventIndex];
+                            if (eventFile.overworlds != null)
+                            {
+                                for (int owIndex = 0; owIndex < eventFile.overworlds.Count; owIndex++)
+                                {
+                                    var ow = eventFile.overworlds[owIndex];
+                                    if (ow.flag == flagNumber)
+                                    {
+                                        allFlagUsageResults.Add(new FlagUsageResult
+                                        {
+                                            FileType = "Event",
+                                            FileID = eventFile.ID,
+                                            Details = $"Overworld {owIndex}: {ow}",
+                                            UsageCount = 1,
+                                            EventIndex = owIndex
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // Search in Scripts for flag-related commands
+                        foreach (var scriptFile in cachedScriptFiles)
+                        {
+                            int usageCount = CountFlagInScriptFile(scriptFile, flagNumber);
+                            if (usageCount > 0)
+                            {
+                                allFlagUsageResults.Add(new FlagUsageResult
+                                {
+                                    FileType = "Script",
+                                    FileID = scriptFile.fileID,
+                                    Details = $"{usageCount} flag operation(s)",
+                                    UsageCount = usageCount,
+                                    EventIndex = -1
+                                });
+                            }
+                        }
+
+                        // Populate results
+                        PopulateFlagDataGridView(allFlagUsageResults);
+                        statusLabel.Text = $"Found {allFlagUsageResults.Count} results for flag {flagNumber} (0x{flagNumber:X})";
+                    }
+
+                    private int CountFlagInScriptFile(ScriptFile scriptFile, int flagNumber)
+                    {
+                        int count = 0;
+
+                        // Check all scripts
+                        if (scriptFile.allScripts != null)
+                        {
+                            foreach (var script in scriptFile.allScripts)
+                            {
+                                count += CountFlagInCommands(script.commands, flagNumber);
+                            }
+                        }
+
+                        // Check all functions
+                        if (scriptFile.allFunctions != null)
+                        {
+                            foreach (var func in scriptFile.allFunctions)
+                            {
+                                count += CountFlagInCommands(func.commands, flagNumber);
+                            }
+                        }
+
+                        return count;
+                    }
+
+                    private int CountFlagInCommands(List<ScriptCommand> commands, int flagNumber)
+                    {
+                        int count = 0;
+                        if (commands == null) return 0;
+
+                        // Flag-related command names commonly include: SetFlag, ClearFlag, CheckFlag, etc.
+                        // We check command parameters that might be flag values (typically small numbers < 0x1000)
+                        foreach (var cmd in commands)
+                        {
+                            if (cmd.cmdParams == null) continue;
+
+                            // Check each parameter for matching flag value
+                            foreach (var paramData in cmd.cmdParams)
+                            {
+                                if (paramData.Length >= 2)
+                                {
+                                    int paramValue = GetParamValue(paramData);
+                                    // Flags are typically in lower range (not in variable range 0x4000+)
+                                    if (paramValue == flagNumber && paramValue < 0x4000)
+                                    {
+                                        count++;
+                                    }
+                                }
+                            }
+                        }
+
+                        return count;
+                    }
+
+                    private void PopulateFlagDataGridView(IList<FlagUsageResult> results)
+                    {
+                        flagWatcherDataGridView.Rows.Clear();
+
+                        foreach (var result in results)
+                        {
+                            flagWatcherDataGridView.Rows.Add(result.FileType, result.FileID, result.Details, result.UsageCount);
+                        }
+                    }
+
+                    private void flagWatcherDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        string fileType = (string)flagWatcherDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        int fileId = (int)flagWatcherDataGridView.Rows[e.RowIndex].Cells[1].Value;
+
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                        if (mainProgram != null)
+                        {
+                            switch (fileType)
+                            {
+                                case "Event":
+                                    // Find the result to get the event index
+                                    var result = allFlagUsageResults.FirstOrDefault(r => 
+                                        r.FileType == "Event" && r.FileID == fileId);
+                                    if (result != null && result.EventIndex >= 0)
+                                    {
+                                        EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, fileId, result.EventIndex);
+                                        statusLabel.Text = $"Opened Event File {fileId}, Overworld {result.EventIndex}";
+                                    }
+                                    else
+                                    {
+                                        EditorPanels.eventEditor.OpenEventEditor(mainProgram, fileId);
+                                        statusLabel.Text = $"Opened Event File {fileId}";
+                                    }
+                                    break;
+                                case "Script":
+                                    EditorPanels.scriptEditor.OpenScriptEditor(mainProgram, fileId);
+                                    statusLabel.Text = $"Opened Script File {fileId}";
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                        }
+                    }
+
+                    #endregion
+
+                    #region Script Watcher Tab
+
+                    private List<ScriptFileReferenceResult> scriptFileReferenceResults = new List<ScriptFileReferenceResult>();
+                    private List<ScriptIdUsageResult> scriptIdUsageResults = new List<ScriptIdUsageResult>();
+                    private Dictionary<int, ScriptFile> scriptFileIdToScript = new Dictionary<int, ScriptFile>();
+
+                    private void PopulateIdWatcherScriptFileComboBox()
+                    {
+                        idWatcherScriptFileComboBox.Items.Clear();
+                        scriptFileIdToScript.Clear();
+
+                        foreach (var scriptFile in cachedScriptFiles)
+                        {
+                            idWatcherScriptFileComboBox.Items.Add($"{scriptFile.fileID}: Script File");
+                            scriptFileIdToScript[scriptFile.fileID] = scriptFile;
+                        }
+
+                        if (idWatcherScriptFileComboBox.Items.Count > 0)
+                        {
+                            idWatcherScriptFileComboBox.SelectedIndex = 0;
+                        }
+                    }
+
+                    private void idWatcherScriptFileComboBox_SelectedIndexChanged(object sender, EventArgs e)
+                    {
+                        idWatcherScriptIdComboBox.Items.Clear();
+
+                        if (idWatcherScriptFileComboBox.SelectedIndex < 0) return;
+
+                        // Parse the script file ID from the selected item
+                        string selectedText = idWatcherScriptFileComboBox.SelectedItem.ToString();
+                        int colonIndex = selectedText.IndexOf(':');
+                        if (colonIndex > 0 && int.TryParse(selectedText.Substring(0, colonIndex), out int scriptFileId))
+                        {
+                            if (scriptFileIdToScript.TryGetValue(scriptFileId, out ScriptFile scriptFile))
+                            {
+                                // Add all scripts from this file
+                                if (scriptFile.allScripts != null)
+                                {
+                                    for (int i = 0; i < scriptFile.allScripts.Count; i++)
+                                    {
+                                        idWatcherScriptIdComboBox.Items.Add($"Script {i + 1}");
+                                    }
+                                }
+
+                                if (idWatcherScriptIdComboBox.Items.Count > 0)
+                                {
+                                    idWatcherScriptIdComboBox.SelectedIndex = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    // File Watcher - search what headers/events use a specific script file
+                    private void fileWatcherSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchScriptFileReferences();
+                    }
+
+                    private void SearchScriptFileReferences()
+                    {
+                        int searchScriptFileId = (int)fileWatcherScriptFileNumericUpDown.Value;
+
+                        statusLabel.Text = $"Searching for references to script file {searchScriptFileId}...";
+                        Application.DoEvents();
+
+                        scriptFileReferenceResults.Clear();
+                        fileWatcherDataGridView.Rows.Clear();
+
+                        // Search in headers
+                        int headerCount = RomInfo.GetHeaderCount();
+                        for (ushort i = 0; i < headerCount; i++)
+                        {
+                            try
+                            {
+                                MapHeader header = MapHeader.GetMapHeader(i);
+                                if (header != null)
+                                {
+                                    if (header.scriptFileID == searchScriptFileId)
+                                    {
+                                        scriptFileReferenceResults.Add(new ScriptFileReferenceResult
+                                        {
+                                            ReferenceType = "Header",
+                                            ReferenceID = i,
+                                            Field = "scriptFileID"
+                                        });
+                                    }
+                                    if (header.levelScriptID == searchScriptFileId)
+                                    {
+                                        scriptFileReferenceResults.Add(new ScriptFileReferenceResult
+                                        {
+                                            ReferenceType = "Header",
+                                            ReferenceID = i,
+                                            Field = "levelScriptID"
+                                        });
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                AppLogger.Warn($"Failed to load header {i}: {ex.Message}");
+                            }
+                        }
+
+                        // Populate results
+                        PopulateFileWatcherDataGridView(scriptFileReferenceResults);
+                        statusLabel.Text = $"Found {scriptFileReferenceResults.Count} references to script file {searchScriptFileId}";
+                    }
+
+                    private void PopulateFileWatcherDataGridView(IList<ScriptFileReferenceResult> results)
+                    {
+                        fileWatcherDataGridView.Rows.Clear();
+
+                        foreach (var result in results)
+                        {
+                            fileWatcherDataGridView.Rows.Add(result.ReferenceType, result.ReferenceID, result.Field);
+                        }
+                    }
+
+                    private void fileWatcherDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        string refType = (string)fileWatcherDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        int refId = (int)fileWatcherDataGridView.Rows[e.RowIndex].Cells[1].Value;
+
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                        if (mainProgram != null)
+                        {
+                            if (refType == "Header")
+                            {
+                                EditorPanels.headerEditor.OpenHeaderEditor(mainProgram, refId);
+                                statusLabel.Text = $"Opened Header {refId}";
+                            }
+                        }
+                        else
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                        }
+                    }
+
+                    // ID Watcher - search where a specific script ID is used in event files
+                    private void idWatcherSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchScriptIdUsage();
+                    }
+
+                    private void SearchScriptIdUsage()
+                    {
+                        if (idWatcherScriptFileComboBox.SelectedIndex < 0 || idWatcherScriptIdComboBox.SelectedIndex < 0)
+                        {
+                            MessageBox.Show("Please select a script file and script ID.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        // Parse the script file ID
+                        string selectedFileText = idWatcherScriptFileComboBox.SelectedItem.ToString();
+                        int colonIndex = selectedFileText.IndexOf(':');
+                        if (colonIndex <= 0 || !int.TryParse(selectedFileText.Substring(0, colonIndex), out int scriptFileId))
+                        {
+                            return;
+                        }
+
+                        // The script ID is 1-based in the dropdown (Script 1, Script 2, etc.)
+                        int scriptId = idWatcherScriptIdComboBox.SelectedIndex + 1;
+
+                        statusLabel.Text = $"Searching for Script {scriptId} usage in events linked to script file {scriptFileId}...";
+                        Application.DoEvents();
+
+                        scriptIdUsageResults.Clear();
+                        idWatcherDataGridView.Rows.Clear();
+
+                        // First, find which event files are associated with headers that use this script file
+                        HashSet<int> associatedEventFileIds = new HashSet<int>();
+                        int headerCount = RomInfo.GetHeaderCount();
+
+                        for (ushort i = 0; i < headerCount; i++)
+                        {
+                            try
+                            {
+                                MapHeader header = MapHeader.GetMapHeader(i);
+                                if (header != null && header.scriptFileID == scriptFileId)
+                                {
+                                    associatedEventFileIds.Add(header.eventFileID);
+                                }
+                            }
+                            catch { }
+                        }
+
+                        // Now search those event files for uses of this script ID
+                        foreach (var eventFile in cachedEventFiles)
+                        {
+                            if (!associatedEventFileIds.Contains(eventFile.ID))
+                                continue;
+
+                            // Check overworlds
+                            if (eventFile.overworlds != null)
+                            {
+                                for (int i = 0; i < eventFile.overworlds.Count; i++)
+                                {
+                                    var ow = eventFile.overworlds[i];
+                                    if (ow.scriptNumber == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Overworld",
+                                            EventIndex = i,
+                                            Details = ow.ToString()
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Check spawnables
+                            if (eventFile.spawnables != null)
+                            {
+                                for (int i = 0; i < eventFile.spawnables.Count; i++)
+                                {
+                                    var sp = eventFile.spawnables[i];
+                                    if (sp.scriptNumber == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Spawnable",
+                                            EventIndex = i,
+                                            Details = sp.ToString()
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Check triggers
+                            if (eventFile.triggers != null)
+                            {
+                                for (int i = 0; i < eventFile.triggers.Count; i++)
+                                {
+                                    var tr = eventFile.triggers[i];
+                                    if (tr.scriptNumber == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Trigger",
+                                            EventIndex = i,
+                                            Details = tr.ToString()
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // Populate results
+                        PopulateIdWatcherDataGridView(scriptIdUsageResults);
+                        statusLabel.Text = $"Found {scriptIdUsageResults.Count} uses of Script {scriptId} in associated event files";
+                    }
+
+                    private void PopulateIdWatcherDataGridView(IList<ScriptIdUsageResult> results)
+                    {
+                        idWatcherDataGridView.Rows.Clear();
+
+                        foreach (var result in results)
+                        {
+                            idWatcherDataGridView.Rows.Add(result.EventFileID, result.EventType, result.EventIndex, result.Details);
+                        }
+                    }
+
+                    private void idWatcherDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        int eventFileId = (int)idWatcherDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        string eventType = (string)idWatcherDataGridView.Rows[e.RowIndex].Cells[1].Value;
+                        int eventIndex = (int)idWatcherDataGridView.Rows[e.RowIndex].Cells[2].Value;
+
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                        if (mainProgram != null)
+                        {
+                            switch (eventType)
+                            {
+                                case "Overworld":
+                                    EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, eventFileId, eventIndex);
+                                    statusLabel.Text = $"Opened Event File {eventFileId}, Overworld {eventIndex}";
+                                    break;
+                                case "Spawnable":
+                                    EditorPanels.eventEditor.OpenEventEditorWithSpawnable(mainProgram, eventFileId, eventIndex);
+                                    statusLabel.Text = $"Opened Event File {eventFileId}, Spawnable {eventIndex}";
+                                    break;
+                                case "Trigger":
+                                    EditorPanels.eventEditor.OpenEventEditorWithTrigger(mainProgram, eventFileId, eventIndex);
+                                    statusLabel.Text = $"Opened Event File {eventFileId}, Trigger {eventIndex}";
+                                    break;
+                                default:
+                                    EditorPanels.eventEditor.OpenEventEditor(mainProgram, eventFileId);
+                                    statusLabel.Text = $"Opened Event File {eventFileId}";
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                        }
+                    }
+
+                    #endregion
                 }
             }

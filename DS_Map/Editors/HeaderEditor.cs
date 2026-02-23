@@ -166,6 +166,25 @@ namespace DSPRE.Editors
             Helpers.statusLabelMessage();
         }
 
+        public void OpenHeaderEditor(MainProgram parent, int headerID)
+        {
+            SetupHeaderEditor(parent);
+
+            if (headerID >= 0 && headerID < headerListBox.Items.Count)
+            {
+                headerListBox.SelectedIndex = headerID;
+            }
+
+            if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))
+            {
+                host.Focus();
+            }
+            else
+            {
+                EditorPanels.mainTabControl.SelectedTab = EditorPanels.headerEditorTabPage;
+            }
+        }
+
         private void openWildEditorWithIdButtonClick(object sender, EventArgs e)
         {
             _parent.openWildEditor(loadCurrent: true);

@@ -153,6 +153,10 @@
             this.warpsListBox = new System.Windows.Forms.ListBox();
             this.triggersTabPage = new System.Windows.Forms.TabPage();
             this.triggerLogicGroupBox = new System.Windows.Forms.GroupBox();
+            this.triggerVarHexModeRadioButton = new System.Windows.Forms.RadioButton();
+            this.triggerVarDecimalModeRadioButton = new System.Windows.Forms.RadioButton();
+            this.triggerVarWatchedHexTextBox = new System.Windows.Forms.TextBox();
+            this.triggerExpectedValueHexTextBox = new System.Windows.Forms.TextBox();
             this.expectedVarValueTriggerUpDown = new System.Windows.Forms.NumericUpDown();
             this.label19 = new System.Windows.Forms.Label();
             this.triggerVariableWatchedUpDown = new System.Windows.Forms.NumericUpDown();
@@ -1748,6 +1752,10 @@
             // 
             // triggerLogicGroupBox
             // 
+            this.triggerLogicGroupBox.Controls.Add(this.triggerVarHexModeRadioButton);
+            this.triggerLogicGroupBox.Controls.Add(this.triggerVarDecimalModeRadioButton);
+            this.triggerLogicGroupBox.Controls.Add(this.triggerVarWatchedHexTextBox);
+            this.triggerLogicGroupBox.Controls.Add(this.triggerExpectedValueHexTextBox);
             this.triggerLogicGroupBox.Controls.Add(this.expectedVarValueTriggerUpDown);
             this.triggerLogicGroupBox.Controls.Add(this.label19);
             this.triggerLogicGroupBox.Controls.Add(this.triggerVariableWatchedUpDown);
@@ -1756,11 +1764,55 @@
             this.triggerLogicGroupBox.Controls.Add(this.label27);
             this.triggerLogicGroupBox.Location = new System.Drawing.Point(225, 9);
             this.triggerLogicGroupBox.Name = "triggerLogicGroupBox";
-            this.triggerLogicGroupBox.Size = new System.Drawing.Size(200, 108);
+            this.triggerLogicGroupBox.Size = new System.Drawing.Size(200, 130);
             this.triggerLogicGroupBox.TabIndex = 39;
             this.triggerLogicGroupBox.TabStop = false;
             this.triggerLogicGroupBox.Text = "Logic";
             // 
+            // triggerVarDecimalModeRadioButton
+            // 
+            this.triggerVarDecimalModeRadioButton.AutoSize = true;
+            this.triggerVarDecimalModeRadioButton.Checked = true;
+            this.triggerVarDecimalModeRadioButton.Location = new System.Drawing.Point(17, 56);
+            this.triggerVarDecimalModeRadioButton.Name = "triggerVarDecimalModeRadioButton";
+            this.triggerVarDecimalModeRadioButton.Size = new System.Drawing.Size(63, 17);
+            this.triggerVarDecimalModeRadioButton.TabIndex = 40;
+            this.triggerVarDecimalModeRadioButton.TabStop = true;
+            this.triggerVarDecimalModeRadioButton.Text = "Decimal";
+            this.triggerVarDecimalModeRadioButton.UseVisualStyleBackColor = true;
+            this.triggerVarDecimalModeRadioButton.CheckedChanged += new System.EventHandler(this.triggerVarModeRadioButton_CheckedChanged);
+            // 
+            // triggerVarHexModeRadioButton
+            // 
+            this.triggerVarHexModeRadioButton.AutoSize = true;
+            this.triggerVarHexModeRadioButton.Location = new System.Drawing.Point(90, 56);
+            this.triggerVarHexModeRadioButton.Name = "triggerVarHexModeRadioButton";
+            this.triggerVarHexModeRadioButton.Size = new System.Drawing.Size(44, 17);
+            this.triggerVarHexModeRadioButton.TabIndex = 41;
+            this.triggerVarHexModeRadioButton.Text = "Hex";
+            this.triggerVarHexModeRadioButton.UseVisualStyleBackColor = true;
+            this.triggerVarHexModeRadioButton.CheckedChanged += new System.EventHandler(this.triggerVarModeRadioButton_CheckedChanged);
+            // 
+            // triggerVarWatchedHexTextBox
+            // 
+            this.triggerVarWatchedHexTextBox.Location = new System.Drawing.Point(17, 36);
+            this.triggerVarWatchedHexTextBox.MaxLength = 6;
+            this.triggerVarWatchedHexTextBox.Name = "triggerVarWatchedHexTextBox";
+            this.triggerVarWatchedHexTextBox.Size = new System.Drawing.Size(71, 20);
+            this.triggerVarWatchedHexTextBox.TabIndex = 42;
+            this.triggerVarWatchedHexTextBox.Visible = false;
+            this.triggerVarWatchedHexTextBox.TextChanged += new System.EventHandler(this.triggerVarWatchedHexTextBox_TextChanged);
+            // 
+            // triggerExpectedValueHexTextBox
+            // 
+            this.triggerExpectedValueHexTextBox.Location = new System.Drawing.Point(112, 36);
+            this.triggerExpectedValueHexTextBox.MaxLength = 6;
+            this.triggerExpectedValueHexTextBox.Name = "triggerExpectedValueHexTextBox";
+            this.triggerExpectedValueHexTextBox.Size = new System.Drawing.Size(71, 20);
+            this.triggerExpectedValueHexTextBox.TabIndex = 43;
+            this.triggerExpectedValueHexTextBox.Visible = false;
+            this.triggerExpectedValueHexTextBox.TextChanged += new System.EventHandler(this.triggerExpectedValueHexTextBox_TextChanged);
+            //
             // expectedVarValueTriggerUpDown
             // 
             this.expectedVarValueTriggerUpDown.Location = new System.Drawing.Point(112, 36);
@@ -1807,7 +1859,7 @@
             // 
             // triggerScriptUpDown
             // 
-            this.triggerScriptUpDown.Location = new System.Drawing.Point(68, 77);
+            this.triggerScriptUpDown.Location = new System.Drawing.Point(68, 99);
             this.triggerScriptUpDown.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -1821,7 +1873,7 @@
             // label27
             // 
             this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(58, 62);
+            this.label27.Location = new System.Drawing.Point(58, 83);
             this.label27.Name = "label27";
             this.label27.Size = new System.Drawing.Size(78, 13);
             this.label27.TabIndex = 24;
@@ -2543,6 +2595,10 @@
         private System.Windows.Forms.ListBox warpsListBox;
         private System.Windows.Forms.TabPage triggersTabPage;
         private System.Windows.Forms.GroupBox triggerLogicGroupBox;
+        private System.Windows.Forms.RadioButton triggerVarHexModeRadioButton;
+        private System.Windows.Forms.RadioButton triggerVarDecimalModeRadioButton;
+        private System.Windows.Forms.TextBox triggerVarWatchedHexTextBox;
+        private System.Windows.Forms.TextBox triggerExpectedValueHexTextBox;
         private System.Windows.Forms.NumericUpDown expectedVarValueTriggerUpDown;
         private System.Windows.Forms.Label label19;
         private System.Windows.Forms.NumericUpDown triggerVariableWatchedUpDown;

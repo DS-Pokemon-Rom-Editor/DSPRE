@@ -528,9 +528,16 @@ namespace DSPRE.ROMFiles {
             }
         }
         public override string ToString() {
+            return ToString(hexMode: false);
+        }
+        public string ToString(bool hexMode) {
             string msg = "Run script " + scriptNumber;
             if (variableWatched != 0) {
-                msg += $" when Var {variableWatched} is {expectedVarValue}";
+                if (hexMode) {
+                    msg += $" when Var 0x{variableWatched:X4} is 0x{expectedVarValue:X4}";
+                } else {
+                    msg += $" when Var {variableWatched} is {expectedVarValue}";
+                }
             }
             return msg;
         }

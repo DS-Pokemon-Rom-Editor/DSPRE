@@ -681,6 +681,42 @@ namespace DSPRE.Editors
             }
         }
 
+        public void OpenEventEditorWithOverworld(MainProgram parent, int eventFileID, int overworldIndex)
+        {
+            OpenEventEditor(parent, eventFileID);
+
+            // Select the Overworlds tab and the specific overworld
+            eventsTabControl.SelectedTab = overworldsTabPage;
+            if (overworldIndex >= 0 && overworldIndex < overworldsListBox.Items.Count)
+            {
+                overworldsListBox.SelectedIndex = overworldIndex;
+            }
+        }
+
+        public void OpenEventEditorWithSpawnable(MainProgram parent, int eventFileID, int spawnableIndex)
+        {
+            OpenEventEditor(parent, eventFileID);
+
+            // Select the Spawnables tab and the specific spawnable
+            eventsTabControl.SelectedTab = signsTabPage;
+            if (spawnableIndex >= 0 && spawnableIndex < spawnablesListBox.Items.Count)
+            {
+                spawnablesListBox.SelectedIndex = spawnableIndex;
+            }
+        }
+
+        public void OpenEventEditorWithTrigger(MainProgram parent, int eventFileID, int triggerIndex)
+        {
+            OpenEventEditor(parent, eventFileID);
+
+            // Select the Triggers tab and the specific trigger
+            eventsTabControl.SelectedTab = triggersTabPage;
+            if (triggerIndex >= 0 && triggerIndex < triggersListBox.Items.Count)
+            {
+                triggersListBox.SelectedIndex = triggerIndex;
+            }
+        }
+
         public void SetupEventEditor(MainProgram parent, bool force = false)
         {
             if (eventEditorIsReady && !force) return;
@@ -2383,7 +2419,20 @@ namespace DSPRE.Editors
             {
                 return;
             }
-            triggersListBox.Items[index] = index.ToString("D" + Math.Max(0, triggersListBox.Items.Count - 1).ToString().Length) + ": " + (selectedEvent as Trigger).ToString();
+            bool hexMode = triggerVarHexModeRadioButton.Checked;
+            triggersListBox.Items[index] = index.ToString("D" + Math.Max(0, triggersListBox.Items.Count - 1).ToString().Length) + ": " + (selectedEvent as Trigger).ToString(hexMode);
+        }
+        private void refreshAllTriggerNames()
+        {
+            bool hexMode = triggerVarHexModeRadioButton.Checked;
+            Helpers.DisableHandlers();
+            int selectedIndex = triggersListBox.SelectedIndex;
+            for (int i = 0; i < currentEvFile.triggers.Count; i++)
+            {
+                triggersListBox.Items[i] = i.ToString("D" + Math.Max(0, triggersListBox.Items.Count - 1).ToString().Length) + ": " + currentEvFile.triggers[i].ToString(hexMode);
+            }
+            triggersListBox.SelectedIndex = selectedIndex;
+            Helpers.EnableHandlers();
         }
 
         private void warpsListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -2584,6 +2633,10 @@ namespace DSPRE.Editors
             triggerVariableWatchedUpDown.Value = t.variableWatched;
             expectedVarValueTriggerUpDown.Value = t.expectedVarValue;
 
+            // Also update hex text boxes
+            triggerVarWatchedHexTextBox.Text = $"0x{t.variableWatched:X4}";
+            triggerExpectedValueHexTextBox.Text = $"0x{t.expectedVarValue:X4}";
+
             triggerWidthUpDown.Value = t.widthX;
             triggerLengthUpDown.Value = t.heightY;
 
@@ -2605,7 +2658,14 @@ namespace DSPRE.Editors
                 return;
             }
 
-            currentEvFile.triggers[selection].variableWatched = (ushort)triggerVariableWatchedUpDown.Value;
+            ushort value = (ushort)triggerVariableWatchedUpDown.Value;
+            currentEvFile.triggers[selection].variableWatched = value;
+
+            // Sync hex text box
+            Helpers.DisableHandlers();
+            triggerVarWatchedHexTextBox.Text = $"0x{value:X4}";
+            Helpers.EnableHandlers();
+
             updateSelectedTriggerName();
         }
         private void expectedVarValueTriggerUpDown_ValueChanged(object sender, EventArgs e)
@@ -2616,9 +2676,103 @@ namespace DSPRE.Editors
                 return;
             }
 
-            currentEvFile.triggers[selection].expectedVarValue = (ushort)expectedVarValueTriggerUpDown.Value;
+            ushort value = (ushort)expectedVarValueTriggerUpDown.Value;
+            currentEvFile.triggers[selection].expectedVarValue = value;
+
+            // Sync hex text box
+            Helpers.DisableHandlers();
+            triggerExpectedValueHexTextBox.Text = $"0x{value:X4}";
+            Helpers.EnableHandlers();
+
             updateSelectedTriggerName();
         }
+
+        private void triggerVarModeRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Helpers.HandlersDisabled) return;
+
+            bool hexMode = triggerVarHexModeRadioButton.Checked;
+
+            // Toggle visibility of controls
+            triggerVariableWatchedUpDown.Visible = !hexMode;
+            expectedVarValueTriggerUpDown.Visible = !hexMode;
+            triggerVarWatchedHexTextBox.Visible = hexMode;
+            triggerExpectedValueHexTextBox.Visible = hexMode;
+
+            // Sync values when switching modes
+            if (hexMode)
+            {
+                // Decimal -> Hex: copy values to text boxes
+                triggerVarWatchedHexTextBox.Text = $"0x{(int)triggerVariableWatchedUpDown.Value:X4}";
+                triggerExpectedValueHexTextBox.Text = $"0x{(int)expectedVarValueTriggerUpDown.Value:X4}";
+            }
+            else
+            {
+                // Hex -> Decimal: values are already in the numeric up/downs (synced on text change)
+            }
+
+            // Refresh all trigger names in listbox to reflect new mode
+            refreshAllTriggerNames();
+        }
+
+        private void triggerVarWatchedHexTextBox_TextChanged(object sender, EventArgs e)
+        {
+            int selection = triggersListBox.SelectedIndex;
+            if (Helpers.HandlersDisabled || selection < 0)
+            {
+                return;
+            }
+
+            string hexText = triggerVarWatchedHexTextBox.Text.Trim();
+            if (TryParseHexValue(hexText, out ushort value))
+            {
+                Helpers.DisableHandlers();
+                triggerVariableWatchedUpDown.Value = value;
+                currentEvFile.triggers[selection].variableWatched = value;
+                Helpers.EnableHandlers();
+                updateSelectedTriggerName();
+            }
+        }
+
+        private void triggerExpectedValueHexTextBox_TextChanged(object sender, EventArgs e)
+        {
+            int selection = triggersListBox.SelectedIndex;
+            if (Helpers.HandlersDisabled || selection < 0)
+            {
+                return;
+            }
+
+            string hexText = triggerExpectedValueHexTextBox.Text.Trim();
+            if (TryParseHexValue(hexText, out ushort value))
+            {
+                Helpers.DisableHandlers();
+                expectedVarValueTriggerUpDown.Value = value;
+                currentEvFile.triggers[selection].expectedVarValue = value;
+                Helpers.EnableHandlers();
+                updateSelectedTriggerName();
+            }
+        }
+
+        private bool TryParseHexValue(string hexText, out ushort value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(hexText)) return false;
+
+            // Strip 0x prefix if present
+            if (hexText.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
+                hexText.StartsWith("0X", StringComparison.OrdinalIgnoreCase))
+            {
+                hexText = hexText.Substring(2);
+            }
+
+            if (ushort.TryParse(hexText, System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+            return false;
+        }
+
         private void triggerScriptUpDown_ValueChanged(object sender, EventArgs e)
         {
             int selection = triggersListBox.SelectedIndex;
