@@ -656,6 +656,31 @@ namespace DSPRE.Editors
             return false;
         }
         #endregion
+
+        /// <summary>
+        /// Opens the Event Editor and navigates to a specific event file.
+        /// </summary>
+        /// <param name="parent">The parent MainProgram instance</param>
+        /// <param name="eventFileID">The event file ID to open</param>
+        public void OpenEventEditor(MainProgram parent, int eventFileID)
+        {
+            SetupEventEditor(parent);
+
+            if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
+            {
+                selectEventComboBox.SelectedIndex = eventFileID;
+            }
+
+            if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))
+            {
+                host.Focus();
+            }
+            else
+            {
+                EditorPanels.mainTabControl.SelectedTab = EditorPanels.eventEditorTabPage;
+            }
+        }
+
         public void SetupEventEditor(MainProgram parent, bool force = false)
         {
             if (eventEditorIsReady && !force) return;
