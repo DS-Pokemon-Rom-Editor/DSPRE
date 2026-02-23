@@ -1180,6 +1180,11 @@ namespace DSPRE
 
             otherEditorsToolStripMenuItem.Enabled = true;
 
+            NarcUtilityToolStripMenuItem.Enabled = true;
+            nSBMDUtilityToolStripMenuItem.Enabled = true;
+            generateCSVToolStripMenuItem.Enabled = true;
+            researchHelperToolStripMenuItem.Enabled = true;
+
             scriptCommandsButton.Enabled = true;
             if (!RomInfo.gameFamily.Equals(GameFamilies.HGSS))
             {
@@ -1336,7 +1341,7 @@ namespace DSPRE
             DialogResult d = MessageBox.Show("Do you wish to unpack all extracted NARCS?\n" +
                 "This operation might be long and can't be interrupted.\n\n" +
                 "Any unsaved changes made to the ROM in this session will be lost." +
-                "\nProceed?", "About to unpack all NARCS",
+                "\nProceed?", "About to unpack all NARCs",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (d == DialogResult.Yes)
@@ -2007,6 +2012,12 @@ namespace DSPRE
         {            
             EggMoveEditor eggMoveEditor = new EggMoveEditor();
             eggMoveEditor.ShowDialog();
+        }
+
+        private void researchHelperToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ResearchHelper helper = new ResearchHelper();
+            helper.Show();
         }
 
         #endregion
