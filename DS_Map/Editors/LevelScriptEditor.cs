@@ -1,9 +1,8 @@
 using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Messaging;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
@@ -242,79 +241,207 @@ namespace DSPRE.Editors
             handleHexFormat();
             handleDecimalFormat();
 
+            ValidateAllInputs();
+
             textBoxScriptID.Enabled = true;
             buttonRemove.Enabled = true;
         }
 
-        private int SmartParse(string input, int configuredBase = 10)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-                throw new ArgumentException("Input cannot be empty.");
+        private static readonly Color ValidColor = SystemColors.Window;
+        private static readonly Color InvalidColor = Color.MistyRose;
 
+        /// <summary>
+        /// Validates a text input and returns whether it's valid for the current mode.
+        /// Also updates the textbox background color.
+        /// </summary>
+        private bool ValidateInput(TextBox textBox, out int result)
+        {
+            result = 0;
+            if (string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                textBox.BackColor = ValidColor;
+                return false; // Empty is not an error, but not valid for parsing
+            }
+
+            string input = textBox.Text.Trim();
+            bool isValid = false;
+
+            if (radioButtonHex.Checked)
+            {
+                isValid = TryParseHex(input, out result);
+            }
+            else if (radioButtonDecimal.Checked)
+            {
+                isValid = TryParseDecimal(input, out result);
+            }
+            else // Auto mode - accept either
+            {
+                isValid = TryParseAuto(input, out result);
+            }
+
+            textBox.BackColor = isValid ? ValidColor : InvalidColor;
+            return isValid;
+        }
+
+        /// <summary>
+        /// Parses input in hex mode. Accepts 0x prefix or plain hex digits.
+        /// </summary>
+        private bool TryParseHex(string input, out int result)
+        {
+            result = 0;
             string s = input.Trim();
 
-            // Explicit hex with 0x prefix
+            // Remove 0x prefix if present
             if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
             {
-                string hexPart = s.Substring(2);
-                return Convert.ToInt32(hexPart, 16);
+                s = s.Substring(2);
             }
 
-            // Try parsing based on the configured base
+            // Try to parse as hex
             try
             {
-                int candidate = Convert.ToInt32(s, configuredBase);
-                return candidate;
+                result = Convert.ToInt32(s, 16);
+                return true;
             }
-            catch (FormatException)
+            catch
             {
-                // If parsing fails, try the other base
-                int alternateBase = (configuredBase == 10) ? 16 : 10;
-                return Convert.ToInt32(s, alternateBase);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Parses input in decimal mode. Only accepts decimal digits.
+        /// Shows warning if input looks like hex.
+        /// </summary>
+        private bool TryParseDecimal(string input, out int result)
+        {
+            result = 0;
+            string s = input.Trim();
+
+            // Check if user entered hex format in decimal mode
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                return false; // 0x prefix not allowed in decimal mode
+            }
+
+            // Check if input contains hex letters (A-F)
+            foreach (char c in s.ToUpperInvariant())
+            {
+                if (c >= 'A' && c <= 'F')
+                {
+                    return false; // Hex letters not allowed in decimal mode
+                }
+            }
+
+            // Try to parse as decimal
+            try
+            {
+                result = Convert.ToInt32(s, 10);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Parses input in auto mode. Accepts 0x prefix for hex, otherwise decimal.
+        /// </summary>
+        private bool TryParseAuto(string input, out int result)
+        {
+            result = 0;
+            string s = input.Trim();
+
+            // If 0x prefix, parse as hex
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryParseHex(s, out result);
+            }
+
+            // Otherwise try decimal first
+            try
+            {
+                result = Convert.ToInt32(s, 10);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Validates all input fields and updates their visual state.
+        /// </summary>
+        private void ValidateAllInputs()
+        {
+            ValidateInput(textBoxScriptID, out _);
+            ValidateInput(textBoxVariableName, out _);
+            ValidateInput(textBoxVariableValue, out _);
+        }
+
+        /// <summary>
+        /// Gets the tooltip message for invalid input based on current mode.
+        /// </summary>
+        private string GetValidationErrorMessage()
+        {
+            if (radioButtonHex.Checked)
+            {
+                return "Invalid hex format. Use digits 0-9 and A-F, optionally prefixed with 0x.";
+            }
+            else if (radioButtonDecimal.Checked)
+            {
+                return "Invalid decimal format. Use only digits 0-9.\nIf you want to enter hex, switch to Hex mode.";
+            }
+            else
+            {
+                return "Invalid number format. Use decimal digits or hex with 0x prefix.";
             }
         }
 
         private void buttonAdd_Click(object sender, EventArgs e)
         {
-            // try {
             if (_levelScriptFile == null)
             {
                 _levelScriptFile = new LevelScriptFile();
             }
 
-            int convertBase = 10; //decimal
-            if (radioButtonHex.Checked)
-            {
-                convertBase = 16; //hex
-            }
-
             if (radioButtonVariableValue.Checked)
             {
-                string scriptIDRaw = textBoxScriptID.Text;
-                string variableNameRaw = textBoxVariableName.Text;
-                string variableValueRaw = textBoxVariableValue.Text;
+                // Validate all three inputs for variable value trigger
+                if (!ValidateInput(textBoxScriptID, out int scriptID))
+                {
+                    MessageBox.Show(GetValidationErrorMessage(), "Invalid Script ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    textBoxScriptID.Focus();
+                    return;
+                }
+                if (!ValidateInput(textBoxVariableName, out int variableName))
+                {
+                    MessageBox.Show(GetValidationErrorMessage(), "Invalid Variable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    textBoxVariableName.Focus();
+                    return;
+                }
+                if (!ValidateInput(textBoxVariableValue, out int variableValue))
+                {
+                    MessageBox.Show(GetValidationErrorMessage(), "Invalid Value", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    textBoxVariableValue.Focus();
+                    return;
+                }
 
-                try
-                {
-                    int scriptID = SmartParse(scriptIDRaw, convertBase);
-                    int variableName = SmartParse(variableNameRaw, convertBase);
-                    int variableValue = SmartParse(variableValueRaw, convertBase);
-
-                    VariableValueTrigger trigger = new VariableValueTrigger(scriptID, variableName, variableValue);
-                    _levelScriptFile.bufferSet.Add(trigger);
-                }
-                catch (FormatException ex)
-                {
-                    MessageBox.Show($"Invalid number format: {ex.Message}");
-                }
-                catch (OverflowException)
-                {
-                    MessageBox.Show("Number is too large.");
-                }
+                VariableValueTrigger trigger = new VariableValueTrigger(scriptID, variableName, variableValue);
+                _levelScriptFile.bufferSet.Add(trigger);
             }
             else
             {
-                int scriptID = Convert.ToInt16(textBoxScriptID.Text, convertBase);
+                // Validate script ID only for map/screen/load triggers
+                if (!ValidateInput(textBoxScriptID, out int scriptID))
+                {
+                    MessageBox.Show(GetValidationErrorMessage(), "Invalid Script ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    textBoxScriptID.Focus();
+                    return;
+                }
+
                 if (radioButtonMapChange.Checked)
                 {
                     MapScreenLoadTrigger mapScreenLoadTrigger = new MapScreenLoadTrigger(LevelScriptTrigger.MAPCHANGE, scriptID);
@@ -335,10 +462,7 @@ namespace DSPRE.Editors
             textBoxScriptID.Clear();
             textBoxVariableName.Clear();
             textBoxVariableValue.Clear();
-            // }
-            // catch (Exception exception) {
-            //   MessageBox.Show(exception.Message);
-            // }
+            ValidateAllInputs(); // Reset colors after clearing
         }
 
         private void buttonRemove_Click(object sender, EventArgs e)
@@ -525,17 +649,55 @@ namespace DSPRE.Editors
 
         private void radioButtonAuto_CheckedChanged(object sender, EventArgs e)
         {
+            if (radioButtonAuto.Checked)
+            {
+                LevelScriptTrigger.DisplayInHex = false;
+                RefreshTriggerList();
+            }
             handleAutoFormat();
+            ValidateAllInputs();
         }
 
         private void radioButtonHex_CheckedChanged(object sender, EventArgs e)
         {
+            if (radioButtonHex.Checked)
+            {
+                LevelScriptTrigger.DisplayInHex = true;
+                RefreshTriggerList();
+            }
             handleHexFormat();
+            ValidateAllInputs();
         }
 
         private void radioButtonDecimal_CheckedChanged(object sender, EventArgs e)
         {
+            if (radioButtonDecimal.Checked)
+            {
+                LevelScriptTrigger.DisplayInHex = false;
+                RefreshTriggerList();
+            }
             handleDecimalFormat();
+            ValidateAllInputs();
+        }
+
+        /// <summary>
+        /// Refreshes the trigger listbox to update display formatting.
+        /// </summary>
+        private void RefreshTriggerList()
+        {
+            if (listBoxTriggers.DataSource == null) return;
+
+            int selectedIndex = listBoxTriggers.SelectedIndex;
+
+            // Force refresh by reassigning DataSource
+            var source = listBoxTriggers.DataSource;
+            listBoxTriggers.DataSource = null;
+            listBoxTriggers.DataSource = source;
+
+            if (selectedIndex >= 0 && selectedIndex < listBoxTriggers.Items.Count)
+            {
+                listBoxTriggers.SelectedIndex = selectedIndex;
+            }
         }
         private void AssignGroupBoxScriptText()
         {
@@ -583,16 +745,19 @@ namespace DSPRE.Editors
 
         void textBoxScriptID_TextChanged(object sender, EventArgs e)
         {
+            ValidateInput(textBoxScriptID, out _);
             buttonAdd_logic();
         }
 
         void textBoxVariableName_TextChanged(object sender, EventArgs e)
         {
+            ValidateInput(textBoxVariableName, out _);
             buttonAdd_logic();
         }
 
         void textBoxVariableValue_TextChanged(object sender, EventArgs e)
         {
+            ValidateInput(textBoxVariableValue, out _);
             buttonAdd_logic();
         }
     }

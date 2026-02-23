@@ -9,7 +9,7 @@ namespace DSPRE.ROMFiles {
     }
 
     public override string ToString() {
-      return base.ToString() + " when Var " + variableToWatch + " == " + expectedValue;
+      return base.ToString() + " when Var " + FormatValue(variableToWatch) + " == " + FormatValue(expectedValue);
     }
 
     public override bool Equals(object obj) {
@@ -18,11 +18,14 @@ namespace DSPRE.ROMFiles {
         return false;
       }
 
-      if (!(obj is VariableValueTrigger)) {
+      if (!(obj is VariableValueTrigger other)) {
         return false;
       }
 
-      return this.ToString() == ((VariableValueTrigger)obj).ToString();
+      return this.triggerType == other.triggerType 
+          && this.scriptTriggered == other.scriptTriggered
+          && this.variableToWatch == other.variableToWatch
+          && this.expectedValue == other.expectedValue;
     }
 
     public override int GetHashCode() {
