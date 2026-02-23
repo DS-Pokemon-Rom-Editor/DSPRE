@@ -21,6 +21,7 @@ namespace DSPRE.ROMFiles {
         #region Fields
         public static readonly string DefaultFilter = "Event File (*.evt, *.ev)|*.evt;*.ev";
 
+        public int ID { get; set; } = -1;
         public List<Spawnable> spawnables = new List<Spawnable>();
         public List<Overworld> overworlds = new List<Overworld>();
         public List<Warp> warps = new List<Warp>();
@@ -55,7 +56,9 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
-        public EventFile(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public EventFile(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) {
+                    this.ID = ID;
+                }
         public EventFile() { }
         #endregion
 
@@ -525,9 +528,16 @@ namespace DSPRE.ROMFiles {
             }
         }
         public override string ToString() {
+            return ToString(hexMode: false);
+        }
+        public string ToString(bool hexMode) {
             string msg = "Run script " + scriptNumber;
             if (variableWatched != 0) {
-                msg += $" when Var {variableWatched} is {expectedVarValue}";
+                if (hexMode) {
+                    msg += $" when Var 0x{variableWatched:X4} is 0x{expectedVarValue:X4}";
+                } else {
+                    msg += $" when Var {variableWatched} is {expectedVarValue}";
+                }
             }
             return msg;
         }

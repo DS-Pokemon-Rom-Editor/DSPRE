@@ -54,6 +54,87 @@ namespace DSPRE
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.refreshButton = new System.Windows.Forms.Button();
+            // Level Scripts tab controls
+            this.levelScriptsTabPage = new System.Windows.Forms.TabPage();
+            this.levelScriptsDataGridView = new System.Windows.Forms.DataGridView();
+            this.lsColID = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsColTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsColMapChange = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsColScreenReset = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsColLoadGame = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsColVariableValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lsSearchPanel = new System.Windows.Forms.Panel();
+            this.lsSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.lsSearchValueNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.lsSearchButton = new System.Windows.Forms.Button();
+            this.lsClearSearchButton = new System.Windows.Forms.Button();
+            this.lsComparisonGroupBox = new System.Windows.Forms.GroupBox();
+            this.lsEqualsRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsGreaterThanOrEqualRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsLessThanOrEqualRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsColumnGroupBox = new System.Windows.Forms.GroupBox();
+            this.lsIdRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsTotalRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsMapChangeRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsScreenResetRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsLoadGameRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsVariableValueRadioButton = new System.Windows.Forms.RadioButton();
+            this.lsRefreshButton = new System.Windows.Forms.Button();
+            // Variables tab controls
+            this.variablesTabPage = new System.Windows.Forms.TabPage();
+            this.variablesDataGridView = new System.Windows.Forms.DataGridView();
+            this.varColType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.varColID = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.varColUses = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.varSearchPanel = new System.Windows.Forms.Panel();
+            this.varSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.varSearchTextBox = new System.Windows.Forms.TextBox();
+            this.varSearchButton = new System.Windows.Forms.Button();
+            this.varClearButton = new System.Windows.Forms.Button();
+            this.varModeGroupBox = new System.Windows.Forms.GroupBox();
+            this.varDecimalRadioButton = new System.Windows.Forms.RadioButton();
+            this.varHexRadioButton = new System.Windows.Forms.RadioButton();
+            // Flag Watcher tab controls
+            this.flagWatcherTabPage = new System.Windows.Forms.TabPage();
+            this.flagWatcherDataGridView = new System.Windows.Forms.DataGridView();
+            this.flagColType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.flagColID = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.flagColDetails = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.flagColUses = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.flagSearchPanel = new System.Windows.Forms.Panel();
+            this.flagSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.flagSearchTextBox = new System.Windows.Forms.TextBox();
+            this.flagSearchButton = new System.Windows.Forms.Button();
+            this.flagClearButton = new System.Windows.Forms.Button();
+            this.flagModeGroupBox = new System.Windows.Forms.GroupBox();
+            this.flagDecimalRadioButton = new System.Windows.Forms.RadioButton();
+            this.flagHexRadioButton = new System.Windows.Forms.RadioButton();
+            // Script Watcher tab controls
+            this.scriptWatcherTabPage = new System.Windows.Forms.TabPage();
+            this.scriptWatcherSubTabControl = new System.Windows.Forms.TabControl();
+            this.fileWatcherSubTabPage = new System.Windows.Forms.TabPage();
+            this.idWatcherSubTabPage = new System.Windows.Forms.TabPage();
+            this.fileWatcherPanel = new System.Windows.Forms.Panel();
+            this.fileWatcherSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.fileWatcherScriptFileLabel = new System.Windows.Forms.Label();
+            this.fileWatcherScriptFileNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.fileWatcherSearchButton = new System.Windows.Forms.Button();
+            this.fileWatcherDataGridView = new System.Windows.Forms.DataGridView();
+            this.fwColType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.fwColID = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.fwColField = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.idWatcherPanel = new System.Windows.Forms.Panel();
+            this.idWatcherSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.idWatcherScriptFileLabel = new System.Windows.Forms.Label();
+            this.idWatcherScriptFileComboBox = new System.Windows.Forms.ComboBox();
+            this.idWatcherScriptIdLabel = new System.Windows.Forms.Label();
+            this.idWatcherScriptIdComboBox = new System.Windows.Forms.ComboBox();
+            this.idWatcherSearchButton = new System.Windows.Forms.Button();
+            this.idWatcherDataGridView = new System.Windows.Forms.DataGridView();
+            this.iwColEventFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.iwColEventType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.iwColEventIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.iwColDetails = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.mainTabControl.SuspendLayout();
             this.scriptsTabPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.scriptsDataGridView)).BeginInit();
@@ -63,6 +144,34 @@ namespace DSPRE
             this.comparisonGroupBox.SuspendLayout();
             this.columnGroupBox.SuspendLayout();
             this.statusStrip.SuspendLayout();
+            this.levelScriptsTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.levelScriptsDataGridView)).BeginInit();
+            this.lsSearchPanel.SuspendLayout();
+            this.lsSearchGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.lsSearchValueNumericUpDown)).BeginInit();
+            this.lsComparisonGroupBox.SuspendLayout();
+            this.lsColumnGroupBox.SuspendLayout();
+            this.variablesTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.variablesDataGridView)).BeginInit();
+            this.varSearchPanel.SuspendLayout();
+            this.varSearchGroupBox.SuspendLayout();
+            this.varModeGroupBox.SuspendLayout();
+            this.flagWatcherTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.flagWatcherDataGridView)).BeginInit();
+            this.flagSearchPanel.SuspendLayout();
+            this.flagSearchGroupBox.SuspendLayout();
+            this.flagModeGroupBox.SuspendLayout();
+            this.scriptWatcherTabPage.SuspendLayout();
+            this.scriptWatcherSubTabControl.SuspendLayout();
+            this.fileWatcherSubTabPage.SuspendLayout();
+            this.idWatcherSubTabPage.SuspendLayout();
+            this.fileWatcherPanel.SuspendLayout();
+            this.fileWatcherSearchGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.fileWatcherScriptFileNumericUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.fileWatcherDataGridView)).BeginInit();
+            this.idWatcherPanel.SuspendLayout();
+            this.idWatcherSearchGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.idWatcherDataGridView)).BeginInit();
             this.SuspendLayout();
             // 
             // mainTabControl
@@ -71,6 +180,10 @@ namespace DSPRE
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.mainTabControl.Controls.Add(this.scriptsTabPage);
+            this.mainTabControl.Controls.Add(this.levelScriptsTabPage);
+            this.mainTabControl.Controls.Add(this.variablesTabPage);
+            this.mainTabControl.Controls.Add(this.flagWatcherTabPage);
+            this.mainTabControl.Controls.Add(this.scriptWatcherTabPage);
             this.mainTabControl.Location = new System.Drawing.Point(12, 12);
             this.mainTabControl.Name = "mainTabControl";
             this.mainTabControl.SelectedIndex = 0;
@@ -340,6 +453,813 @@ namespace DSPRE
             this.refreshButton.UseVisualStyleBackColor = true;
             this.refreshButton.Click += new System.EventHandler(this.refreshButton_Click);
             // 
+            // levelScriptsTabPage
+            // 
+            this.levelScriptsTabPage.Controls.Add(this.levelScriptsDataGridView);
+            this.levelScriptsTabPage.Controls.Add(this.lsSearchPanel);
+            this.levelScriptsTabPage.Location = new System.Drawing.Point(4, 22);
+            this.levelScriptsTabPage.Name = "levelScriptsTabPage";
+            this.levelScriptsTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.levelScriptsTabPage.Size = new System.Drawing.Size(752, 472);
+            this.levelScriptsTabPage.TabIndex = 1;
+            this.levelScriptsTabPage.Text = "Level Scripts";
+            this.levelScriptsTabPage.UseVisualStyleBackColor = true;
+            // 
+            // levelScriptsDataGridView
+            // 
+            this.levelScriptsDataGridView.AllowUserToAddRows = false;
+            this.levelScriptsDataGridView.AllowUserToDeleteRows = false;
+            this.levelScriptsDataGridView.AllowUserToResizeRows = false;
+            this.levelScriptsDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.levelScriptsDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.levelScriptsDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.levelScriptsDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.lsColID,
+            this.lsColTotal,
+            this.lsColMapChange,
+            this.lsColScreenReset,
+            this.lsColLoadGame,
+            this.lsColVariableValue});
+            this.levelScriptsDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.levelScriptsDataGridView.MultiSelect = false;
+            this.levelScriptsDataGridView.Name = "levelScriptsDataGridView";
+            this.levelScriptsDataGridView.ReadOnly = true;
+            this.levelScriptsDataGridView.RowHeadersVisible = false;
+            this.levelScriptsDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.levelScriptsDataGridView.Size = new System.Drawing.Size(518, 460);
+            this.levelScriptsDataGridView.TabIndex = 0;
+            this.levelScriptsDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.levelScriptsDataGridView_CellDoubleClick);
+            // 
+            // lsColID
+            // 
+            this.lsColID.HeaderText = "ID";
+            this.lsColID.Name = "lsColID";
+            this.lsColID.ReadOnly = true;
+            this.lsColID.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            // 
+            // lsColTotal
+            // 
+            this.lsColTotal.HeaderText = "Total";
+            this.lsColTotal.Name = "lsColTotal";
+            this.lsColTotal.ReadOnly = true;
+            // 
+            // lsColMapChange
+            // 
+            this.lsColMapChange.HeaderText = "Map Change";
+            this.lsColMapChange.Name = "lsColMapChange";
+            this.lsColMapChange.ReadOnly = true;
+            // 
+            // lsColScreenReset
+            // 
+            this.lsColScreenReset.HeaderText = "Screen Reset";
+            this.lsColScreenReset.Name = "lsColScreenReset";
+            this.lsColScreenReset.ReadOnly = true;
+            // 
+            // lsColLoadGame
+            // 
+            this.lsColLoadGame.HeaderText = "Load Game";
+            this.lsColLoadGame.Name = "lsColLoadGame";
+            this.lsColLoadGame.ReadOnly = true;
+            // 
+            // lsColVariableValue
+            // 
+            this.lsColVariableValue.HeaderText = "Variable Value";
+            this.lsColVariableValue.Name = "lsColVariableValue";
+            this.lsColVariableValue.ReadOnly = true;
+            // 
+            // lsSearchPanel
+            // 
+            this.lsSearchPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lsSearchPanel.Controls.Add(this.lsRefreshButton);
+            this.lsSearchPanel.Controls.Add(this.lsSearchGroupBox);
+            this.lsSearchPanel.Location = new System.Drawing.Point(530, 6);
+            this.lsSearchPanel.Name = "lsSearchPanel";
+            this.lsSearchPanel.Size = new System.Drawing.Size(216, 460);
+            this.lsSearchPanel.TabIndex = 1;
+            // 
+            // lsSearchGroupBox
+            // 
+            this.lsSearchGroupBox.Controls.Add(this.lsSearchValueNumericUpDown);
+            this.lsSearchGroupBox.Controls.Add(this.lsSearchButton);
+            this.lsSearchGroupBox.Controls.Add(this.lsClearSearchButton);
+            this.lsSearchGroupBox.Controls.Add(this.lsComparisonGroupBox);
+            this.lsSearchGroupBox.Controls.Add(this.lsColumnGroupBox);
+            this.lsSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lsSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.lsSearchGroupBox.Name = "lsSearchGroupBox";
+            this.lsSearchGroupBox.Size = new System.Drawing.Size(216, 310);
+            this.lsSearchGroupBox.TabIndex = 0;
+            this.lsSearchGroupBox.TabStop = false;
+            this.lsSearchGroupBox.Text = "Search / Filter";
+            // 
+            // lsSearchValueNumericUpDown
+            // 
+            this.lsSearchValueNumericUpDown.Location = new System.Drawing.Point(6, 242);
+            this.lsSearchValueNumericUpDown.Maximum = new decimal(new int[] {
+            99999,
+            0,
+            0,
+            0});
+            this.lsSearchValueNumericUpDown.Name = "lsSearchValueNumericUpDown";
+            this.lsSearchValueNumericUpDown.Size = new System.Drawing.Size(204, 20);
+            this.lsSearchValueNumericUpDown.TabIndex = 2;
+            // 
+            // lsSearchButton
+            // 
+            this.lsSearchButton.Location = new System.Drawing.Point(6, 268);
+            this.lsSearchButton.Name = "lsSearchButton";
+            this.lsSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.lsSearchButton.TabIndex = 3;
+            this.lsSearchButton.Text = "Search";
+            this.lsSearchButton.UseVisualStyleBackColor = true;
+            this.lsSearchButton.Click += new System.EventHandler(this.lsSearchButton_Click);
+            // 
+            // lsClearSearchButton
+            // 
+            this.lsClearSearchButton.Location = new System.Drawing.Point(111, 268);
+            this.lsClearSearchButton.Name = "lsClearSearchButton";
+            this.lsClearSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.lsClearSearchButton.TabIndex = 4;
+            this.lsClearSearchButton.Text = "Clear";
+            this.lsClearSearchButton.UseVisualStyleBackColor = true;
+            this.lsClearSearchButton.Click += new System.EventHandler(this.lsClearSearchButton_Click);
+            // 
+            // lsComparisonGroupBox
+            // 
+            this.lsComparisonGroupBox.Controls.Add(this.lsEqualsRadioButton);
+            this.lsComparisonGroupBox.Controls.Add(this.lsGreaterThanOrEqualRadioButton);
+            this.lsComparisonGroupBox.Controls.Add(this.lsLessThanOrEqualRadioButton);
+            this.lsComparisonGroupBox.Location = new System.Drawing.Point(6, 154);
+            this.lsComparisonGroupBox.Name = "lsComparisonGroupBox";
+            this.lsComparisonGroupBox.Size = new System.Drawing.Size(204, 82);
+            this.lsComparisonGroupBox.TabIndex = 1;
+            this.lsComparisonGroupBox.TabStop = false;
+            this.lsComparisonGroupBox.Text = "Comparison";
+            // 
+            // lsEqualsRadioButton
+            // 
+            this.lsEqualsRadioButton.AutoSize = true;
+            this.lsEqualsRadioButton.Checked = true;
+            this.lsEqualsRadioButton.Location = new System.Drawing.Point(6, 19);
+            this.lsEqualsRadioButton.Name = "lsEqualsRadioButton";
+            this.lsEqualsRadioButton.Size = new System.Drawing.Size(58, 17);
+            this.lsEqualsRadioButton.TabIndex = 0;
+            this.lsEqualsRadioButton.TabStop = true;
+            this.lsEqualsRadioButton.Text = "Equals";
+            this.lsEqualsRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsGreaterThanOrEqualRadioButton
+            // 
+            this.lsGreaterThanOrEqualRadioButton.AutoSize = true;
+            this.lsGreaterThanOrEqualRadioButton.Location = new System.Drawing.Point(6, 38);
+            this.lsGreaterThanOrEqualRadioButton.Name = "lsGreaterThanOrEqualRadioButton";
+            this.lsGreaterThanOrEqualRadioButton.Size = new System.Drawing.Size(127, 17);
+            this.lsGreaterThanOrEqualRadioButton.TabIndex = 1;
+            this.lsGreaterThanOrEqualRadioButton.Text = "Greater Than or Equal";
+            this.lsGreaterThanOrEqualRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsLessThanOrEqualRadioButton
+            // 
+            this.lsLessThanOrEqualRadioButton.AutoSize = true;
+            this.lsLessThanOrEqualRadioButton.Location = new System.Drawing.Point(6, 57);
+            this.lsLessThanOrEqualRadioButton.Name = "lsLessThanOrEqualRadioButton";
+            this.lsLessThanOrEqualRadioButton.Size = new System.Drawing.Size(115, 17);
+            this.lsLessThanOrEqualRadioButton.TabIndex = 2;
+            this.lsLessThanOrEqualRadioButton.Text = "Less Than or Equal";
+            this.lsLessThanOrEqualRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsColumnGroupBox
+            // 
+            this.lsColumnGroupBox.Controls.Add(this.lsIdRadioButton);
+            this.lsColumnGroupBox.Controls.Add(this.lsTotalRadioButton);
+            this.lsColumnGroupBox.Controls.Add(this.lsMapChangeRadioButton);
+            this.lsColumnGroupBox.Controls.Add(this.lsScreenResetRadioButton);
+            this.lsColumnGroupBox.Controls.Add(this.lsLoadGameRadioButton);
+            this.lsColumnGroupBox.Controls.Add(this.lsVariableValueRadioButton);
+            this.lsColumnGroupBox.Location = new System.Drawing.Point(6, 19);
+            this.lsColumnGroupBox.Name = "lsColumnGroupBox";
+            this.lsColumnGroupBox.Size = new System.Drawing.Size(204, 129);
+            this.lsColumnGroupBox.TabIndex = 0;
+            this.lsColumnGroupBox.TabStop = false;
+            this.lsColumnGroupBox.Text = "Search Column";
+            // 
+            // lsIdRadioButton
+            // 
+            this.lsIdRadioButton.AutoSize = true;
+            this.lsIdRadioButton.Checked = true;
+            this.lsIdRadioButton.Location = new System.Drawing.Point(6, 19);
+            this.lsIdRadioButton.Name = "lsIdRadioButton";
+            this.lsIdRadioButton.Size = new System.Drawing.Size(35, 17);
+            this.lsIdRadioButton.TabIndex = 0;
+            this.lsIdRadioButton.TabStop = true;
+            this.lsIdRadioButton.Text = "ID";
+            this.lsIdRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsTotalRadioButton
+            // 
+            this.lsTotalRadioButton.AutoSize = true;
+            this.lsTotalRadioButton.Location = new System.Drawing.Point(6, 37);
+            this.lsTotalRadioButton.Name = "lsTotalRadioButton";
+            this.lsTotalRadioButton.Size = new System.Drawing.Size(48, 17);
+            this.lsTotalRadioButton.TabIndex = 1;
+            this.lsTotalRadioButton.Text = "Total";
+            this.lsTotalRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsMapChangeRadioButton
+            // 
+            this.lsMapChangeRadioButton.AutoSize = true;
+            this.lsMapChangeRadioButton.Location = new System.Drawing.Point(6, 55);
+            this.lsMapChangeRadioButton.Name = "lsMapChangeRadioButton";
+            this.lsMapChangeRadioButton.Size = new System.Drawing.Size(84, 17);
+            this.lsMapChangeRadioButton.TabIndex = 2;
+            this.lsMapChangeRadioButton.Text = "Map Change";
+            this.lsMapChangeRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsScreenResetRadioButton
+            // 
+            this.lsScreenResetRadioButton.AutoSize = true;
+            this.lsScreenResetRadioButton.Location = new System.Drawing.Point(6, 73);
+            this.lsScreenResetRadioButton.Name = "lsScreenResetRadioButton";
+            this.lsScreenResetRadioButton.Size = new System.Drawing.Size(89, 17);
+            this.lsScreenResetRadioButton.TabIndex = 3;
+            this.lsScreenResetRadioButton.Text = "Screen Reset";
+            this.lsScreenResetRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsLoadGameRadioButton
+            // 
+            this.lsLoadGameRadioButton.AutoSize = true;
+            this.lsLoadGameRadioButton.Location = new System.Drawing.Point(6, 91);
+            this.lsLoadGameRadioButton.Name = "lsLoadGameRadioButton";
+            this.lsLoadGameRadioButton.Size = new System.Drawing.Size(79, 17);
+            this.lsLoadGameRadioButton.TabIndex = 4;
+            this.lsLoadGameRadioButton.Text = "Load Game";
+            this.lsLoadGameRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsVariableValueRadioButton
+            // 
+            this.lsVariableValueRadioButton.AutoSize = true;
+            this.lsVariableValueRadioButton.Location = new System.Drawing.Point(6, 109);
+            this.lsVariableValueRadioButton.Name = "lsVariableValueRadioButton";
+            this.lsVariableValueRadioButton.Size = new System.Drawing.Size(93, 17);
+            this.lsVariableValueRadioButton.TabIndex = 5;
+            this.lsVariableValueRadioButton.Text = "Variable Value";
+            this.lsVariableValueRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // lsRefreshButton
+            // 
+            this.lsRefreshButton.Location = new System.Drawing.Point(6, 316);
+            this.lsRefreshButton.Name = "lsRefreshButton";
+            this.lsRefreshButton.Size = new System.Drawing.Size(204, 30);
+            this.lsRefreshButton.TabIndex = 5;
+            this.lsRefreshButton.Text = "Refresh Data";
+            this.lsRefreshButton.UseVisualStyleBackColor = true;
+            this.lsRefreshButton.Click += new System.EventHandler(this.lsRefreshButton_Click);
+            // 
+            // variablesTabPage
+            // 
+            this.variablesTabPage.Controls.Add(this.variablesDataGridView);
+            this.variablesTabPage.Controls.Add(this.varSearchPanel);
+            this.variablesTabPage.Location = new System.Drawing.Point(4, 22);
+            this.variablesTabPage.Name = "variablesTabPage";
+            this.variablesTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.variablesTabPage.Size = new System.Drawing.Size(752, 472);
+            this.variablesTabPage.TabIndex = 2;
+            this.variablesTabPage.Text = "Var Watcher";
+            this.variablesTabPage.UseVisualStyleBackColor = true;
+            // 
+            // variablesDataGridView
+            // 
+            this.variablesDataGridView.AllowUserToAddRows = false;
+            this.variablesDataGridView.AllowUserToDeleteRows = false;
+            this.variablesDataGridView.AllowUserToResizeRows = false;
+            this.variablesDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.variablesDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.variablesDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.variablesDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.varColType,
+            this.varColID,
+            this.varColUses});
+            this.variablesDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.variablesDataGridView.MultiSelect = false;
+            this.variablesDataGridView.Name = "variablesDataGridView";
+            this.variablesDataGridView.ReadOnly = true;
+            this.variablesDataGridView.RowHeadersVisible = false;
+            this.variablesDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.variablesDataGridView.Size = new System.Drawing.Size(518, 460);
+            this.variablesDataGridView.TabIndex = 0;
+            this.variablesDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.variablesDataGridView_CellDoubleClick);
+            // 
+            // varColType
+            // 
+            this.varColType.HeaderText = "Type";
+            this.varColType.Name = "varColType";
+            this.varColType.ReadOnly = true;
+            // 
+            // varColID
+            // 
+            this.varColID.HeaderText = "ID";
+            this.varColID.Name = "varColID";
+            this.varColID.ReadOnly = true;
+            // 
+            // varColUses
+            // 
+            this.varColUses.HeaderText = "Uses";
+            this.varColUses.Name = "varColUses";
+            this.varColUses.ReadOnly = true;
+            // 
+            // varSearchPanel
+            // 
+            this.varSearchPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.varSearchPanel.Controls.Add(this.varSearchGroupBox);
+            this.varSearchPanel.Location = new System.Drawing.Point(530, 6);
+            this.varSearchPanel.Name = "varSearchPanel";
+            this.varSearchPanel.Size = new System.Drawing.Size(216, 460);
+            this.varSearchPanel.TabIndex = 1;
+            // 
+            // varSearchGroupBox
+            // 
+            this.varSearchGroupBox.Controls.Add(this.varSearchTextBox);
+            this.varSearchGroupBox.Controls.Add(this.varSearchButton);
+            this.varSearchGroupBox.Controls.Add(this.varClearButton);
+            this.varSearchGroupBox.Controls.Add(this.varModeGroupBox);
+            this.varSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.varSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.varSearchGroupBox.Name = "varSearchGroupBox";
+            this.varSearchGroupBox.Size = new System.Drawing.Size(216, 180);
+            this.varSearchGroupBox.TabIndex = 0;
+            this.varSearchGroupBox.TabStop = false;
+            this.varSearchGroupBox.Text = "Search Variable";
+            // 
+            // varSearchTextBox
+            // 
+            this.varSearchTextBox.Location = new System.Drawing.Point(6, 100);
+            this.varSearchTextBox.Name = "varSearchTextBox";
+            this.varSearchTextBox.Size = new System.Drawing.Size(204, 20);
+            this.varSearchTextBox.TabIndex = 0;
+            // 
+            // varSearchButton
+            // 
+            this.varSearchButton.Location = new System.Drawing.Point(6, 126);
+            this.varSearchButton.Name = "varSearchButton";
+            this.varSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.varSearchButton.TabIndex = 1;
+            this.varSearchButton.Text = "Search";
+            this.varSearchButton.UseVisualStyleBackColor = true;
+            this.varSearchButton.Click += new System.EventHandler(this.varSearchButton_Click);
+            // 
+            // varClearButton
+            // 
+            this.varClearButton.Location = new System.Drawing.Point(111, 126);
+            this.varClearButton.Name = "varClearButton";
+            this.varClearButton.Size = new System.Drawing.Size(99, 30);
+            this.varClearButton.TabIndex = 2;
+            this.varClearButton.Text = "Clear";
+            this.varClearButton.UseVisualStyleBackColor = true;
+            this.varClearButton.Click += new System.EventHandler(this.varClearButton_Click);
+            // 
+            // varModeGroupBox
+            // 
+            this.varModeGroupBox.Controls.Add(this.varDecimalRadioButton);
+            this.varModeGroupBox.Controls.Add(this.varHexRadioButton);
+            this.varModeGroupBox.Location = new System.Drawing.Point(6, 19);
+            this.varModeGroupBox.Name = "varModeGroupBox";
+            this.varModeGroupBox.Size = new System.Drawing.Size(204, 75);
+            this.varModeGroupBox.TabIndex = 3;
+            this.varModeGroupBox.TabStop = false;
+            this.varModeGroupBox.Text = "Input Mode";
+            // 
+            // varDecimalRadioButton
+            // 
+            this.varDecimalRadioButton.AutoSize = true;
+            this.varDecimalRadioButton.Checked = true;
+            this.varDecimalRadioButton.Location = new System.Drawing.Point(6, 19);
+            this.varDecimalRadioButton.Name = "varDecimalRadioButton";
+            this.varDecimalRadioButton.Size = new System.Drawing.Size(63, 17);
+            this.varDecimalRadioButton.TabIndex = 0;
+            this.varDecimalRadioButton.TabStop = true;
+            this.varDecimalRadioButton.Text = "Decimal";
+            this.varDecimalRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // varHexRadioButton
+            // 
+            this.varHexRadioButton.AutoSize = true;
+            this.varHexRadioButton.Location = new System.Drawing.Point(6, 42);
+            this.varHexRadioButton.Name = "varHexRadioButton";
+            this.varHexRadioButton.Size = new System.Drawing.Size(118, 17);
+            this.varHexRadioButton.TabIndex = 1;
+            this.varHexRadioButton.Text = "Hex (e.g., 0x4000)";
+            this.varHexRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // flagWatcherTabPage
+            // 
+            this.flagWatcherTabPage.Controls.Add(this.flagWatcherDataGridView);
+            this.flagWatcherTabPage.Controls.Add(this.flagSearchPanel);
+            this.flagWatcherTabPage.Location = new System.Drawing.Point(4, 22);
+            this.flagWatcherTabPage.Name = "flagWatcherTabPage";
+            this.flagWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.flagWatcherTabPage.Size = new System.Drawing.Size(752, 472);
+            this.flagWatcherTabPage.TabIndex = 3;
+            this.flagWatcherTabPage.Text = "Flag Watcher";
+            this.flagWatcherTabPage.UseVisualStyleBackColor = true;
+            // 
+            // flagWatcherDataGridView
+            // 
+            this.flagWatcherDataGridView.AllowUserToAddRows = false;
+            this.flagWatcherDataGridView.AllowUserToDeleteRows = false;
+            this.flagWatcherDataGridView.AllowUserToResizeRows = false;
+            this.flagWatcherDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.flagWatcherDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.flagWatcherDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.flagWatcherDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.flagColType,
+            this.flagColID,
+            this.flagColDetails,
+            this.flagColUses});
+            this.flagWatcherDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.flagWatcherDataGridView.MultiSelect = false;
+            this.flagWatcherDataGridView.Name = "flagWatcherDataGridView";
+            this.flagWatcherDataGridView.ReadOnly = true;
+            this.flagWatcherDataGridView.RowHeadersVisible = false;
+            this.flagWatcherDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.flagWatcherDataGridView.Size = new System.Drawing.Size(518, 460);
+            this.flagWatcherDataGridView.TabIndex = 0;
+            this.flagWatcherDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.flagWatcherDataGridView_CellDoubleClick);
+            // 
+            // flagColType
+            // 
+            this.flagColType.HeaderText = "Type";
+            this.flagColType.Name = "flagColType";
+            this.flagColType.ReadOnly = true;
+            // 
+            // flagColID
+            // 
+            this.flagColID.HeaderText = "ID";
+            this.flagColID.Name = "flagColID";
+            this.flagColID.ReadOnly = true;
+            // 
+            // flagColDetails
+            // 
+            this.flagColDetails.HeaderText = "Details";
+            this.flagColDetails.Name = "flagColDetails";
+            this.flagColDetails.ReadOnly = true;
+            // 
+            // flagColUses
+            // 
+            this.flagColUses.HeaderText = "Uses";
+            this.flagColUses.Name = "flagColUses";
+            this.flagColUses.ReadOnly = true;
+            // 
+            // flagSearchPanel
+            // 
+            this.flagSearchPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.flagSearchPanel.Controls.Add(this.flagSearchGroupBox);
+            this.flagSearchPanel.Location = new System.Drawing.Point(530, 6);
+            this.flagSearchPanel.Name = "flagSearchPanel";
+            this.flagSearchPanel.Size = new System.Drawing.Size(216, 460);
+            this.flagSearchPanel.TabIndex = 1;
+            // 
+            // flagSearchGroupBox
+            // 
+            this.flagSearchGroupBox.Controls.Add(this.flagSearchTextBox);
+            this.flagSearchGroupBox.Controls.Add(this.flagSearchButton);
+            this.flagSearchGroupBox.Controls.Add(this.flagClearButton);
+            this.flagSearchGroupBox.Controls.Add(this.flagModeGroupBox);
+            this.flagSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.flagSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.flagSearchGroupBox.Name = "flagSearchGroupBox";
+            this.flagSearchGroupBox.Size = new System.Drawing.Size(216, 180);
+            this.flagSearchGroupBox.TabIndex = 0;
+            this.flagSearchGroupBox.TabStop = false;
+            this.flagSearchGroupBox.Text = "Search Flag";
+            // 
+            // flagSearchTextBox
+            // 
+            this.flagSearchTextBox.Location = new System.Drawing.Point(6, 100);
+            this.flagSearchTextBox.Name = "flagSearchTextBox";
+            this.flagSearchTextBox.Size = new System.Drawing.Size(204, 20);
+            this.flagSearchTextBox.TabIndex = 0;
+            // 
+            // flagSearchButton
+            // 
+            this.flagSearchButton.Location = new System.Drawing.Point(6, 126);
+            this.flagSearchButton.Name = "flagSearchButton";
+            this.flagSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.flagSearchButton.TabIndex = 1;
+            this.flagSearchButton.Text = "Search";
+            this.flagSearchButton.UseVisualStyleBackColor = true;
+            this.flagSearchButton.Click += new System.EventHandler(this.flagSearchButton_Click);
+            // 
+            // flagClearButton
+            // 
+            this.flagClearButton.Location = new System.Drawing.Point(111, 126);
+            this.flagClearButton.Name = "flagClearButton";
+            this.flagClearButton.Size = new System.Drawing.Size(99, 30);
+            this.flagClearButton.TabIndex = 2;
+            this.flagClearButton.Text = "Clear";
+            this.flagClearButton.UseVisualStyleBackColor = true;
+            this.flagClearButton.Click += new System.EventHandler(this.flagClearButton_Click);
+            // 
+            // flagModeGroupBox
+            // 
+            this.flagModeGroupBox.Controls.Add(this.flagDecimalRadioButton);
+            this.flagModeGroupBox.Controls.Add(this.flagHexRadioButton);
+            this.flagModeGroupBox.Location = new System.Drawing.Point(6, 19);
+            this.flagModeGroupBox.Name = "flagModeGroupBox";
+            this.flagModeGroupBox.Size = new System.Drawing.Size(204, 75);
+            this.flagModeGroupBox.TabIndex = 3;
+            this.flagModeGroupBox.TabStop = false;
+            this.flagModeGroupBox.Text = "Input Mode";
+            // 
+            // flagDecimalRadioButton
+            // 
+            this.flagDecimalRadioButton.AutoSize = true;
+            this.flagDecimalRadioButton.Checked = true;
+            this.flagDecimalRadioButton.Location = new System.Drawing.Point(6, 19);
+            this.flagDecimalRadioButton.Name = "flagDecimalRadioButton";
+            this.flagDecimalRadioButton.Size = new System.Drawing.Size(63, 17);
+            this.flagDecimalRadioButton.TabIndex = 0;
+            this.flagDecimalRadioButton.TabStop = true;
+            this.flagDecimalRadioButton.Text = "Decimal";
+            this.flagDecimalRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // flagHexRadioButton
+            // 
+            this.flagHexRadioButton.AutoSize = true;
+            this.flagHexRadioButton.Location = new System.Drawing.Point(6, 42);
+            this.flagHexRadioButton.Name = "flagHexRadioButton";
+            this.flagHexRadioButton.Size = new System.Drawing.Size(112, 17);
+            this.flagHexRadioButton.TabIndex = 1;
+            this.flagHexRadioButton.Text = "Hex (e.g., 0x200)";
+            this.flagHexRadioButton.UseVisualStyleBackColor = true;
+            // 
+            // scriptWatcherTabPage
+            // 
+            this.scriptWatcherTabPage.Controls.Add(this.scriptWatcherSubTabControl);
+            this.scriptWatcherTabPage.Location = new System.Drawing.Point(4, 22);
+            this.scriptWatcherTabPage.Name = "scriptWatcherTabPage";
+            this.scriptWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.scriptWatcherTabPage.Size = new System.Drawing.Size(752, 472);
+            this.scriptWatcherTabPage.TabIndex = 4;
+            this.scriptWatcherTabPage.Text = "Script Watcher";
+            this.scriptWatcherTabPage.UseVisualStyleBackColor = true;
+            // 
+            // scriptWatcherSubTabControl
+            // 
+            this.scriptWatcherSubTabControl.Controls.Add(this.fileWatcherSubTabPage);
+            this.scriptWatcherSubTabControl.Controls.Add(this.idWatcherSubTabPage);
+            this.scriptWatcherSubTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.scriptWatcherSubTabControl.Location = new System.Drawing.Point(3, 3);
+            this.scriptWatcherSubTabControl.Name = "scriptWatcherSubTabControl";
+            this.scriptWatcherSubTabControl.SelectedIndex = 0;
+            this.scriptWatcherSubTabControl.Size = new System.Drawing.Size(746, 466);
+            this.scriptWatcherSubTabControl.TabIndex = 0;
+            // 
+            // fileWatcherSubTabPage
+            // 
+            this.fileWatcherSubTabPage.Controls.Add(this.fileWatcherDataGridView);
+            this.fileWatcherSubTabPage.Controls.Add(this.fileWatcherPanel);
+            this.fileWatcherSubTabPage.Location = new System.Drawing.Point(4, 22);
+            this.fileWatcherSubTabPage.Name = "fileWatcherSubTabPage";
+            this.fileWatcherSubTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.fileWatcherSubTabPage.Size = new System.Drawing.Size(738, 440);
+            this.fileWatcherSubTabPage.TabIndex = 0;
+            this.fileWatcherSubTabPage.Text = "File Watcher";
+            this.fileWatcherSubTabPage.UseVisualStyleBackColor = true;
+            // 
+            // fileWatcherPanel
+            // 
+            this.fileWatcherPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.fileWatcherPanel.Controls.Add(this.fileWatcherSearchGroupBox);
+            this.fileWatcherPanel.Location = new System.Drawing.Point(516, 6);
+            this.fileWatcherPanel.Name = "fileWatcherPanel";
+            this.fileWatcherPanel.Size = new System.Drawing.Size(216, 428);
+            this.fileWatcherPanel.TabIndex = 1;
+            // 
+            // fileWatcherSearchGroupBox
+            // 
+            this.fileWatcherSearchGroupBox.Controls.Add(this.fileWatcherScriptFileLabel);
+            this.fileWatcherSearchGroupBox.Controls.Add(this.fileWatcherScriptFileNumericUpDown);
+            this.fileWatcherSearchGroupBox.Controls.Add(this.fileWatcherSearchButton);
+            this.fileWatcherSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.fileWatcherSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.fileWatcherSearchGroupBox.Name = "fileWatcherSearchGroupBox";
+            this.fileWatcherSearchGroupBox.Size = new System.Drawing.Size(216, 110);
+            this.fileWatcherSearchGroupBox.TabIndex = 0;
+            this.fileWatcherSearchGroupBox.TabStop = false;
+            this.fileWatcherSearchGroupBox.Text = "Search Script File";
+            // 
+            // fileWatcherScriptFileLabel
+            // 
+            this.fileWatcherScriptFileLabel.AutoSize = true;
+            this.fileWatcherScriptFileLabel.Location = new System.Drawing.Point(6, 25);
+            this.fileWatcherScriptFileLabel.Name = "fileWatcherScriptFileLabel";
+            this.fileWatcherScriptFileLabel.Size = new System.Drawing.Size(70, 13);
+            this.fileWatcherScriptFileLabel.TabIndex = 0;
+            this.fileWatcherScriptFileLabel.Text = "Script File ID:";
+            // 
+            // fileWatcherScriptFileNumericUpDown
+            // 
+            this.fileWatcherScriptFileNumericUpDown.Location = new System.Drawing.Point(6, 44);
+            this.fileWatcherScriptFileNumericUpDown.Maximum = new decimal(new int[] { 99999, 0, 0, 0 });
+            this.fileWatcherScriptFileNumericUpDown.Name = "fileWatcherScriptFileNumericUpDown";
+            this.fileWatcherScriptFileNumericUpDown.Size = new System.Drawing.Size(204, 20);
+            this.fileWatcherScriptFileNumericUpDown.TabIndex = 1;
+            // 
+            // fileWatcherSearchButton
+            // 
+            this.fileWatcherSearchButton.Location = new System.Drawing.Point(6, 70);
+            this.fileWatcherSearchButton.Name = "fileWatcherSearchButton";
+            this.fileWatcherSearchButton.Size = new System.Drawing.Size(204, 30);
+            this.fileWatcherSearchButton.TabIndex = 2;
+            this.fileWatcherSearchButton.Text = "Search";
+            this.fileWatcherSearchButton.UseVisualStyleBackColor = true;
+            this.fileWatcherSearchButton.Click += new System.EventHandler(this.fileWatcherSearchButton_Click);
+            // 
+            // fileWatcherDataGridView
+            // 
+            this.fileWatcherDataGridView.AllowUserToAddRows = false;
+            this.fileWatcherDataGridView.AllowUserToDeleteRows = false;
+            this.fileWatcherDataGridView.AllowUserToResizeRows = false;
+            this.fileWatcherDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.fileWatcherDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.fileWatcherDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.fileWatcherDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.fwColType,
+            this.fwColID,
+            this.fwColField});
+            this.fileWatcherDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.fileWatcherDataGridView.MultiSelect = false;
+            this.fileWatcherDataGridView.Name = "fileWatcherDataGridView";
+            this.fileWatcherDataGridView.ReadOnly = true;
+            this.fileWatcherDataGridView.RowHeadersVisible = false;
+            this.fileWatcherDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.fileWatcherDataGridView.Size = new System.Drawing.Size(504, 428);
+            this.fileWatcherDataGridView.TabIndex = 0;
+            this.fileWatcherDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.fileWatcherDataGridView_CellDoubleClick);
+            // 
+            // fwColType
+            // 
+            this.fwColType.HeaderText = "Type";
+            this.fwColType.Name = "fwColType";
+            this.fwColType.ReadOnly = true;
+            // 
+            // fwColID
+            // 
+            this.fwColID.HeaderText = "ID";
+            this.fwColID.Name = "fwColID";
+            this.fwColID.ReadOnly = true;
+            // 
+            // fwColField
+            // 
+            this.fwColField.HeaderText = "Reference";
+            this.fwColField.Name = "fwColField";
+            this.fwColField.ReadOnly = true;
+            // 
+            // idWatcherSubTabPage
+            // 
+            this.idWatcherSubTabPage.Controls.Add(this.idWatcherDataGridView);
+            this.idWatcherSubTabPage.Controls.Add(this.idWatcherPanel);
+            this.idWatcherSubTabPage.Location = new System.Drawing.Point(4, 22);
+            this.idWatcherSubTabPage.Name = "idWatcherSubTabPage";
+            this.idWatcherSubTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.idWatcherSubTabPage.Size = new System.Drawing.Size(738, 440);
+            this.idWatcherSubTabPage.TabIndex = 1;
+            this.idWatcherSubTabPage.Text = "ID Watcher";
+            this.idWatcherSubTabPage.UseVisualStyleBackColor = true;
+            // 
+            // idWatcherPanel
+            // 
+            this.idWatcherPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.idWatcherPanel.Controls.Add(this.idWatcherSearchGroupBox);
+            this.idWatcherPanel.Location = new System.Drawing.Point(516, 6);
+            this.idWatcherPanel.Name = "idWatcherPanel";
+            this.idWatcherPanel.Size = new System.Drawing.Size(216, 428);
+            this.idWatcherPanel.TabIndex = 1;
+            // 
+            // idWatcherSearchGroupBox
+            // 
+            this.idWatcherSearchGroupBox.Controls.Add(this.idWatcherScriptFileLabel);
+            this.idWatcherSearchGroupBox.Controls.Add(this.idWatcherScriptFileComboBox);
+            this.idWatcherSearchGroupBox.Controls.Add(this.idWatcherScriptIdLabel);
+            this.idWatcherSearchGroupBox.Controls.Add(this.idWatcherScriptIdComboBox);
+            this.idWatcherSearchGroupBox.Controls.Add(this.idWatcherSearchButton);
+            this.idWatcherSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.idWatcherSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.idWatcherSearchGroupBox.Name = "idWatcherSearchGroupBox";
+            this.idWatcherSearchGroupBox.Size = new System.Drawing.Size(216, 160);
+            this.idWatcherSearchGroupBox.TabIndex = 0;
+            this.idWatcherSearchGroupBox.TabStop = false;
+            this.idWatcherSearchGroupBox.Text = "Search Script ID Usage";
+            // 
+            // idWatcherScriptFileLabel
+            // 
+            this.idWatcherScriptFileLabel.AutoSize = true;
+            this.idWatcherScriptFileLabel.Location = new System.Drawing.Point(6, 25);
+            this.idWatcherScriptFileLabel.Name = "idWatcherScriptFileLabel";
+            this.idWatcherScriptFileLabel.Size = new System.Drawing.Size(55, 13);
+            this.idWatcherScriptFileLabel.TabIndex = 0;
+            this.idWatcherScriptFileLabel.Text = "Script File:";
+            // 
+            // idWatcherScriptFileComboBox
+            // 
+            this.idWatcherScriptFileComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.idWatcherScriptFileComboBox.FormattingEnabled = true;
+            this.idWatcherScriptFileComboBox.Location = new System.Drawing.Point(6, 44);
+            this.idWatcherScriptFileComboBox.Name = "idWatcherScriptFileComboBox";
+            this.idWatcherScriptFileComboBox.Size = new System.Drawing.Size(204, 21);
+            this.idWatcherScriptFileComboBox.TabIndex = 1;
+            this.idWatcherScriptFileComboBox.SelectedIndexChanged += new System.EventHandler(this.idWatcherScriptFileComboBox_SelectedIndexChanged);
+            // 
+            // idWatcherScriptIdLabel
+            // 
+            this.idWatcherScriptIdLabel.AutoSize = true;
+            this.idWatcherScriptIdLabel.Location = new System.Drawing.Point(6, 72);
+            this.idWatcherScriptIdLabel.Name = "idWatcherScriptIdLabel";
+            this.idWatcherScriptIdLabel.Size = new System.Drawing.Size(52, 13);
+            this.idWatcherScriptIdLabel.TabIndex = 2;
+            this.idWatcherScriptIdLabel.Text = "Script ID:";
+            // 
+            // idWatcherScriptIdComboBox
+            // 
+            this.idWatcherScriptIdComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.idWatcherScriptIdComboBox.FormattingEnabled = true;
+            this.idWatcherScriptIdComboBox.Location = new System.Drawing.Point(6, 91);
+            this.idWatcherScriptIdComboBox.Name = "idWatcherScriptIdComboBox";
+            this.idWatcherScriptIdComboBox.Size = new System.Drawing.Size(204, 21);
+            this.idWatcherScriptIdComboBox.TabIndex = 3;
+            // 
+            // idWatcherSearchButton
+            // 
+            this.idWatcherSearchButton.Location = new System.Drawing.Point(6, 120);
+            this.idWatcherSearchButton.Name = "idWatcherSearchButton";
+            this.idWatcherSearchButton.Size = new System.Drawing.Size(204, 30);
+            this.idWatcherSearchButton.TabIndex = 4;
+            this.idWatcherSearchButton.Text = "Search";
+            this.idWatcherSearchButton.UseVisualStyleBackColor = true;
+            this.idWatcherSearchButton.Click += new System.EventHandler(this.idWatcherSearchButton_Click);
+            // 
+            // idWatcherDataGridView
+            // 
+            this.idWatcherDataGridView.AllowUserToAddRows = false;
+            this.idWatcherDataGridView.AllowUserToDeleteRows = false;
+            this.idWatcherDataGridView.AllowUserToResizeRows = false;
+            this.idWatcherDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.idWatcherDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.idWatcherDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.idWatcherDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.iwColEventFile,
+            this.iwColEventType,
+            this.iwColEventIndex,
+            this.iwColDetails});
+            this.idWatcherDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.idWatcherDataGridView.MultiSelect = false;
+            this.idWatcherDataGridView.Name = "idWatcherDataGridView";
+            this.idWatcherDataGridView.ReadOnly = true;
+            this.idWatcherDataGridView.RowHeadersVisible = false;
+            this.idWatcherDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.idWatcherDataGridView.Size = new System.Drawing.Size(504, 428);
+            this.idWatcherDataGridView.TabIndex = 0;
+            this.idWatcherDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.idWatcherDataGridView_CellDoubleClick);
+            // 
+            // iwColEventFile
+            // 
+            this.iwColEventFile.HeaderText = "Event File";
+            this.iwColEventFile.Name = "iwColEventFile";
+            this.iwColEventFile.ReadOnly = true;
+            // 
+            // iwColEventType
+            // 
+            this.iwColEventType.HeaderText = "Event Type";
+            this.iwColEventType.Name = "iwColEventType";
+            this.iwColEventType.ReadOnly = true;
+            // 
+            // iwColEventIndex
+            // 
+            this.iwColEventIndex.HeaderText = "Index";
+            this.iwColEventIndex.Name = "iwColEventIndex";
+            this.iwColEventIndex.ReadOnly = true;
+            // 
+            // iwColDetails
+            // 
+            this.iwColDetails.HeaderText = "Details";
+            this.iwColDetails.Name = "iwColDetails";
+            this.iwColDetails.ReadOnly = true;
+            //
             // ResearchHelper
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -364,6 +1284,42 @@ namespace DSPRE
             this.columnGroupBox.PerformLayout();
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
+            this.levelScriptsTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.levelScriptsDataGridView)).EndInit();
+            this.lsSearchPanel.ResumeLayout(false);
+            this.lsSearchGroupBox.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.lsSearchValueNumericUpDown)).EndInit();
+            this.lsComparisonGroupBox.ResumeLayout(false);
+            this.lsComparisonGroupBox.PerformLayout();
+            this.lsColumnGroupBox.ResumeLayout(false);
+            this.lsColumnGroupBox.PerformLayout();
+            this.variablesTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.variablesDataGridView)).EndInit();
+            this.varSearchPanel.ResumeLayout(false);
+            this.varSearchGroupBox.ResumeLayout(false);
+            this.varSearchGroupBox.PerformLayout();
+            this.varModeGroupBox.ResumeLayout(false);
+            this.varModeGroupBox.PerformLayout();
+            this.flagWatcherTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.flagWatcherDataGridView)).EndInit();
+            this.flagSearchPanel.ResumeLayout(false);
+            this.flagSearchGroupBox.ResumeLayout(false);
+            this.flagSearchGroupBox.PerformLayout();
+            this.flagModeGroupBox.ResumeLayout(false);
+            this.flagModeGroupBox.PerformLayout();
+            this.scriptWatcherTabPage.ResumeLayout(false);
+            this.scriptWatcherSubTabControl.ResumeLayout(false);
+            this.fileWatcherSubTabPage.ResumeLayout(false);
+            this.fileWatcherPanel.ResumeLayout(false);
+            this.fileWatcherSearchGroupBox.ResumeLayout(false);
+            this.fileWatcherSearchGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.fileWatcherScriptFileNumericUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.fileWatcherDataGridView)).EndInit();
+            this.idWatcherSubTabPage.ResumeLayout(false);
+            this.idWatcherPanel.ResumeLayout(false);
+            this.idWatcherSearchGroupBox.ResumeLayout(false);
+            this.idWatcherSearchGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.idWatcherDataGridView)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -397,5 +1353,88 @@ namespace DSPRE
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
         private System.Windows.Forms.Button refreshButton;
+        // Level Scripts tab controls
+        private System.Windows.Forms.TabPage levelScriptsTabPage;
+        private System.Windows.Forms.DataGridView levelScriptsDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColID;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColTotal;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColMapChange;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColScreenReset;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColLoadGame;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lsColVariableValue;
+        private System.Windows.Forms.Panel lsSearchPanel;
+        private System.Windows.Forms.GroupBox lsSearchGroupBox;
+        private System.Windows.Forms.NumericUpDown lsSearchValueNumericUpDown;
+        private System.Windows.Forms.Button lsSearchButton;
+        private System.Windows.Forms.Button lsClearSearchButton;
+        private System.Windows.Forms.GroupBox lsComparisonGroupBox;
+        private System.Windows.Forms.RadioButton lsEqualsRadioButton;
+        private System.Windows.Forms.RadioButton lsGreaterThanOrEqualRadioButton;
+        private System.Windows.Forms.RadioButton lsLessThanOrEqualRadioButton;
+        private System.Windows.Forms.GroupBox lsColumnGroupBox;
+        private System.Windows.Forms.RadioButton lsIdRadioButton;
+        private System.Windows.Forms.RadioButton lsTotalRadioButton;
+        private System.Windows.Forms.RadioButton lsMapChangeRadioButton;
+        private System.Windows.Forms.RadioButton lsScreenResetRadioButton;
+        private System.Windows.Forms.RadioButton lsLoadGameRadioButton;
+        private System.Windows.Forms.RadioButton lsVariableValueRadioButton;
+        private System.Windows.Forms.Button lsRefreshButton;
+        // Variables tab controls
+        private System.Windows.Forms.TabPage variablesTabPage;
+        private System.Windows.Forms.DataGridView variablesDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn varColType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn varColID;
+        private System.Windows.Forms.DataGridViewTextBoxColumn varColUses;
+        private System.Windows.Forms.Panel varSearchPanel;
+        private System.Windows.Forms.GroupBox varSearchGroupBox;
+        private System.Windows.Forms.TextBox varSearchTextBox;
+        private System.Windows.Forms.Button varSearchButton;
+        private System.Windows.Forms.Button varClearButton;
+        private System.Windows.Forms.GroupBox varModeGroupBox;
+        private System.Windows.Forms.RadioButton varDecimalRadioButton;
+        private System.Windows.Forms.RadioButton varHexRadioButton;
+        // Flag Watcher tab controls
+        private System.Windows.Forms.TabPage flagWatcherTabPage;
+        private System.Windows.Forms.DataGridView flagWatcherDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn flagColType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn flagColID;
+        private System.Windows.Forms.DataGridViewTextBoxColumn flagColDetails;
+        private System.Windows.Forms.DataGridViewTextBoxColumn flagColUses;
+        private System.Windows.Forms.Panel flagSearchPanel;
+        private System.Windows.Forms.GroupBox flagSearchGroupBox;
+        private System.Windows.Forms.TextBox flagSearchTextBox;
+        private System.Windows.Forms.Button flagSearchButton;
+        private System.Windows.Forms.Button flagClearButton;
+        private System.Windows.Forms.GroupBox flagModeGroupBox;
+        private System.Windows.Forms.RadioButton flagDecimalRadioButton;
+        private System.Windows.Forms.RadioButton flagHexRadioButton;
+        // Script Watcher tab controls
+        private System.Windows.Forms.TabPage scriptWatcherTabPage;
+        private System.Windows.Forms.TabControl scriptWatcherSubTabControl;
+        private System.Windows.Forms.TabPage fileWatcherSubTabPage;
+        private System.Windows.Forms.TabPage idWatcherSubTabPage;
+        // File Watcher sub-tab controls
+        private System.Windows.Forms.Panel fileWatcherPanel;
+        private System.Windows.Forms.GroupBox fileWatcherSearchGroupBox;
+        private System.Windows.Forms.Label fileWatcherScriptFileLabel;
+        private System.Windows.Forms.NumericUpDown fileWatcherScriptFileNumericUpDown;
+        private System.Windows.Forms.Button fileWatcherSearchButton;
+        private System.Windows.Forms.DataGridView fileWatcherDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn fwColType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn fwColID;
+        private System.Windows.Forms.DataGridViewTextBoxColumn fwColField;
+        // ID Watcher sub-tab controls
+        private System.Windows.Forms.Panel idWatcherPanel;
+        private System.Windows.Forms.GroupBox idWatcherSearchGroupBox;
+        private System.Windows.Forms.Label idWatcherScriptFileLabel;
+        private System.Windows.Forms.ComboBox idWatcherScriptFileComboBox;
+        private System.Windows.Forms.Label idWatcherScriptIdLabel;
+        private System.Windows.Forms.ComboBox idWatcherScriptIdComboBox;
+        private System.Windows.Forms.Button idWatcherSearchButton;
+        private System.Windows.Forms.DataGridView idWatcherDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn iwColEventFile;
+        private System.Windows.Forms.DataGridViewTextBoxColumn iwColEventType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn iwColEventIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn iwColDetails;
     }
 }
