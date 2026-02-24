@@ -49,20 +49,22 @@ namespace DSPRE
 
         public static void FolderToJSON(string inputFolderPath, string outputFolderPath, string charMapPath)
         {
-            ChatotWrapperDirectory(outputFolderPath, inputFolderPath, charMapPath, "decode", true, "--newer");
+            ChatotWrapperDirectory(outputFolderPath, inputFolderPath, charMapPath, "decode", true, extraArgs: "--newer");
         }
 
         public static void FolderToBin(string inputFolderPath, string outputFolderPath, string charMapPath)
         {
-            ChatotWrapperDirectory(inputFolderPath, outputFolderPath, charMapPath, "encode", true, "--newer");
+            ChatotWrapperDirectory(inputFolderPath, outputFolderPath, charMapPath, "encode", true, extraArgs: "--newer");
         }
 
-        private static void ChatotWrapperDirectory(string plainTextPath, string binaryPath, string charMapPath, string mode, bool json, string extraArgs = "")
+        private static void ChatotWrapperDirectory(string plainTextPath, string binaryPath, string charMapPath, 
+            string mode, bool json, string lang = "", string extraArgs = "")
         {
-            ChatotWrapper(plainTextPath, binaryPath, charMapPath, mode, true, json, extraArgs);
+            ChatotWrapper(plainTextPath, binaryPath, charMapPath, mode, true, json, "", extraArgs);
         }
 
-        private static void ChatotWrapper(string plainTextPath, string binaryPath, string charMapPath, string mode, bool isDirectory, bool isJson, string extraArgs = "")
+        private static void ChatotWrapper(string plainTextPath, string binaryPath, string charMapPath, 
+            string mode, bool isDirectory, bool isJson, string lang = "", string extraArgs = "")
         {
             // Ensure all paths are absolute
             plainTextPath = Path.GetFullPath(plainTextPath);
@@ -101,6 +103,14 @@ namespace DSPRE
             if (isJson)
             {
                 chatot.StartInfo.Arguments += " --json";
+                
+                // If no language was specified read from the langcodes dictionary
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = langCodes[RomInfo.gameLanguage];
+                }
+
+                chatot.StartInfo.Arguments += $" --lang {lang}";
             }
 
             if (!string.IsNullOrEmpty(extraArgs))
