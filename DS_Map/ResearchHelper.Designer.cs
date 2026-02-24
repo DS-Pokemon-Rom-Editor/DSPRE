@@ -135,6 +135,31 @@ namespace DSPRE
             this.iwColEventType = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.iwColEventIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.iwColDetails = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            // Header Watcher tab controls
+            this.headerWatcherTabPage = new System.Windows.Forms.TabPage();
+            this.headerWatcherSubTabControl = new System.Windows.Forms.TabControl();
+            this.headerInfoSubTabPage = new System.Windows.Forms.TabPage();
+            this.headerWarpsSubTabPage = new System.Windows.Forms.TabPage();
+            this.headerInfoPanel = new System.Windows.Forms.Panel();
+            this.headerInfoSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.headerIdLabel = new System.Windows.Forms.Label();
+            this.headerIdNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.headerSearchButton = new System.Windows.Forms.Button();
+            this.headerInfoDataGridView = new System.Windows.Forms.DataGridView();
+            this.hwColProperty = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.hwColValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.headerWarpsPanel = new System.Windows.Forms.Panel();
+            this.headerWarpsDataGridView = new System.Windows.Forms.DataGridView();
+            this.hwwColEventFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.hwwColWarpIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.hwwColPosition = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.hwwColAnchor = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.headerOutgoingWarpsSubTabPage = new System.Windows.Forms.TabPage();
+            this.headerOutgoingWarpsDataGridView = new System.Windows.Forms.DataGridView();
+            this.howColWarpIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.howColPosition = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.howColDestHeader = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.howColDestAnchor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.mainTabControl.SuspendLayout();
             this.scriptsTabPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.scriptsDataGridView)).BeginInit();
@@ -172,6 +197,18 @@ namespace DSPRE
             this.idWatcherPanel.SuspendLayout();
             this.idWatcherSearchGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.idWatcherDataGridView)).BeginInit();
+            this.headerWatcherTabPage.SuspendLayout();
+            this.headerWatcherSubTabControl.SuspendLayout();
+            this.headerInfoSubTabPage.SuspendLayout();
+            this.headerWarpsSubTabPage.SuspendLayout();
+            this.headerInfoPanel.SuspendLayout();
+            this.headerInfoSearchGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.headerIdNumericUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.headerInfoDataGridView)).BeginInit();
+            this.headerWarpsPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.headerWarpsDataGridView)).BeginInit();
+            this.headerOutgoingWarpsSubTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.headerOutgoingWarpsDataGridView)).BeginInit();
             this.SuspendLayout();
             // 
             // mainTabControl
@@ -184,6 +221,7 @@ namespace DSPRE
             this.mainTabControl.Controls.Add(this.variablesTabPage);
             this.mainTabControl.Controls.Add(this.flagWatcherTabPage);
             this.mainTabControl.Controls.Add(this.scriptWatcherTabPage);
+            this.mainTabControl.Controls.Add(this.headerWatcherTabPage);
             this.mainTabControl.Location = new System.Drawing.Point(12, 12);
             this.mainTabControl.Name = "mainTabControl";
             this.mainTabControl.SelectedIndex = 0;
@@ -1259,6 +1297,251 @@ namespace DSPRE
             this.iwColDetails.HeaderText = "Details";
             this.iwColDetails.Name = "iwColDetails";
             this.iwColDetails.ReadOnly = true;
+            // 
+            // headerWatcherTabPage
+            // 
+            this.headerWatcherTabPage.Controls.Add(this.headerWatcherSubTabControl);
+            this.headerWatcherTabPage.Location = new System.Drawing.Point(4, 22);
+            this.headerWatcherTabPage.Name = "headerWatcherTabPage";
+            this.headerWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.headerWatcherTabPage.Size = new System.Drawing.Size(752, 472);
+            this.headerWatcherTabPage.TabIndex = 5;
+            this.headerWatcherTabPage.Text = "Header Watcher";
+            this.headerWatcherTabPage.UseVisualStyleBackColor = true;
+            // 
+            // headerWatcherSubTabControl
+            // 
+            this.headerWatcherSubTabControl.Controls.Add(this.headerInfoSubTabPage);
+            this.headerWatcherSubTabControl.Controls.Add(this.headerWarpsSubTabPage);
+            this.headerWatcherSubTabControl.Controls.Add(this.headerOutgoingWarpsSubTabPage);
+            this.headerWatcherSubTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.headerWatcherSubTabControl.Location = new System.Drawing.Point(3, 3);
+            this.headerWatcherSubTabControl.Name = "headerWatcherSubTabControl";
+            this.headerWatcherSubTabControl.SelectedIndex = 0;
+            this.headerWatcherSubTabControl.Size = new System.Drawing.Size(746, 466);
+            this.headerWatcherSubTabControl.TabIndex = 0;
+            // 
+            // headerInfoSubTabPage
+            // 
+            this.headerInfoSubTabPage.Controls.Add(this.headerInfoDataGridView);
+            this.headerInfoSubTabPage.Controls.Add(this.headerInfoPanel);
+            this.headerInfoSubTabPage.Location = new System.Drawing.Point(4, 22);
+            this.headerInfoSubTabPage.Name = "headerInfoSubTabPage";
+            this.headerInfoSubTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.headerInfoSubTabPage.Size = new System.Drawing.Size(738, 440);
+            this.headerInfoSubTabPage.TabIndex = 0;
+            this.headerInfoSubTabPage.Text = "Header Info";
+            this.headerInfoSubTabPage.UseVisualStyleBackColor = true;
+            // 
+            // headerWarpsSubTabPage
+            // 
+            this.headerWarpsSubTabPage.Controls.Add(this.headerWarpsDataGridView);
+            this.headerWarpsSubTabPage.Location = new System.Drawing.Point(4, 22);
+            this.headerWarpsSubTabPage.Name = "headerWarpsSubTabPage";
+            this.headerWarpsSubTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.headerWarpsSubTabPage.Size = new System.Drawing.Size(738, 440);
+            this.headerWarpsSubTabPage.TabIndex = 1;
+            this.headerWarpsSubTabPage.Text = "Incoming Warps";
+            this.headerWarpsSubTabPage.UseVisualStyleBackColor = true;
+            // 
+            // headerInfoPanel
+            // 
+            this.headerInfoPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.headerInfoPanel.Controls.Add(this.headerInfoSearchGroupBox);
+            this.headerInfoPanel.Location = new System.Drawing.Point(516, 6);
+            this.headerInfoPanel.Name = "headerInfoPanel";
+            this.headerInfoPanel.Size = new System.Drawing.Size(216, 428);
+            this.headerInfoPanel.TabIndex = 1;
+            // 
+            // headerInfoSearchGroupBox
+            // 
+            this.headerInfoSearchGroupBox.Controls.Add(this.headerIdLabel);
+            this.headerInfoSearchGroupBox.Controls.Add(this.headerIdNumericUpDown);
+            this.headerInfoSearchGroupBox.Controls.Add(this.headerSearchButton);
+            this.headerInfoSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.headerInfoSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.headerInfoSearchGroupBox.Name = "headerInfoSearchGroupBox";
+            this.headerInfoSearchGroupBox.Size = new System.Drawing.Size(216, 110);
+            this.headerInfoSearchGroupBox.TabIndex = 0;
+            this.headerInfoSearchGroupBox.TabStop = false;
+            this.headerInfoSearchGroupBox.Text = "Search Header";
+            // 
+            // headerIdLabel
+            // 
+            this.headerIdLabel.AutoSize = true;
+            this.headerIdLabel.Location = new System.Drawing.Point(6, 25);
+            this.headerIdLabel.Name = "headerIdLabel";
+            this.headerIdLabel.Size = new System.Drawing.Size(58, 13);
+            this.headerIdLabel.TabIndex = 0;
+            this.headerIdLabel.Text = "Header ID:";
+            // 
+            // headerIdNumericUpDown
+            // 
+            this.headerIdNumericUpDown.Location = new System.Drawing.Point(6, 44);
+            this.headerIdNumericUpDown.Maximum = new decimal(new int[] { 99999, 0, 0, 0 });
+            this.headerIdNumericUpDown.Name = "headerIdNumericUpDown";
+            this.headerIdNumericUpDown.Size = new System.Drawing.Size(204, 20);
+            this.headerIdNumericUpDown.TabIndex = 1;
+            // 
+            // headerSearchButton
+            // 
+            this.headerSearchButton.Location = new System.Drawing.Point(6, 70);
+            this.headerSearchButton.Name = "headerSearchButton";
+            this.headerSearchButton.Size = new System.Drawing.Size(204, 30);
+            this.headerSearchButton.TabIndex = 2;
+            this.headerSearchButton.Text = "Search";
+            this.headerSearchButton.UseVisualStyleBackColor = true;
+            this.headerSearchButton.Click += new System.EventHandler(this.headerSearchButton_Click);
+            // 
+            // headerInfoDataGridView
+            // 
+            this.headerInfoDataGridView.AllowUserToAddRows = false;
+            this.headerInfoDataGridView.AllowUserToDeleteRows = false;
+            this.headerInfoDataGridView.AllowUserToResizeRows = false;
+            this.headerInfoDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.headerInfoDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.headerInfoDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.headerInfoDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.hwColProperty,
+            this.hwColValue});
+            this.headerInfoDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.headerInfoDataGridView.MultiSelect = false;
+            this.headerInfoDataGridView.Name = "headerInfoDataGridView";
+            this.headerInfoDataGridView.ReadOnly = true;
+            this.headerInfoDataGridView.RowHeadersVisible = false;
+            this.headerInfoDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.headerInfoDataGridView.Size = new System.Drawing.Size(504, 428);
+            this.headerInfoDataGridView.TabIndex = 0;
+            this.headerInfoDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.headerInfoDataGridView_CellDoubleClick);
+            // 
+            // hwColProperty
+            // 
+            this.hwColProperty.HeaderText = "Property";
+            this.hwColProperty.Name = "hwColProperty";
+            this.hwColProperty.ReadOnly = true;
+            // 
+            // hwColValue
+            // 
+            this.hwColValue.HeaderText = "Value";
+            this.hwColValue.Name = "hwColValue";
+            this.hwColValue.ReadOnly = true;
+            // 
+            // headerWarpsPanel
+            // 
+            this.headerWarpsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.headerWarpsPanel.Location = new System.Drawing.Point(516, 6);
+            this.headerWarpsPanel.Name = "headerWarpsPanel";
+            this.headerWarpsPanel.Size = new System.Drawing.Size(216, 428);
+            this.headerWarpsPanel.TabIndex = 1;
+            // 
+            // headerWarpsDataGridView
+            // 
+            this.headerWarpsDataGridView.AllowUserToAddRows = false;
+            this.headerWarpsDataGridView.AllowUserToDeleteRows = false;
+            this.headerWarpsDataGridView.AllowUserToResizeRows = false;
+            this.headerWarpsDataGridView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.headerWarpsDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.headerWarpsDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.headerWarpsDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.hwwColEventFile,
+            this.hwwColWarpIndex,
+            this.hwwColPosition,
+            this.hwwColAnchor});
+            this.headerWarpsDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.headerWarpsDataGridView.MultiSelect = false;
+            this.headerWarpsDataGridView.Name = "headerWarpsDataGridView";
+            this.headerWarpsDataGridView.ReadOnly = true;
+            this.headerWarpsDataGridView.RowHeadersVisible = false;
+            this.headerWarpsDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.headerWarpsDataGridView.Size = new System.Drawing.Size(726, 428);
+            this.headerWarpsDataGridView.TabIndex = 0;
+            this.headerWarpsDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.headerWarpsDataGridView_CellDoubleClick);
+            // 
+            // hwwColEventFile
+            // 
+            this.hwwColEventFile.HeaderText = "Event File";
+            this.hwwColEventFile.Name = "hwwColEventFile";
+            this.hwwColEventFile.ReadOnly = true;
+            // 
+            // hwwColWarpIndex
+            // 
+            this.hwwColWarpIndex.HeaderText = "Warp Index";
+            this.hwwColWarpIndex.Name = "hwwColWarpIndex";
+            this.hwwColWarpIndex.ReadOnly = true;
+            // 
+            // hwwColPosition
+            // 
+            this.hwwColPosition.HeaderText = "Position";
+            this.hwwColPosition.Name = "hwwColPosition";
+            this.hwwColPosition.ReadOnly = true;
+            // 
+            // hwwColAnchor
+            // 
+            this.hwwColAnchor.HeaderText = "Dest Anchor";
+            this.hwwColAnchor.Name = "hwwColAnchor";
+            this.hwwColAnchor.ReadOnly = true;
+            // 
+            // headerOutgoingWarpsSubTabPage
+            // 
+            this.headerOutgoingWarpsSubTabPage.Controls.Add(this.headerOutgoingWarpsDataGridView);
+            this.headerOutgoingWarpsSubTabPage.Location = new System.Drawing.Point(4, 22);
+            this.headerOutgoingWarpsSubTabPage.Name = "headerOutgoingWarpsSubTabPage";
+            this.headerOutgoingWarpsSubTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.headerOutgoingWarpsSubTabPage.Size = new System.Drawing.Size(738, 440);
+            this.headerOutgoingWarpsSubTabPage.TabIndex = 2;
+            this.headerOutgoingWarpsSubTabPage.Text = "Outgoing Warps";
+            this.headerOutgoingWarpsSubTabPage.UseVisualStyleBackColor = true;
+            // 
+            // headerOutgoingWarpsDataGridView
+            // 
+            this.headerOutgoingWarpsDataGridView.AllowUserToAddRows = false;
+            this.headerOutgoingWarpsDataGridView.AllowUserToDeleteRows = false;
+            this.headerOutgoingWarpsDataGridView.AllowUserToResizeRows = false;
+            this.headerOutgoingWarpsDataGridView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.headerOutgoingWarpsDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.headerOutgoingWarpsDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.headerOutgoingWarpsDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.howColWarpIndex,
+            this.howColPosition,
+            this.howColDestHeader,
+            this.howColDestAnchor});
+            this.headerOutgoingWarpsDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.headerOutgoingWarpsDataGridView.MultiSelect = false;
+            this.headerOutgoingWarpsDataGridView.Name = "headerOutgoingWarpsDataGridView";
+            this.headerOutgoingWarpsDataGridView.ReadOnly = true;
+            this.headerOutgoingWarpsDataGridView.RowHeadersVisible = false;
+            this.headerOutgoingWarpsDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.headerOutgoingWarpsDataGridView.Size = new System.Drawing.Size(726, 428);
+            this.headerOutgoingWarpsDataGridView.TabIndex = 0;
+            this.headerOutgoingWarpsDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.headerOutgoingWarpsDataGridView_CellDoubleClick);
+            // 
+            // howColWarpIndex
+            // 
+            this.howColWarpIndex.HeaderText = "Warp Index";
+            this.howColWarpIndex.Name = "howColWarpIndex";
+            this.howColWarpIndex.ReadOnly = true;
+            // 
+            // howColPosition
+            // 
+            this.howColPosition.HeaderText = "Position";
+            this.howColPosition.Name = "howColPosition";
+            this.howColPosition.ReadOnly = true;
+            // 
+            // howColDestHeader
+            // 
+            this.howColDestHeader.HeaderText = "Dest Header";
+            this.howColDestHeader.Name = "howColDestHeader";
+            this.howColDestHeader.ReadOnly = true;
+            // 
+            // howColDestAnchor
+            // 
+            this.howColDestAnchor.HeaderText = "Dest Anchor";
+            this.howColDestAnchor.Name = "howColDestAnchor";
+            this.howColDestAnchor.ReadOnly = true;
             //
             // ResearchHelper
             // 
@@ -1320,6 +1603,19 @@ namespace DSPRE
             this.idWatcherSearchGroupBox.ResumeLayout(false);
             this.idWatcherSearchGroupBox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.idWatcherDataGridView)).EndInit();
+            this.headerWatcherTabPage.ResumeLayout(false);
+            this.headerWatcherSubTabControl.ResumeLayout(false);
+            this.headerInfoSubTabPage.ResumeLayout(false);
+            this.headerWarpsSubTabPage.ResumeLayout(false);
+            this.headerInfoPanel.ResumeLayout(false);
+            this.headerInfoSearchGroupBox.ResumeLayout(false);
+            this.headerInfoSearchGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.headerIdNumericUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.headerInfoDataGridView)).EndInit();
+            this.headerWarpsPanel.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.headerWarpsDataGridView)).EndInit();
+            this.headerOutgoingWarpsSubTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.headerOutgoingWarpsDataGridView)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1436,5 +1732,33 @@ namespace DSPRE
         private System.Windows.Forms.DataGridViewTextBoxColumn iwColEventType;
         private System.Windows.Forms.DataGridViewTextBoxColumn iwColEventIndex;
         private System.Windows.Forms.DataGridViewTextBoxColumn iwColDetails;
+        // Header Watcher tab controls
+        private System.Windows.Forms.TabPage headerWatcherTabPage;
+        private System.Windows.Forms.TabControl headerWatcherSubTabControl;
+        private System.Windows.Forms.TabPage headerInfoSubTabPage;
+        private System.Windows.Forms.TabPage headerWarpsSubTabPage;
+        // Header Info sub-tab controls
+        private System.Windows.Forms.Panel headerInfoPanel;
+        private System.Windows.Forms.GroupBox headerInfoSearchGroupBox;
+        private System.Windows.Forms.Label headerIdLabel;
+        private System.Windows.Forms.NumericUpDown headerIdNumericUpDown;
+        private System.Windows.Forms.Button headerSearchButton;
+        private System.Windows.Forms.DataGridView headerInfoDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwColProperty;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwColValue;
+        // Header Warps sub-tab controls (Incoming)
+        private System.Windows.Forms.Panel headerWarpsPanel;
+        private System.Windows.Forms.DataGridView headerWarpsDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwwColEventFile;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwwColWarpIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwwColPosition;
+        private System.Windows.Forms.DataGridViewTextBoxColumn hwwColAnchor;
+        // Header Outgoing Warps sub-tab controls
+        private System.Windows.Forms.TabPage headerOutgoingWarpsSubTabPage;
+        private System.Windows.Forms.DataGridView headerOutgoingWarpsDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn howColWarpIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn howColPosition;
+        private System.Windows.Forms.DataGridViewTextBoxColumn howColDestHeader;
+        private System.Windows.Forms.DataGridViewTextBoxColumn howColDestAnchor;
     }
 }

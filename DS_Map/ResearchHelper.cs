@@ -1341,5 +1341,310 @@ namespace DSPRE
                     }
 
                     #endregion
+
+                    #region Header Watcher Tab
+
+                    private MapHeader currentSearchedHeader = null;
+                    private List<HeaderWarpResult> headerWarpResults = new List<HeaderWarpResult>();
+                    private List<HeaderOutgoingWarpResult> headerOutgoingWarpResults = new List<HeaderOutgoingWarpResult>();
+
+                    /// <summary>
+                    /// Data class to hold incoming warp results pointing to a header
+                    /// </summary>
+                    private class HeaderWarpResult
+                    {
+                        public int EventFileID { get; set; }
+                        public int WarpIndex { get; set; }
+                        public string Position { get; set; }
+                        public int Anchor { get; set; }
+                    }
+
+                    /// <summary>
+                    /// Data class to hold outgoing warp results from a header's event file
+                    /// </summary>
+                    private class HeaderOutgoingWarpResult
+                    {
+                        public int WarpIndex { get; set; }
+                        public string Position { get; set; }
+                        public int DestHeader { get; set; }
+                        public int DestAnchor { get; set; }
+                    }
+
+                    private void headerSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchHeaderInfo();
+                    }
+
+                    private void SearchHeaderInfo()
+                    {
+                        int headerId = (int)headerIdNumericUpDown.Value;
+                        int headerCount = RomInfo.GetHeaderCount();
+
+                        if (headerId < 0 || headerId >= headerCount)
+                        {
+                            MessageBox.Show($"Header ID must be between 0 and {headerCount - 1}.", "Invalid Header ID", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        statusLabel.Text = $"Loading header {headerId}...";
+                        Application.DoEvents();
+
+                        try
+                        {
+                            currentSearchedHeader = MapHeader.GetMapHeader((ushort)headerId);
+                            if (currentSearchedHeader == null)
+                            {
+                                MessageBox.Show($"Could not load header {headerId}.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+
+                            // Populate header info
+                            PopulateHeaderInfoDataGridView(currentSearchedHeader);
+
+                            // Search for warps leading to this header (incoming)
+                            SearchWarpsToHeader(headerId);
+
+                            // Search for warps from this header's event file (outgoing)
+                            SearchWarpsFromHeader(currentSearchedHeader);
+
+                            statusLabel.Text = $"Header {headerId} loaded - {headerWarpResults.Count} incoming, {headerOutgoingWarpResults.Count} outgoing warps";
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLogger.Error($"Error loading header {headerId}: {ex.Message}");
+                            MessageBox.Show($"Error loading header: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+
+                    private void PopulateHeaderInfoDataGridView(MapHeader header)
+                    {
+                        headerInfoDataGridView.Rows.Clear();
+
+                        // Add all header properties as rows
+                        headerInfoDataGridView.Rows.Add("Header ID", header.ID);
+                        headerInfoDataGridView.Rows.Add("Script File ID", header.scriptFileID);
+                        headerInfoDataGridView.Rows.Add("Level Script ID", header.levelScriptID);
+                        headerInfoDataGridView.Rows.Add("Event File ID", header.eventFileID);
+                        headerInfoDataGridView.Rows.Add("Text Archive ID", header.textArchiveID);
+                        headerInfoDataGridView.Rows.Add("Matrix ID", header.matrixID);
+                        headerInfoDataGridView.Rows.Add("Area Data ID", header.areaDataID);
+                        headerInfoDataGridView.Rows.Add("Camera Angle ID", header.cameraAngleID);
+                        headerInfoDataGridView.Rows.Add("Music Day ID", header.musicDayID);
+                        headerInfoDataGridView.Rows.Add("Music Night ID", header.musicNightID);
+                        headerInfoDataGridView.Rows.Add("Weather ID", header.weatherID);
+                        headerInfoDataGridView.Rows.Add("Wild Pokémon", header.wildPokemon);
+                        headerInfoDataGridView.Rows.Add("Location Specifier", header.locationSpecifier);
+                        headerInfoDataGridView.Rows.Add("Flags", $"0x{header.flags:X2}");
+                    }
+
+                    private void SearchWarpsToHeader(int targetHeaderId)
+                    {
+                        headerWarpResults.Clear();
+                        headerWarpsDataGridView.Rows.Clear();
+
+                        // Search all cached event files for warps pointing to this header
+                        foreach (var eventFile in cachedEventFiles)
+                        {
+                            if (eventFile.warps == null) continue;
+
+                            for (int i = 0; i < eventFile.warps.Count; i++)
+                            {
+                                var warp = eventFile.warps[i];
+                                if (warp.header == targetHeaderId)
+                                {
+                                    headerWarpResults.Add(new HeaderWarpResult
+                                    {
+                                        EventFileID = eventFile.ID,
+                                        WarpIndex = i,
+                                        Position = $"({warp.xMapPosition}, {warp.yMapPosition})",
+                                        Anchor = warp.anchor
+                                    });
+                                }
+                            }
+                        }
+
+                        // Populate the warps grid
+                        foreach (var result in headerWarpResults)
+                        {
+                            headerWarpsDataGridView.Rows.Add(result.EventFileID, result.WarpIndex, result.Position, result.Anchor);
+                        }
+                    }
+
+                    private void SearchWarpsFromHeader(MapHeader header)
+                    {
+                        headerOutgoingWarpResults.Clear();
+                        headerOutgoingWarpsDataGridView.Rows.Clear();
+
+                        // Find the event file for this header
+                        var eventFile = cachedEventFiles.FirstOrDefault(e => e.ID == header.eventFileID);
+                        if (eventFile == null || eventFile.warps == null)
+                        {
+                            return;
+                        }
+
+                        // Get all warps from this header's event file
+                        for (int i = 0; i < eventFile.warps.Count; i++)
+                        {
+                            var warp = eventFile.warps[i];
+                            headerOutgoingWarpResults.Add(new HeaderOutgoingWarpResult
+                            {
+                                WarpIndex = i,
+                                Position = $"({warp.xMapPosition}, {warp.yMapPosition})",
+                                DestHeader = warp.header,
+                                DestAnchor = warp.anchor
+                            });
+                        }
+
+                        // Populate the outgoing warps grid
+                        foreach (var result in headerOutgoingWarpResults)
+                        {
+                            headerOutgoingWarpsDataGridView.Rows.Add(result.WarpIndex, result.Position, result.DestHeader, result.DestAnchor);
+                        }
+                    }
+
+                    private void headerInfoDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0 || currentSearchedHeader == null) return;
+
+                        string property = (string)headerInfoDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+
+                        if (mainProgram == null)
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                            return;
+                        }
+
+                        switch (property)
+                        {
+                            case "Script File ID":
+                                EditorPanels.scriptEditor.OpenScriptEditor(mainProgram, currentSearchedHeader.scriptFileID);
+                                statusLabel.Text = $"Opened Script File {currentSearchedHeader.scriptFileID}";
+                                break;
+                            case "Level Script ID":
+                                EditorPanels.levelScriptEditor.OpenLevelScriptEditor(mainProgram, currentSearchedHeader.levelScriptID);
+                                statusLabel.Text = $"Opened Level Script {currentSearchedHeader.levelScriptID}";
+                                break;
+                            case "Event File ID":
+                                EditorPanels.eventEditor.OpenEventEditor(mainProgram, currentSearchedHeader.eventFileID);
+                                statusLabel.Text = $"Opened Event File {currentSearchedHeader.eventFileID}";
+                                break;
+                            case "Text Archive ID":
+                                EditorPanels.textEditor.OpenTextEditor(mainProgram, currentSearchedHeader.textArchiveID, null);
+                                statusLabel.Text = $"Opened Text Archive {currentSearchedHeader.textArchiveID}";
+                                break;
+                            case "Header ID":
+                                EditorPanels.headerEditor.OpenHeaderEditor(mainProgram, currentSearchedHeader.ID);
+                                statusLabel.Text = $"Opened Header {currentSearchedHeader.ID}";
+                                break;
+                            default:
+                                Clipboard.SetText(headerInfoDataGridView.Rows[e.RowIndex].Cells[1].Value?.ToString() ?? "");
+                                statusLabel.Text = $"{property} value copied to clipboard";
+                                break;
+                        }
+                    }
+
+                    private void headerWarpsDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        int eventFileId = (int)headerWarpsDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        int warpIndex = (int)headerWarpsDataGridView.Rows[e.RowIndex].Cells[1].Value;
+
+                        bool shiftHeld = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+
+                        if (shiftHeld)
+                        {
+                            // Shift+Double-click: Open Event Editor
+                            var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                            if (mainProgram != null)
+                            {
+                                EditorPanels.eventEditor.OpenEventEditorWithWarp(mainProgram, eventFileId, warpIndex);
+                                statusLabel.Text = $"Opened Event File {eventFileId}, Warp {warpIndex}";
+                            }
+                            else
+                            {
+                                statusLabel.Text = "Could not find main window to open editor";
+                            }
+                        }
+                        else
+                        {
+                            // Double-click: Navigate to the source header (header that uses this event file)
+                            int? sourceHeader = FindHeaderByEventFileId(eventFileId);
+                            if (sourceHeader.HasValue)
+                            {
+                                int previousHeader = (int)headerIdNumericUpDown.Value;
+                                headerIdNumericUpDown.Value = sourceHeader.Value;
+                                SearchHeaderInfo();
+                                headerWatcherSubTabControl.SelectedTab = headerInfoSubTabPage;
+                                statusLabel.Text = $"Jumped from Header {previousHeader} ? Header {sourceHeader.Value} (via Event File {eventFileId})";
+                            }
+                            else
+                            {
+                                statusLabel.Text = $"Could not find header using Event File {eventFileId}";
+                            }
+                        }
+                    }
+
+                    private void headerOutgoingWarpsDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0 || currentSearchedHeader == null) return;
+
+                        int warpIndex = (int)headerOutgoingWarpsDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        int destHeader = (int)headerOutgoingWarpsDataGridView.Rows[e.RowIndex].Cells[2].Value;
+
+                        bool shiftHeld = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+
+                        if (shiftHeld)
+                        {
+                            // Shift+Double-click: Open Event Editor with this header's event file
+                            var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                            if (mainProgram != null)
+                            {
+                                EditorPanels.eventEditor.OpenEventEditorWithWarp(mainProgram, currentSearchedHeader.eventFileID, warpIndex);
+                                statusLabel.Text = $"Opened Event File {currentSearchedHeader.eventFileID}, Warp {warpIndex}";
+                            }
+                            else
+                            {
+                                statusLabel.Text = "Could not find main window to open editor";
+                            }
+                        }
+                        else
+                        {
+                            // Double-click: Navigate to the destination header
+                            int previousHeader = currentSearchedHeader.ID;
+                            headerIdNumericUpDown.Value = destHeader;
+                            SearchHeaderInfo();
+                            headerWatcherSubTabControl.SelectedTab = headerInfoSubTabPage;
+                            statusLabel.Text = $"Jumped from Header {previousHeader} ? Header {destHeader}";
+                        }
+                    }
+
+                    /// <summary>
+                    /// Finds a header that uses the specified event file ID.
+                    /// Returns the first matching header ID, or null if not found.
+                    /// </summary>
+                    private int? FindHeaderByEventFileId(int eventFileId)
+                    {
+                        int headerCount = RomInfo.GetHeaderCount();
+                        for (int i = 0; i < headerCount; i++)
+                        {
+                            try
+                            {
+                                var header = MapHeader.GetMapHeader((ushort)i);
+                                if (header != null && header.eventFileID == eventFileId)
+                                {
+                                    return i;
+                                }
+                            }
+                            catch
+                            {
+                                // Skip invalid headers
+                            }
+                        }
+                        return null;
+                    }
+
+                    #endregion
                 }
             }
