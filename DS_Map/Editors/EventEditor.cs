@@ -717,6 +717,18 @@ namespace DSPRE.Editors
             }
         }
 
+        public void OpenEventEditorWithWarp(MainProgram parent, int eventFileID, int warpIndex)
+        {
+            OpenEventEditor(parent, eventFileID);
+
+            // Select the Warps tab and the specific warp
+            eventsTabControl.SelectedTab = warpsTabPage;
+            if (warpIndex >= 0 && warpIndex < warpsListBox.Items.Count)
+            {
+                warpsListBox.SelectedIndex = warpIndex;
+            }
+        }
+
         public void SetupEventEditor(MainProgram parent, bool force = false)
         {
             if (eventEditorIsReady && !force) return;
