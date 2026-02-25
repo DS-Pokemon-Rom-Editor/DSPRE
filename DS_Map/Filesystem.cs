@@ -25,6 +25,22 @@ namespace DSPRE {
         public static string interiorBuildingModels => RomInfo.gameDirs[RomInfo.DirNames.interiorBuildingModels].unpackedDir;
         public static string exteriorBuildingModels => RomInfo.gameDirs[RomInfo.DirNames.exteriorBuildingModels].unpackedDir;
 
+        /// <summary>
+        /// Gets the path to the Bug Contest encounter file (HGSS only).
+        /// This is a single file, not a NARC.
+        /// Path in ROM filesystem: data/mushi/mushi_encount.bin
+        /// </summary>
+        public static string GetBugContestEncounterPath() {
+            return Path.Combine(RomInfo.dataPath, "data", "mushi", "mushi_encount.bin");
+        }
+
+        /// <summary>
+        /// Checks if the Bug Contest encounter file exists.
+        /// </summary>
+        public static bool BugContestEncounterFileExists() {
+            return File.Exists(GetBugContestEncounterPath());
+        }
+
         public static string GetBuildingModelsDirPath(bool interior) {
             if (interior) {
                 return interiorBuildingModels;

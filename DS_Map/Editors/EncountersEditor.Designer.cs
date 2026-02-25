@@ -34,15 +34,19 @@ namespace DSPRE.Editors
             this.headbuttEncounterEditor = new DSPRE.Editors.HeadbuttEncounterEditor();
             this.tabPageSafariZoneEditor = new System.Windows.Forms.TabPage();
             this.safariZoneEditor = new DSPRE.Editors.SafariZoneEditor();
+            this.tabPageBugContestEditor = new System.Windows.Forms.TabPage();
+            this.bugContestEncounterEditor = new DSPRE.Editors.BugContestEncounterEditor();
             this.tabControl.SuspendLayout();
             this.tabPageHeadbuttEditor.SuspendLayout();
             this.tabPageSafariZoneEditor.SuspendLayout();
+            this.tabPageBugContestEditor.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
             // 
             this.tabControl.Controls.Add(this.tabPageHeadbuttEditor);
             this.tabControl.Controls.Add(this.tabPageSafariZoneEditor);
+            this.tabControl.Controls.Add(this.tabPageBugContestEditor);
             this.tabControl.Location = new System.Drawing.Point(4, 4);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
@@ -90,6 +94,26 @@ namespace DSPRE.Editors
             this.safariZoneEditor.Size = new System.Drawing.Size(996, 341);
             this.safariZoneEditor.TabIndex = 1;
             // 
+            // tabPageBugContestEditor
+            // 
+            this.tabPageBugContestEditor.Controls.Add(this.bugContestEncounterEditor);
+            this.tabPageBugContestEditor.Location = new System.Drawing.Point(4, 22);
+            this.tabPageBugContestEditor.Name = "tabPageBugContestEditor";
+            this.tabPageBugContestEditor.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageBugContestEditor.Size = new System.Drawing.Size(1095, 628);
+            this.tabPageBugContestEditor.TabIndex = 2;
+            this.tabPageBugContestEditor.Text = "Bug Contest";
+            this.tabPageBugContestEditor.UseVisualStyleBackColor = true;
+            this.tabPageBugContestEditor.Enter += new System.EventHandler(this.tabPageBugContestEditor_Enter);
+            // 
+            // bugContestEncounterEditor
+            // 
+            this.bugContestEncounterEditor.bugContestEncounterEditorIsReady = false;
+            this.bugContestEncounterEditor.Location = new System.Drawing.Point(6, 6);
+            this.bugContestEncounterEditor.Name = "bugContestEncounterEditor";
+            this.bugContestEncounterEditor.Size = new System.Drawing.Size(700, 400);
+            this.bugContestEncounterEditor.TabIndex = 0;
+            // 
             // EncountersEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -100,6 +124,7 @@ namespace DSPRE.Editors
             this.tabControl.ResumeLayout(false);
             this.tabPageHeadbuttEditor.ResumeLayout(false);
             this.tabPageSafariZoneEditor.ResumeLayout(false);
+            this.tabPageBugContestEditor.ResumeLayout(false);
             this.ResumeLayout(false);
 
     }
@@ -111,5 +136,7 @@ namespace DSPRE.Editors
     private System.Windows.Forms.TabPage tabPageHeadbuttEditor;
     private System.Windows.Forms.TabPage tabPageSafariZoneEditor;
     public SafariZoneEditor safariZoneEditor;
+    private System.Windows.Forms.TabPage tabPageBugContestEditor;
+    public BugContestEncounterEditor bugContestEncounterEditor;
   }
 }
