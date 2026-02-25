@@ -26,5 +26,10 @@ namespace DSPRE.Editors
     {
       safariZoneEditor.SetupSafariZoneEditor();
     }
+
+    private void tabPageBugContestEditor_Enter(object sender, System.EventArgs e)
+    {
+      bugContestEncounterEditor.SetupBugContestEncounterEditor();
+    }
   }
 }

@@ -113,6 +113,12 @@
     <Compile Include="DSUtils\OverlayUtils.cs" />
     <Compile Include="DSUtils\TextConverter.cs" />
     <Compile Include="DSUtils\YamlUtils.cs" />
+    <Compile Include="Editors\BugContestEncounterEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Editors\BugContestEncounterEditor.Designer.cs">
+      <DependentUpon>BugContestEncounterEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\EggMoveEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -409,6 +415,7 @@
     <Compile Include="OffsetPictureBox.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ROMFiles\BugContestEncounterFile.cs" />
     <Compile Include="ROMFiles\EvolutionFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
@@ -557,6 +564,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\writeText.Designer.cs" />
+    <EmbeddedResource Include="Editors\BugContestEncounterEditor.resx">
+      <DependentUpon>BugContestEncounterEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Editors\EggMoveEditor.resx">
       <DependentUpon>EggMoveEditor.cs</DependentUpon>
     </EmbeddedResource>
