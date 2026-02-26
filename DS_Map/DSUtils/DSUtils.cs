@@ -354,7 +354,16 @@ namespace DSPRE {
             return true;
 
         }
-
+        
+        /// <summary>
+        /// Determines the type of folder based on the presence of specific configuration files.
+        /// </summary>
+        /// <remarks>This method checks for the existence of specific files to classify the folder type.
+        /// It is important to ensure that the provided path is valid and accessible.</remarks>
+        /// <param name="folderPath">The path to the folder to be checked. Must be a valid directory path.</param>
+        /// <returns>Returns 0 if the folder contains a 'config.yaml' file, indicating it is a dsrom folder; returns 1 if it
+        /// contains a 'header.bin' file, indicating it is a ndstool folder; returns -1 if the folder does not exist or
+        /// does not match either type.</returns>
         public static int GetFolderType(string folderPath)
         {
             if (!Directory.Exists(folderPath))
