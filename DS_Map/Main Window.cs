@@ -457,40 +457,56 @@ namespace DSPRE
         /// </returns>
         private int UnpackRomCheckUserChoice(string romDir)
         {
-            switch (DSUtils.GetFolderType(romDir))
+            int folderType = DSUtils.GetFolderType(romDir);
+
+            // No valid extracted data found, proceed with unpacking
+            if (folderType == -1) { return  -1; };
+
+            DialogResult extract;
+
+            // Assumed to be a ds-rom folder
+            if (folderType == 0)
             {
-                case -1:
-                    return -1; // Do nothing case
-                case 0:
-                    MessageBox.Show("Extracted data of this ROM is not yet supported.\n" +
-                        "Loading will be aborted.", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return 0; //user wants to abort loading
-                case 1:
-                    DialogResult d2 = MessageBox.Show("Extracted data of this ROM has been found.\n" +
-                        "Do you want to load it?", "Extracted data detected", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-
-                    if (d2 == DialogResult.Cancel)
-                    {
-                        return 0; //user wants to abort loading
-                    }
-                    else if (d2 == DialogResult.Yes)
-                    {
-                        return 1; //user wants to load data
-                    }
-
-                    DialogResult nd2 = MessageBox.Show("All data of this ROM will be re-extracted. Proceed?\n",
-                        "Existing data will be deleted", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                    if (nd2 == DialogResult.Yes)
-                    {
-                        return 2; //user wants to re-extract data
-                    }
-
-                    return 0; //user wants to abort loading
-                default:
-                    return -1; // Do nothing case
-
+                extract = MessageBox.Show("Extracted data of this ROM has been found.\n" +
+                    "Do you want to load it?", "Extracted data detected", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
             }
+            // Assumed to be a ndstool folder
+            else if (folderType == 1)
+            {
+                extract = MessageBox.Show("Extracted data of this ROM has been found, but it is of legacy type (extracted with a version of DSPRE prior to 1.15.0).\n" +
+                    "Do you want to load it?", "Extracted data detected", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            }
+            // Should never occur
+            else
+            {
+                AppLogger.Error("Unexpected folder type detected in UnpackRomCheckUserChoice: " + folderType);
+                return 0;
+            }
+
+            if (extract == DialogResult.Cancel)
+            {
+                return 0; // User wants to abort loading
+            }
+            else if (extract == DialogResult.Yes)
+            {
+                return 1; // User wants to load data
+            }
+            else if (extract == DialogResult.No)
+            {
+                extract = MessageBox.Show("All data of this ROM will be re-extracted. Proceed?\n",
+                    "Existing data will be deleted", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (extract == DialogResult.Yes)
+                {
+                    return 2; // User wants to re-extract data
+                }
+
+                return 0; // Abort loading if user doesn't confirm re-extraction
+            }
+
+            AppLogger.Error("Unexpected user choice in UnpackRomCheckUserChoice: " + extract);
+            return 0;
+
         }
         #endregion
 
