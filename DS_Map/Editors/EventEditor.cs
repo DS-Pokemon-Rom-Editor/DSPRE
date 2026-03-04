@@ -744,7 +744,15 @@ namespace DSPRE.Editors
 
             if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
             {
-                selectEventComboBox.SelectedIndex = eventFileID;
+                // Re-opening the same Event File from another header would not
+                // trigger SelectedIndexChanged. Force-load with the new header
+                // context so Movement Editor defaults to that header's Script File.
+                if (selectEventComboBox.SelectedIndex != eventFileID)
+                {
+                    selectEventComboBox.SelectedIndex = eventFileID;
+                }
+                ChangeLoadedEventFile(eventFileID, preferredHeaderId ?? 0);
+                PrimeMovementEditorContext();
             }
 
             if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))

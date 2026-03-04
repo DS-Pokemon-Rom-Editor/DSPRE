@@ -721,22 +721,8 @@ namespace DSPRE.Editors
             if (_parent == null || selectEventComboBox == null || selectEventComboBox.SelectedIndex < 0)
                 return (current, related);
 
-            ushort currentHeaderId;
-            if (_preferredMovementHeaderId.HasValue)
-            {
-                currentHeaderId = _preferredMovementHeaderId.Value;
-                MapHeader preferred = LoadHeaderById(currentHeaderId);
-                if (preferred == null || preferred.eventFileID != selectEventComboBox.SelectedIndex)
-                {
-                    _preferredMovementHeaderId = null;
-                    if (!_parent.eventToHeader.TryGetValue((ushort)selectEventComboBox.SelectedIndex, out currentHeaderId))
-                        return (current, related);
-                }
-            }
-            else if (!_parent.eventToHeader.TryGetValue((ushort)selectEventComboBox.SelectedIndex, out currentHeaderId))
-            {
+            if (!TryResolveMovementHeaderForCurrentEvent(out ushort currentHeaderId))
                 return (current, related);
-            }
 
             MapHeader currentHeader = LoadHeaderById(currentHeaderId);
             if (currentHeader != null)
@@ -755,6 +741,47 @@ namespace DSPRE.Editors
             if (current >= 0)
                 related.Remove(current);
             return (current, related);
+        }
+
+        private bool TryResolveMovementHeaderForCurrentEvent(out ushort headerId)
+        {
+            headerId = 0;
+            if (_parent == null || selectEventComboBox == null || selectEventComboBox.SelectedIndex < 0)
+                return false;
+
+            int eventFileId = selectEventComboBox.SelectedIndex;
+
+            // Highest priority: explicit header context from Header Editor -> Open Events.
+            if (_preferredMovementHeaderId.HasValue)
+            {
+                ushort preferredId = _preferredMovementHeaderId.Value;
+                MapHeader preferred = LoadHeaderById(preferredId);
+                if (preferred != null && preferred.eventFileID == eventFileId)
+                {
+                    headerId = preferredId;
+                    return true;
+                }
+
+                // Stale preferred context (different event file or invalid header).
+                _preferredMovementHeaderId = null;
+            }
+
+            // Default behavior: pick the first header associated with this Event File.
+            if (EditorPanels.headerEditor?.internalNames != null)
+            {
+                for (ushort i = 0; i < EditorPanels.headerEditor.internalNames.Count; i++)
+                {
+                    MapHeader header = LoadHeaderById(i);
+                    if (header != null && header.eventFileID == eventFileId)
+                    {
+                        headerId = i;
+                        return true;
+                    }
+                }
+            }
+
+            // Fallback for legacy cases where a precomputed mapping exists.
+            return _parent.eventToHeader.TryGetValue((ushort)eventFileId, out headerId);
         }
 
         private static MapHeader LoadHeaderById(ushort headerId)
@@ -1925,19 +1952,7 @@ namespace DSPRE.Editors
         private void SetMovementScriptFileFromCurrentEventHeader()
         {
             if (_parent == null || currentEvFile == null || selectEventComboBox == null) return;
-            ushort headerID;
-            if (_preferredMovementHeaderId.HasValue)
-            {
-                headerID = _preferredMovementHeaderId.Value;
-                MapHeader preferred = LoadHeaderById(headerID);
-                if (preferred == null || preferred.eventFileID != selectEventComboBox.SelectedIndex)
-                {
-                    _preferredMovementHeaderId = null;
-                    if (!_parent.eventToHeader.TryGetValue((ushort)selectEventComboBox.SelectedIndex, out headerID))
-                        return;
-                }
-            }
-            else if (!_parent.eventToHeader.TryGetValue((ushort)selectEventComboBox.SelectedIndex, out headerID))
+            if (!TryResolveMovementHeaderForCurrentEvent(out ushort headerID))
                 return;
             MapHeader header;
             try
