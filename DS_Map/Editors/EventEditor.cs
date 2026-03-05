@@ -338,13 +338,52 @@ namespace DSPRE.Editors
             eventPictureBox.Invalidate();
         }
 
+        /// <summary>
+        /// Clips a segment in global tile coordinates to the current map cell and returns the segment in local tile coordinates, or null if no intersection.
+        /// </summary>
+        private static (int lx1, int ly1, int lx2, int ly2)? ClipSegmentToCell(int gx1, int gy1, int gx2, int gy2, int cellMinX, int cellMinY, int cellMaxX, int cellMaxY)
+        {
+            double dx = gx2 - gx1;
+            double dy = gy2 - gy1;
+            double t0 = 0.0;
+            double t1 = 1.0;
+
+            double p1 = -dx, q1 = gx1 - cellMinX;
+            double p2 = dx, q2 = cellMaxX - gx1;
+            double p3 = -dy, q3 = gy1 - cellMinY;
+            double p4 = dy, q4 = cellMaxY - gy1;
+
+            if (Math.Abs(p1) < 1e-9) { if (q1 < 0) return null; } else { double t = q1 / p1; if (p1 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p2) < 1e-9) { if (q2 < 0) return null; } else { double t = q2 / p2; if (p2 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p3) < 1e-9) { if (q3 < 0) return null; } else { double t = q3 / p3; if (p3 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p4) < 1e-9) { if (q4 < 0) return null; } else { double t = q4 / p4; if (p4 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+
+            if (t0 > t1) return null;
+
+            int lx1 = (int)Math.Round(gx1 + t0 * dx) - cellMinX;
+            int ly1 = (int)Math.Round(gy1 + t0 * dy) - cellMinY;
+            int lx2 = (int)Math.Round(gx1 + t1 * dx) - cellMinX;
+            int ly2 = (int)Math.Round(gy1 + t1 * dy) - cellMinY;
+            return (lx1, ly1, lx2, ly2);
+        }
+
         private void DrawMovementPreviewOverlay(Graphics g)
         {
             if (_previewPathTiles == null || _previewPathTiles.Count == 0) return;
+            if (eventMatrixXUpDown == null || eventMatrixYUpDown == null) return;
+
+            int cellX = (int)eventMatrixXUpDown.Value;
+            int cellY = (int)eventMatrixYUpDown.Value;
+            int cellMinX = cellX * MapFile.mapSize;
+            int cellMinY = cellY * MapFile.mapSize;
+            int cellMaxX = cellMinX + MapFile.mapSize - 1;
+            int cellMaxY = cellMinY + MapFile.mapSize - 1;
+
             bool showPath = movementShowPathCheckBox?.Checked ?? true;
             bool showMarkers = movementShowMarkersCheckBox?.Checked ?? true;
             int ts = tileSize + 1;
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
             if (showPath)
             {
                 using (var basePen = new Pen(Color.White, 3f))
@@ -354,16 +393,25 @@ namespace DSPRE.Editors
                     {
                         foreach (var segment in _previewPathSegments)
                         {
+                            var clipped = ClipSegmentToCell(segment.x1, segment.y1, segment.x2, segment.y2, cellMinX, cellMinY, cellMaxX, cellMaxY);
+                            if (clipped == null) continue;
                             var pen = _previewSelectedCommandRows.Contains(segment.commandRow) ? selectedPen : basePen;
-                            Point start = new Point(segment.x1 * ts + ts / 2, segment.y1 * ts + ts / 2);
-                            Point end = new Point(segment.x2 * ts + ts / 2, segment.y2 * ts + ts / 2);
+                            Point start = new Point(clipped.Value.lx1 * ts + ts / 2, clipped.Value.ly1 * ts + ts / 2);
+                            Point end = new Point(clipped.Value.lx2 * ts + ts / 2, clipped.Value.ly2 * ts + ts / 2);
                             g.DrawLine(pen, start, end);
                         }
                     }
                     else if (_previewPathTiles.Count >= 2)
                     {
-                        var points = _previewPathTiles.Select(p => new Point(p.x * ts + ts / 2, p.y * ts + ts / 2)).ToArray();
-                        g.DrawLines(basePen, points);
+                        var points = new List<Point>();
+                        for (int i = 0; i < _previewPathTiles.Count; i++)
+                        {
+                            var p = _previewPathTiles[i];
+                            if (p.x >= cellMinX && p.x <= cellMaxX && p.y >= cellMinY && p.y <= cellMaxY)
+                                points.Add(new Point((p.x - cellMinX) * ts + ts / 2, (p.y - cellMinY) * ts + ts / 2));
+                        }
+                        if (points.Count >= 2)
+                            g.DrawLines(basePen, points.ToArray());
                     }
                 }
             }
@@ -373,25 +421,37 @@ namespace DSPRE.Editors
                 using (var brush = new SolidBrush(Color.White))
                 using (var outlineBrush = new SolidBrush(Color.Black))
                 {
-                    // Show anchor as step 0.
-                    if (_previewAnchorX.HasValue && _previewAnchorY.HasValue)
+                    if (_previewAnchorX.HasValue && _previewAnchorY.HasValue &&
+                        _previewAnchorX.Value >= cellMinX && _previewAnchorX.Value <= cellMaxX &&
+                        _previewAnchorY.Value >= cellMinY && _previewAnchorY.Value <= cellMaxY)
                     {
-                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, _previewAnchorX.Value, _previewAnchorY.Value, "0");
+                        int lax = _previewAnchorX.Value - cellMinX;
+                        int lay = _previewAnchorY.Value - cellMinY;
+                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, lax, lay, "0");
                     }
 
                     int lastCommandIndex = _previewCommandMarkers.Count > 0 ? _previewCommandMarkers[_previewCommandMarkers.Count - 1].commandIndex : 0;
                     foreach (var marker in _previewCommandMarkers)
                     {
-                        // Front marker number is drawn separately so it stays visually in front of the destination square.
                         if (marker.commandIndex == lastCommandIndex)
                             continue;
-                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, marker.x, marker.y, marker.commandIndex.ToString());
+                        if (marker.x >= cellMinX && marker.x <= cellMaxX && marker.y >= cellMinY && marker.y <= cellMaxY)
+                        {
+                            int lx = marker.x - cellMinX;
+                            int ly = marker.y - cellMinY;
+                            DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, marker.commandIndex.ToString());
+                        }
                     }
 
-                    if (lastCommandIndex > 0)
+                    if (lastCommandIndex > 0 && _previewPathTiles.Count > 0)
                     {
                         var last = _previewPathTiles[_previewPathTiles.Count - 1];
-                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, last.x, last.y, lastCommandIndex.ToString());
+                        if (last.x >= cellMinX && last.x <= cellMaxX && last.y >= cellMinY && last.y <= cellMaxY)
+                        {
+                            int lx = last.x - cellMinX;
+                            int ly = last.y - cellMinY;
+                            DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, lastCommandIndex.ToString());
+                        }
                     }
                 }
             }
@@ -400,20 +460,31 @@ namespace DSPRE.Editors
         private void DrawMovementPreviewFrontSquare(Graphics g, bool drawNumber)
         {
             bool showGhost = movementShowGhostCheckBox?.Checked ?? true;
-            if (!showGhost || _previewPathTiles == null || _previewPathTiles.Count == 0)
+            if (!showGhost || _previewPathTiles == null || _previewPathTiles.Count == 0 || eventMatrixXUpDown == null || eventMatrixYUpDown == null)
                 return;
 
-            int ts = tileSize + 1;
-            var last = _previewPathTiles[_previewPathTiles.Count - 1];
-            int gx = last.x * ts;
-            int gy = last.y * ts;
+            int cellX = (int)eventMatrixXUpDown.Value;
+            int cellY = (int)eventMatrixYUpDown.Value;
+            int cellMinX = cellX * MapFile.mapSize;
+            int cellMinY = cellY * MapFile.mapSize;
+            int cellMaxX = cellMinX + MapFile.mapSize - 1;
+            int cellMaxY = cellMinY + MapFile.mapSize - 1;
 
-            // Yellow destination square with 75% opacity.
+            var last = _previewPathTiles[_previewPathTiles.Count - 1];
+            if (last.x < cellMinX || last.x > cellMaxX || last.y < cellMinY || last.y > cellMaxY)
+                return;
+
+            int lx = last.x - cellMinX;
+            int ly = last.y - cellMinY;
+            int ts = tileSize + 1;
+            int px = lx * ts;
+            int py = ly * ts;
+
             using (var fill = new SolidBrush(Color.FromArgb(192, Color.Yellow)))
             using (var border = new Pen(Color.FromArgb(220, Color.DarkGoldenrod), 2f))
             {
-                g.FillRectangle(fill, gx, gy - 1, ts, ts);
-                g.DrawRectangle(border, gx, gy - 1, ts, ts);
+                g.FillRectangle(fill, px + 2, py + 2, ts - 4, ts - 4);
+                g.DrawRectangle(border, px + 2, py + 2, ts - 5, ts - 5);
             }
 
             if (drawNumber)
@@ -425,7 +496,7 @@ namespace DSPRE.Editors
                     using (var brush = new SolidBrush(Color.White))
                     using (var outlineBrush = new SolidBrush(Color.Black))
                     {
-                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, last.x, last.y, lastCommandIndex.ToString());
+                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, lastCommandIndex.ToString());
                     }
                 }
             }

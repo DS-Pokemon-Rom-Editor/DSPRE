@@ -86,6 +86,8 @@ namespace DSPRE.Editors
         private int _pendingScriptSelectionId = -1;
         private int _pendingActionSelectionIndex = -1;
         private bool _suppressMovementSelectionEvents;
+        private int? _placeholderAnchorMatrixX;
+        private int? _placeholderAnchorMatrixY;
 
         #endregion
 
@@ -1559,7 +1561,14 @@ namespace DSPRE.Editors
                 if (ReferenceEquals(sender, OverworldPointerCheckBox) && OverworldPointerCheckBox.Checked)
                     PlaceholderPointerCheckBox.Checked = false;
                 else if (ReferenceEquals(sender, PlaceholderPointerCheckBox) && PlaceholderPointerCheckBox.Checked)
+                {
                     OverworldPointerCheckBox.Checked = false;
+                    if (eventMatrixXUpDown != null && eventMatrixYUpDown != null)
+                    {
+                        _placeholderAnchorMatrixX = (int)eventMatrixXUpDown.Value;
+                        _placeholderAnchorMatrixY = (int)eventMatrixYUpDown.Value;
+                    }
+                }
             }
             finally
             {
@@ -1574,6 +1583,11 @@ namespace DSPRE.Editors
         {
             if (_suppressMovementSelectionEvents)
                 return;
+            if (PlaceholderPointerCheckBox?.Checked == true && eventMatrixXUpDown != null && eventMatrixYUpDown != null)
+            {
+                _placeholderAnchorMatrixX = (int)eventMatrixXUpDown.Value;
+                _placeholderAnchorMatrixY = (int)eventMatrixYUpDown.Value;
+            }
             ComputeMovementPreviewPath();
             DisplayActiveEvents();
         }
@@ -2061,6 +2075,69 @@ namespace DSPRE.Editors
             return anchor;
         }
 
+        /// <summary>
+        /// Returns the path anchor in global (matrix) coordinates for continuous path across cells.
+        /// </summary>
+        private (int gax, int gay)? GetMovementPreviewAnchorGlobal()
+        {
+            bool useOverworld = OverworldPointerCheckBox?.Checked ?? false;
+            bool usePlaceholder = PlaceholderPointerCheckBox?.Checked ?? false;
+            int mapSize = MapFile.mapSize;
+
+            if (useOverworld && movementOverworldIdComboBox != null && movementOverworldIdComboBox.SelectedIndex >= 0 && currentEvFile?.overworlds != null)
+            {
+                int idx = movementOverworldIdComboBox.SelectedIndex;
+                if (idx < currentEvFile.overworlds.Count)
+                {
+                    var ow = currentEvFile.overworlds[idx];
+                    if (ow != null)
+                    {
+                        int gax = ow.xMatrixPosition * mapSize + ow.xMapPosition;
+                        int gay = ow.yMatrixPosition * mapSize + ow.yMapPosition;
+                        return (gax, gay);
+                    }
+                }
+            }
+            if (usePlaceholder && PointerXUpDown != null && PointerYUpDown != null && eventMatrixXUpDown != null && eventMatrixYUpDown != null)
+            {
+                int mx = _placeholderAnchorMatrixX ?? (int)eventMatrixXUpDown.Value;
+                int my = _placeholderAnchorMatrixY ?? (int)eventMatrixYUpDown.Value;
+                if (!_placeholderAnchorMatrixX.HasValue)
+                {
+                    _placeholderAnchorMatrixX = (int)eventMatrixXUpDown.Value;
+                    _placeholderAnchorMatrixY = (int)eventMatrixYUpDown.Value;
+                    mx = _placeholderAnchorMatrixX.Value;
+                    my = _placeholderAnchorMatrixY.Value;
+                }
+                int gax = mx * mapSize + (int)PointerXUpDown.Value;
+                int gay = my * mapSize + (int)PointerYUpDown.Value;
+                return (gax, gay);
+            }
+            if (useOverworld && selectedEvent is Overworld fallbackOw && currentEvFile?.overworlds != null)
+            {
+                int idx = currentEvFile.overworlds.IndexOf(fallbackOw);
+                if (idx >= 0)
+                {
+                    var ow = currentEvFile.overworlds[idx];
+                    int gax = ow.xMatrixPosition * mapSize + ow.xMapPosition;
+                    int gay = ow.yMatrixPosition * mapSize + ow.yMapPosition;
+                    return (gax, gay);
+                }
+            }
+            if (selectedEvent is Overworld ow2 && currentEvFile?.overworlds != null)
+            {
+                int idx = currentEvFile.overworlds.IndexOf(ow2);
+                if (idx >= 0)
+                {
+                    var ow = currentEvFile.overworlds[idx];
+                    int gax = ow.xMatrixPosition * mapSize + ow.xMapPosition;
+                    int gay = ow.yMatrixPosition * mapSize + ow.yMapPosition;
+                    return (gax, gay);
+                }
+            }
+            return null;
+        }
+
         private void SaveMovementEditorSessionState()
         {
             _sessionMovementSet = movementSetComboBox?.SelectedItem?.ToString();
@@ -2125,15 +2202,15 @@ namespace DSPRE.Editors
             _previewPathTiles.Clear();
             _previewCommandMarkers.Clear();
             _previewPathSegments.Clear();
-            var anchor = GetMovementPreviewAnchor();
-            if (anchor == null) { _previewAnchorX = _previewAnchorY = null; return; }
-            _previewAnchorX = anchor.Value.x;
-            _previewAnchorY = anchor.Value.y;
+            var anchorGlobal = GetMovementPreviewAnchorGlobal();
+            if (anchorGlobal == null) { _previewAnchorX = _previewAnchorY = null; return; }
+            _previewAnchorX = anchorGlobal.Value.gax;
+            _previewAnchorY = anchorGlobal.Value.gay;
             var container = GetCurrentActionContainer();
             if (container == null) return;
             var map = MovementDirectionDeltaMap.Get();
-            int x = anchor.Value.x, y = anchor.Value.y;
-            _previewPathTiles.Add((x, y));
+            int gx = anchorGlobal.Value.gax, gy = anchorGlobal.Value.gay;
+            _previewPathTiles.Add((gx, gy));
             int commandIndex = 1;
             foreach (var cmd in container.commands)
             {
@@ -2143,15 +2220,15 @@ namespace DSPRE.Editors
                 {
                     for (int i = 0; i < n; i++)
                     {
-                        int prevX = x;
-                        int prevY = y;
-                        x += delta.dx;
-                        y += delta.dy;
-                        _previewPathSegments.Add((prevX, prevY, x, y, commandIndex - 1));
-                        _previewPathTiles.Add((x, y));
+                        int prevGx = gx;
+                        int prevGy = gy;
+                        gx += delta.dx;
+                        gy += delta.dy;
+                        _previewPathSegments.Add((prevGx, prevGy, gx, gy, commandIndex - 1));
+                        _previewPathTiles.Add((gx, gy));
                     }
                 }
-                _previewCommandMarkers.Add((x, y, commandIndex));
+                _previewCommandMarkers.Add((gx, gy, commandIndex));
                 commandIndex++;
             }
         }
