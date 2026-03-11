@@ -121,16 +121,20 @@
     <value>Bug Catching Contest encounters for HeartGold/SoulSilver.
 
 The game uses 4 sets of 10 encounters each:
-- Set 0: Without National Dex (always), or with National Dex on Sun/Mon
+- Set 0: Without National Dex (always), or Sun/Mon
 - Set 1: With National Dex on Tuesday/Wednesday
 - Set 2: With National Dex on Thursday/Friday
 - Set 3: With National Dex on Saturday
 
-Fields:
-- Species: The Pokemon that can appear
-- Min/Max Level: Level range when encountered
-- Rate: Encounter rate weight (higher = more common)
-- Score: Base score value for judging
+Rate System (threshold-based, not percentage!):
+Game rolls 0-99, checks entries top-to-bottom.
+First entry where roll &gt;= rate is selected.
+Click the [?] button for a full explanation.
+
+Score: Base score added to level/HP/IV bonuses.
+
+Watch for duplicate or ascending rates - 
+they can cause entries to never trigger!
 
 File: data/mushi/mushi_encount.bin</value>
   </data>

@@ -35,11 +35,13 @@ namespace DSPRE.Editors {
             this.numericUpDownMaxLevel = new System.Windows.Forms.NumericUpDown();
             this.labelRate = new System.Windows.Forms.Label();
             this.numericUpDownRate = new System.Windows.Forms.NumericUpDown();
+            this.buttonRateHelp = new System.Windows.Forms.Button();
+            this.labelEffectiveRate = new System.Windows.Forms.Label();
+            this.labelRateWarning = new System.Windows.Forms.Label();
             this.labelScore = new System.Windows.Forms.Label();
             this.numericUpDownScore = new System.Windows.Forms.NumericUpDown();
             this.labelDummy = new System.Windows.Forms.Label();
             this.numericUpDownDummy = new System.Windows.Forms.NumericUpDown();
-            this.labelDummyInfo = new System.Windows.Forms.Label();
             this.buttonSave = new System.Windows.Forms.Button();
             this.buttonExport = new System.Windows.Forms.Button();
             this.buttonImport = new System.Windows.Forms.Button();
@@ -157,7 +159,7 @@ namespace DSPRE.Editors {
             this.listBoxEncounters.FormattingEnabled = true;
             this.listBoxEncounters.Location = new System.Drawing.Point(6, 19);
             this.listBoxEncounters.Name = "listBoxEncounters";
-            this.listBoxEncounters.Size = new System.Drawing.Size(288, 368);
+            this.listBoxEncounters.Size = new System.Drawing.Size(288, 407);
             this.listBoxEncounters.TabIndex = 0;
             this.listBoxEncounters.SelectedIndexChanged += new System.EventHandler(this.listBoxEncounters_SelectedIndexChanged);
             // 
@@ -174,6 +176,7 @@ namespace DSPRE.Editors {
             this.buttonAdd.Text = "Add";
             this.buttonAdd.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.buttonAdd.UseVisualStyleBackColor = true;
+            this.buttonAdd.Visible = false;
             // 
             // buttonRemove
             // 
@@ -188,6 +191,7 @@ namespace DSPRE.Editors {
             this.buttonRemove.Text = "Remove";
             this.buttonRemove.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.buttonRemove.UseVisualStyleBackColor = true;
+            this.buttonRemove.Visible = false;
             // 
             // groupBoxDetails
             // 
@@ -200,11 +204,13 @@ namespace DSPRE.Editors {
             this.groupBoxDetails.Controls.Add(this.numericUpDownMaxLevel);
             this.groupBoxDetails.Controls.Add(this.labelRate);
             this.groupBoxDetails.Controls.Add(this.numericUpDownRate);
+            this.groupBoxDetails.Controls.Add(this.buttonRateHelp);
+            this.groupBoxDetails.Controls.Add(this.labelEffectiveRate);
+            this.groupBoxDetails.Controls.Add(this.labelRateWarning);
             this.groupBoxDetails.Controls.Add(this.labelScore);
             this.groupBoxDetails.Controls.Add(this.numericUpDownScore);
             this.groupBoxDetails.Controls.Add(this.labelDummy);
             this.groupBoxDetails.Controls.Add(this.numericUpDownDummy);
-            this.groupBoxDetails.Controls.Add(this.labelDummyInfo);
             this.groupBoxDetails.Location = new System.Drawing.Point(312, 6);
             this.groupBoxDetails.Name = "groupBoxDetails";
             this.groupBoxDetails.Size = new System.Drawing.Size(280, 270);
@@ -234,7 +240,8 @@ namespace DSPRE.Editors {
             // 
             // comboBoxSpecies
             // 
-            this.comboBoxSpecies.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxSpecies.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.comboBoxSpecies.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.comboBoxSpecies.FormattingEnabled = true;
             this.comboBoxSpecies.Location = new System.Drawing.Point(75, 19);
             this.comboBoxSpecies.Name = "comboBoxSpecies";
@@ -309,7 +316,7 @@ namespace DSPRE.Editors {
             // 
             this.numericUpDownRate.Location = new System.Drawing.Point(75, 104);
             this.numericUpDownRate.Maximum = new decimal(new int[] {
-            255,
+            99,
             0,
             0,
             0});
@@ -317,6 +324,35 @@ namespace DSPRE.Editors {
             this.numericUpDownRate.Size = new System.Drawing.Size(60, 20);
             this.numericUpDownRate.TabIndex = 7;
             this.numericUpDownRate.ValueChanged += new System.EventHandler(this.numericUpDownRate_ValueChanged);
+            // 
+            // buttonRateHelp
+            // 
+            this.buttonRateHelp.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
+            this.buttonRateHelp.Location = new System.Drawing.Point(141, 102);
+            this.buttonRateHelp.Name = "buttonRateHelp";
+            this.buttonRateHelp.Size = new System.Drawing.Size(24, 24);
+            this.buttonRateHelp.TabIndex = 15;
+            this.buttonRateHelp.Text = "?";
+            this.buttonRateHelp.UseVisualStyleBackColor = true;
+            this.buttonRateHelp.Click += new System.EventHandler(this.buttonRateHelp_Click);
+            // 
+            // labelEffectiveRate
+            // 
+            this.labelEffectiveRate.AutoSize = true;
+            this.labelEffectiveRate.ForeColor = System.Drawing.Color.DarkGreen;
+            this.labelEffectiveRate.Location = new System.Drawing.Point(172, 107);
+            this.labelEffectiveRate.Name = "labelEffectiveRate";
+            this.labelEffectiveRate.Size = new System.Drawing.Size(76, 13);
+            this.labelEffectiveRate.TabIndex = 16;
+            this.labelEffectiveRate.Text = "Effective: ~0%";
+            // 
+            // labelRateWarning
+            // 
+            this.labelRateWarning.ForeColor = System.Drawing.Color.DarkRed;
+            this.labelRateWarning.Location = new System.Drawing.Point(6, 227);
+            this.labelRateWarning.Name = "labelRateWarning";
+            this.labelRateWarning.Size = new System.Drawing.Size(268, 40);
+            this.labelRateWarning.TabIndex = 17;
             // 
             // labelScore
             // 
@@ -362,16 +398,6 @@ namespace DSPRE.Editors {
             this.numericUpDownDummy.Name = "numericUpDownDummy";
             this.numericUpDownDummy.Size = new System.Drawing.Size(80, 20);
             this.numericUpDownDummy.TabIndex = 11;
-            // 
-            // labelDummyInfo
-            // 
-            this.labelDummyInfo.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.labelDummyInfo.Location = new System.Drawing.Point(6, 195);
-            this.labelDummyInfo.Name = "labelDummyInfo";
-            this.labelDummyInfo.Size = new System.Drawing.Size(268, 70);
-            this.labelDummyInfo.TabIndex = 13;
-            this.labelDummyInfo.Text = "* We believe this to be simply the \'end of encounter data\' terminator. Its exact " +
-    "purpose is not fully researched, but it may be relevant in future discoveries.";
             // 
             // buttonSave
             // 
@@ -471,11 +497,13 @@ namespace DSPRE.Editors {
         private System.Windows.Forms.NumericUpDown numericUpDownMaxLevel;
         private System.Windows.Forms.Label labelRate;
         private System.Windows.Forms.NumericUpDown numericUpDownRate;
+        private System.Windows.Forms.Button buttonRateHelp;
+        private System.Windows.Forms.Label labelEffectiveRate;
+        private System.Windows.Forms.Label labelRateWarning;
         private System.Windows.Forms.Label labelScore;
         private System.Windows.Forms.NumericUpDown numericUpDownScore;
         private System.Windows.Forms.Label labelDummy;
         private System.Windows.Forms.NumericUpDown numericUpDownDummy;
-        private System.Windows.Forms.Label labelDummyInfo;
         private System.Windows.Forms.Button buttonSave;
         private System.Windows.Forms.Button buttonExport;
         private System.Windows.Forms.Button buttonImport;
