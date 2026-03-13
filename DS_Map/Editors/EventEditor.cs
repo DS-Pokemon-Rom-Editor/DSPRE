@@ -1,4 +1,4 @@
-﻿using DSPRE.Resources;
+using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using Ekona.Images.Formats;
 using LibNDSFormats.NSBMD;
@@ -27,6 +27,7 @@ namespace DSPRE.Editors
         public EventEditor()
         {
             InitializeComponent();
+            EnsureMovementEditorTab();
         }
 
         #region Event Editor
@@ -42,6 +43,7 @@ namespace DSPRE.Editors
         public const byte tileSize = 16;
         public EventFile currentEvFile;
         public Event selectedEvent;
+        private ushort? _preferredMovementHeaderId;
 
         /* Painters to draw the matrix grid */
         public Pen eventPen;
@@ -224,6 +226,12 @@ namespace DSPRE.Editors
             using (Graphics g = Graphics.FromImage(eventPictureBox.Image))
             {
                 Bitmap icon;
+                bool drawMovementPreview = movementEditorTabPage != null &&
+                    eventsTabControl.SelectedTab == movementEditorTabPage &&
+                    _previewPathTiles != null &&
+                    _previewPathTiles.Count > 0 &&
+                    _previewAnchorX.HasValue &&
+                    _previewAnchorY.HasValue;
 
                 /* Draw spawnables */
                 if (showSpawnablesCheckBox.Checked)
@@ -243,6 +251,12 @@ namespace DSPRE.Editors
                             }
                         }
                     }
+                }
+
+                // Draw destination square before overworld sprites so sprites appear above it.
+                if (drawMovementPreview)
+                {
+                    DrawMovementPreviewFrontSquare(g, drawNumber: false);
                 }
 
                 /* Draw overworlds */
@@ -313,9 +327,194 @@ namespace DSPRE.Editors
                         }
                     }
                 }
+
+                /* Movement Editor preview overlay */
+                if (drawMovementPreview)
+                {
+                    DrawMovementPreviewOverlay(g);
+                }
             }
 
             eventPictureBox.Invalidate();
+        }
+
+        /// <summary>
+        /// Clips a segment in global tile coordinates to the current map cell and returns the segment in local tile coordinates, or null if no intersection.
+        /// </summary>
+        private static (int lx1, int ly1, int lx2, int ly2)? ClipSegmentToCell(int gx1, int gy1, int gx2, int gy2, int cellMinX, int cellMinY, int cellMaxX, int cellMaxY)
+        {
+            double dx = gx2 - gx1;
+            double dy = gy2 - gy1;
+            double t0 = 0.0;
+            double t1 = 1.0;
+
+            double p1 = -dx, q1 = gx1 - cellMinX;
+            double p2 = dx, q2 = cellMaxX - gx1;
+            double p3 = -dy, q3 = gy1 - cellMinY;
+            double p4 = dy, q4 = cellMaxY - gy1;
+
+            if (Math.Abs(p1) < 1e-9) { if (q1 < 0) return null; } else { double t = q1 / p1; if (p1 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p2) < 1e-9) { if (q2 < 0) return null; } else { double t = q2 / p2; if (p2 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p3) < 1e-9) { if (q3 < 0) return null; } else { double t = q3 / p3; if (p3 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+            if (Math.Abs(p4) < 1e-9) { if (q4 < 0) return null; } else { double t = q4 / p4; if (p4 < 0) t0 = Math.Max(t0, t); else t1 = Math.Min(t1, t); }
+
+            if (t0 > t1) return null;
+
+            int lx1 = (int)Math.Round(gx1 + t0 * dx) - cellMinX;
+            int ly1 = (int)Math.Round(gy1 + t0 * dy) - cellMinY;
+            int lx2 = (int)Math.Round(gx1 + t1 * dx) - cellMinX;
+            int ly2 = (int)Math.Round(gy1 + t1 * dy) - cellMinY;
+            return (lx1, ly1, lx2, ly2);
+        }
+
+        private void DrawMovementPreviewOverlay(Graphics g)
+        {
+            if (_previewPathTiles == null || _previewPathTiles.Count == 0) return;
+            if (eventMatrixXUpDown == null || eventMatrixYUpDown == null) return;
+
+            int cellX = (int)eventMatrixXUpDown.Value;
+            int cellY = (int)eventMatrixYUpDown.Value;
+            int cellMinX = cellX * MapFile.mapSize;
+            int cellMinY = cellY * MapFile.mapSize;
+            int cellMaxX = cellMinX + MapFile.mapSize - 1;
+            int cellMaxY = cellMinY + MapFile.mapSize - 1;
+
+            bool showPath = movementShowPathCheckBox?.Checked ?? true;
+            bool showMarkers = movementShowMarkersCheckBox?.Checked ?? true;
+            int ts = tileSize + 1;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            if (showPath)
+            {
+                using (var basePen = new Pen(Color.White, 3f))
+                using (var selectedPen = new Pen(Color.Yellow, 3f))
+                {
+                    if (_previewPathSegments != null && _previewPathSegments.Count > 0)
+                    {
+                        foreach (var segment in _previewPathSegments)
+                        {
+                            var clipped = ClipSegmentToCell(segment.x1, segment.y1, segment.x2, segment.y2, cellMinX, cellMinY, cellMaxX, cellMaxY);
+                            if (clipped == null) continue;
+                            var pen = _previewSelectedCommandRows.Contains(segment.commandRow) ? selectedPen : basePen;
+                            Point start = new Point(clipped.Value.lx1 * ts + ts / 2, clipped.Value.ly1 * ts + ts / 2);
+                            Point end = new Point(clipped.Value.lx2 * ts + ts / 2, clipped.Value.ly2 * ts + ts / 2);
+                            g.DrawLine(pen, start, end);
+                        }
+                    }
+                    else if (_previewPathTiles.Count >= 2)
+                    {
+                        var points = new List<Point>();
+                        for (int i = 0; i < _previewPathTiles.Count; i++)
+                        {
+                            var p = _previewPathTiles[i];
+                            if (p.x >= cellMinX && p.x <= cellMaxX && p.y >= cellMinY && p.y <= cellMaxY)
+                                points.Add(new Point((p.x - cellMinX) * ts + ts / 2, (p.y - cellMinY) * ts + ts / 2));
+                        }
+                        if (points.Count >= 2)
+                            g.DrawLines(basePen, points.ToArray());
+                    }
+                }
+            }
+            if (showMarkers)
+            {
+                using (var font = new Font("Segoe UI", 12f, FontStyle.Bold))
+                using (var brush = new SolidBrush(Color.White))
+                using (var outlineBrush = new SolidBrush(Color.Black))
+                {
+                    if (_previewAnchorX.HasValue && _previewAnchorY.HasValue &&
+                        _previewAnchorX.Value >= cellMinX && _previewAnchorX.Value <= cellMaxX &&
+                        _previewAnchorY.Value >= cellMinY && _previewAnchorY.Value <= cellMaxY)
+                    {
+                        int lax = _previewAnchorX.Value - cellMinX;
+                        int lay = _previewAnchorY.Value - cellMinY;
+                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, lax, lay, "0");
+                    }
+
+                    int lastCommandIndex = _previewCommandMarkers.Count > 0 ? _previewCommandMarkers[_previewCommandMarkers.Count - 1].commandIndex : 0;
+                    foreach (var marker in _previewCommandMarkers)
+                    {
+                        if (marker.commandIndex == lastCommandIndex)
+                            continue;
+                        if (marker.x >= cellMinX && marker.x <= cellMaxX && marker.y >= cellMinY && marker.y <= cellMaxY)
+                        {
+                            int lx = marker.x - cellMinX;
+                            int ly = marker.y - cellMinY;
+                            DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, marker.commandIndex.ToString());
+                        }
+                    }
+
+                    if (lastCommandIndex > 0 && _previewPathTiles.Count > 0)
+                    {
+                        var last = _previewPathTiles[_previewPathTiles.Count - 1];
+                        if (last.x >= cellMinX && last.x <= cellMaxX && last.y >= cellMinY && last.y <= cellMaxY)
+                        {
+                            int lx = last.x - cellMinX;
+                            int ly = last.y - cellMinY;
+                            DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, lastCommandIndex.ToString());
+                        }
+                    }
+                }
+            }
+        }
+
+        private void DrawMovementPreviewFrontSquare(Graphics g, bool drawNumber)
+        {
+            bool showGhost = movementShowGhostCheckBox?.Checked ?? true;
+            if (!showGhost || _previewPathTiles == null || _previewPathTiles.Count == 0 || eventMatrixXUpDown == null || eventMatrixYUpDown == null)
+                return;
+
+            int cellX = (int)eventMatrixXUpDown.Value;
+            int cellY = (int)eventMatrixYUpDown.Value;
+            int cellMinX = cellX * MapFile.mapSize;
+            int cellMinY = cellY * MapFile.mapSize;
+            int cellMaxX = cellMinX + MapFile.mapSize - 1;
+            int cellMaxY = cellMinY + MapFile.mapSize - 1;
+
+            var last = _previewPathTiles[_previewPathTiles.Count - 1];
+            if (last.x < cellMinX || last.x > cellMaxX || last.y < cellMinY || last.y > cellMaxY)
+                return;
+
+            int lx = last.x - cellMinX;
+            int ly = last.y - cellMinY;
+            int ts = tileSize + 1;
+            int px = lx * ts;
+            int py = ly * ts;
+
+            using (var fill = new SolidBrush(Color.FromArgb(192, Color.Yellow)))
+            using (var border = new Pen(Color.FromArgb(220, Color.DarkGoldenrod), 2f))
+            {
+                g.FillRectangle(fill, px + 2, py + 2, ts - 4, ts - 4);
+                g.DrawRectangle(border, px + 2, py + 2, ts - 5, ts - 5);
+            }
+
+            if (drawNumber)
+            {
+                int lastCommandIndex = _previewCommandMarkers.Count > 0 ? _previewCommandMarkers[_previewCommandMarkers.Count - 1].commandIndex : 0;
+                if (lastCommandIndex > 0)
+                {
+                    using (var font = new Font("Segoe UI", 12f, FontStyle.Bold))
+                    using (var brush = new SolidBrush(Color.White))
+                    using (var outlineBrush = new SolidBrush(Color.Black))
+                    {
+                        DrawMovementPreviewNumber(g, font, brush, outlineBrush, lx, ly, lastCommandIndex.ToString());
+                    }
+                }
+            }
+        }
+
+        private void DrawMovementPreviewNumber(Graphics g, Font font, Brush brush, Brush outlineBrush, int tileX, int tileY, string number)
+        {
+            int ts = tileSize + 1;
+            int cx = tileX * ts + ts / 2;
+            int cy = tileY * ts + ts / 2;
+            var size = g.MeasureString(number, font);
+            float tx = cx - size.Width / 2f;
+            float ty = cy - size.Height / 2f;
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        g.DrawString(number, font, outlineBrush, tx + dx, ty + dy);
+            g.DrawString(number, font, brush, tx, ty);
         }
         private void DrawWarpCollisions(Graphics g)
         {
@@ -664,11 +863,25 @@ namespace DSPRE.Editors
         /// <param name="eventFileID">The event file ID to open</param>
         public void OpenEventEditor(MainProgram parent, int eventFileID)
         {
+            OpenEventEditor(parent, eventFileID, null);
+        }
+
+        public void OpenEventEditor(MainProgram parent, int eventFileID, ushort? preferredHeaderId)
+        {
             SetupEventEditor(parent);
+            _preferredMovementHeaderId = preferredHeaderId;
 
             if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
             {
-                selectEventComboBox.SelectedIndex = eventFileID;
+                // Re-opening the same Event File from another header would not
+                // trigger SelectedIndexChanged. Force-load with the new header
+                // context so Movement Editor defaults to that header's Script File.
+                if (selectEventComboBox.SelectedIndex != eventFileID)
+                {
+                    selectEventComboBox.SelectedIndex = eventFileID;
+                }
+                ChangeLoadedEventFile(eventFileID, preferredHeaderId ?? 0);
+                PrimeMovementEditorContext();
             }
 
             if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))
@@ -904,6 +1117,7 @@ namespace DSPRE.Editors
             _parent.toolStripProgressBar.Value = 0;
             _parent.toolStripProgressBar.Visible = false;
 
+            EnsureMovementEditorTab();
             Helpers.statusLabelMessage();
         }
 
@@ -951,6 +1165,7 @@ namespace DSPRE.Editors
             Helpers.EnableHandlers();
 
             CenterEventViewOnEntities();
+            PrimeMovementEditorContext();
         }
         private void eventShiftLeftButton_Click(object sender, EventArgs e)
         {
@@ -1669,6 +1884,13 @@ namespace DSPRE.Editors
         }
         private void eventsTabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (eventPictureBox != null && eventPanel != null && eventPanel.Controls.Contains(eventPictureBox))
+                eventPictureBox.BringToFront();
+            if (eventsTabControl.SelectedTab == movementEditorTabPage)
+            {
+                PrimeMovementEditorContext();
+                DisplayActiveEvents();
+            }
             if (eventsTabControl.SelectedTab == signsTabPage)
             {
                 int spawnablesCount = spawnablesListBox.Items.Count;
@@ -2910,6 +3132,251 @@ namespace DSPRE.Editors
             }
             newImage.Save(imageSFD.FileName);
             MessageBox.Show("Screenshot saved.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void movementCommandListView_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void movementActionButtonsRow_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementModeTlp_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementBtnUp_Click(object sender, EventArgs e)
+        {
+            MovementDirectionPad_Click("North");
+        }
+
+        private void movementOnSpotCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            MovementSetOrTypeComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void movementHeaderTable_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementOverworldIdComboBox_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            MovementOverworldIdComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void movementDeleteActionButton_Click_1(object sender, EventArgs e)
+        {
+            MovementDeleteActionButton_Click(sender, e);
+        }
+
+        private void movementActionComboBox_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            MovementActionComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void movementNewActionButton_Click_1(object sender, EventArgs e)
+        {
+            MovementNewActionButton_Click(sender, e);
+        }
+
+        private void movementScriptFileComboBox_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            MovementScriptFileComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            MovementNewActionButton_Click(sender, e);
+        }
+
+        private void movementCommandTablePanel_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementSplitContainer_Panel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementLeftStack_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void tableLayoutPanel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void movementTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            MovementSetOrTypeComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void movementTypeLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void movementBtnDown_Click(object sender, EventArgs e)
+        {
+            MovementDirectionPad_Click("South");
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button13_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void UndoButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void signsTabPage_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void movementPadTable_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void comboBox5_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            MovementActionComboBox_SelectedIndexChanged(sender, e);
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            MovementNewActionButton_Click(sender, e);
+        }
+
+        private void movementLeftPanel_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            MovementDeleteActionButton_Click(sender, e);
+        }
+
+        private void movementDirectionPadGroup_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void SetScriptFileButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox2_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tableLayoutPanel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void movementSplitContainer_Panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void UndoListChangesButton_Click(object sender, EventArgs e)
+        {
+            MovementUndoButton_Click(sender, e);
+        }
+
+        private void ActionToolboxBox_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void PasteListButton_Click(object sender, EventArgs e)
+        {
+            MovementPasteButton_Click(sender, e);
+        }
+
+        private void CopyListButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MoveListDownButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MoveListUpButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void OverworldIDDropdown_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void OWCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void ExportActionButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label1_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void SetInvisibleButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

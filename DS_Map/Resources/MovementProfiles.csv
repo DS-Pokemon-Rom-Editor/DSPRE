@@ -1,0 +1,6 @@
+Movement,Type,North,South,East,West,Notes
+Walk,Normal,WalkNorth,WalkSouth,WalkEast,WalkWest,
+Walk,Slow,WalkSlowNorth,WalkSlowSouth,WalkSlowEast,WalkSlowWest,
+Run,Normal,RunNorth,RunSouth,RunEast,RunWest,
+Face,Normal,FaceNorth,FaceSouth,FaceEast,FaceWest,
+Jump,Normal,JumpNorth,JumpSouth,JumpEast,JumpWest,
