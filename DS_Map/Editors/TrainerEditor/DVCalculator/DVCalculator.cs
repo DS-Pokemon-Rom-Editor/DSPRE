@@ -95,7 +95,7 @@ namespace DSPRE
                 random = getNextRandom();
             }
             if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
-                UpdateGenderMod(baseGenderRatio, genderOverride, abilityOverride);
+                UpdateGenderMod((ushort)pokeIdx, baseGenderRatio, genderOverride, abilityOverride);
 
             uint PID = (random << 8) + genderMod;
 
@@ -107,29 +107,35 @@ namespace DSPRE
             return (int) (PID % 100) % 25;
         }
 
-        public static void UpdateGenderMod(byte baseGenderRatio, int genderOverride, int abilityOverride)
+        public static void UpdateGenderMod(ushort pokeId, byte baseGenderRatio, int genderOverride, int abilityOverride)
         {
-            // Code from here on is HGSS exclusive
-            if (genderOverride == 1)
+            if (genderOverride > 0 || abilityOverride > 0)
             {
-                genderMod = baseGenderRatio + 2u;
-            }
+                if (RomInfo.AIBackportEnabled)
+                    genderMod = pokeId;
 
-            else if (genderOverride == 2)
-            {
-                genderMod = baseGenderRatio - 2u;
-            }
+                // Code from here on is HGSS exclusive
+                if (genderOverride == 1)
+                {
+                    genderMod = baseGenderRatio + 2u;
+                }
 
-            // Force Ability 1 --> Force lowest bit to 0
-            if (abilityOverride == 1)
-            {
-                genderMod = (uint)(genderMod & ~1);
-            }
+                else if (genderOverride == 2)
+                {
+                    genderMod = baseGenderRatio - 2u;
+                }
 
-            // Force Ability 2 --> Force lowest bit to 1
-            else if (abilityOverride == 2)
-            {
-                genderMod = (uint)(genderMod | 1);
+                // Force Ability 1 --> Force lowest bit to 0
+                if (abilityOverride == 1)
+                {
+                    genderMod = (uint)(genderMod & ~1);
+                }
+
+                // Force Ability 2 --> Force lowest bit to 1
+                else if (abilityOverride == 2)
+                {
+                    genderMod = (uint)(genderMod | 1);
+                }
             }
         }
 

@@ -200,7 +200,7 @@ namespace DSPRE
                 for (int i = 0; i < index; i++)
                 {
                     byte genderRatio = new PokemonPersonalData((int)trainerFile.party[i].pokeID).genderVec;
-                    DVCalculator.UpdateGenderMod(genderRatio, genderCombos[i].SelectedIndex, abilityCombos[i].SelectedIndex);
+                    DVCalculator.UpdateGenderMod((ushort)trainerFile.party[i].pokeID, genderRatio, genderCombos[i].SelectedIndex, abilityCombos[i].SelectedIndex);
 
                 }
             }
