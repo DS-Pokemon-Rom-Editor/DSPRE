@@ -108,6 +108,7 @@ namespace DSPRE
         public static Dictionary<ushort, string> ScriptComparisonOperatorsDict { get; private set; }
         public static Dictionary<string, ushort> ScriptComparisonOperatorsReverseDict { get; private set; }
         public static bool AIBackportEnabled { get; private set; }
+        public static bool OutdatedAIBackportEnabled { get; private set; }
 
         public enum GameVersions : byte
         {
@@ -1506,6 +1507,11 @@ namespace DSPRE
             // The tutorial is only for the USA version, but it might be better to differentiate the different languages here
             AIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0xF0, 0xB5, 0x93, 0xB0 });
 
+
+            bytesAtOffset = ARM9.ReadBytes(0x0795A2, 4);
+            // Original Backport by Lhea is 1D 1C 0F 23
+            // Fixed Backport by YakoSWG is 1E 00 0F 24
+            OutdatedAIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0x1D, 0x1C, 0x0F, 0x23 });
         }
 
         public string GetBuildingModelsDirPath(bool interior) => interior ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : gameDirs[DirNames.exteriorBuildingModels].unpackedDir;

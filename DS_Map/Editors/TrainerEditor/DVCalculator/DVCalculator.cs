@@ -111,7 +111,7 @@ namespace DSPRE
         {
             if (genderOverride > 0 || abilityOverride > 0)
             {
-                if (RomInfo.AIBackportEnabled)
+                if (RomInfo.OutdatedAIBackportEnabled)
                     genderMod = pokeId;
 
                 // Code from here on is HGSS exclusive
