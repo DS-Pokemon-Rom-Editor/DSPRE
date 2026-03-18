@@ -140,6 +140,12 @@
     <Compile Include="Editors\TMEditor.Designer.cs">
       <DependentUpon>TMEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.Designer.cs">
+      <DependentUpon>BattleMessageEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\TrainerEditor\DVCalculator\DVCalc.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -572,6 +578,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\TMEditor.resx">
       <DependentUpon>TMEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.resx">
+      <DependentUpon>BattleMessageEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\TrainerEditor\DVCalculator\DVCalc.resx">
       <DependentUpon>DVCalc.cs</DependentUpon>
