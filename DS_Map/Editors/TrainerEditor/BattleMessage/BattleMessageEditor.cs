@@ -32,7 +32,13 @@ namespace DSPRE.Editors
             }
         }
 
-        public enum TrainerMessageTrigger : ushort
+        private struct MessageTrigger
+        {
+            public TrainerMessageType type { get; set; }
+            public string description { get; set; }
+        }
+
+        public enum TrainerMessageType : ushort
         {
             PRE_BATTLE = 0,
             DEFEAT = 1,
@@ -54,8 +60,35 @@ namespace DSPRE.Editors
             REMATCH = 17,
             DOUBLE_BATTLE_REMATCH_1 = 18,
             DOUBLE_BATTLE_REMATCH_2 = 19,
-            WIN = 100,
+            WIN = 20,
+            WIN_DPPT = 100,
         }
+
+        private static readonly List<MessageTrigger> messageTriggers = new List<MessageTrigger>
+        {
+            new MessageTrigger { type = TrainerMessageType.PRE_BATTLE, description = "Pre-Battle in Overworld" },
+            new MessageTrigger { type = TrainerMessageType.DEFEAT, description = "on Defeat (Player wins)" },
+            new MessageTrigger { type = TrainerMessageType.POST_BATTLE, description = "Post-Battle in Overworld" },
+            new MessageTrigger { type = TrainerMessageType.PRE_DOUBLE_BATTLE_1, description = "Pre-Double Battle in Overworld (Trainer 1)" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_DEFEAT_1, description = "on Double Battle Defeat (Trainer 1)" },
+            new MessageTrigger { type = TrainerMessageType.POST_DOUBLE_BATTLE_1, description = "Post-Double Battle in Overworld (Trainer 1)" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_1, description = "when not Enough Pokémon for a Double Battle (Trainer 1)" },
+            new MessageTrigger { type = TrainerMessageType.PRE_DOUBLE_BATTLE_2, description = "Pre-Double Battle in Overworld (Trainer 2)" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_DEFEAT_2, description = "on Double Battle Defeat (Trainer 2)" },
+            new MessageTrigger { type = TrainerMessageType.POST_DOUBLE_BATTLE_2, description = "Post-Double Battle in Overworld (Trainer 2)" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2, description = "when not Enough Pokémon for a Double Battle (Trainer 2)" },
+            new MessageTrigger { type = TrainerMessageType.NOT_MORNING_UNUSED, description = "when not Morning (Unused)" },
+            new MessageTrigger { type = TrainerMessageType.NOT_NIGHT_UNUSED, description = "when not Night (Unused)" },
+            new MessageTrigger { type = TrainerMessageType.FIRST_DAMAGE, description = "on First Damage dealt (Unused)" },
+            new MessageTrigger { type = TrainerMessageType.ACTIVE_BATTLER_HALF_HP, description = "when active Battler Half HP (Unused)" },
+            new MessageTrigger { type = TrainerMessageType.LAST_BATTLER, description = "when Last Battler sent out" },
+            new MessageTrigger { type = TrainerMessageType.LAST_BATTLER_HALF_HP, description = "when Last Battler Half HP" },
+            new MessageTrigger { type = TrainerMessageType.REMATCH, description = "before Rematch" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_REMATCH_1, description = "on Double Battle Rematch (Trainer 1)" },
+            new MessageTrigger { type = TrainerMessageType.DOUBLE_BATTLE_REMATCH_2, description = "on Double Battle Rematch (Trainer 2)" },
+            new MessageTrigger { type = TrainerMessageType.WIN, description = "Victory (Trainer wins) - HG/SS" },
+            new MessageTrigger { type = TrainerMessageType.WIN_DPPT, description = "Victory (Trainer wins) - DP/PT" },
+        };
 
         public Dictionary<uint, List<TrainerTextTableEntry>> trainerTextEntriesByTrainerId = new Dictionary<uint, List<TrainerTextTableEntry>>();
         
@@ -70,9 +103,19 @@ namespace DSPRE.Editors
         private ImageBase trainerTile;
         private SpriteBase trainerSprite;
 
+        private readonly ToolTip hoverToolTip = new ToolTip();
+        private int hoveredListBoxIndex = -1;
+        private string currentComboTooltipText;
+
         public BattleMessageEditor()
         {
             InitializeComponent();
+
+            // Custom Tooltip setup
+            trainerTextListBox.MouseMove += trainerTextListBox_MouseMove;
+            trainerTextListBox.MouseLeave += trainerTextListBox_MouseLeave;
+            triggerTypeComboBox.MouseMove += triggerTypeComboBox_MouseMove;
+            triggerTypeComboBox.MouseLeave += triggerTypeComboBox_MouseLeave;
         }
 
         public BattleMessageEditor(int trainerID)
@@ -213,9 +256,9 @@ namespace DSPRE.Editors
             {
                 triggerTypeComboBox.BeginUpdate();
                 triggerTypeComboBox.Items.Clear();
-                foreach (var trigger in Enum.GetValues(typeof(TrainerMessageTrigger)).Cast<TrainerMessageTrigger>())
+                foreach (var trigger in messageTriggers)
                 {
-                    triggerTypeComboBox.Items.Add(trigger.ToString());
+                    triggerTypeComboBox.Items.Add(trigger.type.ToString());
                 }
             }
             catch (Exception ex)
@@ -265,7 +308,7 @@ namespace DSPRE.Editors
 
             foreach (var entry in currentTextEntries)
             {
-                string messageTrigger = ((TrainerMessageTrigger)entry.messageTriggerId).ToString();
+                string messageTrigger = ((TrainerMessageType)entry.messageTriggerId).ToString();
                 string messageText = localTrainerMessageArchive.messages[entry.messageID];
                 trainerTextListBox.Items.Add($"[{messageTrigger}] {messageText}");
             }
@@ -430,7 +473,7 @@ namespace DSPRE.Editors
             var duplicates = currentTextEntries
                 .GroupBy(entry => entry.messageTriggerId)
                 .Where(group => group.Count() > 1)
-                .Select(group => ((TrainerMessageTrigger)group.Key).ToString());
+                .Select(group => ((TrainerMessageType)group.Key).ToString());
 
             if (duplicates.Any())
             {
@@ -448,14 +491,14 @@ namespace DSPRE.Editors
             }
 
             // Check if the message won't work with the trainer type (e.g. double battle triggers for a single battle trainer)
-            if (!currentTrainerIsDouble && currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageTrigger.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageTrigger.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
+            if (!currentTrainerIsDouble && currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageType.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
             {
                 infoLabel.Text = "Warning: This trainer is not a double battle trainer, but has double battle message triggers.";
                 infoLabel.ForeColor = Color.Orange;
                 return;
             }
 
-            if (currentTrainerIsDouble && currentTextEntries.Count > 0 && !currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageTrigger.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageTrigger.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
+            if (currentTrainerIsDouble && currentTextEntries.Count > 0 && !currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageType.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
             {
                 infoLabel.Text = "Warning: This trainer is a double battle trainer, but has no double battle message triggers.";
                 infoLabel.ForeColor = Color.Orange;
@@ -464,7 +507,7 @@ namespace DSPRE.Editors
 
             // Check for invalid trigger IDs (not defined in enum)
             var invalidTriggerIds = currentTextEntries
-                .Where(entry => !Enum.IsDefined(typeof(TrainerMessageTrigger), entry.messageTriggerId))
+                .Where(entry => !Enum.IsDefined(typeof(TrainerMessageType), entry.messageTriggerId))
                 .Select(entry => entry.messageTriggerId)
                 .Distinct()
                 .OrderBy(id => id)
@@ -590,8 +633,7 @@ namespace DSPRE.Editors
             int selectedTriggerTypeIndex = triggerTypeComboBox.SelectedIndex;
             if (selectedTriggerTypeIndex < 0) return;
 
-            // Try to get enum from selected trigger
-            Enum.TryParse(triggerTypeComboBox.SelectedItem.ToString(), out TrainerMessageTrigger selectedTrigger);
+            TrainerMessageType selectedTrigger = messageTriggers[selectedTriggerTypeIndex].type;
 
             var entryToEdit = currentTextEntries[selectedIndex];
             entryToEdit.messageTriggerId = (ushort)selectedTrigger;
@@ -612,7 +654,7 @@ namespace DSPRE.Editors
             }
 
             // Try to get enum from selected trigger
-            if (!Enum.TryParse(triggerTypeComboBox.SelectedItem.ToString(), out TrainerMessageTrigger selectedTrigger)) 
+            if (!Enum.TryParse(triggerTypeComboBox.SelectedItem.ToString(), out TrainerMessageType selectedTrigger)) 
             {
                 AppLogger.Error($"Failed to parse selected trigger type: {triggerTypeComboBox.SelectedItem.ToString()}");
                 return; 
@@ -668,6 +710,77 @@ namespace DSPRE.Editors
             {
                 e.Cancel = true;
             }
+        }
+
+        private string GetTriggerDescription(ushort triggerId)
+        {
+            var trigger = messageTriggers.FirstOrDefault(t => (ushort)t.type == triggerId);
+            return string.IsNullOrWhiteSpace(trigger.description)
+                ? $"Unknown trigger ({triggerId})"
+                : "Plays " + trigger.description;
+        }
+
+        private void trainerTextListBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (currentTextEntries == null)
+            {
+                return;
+            }
+
+            int hoveredIndex = trainerTextListBox.IndexFromPoint(e.Location);
+            if (hoveredIndex < 0 || hoveredIndex >= currentTextEntries.Count)
+            {
+                if (hoveredListBoxIndex != -1)
+                {
+                    hoverToolTip.Hide(trainerTextListBox);
+                    hoveredListBoxIndex = -1;
+                }
+                return;
+            }
+
+            if (hoveredListBoxIndex == hoveredIndex)
+            {
+                return;
+            }
+
+            hoveredListBoxIndex = hoveredIndex;
+            var entry = currentTextEntries[hoveredIndex];
+            hoverToolTip.SetToolTip(trainerTextListBox, GetTriggerDescription(entry.messageTriggerId));
+        }
+
+        private void trainerTextListBox_MouseLeave(object sender, EventArgs e)
+        {
+            hoverToolTip.Hide(trainerTextListBox);
+            hoveredListBoxIndex = -1;
+        }
+
+        private void triggerTypeComboBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            int selectedIndex = triggerTypeComboBox.SelectedIndex;
+            if (selectedIndex < 0 || selectedIndex >= messageTriggers.Count)
+            {
+                if (!string.IsNullOrEmpty(currentComboTooltipText))
+                {
+                    hoverToolTip.Hide(triggerTypeComboBox);
+                    currentComboTooltipText = null;
+                }
+                return;
+            }
+
+            string tooltipText = messageTriggers[selectedIndex].description;
+            if (string.Equals(currentComboTooltipText, tooltipText, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            currentComboTooltipText = tooltipText;
+            hoverToolTip.SetToolTip(triggerTypeComboBox, tooltipText);
+        }
+
+        private void triggerTypeComboBox_MouseLeave(object sender, EventArgs e)
+        {
+            hoverToolTip.Hide(triggerTypeComboBox);
+            currentComboTooltipText = null;
         }
     }
 }

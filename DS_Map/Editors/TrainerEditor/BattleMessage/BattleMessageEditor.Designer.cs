@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.trainerClassPicBox = new System.Windows.Forms.PictureBox();
             this.mainLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             this.infoLabel = new System.Windows.Forms.Label();
@@ -42,6 +43,7 @@
             this.editButton = new System.Windows.Forms.Button();
             this.deleteButton = new System.Windows.Forms.Button();
             this.addButton = new System.Windows.Forms.Button();
+            this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.trainerComboBox = new DSPRE.InputComboBox();
             this.triggerTypeComboBox = new DSPRE.InputComboBox();
             this.dsTextBox = new DSPRE.Editors.DSTextBox();
@@ -170,7 +172,9 @@
             // 
             this.mainLayoutPanel.SetColumnSpan(this.trainerTextListBox, 3);
             this.trainerTextListBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.trainerTextListBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.trainerTextListBox.FormattingEnabled = true;
+            this.trainerTextListBox.ItemHeight = 16;
             this.trainerTextListBox.Location = new System.Drawing.Point(3, 93);
             this.trainerTextListBox.Name = "trainerTextListBox";
             this.trainerTextListBox.Size = new System.Drawing.Size(516, 114);
@@ -279,6 +283,7 @@
             this.mainLayoutPanel.SetRowSpan(this.dsTextBox, 2);
             this.dsTextBox.Size = new System.Drawing.Size(516, 94);
             this.dsTextBox.TabIndex = 58;
+            this.toolTip.SetToolTip(this.dsTextBox, "Preview may not be fully accurate");
             // 
             // BattleMessageEditor
             // 
@@ -321,5 +326,6 @@
         private System.Windows.Forms.Button saveMessageButton;
         private System.Windows.Forms.Label infoLabel;
         private DSTextBox dsTextBox;
+        private System.Windows.Forms.ToolTip toolTip;
     }
 }
