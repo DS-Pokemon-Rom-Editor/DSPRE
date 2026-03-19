@@ -185,6 +185,7 @@ namespace DSPRE.Editors
                 var sortedEntries = trainerTextEntries.OrderBy(entry => entry.trainerId).ThenBy(entry => entry.messageTriggerId).ToList();
 
                 List<string> messages = new List<string>();
+                bool error = false;
 
                 foreach (var entry in sortedEntries)
                 {
@@ -207,6 +208,7 @@ namespace DSPRE.Editors
                     {
                         messages.Add("ERROR");
                         AppLogger.Error($"Invalid message ID {entry.messageID} for trainer ID {entry.trainerId}. This should not have happened.");
+                        error = true;
                     }
                     
                 }
@@ -220,7 +222,12 @@ namespace DSPRE.Editors
                 {
                     offsetWriter.Seek((int) kvp.Key * 2, SeekOrigin.Begin);
                     offsetWriter.Write(kvp.Value);
-                }                
+                }
+                
+                if (error)
+                {
+                    MessageBox.Show("There were errors with some message IDs. Please check the log for details.");
+                }
 
             }
             catch (Exception ex)
