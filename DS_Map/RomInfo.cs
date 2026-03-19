@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Xaml;
+using static DSPRE.RomInfo;
 using Path = System.IO.Path;
 
 namespace DSPRE
@@ -85,6 +87,7 @@ namespace DSPRE
         public static int trainerFunnyScriptNumber { get; private set; }
 
         public static int typesTextNumber { get; private set; }
+        public static int trainerMessageTextNumber { get; private set; }
 
         public static string internalNamesLocation { get; private set; }
         public static readonly byte internalNameLength = 16;
@@ -181,6 +184,9 @@ namespace DSPRE
             itemIcons,
 
             tradeData,
+
+            trainerTextOffset,
+            trainerTextTable,
 
             eggMoves,
         };
@@ -298,6 +304,7 @@ namespace DSPRE
             SetTrainerNameLenOffset();
             SetMoveTextNumbers();
             SetTypesTextNumber();
+            SetTrainerMessageTextNumber();
 
             InitScriptDBs();
 
@@ -1220,6 +1227,22 @@ namespace DSPRE
             }
         }
 
+        private static void SetTrainerMessageTextNumber()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 549 : 558;
+                    break;
+                case GameFamilies.Plat:
+                    trainerMessageTextNumber = 617;
+                    break;
+                case GameFamilies.HGSS:
+                    trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 718 : 728;
+                    break;
+            }
+        }
+
         private static void SetTrainerNameLenOffset()
         {
             switch (RomInfo.gameFamily)
@@ -1690,6 +1713,10 @@ namespace DSPRE
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
                         [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc",
+
+                        [DirNames.trainerTextOffset] = $@"{dataFolderName}\poketool\trmsg\trtblofs.narc",
+                        [DirNames.trainerTextTable] = $@"{dataFolderName}\poketool\trmsg\trtbl.narc",
+
                         [DirNames.eggMoves] = $@"{customNarcFolderName}/egg_moves.narc",
                     };
 
@@ -1753,6 +1780,10 @@ namespace DSPRE
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
                         [DirNames.tradeData] = $@"{dataFolderName}\fielddata\pokemon_trade\fld_trade.narc",
+
+                        [DirNames.trainerTextOffset] = $@"{dataFolderName}\poketool\trmsg\trtblofs.narc",
+                        [DirNames.trainerTextTable] = $@"{dataFolderName}\poketool\trmsg\trtbl.narc",
+
                         [DirNames.eggMoves] = $@"{customNarcFolderName}/egg_moves.narc",
                     };
 
@@ -1805,6 +1836,10 @@ namespace DSPRE
 
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
+
+                        [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
+                        [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",
+
                         [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9"
                     };
 
