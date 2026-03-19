@@ -3,17 +3,12 @@ using Ekona.Images;
 using Images;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static DSPRE.ARM9;
 using static DSPRE.RomInfo;
-using static Images.NCOB.sNCOB;
 
 namespace DSPRE.Editors
 {
@@ -25,9 +20,9 @@ namespace DSPRE.Editors
 
         public struct TrainerTextTableEntry
         {
-            public int messageID { get; private set; }
-            public uint trainerId { get; private set; }
-            public ushort messageTriggerId { get; private set; }
+            public int messageID { get; set; }
+            public uint trainerId { get; set; }
+            public ushort messageTriggerId { get; set; }
 
             public TrainerTextTableEntry(int messageID, uint trainerId, ushort messageTriggerId)
             {
@@ -65,14 +60,23 @@ namespace DSPRE.Editors
         public Dictionary<uint, List<TrainerTextTableEntry>> trainerTextEntriesByTrainerId = new Dictionary<uint, List<TrainerTextTableEntry>>();
         
         private int currentTrainerID;
+        private int currentTrainerClass;
+        private bool currentTrainerIsDouble;
         private List<TrainerTextTableEntry> currentTextEntries;
         private TextArchive localTrainerMessageArchive;
+        private bool dirty = false;
 
         private PaletteBase trainerPal;
         private ImageBase trainerTile;
         private SpriteBase trainerSprite;
 
+        public BattleMessageEditor()
+        {
+            InitializeComponent();
+        }
+
         public BattleMessageEditor(int trainerID)
+            : this()
         {
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames>() 
             { 
@@ -82,8 +86,6 @@ namespace DSPRE.Editors
                 RomInfo.DirNames.trainerTextTable, 
                 RomInfo.DirNames.trainerTextOffset 
             });
-
-            InitializeComponent();
 
             // Make a copy of the trainer message text archive to work with
             localTrainerMessageArchive = new TextArchive(RomInfo.trainerMessageTextNumber);
@@ -180,6 +182,12 @@ namespace DSPRE.Editors
                 .ToDictionary(group => group.Key, group => group.ToList());
         }
 
+        private void SetDirty(bool isDirty)
+        {
+            dirty = isDirty;
+            this.Text = dirty ? "Trainer Message Editor*" : "Trainer Message Editor";
+        }
+
         private void InitControls()
         {
             var trainerNames = RomInfo.GetSimpleTrainerNames();
@@ -187,6 +195,9 @@ namespace DSPRE.Editors
 
             int trainerCount = trainerNames.Length;
             trainerIDUpDown.Maximum = trainerCount - 1;
+
+            // Scintilla control setup
+            dsTextBox.UpdateDisplayScale();
 
             // Set up combobox for message trigger types
             try
@@ -234,6 +245,7 @@ namespace DSPRE.Editors
                 trainerComboBox.EndUpdate();
             }
         }
+        
 
         private void ReadCurrentTrainerTextEntries()
         {
@@ -271,6 +283,17 @@ namespace DSPRE.Editors
             stream.Close();
 
             return trainerClassID;
+        }
+
+        private void UpdateCurrentTrainerInfo(int trainerID)
+        {
+            string filePath = RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir + "\\" + trainerID.ToString("D4");
+            var stream = File.OpenRead(filePath);
+
+            var trainerProperties = new TrainerProperties((ushort)trainerID, stream);
+
+            currentTrainerClass = trainerProperties.trainerClass;
+            currentTrainerIsDouble = trainerProperties.doubleBattle;
         }
 
         public int LoadTrainerClassPic(int trClassID)
@@ -311,18 +334,10 @@ namespace DSPRE.Editors
             }
 
             frameNumber = Math.Min(trainerSprite.Banks.Length, frameNumber);
-            Image trSprite = trainerSprite.Get_Image(trainerTile, trainerPal, frameNumber, trainerClassPicBox.Width / 2, 
-                trainerClassPicBox.Height / 2, false, false, false, true, true, -1, OAMenabled);
+            Image trSprite = trainerSprite.Get_Image(trainerTile, trainerPal, frameNumber, trainerClassPicBox.Width, 
+                trainerClassPicBox.Height, false, false, false, true, true, -1, OAMenabled);
 
-            // Scale up image using nearest neighbor
-            Bitmap scaledSprite = new Bitmap(trSprite.Width * 2, trSprite.Height * 2);
-            using (Graphics g = Graphics.FromImage(scaledSprite))
-            {
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-                g.DrawImage(trSprite, new Rectangle(0, 0, scaledSprite.Width, scaledSprite.Height));
-            }
-            pb.Image = scaledSprite;
+            pb.Image = trSprite;
             pb.Update();
         }
 
@@ -336,7 +351,39 @@ namespace DSPRE.Editors
                 text = text.Replace(breakChar, breakChar + Environment.NewLine);
             }
 
-            messageScintilla.Text = text;
+            dsTextBox.scintilla.Text = text;
+        }
+
+        private void CheckForMistakes()
+        {
+            // Check if there are duplicates
+            var duplicates = currentTextEntries
+                .GroupBy(entry => entry.messageTriggerId)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key);
+
+            if (duplicates.Any())
+            {
+                infoLabel.Text = $"Warning: Duplicate message trigger types detected: {string.Join(", ", duplicates)}";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
+            // Check if the message won't work with the trainer type (e.g. double battle triggers for a single battle trainer)
+            if (!currentTrainerIsDouble && currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageTrigger.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageTrigger.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
+            {
+                infoLabel.Text = "Warning: This trainer is not a double battle trainer, but has double battle message triggers.";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
+            if (currentTrainerIsDouble && currentTextEntries.Count > 0 && !currentTextEntries.Any(entry => entry.messageTriggerId >= (ushort)TrainerMessageTrigger.PRE_DOUBLE_BATTLE_1 && entry.messageTriggerId <= (ushort)TrainerMessageTrigger.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2))
+            {
+                infoLabel.Text = "Warning: This trainer is a double battle trainer, but has no double battle message triggers.";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
         }
 
         private void trainerIDUpDown_ValueChanged(object sender, EventArgs e)
@@ -345,15 +392,24 @@ namespace DSPRE.Editors
 
             Helpers.DisableHandlers();
 
+            // Write back current list
+            if (currentTextEntries != null)
+            {
+                trainerTextEntriesByTrainerId[(uint)currentTrainerID] = currentTextEntries;
+            }            
+
             currentTrainerID = (int)trainerIDUpDown.Value;
             trainerComboBox.SelectedIndex = currentTrainerID;
 
+            UpdateCurrentTrainerInfo(currentTrainerID);
+
             // Load and display trainer class pic
-            int trainerClassID = GetTrainerClass(currentTrainerID);
-            LoadTrainerClassPic(trainerClassID);
+            LoadTrainerClassPic(currentTrainerClass);
             UpdateTrainerClassPic(trainerClassPicBox);
 
             ReadCurrentTrainerTextEntries();
+
+            CheckForMistakes();
 
             Helpers.EnableHandlers();
         }
@@ -373,7 +429,7 @@ namespace DSPRE.Editors
             int selectedIndex = trainerTextListBox.SelectedIndex;
             if (selectedIndex < 0)
             {
-                messageScintilla.Enabled = false;
+                dsTextBox.scintilla.Enabled = false;
                 return;
             }
 
@@ -388,13 +444,41 @@ namespace DSPRE.Editors
             string messageText = localTrainerMessageArchive.messages[selectedEntry.messageID];
 
             UpdateScintillaText(messageText);
-            messageScintilla.Enabled = true;
+            dsTextBox.scintilla.Enabled = true;
 
             Helpers.EnableHandlers();
         }
 
-        private void manageLayoutPanel_Paint(object sender, PaintEventArgs e)
+        private void deleteButton_Click(object sender, EventArgs e)
         {
+            int selectedIndex = trainerTextListBox.SelectedIndex;
+
+            if (selectedIndex < 0) return;
+
+            TrainerTextTableEntry entryToRemove = currentTextEntries[selectedIndex];
+            currentTextEntries.Remove(entryToRemove);
+            
+            CheckForMistakes();
+            SetDirty(true);
+        }
+
+        private void editButton_Click(object sender, EventArgs e)
+        {
+            int selectedIndex = trainerTextListBox.SelectedIndex;
+            if (selectedIndex < 0) return;
+
+            int selectedTriggerTypeIndex = triggerTypeComboBox.SelectedIndex;
+            if (selectedTriggerTypeIndex < 0) return;
+
+            // Try to get enum from selected trigger
+            Enum.TryParse(triggerTypeComboBox.SelectedItem.ToString(), out TrainerMessageTrigger selectedTrigger);
+
+            var entryToEdit = currentTextEntries[selectedIndex];
+            entryToEdit.messageTriggerId = (ushort)selectedTrigger;
+            currentTextEntries[selectedIndex] = entryToEdit;
+            
+            CheckForMistakes();
+            SetDirty(true);
 
         }
     }
