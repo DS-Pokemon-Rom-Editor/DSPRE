@@ -8,6 +8,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using static DSPRE.ARM9;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors
@@ -173,11 +174,11 @@ namespace DSPRE.Editors
         private void WriteTrainerTextTable(List<TrainerTextTableEntry> trainerTextEntries)
         {
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames>() { RomInfo.DirNames.trainerTextTable, RomInfo.DirNames.trainerTextOffset });
+            var writer = new DSUtils.EasyWriter(trainerTextTablePath);
+            var offsetWriter = new DSUtils.EasyWriter(trainerTextOffsetPath);
 
             try
             {
-                var writer = new DSUtils.EasyWriter(trainerTextTablePath);
-
                 Dictionary<uint, ushort> trainerIdToOffset = new Dictionary<uint, ushort>();
 
                 // Ensure the entries are sorted by trainer ID and then by message trigger ID (this is how the game expects to read them)
@@ -198,30 +199,38 @@ namespace DSPRE.Editors
                     writer.Write((ushort)entry.messageTriggerId);
 
                     // Store the message (we need to ensure they are in the correct order)
-                    messages.Add(localTrainerMessageArchive.messages[entry.messageID]);
+                    if (entry.messageID >= 0 && entry.messageID < localTrainerMessageArchive.messages.Count)
+                    {
+                        messages.Add(localTrainerMessageArchive.messages[entry.messageID]);
+                    }
+                    else
+                    {
+                        messages.Add("ERROR");
+                        AppLogger.Error($"Invalid message ID {entry.messageID} for trainer ID {entry.trainerId}. This should not have happened.");
+                    }
+                    
                 }
-
-                writer.Close();
 
                 // Write the messages to the text archive
                 var tempArchive = new TextArchive(RomInfo.trainerMessageTextNumber, messages);
                 tempArchive.SaveToExpandedDir(RomInfo.trainerMessageTextNumber, false);
-
-                var offsetWriter = new DSUtils.EasyWriter(trainerTextOffsetPath);
 
                 // Write the offsets for each trainer ID
                 foreach (var kvp in trainerIdToOffset)
                 {
                     offsetWriter.Seek((int) kvp.Key * 2, SeekOrigin.Begin);
                     offsetWriter.Write(kvp.Value);
-                }
-
-                offsetWriter.Close();
+                }                
 
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error writing trainer text table: {ex.Message}");
+            }
+            finally
+            {
+                writer.Close();
+                offsetWriter.Close();
             }
         }
 
