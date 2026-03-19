@@ -34,16 +34,16 @@
             this.saveButton = new System.Windows.Forms.Button();
             this.saveMessageButton = new System.Windows.Forms.Button();
             this.trainerLabel = new System.Windows.Forms.Label();
-            this.trainerComboBox = new DSPRE.InputComboBox();
             this.trainerIDUpDown = new System.Windows.Forms.NumericUpDown();
             this.trainerIDlabel = new System.Windows.Forms.Label();
             this.trainerTextListBox = new System.Windows.Forms.ListBox();
             this.buttonGroupBox = new System.Windows.Forms.GroupBox();
             this.manageLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
             this.editButton = new System.Windows.Forms.Button();
-            this.triggerTypeComboBox = new DSPRE.InputComboBox();
             this.deleteButton = new System.Windows.Forms.Button();
             this.addButton = new System.Windows.Forms.Button();
+            this.trainerComboBox = new DSPRE.InputComboBox();
+            this.triggerTypeComboBox = new DSPRE.InputComboBox();
             this.dsTextBox = new DSPRE.Editors.DSTextBox();
             ((System.ComponentModel.ISupportInitialize)(this.trainerClassPicBox)).BeginInit();
             this.mainLayoutPanel.SuspendLayout();
@@ -120,6 +120,7 @@
             this.saveButton.TabIndex = 56;
             this.saveButton.Text = "Save \r\nand \r\nSort Table\r\n";
             this.saveButton.UseVisualStyleBackColor = true;
+            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
             // 
             // saveMessageButton
             // 
@@ -132,6 +133,7 @@
             this.saveMessageButton.TabIndex = 55;
             this.saveMessageButton.Text = "Save Message";
             this.saveMessageButton.UseVisualStyleBackColor = true;
+            this.saveMessageButton.Click += new System.EventHandler(this.saveMessageButton_Click);
             // 
             // trainerLabel
             // 
@@ -143,18 +145,6 @@
             this.trainerLabel.TabIndex = 51;
             this.trainerLabel.Text = "Trainer Name";
             this.trainerLabel.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
-            // 
-            // trainerComboBox
-            // 
-            this.trainerComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.trainerComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.trainerComboBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.trainerComboBox.FormattingEnabled = true;
-            this.trainerComboBox.Location = new System.Drawing.Point(183, 48);
-            this.trainerComboBox.Name = "trainerComboBox";
-            this.trainerComboBox.Size = new System.Drawing.Size(336, 21);
-            this.trainerComboBox.TabIndex = 49;
-            this.trainerComboBox.SelectedIndexChanged += new System.EventHandler(this.trainerComboBox_SelectedIndexChanged);
             // 
             // trainerIDUpDown
             // 
@@ -231,17 +221,6 @@
             this.editButton.UseVisualStyleBackColor = true;
             this.editButton.Click += new System.EventHandler(this.editButton_Click);
             // 
-            // triggerTypeComboBox
-            // 
-            this.triggerTypeComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.triggerTypeComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.triggerTypeComboBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.triggerTypeComboBox.FormattingEnabled = true;
-            this.triggerTypeComboBox.Location = new System.Drawing.Point(3, 73);
-            this.triggerTypeComboBox.Name = "triggerTypeComboBox";
-            this.triggerTypeComboBox.Size = new System.Drawing.Size(197, 21);
-            this.triggerTypeComboBox.TabIndex = 50;
-            // 
             // deleteButton
             // 
             this.deleteButton.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -266,6 +245,30 @@
             this.addButton.TabIndex = 0;
             this.addButton.Text = "Add";
             this.addButton.UseVisualStyleBackColor = true;
+            this.addButton.Click += new System.EventHandler(this.addButton_Click);
+            // 
+            // trainerComboBox
+            // 
+            this.trainerComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.trainerComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.trainerComboBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.trainerComboBox.FormattingEnabled = true;
+            this.trainerComboBox.Location = new System.Drawing.Point(183, 48);
+            this.trainerComboBox.Name = "trainerComboBox";
+            this.trainerComboBox.Size = new System.Drawing.Size(336, 21);
+            this.trainerComboBox.TabIndex = 49;
+            this.trainerComboBox.SelectedIndexChanged += new System.EventHandler(this.trainerComboBox_SelectedIndexChanged);
+            // 
+            // triggerTypeComboBox
+            // 
+            this.triggerTypeComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.triggerTypeComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.triggerTypeComboBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.triggerTypeComboBox.FormattingEnabled = true;
+            this.triggerTypeComboBox.Location = new System.Drawing.Point(3, 73);
+            this.triggerTypeComboBox.Name = "triggerTypeComboBox";
+            this.triggerTypeComboBox.Size = new System.Drawing.Size(197, 21);
+            this.triggerTypeComboBox.TabIndex = 50;
             // 
             // dsTextBox
             // 
@@ -288,6 +291,7 @@
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Trainer Message Editor";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.BattleMessageEditor_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.trainerClassPicBox)).EndInit();
             this.mainLayoutPanel.ResumeLayout(false);
             this.mainLayoutPanel.PerformLayout();

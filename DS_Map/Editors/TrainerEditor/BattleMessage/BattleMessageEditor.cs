@@ -127,7 +127,7 @@ namespace DSPRE.Editors
             return trainerTextEntries;
         }
 
-        private void WriteTrainerTextTable()
+        private void WriteTrainerTextTable(List<TrainerTextTableEntry> trainerTextEntries)
         {
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames>() { RomInfo.DirNames.trainerTextTable, RomInfo.DirNames.trainerTextOffset });
 
@@ -137,35 +137,44 @@ namespace DSPRE.Editors
 
                 Dictionary<uint, ushort> trainerIdToOffset = new Dictionary<uint, ushort>();
 
-                // Write the trainer text table entries, sorted by trainer ID
-                foreach (var kvp in trainerTextEntriesByTrainerId)
+                // Ensure the entries are sorted by trainer ID and then by message trigger ID (this is how the game expects to read them)
+                var sortedEntries = trainerTextEntries.OrderBy(entry => entry.trainerId).ThenBy(entry => entry.messageTriggerId).ToList();
+
+                List<string> messages = new List<string>();
+
+                foreach (var entry in sortedEntries)
                 {
-                    if (!kvp.Value.Any())
-                        continue;
-
-                    // Save new offset for this trainer ID in the trainer table
-                    trainerIdToOffset[kvp.Key] = (ushort)writer.BaseStream.Position;
-
-                    foreach (var entry in kvp.Value)
+                    // Store the offset for this trainer ID (if not already stored)
+                    if (!trainerIdToOffset.ContainsKey(entry.trainerId))
                     {
-                        writer.Write((ushort)entry.trainerId);
-                        writer.Write((ushort)entry.messageTriggerId);                            
+                        trainerIdToOffset[entry.trainerId] = (ushort) writer.BaseStream.Position;
                     }
+
+                    // Write the trainer ID and message trigger ID to the trainer text table
+                    writer.Write((ushort)entry.trainerId);
+                    writer.Write((ushort)entry.messageTriggerId);
+
+                    // Store the message (we need to ensure they are in the correct order)
+                    messages.Add(localTrainerMessageArchive.messages[entry.messageID]);
                 }
-    
+
                 writer.Close();
 
-                // Update the trainer text offset table with the new offsets for each trainer ID
+                // Write the messages to the text archive
+                var tempArchive = new TextArchive(RomInfo.trainerMessageTextNumber, messages);
+                tempArchive.SaveToExpandedDir(RomInfo.trainerMessageTextNumber, false);
+
                 var offsetWriter = new DSUtils.EasyWriter(trainerTextOffsetPath);
 
+                // Write the offsets for each trainer ID
                 foreach (var kvp in trainerIdToOffset)
                 {
-                    // Each offset is 2 bytes, so seek to the correct position for this trainer ID
-                    offsetWriter.BaseStream.Seek(kvp.Key * 2, SeekOrigin.Begin); 
+                    offsetWriter.Seek((int) kvp.Key * 2, SeekOrigin.Begin);
                     offsetWriter.Write(kvp.Value);
                 }
 
                 offsetWriter.Close();
+
             }
             catch (Exception ex)
             {
@@ -249,14 +258,6 @@ namespace DSPRE.Editors
 
         private void ReadCurrentTrainerTextEntries()
         {
-            if (trainerTextEntriesByTrainerId.TryGetValue((uint)currentTrainerID, out List<TrainerTextTableEntry> entries))
-            {
-                currentTextEntries = entries;
-            }
-            else
-            {
-                currentTextEntries = new List<TrainerTextTableEntry>();
-            }
 
             // Update listbox with current trainer text entries
             trainerTextListBox.BeginUpdate();
@@ -271,6 +272,7 @@ namespace DSPRE.Editors
 
             trainerTextListBox.EndUpdate();
 
+            CheckForMistakes();
         }
 
         private int GetTrainerClass(int trainerID)
@@ -354,17 +356,93 @@ namespace DSPRE.Editors
             dsTextBox.scintilla.Text = text;
         }
 
+        private string GetScintillaText()
+        {
+            string text = dsTextBox.scintilla.Text;
+            // Remove line breaks
+            text = text.Replace(Environment.NewLine, "");
+            return text;
+        }
+
+        private bool ConfirmUnsavedChanges()
+        {
+            if (!dirty) return true;
+
+            var result = MessageBox.Show("You have unsaved changes. Do you want to save them?", "Unsaved Changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                // User could decide to cancel save if they want to go back and check for mistakes, so we need to check the result of the save action
+                return SaveAndSort();
+            }
+            else if (result == DialogResult.No)
+            {
+                return true;
+            }
+            else // Cancel
+            {
+                return false;
+            }
+        }
+
+        private bool SaveAndSort()
+        {
+            // Save current trainer text entries back to the main dictionary
+            if (currentTextEntries != null)
+            {
+                trainerTextEntriesByTrainerId[(uint)currentTrainerID] = currentTextEntries;
+            }
+
+            var result = MessageBox.Show("This will sort and write all trainer text entries back to the ROM. " +
+                $"Text archive {RomInfo.trainerMessageTextNumber} will be overwritten entirely and unused messages will be lost. " +
+                "Are you sure you want to continue?", "Confirm Save", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes) return false;
+
+            var trainerTextEntries = trainerTextEntriesByTrainerId.SelectMany(kvp => kvp.Value).ToList();
+
+            WriteTrainerTextTable(trainerTextEntries);
+            SetDirty(false);
+
+            // Reload everything to ensure offsets are correct and there are no issues with the new data
+            trainerIDUpDown_ValueChanged(null, null);
+
+            return true;
+        }
+
         private void CheckForMistakes()
         {
+            if (currentTextEntries == null || localTrainerMessageArchive == null)
+            {
+                infoLabel.Text = "";
+                return;
+            }
+
+            // Check for trainer ID mismatch in this trainer's entry list (proper error)
+            if (currentTextEntries.Any(entry => entry.trainerId != (uint)currentTrainerID))
+            {
+                infoLabel.Text = "Error: Some entries have a trainer ID that does not match the selected trainer.";
+                infoLabel.ForeColor = Color.Red;
+                return;
+            }
+
             // Check if there are duplicates
             var duplicates = currentTextEntries
                 .GroupBy(entry => entry.messageTriggerId)
                 .Where(group => group.Count() > 1)
-                .Select(group => group.Key);
+                .Select(group => ((TrainerMessageTrigger)group.Key).ToString());
 
             if (duplicates.Any())
             {
                 infoLabel.Text = $"Warning: Duplicate message trigger types detected: {string.Join(", ", duplicates)}";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
+            // Check for empty messages
+            if (currentTextEntries.Any(entry => string.IsNullOrWhiteSpace(localTrainerMessageArchive.messages[entry.messageID])))
+            {
+                infoLabel.Text = "Warning: One or more messages are empty.";
                 infoLabel.ForeColor = Color.Orange;
                 return;
             }
@@ -384,6 +462,38 @@ namespace DSPRE.Editors
                 return;
             }
 
+            // Check for invalid trigger IDs (not defined in enum)
+            var invalidTriggerIds = currentTextEntries
+                .Where(entry => !Enum.IsDefined(typeof(TrainerMessageTrigger), entry.messageTriggerId))
+                .Select(entry => entry.messageTriggerId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
+
+            if (invalidTriggerIds.Any())
+            {
+                infoLabel.Text = $"Warning: Unknown message trigger ID(s): {string.Join(", ", invalidTriggerIds)}";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
+            // Check for invalid message IDs
+            var invalidMessageIds = currentTextEntries
+                .Where(entry => entry.messageID < 0 || entry.messageID >= localTrainerMessageArchive.messages.Count)
+                .Select(entry => entry.messageID)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
+
+            if (invalidMessageIds.Any())
+            {
+                infoLabel.Text = $"Warning: Invalid message ID(s): {string.Join(", ", invalidMessageIds)}";
+                infoLabel.ForeColor = Color.Orange;
+                return;
+            }
+
+            // Reset info label
+            infoLabel.Text = "";
         }
 
         private void trainerIDUpDown_ValueChanged(object sender, EventArgs e)
@@ -406,6 +516,16 @@ namespace DSPRE.Editors
             // Load and display trainer class pic
             LoadTrainerClassPic(currentTrainerClass);
             UpdateTrainerClassPic(trainerClassPicBox);
+
+            if (trainerTextEntriesByTrainerId.TryGetValue((uint)currentTrainerID, out List<TrainerTextTableEntry> entries))
+            {
+                currentTextEntries = entries;
+            }
+            else
+            {
+                currentTextEntries = new List<TrainerTextTableEntry>();
+                AppLogger.Error($"No trainer text entries found for trainer ID {currentTrainerID}. This should not have happened.");
+            }
 
             ReadCurrentTrainerTextEntries();
 
@@ -457,8 +577,8 @@ namespace DSPRE.Editors
 
             TrainerTextTableEntry entryToRemove = currentTextEntries[selectedIndex];
             currentTextEntries.Remove(entryToRemove);
-            
-            CheckForMistakes();
+
+            ReadCurrentTrainerTextEntries();
             SetDirty(true);
         }
 
@@ -476,10 +596,78 @@ namespace DSPRE.Editors
             var entryToEdit = currentTextEntries[selectedIndex];
             entryToEdit.messageTriggerId = (ushort)selectedTrigger;
             currentTextEntries[selectedIndex] = entryToEdit;
-            
-            CheckForMistakes();
+
+            ReadCurrentTrainerTextEntries();
             SetDirty(true);
 
+        }
+
+        private void addButton_Click(object sender, EventArgs e)
+        {
+            int selectedTriggerTypeIndex = triggerTypeComboBox.SelectedIndex;
+            if (selectedTriggerTypeIndex < 0)
+            {
+                MessageBox.Show("Please select a message trigger type before adding a new message.");
+                return;
+            }
+
+            // Try to get enum from selected trigger
+            if (!Enum.TryParse(triggerTypeComboBox.SelectedItem.ToString(), out TrainerMessageTrigger selectedTrigger)) 
+            {
+                AppLogger.Error($"Failed to parse selected trigger type: {triggerTypeComboBox.SelectedItem.ToString()}");
+                return; 
+            }
+
+            // Add at the end of the archive (this will need to be fixed by sorting later)
+            int newMessageID = localTrainerMessageArchive.messages.Count;
+            string text = GetScintillaText();
+            localTrainerMessageArchive.messages.Add(text);
+
+            TrainerTextTableEntry newEntry = new TrainerTextTableEntry(newMessageID, (uint)currentTrainerID, (ushort)selectedTrigger);
+            currentTextEntries.Add(newEntry);
+
+            ReadCurrentTrainerTextEntries();
+            SetDirty(true);
+
+        }
+
+        private void saveMessageButton_Click(object sender, EventArgs e)
+        {
+            int selectedIndex = trainerTextListBox.SelectedIndex;
+            if (selectedIndex < 0)
+            {
+                MessageBox.Show("Please select a message to save over.");
+                return;
+            }
+
+            string text = GetScintillaText();
+
+            int messageID = currentTextEntries[selectedIndex].messageID;
+
+            if (messageID < 0 || messageID >= localTrainerMessageArchive.messages.Count)
+            {
+                MessageBox.Show("Invalid message ID. Cannot save message.");
+                return;
+            }
+
+            localTrainerMessageArchive.messages[messageID] = text;
+
+            ReadCurrentTrainerTextEntries();
+            SetDirty(true);
+
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            SaveAndSort();
+        }
+
+        private void BattleMessageEditor_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!ConfirmUnsavedChanges())
+            {
+                e.Cancel = true;
+            }
         }
     }
 }
