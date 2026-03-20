@@ -49,6 +49,12 @@ namespace DSPRE
             else
             {
                 DisableARM9patch("Unsupported\nlanguage");
+            }
+
+            // BDHCam routine and ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS and Platinum
+            if ( (RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat) 
+                || ( RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
+            {
                 DisableBDHCamPatch("Unsupported\nlanguage");
                 DisableScrcmdRepointPatch("Unsupported\nlanguage");
             }            
