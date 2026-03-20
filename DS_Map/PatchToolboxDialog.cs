@@ -42,7 +42,7 @@ namespace DSPRE
 
             CheckStandardizedItems();
 
-            if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
+            if (ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
             {
                 CheckARM9ExpansionApplied();
             }
@@ -51,7 +51,7 @@ namespace DSPRE
                 DisableARM9patch("Unsupported\nlanguage");
                 DisableBDHCamPatch("Unsupported\nlanguage");
                 DisableScrcmdRepointPatch("Unsupported\nlanguage");
-            }
+            }            
 
             CheckExpandedTrainerNamesPatchApplied();
 
