@@ -611,7 +611,7 @@
             this.preventTossCheckBox.Name = "preventTossCheckBox";
             this.preventTossCheckBox.Size = new System.Drawing.Size(89, 17);
             this.preventTossCheckBox.TabIndex = 0;
-            this.preventTossCheckBox.Text = "Prevent Toss";
+            this.preventTossCheckBox.Text = "Prevent Toss & Hold";
             this.preventTossCheckBox.UseVisualStyleBackColor = true;
             this.preventTossCheckBox.CheckedChanged += new System.EventHandler(this.preventTossCheckBox_CheckedChanged);
             // 
