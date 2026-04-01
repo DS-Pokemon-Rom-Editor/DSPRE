@@ -1,4 +1,5 @@
-﻿using DSPRE.ROMFiles;
+﻿using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +8,7 @@ using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE {
-    public partial class WildEditorHGSS : Form {
+    public partial class WildEditorHGSS : Form, IEditorWithUnsavedChanges {
         public string encounterFileFolder { get; private set; }
         public bool walkingDirty { get; private set; } = false;
         public bool waterDirty { get; private set; } = false;
@@ -16,9 +17,37 @@ namespace DSPRE {
 
         EncounterFileHGSS currentFile;
 
+        #region IEditorWithUnsavedChanges Implementation
+
+        public bool HasUnsavedChanges => walkingDirty || waterDirty;
+
+        public string UnsavedChangesDescription => $"Encounter File {loadedEncounterFileIndex}";
+
+        public void SaveChanges()
+        {
+            if (HasUnsavedChanges)
+            {
+                SaveWalking();
+                SaveWater();
+                currentFile?.SaveToFileDefaultDir(loadedEncounterFileIndex, showSuccessMessage: false);
+            }
+        }
+
+        public void DiscardChanges()
+        {
+            SetDirtyWalking(false);
+            SetDirtyWater(false);
+        }
+
+        #endregion
+
         public WildEditorHGSS(string dirPath, string[] names, int encToOpen, int totalNumHeaderFiles) 
         {
             InitializeComponent();
+
+            // Register with OpenEditorsRegistry for project switch tracking
+            OpenEditorsRegistry.Register(this);
+
             encounterFileFolder = dirPath;
 
             Helpers.DisableHandlers();

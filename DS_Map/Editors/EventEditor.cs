@@ -20,14 +20,24 @@ using static Tao.Platform.Windows.Winmm;
 
 namespace DSPRE.Editors
 {
-    public partial class EventEditor : UserControl
+    public partial class EventEditor : UserControl, IEditorWithUnsavedChanges
     {
         MainProgram _parent;
         public bool eventEditorIsReady { get; set; } = false;
+        private bool isDirty = false;
+        private int loadedEventFileID = -1;
+
         public EventEditor()
         {
             InitializeComponent();
         }
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => $"Event Editor (File {loadedEventFileID})";
+        public void SaveChanges() => saveEventsButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
 
         #region Event Editor
 
@@ -49,6 +59,56 @@ namespace DSPRE.Editors
         public Rectangle eventMatrixRectangle;
         #endregion
 
+        #region Dirty Tracking
+        private void SetDirty()
+        {
+            if (!isDirty)
+            {
+                isDirty = true;
+            }
+        }
+
+        private void SetClean()
+        {
+            isDirty = false;
+        }
+
+        /// <summary>
+        /// Resets the Event Editor to its initial state. Called when switching ROMs.
+        /// </summary>
+        public void Reset()
+        {
+            Helpers.DisableHandlers();
+
+            eventEditorIsReady = false;
+            isDirty = false;
+            loadedEventFileID = -1;
+            currentEvFile = null;
+            selectedEvent = null;
+            eventMatrix = null;
+            itemComboboxIsUpToDate = false;
+
+            // Clear list boxes
+            spawnablesListBox.Items.Clear();
+            overworldsListBox.Items.Clear();
+            warpsListBox.Items.Clear();
+            triggersListBox.Items.Clear();
+            selectEventComboBox.Items.Clear();
+
+            // Clear combo boxes
+            owSpriteComboBox.Items.Clear();
+            owTrainerComboBox.Items.Clear();
+            owItemComboBox.Items.Clear();
+
+            // Clear pictures
+            eventPictureBox.Image = null;
+            eventPictureBox.BackgroundImage = null;
+            eventMatrixPictureBox.Image = null;
+            owSpritePictureBox.BackgroundImage = null;
+
+            Helpers.EnableHandlers();
+        }
+        #endregion
 
 
         #region Subroutines
@@ -1004,10 +1064,8 @@ namespace DSPRE.Editors
         }
         private void saveEventsButton_Click(object sender, EventArgs e)
         {
-
-
-
             currentEvFile.SaveToFileDefaultDir(selectEventComboBox.SelectedIndex);
+            SetClean();
         }
         private void importEventFileButton_Click(object sender, EventArgs e)
         {
@@ -1125,6 +1183,7 @@ namespace DSPRE.Editors
 
                 /* Display success message */
                 MessageBox.Show("Events imported successfully!\nRemember to save the current Event File.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SetDirty();
             }
         }
         private void removeEventFileButton_Click(object sender, EventArgs e)
@@ -1158,10 +1217,30 @@ namespace DSPRE.Editors
 
         private void ChangeLoadedEventFile(int evfile, ushort mapHeader)
         {
+            // Check for unsaved changes before switching
+            if (isDirty && loadedEventFileID >= 0 && loadedEventFileID != evfile)
+            {
+                DialogResult result = MessageBox.Show(
+                    $"There are unsaved changes in Event File {loadedEventFileID}.\nDo you wish to discard them?",
+                    "Unsaved Changes",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result != DialogResult.Yes)
+                {
+                    Helpers.DisableHandlers();
+                    selectEventComboBox.SelectedIndex = loadedEventFileID;
+                    Helpers.EnableHandlers();
+                    return;
+                }
+            }
+
             Helpers.DisableHandlers();
 
             /* Load events data into EventFile class instance */
             currentEvFile = new EventFile(evfile);
+            loadedEventFileID = evfile;
+            SetClean();
 
             /* Update ListBoxes */
             FillSpawnablesBox();
@@ -1427,6 +1506,7 @@ namespace DSPRE.Editors
             spawnablesListBox.Items.Add("");
             spawnablesListBox.SelectedIndex = spCount;
             updateSelectedSpawnableName();
+            SetDirty();
         }
         private void removeSpawnableButton_Click(object sender, EventArgs e)
         {
@@ -1454,6 +1534,7 @@ namespace DSPRE.Editors
             {
                 DisplayActiveEvents();
             }
+            SetDirty();
         }
         private void duplicateSpawnableButton_Click(object sender, EventArgs e)
         {
@@ -1467,6 +1548,7 @@ namespace DSPRE.Editors
             spawnablesListBox.Items.Add("");
             spawnablesListBox.SelectedIndex = spawnablesListBox.Items.Count - 1;
             updateSelectedSpawnableName();
+            SetDirty();
         }
         private void spawnablesListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1501,6 +1583,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].xMatrixPosition = (ushort)spawnableXMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void spawnableMatrixYUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1512,6 +1595,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].yMatrixPosition = (ushort)spawnableYMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void spawnableScriptUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1523,6 +1607,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].scriptNumber = (ushort)spawnableScriptUpDown.Value;
             updateSelectedSpawnableName();
+            SetDirty();
         }
         private void spawnableMapXUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1534,6 +1619,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].xMapPosition = (short)spawnablexMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void spawnableMapYUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1545,6 +1631,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].yMapPosition = (short)spawnableYMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void spawnableZUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1556,6 +1643,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].zPosition = (short)spawnableUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void spawnableDirComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1567,6 +1655,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].dir = (ushort)spawnableDirComboBox.SelectedIndex;
             updateSelectedSpawnableName();
+            SetDirty();
         }
         private void spawnableTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1580,6 +1669,7 @@ namespace DSPRE.Editors
 
             currentEvFile.spawnables[selectedSpawnable].type = (ushort)spawnableTypeComboBox.SelectedIndex;
             updateSelectedSpawnableName();
+            SetDirty();
         }
         #endregion
 
@@ -1598,6 +1688,7 @@ namespace DSPRE.Editors
             overworldsListBox.Items.Add("");
             overworldsListBox.SelectedIndex = owCount;
             updateSelectedOverworldName();
+            SetDirty();
         }
         private void removeOverworldButton_Click(object sender, EventArgs e)
         {
@@ -1624,6 +1715,7 @@ namespace DSPRE.Editors
             {
                 DisplayActiveEvents();
             }
+            SetDirty();
         }
         private void sortOWsByIDAscButton_Click(object sender, EventArgs e)
         {
@@ -1631,6 +1723,7 @@ namespace DSPRE.Editors
             overworldsListBox.BeginUpdate();
             FillOverworldsBox();
             overworldsListBox.EndUpdate();
+            SetDirty();
         }
 
         private void sortOWsByIDDescButton_Click(object sender, EventArgs e)
@@ -1639,6 +1732,7 @@ namespace DSPRE.Editors
             overworldsListBox.BeginUpdate();
             FillOverworldsBox();
             overworldsListBox.EndUpdate();
+            SetDirty();
         }
 
         private void locateCurrentEvFile_Click(object sender, EventArgs e)
@@ -1652,7 +1746,7 @@ namespace DSPRE.Editors
             {
                 return;
             }
-           
+
             // Find the smallest unused ID
             int newID = 0;
             while (currentEvFile.overworlds.Any(ow => ow.owID == newID))
@@ -1666,6 +1760,7 @@ namespace DSPRE.Editors
             overworldsListBox.Items.Add("");
             overworldsListBox.SelectedIndex = currentEvFile.overworlds.Count - 1;
             updateSelectedOverworldName();
+            SetDirty();
         }
         private void eventsTabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1900,6 +1995,7 @@ namespace DSPRE.Editors
             }
 
             currentEvFile.overworlds[selection].flag = (ushort)owFlagNumericUpDown.Value;
+            SetDirty();
         }
         private void owIDNumericUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -1912,6 +2008,7 @@ namespace DSPRE.Editors
 
             currentEvFile.overworlds[selection].owID = (ushort)owIDNumericUpDown.Value;
             updateSelectedOverworldName();
+            SetDirty();
         }
         private void owMovementComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1923,6 +2020,7 @@ namespace DSPRE.Editors
             }
 
             currentEvFile.overworlds[selection].movement = (ushort)owMovementComboBox.SelectedIndex;
+            SetDirty();
         }
         private void owOrientationComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1941,6 +2039,7 @@ namespace DSPRE.Editors
                 {
                     currentEvFile.overworlds[selection].orientation = orientation;
                     DisplayActiveEvents();
+                    SetDirty();
                 }
             }
             else
@@ -1961,11 +2060,13 @@ namespace DSPRE.Editors
 
             currentEvFile.overworlds[selection].scriptNumber = (ushort)owScriptNumericUpDown.Value;
             updateSelectedOverworldName();
+            SetDirty();
         }
         private void owSightRangeUpDown_ValueChanged(object sender, EventArgs e)
         {
             int selection = overworldsListBox.SelectedIndex;
             currentEvFile.overworlds[selection].sightRange = (ushort)owSightRangeUpDown.Value;
+            SetDirty();
         }
 
         private void owSpriteComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -1995,6 +2096,7 @@ namespace DSPRE.Editors
                 {
                     currentEvFile.overworlds[selection].overlayTableEntry = overlayTableEntryID;
                     DisplayActiveEvents();
+                    SetDirty();
                 }
             }
             else
@@ -2008,16 +2110,23 @@ namespace DSPRE.Editors
         {
             int selection = overworldsListBox.SelectedIndex;
             owScriptNumericUpDown.Value = (ushort)(currentEvFile.overworlds[selection].scriptNumber + (owPartnerTrainerCheckBox.Checked ? 2000 : -2000));
+            SetDirty();
         }
 
         private void owTrainerComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || overworldsListBox.SelectedIndex < 0)
+            {
+                return;
+            }
+
             ushort scriptNum = (ushort)(owTrainerComboBox.SelectedIndex + (owPartnerTrainerCheckBox.Checked ? 4999 : 2999));
             if (owTrainerComboBox.SelectedIndex > trainerFunnyScriptNumber - 1)
             {
                 scriptNum++;
             }
             owScriptNumericUpDown.Value = scriptNum;
+            SetDirty();
         }
 
         private void owXMapUpDown_ValueChanged(object sender, EventArgs e)
@@ -2031,6 +2140,7 @@ namespace DSPRE.Editors
 
             currentEvFile.overworlds[overworldsListBox.SelectedIndex].xMapPosition = (short)owXMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void owXRangeUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2042,6 +2152,7 @@ namespace DSPRE.Editors
             }
 
             currentEvFile.overworlds[overworldsListBox.SelectedIndex].xRange = (ushort)owXRangeUpDown.Value;
+            SetDirty();
         }
         private void owYRangeUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2053,6 +2164,7 @@ namespace DSPRE.Editors
             }
 
             currentEvFile.overworlds[overworldsListBox.SelectedIndex].yRange = (ushort)owYRangeUpDown.Value;
+            SetDirty();
         }
         private void owYMapUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2065,6 +2177,7 @@ namespace DSPRE.Editors
 
             currentEvFile.overworlds[overworldsListBox.SelectedIndex].yMapPosition = (short)owYMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void owZPositionUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2077,6 +2190,7 @@ namespace DSPRE.Editors
 
             int zFld = (short)owZPositionUpDown.Value << 4; //decimal to overworld units
             currentEvFile.overworlds[selection].zPosition = zFld * 0x1000; //overworld units to fixed point
+            SetDirty();
         }
         private void owXMatrixUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2091,6 +2205,7 @@ namespace DSPRE.Editors
             eventMatrixPictureBox.Image = new Bitmap(eventMatrixPictureBox.Width, eventMatrixPictureBox.Height);
             MarkActiveCell((int)eventMatrixXUpDown.Value, (int)eventMatrixYUpDown.Value);
             DisplayActiveEvents();
+            SetDirty();
         }
         private void owYMatrixUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2284,6 +2399,7 @@ namespace DSPRE.Editors
             updateSelectedWarpName();
 
             eventEditorWarpHeaderListBox.SelectedIndex = n.header;
+            SetDirty();
         }
         private void removeWarpButton_Click(object sender, EventArgs e)
         {
@@ -2311,6 +2427,7 @@ namespace DSPRE.Editors
             {
                 DisplayActiveEvents();
             }
+            SetDirty();
         }
         private void duplicateWarpsButton_Click(object sender, EventArgs e)
         {
@@ -2329,6 +2446,7 @@ namespace DSPRE.Editors
             updateSelectedWarpName();
 
             eventEditorWarpHeaderListBox.SelectedIndex = n.header;
+            SetDirty();
         }
         private void warpAnchorUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2339,6 +2457,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[warpsListBox.SelectedIndex].anchor = (ushort)warpAnchorUpDown.Value;
             updateSelectedWarpName();
+            SetDirty();
         }
         private void eventEditorWarpHeaderListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -2396,6 +2515,7 @@ namespace DSPRE.Editors
             }
             currentEvFile.warps[warpSel].header = destHeaderID;
             updateSelectedWarpName();
+            SetDirty();
         }
         private void updateSelectedSpawnableName()
         {
@@ -2483,6 +2603,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[index].xMatrixPosition = (ushort)warpXMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void warpMatrixYUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2494,6 +2615,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[index].yMatrixPosition = (ushort)warpYMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void warpXMapUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2505,6 +2627,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[index].xMapPosition = (short)warpXMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void warpYMapUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2516,6 +2639,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[index].yMapPosition = (short)warpYMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void warpZUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2527,6 +2651,7 @@ namespace DSPRE.Editors
 
             currentEvFile.warps[index].zPosition = (short)warpZUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void goToWarpDestination_Click(object sender, EventArgs e)
         {
@@ -2587,6 +2712,7 @@ namespace DSPRE.Editors
             triggersListBox.Items.Add("");
             triggersListBox.SelectedIndex = currentEvFile.triggers.Count - 1;
             updateSelectedTriggerName();
+            SetDirty();
         }
         private void removeTriggerButton_Click(object sender, EventArgs e)
         {
@@ -2615,6 +2741,7 @@ namespace DSPRE.Editors
             {
                 DisplayActiveEvents();
             }
+            SetDirty();
         }
         private void duplicateTriggersButton_Click(object sender, EventArgs e)
         {
@@ -2628,6 +2755,7 @@ namespace DSPRE.Editors
             triggersListBox.Items.Add("");
             triggersListBox.SelectedIndex = currentEvFile.triggers.Count - 1;
             updateSelectedTriggerName();
+            SetDirty();
         }
         private void triggersListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -2679,6 +2807,7 @@ namespace DSPRE.Editors
             Helpers.EnableHandlers();
 
             updateSelectedTriggerName();
+            SetDirty();
         }
         private void expectedVarValueTriggerUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2697,6 +2826,7 @@ namespace DSPRE.Editors
             Helpers.EnableHandlers();
 
             updateSelectedTriggerName();
+            SetDirty();
         }
 
         private void triggerVarModeRadioButton_CheckedChanged(object sender, EventArgs e)
@@ -2743,6 +2873,7 @@ namespace DSPRE.Editors
                 currentEvFile.triggers[selection].variableWatched = value;
                 Helpers.EnableHandlers();
                 updateSelectedTriggerName();
+                SetDirty();
             }
         }
 
@@ -2762,6 +2893,7 @@ namespace DSPRE.Editors
                 currentEvFile.triggers[selection].expectedVarValue = value;
                 Helpers.EnableHandlers();
                 updateSelectedTriggerName();
+                SetDirty();
             }
         }
 
@@ -2795,6 +2927,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].scriptNumber = (ushort)triggerScriptUpDown.Value;
             updateSelectedTriggerName();
+            SetDirty();
         }
         private void triggerXMapUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2806,6 +2939,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].xMapPosition = (short)triggerXMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerYMapUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2817,6 +2951,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].yMapPosition = (short)triggerYMapUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerZUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2828,6 +2963,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].zPosition = (ushort)triggerZUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerXMatrixUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2839,6 +2975,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].xMatrixPosition = (ushort)triggerXMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerYMatrixUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2850,6 +2987,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].yMatrixPosition = (ushort)triggerYMatrixUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerWidthUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2861,6 +2999,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].widthX = (ushort)triggerWidthUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         private void triggerLengthUpDown_ValueChanged(object sender, EventArgs e)
         {
@@ -2872,6 +3011,7 @@ namespace DSPRE.Editors
 
             currentEvFile.triggers[selection].heightY = (ushort)triggerLengthUpDown.Value;
             DisplayActiveEvents();
+            SetDirty();
         }
         #endregion
 

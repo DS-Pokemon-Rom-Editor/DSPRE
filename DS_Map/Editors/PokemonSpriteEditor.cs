@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors {
-    public partial class PokemonSpriteEditor : Form {
+    public partial class PokemonSpriteEditor : Form, IEditorWithUnsavedChanges {
         #region Constants and Static Data
         private static readonly string formName = "Sprite Editor";
         
@@ -427,6 +427,13 @@ namespace DSPRE.Editors {
         private bool isLoadingOtherForms = false;
         
         public bool dirty = false;
+        #endregion
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => $"Sprite Editor (Mon {currentLoadedId})";
+        void IEditorWithUnsavedChanges.SaveChanges() => SaveChanges_Click(null, null);
+        public void DiscardChanges() => SetDirty(false);
         #endregion
 
         #region Constructor

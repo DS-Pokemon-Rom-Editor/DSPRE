@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using DSPRE.Editors;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using Microsoft.WindowsAPICodePack.Dialogs;
@@ -38,6 +39,10 @@ namespace DSPRE {
 
         public BuildingEditor(RomInfo romInfo) {
             InitializeComponent();
+
+            // Register with OpenEditorsRegistry for project switch tracking
+            OpenEditorsRegistry.Register(this);
+
             rom = romInfo;
 
             buildingOpenGLControl.InitializeContexts();
