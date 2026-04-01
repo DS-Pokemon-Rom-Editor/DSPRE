@@ -1429,11 +1429,15 @@ namespace DSPRE
             researchHelperToolStripMenuItem.Enabled = true;
 
             scriptCommandsButton.Enabled = true;
-            if (!RomInfo.gameFamily.Equals(GameFamilies.HGSS))
+
+            // Special Encounters tab is available for both DPPt (Honey Tree) and HGSS (Headbutt/Safari/Bug Contest)
+            // Only remove for unsupported game families (BW/BW2)
+            if (RomInfo.gameFamily == GameFamilies.BW || RomInfo.gameFamily == GameFamilies.BW2)
             {
                 mainTabControl.TabPages.Remove(tabPageEncountersEditor);
             }
-            else
+
+            if (RomInfo.gameFamily == GameFamilies.HGSS)
             {
                 overlayEditorToolStripMenuItem.Enabled = true;
             }

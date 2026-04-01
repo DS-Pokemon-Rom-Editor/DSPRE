@@ -125,6 +125,12 @@
     <Compile Include="Editors\EggMoveEditor.Designer.cs">
       <DependentUpon>EggMoveEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\HoneyTreeEncounterEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Editors\HoneyTreeEncounterEditor.Designer.cs">
+      <DependentUpon>HoneyTreeEncounterEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\IEditorWithUnsavedChanges.cs" />
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
@@ -439,6 +445,7 @@
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
     <Compile Include="ROMFiles\HeadbuttTree.cs" />
     <Compile Include="ROMFiles\HeadbuttTreeGroup.cs" />
+    <Compile Include="ROMFiles\HoneyTreeEncounterFile.cs" />
     <Compile Include="ROMFiles\ItemData.cs" />
     <Compile Include="ROMFiles\LearnsetData.cs" />
     <Compile Include="ROMFiles\LevelScriptFile.cs" />
@@ -586,6 +593,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\EggMoveEditor.resx">
       <DependentUpon>EggMoveEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Editors\HoneyTreeEncounterEditor.resx">
+      <DependentUpon>HoneyTreeEncounterEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\TMEditor.resx">
       <DependentUpon>TMEditor.cs</DependentUpon>
