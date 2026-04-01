@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+using DSPRE.Editors;
 
 namespace DSPRE {
-    public partial class EvolutionsEditor : Form {
+    public partial class EvolutionsEditor : Form, IEditorWithUnsavedChanges {
 
         private readonly string[] fileNames;
         private PokemonEditor _parent;
@@ -18,6 +18,13 @@ namespace DSPRE {
 
         public bool dirty = false;
         private static readonly string formName = "Evolutions Editor";
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => $"Evolutions Editor (Mon {currentLoadedId})";
+        public void SaveChanges() => saveDataButton_Click(null, null);
+        public void DiscardChanges() => setDirty(false);
+        #endregion
 
         private (ComboBox m, Label l, NumericUpDown p, ComboBox t)[] evoRows;
         public EvolutionsEditor(Control parent, PokemonEditor pokeEditor) {

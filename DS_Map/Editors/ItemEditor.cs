@@ -26,7 +26,7 @@ namespace DSPRE.Editors
         public uint itemAGB;
     };
 
-    public partial class ItemEditor : Form
+    public partial class ItemEditor : Form, IEditorWithUnsavedChanges
     {
 
         private string[] itemNames;
@@ -42,8 +42,31 @@ namespace DSPRE.Editors
 
         private uint itemNarcTableOffset;
 
-        public ItemEditor(string[] itemFileNames) //, string[] itemDescriptions)
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => itemDataDirty || itemEntryDirty;
+        public string UnsavedChangesDescription => "Item Data Editor";
+        public void SaveChanges()
+        {
+            if (itemDataDirty)
+            {
+                currentLoadedItemData?.SaveToFileDefaultDir((int)currentLoadedEntry.itemData, false);
+                SetItemDataDirty(false);
+            }
+            if (itemEntryDirty)
+            {
+                SetItemEntryDirty(false);
+            }
+        }
+        public void DiscardChanges()
+        {
+            SetItemDataDirty(false);
+            SetItemEntryDirty(false);
+        }
+        #endregion
+
+        public ItemEditor(string[] itemFileNames)
          {      
+            OpenEditorsRegistry.Register(this);
             itemNarcTableOffset = RomInfo.GetItemTableOffset();
 
             this.itemNames = itemFileNames;

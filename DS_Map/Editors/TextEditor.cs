@@ -17,9 +17,9 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace DSPRE.Editors
 {
-    public partial class TextEditor : UserControl
+    public partial class TextEditor : UserControl, IEditorWithUnsavedChanges
     {
-        
+
         private bool dirty = false;
 
         public TextEditor()
@@ -27,6 +27,56 @@ namespace DSPRE.Editors
             InitializeComponent();
             this.textSearchResultsListBox.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.textSearchResultsListBox_GoToEntryResult);
         }
+
+        #region IEditorWithUnsavedChanges Implementation
+
+        public bool HasUnsavedChanges => dirty;
+
+        public string UnsavedChangesDescription => currentTextArchive != null 
+            ? $"Text Archive {currentTextArchive.ID}" 
+            : "Text Archive";
+
+        public void SaveChanges()
+        {
+            if (dirty && currentTextArchive != null)
+            {
+                saveTextArchiveButton_Click(null, null);
+            }
+        }
+
+        public void DiscardChanges()
+        {
+            SetDirty(false);
+            // Optionally reload the current archive to discard changes
+            // For now, just clearing the dirty flag is sufficient
+        }
+
+        /// <summary>
+        /// Resets the Text Editor to its initial state when switching ROMs.
+        /// </summary>
+        public void Reset()
+        {
+            Helpers.DisableHandlers();
+            try
+            {
+                textEditorIsReady = false;
+                dirty = false;
+                currentTextArchive = null;
+
+                // Clear UI controls
+                selectTextFileComboBox.Items.Clear();
+                textEditorDataGridView.Rows.Clear();
+                textSearchResultsListBox.Items.Clear();
+                searchMessageTextBox.Text = "";
+                replaceMessageTextBox.Text = "";
+            }
+            finally
+            {
+                Helpers.EnableHandlers();
+            }
+        }
+
+        #endregion
 
         #region Text Editor
 
@@ -801,6 +851,18 @@ namespace DSPRE.Editors
             this._parent = parent;
             textEditorIsReady = true;
 
+            // Ensure control handle is created before starting async operations that use Invoke()
+            // This is necessary when SetupTextEditor is called before the TextEditor tab has been shown
+            if (!IsHandleCreated)
+            {
+                CreateControl();
+            }
+            // Force handle creation on child controls that will be invoked from background task
+            if (!selectTextFileComboBox.IsHandleCreated)
+            {
+                var _ = selectTextFileComboBox.Handle;
+            }
+
             string unpackedPath = RomInfo.gameDirs[DirNames.textArchives].unpackedDir;
             string expandedPath = TextConverter.GetExpandedFolderPath();
 
@@ -808,6 +870,13 @@ namespace DSPRE.Editors
 
             using (var loadingForm = new LoadingForm(maxProgress, "Loading text archives..."))
             {
+                // Force handle creation on loadingForm before Task.Run starts
+                // Otherwise the task may try to Invoke before ShowDialog creates the handle
+                if (!loadingForm.IsHandleCreated)
+                {
+                    var _ = loadingForm.Handle;
+                }
+
                 Task.Run(() =>
                 {
                     int progress = 0;

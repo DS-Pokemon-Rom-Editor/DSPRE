@@ -21,7 +21,7 @@ namespace DSPRE.Editors
 {
     public partial class HeaderEditor : UserControl
     {
-        bool isHeaderEditorReady = false;
+        public bool isHeaderEditorReady { get; set; } = false;
         MainProgram _parent;
 
         public HeaderEditor()
@@ -331,7 +331,7 @@ namespace DSPRE.Editors
         }
         private void areaDataUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -356,7 +356,7 @@ namespace DSPRE.Editors
         }
         private void areaIconComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -380,7 +380,7 @@ namespace DSPRE.Editors
         }
         private void eventFileUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -388,11 +388,15 @@ namespace DSPRE.Editors
         }
         private void battleBackgroundUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
             currentHeader.battleBackground = (byte)battleBackgroundUpDown.Value;
         }
         private void followModeComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -406,7 +410,7 @@ namespace DSPRE.Editors
 
         private void kantoRadioButton_CheckedChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -418,7 +422,7 @@ namespace DSPRE.Editors
         }
         private void headerFlagsCheckBoxes_CheckedChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -578,7 +582,7 @@ namespace DSPRE.Editors
         }
         private void levelScriptUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -586,7 +590,7 @@ namespace DSPRE.Editors
         }
         private void mapNameComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -606,7 +610,7 @@ namespace DSPRE.Editors
         }
         private void matrixUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -625,7 +629,7 @@ namespace DSPRE.Editors
 
         private void musicDayComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -644,7 +648,7 @@ namespace DSPRE.Editors
         }
         private void musicNightComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -664,7 +668,7 @@ namespace DSPRE.Editors
         }
         private void musicDayUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -695,7 +699,7 @@ namespace DSPRE.Editors
         }
         private void musicNightUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -726,10 +730,18 @@ namespace DSPRE.Editors
         }
         private void worldmapXCoordUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
             ((HeaderHGSS)currentHeader).worldmapX = (byte)worldmapXCoordUpDown.Value;
         }
         private void worldmapYCoordUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
             ((HeaderHGSS)currentHeader).worldmapY = (byte)worldmapYCoordUpDown.Value;
         }
         private void updateWeatherPicAndComboBox()
@@ -856,7 +868,7 @@ namespace DSPRE.Editors
 
         private void weatherComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled || weatherComboBox.SelectedIndex < 0)
+            if (Helpers.HandlersDisabled || currentHeader == null || weatherComboBox.SelectedIndex < 0)
             {
                 return;
             }
@@ -877,12 +889,16 @@ namespace DSPRE.Editors
         }
         private void weatherUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
             currentHeader.weatherID = (byte)weatherUpDown.Value;
             updateWeatherPicAndComboBox();
         }
         private void cameraComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled || cameraComboBox.SelectedIndex < 0)
+            if (Helpers.HandlersDisabled || currentHeader == null || cameraComboBox.SelectedIndex < 0)
             {
                 return;
             }
@@ -903,6 +919,10 @@ namespace DSPRE.Editors
         }
         private void cameraUpDown_ValueChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
             currentHeader.cameraAngleID = (byte)cameraUpDown.Value;
             updateCameraPicAndComboBox();
         }
@@ -1203,7 +1223,7 @@ namespace DSPRE.Editors
         }
         private void scriptFileUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -1211,7 +1231,7 @@ namespace DSPRE.Editors
         }
         private void areaSettingsComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled || areaSettingsComboBox.SelectedItem is null)
+            if (Helpers.HandlersDisabled || currentHeader == null || areaSettingsComboBox.SelectedItem is null)
             {
                 return;
             }
@@ -1230,7 +1250,7 @@ namespace DSPRE.Editors
         }
         private void textFileUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -1239,7 +1259,7 @@ namespace DSPRE.Editors
 
         private void wildPokeUpDown_ValueChanged(object sender, EventArgs e)
         {
-            if (Helpers.HandlersDisabled)
+            if (Helpers.HandlersDisabled || currentHeader == null)
             {
                 return;
             }
@@ -1636,6 +1656,43 @@ namespace DSPRE.Editors
             followModeComboBox.SelectedIndex = followingPokeCopy;
             kantoRadioButton.Checked = kantoFlagCopy;
             RefreshFlags();
+        }
+
+        /// <summary>
+        /// Resets the Header Editor to its initial state when switching ROMs.
+        /// </summary>
+        public void Reset()
+        {
+            Helpers.DisableHandlers();
+            try
+            {
+                isHeaderEditorReady = false;
+                currentHeader = null;
+                internalNames?.Clear();
+                headerListBoxNames?.Clear();
+
+                // Clear UI controls
+                headerListBox.Items.Clear();
+                locationNameComboBox.Items.Clear();
+                areaSettingsComboBox.Items.Clear();
+                areaIconComboBox.Items.Clear();
+                musicDayComboBox.Items.Clear();
+                musicNightComboBox.Items.Clear();
+                weatherComboBox.Items.Clear();
+                cameraComboBox.Items.Clear();
+
+                internalNameBox.Text = "";
+                searchLocationTextBox.Text = "";
+
+                // Reset pictures
+                areaIconPictureBox.Image = null;
+                weatherPictureBox.Image = null;
+                cameraPictureBox.Image = null;
+            }
+            finally
+            {
+                Helpers.EnableHandlers();
+            }
         }
         #endregion
 

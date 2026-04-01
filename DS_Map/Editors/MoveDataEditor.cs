@@ -1,3 +1,4 @@
+using DSPRE.Editors;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using System;
@@ -10,7 +11,7 @@ using static DSPRE.MoveData;
 using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace DSPRE {
-    public partial class MoveDataEditor : Form {
+    public partial class MoveDataEditor : Form, IEditorWithUnsavedChanges {
         private bool disableHandlers = false;
 
         private readonly string[] fileNames;
@@ -28,6 +29,30 @@ namespace DSPRE {
         private static bool dirty = false;
         private static readonly string formName = "Move Data Editor";
 
+        #region IEditorWithUnsavedChanges Implementation
+
+        public bool HasUnsavedChanges => dirty;
+
+        public string UnsavedChangesDescription => currentLoadedFile != null 
+            ? $"Move {currentLoadedId} - {fileNames[currentLoadedId]}" 
+            : "Move Data";
+
+        public void SaveChanges()
+        {
+            if (dirty && currentLoadedFile != null)
+            {
+                currentLoadedFile.SaveToFileDefaultDir(currentLoadedId, showSuccessMessage: false);
+                setDirty(false);
+            }
+        }
+
+        public void DiscardChanges()
+        {
+            setDirty(false);
+        }
+
+        #endregion
+
         public MoveDataEditor(string[] fileNames, string[] moveDescriptions) {
         this.fileNames = fileNames.ToArray();
         this.moveDescriptions = moveDescriptions;
@@ -35,6 +60,9 @@ namespace DSPRE {
 
         // Build lookup dictionaries for import validation
         BuildLookupDictionaries();
+
+        // Register with OpenEditorsRegistry for project switch tracking
+        OpenEditorsRegistry.Register(this);
 
         InitializeComponent();
 

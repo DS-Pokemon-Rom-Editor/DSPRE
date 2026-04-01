@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using DSPRE.Editors;
+
 namespace DSPRE
 {
     public struct EggMoveEntry
@@ -29,7 +31,7 @@ namespace DSPRE
     }
 
 
-    public partial class EggMoveEditor : Form
+    public partial class EggMoveEditor : Form, IEditorWithUnsavedChanges
     {
         private const int EGG_MOVE_OVERLAY_NUMBER = 5;
         private const int EGG_MOVES_SPECIES_CONSTANT = 20000; // Species IDs in egg move data are stored as speciesID + this constant
@@ -44,8 +46,16 @@ namespace DSPRE
         private List<EggMoveEntry> eggMoveData = new List<EggMoveEntry>();
         private bool dirty = false;
 
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => "Egg Move Editor";
+        public void SaveChanges() => SaveEggMoveData();
+        public void DiscardChanges() => SetDirty(false);
+        #endregion
+
         public EggMoveEditor()
         {
+            OpenEditorsRegistry.Register(this);
             monNames = RomInfo.GetPokemonNames();
             moveNames = RomInfo.GetAttackNames();
 

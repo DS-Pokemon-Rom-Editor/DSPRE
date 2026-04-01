@@ -143,6 +143,216 @@ namespace DSPRE
 
         #endregion
 
+        #region Project Management
+
+        /// <summary>
+        /// Gets whether a ROM project is currently loaded.
+        /// </summary>
+        public bool IsProjectLoaded => romInfo != null && !string.IsNullOrEmpty(RomInfo.workDir);
+
+        /// <summary>
+        /// Attempts to close the current project, prompting for unsaved changes.
+        /// Returns true if the project was closed (or no project was open), false if the user cancelled.
+        /// </summary>
+        private bool TryCloseCurrentProject()
+        {
+            if (!IsProjectLoaded)
+            {
+                return true; // No project loaded, nothing to close
+            }
+
+            AppLogger.Info("TryCloseCurrentProject: Checking for unsaved changes...");
+
+            // Gather all editors with unsaved changes
+            var editorsWithChanges = new List<UnsavedChangesDialog.UnsavedEditorInfo>();
+
+            // Check tabbed editors that implement IEditorWithUnsavedChanges
+            CheckTabbedEditorForUnsavedChanges(headerEditor, "Header Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(matrixEditor, "Matrix Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(mapEditor, "Map Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(eventEditor, "Event Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(scriptEditor, "Script Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(levelScriptEditor, "Level Script Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(textEditor, "Text Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(trainerEditor, "Trainer Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(encountersEditor, "Encounters Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(cameraEditor, "Camera Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(nsbtxEditor, "NSBTX Editor", editorsWithChanges);
+
+            // Check standalone editors via OpenEditorsRegistry
+            foreach (var (form, editor) in OpenEditorsRegistry.GetEditorsWithUnsavedChanges())
+            {
+                editorsWithChanges.Add(new UnsavedChangesDialog.UnsavedEditorInfo
+                {
+                    EditorName = form.Text.TrimEnd('*'),
+                    Description = editor.UnsavedChangesDescription,
+                    Editor = editor
+                });
+            }
+
+            // Check popped-out editors
+            foreach (var kvp in EditorPanels.PopoutRegistry.Snapshot)
+            {
+                if (kvp.Key is IEditorWithUnsavedChanges editor && editor.HasUnsavedChanges)
+                {
+                    // Skip if already added as tabbed editor
+                    if (!editorsWithChanges.Any(e => e.Editor == editor))
+                    {
+                        editorsWithChanges.Add(new UnsavedChangesDialog.UnsavedEditorInfo
+                        {
+                            EditorName = kvp.Value.Text.TrimEnd('*'),
+                            Description = editor.UnsavedChangesDescription,
+                            Editor = editor
+                        });
+                    }
+                }
+            }
+
+            AppLogger.Info($"TryCloseCurrentProject: Found {editorsWithChanges.Count} editor(s) with unsaved changes");
+
+            // Show dialog if there are unsaved changes
+            if (editorsWithChanges.Count > 0)
+            {
+                if (!UnsavedChangesDialog.ShowIfNeeded(editorsWithChanges))
+                {
+                    AppLogger.Info("TryCloseCurrentProject: User cancelled");
+                    return false; // User cancelled
+                }
+            }
+
+            // Close all pop-out windows
+            EditorPanels.PopoutRegistry.CloseAll();
+
+            // Close all standalone editors
+            OpenEditorsRegistry.CloseAll(force: true);
+
+            // Reset the project state
+            ResetProjectState();
+
+            AppLogger.Info("TryCloseCurrentProject: Project closed successfully");
+            return true;
+        }
+
+        private void CheckTabbedEditorForUnsavedChanges(
+            object editor,
+            string editorName,
+            List<UnsavedChangesDialog.UnsavedEditorInfo> list)
+        {
+            if (editor is IEditorWithUnsavedChanges unsavedEditor && unsavedEditor.HasUnsavedChanges)
+            {
+                list.Add(new UnsavedChangesDialog.UnsavedEditorInfo
+                {
+                    EditorName = editorName,
+                    Description = unsavedEditor.UnsavedChangesDescription,
+                    Editor = unsavedEditor
+                });
+            }
+        }
+
+        /// <summary>
+        /// Resets the project state after closing a project.
+        /// </summary>
+        private void ResetProjectState()
+        {
+            AppLogger.Info("ResetProjectState: Resetting project state...");
+
+            // Reset RomInfo (clear the instance reference)
+            romInfo = null;
+
+            // Clear lookup dictionaries
+            eventToHeader.Clear();
+            scriptToHeaders.Clear();
+
+            // Reset all tabbed editors to their initial state
+            ResetAllEditors();
+
+            // Reset UI state
+            iconON = false;
+            gameIcon.Refresh();
+
+            // Reset window title
+            this.Text = "DS Pokémon Rom Editor Reloaded " + GetDSPREVersion();
+
+            // Hide the main tab control
+            mainTabControl.Hide();
+
+            // Reset labels
+            versionLabel.Visible = false;
+            languageLabel.Visible = false;
+
+            // Re-enable open buttons/menus
+            loadRomButton.Enabled = true;
+            readDataFromFolderButton.Enabled = true;
+            openROMToolStripMenuItem.Enabled = true;
+            openFolderToolStripMenuItem.Enabled = true;
+
+            // Disable save and other project-specific features
+            saveRomButton.Enabled = false;
+            saveROMToolStripMenuItem.Enabled = false;
+            unpackAllButton.Enabled = false;
+            updateMapNarcsButton.Enabled = false;
+            buildingEditorButton.Enabled = false;
+            wildEditorButton.Enabled = false;
+            romToolboxToolStripButton.Enabled = false;
+            romToolboxToolStripMenuItem.Enabled = false;
+            headerSearchToolStripButton.Enabled = false;
+            pokemonEditorButton.Enabled = false;
+            moveEditorButton.Enabled = false;
+            itemEditorButton.Enabled = false;
+            tradeEditorButton.Enabled = false;
+            otherEditorsToolStripMenuItem.Enabled = false;
+            NarcUtilityToolStripMenuItem.Enabled = false;
+            nSBMDUtilityToolStripMenuItem.Enabled = false;
+            generateCSVToolStripMenuItem.Enabled = false;
+            researchHelperToolStripMenuItem.Enabled = false;
+            scriptCommandsButton.Enabled = false;
+            overlayEditorToolStripMenuItem.Enabled = false;
+
+            // Reset status
+            Helpers.statusLabelMessage("Ready");
+
+            AppLogger.Info("ResetProjectState: Project state reset complete");
+        }
+
+        /// <summary>
+        /// Resets all tabbed editors to their initial state when switching ROMs.
+        /// </summary>
+        private void ResetAllEditors()
+        {
+            AppLogger.Debug("ResetAllEditors: Resetting all editors...");
+
+            // Reset Event Editor
+            EditorPanels.eventEditor.Reset();
+
+            // Reset Header Editor
+            EditorPanels.headerEditor.Reset();
+
+            // Reset Script Editor
+            EditorPanels.scriptEditor.scriptEditorIsReady = false;
+
+            // Reset Text Editor
+            EditorPanels.textEditor.Reset();
+
+            // Reset Matrix Editor
+            EditorPanels.matrixEditor.matrixEditorIsReady = false;
+
+            // Reset Map Editor
+            EditorPanels.mapEditor.mapEditorIsReady = false;
+
+            // Reset Trainer Editor
+            EditorPanels.trainerEditor.trainerEditorIsReady = false;
+
+            // Reset Level Script Editor
+            EditorPanels.levelScriptEditor.levelScriptEditorIsReady = false;
+
+            // Reset Encounters Editor (HGSS only)
+            EditorPanels.encountersEditor.encounterEditorIsReady = false;
+
+            AppLogger.Debug("ResetAllEditors: All editors reset");
+        }
+
+        #endregion
+
         #region Subroutines
 
         private enum LayoutStyle : byte
@@ -770,6 +980,13 @@ namespace DSPRE
         }
         private void loadRom_Click(object sender, EventArgs e)
         {
+            // Check for unsaved changes in current project
+            if (!TryCloseCurrentProject())
+            {
+                AppLogger.Info("loadRom_Click: User cancelled due to unsaved changes");
+                return;
+            }
+
             OpenFileDialog openRom = new OpenFileDialog
             {
                 Filter = DSUtils.NDSRomFilter
@@ -980,6 +1197,13 @@ namespace DSPRE
 
         private void readDataFromFolderButton_Click(object sender, EventArgs e)
         {
+            // Check for unsaved changes in current project
+            if (!TryCloseCurrentProject())
+            {
+                AppLogger.Info("readDataFromFolderButton_Click: User cancelled due to unsaved changes");
+                return;
+            }
+
             CommonOpenFileDialog romFolder = new CommonOpenFileDialog
             {
                 IsFolderPicker = true,
@@ -1173,12 +1397,15 @@ namespace DSPRE
 
 
             mainTabControl.Show();
-            loadRomButton.Enabled = false;
-            readDataFromFolderButton.Enabled = false;
+
+            // Keep open buttons enabled to allow switching projects
+            loadRomButton.Enabled = true;
+            readDataFromFolderButton.Enabled = true;
+            openROMToolStripMenuItem.Enabled = true;
+            openFolderToolStripMenuItem.Enabled = true;
+
             saveRomButton.Enabled = true;
             saveROMToolStripMenuItem.Enabled = true;
-            openROMToolStripMenuItem.Enabled = false;
-            openFolderToolStripMenuItem.Enabled = false;
 
             unpackAllButton.Enabled = true;
             updateMapNarcsButton.Enabled = true;

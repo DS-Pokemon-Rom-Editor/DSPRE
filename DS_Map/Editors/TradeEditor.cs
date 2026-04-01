@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace DSPRE.Editors
 {
-    public partial class TradeEditor : Form
+    public partial class TradeEditor : Form, IEditorWithUnsavedChanges
     {
 
         private TradeData curTradeData;
@@ -21,6 +21,21 @@ namespace DSPRE.Editors
         // Track if any changes have been made
         private bool tradeDirty = false; 
         private bool textDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => tradeDirty || textDirty;
+        public string UnsavedChangesDescription => "Trade Editor";
+        public void SaveChanges()
+        {
+            if (tradeDirty) SaveTradeToFile();
+            if (textDirty) SaveTextDataToFile();
+        }
+        public void DiscardChanges()
+        {
+            tradeDirty = false;
+            textDirty = false;
+        }
+        #endregion
 
         #region Enums
         public enum OriginLang
@@ -39,6 +54,7 @@ namespace DSPRE.Editors
 
         public TradeEditor()
         {
+            OpenEditorsRegistry.Register(this);
             Helpers.DisableHandlers();
 
             AppLogger.Debug("TradeEditor: Initializing Trade Editor.");

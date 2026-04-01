@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace DSPRE {
-    public partial class LearnsetEditor : Form {
+    public partial class LearnsetEditor : Form, IEditorWithUnsavedChanges {
 
         private PokemonEditor _parent;
         private readonly string[] fileNames;
@@ -28,6 +28,13 @@ namespace DSPRE {
         private readonly string formName = "Learnset Editor";
 
         private const string LearnsetWarningDismissedFile = ".learnset_warning_dismissed";
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => $"Learnset Editor (Mon {currentLoadedId})";
+        public void SaveChanges() => SaveLearnsetData();
+        public void DiscardChanges() => SetDirty(false);
+        #endregion
 
         private readonly string[] editButtonNames = new string[] {
             "Edit",

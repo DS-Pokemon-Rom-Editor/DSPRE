@@ -1,4 +1,5 @@
-﻿using DSPRE.ROMFiles;
+﻿using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +9,7 @@ using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE {
-    public partial class WildEditorDPPt : Form {
+    public partial class WildEditorDPPt : Form, IEditorWithUnsavedChanges {
 
         #region Enums
 
@@ -39,9 +40,37 @@ namespace DSPRE {
         private int loadedEncounterFileIndex = 0;
 
         EncounterFileDPPt currentFile;
-       
+
+        #region IEditorWithUnsavedChanges Implementation
+
+        public bool HasUnsavedChanges => walkingDirty || waterDirty;
+
+        public string UnsavedChangesDescription => $"Encounter File {loadedEncounterFileIndex}";
+
+        public void SaveChanges()
+        {
+            if (HasUnsavedChanges)
+            {
+                SaveWalking();
+                SaveWater();
+                currentFile?.SaveToFileDefaultDir(loadedEncounterFileIndex, showSuccessMessage: false);
+            }
+        }
+
+        public void DiscardChanges()
+        {
+            SetDirtyWalking(false);
+            SetDirtyWater(false);
+        }
+
+        #endregion
+
         public WildEditorDPPt(string dirPath, string[] names, int encToOpen, int totalNumHeaderFiles) {
             InitializeComponent();
+
+            // Register with OpenEditorsRegistry for project switch tracking
+            OpenEditorsRegistry.Register(this);
+
             encounterFileFolder = dirPath;
             Text = "DSPRE Reloaded " + GetDSPREVersion() + " - DPPt Encounters Editor";
             Helpers.DisableHandlers();

@@ -11,10 +11,12 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
+using DSPRE.Editors;
+
 namespace DSPRE
 {
 
-    public partial class TMEditor : Form
+    public partial class TMEditor : Form, IEditorWithUnsavedChanges
     {
         // This should make it easier to change in the future if expanding the number of TMs/HMs becomes possible
         private static readonly int machineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
@@ -24,8 +26,16 @@ namespace DSPRE
         private int[] curMachinePalettes = new int[machineCount];
         private bool dirty = false;
 
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => "TM/HM Editor";
+        void IEditorWithUnsavedChanges.SaveChanges() => SaveChanges();
+        public void DiscardChanges() => SetDirty(false);
+        #endregion
+
         public TMEditor()
         {
+            OpenEditorsRegistry.Register(this);
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
 
             InitializeComponent();

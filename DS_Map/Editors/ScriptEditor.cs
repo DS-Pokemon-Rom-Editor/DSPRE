@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 namespace DSPRE.Editors
 {
-    public partial class ScriptEditor : UserControl
+    public partial class ScriptEditor : UserControl, IEditorWithUnsavedChanges
     {
         public bool scriptEditorIsReady { get; set; } = false;
         private Scintilla ScriptTextArea;
@@ -29,6 +29,13 @@ namespace DSPRE.Editors
         private bool scriptsDirty = false;
         private bool functionsDirty = false;
         private bool actionsDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => scriptsDirty || functionsDirty || actionsDirty;
+        public string UnsavedChangesDescription => $"Script Editor (File {currentScriptFile?.fileID})";
+        public void SaveChanges() => SaveScriptFile(ScriptTextArea, showMessage: false);
+        public void DiscardChanges() => ScriptEditorSetClean();
+        #endregion
         private string cmdKeyWords = "";
         private string secondaryKeyWords = "";
         private string altCaseKeywords = "";

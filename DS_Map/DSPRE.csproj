@@ -125,12 +125,14 @@
     <Compile Include="Editors\EggMoveEditor.Designer.cs">
       <DependentUpon>EggMoveEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\IEditorWithUnsavedChanges.cs" />
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Editors\LearnsetLimitWarningForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\OpenEditorsRegistry.cs" />
     <Compile Include="Editors\StrVarHelpForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -225,6 +227,9 @@
     </Compile>
     <Compile Include="Editors\TrainerEditor\MonReorderForm.Designer.cs">
       <DependentUpon>MonReorderForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Editors\UnsavedChangesDialog.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Editors\Utils\IndexedBitmapHandler.cs" />
     <Compile Include="Editors\ItemEditor.cs">
