@@ -36,10 +36,13 @@ namespace DSPRE.Editors
             this.safariZoneEditor = new DSPRE.Editors.SafariZoneEditor();
             this.tabPageBugContestEditor = new System.Windows.Forms.TabPage();
             this.bugContestEncounterEditor = new DSPRE.Editors.BugContestEncounterEditor();
+            this.tabPageHoneyTreeEditor = new System.Windows.Forms.TabPage();
+            this.honeyTreeEncounterEditor = new DSPRE.Editors.HoneyTreeEncounterEditor();
             this.tabControl.SuspendLayout();
             this.tabPageHeadbuttEditor.SuspendLayout();
             this.tabPageSafariZoneEditor.SuspendLayout();
             this.tabPageBugContestEditor.SuspendLayout();
+            this.tabPageHoneyTreeEditor.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
@@ -47,6 +50,7 @@ namespace DSPRE.Editors
             this.tabControl.Controls.Add(this.tabPageHeadbuttEditor);
             this.tabControl.Controls.Add(this.tabPageSafariZoneEditor);
             this.tabControl.Controls.Add(this.tabPageBugContestEditor);
+            this.tabControl.Controls.Add(this.tabPageHoneyTreeEditor);
             this.tabControl.Location = new System.Drawing.Point(4, 4);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
@@ -114,6 +118,26 @@ namespace DSPRE.Editors
             this.bugContestEncounterEditor.Size = new System.Drawing.Size(700, 400);
             this.bugContestEncounterEditor.TabIndex = 0;
             // 
+            // tabPageHoneyTreeEditor
+            // 
+            this.tabPageHoneyTreeEditor.Controls.Add(this.honeyTreeEncounterEditor);
+            this.tabPageHoneyTreeEditor.Location = new System.Drawing.Point(4, 22);
+            this.tabPageHoneyTreeEditor.Name = "tabPageHoneyTreeEditor";
+            this.tabPageHoneyTreeEditor.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageHoneyTreeEditor.Size = new System.Drawing.Size(1095, 628);
+            this.tabPageHoneyTreeEditor.TabIndex = 3;
+            this.tabPageHoneyTreeEditor.Text = "Honey Tree";
+            this.tabPageHoneyTreeEditor.UseVisualStyleBackColor = true;
+            this.tabPageHoneyTreeEditor.Enter += new System.EventHandler(this.tabPageHoneyTreeEditor_Enter);
+            // 
+            // honeyTreeEncounterEditor
+            // 
+            this.honeyTreeEncounterEditor.honeyTreeEncounterEditorIsReady = false;
+            this.honeyTreeEncounterEditor.Location = new System.Drawing.Point(6, 6);
+            this.honeyTreeEncounterEditor.Name = "honeyTreeEncounterEditor";
+            this.honeyTreeEncounterEditor.Size = new System.Drawing.Size(700, 400);
+            this.honeyTreeEncounterEditor.TabIndex = 0;
+            // 
             // EncountersEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -125,6 +149,7 @@ namespace DSPRE.Editors
             this.tabPageHeadbuttEditor.ResumeLayout(false);
             this.tabPageSafariZoneEditor.ResumeLayout(false);
             this.tabPageBugContestEditor.ResumeLayout(false);
+            this.tabPageHoneyTreeEditor.ResumeLayout(false);
             this.ResumeLayout(false);
 
     }
@@ -138,5 +163,7 @@ namespace DSPRE.Editors
     public SafariZoneEditor safariZoneEditor;
     private System.Windows.Forms.TabPage tabPageBugContestEditor;
     public BugContestEncounterEditor bugContestEncounterEditor;
+    private System.Windows.Forms.TabPage tabPageHoneyTreeEditor;
+    public HoneyTreeEncounterEditor honeyTreeEncounterEditor;
   }
 }

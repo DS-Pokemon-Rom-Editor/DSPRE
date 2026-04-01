@@ -167,6 +167,7 @@ namespace DSPRE
             scripts,
 
             encounters,
+            encounterExtended,
             headbutt,
             safariZone,
 
@@ -1709,6 +1710,7 @@ namespace DSPRE
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\poke_icon.narc",
 
                         [DirNames.encounters] = $@"{dataFolderName}\fielddata\encountdata\" + char.ToLower(gameVersion.ToString()[0]) + '_' + "enc_data.narc",
+                        [DirNames.encounterExtended] = $@"{dataFolderName}\arc\encdata_ex.narc",
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 
@@ -1779,6 +1781,7 @@ namespace DSPRE
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\pl_poke_icon.narc",
 
                         [DirNames.encounters] = $@"{dataFolderName}\fielddata\encountdata\" + suffix + '_' + "enc_data.narc",
+                        [DirNames.encounterExtended] = $@"{dataFolderName}\arc\encdata_ex.narc",
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 

@@ -18,8 +18,15 @@ namespace DSPRE {
         public static string trainerParty => RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir;
         public static string trainerGraphics => RomInfo.gameDirs[RomInfo.DirNames.trainerGraphics].unpackedDir;
         public static string encounters => RomInfo.gameDirs[RomInfo.DirNames.encounters].unpackedDir;
-        public static string headbutt => RomInfo.gameDirs[RomInfo.DirNames.headbutt].unpackedDir;
-        public static string safariZone => RomInfo.gameDirs[RomInfo.DirNames.safariZone].unpackedDir;
+        public static string encounterExtended => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.encounterExtended) 
+            ? RomInfo.gameDirs[RomInfo.DirNames.encounterExtended].unpackedDir 
+            : null;
+        public static string headbutt => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.headbutt)
+            ? RomInfo.gameDirs[RomInfo.DirNames.headbutt].unpackedDir
+            : null;
+        public static string safariZone => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.safariZone)
+            ? RomInfo.gameDirs[RomInfo.DirNames.safariZone].unpackedDir
+            : null;
         public static string monIcons => RomInfo.gameDirs[RomInfo.DirNames.monIcons].unpackedDir;
         public static string synthOverlay => RomInfo.gameDirs[RomInfo.DirNames.synthOverlay].unpackedDir;
         public static string interiorBuildingModels => RomInfo.gameDirs[RomInfo.DirNames.interiorBuildingModels].unpackedDir;
@@ -219,7 +226,8 @@ namespace DSPRE {
         }
 
         public static int GetSafariZoneCount() {
-            return GetSafariZoneFiles().Length;
+            var files = GetSafariZoneFiles();
+            return files?.Length ?? 0;
         }
 
         static string[] GetHeadbuttFiles() {
@@ -231,7 +239,8 @@ namespace DSPRE {
         }
 
         public static int GetHeadbuttCount() {
-            return GetHeadbuttFiles().Length;
+            var files = GetHeadbuttFiles();
+            return files?.Length ?? 0;
         }
 
         public static string GetOWSpritePath(int id) {
