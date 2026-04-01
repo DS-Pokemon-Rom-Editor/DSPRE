@@ -553,7 +553,7 @@ private void SomeControl_ValueChanged(object sender, EventArgs e)
 ```
 
 #### 5. Dirty Tracking Pattern
-Track unsaved changes:
+Track unsaved changes. For Form-based editors:
 ```csharp
 private bool dirty = false;
 
@@ -564,10 +564,40 @@ private void SetDirty(bool status) {
 
 private bool CheckDiscardChanges() {
     if (!dirty) return true;
-    
+
     var result = MessageBox.Show("Unsaved changes. Discard?", 
         "Warning", MessageBoxButtons.YesNo);
     return result == DialogResult.Yes;
+}
+```
+
+For UserControl-based editors (tab panels), implement `IEditorWithUnsavedChanges`:
+```csharp
+public class MyEditor : UserControl, IEditorWithUnsavedChanges
+{
+    private bool isDirty = false;
+
+    // IEditorWithUnsavedChanges implementation
+    public bool HasUnsavedChanges => isDirty;
+    public string UnsavedChangesMessage => $"My Editor (File {currentFileID})";
+
+    private void SetDirty()
+    {
+        if (!isDirty)
+        {
+            isDirty = true;
+            OpenEditorsRegistry.Register(this);
+        }
+    }
+
+    private void SetClean()
+    {
+        if (isDirty)
+        {
+            isDirty = false;
+            OpenEditorsRegistry.Unregister(this);
+        }
+    }
 }
 ```
 
@@ -792,6 +822,8 @@ private void myEditorToolStripMenuItem_Click(object sender, EventArgs e)
 3. Log appropriately - use `AppLogger.Info()`, `AppLogger.Error()`, etc.
 4. Check game version - use `RomInfo.gameFamily` for version-specific logic
 5. Avoid useless comments - only comment "why", not "what"
+6. **SetDirty() guards** - When calling `SetDirty()` in event handlers, ALWAYS check BOTH `Helpers.HandlersDisabled` AND the relevant selection index (e.g., `listBox.SelectedIndex < 0`). Setup code can trigger handlers after `EnableHandlers()`, causing false dirty state.
+7. **Reset() for UserControl editors** - Editors that maintain state must implement a `Reset()` method to clear all data when switching ROMs. Always wrap in `DisableHandlers()`/`EnableHandlers()`.
 
 ### Pull Request Process
 
