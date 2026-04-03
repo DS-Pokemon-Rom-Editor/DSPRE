@@ -23,34 +23,40 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
       
     - name: Clone Database Repository
       run: |
         git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+    - name: Clone ds-rom Repository
+      run: |
+        git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
         
     - name: Restore NuGet packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
+      working-directory: ${{ github.workspace }}
       run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
     - name: Build DSPRE
-      working-directory: ${{env.GITHUB_WORKSPACE}}
+      working-directory: ${{ github.workspace }}
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
     
-    - name: Download dsrom.exe
+    - name: Build dsrom.exe
       run: |
-        gh release download --repo AetiasHax/ds-rom --pattern "dsrom-windows-x86_64.exe" --dir .
-        Move-Item -Path dsrom-windows-x86_64.exe -Destination "${{env.GITHUB_WORKSPACE}}DS_Map\bin\Release\Tools\dsrom.exe" -Force
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+        New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\DS_Map\bin\Release\Tools" | Out-Null
+        Copy-Item -Path "${{ github.workspace }}\ds-rom\target\release\dsrom.exe" -Destination "${{ github.workspace }}\DS_Map\bin\Release\Tools\dsrom.exe" -Force
     
     - name: Prepare Release Files
       run: |
-        mkdir "${{env.GITHUB_WORKSPACE}}DS_Map\bin\Release\databases"
-        robocopy databases "${{env.GITHUB_WORKSPACE}}DS_Map\bin\Release\databases" /E /XD "databases\.git\objects\pack"
+        mkdir "${{ github.workspace }}\DS_Map\bin\Release\databases"
+        robocopy databases "${{ github.workspace }}\DS_Map\bin\Release\databases" /E /XD "databases\.git\objects\pack"
         if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
 
     - name: Zip Release Files
-      run: Compress-Archive -Path "${{env.GITHUB_WORKSPACE}}DS_Map\bin\Release\*" -DestinationPath DSPRE-canary-${{ github.sha }}.zip
+      run: Compress-Archive -Path "${{ github.workspace }}\DS_Map\bin\Release\*" -DestinationPath DSPRE-canary-${{ github.sha }}.zip
 
     - name: Fetch tags
       run: git fetch --prune --unshallow --tags
@@ -70,7 +76,7 @@ jobs:
     
     - name: Get current date
       id: date
-      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
         
     - name: Create new release
       uses: softprops/action-gh-release@v2
