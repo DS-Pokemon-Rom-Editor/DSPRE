@@ -1,4 +1,4 @@
-﻿namespace DSPRE.Editors
+namespace DSPRE.Editors
 {
     partial class EventEditor
     {
@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EventEditor));
-            this.locateCurrentEvFile = new System.Windows.Forms.Button();
             this.groupBox21 = new System.Windows.Forms.GroupBox();
             this.showTriggersCheckBox = new System.Windows.Forms.CheckBox();
             this.showWarpsCheckBox = new System.Windows.Forms.CheckBox();
@@ -185,12 +184,65 @@
             this.removeTriggerButton = new System.Windows.Forms.Button();
             this.addTriggerButton = new System.Windows.Forms.Button();
             this.triggersListBox = new System.Windows.Forms.ListBox();
+            this.movementEditorTabPage = new System.Windows.Forms.TabPage();
+            this.movementCommandTablePanel = new System.Windows.Forms.Panel();
+            this.MiscActionsBox = new System.Windows.Forms.GroupBox();
+            this.UnlockDirButton = new System.Windows.Forms.Button();
+            this.LockDirectionButton = new System.Windows.Forms.Button();
+            this.SetVisibleButton = new System.Windows.Forms.Button();
+            this.SetInvisibleButton = new System.Windows.Forms.Button();
+            this.ToolboxBox = new System.Windows.Forms.GroupBox();
+            this.ConfirmListSelectedButton = new System.Windows.Forms.Button();
+            this.UndoListChangesButton = new System.Windows.Forms.Button();
+            this.MoveListUpButton = new System.Windows.Forms.Button();
+            this.CopyListButton = new System.Windows.Forms.Button();
+            this.DeleteListSelectedButton = new System.Windows.Forms.Button();
+            this.RedoListChangesButton = new System.Windows.Forms.Button();
+            this.PasteListButton = new System.Windows.Forms.Button();
+            this.MoveListDownButton = new System.Windows.Forms.Button();
+            this.PlaceholderPointerBox = new System.Windows.Forms.GroupBox();
+            this.PointerXLabel = new System.Windows.Forms.Label();
+            this.PointerYLabel = new System.Windows.Forms.Label();
+            this.PointerYUpDown = new System.Windows.Forms.NumericUpDown();
+            this.PointerXUpDown = new System.Windows.Forms.NumericUpDown();
+            this.PlaceholderPointerCheckBox = new System.Windows.Forms.CheckBox();
+            this.ActionCommandBox = new System.Windows.Forms.GroupBox();
+            this.movementCommandListView = new System.Windows.Forms.ListView();
+            this.ExportActionButton = new System.Windows.Forms.Button();
+            this.MovementStyleBox = new System.Windows.Forms.GroupBox();
+            this.MovementStyleDropdown = new System.Windows.Forms.ComboBox();
+            this.ScriptFileBox = new System.Windows.Forms.GroupBox();
+            this.SetScriptButton = new System.Windows.Forms.Button();
+            this.ScriptFileDropdown = new System.Windows.Forms.ComboBox();
+            this.MovementTypeBox = new System.Windows.Forms.GroupBox();
+            this.MovementTypeDropdown = new System.Windows.Forms.ComboBox();
+            this.movementDirectionPadGroup = new System.Windows.Forms.GroupBox();
+            this.movementPadTable = new System.Windows.Forms.TableLayoutPanel();
+            this.TeleportDownButton = new System.Windows.Forms.Button();
+            this.TeleportUpButton = new System.Windows.Forms.Button();
+            this.DPadNorthButton = new System.Windows.Forms.Button();
+            this.DPadSouthButton = new System.Windows.Forms.Button();
+            this.DPadWestButton = new System.Windows.Forms.Button();
+            this.DPadEastButton = new System.Windows.Forms.Button();
+            this.DPadOnSpotCheckBoxButton = new System.Windows.Forms.CheckBox();
+            this.ExclamationButton = new System.Windows.Forms.Button();
+            this.DoubleExclamationButton = new System.Windows.Forms.Button();
+            this.OverworldPointerBox = new System.Windows.Forms.GroupBox();
+            this.OverworldPointerCheckBox = new System.Windows.Forms.CheckBox();
+            this.OverworldIDDropdown = new System.Windows.Forms.ComboBox();
+            this.ActionBox = new System.Windows.Forms.GroupBox();
+            this.SetActionButton = new System.Windows.Forms.Button();
+            this.DeleteActionButton = new System.Windows.Forms.Button();
+            this.NewActionButton = new System.Windows.Forms.Button();
+            this.ActionDropdown = new System.Windows.Forms.ComboBox();
             this.eventPanel = new System.Windows.Forms.Panel();
             this.eventPictureBox = new System.Windows.Forms.PictureBox();
             this.eventOpenGlControl = new Tao.Platform.Windows.SimpleOpenGlControl();
             this.rightClickPicture = new System.Windows.Forms.PictureBox();
             this.wheelClickPicture = new System.Windows.Forms.PictureBox();
             this.LeftClickPicture = new System.Windows.Forms.PictureBox();
+            this.screenshotButton = new System.Windows.Forms.Button();
+            this.locateCurrentEvFile = new System.Windows.Forms.Button();
             this.removeEventFileButton = new System.Windows.Forms.Button();
             this.addEventFileButton = new System.Windows.Forms.Button();
             this.eventShiftRightButton = new System.Windows.Forms.Button();
@@ -200,7 +252,6 @@
             this.exportEventFileButton = new System.Windows.Forms.Button();
             this.importEventFileButton = new System.Windows.Forms.Button();
             this.saveEventsButton = new System.Windows.Forms.Button();
-            this.screenshotButton = new System.Windows.Forms.Button();
             this.groupBox21.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.eventAreaDataUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.eventMatrixYUpDown)).BeginInit();
@@ -262,22 +313,27 @@
             this.groupBox6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.triggerXMatrixUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.triggerYMatrixUpDown)).BeginInit();
+            this.movementEditorTabPage.SuspendLayout();
+            this.movementCommandTablePanel.SuspendLayout();
+            this.MiscActionsBox.SuspendLayout();
+            this.ToolboxBox.SuspendLayout();
+            this.PlaceholderPointerBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PointerYUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PointerXUpDown)).BeginInit();
+            this.ActionCommandBox.SuspendLayout();
+            this.MovementStyleBox.SuspendLayout();
+            this.ScriptFileBox.SuspendLayout();
+            this.MovementTypeBox.SuspendLayout();
+            this.movementDirectionPadGroup.SuspendLayout();
+            this.movementPadTable.SuspendLayout();
+            this.OverworldPointerBox.SuspendLayout();
+            this.ActionBox.SuspendLayout();
             this.eventPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.eventPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.rightClickPicture)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.wheelClickPicture)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.LeftClickPicture)).BeginInit();
             this.SuspendLayout();
-            // 
-            // locateCurrentEvFile
-            // 
-            this.locateCurrentEvFile.Image = global::DSPRE.Properties.Resources.open_file;
-            this.locateCurrentEvFile.Location = new System.Drawing.Point(461, 14);
-            this.locateCurrentEvFile.Name = "locateCurrentEvFile";
-            this.locateCurrentEvFile.Size = new System.Drawing.Size(42, 40);
-            this.locateCurrentEvFile.TabIndex = 62;
-            this.locateCurrentEvFile.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.locateCurrentEvFile.UseVisualStyleBackColor = true;
             // 
             // groupBox21
             // 
@@ -398,7 +454,7 @@
             // 
             // eventMatrixYUpDown
             // 
-            this.eventMatrixYUpDown.Location = new System.Drawing.Point(466, 173);
+            this.eventMatrixYUpDown.Location = new System.Drawing.Point(466, 153);
             this.eventMatrixYUpDown.Name = "eventMatrixYUpDown";
             this.eventMatrixYUpDown.Size = new System.Drawing.Size(40, 20);
             this.eventMatrixYUpDown.TabIndex = 52;
@@ -406,7 +462,7 @@
             // 
             // eventMatrixXUpDown
             // 
-            this.eventMatrixXUpDown.Location = new System.Drawing.Point(466, 147);
+            this.eventMatrixXUpDown.Location = new System.Drawing.Point(466, 127);
             this.eventMatrixXUpDown.Name = "eventMatrixXUpDown";
             this.eventMatrixXUpDown.Size = new System.Drawing.Size(40, 20);
             this.eventMatrixXUpDown.TabIndex = 51;
@@ -417,7 +473,7 @@
             this.eventMatrixYLabel.AutoSize = true;
             this.eventMatrixYLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.eventMatrixYLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
-            this.eventMatrixYLabel.Location = new System.Drawing.Point(512, 174);
+            this.eventMatrixYLabel.Location = new System.Drawing.Point(512, 155);
             this.eventMatrixYLabel.Name = "eventMatrixYLabel";
             this.eventMatrixYLabel.Size = new System.Drawing.Size(60, 13);
             this.eventMatrixYLabel.TabIndex = 50;
@@ -428,7 +484,7 @@
             this.eventMatrixXLabel.AutoSize = true;
             this.eventMatrixXLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.eventMatrixXLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
-            this.eventMatrixXLabel.Location = new System.Drawing.Point(512, 149);
+            this.eventMatrixXLabel.Location = new System.Drawing.Point(512, 129);
             this.eventMatrixXLabel.Name = "eventMatrixXLabel";
             this.eventMatrixXLabel.Size = new System.Drawing.Size(60, 13);
             this.eventMatrixXLabel.TabIndex = 49;
@@ -503,6 +559,7 @@
             this.eventsTabControl.Controls.Add(this.overworldsTabPage);
             this.eventsTabControl.Controls.Add(this.warpsTabPage);
             this.eventsTabControl.Controls.Add(this.triggersTabPage);
+            this.eventsTabControl.Controls.Add(this.movementEditorTabPage);
             this.eventsTabControl.Location = new System.Drawing.Point(9, 236);
             this.eventsTabControl.Name = "eventsTabControl";
             this.eventsTabControl.SelectedIndex = 0;
@@ -530,6 +587,7 @@
             this.signsTabPage.TabIndex = 0;
             this.signsTabPage.Text = "Spawnables";
             this.signsTabPage.UseVisualStyleBackColor = true;
+            this.signsTabPage.Click += new System.EventHandler(this.signsTabPage_Click);
             // 
             // spawnableTypeComboBox
             // 
@@ -1769,6 +1827,17 @@
             this.triggerLogicGroupBox.TabStop = false;
             this.triggerLogicGroupBox.Text = "Logic";
             // 
+            // triggerVarHexModeRadioButton
+            // 
+            this.triggerVarHexModeRadioButton.AutoSize = true;
+            this.triggerVarHexModeRadioButton.Location = new System.Drawing.Point(90, 56);
+            this.triggerVarHexModeRadioButton.Name = "triggerVarHexModeRadioButton";
+            this.triggerVarHexModeRadioButton.Size = new System.Drawing.Size(44, 17);
+            this.triggerVarHexModeRadioButton.TabIndex = 41;
+            this.triggerVarHexModeRadioButton.Text = "Hex";
+            this.triggerVarHexModeRadioButton.UseVisualStyleBackColor = true;
+            this.triggerVarHexModeRadioButton.CheckedChanged += new System.EventHandler(this.triggerVarModeRadioButton_CheckedChanged);
+            // 
             // triggerVarDecimalModeRadioButton
             // 
             this.triggerVarDecimalModeRadioButton.AutoSize = true;
@@ -1781,17 +1850,6 @@
             this.triggerVarDecimalModeRadioButton.Text = "Decimal";
             this.triggerVarDecimalModeRadioButton.UseVisualStyleBackColor = true;
             this.triggerVarDecimalModeRadioButton.CheckedChanged += new System.EventHandler(this.triggerVarModeRadioButton_CheckedChanged);
-            // 
-            // triggerVarHexModeRadioButton
-            // 
-            this.triggerVarHexModeRadioButton.AutoSize = true;
-            this.triggerVarHexModeRadioButton.Location = new System.Drawing.Point(90, 56);
-            this.triggerVarHexModeRadioButton.Name = "triggerVarHexModeRadioButton";
-            this.triggerVarHexModeRadioButton.Size = new System.Drawing.Size(44, 17);
-            this.triggerVarHexModeRadioButton.TabIndex = 41;
-            this.triggerVarHexModeRadioButton.Text = "Hex";
-            this.triggerVarHexModeRadioButton.UseVisualStyleBackColor = true;
-            this.triggerVarHexModeRadioButton.CheckedChanged += new System.EventHandler(this.triggerVarModeRadioButton_CheckedChanged);
             // 
             // triggerVarWatchedHexTextBox
             // 
@@ -1812,7 +1870,7 @@
             this.triggerExpectedValueHexTextBox.TabIndex = 43;
             this.triggerExpectedValueHexTextBox.Visible = false;
             this.triggerExpectedValueHexTextBox.TextChanged += new System.EventHandler(this.triggerExpectedValueHexTextBox_TextChanged);
-            //
+            // 
             // expectedVarValueTriggerUpDown
             // 
             this.expectedVarValueTriggerUpDown.Location = new System.Drawing.Point(112, 36);
@@ -2147,6 +2205,637 @@
             this.triggersListBox.SelectedIndexChanged += new System.EventHandler(this.triggersListBox_SelectedIndexChanged);
             this.triggersListBox.DoubleClick += new System.EventHandler(this.triggersListBox_DoubleClick);
             // 
+            // movementEditorTabPage
+            // 
+            this.movementEditorTabPage.Controls.Add(this.movementCommandTablePanel);
+            this.movementEditorTabPage.Location = new System.Drawing.Point(4, 22);
+            this.movementEditorTabPage.Name = "movementEditorTabPage";
+            this.movementEditorTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.movementEditorTabPage.Size = new System.Drawing.Size(444, 352);
+            this.movementEditorTabPage.TabIndex = 4;
+            this.movementEditorTabPage.Text = "Movement Editor";
+            this.movementEditorTabPage.UseVisualStyleBackColor = true;
+            // 
+            // movementCommandTablePanel
+            // 
+            this.movementCommandTablePanel.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.movementCommandTablePanel.Controls.Add(this.MiscActionsBox);
+            this.movementCommandTablePanel.Controls.Add(this.ToolboxBox);
+            this.movementCommandTablePanel.Controls.Add(this.PlaceholderPointerBox);
+            this.movementCommandTablePanel.Controls.Add(this.ActionCommandBox);
+            this.movementCommandTablePanel.Controls.Add(this.ExportActionButton);
+            this.movementCommandTablePanel.Controls.Add(this.MovementStyleBox);
+            this.movementCommandTablePanel.Controls.Add(this.ScriptFileBox);
+            this.movementCommandTablePanel.Controls.Add(this.MovementTypeBox);
+            this.movementCommandTablePanel.Controls.Add(this.movementDirectionPadGroup);
+            this.movementCommandTablePanel.Controls.Add(this.OverworldPointerBox);
+            this.movementCommandTablePanel.Controls.Add(this.ActionBox);
+            this.movementCommandTablePanel.Location = new System.Drawing.Point(0, 1);
+            this.movementCommandTablePanel.Name = "movementCommandTablePanel";
+            this.movementCommandTablePanel.Size = new System.Drawing.Size(444, 352);
+            this.movementCommandTablePanel.TabIndex = 1;
+            this.movementCommandTablePanel.Paint += new System.Windows.Forms.PaintEventHandler(this.movementCommandTablePanel_Paint);
+            // 
+            // MiscActionsBox
+            // 
+            this.MiscActionsBox.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.MiscActionsBox.Controls.Add(this.UnlockDirButton);
+            this.MiscActionsBox.Controls.Add(this.LockDirectionButton);
+            this.MiscActionsBox.Controls.Add(this.SetVisibleButton);
+            this.MiscActionsBox.Controls.Add(this.SetInvisibleButton);
+            this.MiscActionsBox.Location = new System.Drawing.Point(302, 270);
+            this.MiscActionsBox.Name = "MiscActionsBox";
+            this.MiscActionsBox.Size = new System.Drawing.Size(139, 51);
+            this.MiscActionsBox.TabIndex = 4;
+            this.MiscActionsBox.TabStop = false;
+            this.MiscActionsBox.Text = "Misc Actions";
+            // 
+            // UnlockDirButton
+            // 
+            this.UnlockDirButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.UnlockDirButton.Image = global::DSPRE.Properties.Resources.unlockDirection;
+            this.UnlockDirButton.Location = new System.Drawing.Point(102, 15);
+            this.UnlockDirButton.Name = "UnlockDirButton";
+            this.UnlockDirButton.Size = new System.Drawing.Size(32, 32);
+            this.UnlockDirButton.TabIndex = 13;
+            this.UnlockDirButton.UseVisualStyleBackColor = true;
+            // 
+            // LockDirectionButton
+            // 
+            this.LockDirectionButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.LockDirectionButton.Image = global::DSPRE.Properties.Resources.lockDirection;
+            this.LockDirectionButton.Location = new System.Drawing.Point(69, 15);
+            this.LockDirectionButton.Name = "LockDirectionButton";
+            this.LockDirectionButton.Size = new System.Drawing.Size(32, 32);
+            this.LockDirectionButton.TabIndex = 12;
+            this.LockDirectionButton.UseVisualStyleBackColor = true;
+            // 
+            // SetVisibleButton
+            // 
+            this.SetVisibleButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.SetVisibleButton.Image = global::DSPRE.Properties.Resources.EthanVisibleIcon;
+            this.SetVisibleButton.Location = new System.Drawing.Point(3, 15);
+            this.SetVisibleButton.Name = "SetVisibleButton";
+            this.SetVisibleButton.Size = new System.Drawing.Size(32, 32);
+            this.SetVisibleButton.TabIndex = 11;
+            this.SetVisibleButton.UseVisualStyleBackColor = true;
+            // 
+            // SetInvisibleButton
+            // 
+            this.SetInvisibleButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.SetInvisibleButton.Image = global::DSPRE.Properties.Resources.EthanInvisibleIcon;
+            this.SetInvisibleButton.Location = new System.Drawing.Point(36, 15);
+            this.SetInvisibleButton.Name = "SetInvisibleButton";
+            this.SetInvisibleButton.Size = new System.Drawing.Size(32, 32);
+            this.SetInvisibleButton.TabIndex = 10;
+            this.SetInvisibleButton.UseVisualStyleBackColor = true;
+            this.SetInvisibleButton.Click += new System.EventHandler(this.SetInvisibleButton_Click);
+            // 
+            // ToolboxBox
+            // 
+            this.ToolboxBox.Controls.Add(this.ConfirmListSelectedButton);
+            this.ToolboxBox.Controls.Add(this.UndoListChangesButton);
+            this.ToolboxBox.Controls.Add(this.MoveListUpButton);
+            this.ToolboxBox.Controls.Add(this.CopyListButton);
+            this.ToolboxBox.Controls.Add(this.DeleteListSelectedButton);
+            this.ToolboxBox.Controls.Add(this.RedoListChangesButton);
+            this.ToolboxBox.Controls.Add(this.PasteListButton);
+            this.ToolboxBox.Controls.Add(this.MoveListDownButton);
+            this.ToolboxBox.Location = new System.Drawing.Point(204, 178);
+            this.ToolboxBox.Name = "ToolboxBox";
+            this.ToolboxBox.Size = new System.Drawing.Size(92, 171);
+            this.ToolboxBox.TabIndex = 12;
+            this.ToolboxBox.TabStop = false;
+            this.ToolboxBox.Text = "Toolbox";
+            // 
+            // ConfirmListSelectedButton
+            // 
+            this.ConfirmListSelectedButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.ConfirmListSelectedButton.Image = global::DSPRE.Properties.Resources.smalllistset;
+            this.ConfirmListSelectedButton.Location = new System.Drawing.Point(9, 18);
+            this.ConfirmListSelectedButton.Margin = new System.Windows.Forms.Padding(0);
+            this.ConfirmListSelectedButton.Name = "ConfirmListSelectedButton";
+            this.ConfirmListSelectedButton.Size = new System.Drawing.Size(32, 32);
+            this.ConfirmListSelectedButton.TabIndex = 7;
+            this.ConfirmListSelectedButton.UseVisualStyleBackColor = true;
+            this.ConfirmListSelectedButton.Click += new System.EventHandler(this.button9_Click);
+            // 
+            // UndoListChangesButton
+            // 
+            this.UndoListChangesButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.UndoListChangesButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.UndoListChangesButton.Image = global::DSPRE.Properties.Resources.smallundoListIcon;
+            this.UndoListChangesButton.Location = new System.Drawing.Point(9, 128);
+            this.UndoListChangesButton.Name = "UndoListChangesButton";
+            this.UndoListChangesButton.Size = new System.Drawing.Size(32, 32);
+            this.UndoListChangesButton.TabIndex = 9;
+            this.UndoListChangesButton.UseVisualStyleBackColor = true;
+            this.UndoListChangesButton.Click += new System.EventHandler(this.UndoListChangesButton_Click);
+            // 
+            // MoveListUpButton
+            // 
+            this.MoveListUpButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.MoveListUpButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.MoveListUpButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.MoveListUpButton.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.MoveListUpButton.Image = global::DSPRE.Properties.Resources.smalllistup;
+            this.MoveListUpButton.Location = new System.Drawing.Point(9, 54);
+            this.MoveListUpButton.Margin = new System.Windows.Forms.Padding(0);
+            this.MoveListUpButton.Name = "MoveListUpButton";
+            this.MoveListUpButton.Size = new System.Drawing.Size(32, 32);
+            this.MoveListUpButton.TabIndex = 0;
+            this.MoveListUpButton.UseVisualStyleBackColor = true;
+            this.MoveListUpButton.Click += new System.EventHandler(this.MoveListUpButton_Click);
+            // 
+            // CopyListButton
+            // 
+            this.CopyListButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.CopyListButton.Image = global::DSPRE.Properties.Resources.smallcopyIcon;
+            this.CopyListButton.Location = new System.Drawing.Point(9, 91);
+            this.CopyListButton.Margin = new System.Windows.Forms.Padding(0);
+            this.CopyListButton.Name = "CopyListButton";
+            this.CopyListButton.Size = new System.Drawing.Size(32, 32);
+            this.CopyListButton.TabIndex = 1;
+            this.CopyListButton.UseVisualStyleBackColor = true;
+            this.CopyListButton.Click += new System.EventHandler(this.CopyListButton_Click);
+            // 
+            // DeleteListSelectedButton
+            // 
+            this.DeleteListSelectedButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DeleteListSelectedButton.Image = global::DSPRE.Properties.Resources.smalllistdelete;
+            this.DeleteListSelectedButton.Location = new System.Drawing.Point(50, 18);
+            this.DeleteListSelectedButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DeleteListSelectedButton.Name = "DeleteListSelectedButton";
+            this.DeleteListSelectedButton.Size = new System.Drawing.Size(32, 32);
+            this.DeleteListSelectedButton.TabIndex = 3;
+            this.DeleteListSelectedButton.UseVisualStyleBackColor = true;
+            // 
+            // RedoListChangesButton
+            // 
+            this.RedoListChangesButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.RedoListChangesButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.RedoListChangesButton.Image = global::DSPRE.Properties.Resources.smallredoListIcon;
+            this.RedoListChangesButton.Location = new System.Drawing.Point(50, 128);
+            this.RedoListChangesButton.Margin = new System.Windows.Forms.Padding(0);
+            this.RedoListChangesButton.Name = "RedoListChangesButton";
+            this.RedoListChangesButton.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.RedoListChangesButton.Size = new System.Drawing.Size(32, 32);
+            this.RedoListChangesButton.TabIndex = 2;
+            this.RedoListChangesButton.UseVisualStyleBackColor = true;
+            this.RedoListChangesButton.Click += new System.EventHandler(this.UndoButton_Click);
+            // 
+            // PasteListButton
+            // 
+            this.PasteListButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.PasteListButton.Image = global::DSPRE.Properties.Resources.pasteIconMed;
+            this.PasteListButton.Location = new System.Drawing.Point(50, 91);
+            this.PasteListButton.Name = "PasteListButton";
+            this.PasteListButton.Size = new System.Drawing.Size(32, 32);
+            this.PasteListButton.TabIndex = 5;
+            this.PasteListButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextAboveImage;
+            this.PasteListButton.UseVisualStyleBackColor = true;
+            this.PasteListButton.Click += new System.EventHandler(this.PasteListButton_Click);
+            // 
+            // MoveListDownButton
+            // 
+            this.MoveListDownButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.MoveListDownButton.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.MoveListDownButton.Image = global::DSPRE.Properties.Resources.smalllistdown;
+            this.MoveListDownButton.Location = new System.Drawing.Point(50, 54);
+            this.MoveListDownButton.Margin = new System.Windows.Forms.Padding(0);
+            this.MoveListDownButton.Name = "MoveListDownButton";
+            this.MoveListDownButton.Size = new System.Drawing.Size(32, 32);
+            this.MoveListDownButton.TabIndex = 8;
+            this.MoveListDownButton.UseVisualStyleBackColor = true;
+            this.MoveListDownButton.Click += new System.EventHandler(this.MoveListDownButton_Click);
+            // 
+            // PlaceholderPointerBox
+            // 
+            this.PlaceholderPointerBox.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.PlaceholderPointerBox.Controls.Add(this.PointerXLabel);
+            this.PlaceholderPointerBox.Controls.Add(this.PointerYLabel);
+            this.PlaceholderPointerBox.Controls.Add(this.PointerYUpDown);
+            this.PlaceholderPointerBox.Controls.Add(this.PointerXUpDown);
+            this.PlaceholderPointerBox.Controls.Add(this.PlaceholderPointerCheckBox);
+            this.PlaceholderPointerBox.Location = new System.Drawing.Point(302, 133);
+            this.PlaceholderPointerBox.Name = "PlaceholderPointerBox";
+            this.PlaceholderPointerBox.Size = new System.Drawing.Size(139, 44);
+            this.PlaceholderPointerBox.TabIndex = 8;
+            this.PlaceholderPointerBox.TabStop = false;
+            this.PlaceholderPointerBox.Text = "Placeholder Pointer";
+            // 
+            // PointerXLabel
+            // 
+            this.PointerXLabel.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.PointerXLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.PointerXLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
+            this.PointerXLabel.Location = new System.Drawing.Point(26, 20);
+            this.PointerXLabel.Margin = new System.Windows.Forms.Padding(0);
+            this.PointerXLabel.Name = "PointerXLabel";
+            this.PointerXLabel.Size = new System.Drawing.Size(12, 12);
+            this.PointerXLabel.TabIndex = 5;
+            this.PointerXLabel.Text = "X";
+            this.PointerXLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // PointerYLabel
+            // 
+            this.PointerYLabel.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.PointerYLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.PointerYLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
+            this.PointerYLabel.Location = new System.Drawing.Point(81, 20);
+            this.PointerYLabel.Margin = new System.Windows.Forms.Padding(0);
+            this.PointerYLabel.Name = "PointerYLabel";
+            this.PointerYLabel.Size = new System.Drawing.Size(12, 12);
+            this.PointerYLabel.TabIndex = 4;
+            this.PointerYLabel.Text = "Y";
+            this.PointerYLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // PointerYUpDown
+            // 
+            this.PointerYUpDown.Location = new System.Drawing.Point(96, 17);
+            this.PointerYUpDown.Name = "PointerYUpDown";
+            this.PointerYUpDown.Size = new System.Drawing.Size(36, 20);
+            this.PointerYUpDown.TabIndex = 3;
+            // 
+            // PointerXUpDown
+            // 
+            this.PointerXUpDown.Location = new System.Drawing.Point(41, 17);
+            this.PointerXUpDown.Name = "PointerXUpDown";
+            this.PointerXUpDown.Size = new System.Drawing.Size(36, 20);
+            this.PointerXUpDown.TabIndex = 2;
+            // 
+            // PlaceholderPointerCheckBox
+            // 
+            this.PlaceholderPointerCheckBox.AutoSize = true;
+            this.PlaceholderPointerCheckBox.Location = new System.Drawing.Point(7, 20);
+            this.PlaceholderPointerCheckBox.Name = "PlaceholderPointerCheckBox";
+            this.PlaceholderPointerCheckBox.Size = new System.Drawing.Size(15, 14);
+            this.PlaceholderPointerCheckBox.TabIndex = 1;
+            this.PlaceholderPointerCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // ActionCommandBox
+            // 
+            this.ActionCommandBox.Controls.Add(this.movementCommandListView);
+            this.ActionCommandBox.Location = new System.Drawing.Point(3, 51);
+            this.ActionCommandBox.Name = "ActionCommandBox";
+            this.ActionCommandBox.Size = new System.Drawing.Size(196, 298);
+            this.ActionCommandBox.TabIndex = 5;
+            this.ActionCommandBox.TabStop = false;
+            this.ActionCommandBox.Text = "Action Commands";
+            // 
+            // movementCommandListView
+            // 
+            this.movementCommandListView.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.movementCommandListView.CheckBoxes = true;
+            this.movementCommandListView.FullRowSelect = true;
+            this.movementCommandListView.GridLines = true;
+            this.movementCommandListView.HideSelection = false;
+            this.movementCommandListView.Location = new System.Drawing.Point(6, 19);
+            this.movementCommandListView.Name = "movementCommandListView";
+            this.movementCommandListView.Size = new System.Drawing.Size(184, 273);
+            this.movementCommandListView.TabIndex = 0;
+            this.movementCommandListView.UseCompatibleStateImageBehavior = false;
+            this.movementCommandListView.View = System.Windows.Forms.View.Details;
+            this.movementCommandListView.SelectedIndexChanged += new System.EventHandler(this.movementCommandListView_SelectedIndexChanged);
+            // 
+            // ExportActionButton
+            // 
+            this.ExportActionButton.Location = new System.Drawing.Point(302, 325);
+            this.ExportActionButton.Name = "ExportActionButton";
+            this.ExportActionButton.Size = new System.Drawing.Size(140, 24);
+            this.ExportActionButton.TabIndex = 5;
+            this.ExportActionButton.Text = "Export";
+            this.ExportActionButton.UseVisualStyleBackColor = true;
+            this.ExportActionButton.Click += new System.EventHandler(this.ExportActionButton_Click);
+            // 
+            // MovementStyleBox
+            // 
+            this.MovementStyleBox.Controls.Add(this.MovementStyleDropdown);
+            this.MovementStyleBox.Location = new System.Drawing.Point(302, 225);
+            this.MovementStyleBox.Name = "MovementStyleBox";
+            this.MovementStyleBox.Size = new System.Drawing.Size(139, 44);
+            this.MovementStyleBox.TabIndex = 7;
+            this.MovementStyleBox.TabStop = false;
+            this.MovementStyleBox.Text = "Movement Speed";
+            // 
+            // MovementStyleDropdown
+            // 
+            this.MovementStyleDropdown.FormattingEnabled = true;
+            this.MovementStyleDropdown.Location = new System.Drawing.Point(9, 16);
+            this.MovementStyleDropdown.Name = "MovementStyleDropdown";
+            this.MovementStyleDropdown.Size = new System.Drawing.Size(116, 21);
+            this.MovementStyleDropdown.TabIndex = 1;
+            // 
+            // ScriptFileBox
+            // 
+            this.ScriptFileBox.Controls.Add(this.SetScriptButton);
+            this.ScriptFileBox.Controls.Add(this.ScriptFileDropdown);
+            this.ScriptFileBox.Location = new System.Drawing.Point(3, 3);
+            this.ScriptFileBox.Name = "ScriptFileBox";
+            this.ScriptFileBox.Size = new System.Drawing.Size(196, 46);
+            this.ScriptFileBox.TabIndex = 3;
+            this.ScriptFileBox.TabStop = false;
+            this.ScriptFileBox.Text = "Script File";
+            this.ScriptFileBox.Enter += new System.EventHandler(this.groupBox2_Enter);
+            // 
+            // SetScriptButton
+            // 
+            this.SetScriptButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.SetScriptButton.Location = new System.Drawing.Point(121, 14);
+            this.SetScriptButton.Name = "SetScriptButton";
+            this.SetScriptButton.Size = new System.Drawing.Size(68, 24);
+            this.SetScriptButton.TabIndex = 3;
+            this.SetScriptButton.Text = "Set Script";
+            this.SetScriptButton.UseVisualStyleBackColor = true;
+            // 
+            // ScriptFileDropdown
+            // 
+            this.ScriptFileDropdown.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.ScriptFileDropdown.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.ScriptFileDropdown.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.ScriptFileDropdown.FormattingEnabled = true;
+            this.ScriptFileDropdown.Location = new System.Drawing.Point(6, 16);
+            this.ScriptFileDropdown.Name = "ScriptFileDropdown";
+            this.ScriptFileDropdown.Size = new System.Drawing.Size(110, 21);
+            this.ScriptFileDropdown.TabIndex = 2;
+            // 
+            // MovementTypeBox
+            // 
+            this.MovementTypeBox.Controls.Add(this.MovementTypeDropdown);
+            this.MovementTypeBox.Location = new System.Drawing.Point(302, 178);
+            this.MovementTypeBox.Name = "MovementTypeBox";
+            this.MovementTypeBox.Size = new System.Drawing.Size(139, 46);
+            this.MovementTypeBox.TabIndex = 6;
+            this.MovementTypeBox.TabStop = false;
+            this.MovementTypeBox.Text = "Movement Type";
+            // 
+            // MovementTypeDropdown
+            // 
+            this.MovementTypeDropdown.FormattingEnabled = true;
+            this.MovementTypeDropdown.Location = new System.Drawing.Point(9, 18);
+            this.MovementTypeDropdown.Name = "MovementTypeDropdown";
+            this.MovementTypeDropdown.Size = new System.Drawing.Size(116, 21);
+            this.MovementTypeDropdown.TabIndex = 1;
+            // 
+            // movementDirectionPadGroup
+            // 
+            this.movementDirectionPadGroup.Anchor = System.Windows.Forms.AnchorStyles.Top;
+            this.movementDirectionPadGroup.Controls.Add(this.movementPadTable);
+            this.movementDirectionPadGroup.Location = new System.Drawing.Point(302, 3);
+            this.movementDirectionPadGroup.Name = "movementDirectionPadGroup";
+            this.movementDirectionPadGroup.Padding = new System.Windows.Forms.Padding(1);
+            this.movementDirectionPadGroup.Size = new System.Drawing.Size(139, 128);
+            this.movementDirectionPadGroup.TabIndex = 0;
+            this.movementDirectionPadGroup.TabStop = false;
+            this.movementDirectionPadGroup.Text = "Direction";
+            this.movementDirectionPadGroup.Enter += new System.EventHandler(this.movementDirectionPadGroup_Enter);
+            // 
+            // movementPadTable
+            // 
+            this.movementPadTable.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.movementPadTable.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.movementPadTable.ColumnCount = 3;
+            this.movementPadTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33F));
+            this.movementPadTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 34F));
+            this.movementPadTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33F));
+            this.movementPadTable.Controls.Add(this.TeleportDownButton, 2, 0);
+            this.movementPadTable.Controls.Add(this.TeleportUpButton, 0, 0);
+            this.movementPadTable.Controls.Add(this.DPadNorthButton, 1, 0);
+            this.movementPadTable.Controls.Add(this.DPadSouthButton, 1, 2);
+            this.movementPadTable.Controls.Add(this.DPadWestButton, 0, 1);
+            this.movementPadTable.Controls.Add(this.DPadEastButton, 2, 1);
+            this.movementPadTable.Controls.Add(this.DPadOnSpotCheckBoxButton, 1, 1);
+            this.movementPadTable.Controls.Add(this.ExclamationButton, 0, 2);
+            this.movementPadTable.Controls.Add(this.DoubleExclamationButton, 2, 2);
+            this.movementPadTable.Cursor = System.Windows.Forms.Cursors.Arrow;
+            this.movementPadTable.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.movementPadTable.GrowStyle = System.Windows.Forms.TableLayoutPanelGrowStyle.FixedSize;
+            this.movementPadTable.Location = new System.Drawing.Point(14, 12);
+            this.movementPadTable.Margin = new System.Windows.Forms.Padding(0);
+            this.movementPadTable.Name = "movementPadTable";
+            this.movementPadTable.RowCount = 3;
+            this.movementPadTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33F));
+            this.movementPadTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 34F));
+            this.movementPadTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33F));
+            this.movementPadTable.Size = new System.Drawing.Size(112, 112);
+            this.movementPadTable.TabIndex = 0;
+            this.movementPadTable.Paint += new System.Windows.Forms.PaintEventHandler(this.movementPadTable_Paint);
+            // 
+            // TeleportDownButton
+            // 
+            this.TeleportDownButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.TeleportDownButton.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.TeleportDownButton.Image = global::DSPRE.Properties.Resources.warpDown;
+            this.TeleportDownButton.Location = new System.Drawing.Point(77, 2);
+            this.TeleportDownButton.Margin = new System.Windows.Forms.Padding(0);
+            this.TeleportDownButton.Name = "TeleportDownButton";
+            this.TeleportDownButton.Size = new System.Drawing.Size(32, 32);
+            this.TeleportDownButton.TabIndex = 8;
+            this.TeleportDownButton.UseVisualStyleBackColor = true;
+            // 
+            // TeleportUpButton
+            // 
+            this.TeleportUpButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.TeleportUpButton.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.TeleportUpButton.Image = global::DSPRE.Properties.Resources.warpUp;
+            this.TeleportUpButton.Location = new System.Drawing.Point(2, 2);
+            this.TeleportUpButton.Margin = new System.Windows.Forms.Padding(0);
+            this.TeleportUpButton.Name = "TeleportUpButton";
+            this.TeleportUpButton.Size = new System.Drawing.Size(32, 32);
+            this.TeleportUpButton.TabIndex = 7;
+            this.TeleportUpButton.UseVisualStyleBackColor = true;
+            // 
+            // DPadNorthButton
+            // 
+            this.DPadNorthButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DPadNorthButton.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.DPadNorthButton.Image = global::DSPRE.Properties.Resources.arrowup;
+            this.DPadNorthButton.Location = new System.Drawing.Point(39, 2);
+            this.DPadNorthButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DPadNorthButton.Name = "DPadNorthButton";
+            this.DPadNorthButton.Size = new System.Drawing.Size(32, 32);
+            this.DPadNorthButton.TabIndex = 0;
+            this.DPadNorthButton.UseVisualStyleBackColor = true;
+            this.DPadNorthButton.Click += new System.EventHandler(this.movementBtnUp_Click);
+            // 
+            // DPadSouthButton
+            // 
+            this.DPadSouthButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DPadSouthButton.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.DPadSouthButton.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.DPadSouthButton.Image = global::DSPRE.Properties.Resources.arrowdown;
+            this.DPadSouthButton.Location = new System.Drawing.Point(39, 77);
+            this.DPadSouthButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DPadSouthButton.Name = "DPadSouthButton";
+            this.DPadSouthButton.Size = new System.Drawing.Size(32, 32);
+            this.DPadSouthButton.TabIndex = 1;
+            this.DPadSouthButton.UseVisualStyleBackColor = true;
+            this.DPadSouthButton.Click += new System.EventHandler(this.movementBtnDown_Click);
+            // 
+            // DPadWestButton
+            // 
+            this.DPadWestButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DPadWestButton.AutoEllipsis = true;
+            this.DPadWestButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.DPadWestButton.Font = new System.Drawing.Font("Arial", 8F, System.Drawing.FontStyle.Bold);
+            this.DPadWestButton.ForeColor = System.Drawing.Color.Transparent;
+            this.DPadWestButton.Image = global::DSPRE.Properties.Resources.arrowleft;
+            this.DPadWestButton.Location = new System.Drawing.Point(2, 39);
+            this.DPadWestButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DPadWestButton.Name = "DPadWestButton";
+            this.DPadWestButton.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.DPadWestButton.Size = new System.Drawing.Size(32, 32);
+            this.DPadWestButton.TabIndex = 2;
+            this.DPadWestButton.UseVisualStyleBackColor = true;
+            // 
+            // DPadEastButton
+            // 
+            this.DPadEastButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DPadEastButton.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.DPadEastButton.Image = global::DSPRE.Properties.Resources.arrowright;
+            this.DPadEastButton.Location = new System.Drawing.Point(77, 39);
+            this.DPadEastButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DPadEastButton.Name = "DPadEastButton";
+            this.DPadEastButton.Size = new System.Drawing.Size(32, 32);
+            this.DPadEastButton.TabIndex = 3;
+            this.DPadEastButton.UseVisualStyleBackColor = true;
+            // 
+            // DPadOnSpotCheckBoxButton
+            // 
+            this.DPadOnSpotCheckBoxButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DPadOnSpotCheckBoxButton.Appearance = System.Windows.Forms.Appearance.Button;
+            this.DPadOnSpotCheckBoxButton.AutoEllipsis = true;
+            this.DPadOnSpotCheckBoxButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.DPadOnSpotCheckBoxButton.CheckAlign = System.Drawing.ContentAlignment.TopCenter;
+            this.DPadOnSpotCheckBoxButton.Image = global::DSPRE.Properties.Resources.EthanSpotLocked;
+            this.DPadOnSpotCheckBoxButton.Location = new System.Drawing.Point(39, 39);
+            this.DPadOnSpotCheckBoxButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DPadOnSpotCheckBoxButton.Name = "DPadOnSpotCheckBoxButton";
+            this.DPadOnSpotCheckBoxButton.Size = new System.Drawing.Size(32, 32);
+            this.DPadOnSpotCheckBoxButton.TabIndex = 4;
+            this.DPadOnSpotCheckBoxButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
+            this.DPadOnSpotCheckBoxButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.DPadOnSpotCheckBoxButton.UseVisualStyleBackColor = true;
+            this.DPadOnSpotCheckBoxButton.CheckedChanged += new System.EventHandler(this.movementOnSpotCheckBox_CheckedChanged);
+            this.DPadOnSpotCheckBoxButton.BackgroundImageChanged += new System.EventHandler(this.movementOnSpotCheckBox_CheckedChanged);
+            // 
+            // ExclamationButton
+            // 
+            this.ExclamationButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.ExclamationButton.Image = global::DSPRE.Properties.Resources.exclamationMark;
+            this.ExclamationButton.Location = new System.Drawing.Point(2, 77);
+            this.ExclamationButton.Margin = new System.Windows.Forms.Padding(0);
+            this.ExclamationButton.Name = "ExclamationButton";
+            this.ExclamationButton.Size = new System.Drawing.Size(32, 32);
+            this.ExclamationButton.TabIndex = 5;
+            this.ExclamationButton.UseVisualStyleBackColor = true;
+            // 
+            // DoubleExclamationButton
+            // 
+            this.DoubleExclamationButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.DoubleExclamationButton.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.DoubleExclamationButton.Image = global::DSPRE.Properties.Resources.exclamationMarkDouble;
+            this.DoubleExclamationButton.Location = new System.Drawing.Point(77, 77);
+            this.DoubleExclamationButton.Margin = new System.Windows.Forms.Padding(0);
+            this.DoubleExclamationButton.Name = "DoubleExclamationButton";
+            this.DoubleExclamationButton.Size = new System.Drawing.Size(32, 32);
+            this.DoubleExclamationButton.TabIndex = 6;
+            this.DoubleExclamationButton.UseVisualStyleBackColor = true;
+            // 
+            // OverworldPointerBox
+            // 
+            this.OverworldPointerBox.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.OverworldPointerBox.Controls.Add(this.OverworldPointerCheckBox);
+            this.OverworldPointerBox.Controls.Add(this.OverworldIDDropdown);
+            this.OverworldPointerBox.Location = new System.Drawing.Point(204, 133);
+            this.OverworldPointerBox.Name = "OverworldPointerBox";
+            this.OverworldPointerBox.Size = new System.Drawing.Size(92, 44);
+            this.OverworldPointerBox.TabIndex = 3;
+            this.OverworldPointerBox.TabStop = false;
+            this.OverworldPointerBox.Text = "Overworld";
+            // 
+            // OverworldPointerCheckBox
+            // 
+            this.OverworldPointerCheckBox.AutoSize = true;
+            this.OverworldPointerCheckBox.Location = new System.Drawing.Point(7, 20);
+            this.OverworldPointerCheckBox.Name = "OverworldPointerCheckBox";
+            this.OverworldPointerCheckBox.Size = new System.Drawing.Size(15, 14);
+            this.OverworldPointerCheckBox.TabIndex = 1;
+            this.OverworldPointerCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // OverworldIDDropdown
+            // 
+            this.OverworldIDDropdown.FormattingEnabled = true;
+            this.OverworldIDDropdown.Location = new System.Drawing.Point(27, 16);
+            this.OverworldIDDropdown.Name = "OverworldIDDropdown";
+            this.OverworldIDDropdown.Size = new System.Drawing.Size(59, 21);
+            this.OverworldIDDropdown.TabIndex = 0;
+            // 
+            // ActionBox
+            // 
+            this.ActionBox.Controls.Add(this.SetActionButton);
+            this.ActionBox.Controls.Add(this.DeleteActionButton);
+            this.ActionBox.Controls.Add(this.NewActionButton);
+            this.ActionBox.Controls.Add(this.ActionDropdown);
+            this.ActionBox.Location = new System.Drawing.Point(204, 3);
+            this.ActionBox.Name = "ActionBox";
+            this.ActionBox.Padding = new System.Windows.Forms.Padding(1);
+            this.ActionBox.Size = new System.Drawing.Size(92, 128);
+            this.ActionBox.TabIndex = 4;
+            this.ActionBox.TabStop = false;
+            this.ActionBox.Text = "Action #";
+            // 
+            // SetActionButton
+            // 
+            this.SetActionButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.SetActionButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.SetActionButton.Location = new System.Drawing.Point(6, 41);
+            this.SetActionButton.Name = "SetActionButton";
+            this.SetActionButton.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.SetActionButton.Size = new System.Drawing.Size(80, 24);
+            this.SetActionButton.TabIndex = 6;
+            this.SetActionButton.Text = "Set Action";
+            this.SetActionButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.SetActionButton.UseVisualStyleBackColor = true;
+            // 
+            // DeleteActionButton
+            // 
+            this.DeleteActionButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
+            this.DeleteActionButton.Location = new System.Drawing.Point(6, 97);
+            this.DeleteActionButton.Name = "DeleteActionButton";
+            this.DeleteActionButton.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.DeleteActionButton.Size = new System.Drawing.Size(80, 24);
+            this.DeleteActionButton.TabIndex = 1;
+            this.DeleteActionButton.Text = "Delete Action";
+            this.DeleteActionButton.UseVisualStyleBackColor = true;
+            this.DeleteActionButton.Click += new System.EventHandler(this.button6_Click);
+            // 
+            // NewActionButton
+            // 
+            this.NewActionButton.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.NewActionButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.NewActionButton.Location = new System.Drawing.Point(6, 68);
+            this.NewActionButton.Name = "NewActionButton";
+            this.NewActionButton.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.NewActionButton.Size = new System.Drawing.Size(80, 24);
+            this.NewActionButton.TabIndex = 5;
+            this.NewActionButton.Text = "New Action";
+            this.NewActionButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.NewActionButton.UseVisualStyleBackColor = true;
+            this.NewActionButton.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // ActionDropdown
+            // 
+            this.ActionDropdown.Anchor = System.Windows.Forms.AnchorStyles.Top;
+            this.ActionDropdown.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.ActionDropdown.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.ActionDropdown.FormattingEnabled = true;
+            this.ActionDropdown.Location = new System.Drawing.Point(6, 15);
+            this.ActionDropdown.Name = "ActionDropdown";
+            this.ActionDropdown.Size = new System.Drawing.Size(80, 21);
+            this.ActionDropdown.TabIndex = 3;
+            this.ActionDropdown.SelectedIndexChanged += new System.EventHandler(this.comboBox5_SelectedIndexChanged);
+            // 
             // eventPanel
             // 
             this.eventPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -2225,6 +2914,27 @@
             this.LeftClickPicture.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.LeftClickPicture.TabIndex = 55;
             this.LeftClickPicture.TabStop = false;
+            // 
+            // screenshotButton
+            // 
+            this.screenshotButton.Image = global::DSPRE.Properties.Resources.cameraIcon;
+            this.screenshotButton.Location = new System.Drawing.Point(555, 39);
+            this.screenshotButton.Name = "screenshotButton";
+            this.screenshotButton.Size = new System.Drawing.Size(41, 41);
+            this.screenshotButton.TabIndex = 63;
+            this.screenshotButton.Text = "S";
+            this.screenshotButton.UseVisualStyleBackColor = true;
+            this.screenshotButton.Click += new System.EventHandler(this.screenshotButton_Click);
+            // 
+            // locateCurrentEvFile
+            // 
+            this.locateCurrentEvFile.Image = global::DSPRE.Properties.Resources.open_file;
+            this.locateCurrentEvFile.Location = new System.Drawing.Point(461, 14);
+            this.locateCurrentEvFile.Name = "locateCurrentEvFile";
+            this.locateCurrentEvFile.Size = new System.Drawing.Size(42, 40);
+            this.locateCurrentEvFile.TabIndex = 62;
+            this.locateCurrentEvFile.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.locateCurrentEvFile.UseVisualStyleBackColor = true;
             // 
             // removeEventFileButton
             // 
@@ -2335,17 +3045,6 @@
             this.saveEventsButton.Text = "Save Event File";
             this.saveEventsButton.UseVisualStyleBackColor = true;
             this.saveEventsButton.Click += new System.EventHandler(this.saveEventsButton_Click);
-            // 
-            // screenshotButton
-            // 
-            this.screenshotButton.Image = global::DSPRE.Properties.Resources.cameraIcon;
-            this.screenshotButton.Location = new System.Drawing.Point(555, 39);
-            this.screenshotButton.Name = "screenshotButton";
-            this.screenshotButton.Size = new System.Drawing.Size(41, 41);
-            this.screenshotButton.TabIndex = 63;
-            this.screenshotButton.Text = "S";
-            this.screenshotButton.UseVisualStyleBackColor = true;
-            this.screenshotButton.Click += new System.EventHandler(this.screenshotButton_Click);
             // 
             // EventEditor
             // 
@@ -2464,6 +3163,23 @@
             this.groupBox6.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.triggerXMatrixUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.triggerYMatrixUpDown)).EndInit();
+            this.movementEditorTabPage.ResumeLayout(false);
+            this.movementCommandTablePanel.ResumeLayout(false);
+            this.MiscActionsBox.ResumeLayout(false);
+            this.ToolboxBox.ResumeLayout(false);
+            this.PlaceholderPointerBox.ResumeLayout(false);
+            this.PlaceholderPointerBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PointerYUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.PointerXUpDown)).EndInit();
+            this.ActionCommandBox.ResumeLayout(false);
+            this.MovementStyleBox.ResumeLayout(false);
+            this.ScriptFileBox.ResumeLayout(false);
+            this.MovementTypeBox.ResumeLayout(false);
+            this.movementDirectionPadGroup.ResumeLayout(false);
+            this.movementPadTable.ResumeLayout(false);
+            this.OverworldPointerBox.ResumeLayout(false);
+            this.OverworldPointerBox.PerformLayout();
+            this.ActionBox.ResumeLayout(false);
             this.eventPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.eventPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.rightClickPicture)).EndInit();
@@ -2648,5 +3364,56 @@
         public System.Windows.Forms.NumericUpDown eventMatrixUpDown;
         public System.Windows.Forms.ListBox eventEditorWarpHeaderListBox;
         private System.Windows.Forms.Button screenshotButton;
+        private System.Windows.Forms.ListView movementCommandListView;
+        private System.Windows.Forms.Button MoveListDownButton;
+        private System.Windows.Forms.Button MoveListUpButton;
+        private System.Windows.Forms.Button CopyListButton;
+        private System.Windows.Forms.Button RedoListChangesButton;
+        private System.Windows.Forms.Button DeleteListSelectedButton;
+        private System.Windows.Forms.Button PasteListButton;
+        private System.Windows.Forms.Button ConfirmListSelectedButton;
+        private System.Windows.Forms.Button UndoListChangesButton;
+        private System.Windows.Forms.Button NewActionButton;
+        private System.Windows.Forms.Button DeleteActionButton;
+        private System.Windows.Forms.ComboBox ActionDropdown;
+        private System.Windows.Forms.ComboBox ScriptFileDropdown;
+        private System.Windows.Forms.Panel movementCommandTablePanel;
+        private System.Windows.Forms.GroupBox movementDirectionPadGroup;
+        private System.Windows.Forms.TableLayoutPanel movementPadTable;
+        private System.Windows.Forms.Button DPadNorthButton;
+        private System.Windows.Forms.Button DPadSouthButton;
+        private System.Windows.Forms.Button DPadWestButton;
+        private System.Windows.Forms.Button DPadEastButton;
+        private System.Windows.Forms.CheckBox DPadOnSpotCheckBoxButton;
+        private System.Windows.Forms.GroupBox OverworldPointerBox;
+        private System.Windows.Forms.GroupBox ScriptFileBox;
+        private System.Windows.Forms.GroupBox ActionBox;
+        private System.Windows.Forms.Button SetActionButton;
+        private System.Windows.Forms.Button ExportActionButton;
+        private System.Windows.Forms.GroupBox MovementTypeBox;
+        private System.Windows.Forms.ComboBox MovementTypeDropdown;
+        private System.Windows.Forms.GroupBox MovementStyleBox;
+        private System.Windows.Forms.ComboBox MovementStyleDropdown;
+        private System.Windows.Forms.TabPage movementEditorTabPage;
+        private System.Windows.Forms.GroupBox ActionCommandBox;
+        private System.Windows.Forms.Button ExclamationButton;
+        private System.Windows.Forms.Button TeleportDownButton;
+        private System.Windows.Forms.Button TeleportUpButton;
+        private System.Windows.Forms.Button DoubleExclamationButton;
+        private System.Windows.Forms.Button SetInvisibleButton;
+        private System.Windows.Forms.Button SetVisibleButton;
+        private System.Windows.Forms.Button SetScriptButton;
+        private System.Windows.Forms.ComboBox OverworldIDDropdown;
+        private System.Windows.Forms.CheckBox OverworldPointerCheckBox;
+        private System.Windows.Forms.GroupBox PlaceholderPointerBox;
+        private System.Windows.Forms.CheckBox PlaceholderPointerCheckBox;
+        private System.Windows.Forms.NumericUpDown PointerXUpDown;
+        private System.Windows.Forms.Label PointerXLabel;
+        private System.Windows.Forms.Label PointerYLabel;
+        private System.Windows.Forms.NumericUpDown PointerYUpDown;
+        private System.Windows.Forms.GroupBox ToolboxBox;
+        private System.Windows.Forms.GroupBox MiscActionsBox;
+        private System.Windows.Forms.Button LockDirectionButton;
+        private System.Windows.Forms.Button UnlockDirButton;
     }
 }
