@@ -114,6 +114,7 @@
             this.moveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.flyWarpEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.itemEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.itemTableEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.overworldEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tradeEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tMEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -999,6 +1000,7 @@
             this.moveEditorToolStripMenuItem,
             this.flyWarpEditorToolStripMenuItem,
             this.itemEditorToolStripMenuItem,
+            this.itemTableEditorToolStripMenuItem,
             this.overworldEditorToolStripMenuItem,
             this.tradeEditorToolStripMenuItem,
             this.tMEditorToolStripMenuItem,
@@ -1049,6 +1051,13 @@
             this.itemEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.itemEditorToolStripMenuItem.Text = "Item Editor";
             this.itemEditorToolStripMenuItem.Click += new System.EventHandler(this.itemEditorToolStripMenuItem_Click);
+            // 
+            // itemTableEditorToolStripMenuItem
+            // 
+            this.itemTableEditorToolStripMenuItem.Name = "itemTableEditorToolStripMenuItem";
+            this.itemTableEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.itemTableEditorToolStripMenuItem.Text = "Item Table Editor";
+            this.itemTableEditorToolStripMenuItem.Click += new System.EventHandler(this.itemTableEditorToolStripMenuItem_Click);
             // 
             // overworldEditorToolStripMenuItem
             // 
@@ -1685,6 +1694,7 @@
         private System.Windows.Forms.ToolStripMenuItem generateCSVToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem flyWarpEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem itemEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem itemTableEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tradeEditorToolStripMenuItem;
         private System.Windows.Forms.Button popoutTextEditorButton;
         private System.Windows.Forms.Label textEditorPoppedOutLabel;

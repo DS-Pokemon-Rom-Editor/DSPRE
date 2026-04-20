@@ -1427,6 +1427,9 @@ namespace DSPRE
 
             otherEditorsToolStripMenuItem.Enabled = true;
 
+            // Enable Item Table Editor only for HeartGold US
+            itemTableEditorToolStripMenuItem.Enabled = (RomInfo.romID == "IPKE" && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS);
+
             NarcUtilityToolStripMenuItem.Enabled = true;
             nSBMDUtilityToolStripMenuItem.Enabled = true;
             generateCSVToolStripMenuItem.Enabled = true;
@@ -2031,6 +2034,49 @@ namespace DSPRE
                 RomInfo.GetItemNames()
             );
             itemEditor.Show();
+
+            Helpers.statusLabelMessage();
+            Update();
+        }
+
+        private void itemTableEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Helpers.statusLabelMessage("Opening Item Table Editor...");
+            Update();
+
+            // Check if HeartGold US
+            if (RomInfo.romID != "IPKE" || RomInfo.gameFamily != RomInfo.GameFamilies.HGSS)
+            {
+                MessageBox.Show(
+                    "Item Table Editor is only available for HeartGold (US) version.\n\n" +
+                    "Current ROM: " + RomInfo.romID + "\n\n" +
+                    "The correct offsets for other game versions are not yet known.",
+                    "Editor Not Available",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                Helpers.statusLabelMessage();
+                return;
+            }
+
+            // Open the item table editor in a new window
+            Form editorForm = new Form
+            {
+                Text = "Item Table Editor - HeartGold US",
+                Size = new Size(1100, 750),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.Sizable,
+                MinimumSize = new Size(800, 600)
+            };
+
+            ItemTableEditor itemTableEditor = new ItemTableEditor
+            {
+                Dock = DockStyle.Fill
+            };
+
+            editorForm.Controls.Add(itemTableEditor);
+            itemTableEditor.SetupItemTableEditor();
+
+            editorForm.Show();
 
             Helpers.statusLabelMessage();
             Update();
