@@ -263,6 +263,9 @@ namespace DSPRE
             eventToHeader.Clear();
             scriptToHeaders.Clear();
 
+            // Reset patch toolbox flags so they're re-evaluated for the new ROM
+            PatchToolboxDialog.ResetFlags();
+
             // Reset all tabbed editors to their initial state
             ResetAllEditors();
 
