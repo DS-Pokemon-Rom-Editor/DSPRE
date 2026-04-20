@@ -8,11 +8,58 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors
 {
-    public partial class LevelScriptEditor : UserControl
+    public partial class LevelScriptEditor : UserControl, IEditorWithUnsavedChanges
     {
         public bool levelScriptEditorIsReady { get; set; } = false;
         LevelScriptFile _levelScriptFile;
         MainProgram _parent;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => $"Level Script Editor (File {_levelScriptFile?.ID ?? -1})";
+        public void SaveChanges() => buttonSave_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            if (Helpers.HandlersDisabled) return;
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
+
+        /// <summary>
+        /// Checks for unsaved changes and prompts the user.
+        /// Returns true if it's safe to proceed, false if the user cancelled.
+        /// </summary>
+        private bool CheckUnsavedChanges()
+        {
+            if (!isDirty) return true;
+
+            DialogResult d = MessageBox.Show(
+                "There are unsaved changes to the current level script.\nDo you want to save them?",
+                "Level Script Editor - Unsaved Changes",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+            if (d == DialogResult.Yes)
+            {
+                buttonSave_Click(null, null);
+                return true;
+            }
+            else if (d == DialogResult.No)
+            {
+                SetClean();
+                return true;
+            }
+            else
+            {
+                return false; // User cancelled
+            }
+        }
 
         public LevelScriptEditor()
         {
@@ -182,11 +229,23 @@ namespace DSPRE.Editors
             if (selectScriptFileComboBox.SelectedIndex == -1)
             {
                 buttonLocate.Enabled = false;
+                return;
             }
-            else
+
+            // Check for unsaved changes before switching
+            if (!CheckUnsavedChanges())
             {
-                buttonLocate.Enabled = true;
+                // User cancelled - revert selection
+                Helpers.DisableHandlers();
+                if (_levelScriptFile != null)
+                {
+                    selectScriptFileComboBox.SelectedIndex = _levelScriptFile.ID;
+                }
+                Helpers.EnableHandlers();
+                return;
             }
+
+            buttonLocate.Enabled = true;
 
             disableButtons(true);
 
@@ -198,6 +257,7 @@ namespace DSPRE.Editors
                 if (listBoxTriggers.Items.Count > 0) { listBoxTriggers.SelectedIndex = 0; }
                 // Check for 318767104
                 enableButtons();
+                SetClean();
             }
             catch (InvalidDataException ex)
             { //not a level script
@@ -463,11 +523,13 @@ namespace DSPRE.Editors
             textBoxVariableName.Clear();
             textBoxVariableValue.Clear();
             ValidateAllInputs(); // Reset colors after clearing
+            SetDirty();
         }
 
         private void buttonRemove_Click(object sender, EventArgs e)
         {
             _levelScriptFile.bufferSet.RemoveAt(listBoxTriggers.SelectedIndex);
+            SetDirty();
         }
 
         private void buttonOpenHeaderScript_Click(object sender, EventArgs e)
@@ -533,6 +595,7 @@ namespace DSPRE.Editors
                     {
                         _levelScriptFile.bufferSet.Add(trigger);
                     }
+                    SetDirty();
                 }
                 catch (InvalidDataException ex)
                 {
@@ -545,6 +608,7 @@ namespace DSPRE.Editors
         {
             string path = Filesystem.GetScriptPath(_levelScriptFile.ID);
             saveFile(path);
+            SetClean();
         }
 
         private void buttonExport_Click(object sender, EventArgs e)

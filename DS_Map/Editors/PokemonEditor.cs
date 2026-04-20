@@ -3,17 +3,61 @@ using System.Windows.Forms;
 
 namespace DSPRE
 {
-    public partial class PokemonEditor : Form
+    public partial class PokemonEditor : Form, IEditorWithUnsavedChanges
     {
         PersonalDataEditor personalEditor;
         LearnsetEditor learnsetEditor;
         EvolutionsEditor evoEditor;
         PokemonSpriteEditor spriteEditor;
 
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges =>
+            (personalEditor?.HasUnsavedChanges ?? false) ||
+            (learnsetEditor?.HasUnsavedChanges ?? false) ||
+            (evoEditor?.HasUnsavedChanges ?? false) ||
+            (spriteEditor?.HasUnsavedChanges ?? false);
+
+        public string UnsavedChangesDescription {
+            get {
+                var descriptions = new System.Collections.Generic.List<string>();
+                if (personalEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(personalEditor.UnsavedChangesDescription);
+                if (learnsetEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(learnsetEditor.UnsavedChangesDescription);
+                if (evoEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(evoEditor.UnsavedChangesDescription);
+                if (spriteEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(spriteEditor.UnsavedChangesDescription);
+                return descriptions.Count > 0 ? string.Join(", ", descriptions) : "Pokemon Editor";
+            }
+        }
+
+        public void SaveChanges() {
+            if (personalEditor?.HasUnsavedChanges ?? false)
+                personalEditor.SaveChanges();
+            if (learnsetEditor?.HasUnsavedChanges ?? false)
+                learnsetEditor.SaveChanges();
+            if (evoEditor?.HasUnsavedChanges ?? false)
+                evoEditor.SaveChanges();
+            if (spriteEditor?.HasUnsavedChanges ?? false)
+                ((IEditorWithUnsavedChanges)spriteEditor).SaveChanges();
+        }
+
+        public void DiscardChanges() {
+            personalEditor?.DiscardChanges();
+            learnsetEditor?.DiscardChanges();
+            evoEditor?.DiscardChanges();
+            spriteEditor?.DiscardChanges();
+        }
+        #endregion
+
         public PokemonEditor(string[] itemNames, string[] abilityNames, string[] moveNames)
         {
             InitializeComponent();
             IsMdiContainer = true;
+
+            // Register with OpenEditorsRegistry for ROM switching support
+            OpenEditorsRegistry.Register(this);
 
             personalEditor = new PersonalDataEditor(itemNames, abilityNames, personalPage, this);
             personalEditor.TopLevel = false;

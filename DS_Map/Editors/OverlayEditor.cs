@@ -1,3 +1,4 @@
+using DSPRE.Editors;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,16 +12,66 @@ using static ScintillaNET.Style;
 
 namespace DSPRE
 {
-    public partial class OverlayEditor : Form
+    public partial class OverlayEditor : Form, IEditorWithUnsavedChanges
     {
 
         private List<Overlay> overlays;
         private bool currentValComp = true;
         private bool currentValMark = true;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Overlay Editor";
+        public void SaveChanges() => saveChangesButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty()
+        {
+            if (!isDirty)
+            {
+                isDirty = true;
+                OpenEditorsRegistry.Register(this);
+            }
+        }
+
+        private void SetClean()
+        {
+            if (isDirty)
+            {
+                isDirty = false;
+                OpenEditorsRegistry.Unregister(this);
+            }
+        }
+
+        private void OverlayEditor_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (!isDirty) return;
+
+            DialogResult result = MessageBox.Show(
+                "There are unsaved changes to overlays.\nDo you want to save them before closing?",
+                "Overlay Editor - Unsaved Changes",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                saveChangesButton_Click(null, null);
+            }
+            else if (result == DialogResult.Cancel)
+            {
+                e.Cancel = true;
+            }
+        }
 
         public OverlayEditor()
         {
             InitializeComponent();
+            OpenEditorsRegistry.Register(this);
+            this.FormClosing += OverlayEditor_FormClosing;
+            this.FormClosed += (s, e) => OpenEditorsRegistry.Unregister(this);
+
             overlays = new List<Overlay>();
             int numOverlays = OverlayUtils.OverlayTable.GetNumberOfOverlays();
             for (int i = 0; i < numOverlays; i++)
@@ -149,6 +200,7 @@ namespace DSPRE
                 overlayDataGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
                 // Refresh the mismatch highlighting
                 FindMismatches();
+                SetDirty();
             }
         }
 
@@ -160,6 +212,7 @@ namespace DSPRE
             }
             currentValMark = !currentValMark;
             FindMismatches(); // Update highlighting after button click
+            SetDirty();
         }
 
         private void isCompressedButton_Click(object sender, EventArgs e)
@@ -170,6 +223,7 @@ namespace DSPRE
             }
             currentValComp = !currentValComp;
             FindMismatches(); // Update highlighting after button click
+            SetDirty();
         }
 
         private void revertChangesButton_Click(object sender, EventArgs e)
@@ -188,6 +242,7 @@ namespace DSPRE
             }
             overlayDataGrid.DataSource = overlays;
             FindMismatches(); // Update highlighting after button click
+            SetClean();
         }
 
         private void overlayDataGrid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -276,6 +331,7 @@ namespace DSPRE
                     if (!overlay.isCompressed && OverlayUtils.IsCompressed(overlay.number))
                         OverlayUtils.Decompress(overlay.number);
                 }
+                SetClean();
             }
             // ====================================================
             // TEMPORARY DISABLE UNTIL THE COMPRESSION IS FIXED

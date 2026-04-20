@@ -3,9 +3,70 @@ using System.Windows.Forms;
 
 namespace DSPRE.Editors
 {
-  public partial class EncountersEditor : UserControl
+  public partial class EncountersEditor : UserControl, IEditorWithUnsavedChanges
   {
-        public bool encounterEditorIsReady { get; set; } = false;
+    public bool encounterEditorIsReady { get; set; } = false;
+
+    #region IEditorWithUnsavedChanges Implementation
+    public bool HasUnsavedChanges {
+      get {
+        // Aggregate dirty state from child editors based on game family
+        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+          return honeyTreeEncounterEditor?.HasUnsavedChanges ?? false;
+        } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
+          return (headbuttEncounterEditor?.HasUnsavedChanges ?? false) ||
+                 (safariZoneEditor?.HasUnsavedChanges ?? false) ||
+                 (bugContestEncounterEditor?.HasUnsavedChanges ?? false);
+        }
+        return false;
+      }
+    }
+
+    public string UnsavedChangesDescription {
+      get {
+        var descriptions = new System.Collections.Generic.List<string>();
+        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+          if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(honeyTreeEncounterEditor.UnsavedChangesDescription);
+        } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
+          if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(headbuttEncounterEditor.UnsavedChangesDescription);
+          if (safariZoneEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(safariZoneEditor.UnsavedChangesDescription);
+          if (bugContestEncounterEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(bugContestEncounterEditor.UnsavedChangesDescription);
+        }
+        return descriptions.Count > 0 ? string.Join(", ", descriptions) : "Encounters Editor";
+      }
+    }
+
+    public void SaveChanges() {
+      // Save all child editors with unsaved changes
+      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+        if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
+          honeyTreeEncounterEditor.SaveChanges();
+      } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
+        if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
+          headbuttEncounterEditor.SaveChanges();
+        if (safariZoneEditor?.HasUnsavedChanges ?? false)
+          safariZoneEditor.SaveChanges();
+        if (bugContestEncounterEditor?.HasUnsavedChanges ?? false)
+          bugContestEncounterEditor.SaveChanges();
+      }
+    }
+
+    public void DiscardChanges() {
+      // Discard changes in all child editors
+      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+        honeyTreeEncounterEditor?.DiscardChanges();
+      } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
+        headbuttEncounterEditor?.DiscardChanges();
+        safariZoneEditor?.DiscardChanges();
+        bugContestEncounterEditor?.DiscardChanges();
+      }
+    }
+    #endregion
+
     public EncountersEditor()
     {
       InitializeComponent();

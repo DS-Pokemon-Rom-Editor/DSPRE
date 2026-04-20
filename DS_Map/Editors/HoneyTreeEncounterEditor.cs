@@ -6,10 +6,26 @@ using System.Windows.Forms;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Editors {
-    public partial class HoneyTreeEncounterEditor : UserControl {
+    public partial class HoneyTreeEncounterEditor : UserControl, IEditorWithUnsavedChanges {
         public bool honeyTreeEncounterEditorIsReady { get; set; } = false;
         private HoneyTreeEncounterFile honeyTreeEncounterFile;
         private int currentGroupIndex = 0;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Honey Tree Encounter Editor";
+        public void SaveChanges() => buttonSave_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
 
         public HoneyTreeEncounterEditor() {
             InitializeComponent();
@@ -205,9 +221,10 @@ namespace DSPRE.Editors {
 
         private void comboBoxSpecies_SelectedIndexChanged(object sender, EventArgs e) {
             if (Helpers.HandlersDisabled) return;
-            
+
             UpdateSelectedEncounter();
-            
+            SetDirty();
+
             // Update icon when species changes
             if (comboBoxSpecies.SelectedIndex >= 0) {
                 UpdatePokemonIcon(comboBoxSpecies.SelectedIndex);
@@ -217,6 +234,7 @@ namespace DSPRE.Editors {
         private void buttonSave_Click(object sender, EventArgs e) {
             if (honeyTreeEncounterFile == null) return;
             honeyTreeEncounterFile.SaveToNarc();
+            SetClean();
         }
 
         private void buttonExport_Click(object sender, EventArgs e) {
@@ -257,17 +275,18 @@ namespace DSPRE.Editors {
                             foreach (var group in honeyTreeEncounterFile.Groups) {
                                 comboBoxGroup.Items.Add(group);
                             }
-                            
+
                             if (comboBoxGroup.Items.Count > 0) {
                                 comboBoxGroup.SelectedIndex = 0;
                             }
                         } finally {
                             Helpers.EnableHandlers();
                         }
-                        
+
                         currentGroupIndex = 0;
                         RefreshGroupDisplay();
-                        
+                        SetDirty();
+
                         MessageBox.Show(
                             "Honey Tree encounters imported successfully!",
                             "Import Complete",

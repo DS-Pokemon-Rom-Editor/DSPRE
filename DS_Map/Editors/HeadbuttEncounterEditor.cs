@@ -9,8 +9,24 @@ using System.IO;
 using System.Windows.Forms;
 
 namespace DSPRE.Editors {
-    public partial class HeadbuttEncounterEditor : UserControl {
+    public partial class HeadbuttEncounterEditor : UserControl, IEditorWithUnsavedChanges {
         public bool headbuttEncounterEditorIsReady { get; set; } = false;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => $"Headbutt Encounter Editor (File {headbuttFileComboBox?.SelectedIndex ?? -1})";
+        public void SaveChanges() => buttonSave_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        public void SetDirty() {
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
 
         private ListBox2 listBoxTrees;
         private HeadbuttTree headbuttTree;
@@ -104,10 +120,12 @@ namespace DSPRE.Editors {
             headbuttEncounterEditorTabNormal.comboBoxPokemon.Items.AddRange(pokemonNames);
             headbuttEncounterEditorTabNormal.comboBoxPokemon.SelectedIndex = 0;
             headbuttEncounterEditorTabNormal.listBoxTrees.SelectedIndexChanged += ListBoxTrees_SelectedIndexChanged;
+            headbuttEncounterEditorTabNormal.DataChanged += (s, ev) => SetDirty();
 
             headbuttEncounterEditorTabSpecial.comboBoxPokemon.Items.AddRange(pokemonNames);
             headbuttEncounterEditorTabSpecial.comboBoxPokemon.SelectedIndex = 0;
             headbuttEncounterEditorTabSpecial.listBoxTrees.SelectedIndexChanged += ListBoxTrees_SelectedIndexChanged;
+            headbuttEncounterEditorTabSpecial.DataChanged += (s, ev) => SetDirty();
 
             openGlPictureBox.BringToFront();
             SetCam2DValues();
@@ -248,6 +266,7 @@ namespace DSPRE.Editors {
         private void buttonSave_Click(object sender, EventArgs e) {
             if (headbuttEncounterFile == null) { return; }
             headbuttEncounterFile.SaveToFile();
+            SetClean();
         }
 
         private void buttonSaveAs_Click(object sender, EventArgs e) {
@@ -284,6 +303,7 @@ namespace DSPRE.Editors {
             this.headbuttEncounterFile = new HeadbuttEncounterFile(ofd.FileName);
             headbuttEncounterFile.ID = (ushort)headbuttFileComboBox.SelectedIndex;
             setCurrentMap(headbuttEncounterFile);
+            SetDirty();
         }
 
         private void comboBoxMapFile_SelectedIndexChanged(object sender, EventArgs e) {

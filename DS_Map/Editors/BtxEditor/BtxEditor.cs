@@ -1,4 +1,5 @@
-﻿using DSPRE.LibNDSFormats;
+﻿using DSPRE.Editors;
+using DSPRE.LibNDSFormats;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,7 +10,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors.BtxEditor
 {
-    public partial class BtxEditor : Form
+    public partial class BtxEditor : Form, IEditorWithUnsavedChanges
     {
         private Bitmap bm;
         private byte[] BTXFile;
@@ -17,8 +18,16 @@ namespace DSPRE.Editors.BtxEditor
         // Track modified BTX files
         private Dictionary<ushort, byte[]> modifiedBTXFiles = new Dictionary<ushort, byte[]>();
 
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => modifiedBTXFiles.Count > 0;
+        public string UnsavedChangesDescription => $"BTX Editor ({modifiedBTXFiles.Count} modified)";
+        public void SaveChanges() => SaveAll_Button_Click(null, null);
+        public void DiscardChanges() => modifiedBTXFiles.Clear();
+        #endregion
+
         public BtxEditor()
         {
+            OpenEditorsRegistry.Register(this);
             RomInfo.SetOWtable();
             RomInfo.Set3DOverworldsDict();
             RomInfo.ReadOWTable();
@@ -32,6 +41,7 @@ namespace DSPRE.Editors.BtxEditor
 
             overworldList.SelectedIndex = 0;
 
+            this.FormClosed += (s, e) => OpenEditorsRegistry.Unregister(this);
             this.FormClosing += BtxEditor_FormClosing;
         }
 

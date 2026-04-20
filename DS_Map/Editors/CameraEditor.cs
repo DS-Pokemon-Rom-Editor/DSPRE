@@ -4,11 +4,32 @@ using System.Windows.Forms;
 
 namespace DSPRE.Editors
 {
-    public partial class CameraEditor : UserControl
+    public partial class CameraEditor : UserControl, IEditorWithUnsavedChanges
     {
         MainProgram _parent;
         public bool cameraEditorIsReady { get; set; } = false;
-        
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Camera Editor";
+        public void SaveChanges() => saveCameraTableButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty()
+        {
+            if (!isDirty && cameraEditorIsReady)
+            {
+                isDirty = true;
+            }
+        }
+
+        private void SetClean()
+        {
+            isDirty = false;
+        }
+
         public CameraEditor()
         {
             InitializeComponent();
@@ -95,10 +116,12 @@ namespace DSPRE.Editors
         }
         private void saveCameraTableButton_Click(object sender, EventArgs e) {
             SaveCameraTable(OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber), overlayCameraTblOffset);
+            SetClean();
         }
         private void cameraEditorDataGridView_CellValidated(object sender, DataGridViewCellEventArgs e) {
             currentCameraTable[e.RowIndex][e.ColumnIndex] = cameraEditorDataGridView.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
             cameraEditorDataGridView.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = currentCameraTable[e.RowIndex][e.ColumnIndex];
+            SetDirty();
         }
         private void exportCameraTableButton_Click(object sender, EventArgs e) {
             SaveFileDialog of = new SaveFileDialog {
@@ -146,6 +169,7 @@ namespace DSPRE.Editors
 
                     currentCameraTable[e.RowIndex] = new GameCamera(File.ReadAllBytes(of.FileName));
                     currentCameraTable[e.RowIndex].ShowInGridView(senderTable, e.RowIndex);
+                    SetDirty();
                     MessageBox.Show("Camera correctly imported.", "Success!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -172,6 +196,7 @@ namespace DSPRE.Editors
                 currentCameraTable[b] = new GameCamera(DSUtils.ReadFromFile(of.FileName, b * RomInfo.cameraSize, RomInfo.cameraSize));
                 currentCameraTable[b].ShowInGridView(cameraEditorDataGridView, b);
             }
+            SetDirty();
             MessageBox.Show("Camera Table imported correctly.", "Success!", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }

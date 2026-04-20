@@ -15,10 +15,57 @@ using static Tao.Platform.Windows.Winmm;
 
 namespace DSPRE.Editors
 {
-    public partial class MatrixEditor : UserControl
+    public partial class MatrixEditor : UserControl, IEditorWithUnsavedChanges
     {
         MainProgram _parent;
         public bool matrixEditorIsReady { get; set; } = false;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => $"Matrix Editor (Matrix {selectMatrixComboBox?.SelectedIndex ?? -1})";
+        public void SaveChanges() => saveMatrixButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            if (Helpers.HandlersDisabled) return;
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
+
+        /// <summary>
+        /// Checks for unsaved changes and prompts the user.
+        /// Returns true if it's safe to proceed, false if the user cancelled.
+        /// </summary>
+        private bool CheckUnsavedChanges()
+        {
+            if (!isDirty) return true;
+
+            DialogResult d = MessageBox.Show(
+                "There are unsaved changes to the current matrix.\nDo you want to save them?",
+                "Matrix Editor - Unsaved Changes",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+            if (d == DialogResult.Yes)
+            {
+                saveMatrixButton_Click(null, null);
+                return true;
+            }
+            else if (d == DialogResult.No)
+            {
+                SetClean();
+                return true;
+            }
+            else
+            {
+                return false; // User cancelled
+            }
+        }
 
         public MatrixEditor()
         {
@@ -185,6 +232,7 @@ namespace DSPRE.Editors
             GameMatrix saved = new GameMatrix(selectMatrixComboBox.SelectedIndex);
             selectMatrixComboBox.Items[selectMatrixComboBox.SelectedIndex] = saved.ToString();
             EditorPanels.eventEditor.eventMatrix = saved;
+            SetClean();
         }
         private void headersGridView_SelectionChanged(object sender, EventArgs e)
         {
@@ -244,6 +292,7 @@ namespace DSPRE.Editors
                 }
                 /* Change value in matrix object */
                 currentMatrix.headers[e.RowIndex, e.ColumnIndex] = cellValue;
+                SetDirty();
             }
         }
         private void headersGridView_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -292,6 +341,7 @@ namespace DSPRE.Editors
 
                 /* Change value in matrix object */
                 currentMatrix.altitudes[e.RowIndex, e.ColumnIndex] = cellValue;
+                SetDirty();
             }
         }
         private void widthUpDown_ValueChanged(object sender, EventArgs e)
@@ -337,6 +387,7 @@ namespace DSPRE.Editors
 
             /* Modify matrix object */
             currentMatrix.ResizeMatrix((int)heightUpDown.Value, (int)widthUpDown.Value);
+            SetDirty();
             Helpers.EnableHandlers();
         }
         private void heightUpDown_ValueChanged(object sender, EventArgs e)
@@ -453,6 +504,8 @@ namespace DSPRE.Editors
             heightUpDown.Value = currentMatrix.height;
             Helpers.EnableHandlers();
 
+            SetDirty();
+
             /* Display success message */
             MessageBox.Show("Matrix imported successfully!", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Helpers.statusLabelMessage();
@@ -476,6 +529,7 @@ namespace DSPRE.Editors
 
                 /* Change value in matrix object */
                 currentMatrix.maps[e.RowIndex, e.ColumnIndex] = cellValue;
+                SetDirty();
             }
         }
         private void mapFilesGridView_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -618,6 +672,20 @@ namespace DSPRE.Editors
             {
                 return;
             }
+
+            // Check for unsaved changes before switching
+            if (!CheckUnsavedChanges())
+            {
+                // User cancelled - revert selection
+                Helpers.DisableHandlers();
+                if (currentMatrix != null && currentMatrix.id.HasValue)
+                {
+                    selectMatrixComboBox.SelectedIndex = currentMatrix.id.Value;
+                }
+                Helpers.EnableHandlers();
+                return;
+            }
+
             ClearMatrixTables();
             currentMatrix = new GameMatrix(selectMatrixComboBox.SelectedIndex);
             GenerateMatrixTables();
@@ -628,6 +696,7 @@ namespace DSPRE.Editors
             widthUpDown.Value = currentMatrix.width;
             heightUpDown.Value = currentMatrix.height;
             Helpers.EnableHandlers();
+            SetClean();
         }
         private void importColorTableButton_Click(object sender, EventArgs e)
         {

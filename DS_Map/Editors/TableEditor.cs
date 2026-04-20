@@ -15,11 +15,31 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace DSPRE.Editors
 {
-    public partial class TableEditor : UserControl
+    public partial class TableEditor : UserControl, IEditorWithUnsavedChanges
     {
         MainProgram _parent;
         public bool battleTableEditorIsReady { get; set; } = false;
         public bool conditionnalMusicTableEditorIsReady { get; set; } = false;
+        private bool conditionalMusicDirty = false;
+        private bool effectsComboDirty = false;
+        private bool vsTrainerDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => conditionalMusicDirty || effectsComboDirty || vsTrainerDirty;
+        public string UnsavedChangesDescription => "Table Editor";
+        public void SaveChanges()
+        {
+            if (conditionalMusicDirty) saveConditionalMusicTableBTN_Click(null, null);
+            if (effectsComboDirty) saveEffectComboBTN_Click(null, null);
+            if (vsTrainerDirty) saveVSTrainerEntryBTN_Click(null, null);
+        }
+        public void DiscardChanges()
+        {
+            conditionalMusicDirty = false;
+            effectsComboDirty = false;
+            vsTrainerDirty = false;
+        }
+        #endregion
 
         public TableEditor()
         {
@@ -278,6 +298,7 @@ namespace DSPRE.Editors
             (ushort header, ushort flag, ushort music) oldTuple = conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex];
             (ushort header, ushort flag, ushort music) newTuple = ((ushort)headerConditionalMusicComboBox.SelectedIndex, oldTuple.flag, oldTuple.music);
             conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex] = newTuple;
+            conditionalMusicDirty = true;
 
             MapHeader selected = MapHeader.LoadFromARM9(newTuple.header);
             switch (RomInfo.gameFamily)
@@ -302,6 +323,7 @@ namespace DSPRE.Editors
 
             (ushort header, ushort flag, ushort music) oldTuple = conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex];
             conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex] = (oldTuple.header, (ushort)flagConditionalMusicUpDown.Value, oldTuple.music);
+            conditionalMusicDirty = true;
         }
 
         private void musicIDconditionalMusicUpDown_ValueChanged(object sender, EventArgs e)
@@ -313,6 +335,7 @@ namespace DSPRE.Editors
 
             (ushort header, ushort flag, ushort music) oldTuple = conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex];
             conditionalMusicTable[conditionalMusicTableListBox.SelectedIndex] = (oldTuple.header, oldTuple.flag, (ushort)musicIDconditionalMusicUpDown.Value);
+            conditionalMusicDirty = true;
         }
         private void HOWconditionalMusicTableButton_Click(object sender, EventArgs e)
         {
@@ -327,6 +350,7 @@ namespace DSPRE.Editors
                 ARM9.WriteBytes(BitConverter.GetBytes(conditionalMusicTable[i].flag), (uint)(conditionalMusicTableStartAddress + 6 * i + 2));
                 ARM9.WriteBytes(BitConverter.GetBytes(conditionalMusicTable[i].music), (uint)(conditionalMusicTableStartAddress + 6 * i + 4));
             }
+            conditionalMusicDirty = false;
         }
 
         private void TBLEditortrainerClassPreviewPic_ValueChanged(object sender, EventArgs e)
@@ -348,6 +372,7 @@ namespace DSPRE.Editors
                 wr.Write(battleIntroEffect);
                 wr.Write(battleMusic);
             };
+            effectsComboDirty = false;
 
             Helpers.DisableHandlers();
 
@@ -378,6 +403,7 @@ namespace DSPRE.Editors
             {
                 wr.Write((ushort)((trainerClass & 1023) + (comboID << 10)));
             };
+            vsTrainerDirty = false;
 
             Helpers.DisableHandlers();
             pbEffectsVsTrainerListbox.Items[index] = "[" + trainerClass.ToString("D3") + "]" + " " + trcNames[trainerClass] + " uses Combo #" + comboID;
@@ -462,6 +488,11 @@ namespace DSPRE.Editors
 
             tbEditorTrClassFramePreviewUpDown.Maximum = maxFrames;
             tbEditortrainerClassFrameMaxLabel.Text = "/" + maxFrames;
+
+            if (!Helpers.HandlersDisabled)
+            {
+                vsTrainerDirty = true;
+            }
         }
         private void pbEffectsPokemonCombobox_SelectedIndexChanged(object sender, EventArgs e)
         {
