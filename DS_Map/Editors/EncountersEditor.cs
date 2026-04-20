@@ -12,7 +12,8 @@ namespace DSPRE.Editors
       get {
         // Aggregate dirty state from child editors based on game family
         if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
-          return honeyTreeEncounterEditor?.HasUnsavedChanges ?? false;
+          return (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false) ||
+                 (greatMarshEncounterEditor?.HasUnsavedChanges ?? false);
         } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
           return (headbuttEncounterEditor?.HasUnsavedChanges ?? false) ||
                  (safariZoneEditor?.HasUnsavedChanges ?? false) ||
@@ -28,6 +29,8 @@ namespace DSPRE.Editors
         if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
           if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
             descriptions.Add(honeyTreeEncounterEditor.UnsavedChangesDescription);
+          if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(greatMarshEncounterEditor.UnsavedChangesDescription);
         } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
           if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
             descriptions.Add(headbuttEncounterEditor.UnsavedChangesDescription);
@@ -45,6 +48,8 @@ namespace DSPRE.Editors
       if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
         if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
           honeyTreeEncounterEditor.SaveChanges();
+        if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
+          greatMarshEncounterEditor.SaveChanges();
       } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
         if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
           headbuttEncounterEditor.SaveChanges();
@@ -59,6 +64,7 @@ namespace DSPRE.Editors
       // Discard changes in all child editors
       if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
         honeyTreeEncounterEditor?.DiscardChanges();
+        greatMarshEncounterEditor?.DiscardChanges();
       } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
         headbuttEncounterEditor?.DiscardChanges();
         safariZoneEditor?.DiscardChanges();
@@ -86,7 +92,7 @@ namespace DSPRE.Editors
     }
 
     private void ConfigureTabsForGameFamily() {
-        // DPPt: Only show Honey Tree tab
+        // DPPt: Show Honey Tree and Great Marsh tabs
         // HGSS: Only show Headbutt, Safari Zone, Bug Contest tabs
 
         // Disable handlers to prevent Enter events from firing during tab manipulation
@@ -103,14 +109,20 @@ namespace DSPRE.Editors
                 if (tabControl.TabPages.Contains(tabPageBugContestEditor)) {
                     tabControl.TabPages.Remove(tabPageBugContestEditor);
                 }
-                // Ensure Honey Tree tab is present
+                // Ensure DPPt tabs are present
                 if (!tabControl.TabPages.Contains(tabPageHoneyTreeEditor)) {
                     tabControl.TabPages.Add(tabPageHoneyTreeEditor);
+                }
+                if (!tabControl.TabPages.Contains(tabPageGreatMarshEditor)) {
+                    tabControl.TabPages.Add(tabPageGreatMarshEditor);
                 }
             } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
                 // Remove DPPt-only tabs
                 if (tabControl.TabPages.Contains(tabPageHoneyTreeEditor)) {
                     tabControl.TabPages.Remove(tabPageHoneyTreeEditor);
+                }
+                if (tabControl.TabPages.Contains(tabPageGreatMarshEditor)) {
+                    tabControl.TabPages.Remove(tabPageGreatMarshEditor);
                 }
                 // Ensure HGSS tabs are present
                 if (!tabControl.TabPages.Contains(tabPageHeadbuttEditor)) {
@@ -137,6 +149,8 @@ namespace DSPRE.Editors
             tabPageBugContestEditor_Enter(null, null);
         } else if (tab == tabPageHoneyTreeEditor) {
             tabPageHoneyTreeEditor_Enter(null, null);
+        } else if (tab == tabPageGreatMarshEditor) {
+            tabPageGreatMarshEditor_Enter(null, null);
         }
     }
 
@@ -163,6 +177,12 @@ namespace DSPRE.Editors
     {
       if (Helpers.HandlersDisabled) return;
       honeyTreeEncounterEditor.SetupHoneyTreeEncounterEditor();
+    }
+
+    private void tabPageGreatMarshEditor_Enter(object sender, System.EventArgs e)
+    {
+      if (Helpers.HandlersDisabled) return;
+      greatMarshEncounterEditor.SetupGreatMarshEncounterEditor();
     }
   }
 }

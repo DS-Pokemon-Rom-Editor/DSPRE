@@ -38,11 +38,14 @@ namespace DSPRE.Editors
             this.bugContestEncounterEditor = new DSPRE.Editors.BugContestEncounterEditor();
             this.tabPageHoneyTreeEditor = new System.Windows.Forms.TabPage();
             this.honeyTreeEncounterEditor = new DSPRE.Editors.HoneyTreeEncounterEditor();
+            this.tabPageGreatMarshEditor = new System.Windows.Forms.TabPage();
+            this.greatMarshEncounterEditor = new DSPRE.Editors.GreatMarshEncounterEditor();
             this.tabControl.SuspendLayout();
             this.tabPageHeadbuttEditor.SuspendLayout();
             this.tabPageSafariZoneEditor.SuspendLayout();
             this.tabPageBugContestEditor.SuspendLayout();
             this.tabPageHoneyTreeEditor.SuspendLayout();
+            this.tabPageGreatMarshEditor.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl
@@ -51,6 +54,7 @@ namespace DSPRE.Editors
             this.tabControl.Controls.Add(this.tabPageSafariZoneEditor);
             this.tabControl.Controls.Add(this.tabPageBugContestEditor);
             this.tabControl.Controls.Add(this.tabPageHoneyTreeEditor);
+            this.tabControl.Controls.Add(this.tabPageGreatMarshEditor);
             this.tabControl.Location = new System.Drawing.Point(4, 4);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
@@ -138,6 +142,26 @@ namespace DSPRE.Editors
             this.honeyTreeEncounterEditor.Size = new System.Drawing.Size(700, 400);
             this.honeyTreeEncounterEditor.TabIndex = 0;
             // 
+            // tabPageGreatMarshEditor
+            // 
+            this.tabPageGreatMarshEditor.Controls.Add(this.greatMarshEncounterEditor);
+            this.tabPageGreatMarshEditor.Location = new System.Drawing.Point(4, 22);
+            this.tabPageGreatMarshEditor.Name = "tabPageGreatMarshEditor";
+            this.tabPageGreatMarshEditor.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageGreatMarshEditor.Size = new System.Drawing.Size(1095, 628);
+            this.tabPageGreatMarshEditor.TabIndex = 4;
+            this.tabPageGreatMarshEditor.Text = "Great Marsh";
+            this.tabPageGreatMarshEditor.UseVisualStyleBackColor = true;
+            this.tabPageGreatMarshEditor.Enter += new System.EventHandler(this.tabPageGreatMarshEditor_Enter);
+            // 
+            // greatMarshEncounterEditor
+            // 
+            this.greatMarshEncounterEditor.greatMarshEncounterEditorIsReady = false;
+            this.greatMarshEncounterEditor.Location = new System.Drawing.Point(6, 6);
+            this.greatMarshEncounterEditor.Name = "greatMarshEncounterEditor";
+            this.greatMarshEncounterEditor.Size = new System.Drawing.Size(700, 400);
+            this.greatMarshEncounterEditor.TabIndex = 0;
+            // 
             // EncountersEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -150,6 +174,7 @@ namespace DSPRE.Editors
             this.tabPageSafariZoneEditor.ResumeLayout(false);
             this.tabPageBugContestEditor.ResumeLayout(false);
             this.tabPageHoneyTreeEditor.ResumeLayout(false);
+            this.tabPageGreatMarshEditor.ResumeLayout(false);
             this.ResumeLayout(false);
 
     }
@@ -165,5 +190,7 @@ namespace DSPRE.Editors
     public BugContestEncounterEditor bugContestEncounterEditor;
     private System.Windows.Forms.TabPage tabPageHoneyTreeEditor;
     public HoneyTreeEncounterEditor honeyTreeEncounterEditor;
+    private System.Windows.Forms.TabPage tabPageGreatMarshEditor;
+    public GreatMarshEncounterEditor greatMarshEncounterEditor;
   }
 }
