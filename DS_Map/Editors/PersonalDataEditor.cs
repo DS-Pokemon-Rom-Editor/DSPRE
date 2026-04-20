@@ -1,4 +1,5 @@
-﻿using DSPRE.Resources;
+﻿using DSPRE.Editors;
+using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace DSPRE {
-    public partial class PersonalDataEditor : Form {
+    public partial class PersonalDataEditor : Form, IEditorWithUnsavedChanges {
 
         private readonly string[] fileNames;
         private readonly string[] pokenames;
@@ -34,6 +35,13 @@ namespace DSPRE {
         public bool dirty = false;
         private bool modifiedAbilities = false;
         private static readonly string formName = "Personal Data Editor";
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => $"Personal Data Editor (Mon {currentLoadedId})";
+        public void SaveChanges() => saveDataButton_Click(null, null);
+        public void DiscardChanges() => setDirty(false);
+        #endregion
 
         PokemonEditor _parent;
 

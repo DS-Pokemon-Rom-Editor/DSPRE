@@ -1,4 +1,5 @@
-﻿using DSPRE.ROMFiles;
+﻿using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,12 +7,36 @@ using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE {
-    public partial class SpawnEditor : Form {
+    public partial class SpawnEditor : Form, IEditorWithUnsavedChanges {
         private List<string> locations = RomInfo.GetLocationNames();
         private List<string> names;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Spawn Editor";
+        public void SaveChanges() => saveSpawnEditorButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            if (Helpers.HandlersDisabled) return;
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
+
         public SpawnEditor(HashSet<string> results, List<string> allNames, ushort headerNumber = 0, int matrixX = 0, int matrixY = 0) {
             InitializeComponent();
             this.names = allNames;
+
+            // Register with OpenEditorsRegistry for ROM switching support
+            OpenEditorsRegistry.Register(this);
+
+            // Wire up dirty tracking for all editable controls
+            WireUpDirtyTracking();
 
             if (results is null || results.Count <= 1) {
                 SetupFields(allNames);
@@ -27,9 +52,26 @@ namespace DSPRE {
         public SpawnEditor(List<string> allNames) {
             InitializeComponent();
             this.names = allNames;
+
+            // Register with OpenEditorsRegistry for ROM switching support
+            OpenEditorsRegistry.Register(this);
+
+            // Wire up dirty tracking for all editable controls
+            WireUpDirtyTracking();
+
             SetupFields(allNames);
             readDefaultSpawnPosButton_Click(null, null);
-        }              
+        }
+
+        private void WireUpDirtyTracking() {
+            matrixxUpDown.ValueChanged += (s, e) => SetDirty();
+            matrixyUpDown.ValueChanged += (s, e) => SetDirty();
+            localmapxUpDown.ValueChanged += (s, e) => SetDirty();
+            localmapyUpDown.ValueChanged += (s, e) => SetDirty();
+            initialMoneyUpDown.ValueChanged += (s, e) => SetDirty();
+            playerDirCombobox.SelectedIndexChanged += (s, e) => SetDirty();
+        }
+
         private void SetupFields(IEnumerable<string> headersList) {
             SetupDirections();
             SetupHeadersList(headersList);
@@ -92,38 +134,45 @@ namespace DSPRE {
                 ARM9.WriteBytes(BitConverter.GetBytes((short)playerDirCombobox.SelectedIndex), RomInfo.arm9spawnOffset + 16);
 
                 DSUtils.WriteToFile(moneyOverlayPath, BitConverter.GetBytes((int)initialMoneyUpDown.Value), RomInfo.initialMoneyOverlayOffset);
+                SetClean();
                 MessageBox.Show("Your spawn settings have been changed.", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } else {
                 MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
-        private void readDefaultSpawnPosButton_Click(object sender, EventArgs e) {;
-            SetupFields(names);
-
-            ushort headerNumber = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0);
-            ushort globalX = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0);
-            ushort globalY = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0);
-
-            spawnHeaderComboBox.SelectedIndex = headerNumber;
-            
-            localmapxUpDown.Value = (short)(globalX % 32);
-            localmapyUpDown.Value = (short)(globalY % 32);
-
-
+        private void readDefaultSpawnPosButton_Click(object sender, EventArgs e) {
+            Helpers.DisableHandlers();
             try {
-                matrixxUpDown.Value = (ushort)Math.Min(globalX / 32, matrixxUpDown.Maximum);
-            } catch (ArgumentOutOfRangeException) {
-                matrixxUpDown.Value = matrixxUpDown.Maximum;
-            }
+                SetupFields(names);
 
-            try {
-                matrixyUpDown.Value = (ushort)Math.Min(globalY / 32, matrixyUpDown.Maximum);
-            } catch (ArgumentOutOfRangeException) {
-                matrixyUpDown.Value = matrixyUpDown.Maximum;
+                ushort headerNumber = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0);
+                ushort globalX = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0);
+                ushort globalY = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0);
+
+                spawnHeaderComboBox.SelectedIndex = headerNumber;
+
+                localmapxUpDown.Value = (short)(globalX % 32);
+                localmapyUpDown.Value = (short)(globalY % 32);
+
+
+                try {
+                    matrixxUpDown.Value = (ushort)Math.Min(globalX / 32, matrixxUpDown.Maximum);
+                } catch (ArgumentOutOfRangeException) {
+                    matrixxUpDown.Value = matrixxUpDown.Maximum;
+                }
+
+                try {
+                    matrixyUpDown.Value = (ushort)Math.Min(globalY / 32, matrixyUpDown.Maximum);
+                } catch (ArgumentOutOfRangeException) {
+                    matrixyUpDown.Value = matrixyUpDown.Maximum;
+                }
+
+                ReadDefaultMoney();
+                playerDirCombobox.SelectedIndex = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 16, 2), 0);
+                SetClean();
+            } finally {
+                Helpers.EnableHandlers();
             }
-            
-            ReadDefaultMoney();
-            playerDirCombobox.SelectedIndex = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 16, 2), 0);
         }
         private void ReadDefaultMoney() {
             if (OverlayUtils.OverlayTable.IsDefaultCompressed(RomInfo.initialMoneyOverlayNumber)) {

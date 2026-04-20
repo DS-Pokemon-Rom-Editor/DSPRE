@@ -4,10 +4,19 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Editors {
   public partial class SafariZoneEncounterEditorTab : UserControl {
+    /// <summary>
+    /// Event raised when data is modified in this tab.
+    /// </summary>
+    public event EventHandler DataChanged;
+
+    protected virtual void OnDataChanged() {
+      DataChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public SafariZoneEncounterEditorTab() {
       InitializeComponent();
     }
-    
+
     private void listBoxEncounters_SelectedIndexChanged(object sender, EventArgs e) {
       if (Helpers.HandlersDisabled){ return; }
       SafariZoneEncounter safariZoneEncounter = (SafariZoneEncounter)listBoxEncounters.SelectedItem;
@@ -22,6 +31,7 @@ namespace DSPRE.Editors {
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.pokemonID = (ushort)comboBoxPokemon.SelectedIndex;
       listBoxEncounters.RefreshItem(listBoxEncounters.SelectedIndex);
+      OnDataChanged();
     }
 
     private void numericUpDownLevel_ValueChanged(object sender, EventArgs e) {
@@ -30,6 +40,7 @@ namespace DSPRE.Editors {
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.level = (byte)numericUpDownLevel.Value;
       listBoxEncounters.RefreshItem(listBoxEncounters.SelectedIndex);
+      OnDataChanged();
     }
 
     private void listBoxEncountersObject_SelectedIndexChanged(object sender, EventArgs e)
@@ -49,6 +60,7 @@ namespace DSPRE.Editors {
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.pokemonID = (ushort)comboBoxPokemonObject.SelectedIndex;
       listBoxEncountersObject.RefreshItem(listBoxEncountersObject.SelectedIndex);
+      OnDataChanged();
     }
 
     private void numericUpDownLevelObject_ValueChanged(object sender, EventArgs e)
@@ -58,6 +70,7 @@ namespace DSPRE.Editors {
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.level = (byte)numericUpDownLevelObject.Value;
       listBoxEncountersObject.RefreshItem(listBoxEncountersObject.SelectedIndex);
+      OnDataChanged();
     }
   }
 }

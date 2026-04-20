@@ -10,7 +10,7 @@ using System.Text;
 
 namespace DSPRE.Editors
 {
-    public partial class LearnsetBulkEditor : Form
+    public partial class LearnsetBulkEditor : Form, IEditorWithUnsavedChanges
     {
         private DataGridView dataGridView;
         private BindingList<LearnsetEntry> learnsetData;
@@ -27,17 +27,31 @@ namespace DSPRE.Editors
         private Dictionary<string, int> pokemonNameToId;
         private Dictionary<string, int> moveNameToId;
 
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty && !changesSaved;
+        public string UnsavedChangesDescription => "Learnset Bulk Editor";
+        public void SaveChanges() => SaveAllChanges();
+        public void DiscardChanges() 
+        { 
+            isDirty = false;
+            changesSaved = false;
+        }
+        #endregion
+
         public LearnsetBulkEditor(BindingList<LearnsetEntry> learnsetData, string[] pokemonNames, string[] moveNames)
         {
+            OpenEditorsRegistry.Register(this);
             //InitializeComponent(); // we set up controls manually
             this.learnsetData = learnsetData;
             this.pokemonNames = pokemonNames;
             this.moveNames = moveNames;
-            
+
             // Build lookup dictionaries from ROM data for strict validation
             BuildLookupDictionaries();
-            
+
             SetupControls();
+
+            this.FormClosed += (s, e) => OpenEditorsRegistry.Unregister(this);
         }
 
         private void BuildLookupDictionaries()

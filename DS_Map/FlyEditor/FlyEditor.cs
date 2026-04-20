@@ -8,7 +8,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors
 {
-    public partial class FlyEditor : Form
+    public partial class FlyEditor : Form, IEditorWithUnsavedChanges
     {
         private const uint DPjpOffset = 0xF41D0;
         private const uint DPusOffset = 0xF2224;
@@ -36,9 +36,25 @@ namespace DSPRE.Editors
         private List<string> Headers;
         private bool isFormClosing = false;
         private bool isValidInput = true;
+        private bool isDirty = false;
 
         private List<FlyTableRowDpPlat> TableDataDpPlat;
         private List<FlyTableRowHgss> TableDataHgss;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Fly Editor";
+        public void SaveChanges() => btn_SaveChanges_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
 
         public FlyEditor(GameFamilies gameFamily, GameLanguages gameLanguage, List<string> headers)
         {
@@ -48,6 +64,15 @@ namespace DSPRE.Editors
             TableDataHgss = new List<FlyTableRowHgss>();
             TableDataDpPlat = new List<FlyTableRowDpPlat>();
             InitializeComponent();
+
+            // Register with OpenEditorsRegistry for ROM switching support
+            OpenEditorsRegistry.Register(this);
+
+            // Wire up CellValueChanged events for dirty tracking
+            dt_GameOverWarps.CellValueChanged += (s, e) => { if (e.RowIndex >= 0) SetDirty(); };
+            dt_FlyWarps.CellValueChanged += (s, e) => { if (e.RowIndex >= 0) SetDirty(); };
+            dt_UnlockSettings.CellValueChanged += (s, e) => { if (e.RowIndex >= 0) SetDirty(); };
+
             PopulateColumns();
             BeginPopulateFlyTableData();
         }
@@ -342,6 +367,7 @@ namespace DSPRE.Editors
                 try
                 {
                     WriteFlyTable();
+                    SetClean();
                     MessageBox.Show("Table data updated!", "Success", MessageBoxButtons.OK);
                 }
                 catch (Exception ex)

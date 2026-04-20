@@ -6,6 +6,15 @@ namespace DSPRE.Editors {
   public partial class SafariZoneEncounterGroupEditor : UserControl {
     private SafariZoneEncounterGroup safariZoneEncounterGroup;
 
+    /// <summary>
+    /// Event raised when data is modified in this group editor.
+    /// </summary>
+    public event EventHandler DataChanged;
+
+    protected virtual void OnDataChanged() {
+      DataChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public SafariZoneEncounterGroupEditor() {
       InitializeComponent();
       safariZoneEncounterEditorMorningTab.listBoxEncountersObject.SelectedIndexChanged += ListBoxEncountersObject_SelectedIndexChanged;
@@ -13,6 +22,11 @@ namespace DSPRE.Editors {
       safariZoneEncounterEditorNightTab.listBoxEncountersObject.SelectedIndexChanged += ListBoxEncountersObject_SelectedIndexChanged;
       listBoxObjectRequirements.SelectedIndexChanged += ListBoxEncountersObject_SelectedIndexChanged;
       listBoxObjectOptionalRequirements.SelectedIndexChanged += ListBoxEncountersObject_SelectedIndexChanged;
+
+      // Subscribe to DataChanged from child tabs
+      safariZoneEncounterEditorMorningTab.DataChanged += (s, ev) => OnDataChanged();
+      safariZoneEncounterEditorDayTab.DataChanged += (s, ev) => OnDataChanged();
+      safariZoneEncounterEditorNightTab.DataChanged += (s, ev) => OnDataChanged();
     }
 
     private void ListBoxEncountersObject_SelectedIndexChanged(object sender, EventArgs e) {
@@ -84,6 +98,7 @@ namespace DSPRE.Editors {
       if (safariZoneObjectRequirement == null){ return; }
       safariZoneObjectRequirement.typeID = (byte)comboBoxObjectRequirementType.SelectedIndex;
       listBoxObjectRequirements.RefreshItem(listBoxObjectRequirements.SelectedIndex);
+      OnDataChanged();
     }
 
     private void numericUpDownObjectRequirementQty_ValueChanged(object sender, EventArgs e) {
@@ -92,6 +107,7 @@ namespace DSPRE.Editors {
       if (safariZoneObjectRequirement == null){ return; }
       safariZoneObjectRequirement.quantity = (byte)numericUpDownObjectRequirementQty.Value;
       listBoxObjectRequirements.RefreshItem(listBoxObjectRequirements.SelectedIndex);
+      OnDataChanged();
     }
 
     private void listBoxObjectOptionalRequirements_SelectedIndexChanged(object sender, EventArgs e) {
@@ -108,6 +124,7 @@ namespace DSPRE.Editors {
       if (safariZoneObjectRequirement == null){ return; }
       safariZoneObjectRequirement.typeID = (byte)comboBoxOptionalObjectRequirementType.SelectedIndex;
       listBoxObjectOptionalRequirements.RefreshItem(listBoxObjectOptionalRequirements.SelectedIndex);
+      OnDataChanged();
     }
 
     private void numericUpDownObjectOptionalRequirementQty_ValueChanged(object sender, EventArgs e) {
@@ -116,6 +133,7 @@ namespace DSPRE.Editors {
       if (safariZoneObjectRequirement == null){ return; }
       safariZoneObjectRequirement.quantity = (byte)numericUpDownObjectOptionalRequirementQty.Value;
       listBoxObjectOptionalRequirements.RefreshItem(listBoxObjectOptionalRequirements.SelectedIndex);
+      OnDataChanged();
     }
 
     private void buttonAddObjectEncounter_Click(object sender, EventArgs e) {
@@ -127,6 +145,7 @@ namespace DSPRE.Editors {
       safariZoneEncounterGroup.ObjectRequirements.Add(new SafariZoneObjectRequirement(1, 1));
       safariZoneEncounterGroup.OptionalObjectRequirements.Add(new SafariZoneObjectRequirement(0, 0));
       safariZoneEncounterGroup.ObjectSlots = (byte)safariZoneEncounterGroup.ObjectRequirements.Count; //all the list counts should be the same
+      OnDataChanged();
     }
 
     private void buttonRemoveObjectEncounter_Click(object sender, EventArgs e) {
@@ -138,6 +157,7 @@ namespace DSPRE.Editors {
       safariZoneEncounterGroup.ObjectRequirements.RemoveAt(safariZoneEncounterGroup.ObjectRequirements.Count - 1);
       safariZoneEncounterGroup.OptionalObjectRequirements.RemoveAt(safariZoneEncounterGroup.OptionalObjectRequirements.Count - 1);
       safariZoneEncounterGroup.ObjectSlots = (byte)safariZoneEncounterGroup.ObjectRequirements.Count; //all the list counts should be the same
+      OnDataChanged();
     }
   }
 }

@@ -9,6 +9,15 @@ namespace DSPRE.Editors {
         private List<HeadbuttEncounter> encounters;
         private BindingList<HeadbuttTreeGroup> treeGroups;
 
+        /// <summary>
+        /// Event raised when data is modified in this tab.
+        /// </summary>
+        public event EventHandler DataChanged;
+
+        protected virtual void OnDataChanged() {
+            DataChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         public HeadbuttEncounterEditorTab() {
             InitializeComponent();
         }
@@ -50,6 +59,7 @@ namespace DSPRE.Editors {
             if (headbuttEncounter == null) { return; }
             headbuttEncounter.pokemonID = (ushort)comboBoxPokemon.SelectedIndex;
             listBoxEncounters.RefreshItem(listBoxEncounters.SelectedIndex);
+            OnDataChanged();
         }
 
         private void numericUpDownMinLevel_ValueChanged(object sender, EventArgs e) {
@@ -58,6 +68,7 @@ namespace DSPRE.Editors {
             if (headbuttEncounter == null) { return; }
             headbuttEncounter.minLevel = (byte)numericUpDownMinLevel.Value;
             listBoxEncounters.RefreshItem(listBoxEncounters.SelectedIndex);
+            OnDataChanged();
         }
 
         private void numericUpDownMaxLevel_ValueChanged(object sender, EventArgs e) {
@@ -66,6 +77,7 @@ namespace DSPRE.Editors {
             if (headbuttEncounter == null) { return; }
             headbuttEncounter.maxLevel = (byte)numericUpDownMaxLevel.Value;
             listBoxEncounters.RefreshItem(listBoxEncounters.SelectedIndex);
+            OnDataChanged();
         }
 
         private void listBoxTreeGroups_SelectedIndexChanged(object sender, EventArgs e) {
@@ -77,18 +89,21 @@ namespace DSPRE.Editors {
 
         private void buttonAddTreeGroup_Click(object sender, EventArgs e) {
             treeGroups.Add(new HeadbuttTreeGroup());
+            OnDataChanged();
         }
 
         private void buttonRemoveTreeGroup_Click(object sender, EventArgs e) {
             int selectedIndex = listBoxTreeGroups.SelectedIndex;
             if (selectedIndex == -1) { return; }
             treeGroups.RemoveAt(selectedIndex);
+            OnDataChanged();
         }
 
         private void buttonDuplicateTreeGroup_Click(object sender, EventArgs e) {
             HeadbuttTreeGroup headbuttTreeGroup = (HeadbuttTreeGroup)listBoxTreeGroups.SelectedItem;
             if (headbuttTreeGroup == null) { return; }
             treeGroups.Add(new HeadbuttTreeGroup(headbuttTreeGroup));
+            OnDataChanged();
         }
     }
 }

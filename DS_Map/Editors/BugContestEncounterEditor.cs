@@ -7,10 +7,26 @@ using System.Windows.Forms;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Editors {
-    public partial class BugContestEncounterEditor : UserControl {
+    public partial class BugContestEncounterEditor : UserControl, IEditorWithUnsavedChanges {
         public bool bugContestEncounterEditorIsReady { get; set; } = false;
         private BugContestEncounterFile bugContestEncounterFile;
         private int currentSetIndex = 0;
+        private bool isDirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => "Bug Contest Encounter Editor";
+        public void SaveChanges() => buttonSave_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        private void SetDirty() {
+            isDirty = true;
+        }
+
+        private void SetClean() {
+            isDirty = false;
+        }
 
         public BugContestEncounterEditor() {
             InitializeComponent();
@@ -101,7 +117,8 @@ namespace DSPRE.Editors {
                 
                 currentSetIndex = 0;
                 RefreshSetDisplay();
-                
+                SetClean();
+
             } catch (Exception ex) {
                 MessageBox.Show(
                     $"Error loading Bug Contest encounters: {ex.Message}",
@@ -223,6 +240,8 @@ namespace DSPRE.Editors {
             encounter.Score = (byte)numericUpDownScore.Value;
             // Dummy/Terminator is read-only, don't update it
 
+            SetDirty();
+
             // Refresh the display
             int selectedIndex = listBoxEncounters.SelectedIndex;
             listBoxEncounters.DataSource = null;
@@ -261,6 +280,7 @@ namespace DSPRE.Editors {
         private void buttonSave_Click(object sender, EventArgs e) {
             if (bugContestEncounterFile == null) return;
             bugContestEncounterFile.SaveToFile();
+            SetClean();
         }
 
         private void buttonExport_Click(object sender, EventArgs e) {
@@ -312,7 +332,8 @@ namespace DSPRE.Editors {
                     
                     currentSetIndex = 0;
                     RefreshSetDisplay();
-                    
+                    SetDirty();
+
                     MessageBox.Show(
                         "Bug Contest encounters imported successfully!",
                         "Import Complete",

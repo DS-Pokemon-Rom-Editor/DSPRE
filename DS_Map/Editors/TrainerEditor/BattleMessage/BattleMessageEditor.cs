@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors
 {
-    public partial class BattleMessageEditor : Form
+    public partial class BattleMessageEditor : Form, IEditorWithUnsavedChanges
     {
 
         private static readonly string trainerTextOffsetPath = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerTextOffset].unpackedDir, "0000");
@@ -92,13 +92,20 @@ namespace DSPRE.Editors
         };
 
         public Dictionary<uint, List<TrainerTextTableEntry>> trainerTextEntriesByTrainerId = new Dictionary<uint, List<TrainerTextTableEntry>>();
-        
+
         private int currentTrainerID;
         private int currentTrainerClass;
         private bool currentTrainerIsDouble;
         private List<TrainerTextTableEntry> currentTextEntries;
         private TextArchive localTrainerMessageArchive;
         private bool dirty = false;
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => dirty;
+        public string UnsavedChangesDescription => "Battle Message Editor";
+        public void SaveChanges() => SaveAndSort();
+        public void DiscardChanges() => SetDirty(false);
+        #endregion
 
         private PaletteBase trainerPal;
         private ImageBase trainerTile;
@@ -111,6 +118,8 @@ namespace DSPRE.Editors
         public BattleMessageEditor()
         {
             InitializeComponent();
+            OpenEditorsRegistry.Register(this);
+            this.FormClosed += (s, e) => OpenEditorsRegistry.Unregister(this);
 
             // Custom Tooltip setup
             trainerTextListBox.MouseMove += trainerTextListBox_MouseMove;

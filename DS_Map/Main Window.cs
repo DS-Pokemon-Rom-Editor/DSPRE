@@ -177,6 +177,7 @@ namespace DSPRE
             CheckTabbedEditorForUnsavedChanges(trainerEditor, "Trainer Editor", editorsWithChanges);
             CheckTabbedEditorForUnsavedChanges(encountersEditor, "Encounters Editor", editorsWithChanges);
             CheckTabbedEditorForUnsavedChanges(cameraEditor, "Camera Editor", editorsWithChanges);
+            CheckTabbedEditorForUnsavedChanges(tableEditor, "Table Editor", editorsWithChanges);
             CheckTabbedEditorForUnsavedChanges(nsbtxEditor, "NSBTX Editor", editorsWithChanges);
 
             // Check standalone editors via OpenEditorsRegistry
