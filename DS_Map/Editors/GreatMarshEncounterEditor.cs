@@ -314,15 +314,13 @@ namespace DSPRE.Editors {
             string helpText = 
 @"=== Great Marsh Daily Changing Pokemon System ===
 
-The Great Marsh (Sinnoh's Safari Zone) features special Pokemon 
-every day that are randomly selected from this encounter list.
+The Great Marsh (Sinnoh's Safari Zone) features special Pokemon every day that are randomly selected from this encounter list.
 
 HOW IT WORKS:
 • Each day, the game randomly selects Pokemon from this list
 • Each of the 6 Great Marsh areas gets an independent random selection
 • The selected Pokemon replaces two 5% encounter slots in that area
-• Use the binoculars on the 2nd floor of the Safari Zone gate to see 
-  which Pokemon are available that day
+• Use the binoculars on the 2nd floor of the Safari Zone gate to see which Pokemon are available that day
 
 ENCOUNTER LISTS:
 • Post-National Dex (encdata_ex_9.bin):
