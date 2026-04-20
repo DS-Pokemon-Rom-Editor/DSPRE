@@ -18,14 +18,73 @@ using Images;
 
 namespace DSPRE.Editors
 {
-    public partial class TrainerEditor : UserControl
+    public partial class TrainerEditor : UserControl, IEditorWithUnsavedChanges
     {
         MainProgram _parent;
         public bool trainerEditorIsReady { get; set; } = false;
+        private bool isDirty = false;
+        private int loadedTrainerID = -1;
+
         public TrainerEditor()
         {
             InitializeComponent();
         }
+
+        #region IEditorWithUnsavedChanges Implementation
+        public bool HasUnsavedChanges => isDirty;
+        public string UnsavedChangesDescription => $"Trainer Editor (Trainer {loadedTrainerID})";
+        public void SaveChanges() => trainerSaveCurrentButton_Click(null, null);
+        public void DiscardChanges() => SetClean();
+        #endregion
+
+        #region Dirty Tracking
+        private void SetDirty()
+        {
+            if (!isDirty && trainerEditorIsReady && !Helpers.HandlersDisabled)
+            {
+                isDirty = true;
+            }
+        }
+
+        private void SetClean()
+        {
+            isDirty = false;
+        }
+
+        /// <summary>
+        /// Resets the Trainer Editor to its initial state. Called when switching ROMs.
+        /// </summary>
+        public void Reset()
+        {
+            Helpers.DisableHandlers();
+
+            trainerEditorIsReady = false;
+            isDirty = false;
+            loadedTrainerID = -1;
+            currentTrainerFile = null;
+
+            // Clear combo boxes and list boxes
+            trainerComboBox.Items.Clear();
+            trainerClassListBox.Items.Clear();
+
+            // Clear party lists
+            partyPokemonComboboxList.Clear();
+            partyItemsComboboxList.Clear();
+            partyMovesGroupboxList.Clear();
+            partyLevelUpdownList.Clear();
+            partyGenderComboBoxList.Clear();
+            partyAbilityComboBoxList.Clear();
+            partyFormComboBoxList.Clear();
+            partyIVUpdownList.Clear();
+            partyBallUpdownList.Clear();
+            partyGroupboxList.Clear();
+            partyPokemonPictureBoxList.Clear();
+            partyPokemonItemIconList.Clear();
+            aiFlagCheckBoxList.Clear();
+
+            Helpers.EnableHandlers();
+        }
+        #endregion
 
         private List<ComboBox> partyPokemonComboboxList = new List<ComboBox>();
         private List<ComboBox> partyItemsComboboxList = new List<ComboBox>();
@@ -386,10 +445,101 @@ namespace DSPRE.Editors
             trainerComboBox.SelectedIndex = 0;
 
             AddTooltips();
+            WireDirtyTrackingHandlers();
 
             Helpers.EnableHandlers();
             trainerComboBox_SelectedIndexChanged(null, null);
             Helpers.statusLabelMessage();
+        }
+
+        private void WireDirtyTrackingHandlers()
+        {
+            // Wire up dirty tracking for trainer properties
+            trainerNameTextBox.TextChanged += MarkDirty;
+            trainerDoubleCheckBox.CheckedChanged += MarkDirty;
+            trainerMovesCheckBox.CheckedChanged += MarkDirty;
+            trainerItemsCheckBox.CheckedChanged += MarkDirty;
+            partyCountUpDown.ValueChanged += MarkDirty;
+
+            // Trainer items
+            foreach (Control c in trainerItemsGroupBox.Controls)
+            {
+                if (c is ComboBox cb)
+                {
+                    cb.SelectedIndexChanged += MarkDirty;
+                }
+            }
+
+            // AI flags
+            foreach (CheckBox cb in aiFlagCheckBoxList)
+            {
+                cb.CheckedChanged += MarkDirty;
+            }
+
+            // Party Pokemon
+            foreach (ComboBox cb in partyPokemonComboboxList)
+            {
+                cb.SelectedIndexChanged += MarkDirty;
+            }
+
+            // Party Items
+            foreach (ComboBox cb in partyItemsComboboxList)
+            {
+                cb.SelectedIndexChanged += MarkDirty;
+            }
+
+            // Party Levels
+            foreach (NumericUpDown nud in partyLevelUpdownList)
+            {
+                nud.ValueChanged += MarkDirty;
+            }
+
+            // Party Genders
+            foreach (ComboBox cb in partyGenderComboBoxList)
+            {
+                cb.SelectedIndexChanged += MarkDirty;
+            }
+
+            // Party Abilities
+            foreach (ComboBox cb in partyAbilityComboBoxList)
+            {
+                cb.SelectedIndexChanged += MarkDirty;
+            }
+
+            // Party Forms
+            foreach (ComboBox cb in partyFormComboBoxList)
+            {
+                cb.SelectedIndexChanged += MarkDirty;
+            }
+
+            // Party IVs (difficulty)
+            foreach (NumericUpDown nud in partyIVUpdownList)
+            {
+                nud.ValueChanged += MarkDirty;
+            }
+
+            // Party Ball Seals
+            foreach (NumericUpDown nud in partyBallUpdownList)
+            {
+                nud.ValueChanged += MarkDirty;
+            }
+
+            // Party Moves
+            foreach (GroupBox movesGroup in partyMovesGroupboxList)
+            {
+                foreach (Control c in movesGroup.Controls)
+                {
+                    if (c is ComboBox cb)
+                    {
+                        cb.SelectedIndexChanged += MarkDirty;
+                    }
+                }
+            }
+        }
+
+        private void MarkDirty(object sender, EventArgs e)
+        {
+            SetDirty();
         }
 
         private void AddTooltips()
@@ -419,6 +569,41 @@ namespace DSPRE.Editors
             {
                 return;
             }
+
+            // Check for unsaved changes before switching trainers
+            if (isDirty && loadedTrainerID >= 0)
+            {
+                DialogResult result = MessageBox.Show(
+                    $"You have unsaved changes to Trainer {loadedTrainerID}.\n\nDo you want to save before switching?",
+                    "Unsaved Changes",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    // Temporarily restore the old selection to save it
+                    Helpers.DisableHandlers();
+                    int newSelection = trainerComboBox.SelectedIndex;
+                    trainerComboBox.SelectedIndex = loadedTrainerID;
+                    Helpers.EnableHandlers();
+
+                    trainerSaveCurrentButton_Click(null, null);
+
+                    Helpers.DisableHandlers();
+                    trainerComboBox.SelectedIndex = newSelection;
+                    Helpers.EnableHandlers();
+                }
+                else if (result == DialogResult.Cancel)
+                {
+                    // Restore the previous selection
+                    Helpers.DisableHandlers();
+                    trainerComboBox.SelectedIndex = loadedTrainerID;
+                    Helpers.EnableHandlers();
+                    return;
+                }
+                // If No, continue without saving
+            }
+
             Helpers.DisableHandlers();
 
             int currentIndex = trainerComboBox.SelectedIndex;
@@ -434,6 +619,10 @@ namespace DSPRE.Editors
                 new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open),
                 error ? TrainerFile.NAME_NOT_FOUND : trNames[currentIndex]
             );
+
+            loadedTrainerID = currentIndex;
+            SetClean();
+
             RefreshTrainerPartyGUI();
             RefreshTrainerPropertiesGUI();
 
@@ -479,6 +668,81 @@ namespace DSPRE.Editors
                 }
             }
         }
+
+        /// <summary>
+        /// Syncs the current UI state to currentTrainerFile without saving to disk.
+        /// This ensures currentTrainerFile reflects any unsaved party changes before
+        /// operations that read from it (e.g., opening DVCalc, MonReorderForm, or refreshing the GUI).
+        /// </summary>
+        private void SyncUIToCurrentTrainerFile()
+        {
+            currentTrainerFile.trp.partyCount = (byte)partyCountUpDown.Value;
+            currentTrainerFile.trp.chooseMoves = trainerMovesCheckBox.Checked;
+            currentTrainerFile.trp.chooseItems = trainerItemsCheckBox.Checked;
+
+            for (int i = 0; i < partyCountUpDown.Value; i++)
+            {
+                currentTrainerFile.party[i].pokeID = (ushort)partyPokemonComboboxList[i].SelectedIndex;
+                currentTrainerFile.party[i].formID = (ushort)partyFormComboBoxList[i].SelectedIndex;
+                currentTrainerFile.party[i].level = (ushort)partyLevelUpdownList[i].Value;
+
+                if (trainerMovesCheckBox.Checked)
+                {
+                    if (currentTrainerFile.party[i].moves == null)
+                    {
+                        currentTrainerFile.party[i].moves = new ushort[4];
+                    }
+                    IList movesList = partyMovesGroupboxList[i].Controls;
+                    for (int j = 0; j < Party.MOVES_PER_POKE; j++)
+                    {
+                        currentTrainerFile.party[i].moves[j] = (ushort)(movesList[j] as ComboBox).SelectedIndex;
+                    }
+                }
+                else
+                {
+                    currentTrainerFile.party[i].moves = null;
+                }
+
+                if (trainerItemsCheckBox.Checked)
+                {
+                    currentTrainerFile.party[i].heldItem = (ushort)partyItemsComboboxList[i].SelectedIndex;
+                }
+
+                currentTrainerFile.party[i].difficulty = (byte)partyIVUpdownList[i].Value;
+
+                if (hasMoreThanOneGender((int)currentTrainerFile.party[i].pokeID, pokemonSpecies) && (gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled))
+                {
+                    switch (partyGenderComboBoxList[i].SelectedIndex)
+                    {
+                        case TRAINER_PARTY_POKEMON_GENDER_DEFAULT_INDEX:
+                            currentTrainerFile.party[i].genderAndAbilityFlags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
+                            break;
+                        case TRAINER_PARTY_POKEMON_GENDER_MALE_INDEX:
+                            currentTrainerFile.party[i].genderAndAbilityFlags = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
+                            break;
+                        case TRAINER_PARTY_POKEMON_GENDER_FEMALE_INDEX:
+                            currentTrainerFile.party[i].genderAndAbilityFlags = PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
+                            break;
+                    }
+                }
+                else
+                {
+                    currentTrainerFile.party[i].genderAndAbilityFlags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
+                }
+
+                if (partyAbilityComboBoxList[i].SelectedIndex == TRAINER_PARTY_POKEMON_ABILITY_SLOT1_INDEX)
+                {
+                    currentTrainerFile.party[i].genderAndAbilityFlags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
+                }
+                else if (partyAbilityComboBoxList[i].SelectedIndex == TRAINER_PARTY_POKEMON_ABILITY_SLOT2_INDEX)
+                {
+                    currentTrainerFile.party[i].genderAndAbilityFlags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
+                }
+
+                currentTrainerFile.party[i].ballSeals = (ushort)partyBallUpdownList[i].Value;
+            }
+        }
+
         public void RefreshTrainerPartyGUI()
         {
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
@@ -644,6 +908,7 @@ namespace DSPRE.Editors
 
         private void DVExplainButton_Click(object sender, EventArgs e)
         {
+            SyncUIToCurrentTrainerFile();
 
             DVCalc DVCalcForm = new DVCalc(currentTrainerFile);
             DVCalcForm.ShowDialog();
@@ -670,13 +935,21 @@ namespace DSPRE.Editors
 
         private void trainerMovesCheckBox_CheckedChanged(object sender, EventArgs e)
         {
+            if (Helpers.HandlersDisabled)
+            {
+                return;
+            }
+
+            // Sync UI changes to currentTrainerFile before reading from it
+            SyncUIToCurrentTrainerFile();
+
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
             {
                 for (int j = 0; j < Party.MOVES_PER_POKE; j++)
                 {
                     (partyMovesGroupboxList[i].Controls[j] as ComboBox).Enabled = trainerMovesCheckBox.Checked;
                 }
-                if (trainerMovesCheckBox.Checked && i < currentTrainerFile.trp.partyCount && Helpers.HandlersEnabled)
+                if (trainerMovesCheckBox.Checked && i < currentTrainerFile.trp.partyCount)
                 {
                     Helpers.BackUpDisableHandler();
                     Helpers.DisableHandlers();
@@ -697,7 +970,9 @@ namespace DSPRE.Editors
                     //currentTrainerFile.party[i].moves = null;
                 }
             }
+            Helpers.DisableHandlers();
             RefreshTrainerPartyGUI();
+            Helpers.EnableHandlers();
         }
         private void trainerItemsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
@@ -865,6 +1140,8 @@ namespace DSPRE.Editors
 
             UpdateCurrentTrainerName(newName: trainerNameTextBox.Text);
             UpdateCurrentTrainerShownName();
+
+            SetClean();
 
             if (trainerNameTextBox.Text.Length > RomInfo.trainerNameMaxLen)
             { //Subtract 1 to account for special end character. 
@@ -1305,11 +1582,15 @@ namespace DSPRE.Editors
 
         private void reorderButton_Click(object sender, EventArgs e)
         {
+            SyncUIToCurrentTrainerFile();
+
             var reorderForm = new MonReorderForm(currentTrainerFile);
             reorderForm.ShowDialog();
 
             currentTrainerFile = reorderForm.trainerFile;
+            Helpers.DisableHandlers();
             RefreshTrainerPartyGUI();
+            Helpers.EnableHandlers();
         }
 
         private void aiInfoButton_Click(object sender, EventArgs e)
