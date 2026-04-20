@@ -301,8 +301,7 @@ namespace DSPRE.Editors {
             string helpText = 
 @"=== Honey Tree Encounter System ===
 
-Honey Trees are special trees found across Sinnoh that can be slathered
-with Honey to attract wild Pokémon. After 6+ hours, a Pokémon may appear.
+Honey Trees are special trees found across Sinnoh that can be slathered with Honey to attract wild Pokémon. After 6+ hours, a Pokémon may appear.
 
 ENCOUNTER GROUPS:
 • Group A (Common): Standard encounters
