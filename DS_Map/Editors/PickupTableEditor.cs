@@ -11,7 +11,7 @@ namespace DSPRE.Editors
     {
         private const int OVERLAY_NUMBER = 12;
         private const int COMMON_ITEMS_OFFSET = 0x34B44;
-        private const int RARE_ITEMS_OFFSET = 0x34A4E;
+        private const int RARE_ITEMS_OFFSET = 0x34A4C;
         private const int ACTIVATION_DIVISOR_OFFSET = 0xC852; // _s32_div_f divisor for activation chance
         private const int WEIGHT_TABLE_OFFSET = 0x3518C; // sPickupWeightTable
         private const int COMMON_ITEMS_COUNT = 18; // 18 pairs
