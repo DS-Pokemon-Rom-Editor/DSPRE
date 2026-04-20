@@ -125,6 +125,10 @@
     <Compile Include="Editors\EggMoveEditor.Designer.cs">
       <DependentUpon>EggMoveEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\GreatMarshEncounterEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Editors\GreatMarshEncounterEditor.Designer.cs" />
     <Compile Include="Editors\HoneyTreeEncounterEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -440,6 +444,7 @@
     </Compile>
     <Compile Include="ROMFiles\BugContestEncounterFile.cs" />
     <Compile Include="ROMFiles\EvolutionFile.cs" />
+    <Compile Include="ROMFiles\GreatMarshEncounterFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
