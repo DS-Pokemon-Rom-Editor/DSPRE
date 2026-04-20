@@ -154,7 +154,7 @@ namespace DSPRE.Editors {
 
                 // Display the slot index
                 int slotIndex = listBoxEncounters.SelectedIndex;
-                labelSlotInfo.Text = $"Slot: {slotIndex:D2} / 31";
+                labelSlotInfo.Text = $"Slot number: {slotIndex:D2}";
 
                 UpdatePokemonIcon(encounter.Species);
             } finally {
