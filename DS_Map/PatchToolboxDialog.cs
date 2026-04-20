@@ -34,6 +34,39 @@ namespace DSPRE
 
         public static readonly int expandedTrainerNameLength = 12;
 
+        /// <summary>
+        /// Resets all static patch flags to their default values.
+        /// Call this when switching ROMs to ensure patch status is re-evaluated.
+        /// </summary>
+        public static void ResetFlags()
+        {
+            flag_standardizedItems = false;
+            flag_arm9Expanded = false;
+            flag_BDHCamPatchApplied = false;
+            flag_DynamicHeadersPatchApplied = false;
+            flag_MatrixExpansionApplied = false;
+            flag_MainComboTableRepointed = false;
+            flag_TrainerClassBattleTableRepointed = false;
+            flag_PokemonBattleTableRepointed = false;
+            flag_TrainerNamesExpanded = false;
+            overlay1MustBeRestoredFromBackup = true;
+
+            // Reset expandedARMfileID to null to force re-evaluation on next access
+            // Note: This is set in the static field initializer which runs once,
+            // so we need to update it when game family changes
+            try
+            {
+                if (ToolboxDB.syntheticOverlayFileNumbersDB.ContainsKey(RomInfo.gameFamily))
+                {
+                    expandedARMfileID = ToolboxDB.syntheticOverlayFileNumbersDB[RomInfo.gameFamily];
+                }
+            }
+            catch
+            {
+                // Ignore if RomInfo not fully initialized yet
+            }
+        }
+
         #region Constructor
 
         public PatchToolboxDialog()
