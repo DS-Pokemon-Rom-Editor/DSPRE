@@ -19,7 +19,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace DSPRE.Editors
 {
-    public partial class HeaderEditor : UserControl
+    public partial class HeaderEditor : UserControl, IPokedatabaseDependent
     {
         public bool isHeaderEditorReady { get; set; } = false;
         MainProgram _parent;
@@ -744,6 +744,65 @@ namespace DSPRE.Editors
             }
             ((HeaderHGSS)currentHeader).worldmapY = (byte)worldmapYCoordUpDown.Value;
         }
+
+        private void updateMusicCombos()
+        {
+            if (currentHeader == null)
+            {
+                return;
+            }
+
+            Helpers.DisableHandlers();
+            try
+            {
+                // Update day music combo
+                try
+                {
+                    switch (RomInfo.gameFamily)
+                    {
+                        case GameFamilies.DP:
+                            musicDayComboBox.SelectedItem = PokeDatabase.MusicDB.DPMusicDict[currentHeader.musicDayID];
+                            break;
+                        case GameFamilies.Plat:
+                            musicDayComboBox.SelectedItem = PokeDatabase.MusicDB.PtMusicDict[currentHeader.musicDayID];
+                            break;
+                        default:
+                            musicDayComboBox.SelectedItem = PokeDatabase.MusicDB.HGSSMusicDict[currentHeader.musicDayID];
+                            break;
+                    }
+                }
+                catch (KeyNotFoundException)
+                {
+                    musicDayComboBox.SelectedItem = null;
+                }
+
+                // Update night music combo
+                try
+                {
+                    switch (RomInfo.gameFamily)
+                    {
+                        case GameFamilies.DP:
+                            musicNightComboBox.SelectedItem = PokeDatabase.MusicDB.DPMusicDict[currentHeader.musicNightID];
+                            break;
+                        case GameFamilies.Plat:
+                            musicNightComboBox.SelectedItem = PokeDatabase.MusicDB.PtMusicDict[currentHeader.musicNightID];
+                            break;
+                        default:
+                            musicNightComboBox.SelectedItem = PokeDatabase.MusicDB.HGSSMusicDict[currentHeader.musicNightID];
+                            break;
+                    }
+                }
+                catch (KeyNotFoundException)
+                {
+                    musicNightComboBox.SelectedItem = null;
+                }
+            }
+            finally
+            {
+                Helpers.EnableHandlers();
+            }
+        }
+
         private void updateWeatherPicAndComboBox()
         {
             if (Helpers.HandlersDisabled)
@@ -1695,6 +1754,71 @@ namespace DSPRE.Editors
             }
         }
         #endregion
+
+        #endregion
+
+        #region IPokedatabaseDependent Implementation
+
+        public void ReloadPokeDatabase()
+        {
+            // Reload dropdown items from updated PokeDatabase
+            Helpers.DisableHandlers();
+            try
+            {
+                switch (RomInfo.gameFamily)
+                {
+                    case GameFamilies.DP:
+                        cameraComboBox.Items.Clear();
+                        musicDayComboBox.Items.Clear();
+                        musicNightComboBox.Items.Clear();
+                        weatherComboBox.Items.Clear();
+
+                        cameraComboBox.Items.AddRange(PokeDatabase.CameraAngles.DPPtCameraDict.Values.ToArray());
+                        musicDayComboBox.Items.AddRange(PokeDatabase.MusicDB.DPMusicDict.Values.ToArray());
+                        musicNightComboBox.Items.AddRange(PokeDatabase.MusicDB.DPMusicDict.Values.ToArray());
+                        weatherComboBox.Items.AddRange(PokeDatabase.Weather.DPWeatherDict.Values.ToArray());
+                        break;
+
+                    case GameFamilies.Plat:
+                        cameraComboBox.Items.Clear();
+                        musicDayComboBox.Items.Clear();
+                        musicNightComboBox.Items.Clear();
+                        weatherComboBox.Items.Clear();
+
+                        cameraComboBox.Items.AddRange(PokeDatabase.CameraAngles.DPPtCameraDict.Values.ToArray());
+                        musicDayComboBox.Items.AddRange(PokeDatabase.MusicDB.PtMusicDict.Values.ToArray());
+                        musicNightComboBox.Items.AddRange(PokeDatabase.MusicDB.PtMusicDict.Values.ToArray());
+                        weatherComboBox.Items.AddRange(PokeDatabase.Weather.PtWeatherDict.Values.ToArray());
+                        break;
+
+                    case GameFamilies.HGSS:
+                        cameraComboBox.Items.Clear();
+                        musicDayComboBox.Items.Clear();
+                        musicNightComboBox.Items.Clear();
+                        weatherComboBox.Items.Clear();
+
+                        cameraComboBox.Items.AddRange(PokeDatabase.CameraAngles.HGSSCameraDict.Values.ToArray());
+                        musicDayComboBox.Items.AddRange(PokeDatabase.MusicDB.HGSSMusicDict.Values.ToArray());
+                        musicNightComboBox.Items.AddRange(PokeDatabase.MusicDB.HGSSMusicDict.Values.ToArray());
+                        weatherComboBox.Items.AddRange(PokeDatabase.Weather.HGSSWeatherDict.Values.ToArray());
+                        break;
+                }
+
+                // Update current selection to reflect new names
+                if (currentHeader != null)
+                {
+                    updateWeatherPicAndComboBox();
+                    updateCameraPicAndComboBox();
+                    updateMusicCombos();
+                }
+
+                AppLogger.Info("HeaderEditor reloaded PokeDatabase data");
+            }
+            finally
+            {
+                Helpers.EnableHandlers();
+            }
+        }
 
         #endregion
     }

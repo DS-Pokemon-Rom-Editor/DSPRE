@@ -99,6 +99,7 @@
             this.untexturizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.extractNSBTXFromNSBMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openCharmapManagerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pokeDatabaseEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateCSVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateDexExportsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.researchHelperToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -723,6 +724,7 @@
             this.listBuilderToolStripMenuItem,
             this.nSBMDUtilityToolStripMenuItem,
             this.openCharmapManagerToolStripMenuItem,
+            this.pokeDatabaseEditorToolStripMenuItem,
             this.generateCSVToolStripMenuItem,
             this.researchHelperToolStripMenuItem});
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
@@ -925,6 +927,13 @@
             this.openCharmapManagerToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.openCharmapManagerToolStripMenuItem.Text = "Open Charmap Manager";
             this.openCharmapManagerToolStripMenuItem.Click += new System.EventHandler(this.openCharmapManagerToolStripMenuItem_Click);
+            // 
+            // pokeDatabaseEditorToolStripMenuItem
+            // 
+            this.pokeDatabaseEditorToolStripMenuItem.Name = "pokeDatabaseEditorToolStripMenuItem";
+            this.pokeDatabaseEditorToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.pokeDatabaseEditorToolStripMenuItem.Text = "PokeDatabase Editor";
+            this.pokeDatabaseEditorToolStripMenuItem.Click += new System.EventHandler(this.pokeDatabaseEditorToolStripMenuItem_Click);
             // 
             // generateCSVToolStripMenuItem
             // 
@@ -1739,6 +1748,7 @@
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem researchHelperToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pokeDatabaseEditorToolStripMenuItem;
     }
 }
 

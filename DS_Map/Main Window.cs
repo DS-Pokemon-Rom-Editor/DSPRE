@@ -2322,6 +2322,14 @@ namespace DSPRE
             charMapManager.ShowDialog();
         }
 
+        private void pokeDatabaseEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Editors.PokeDatabaseEditor pokeDatabaseEditor = new Editors.PokeDatabaseEditor();
+            pokeDatabaseEditor.Show();
+            pokeDatabaseEditor.BringToFront();
+            pokeDatabaseEditor.Focus();
+        }
+
         private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {            
             EggMoveEditor eggMoveEditor = new EggMoveEditor();

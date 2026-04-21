@@ -161,6 +161,12 @@
     <Compile Include="Editors\PickupTableEditor.Designer.cs">
       <DependentUpon>PickupTableEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\PokeDatabaseEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\PokeDatabaseEditor.Designer.cs">
+      <DependentUpon>PokeDatabaseEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\StrVarHelpForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -376,6 +382,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="FlyEditor\FlyEditor.Designer.cs" />
+    <Compile Include="IPokedatabaseDependent.cs" />
     <Compile Include="LibNDSFormats\BTX0.cs" />
     <Compile Include="GameCamera.cs" />
     <Compile Include="Helpers.cs" />
@@ -434,6 +441,7 @@
     <Compile Include="Resources\CustomScrcmdManager.Designer.cs">
       <DependentUpon>CustomScrcmdManager.cs</DependentUpon>
     </Compile>
+    <Compile Include="Resources\PokeDatabaseManager.cs" />
     <Compile Include="Resources\ROMToolboxDB\ToolboxDB.cs" />
     <Compile Include="Resources\ScriptCommandInfo.cs" />
     <Compile Include="Resources\ScriptDatabase.cs" />
