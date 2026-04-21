@@ -434,7 +434,8 @@ namespace DSPRE.Editors
                     {
                         activationDivisor = newDivisor;
                         SetDirty();
-                        PopulateActivationOddsUI(); // Refresh all probabilities
+                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
+                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
                     }
                     else
                     {
@@ -446,7 +447,8 @@ namespace DSPRE.Editors
                             "  % 5 = 20% chance (1/5)\n" +
                             "  etc.",
                             "Invalid Divisor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
+                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
                     }
                 }
                 return;
@@ -469,23 +471,31 @@ namespace DSPRE.Editors
                         {
                             pickupWeightTable[thresholdIndex] = newThreshold;
                             SetDirty();
-                            PopulateActivationOddsUI(); // Refresh probabilities
+                            // Defer UI refresh until cell editing completes to avoid NullReferenceException
+                            BeginInvoke(new Action(() => PopulateActivationOddsUI()));
                         }
                         else
                         {
                             MessageBox.Show($"Threshold must be between {prevThreshold} and {nextThreshold}.",
                                 "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            PopulateActivationOddsUI(); // Reset to previous value
+                            // Defer UI refresh until cell editing completes to avoid NullReferenceException
+                            BeginInvoke(new Action(() => PopulateActivationOddsUI()));
                         }
                     }
                     else
                     {
                         MessageBox.Show("Threshold must be between 0 and 100.",
                             "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
+                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
                     }
                 }
             }
+        }
+
+        private void buttonSave_Click(object sender, EventArgs e)
+        {
+            SavePickupTable();
         }
 
         public void Reset()
