@@ -29,6 +29,7 @@ namespace DSPRE.Editors
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PickupTableEditor));
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.groupBoxCommon = new System.Windows.Forms.GroupBox();
             this.dataGridViewCommon = new System.Windows.Forms.DataGridView();
@@ -47,13 +48,13 @@ namespace DSPRE.Editors
             this.columnRareLevel = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnRareItem1 = new System.Windows.Forms.DataGridViewComboBoxColumn();
             this.columnRareItem2 = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.labelInfo = new System.Windows.Forms.Label();
             this.groupBoxActivation = new System.Windows.Forms.GroupBox();
             this.dataGridViewActivation = new System.Windows.Forms.DataGridView();
             this.columnActivationSlot = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnActivationThreshold = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnActivationProbability = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnActivationRange = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.labelInfo = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.groupBoxCommon.SuspendLayout();
@@ -115,16 +116,16 @@ namespace DSPRE.Editors
             this.dataGridViewCommon.Location = new System.Drawing.Point(3, 16);
             this.dataGridViewCommon.Name = "dataGridViewCommon";
             this.dataGridViewCommon.RowHeadersVisible = false;
-            this.dataGridViewCommon.Size = new System.Drawing.Size(988, 299);
+            this.dataGridViewCommon.Size = new System.Drawing.Size(988, 206);
             this.dataGridViewCommon.TabIndex = 0;
             this.dataGridViewCommon.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewCommon_CellValueChanged);
             // 
             // columnCommonLevel
             // 
+            this.columnCommonLevel.FillWeight = 60F;
             this.columnCommonLevel.HeaderText = "Level Range";
             this.columnCommonLevel.Name = "columnCommonLevel";
             this.columnCommonLevel.ReadOnly = true;
-            this.columnCommonLevel.FillWeight = 60F;
             // 
             // columnCommonItem1
             // 
@@ -196,16 +197,16 @@ namespace DSPRE.Editors
             this.dataGridViewRare.Location = new System.Drawing.Point(3, 16);
             this.dataGridViewRare.Name = "dataGridViewRare";
             this.dataGridViewRare.RowHeadersVisible = false;
-            this.dataGridViewRare.Size = new System.Drawing.Size(988, 191);
+            this.dataGridViewRare.Size = new System.Drawing.Size(988, 164);
             this.dataGridViewRare.TabIndex = 0;
             this.dataGridViewRare.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewRare_CellValueChanged);
             // 
             // columnRareLevel
             // 
+            this.columnRareLevel.FillWeight = 60F;
             this.columnRareLevel.HeaderText = "Level Range";
             this.columnRareLevel.Name = "columnRareLevel";
             this.columnRareLevel.ReadOnly = true;
-            this.columnRareLevel.FillWeight = 60F;
             // 
             // columnRareItem1
             // 
@@ -216,6 +217,16 @@ namespace DSPRE.Editors
             // 
             this.columnRareItem2.HeaderText = "Slot 2";
             this.columnRareItem2.Name = "columnRareItem2";
+            // 
+            // labelInfo
+            // 
+            this.labelInfo.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.labelInfo.Location = new System.Drawing.Point(3, 0);
+            this.labelInfo.Name = "labelInfo";
+            this.labelInfo.Padding = new System.Windows.Forms.Padding(5);
+            this.labelInfo.Size = new System.Drawing.Size(994, 80);
+            this.labelInfo.TabIndex = 2;
+            this.labelInfo.Text = resources.GetString("labelInfo.Text");
             // 
             // groupBoxActivation
             // 
@@ -245,49 +256,35 @@ namespace DSPRE.Editors
             this.dataGridViewActivation.RowHeadersVisible = false;
             this.dataGridViewActivation.Size = new System.Drawing.Size(988, 175);
             this.dataGridViewActivation.TabIndex = 0;
+            this.toolTip1.SetToolTip(this.dataGridViewActivation, "Edit these values to change pickup activation odds. Must be ascending order.");
             this.dataGridViewActivation.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewActivation_CellValueChanged);
             // 
             // columnActivationSlot
             // 
+            this.columnActivationSlot.FillWeight = 40F;
             this.columnActivationSlot.HeaderText = "Slot";
             this.columnActivationSlot.Name = "columnActivationSlot";
             this.columnActivationSlot.ReadOnly = true;
-            this.columnActivationSlot.FillWeight = 40F;
             // 
             // columnActivationThreshold
             // 
+            this.columnActivationThreshold.FillWeight = 50F;
             this.columnActivationThreshold.HeaderText = "Threshold (0-100)";
             this.columnActivationThreshold.Name = "columnActivationThreshold";
-            this.columnActivationThreshold.FillWeight = 50F;
-            this.toolTip1.SetToolTip(this.dataGridViewActivation, "Edit these values to change pickup activation odds. Must be ascending order.");
             // 
             // columnActivationProbability
             // 
+            this.columnActivationProbability.FillWeight = 50F;
             this.columnActivationProbability.HeaderText = "Real Probability";
             this.columnActivationProbability.Name = "columnActivationProbability";
             this.columnActivationProbability.ReadOnly = true;
-            this.columnActivationProbability.FillWeight = 50F;
             // 
             // columnActivationRange
             // 
+            this.columnActivationRange.FillWeight = 60F;
             this.columnActivationRange.HeaderText = "Random Range";
             this.columnActivationRange.Name = "columnActivationRange";
             this.columnActivationRange.ReadOnly = true;
-            this.columnActivationRange.FillWeight = 60F;
-            // 
-            // labelInfo
-            // 
-            this.labelInfo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.labelInfo.Location = new System.Drawing.Point(3, 0);
-            this.labelInfo.Name = "labelInfo";
-            this.labelInfo.Padding = new System.Windows.Forms.Padding(5);
-            this.labelInfo.Size = new System.Drawing.Size(994, 80);
-            this.labelInfo.TabIndex = 2;
-            this.labelInfo.Text = "Pickup Table Editor - HeartGold US Only\r\n\r\nPickup activates after each battle bas" +
-    "ed on the divisor (default 10 = 10% chance). When activated, a random number (0-" +
-    "99) determines which slot is chosen.\r\nThe threshold table controls slot probabil" +
-    "ities. Rare items (98-99) have a special 1% overall chance. Edit the divisor and" +
-    " thresholds to customize drop rates.";
             // 
             // PickupTableEditor
             // 

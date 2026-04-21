@@ -1427,8 +1427,8 @@ namespace DSPRE
 
             otherEditorsToolStripMenuItem.Enabled = true;
 
-            // Enable Item Table Editor only for HeartGold US
-            itemTableEditorToolStripMenuItem.Enabled = (RomInfo.romID == "IPKE" && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS);
+            // Enable Item Table Editor for supported ROMs (DP/Plat/HGSS US versions)
+            itemTableEditorToolStripMenuItem.Enabled = RomInfo.IsItemTableEditorAvailable();
 
             NarcUtilityToolStripMenuItem.Enabled = true;
             nSBMDUtilityToolStripMenuItem.Enabled = true;
@@ -2044,13 +2044,20 @@ namespace DSPRE
             Helpers.statusLabelMessage("Opening Item Table Editor...");
             Update();
 
-            // Check if HeartGold US
-            if (RomInfo.romID != "IPKE" || RomInfo.gameFamily != RomInfo.GameFamilies.HGSS)
+            // Check if Item Table Editor is available for this ROM
+            if (!RomInfo.IsItemTableEditorAvailable())
             {
+                string supportedVersions = "Supported versions:\n" +
+                                          "- Diamond (US)\n" +
+                                          "- Pearl (US)\n" +
+                                          "- Platinum (US)\n" +
+                                          "- HeartGold (US)\n" +
+                                          "- SoulSilver (US)";
+
                 MessageBox.Show(
-                    "Item Table Editor is only available for HeartGold (US) version.\n\n" +
-                    "Current ROM: " + RomInfo.romID + "\n\n" +
-                    "The correct offsets for other game versions are not yet known.",
+                    "Item Table Editor is not available for this ROM version.\n\n" +
+                    "Current ROM: " + RomInfo.GetGameDisplayName() + "\n\n" +
+                    supportedVersions,
                     "Editor Not Available",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -2061,7 +2068,7 @@ namespace DSPRE
             // Open the item table editor in a new window
             Form editorForm = new Form
             {
-                Text = "Item Table Editor - HeartGold US",
+                Text = $"Item Table Editor - {RomInfo.GetGameDisplayName()}",
                 Size = new Size(1100, 750),
                 StartPosition = FormStartPosition.CenterScreen,
                 FormBorderStyle = FormBorderStyle.Sizable,

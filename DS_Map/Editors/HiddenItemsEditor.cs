@@ -105,13 +105,6 @@ namespace DSPRE.Editors
         {
             if (hiddenItemsEditorIsReady && !force) { return; }
 
-            // Check if this is HeartGold US
-            if (!IsHeartGoldUS())
-            {
-                ShowNotAvailableMessage();
-                return;
-            }
-
             itemNames = RomInfo.GetItemNames();
 
             // Populate item combo box
@@ -126,26 +119,6 @@ namespace DSPRE.Editors
 
             LoadHiddenItems();
             hiddenItemsEditorIsReady = true;
-        }
-
-        private bool IsHeartGoldUS()
-        {
-            return RomInfo.romID == "IPKE" && RomInfo.gameFamily == GameFamilies.HGSS;
-        }
-
-        private void ShowNotAvailableMessage()
-        {
-            Label notAvailableLabel = new Label
-            {
-                Text = "Hidden Items Editor is only available for HeartGold (US) version.\n\n" +
-                       "The correct offsets for other game versions are not yet known.",
-                AutoSize = false,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font(Font.FontFamily, 10, FontStyle.Bold)
-            };
-            Controls.Clear();
-            Controls.Add(notAvailableLabel);
         }
 
         private void LoadHiddenItems()
