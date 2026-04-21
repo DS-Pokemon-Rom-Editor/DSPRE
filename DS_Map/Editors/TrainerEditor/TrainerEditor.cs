@@ -1615,5 +1615,16 @@ namespace DSPRE.Editors
             battleMessageEditor.ShowDialog();
 
         }
+
+        private void trainerSearchButton_Click(object sender, EventArgs e)
+        {
+            if (!trainerEditorIsReady || trainerComboBox.Items.Count == 0)
+            {
+                return;
+            }
+
+            var trainerSearch = new TrainerSearch(trainerComboBox);
+            trainerSearch.ShowDialog();
+        }
     }
 }

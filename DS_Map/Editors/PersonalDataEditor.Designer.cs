@@ -80,12 +80,14 @@
             this.ability2InputComboBox = new DSPRE.InputComboBox();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel9 = new System.Windows.Forms.TableLayoutPanel();
+            this.hatchResultLabel = new System.Windows.Forms.Label();
             this.eggStepsNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.eggGroup1Label = new System.Windows.Forms.Label();
             this.eggGroup2Label = new System.Windows.Forms.Label();
             this.eggGroup1InputCombobox = new DSPRE.InputComboBox();
             this.eggGroup2InputCombobox = new DSPRE.InputComboBox();
             this.hatchStepsLabel = new System.Windows.Forms.Label();
+            this.hatchResultComboBox = new DSPRE.InputComboBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel8 = new System.Windows.Forms.TableLayoutPanel();
             this.dexColorInputComboBox = new DSPRE.InputComboBox();
@@ -118,8 +120,9 @@
             this.type2InputComboBox = new DSPRE.InputComboBox();
             this.type1InputComboBox = new DSPRE.InputComboBox();
             this.pokemonNameInputComboBox = new DSPRE.InputComboBox();
-            this.hatchResultLabel = new System.Windows.Forms.Label();
-            this.hatchResultComboBox = new DSPRE.InputComboBox();
+            this.bottomButtonsPanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.exportCsvButton = new System.Windows.Forms.Button();
+            this.importCsvButton = new System.Windows.Forms.Button();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pokemonPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.monNumberNumericUpDown)).BeginInit();
@@ -167,9 +170,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.catchRateNumericUpDown)).BeginInit();
             this.groupBox4.SuspendLayout();
             this.tableLayoutPanel10.SuspendLayout();
-            this.bottomButtonsPanel = new System.Windows.Forms.FlowLayoutPanel();
-            this.exportCsvButton = new System.Windows.Forms.Button();
-            this.importCsvButton = new System.Windows.Forms.Button();
             this.bottomButtonsPanel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -256,16 +256,16 @@
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(1070, 522);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(1070, 487);
             this.tableLayoutPanel2.TabIndex = 17;
             // 
             // groupBox10
             // 
             this.groupBox10.Controls.Add(this.tableLayoutPanel13);
             this.groupBox10.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox10.Location = new System.Drawing.Point(480, 264);
+            this.groupBox10.Location = new System.Drawing.Point(480, 246);
             this.groupBox10.Name = "groupBox10";
-            this.groupBox10.Size = new System.Drawing.Size(126, 250);
+            this.groupBox10.Size = new System.Drawing.Size(126, 233);
             this.groupBox10.TabIndex = 43;
             this.groupBox10.TabStop = false;
             this.groupBox10.Text = "Gender";
@@ -291,7 +291,7 @@
             this.tableLayoutPanel13.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel13.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel13.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel13.Size = new System.Drawing.Size(120, 231);
+            this.tableLayoutPanel13.Size = new System.Drawing.Size(120, 214);
             this.tableLayoutPanel13.TabIndex = 24;
             // 
             // label25
@@ -299,7 +299,7 @@
             this.label25.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label25.AutoSize = true;
             this.label25.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label25.Location = new System.Drawing.Point(8, 117);
+            this.label25.Location = new System.Drawing.Point(8, 109);
             this.label25.Name = "label25";
             this.label25.Size = new System.Drawing.Size(104, 16);
             this.label25.TabIndex = 14;
@@ -308,7 +308,7 @@
             // genderProbabilityNumericUpDown
             // 
             this.genderProbabilityNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.genderProbabilityNumericUpDown.Location = new System.Drawing.Point(8, 60);
+            this.genderProbabilityNumericUpDown.Location = new System.Drawing.Point(8, 56);
             this.genderProbabilityNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -323,7 +323,7 @@
             // 
             this.genderLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.genderLabel.AutoSize = true;
-            this.genderLabel.Location = new System.Drawing.Point(8, 174);
+            this.genderLabel.Location = new System.Drawing.Point(8, 161);
             this.genderLabel.Name = "genderLabel";
             this.genderLabel.Size = new System.Drawing.Size(104, 13);
             this.genderLabel.TabIndex = 20;
@@ -337,7 +337,7 @@
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(4);
             this.tableLayoutPanel2.SetRowSpan(this.groupBox1, 2);
-            this.groupBox1.Size = new System.Drawing.Size(450, 506);
+            this.groupBox1.Size = new System.Drawing.Size(450, 471);
             this.groupBox1.TabIndex = 33;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "TM / HM";
@@ -367,15 +367,15 @@
             this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7F));
             this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 72F));
             this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel11.Size = new System.Drawing.Size(442, 485);
+            this.tableLayoutPanel11.Size = new System.Drawing.Size(442, 450);
             this.tableLayoutPanel11.TabIndex = 0;
             // 
             // removeAllMachinesButton
             // 
             this.removeAllMachinesButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.removeAllMachinesButton.Location = new System.Drawing.Point(177, 119);
+            this.removeAllMachinesButton.Location = new System.Drawing.Point(177, 113);
             this.removeAllMachinesButton.Name = "removeAllMachinesButton";
-            this.removeAllMachinesButton.Size = new System.Drawing.Size(86, 26);
+            this.removeAllMachinesButton.Size = new System.Drawing.Size(86, 24);
             this.removeAllMachinesButton.TabIndex = 5;
             this.removeAllMachinesButton.Text = "<< Remove All";
             this.removeAllMachinesButton.UseVisualStyleBackColor = true;
@@ -384,9 +384,9 @@
             // addAllMachinesButton
             // 
             this.addAllMachinesButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.addAllMachinesButton.Location = new System.Drawing.Point(177, 87);
+            this.addAllMachinesButton.Location = new System.Drawing.Point(177, 83);
             this.addAllMachinesButton.Name = "addAllMachinesButton";
-            this.addAllMachinesButton.Size = new System.Drawing.Size(86, 26);
+            this.addAllMachinesButton.Size = new System.Drawing.Size(86, 24);
             this.addAllMachinesButton.TabIndex = 4;
             this.addAllMachinesButton.Text = "Add All >>";
             this.addAllMachinesButton.UseVisualStyleBackColor = true;
@@ -395,9 +395,9 @@
             // removeMachineButton
             // 
             this.removeMachineButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.removeMachineButton.Location = new System.Drawing.Point(177, 55);
+            this.removeMachineButton.Location = new System.Drawing.Point(177, 53);
             this.removeMachineButton.Name = "removeMachineButton";
-            this.removeMachineButton.Size = new System.Drawing.Size(86, 26);
+            this.removeMachineButton.Size = new System.Drawing.Size(86, 24);
             this.removeMachineButton.TabIndex = 3;
             this.removeMachineButton.Text = "<< Remove";
             this.removeMachineButton.UseVisualStyleBackColor = true;
@@ -410,7 +410,7 @@
             this.addableMachinesListBox.Location = new System.Drawing.Point(3, 23);
             this.addableMachinesListBox.Name = "addableMachinesListBox";
             this.tableLayoutPanel11.SetRowSpan(this.addableMachinesListBox, 5);
-            this.addableMachinesListBox.Size = new System.Drawing.Size(168, 459);
+            this.addableMachinesListBox.Size = new System.Drawing.Size(168, 424);
             this.addableMachinesListBox.TabIndex = 0;
             // 
             // addedMachinesListBox
@@ -420,7 +420,7 @@
             this.addedMachinesListBox.Location = new System.Drawing.Point(269, 23);
             this.addedMachinesListBox.Name = "addedMachinesListBox";
             this.tableLayoutPanel11.SetRowSpan(this.addedMachinesListBox, 5);
-            this.addedMachinesListBox.Size = new System.Drawing.Size(170, 459);
+            this.addedMachinesListBox.Size = new System.Drawing.Size(170, 424);
             this.addedMachinesListBox.TabIndex = 1;
             // 
             // addMachineButton
@@ -428,7 +428,7 @@
             this.addMachineButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.addMachineButton.Location = new System.Drawing.Point(177, 23);
             this.addMachineButton.Name = "addMachineButton";
-            this.addMachineButton.Size = new System.Drawing.Size(86, 26);
+            this.addMachineButton.Size = new System.Drawing.Size(86, 24);
             this.addMachineButton.TabIndex = 2;
             this.addMachineButton.Text = "Enable >>";
             this.addMachineButton.UseVisualStyleBackColor = true;
@@ -461,7 +461,7 @@
             this.groupBox2.Location = new System.Drawing.Point(8, 8);
             this.groupBox2.Name = "groupBox2";
             this.tableLayoutPanel2.SetRowSpan(this.groupBox2, 2);
-            this.groupBox2.Size = new System.Drawing.Size(82, 506);
+            this.groupBox2.Size = new System.Drawing.Size(82, 471);
             this.groupBox2.TabIndex = 34;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Base Stats";
@@ -500,13 +500,13 @@
             this.tableLayoutPanel7.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel7.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16.66667F));
             this.tableLayoutPanel7.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel7.Size = new System.Drawing.Size(76, 487);
+            this.tableLayoutPanel7.Size = new System.Drawing.Size(76, 452);
             this.tableLayoutPanel7.TabIndex = 21;
             // 
             // baseSpeedNumericUpDown
             // 
             this.baseSpeedNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseSpeedNumericUpDown.Location = new System.Drawing.Point(8, 441);
+            this.baseSpeedNumericUpDown.Location = new System.Drawing.Point(8, 408);
             this.baseSpeedNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -520,7 +520,7 @@
             // baseSpAtkNumericUpDown
             // 
             this.baseSpAtkNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseSpAtkNumericUpDown.Location = new System.Drawing.Point(8, 281);
+            this.baseSpAtkNumericUpDown.Location = new System.Drawing.Point(8, 260);
             this.baseSpAtkNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -535,7 +535,7 @@
             // 
             this.label12.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(8, 245);
+            this.label12.Location = new System.Drawing.Point(8, 227);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(60, 13);
             this.label12.TabIndex = 12;
@@ -544,7 +544,7 @@
             // baseDefNumericUpDown
             // 
             this.baseDefNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseDefNumericUpDown.Location = new System.Drawing.Point(8, 202);
+            this.baseDefNumericUpDown.Location = new System.Drawing.Point(8, 187);
             this.baseDefNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -568,7 +568,7 @@
             // baseAtkNumericUpDown
             // 
             this.baseAtkNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseAtkNumericUpDown.Location = new System.Drawing.Point(8, 123);
+            this.baseAtkNumericUpDown.Location = new System.Drawing.Point(8, 114);
             this.baseAtkNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -583,7 +583,7 @@
             // 
             this.label14.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(8, 87);
+            this.label14.Location = new System.Drawing.Point(8, 81);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(60, 13);
             this.label14.TabIndex = 1;
@@ -593,7 +593,7 @@
             // 
             this.label15.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label15.AutoSize = true;
-            this.label15.Location = new System.Drawing.Point(8, 166);
+            this.label15.Location = new System.Drawing.Point(8, 154);
             this.label15.Name = "label15";
             this.label15.Size = new System.Drawing.Size(60, 13);
             this.label15.TabIndex = 2;
@@ -602,7 +602,7 @@
             // baseHpNumericUpDown
             // 
             this.baseHpNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseHpNumericUpDown.Location = new System.Drawing.Point(8, 44);
+            this.baseHpNumericUpDown.Location = new System.Drawing.Point(8, 41);
             this.baseHpNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -617,7 +617,7 @@
             // 
             this.label16.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(8, 324);
+            this.label16.Location = new System.Drawing.Point(8, 300);
             this.label16.Name = "label16";
             this.label16.Size = new System.Drawing.Size(60, 13);
             this.label16.TabIndex = 14;
@@ -626,7 +626,7 @@
             // baseSpDefNumericUpDown
             // 
             this.baseSpDefNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseSpDefNumericUpDown.Location = new System.Drawing.Point(8, 360);
+            this.baseSpDefNumericUpDown.Location = new System.Drawing.Point(8, 333);
             this.baseSpDefNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -641,7 +641,7 @@
             // 
             this.label17.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(8, 403);
+            this.label17.Location = new System.Drawing.Point(8, 373);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(60, 13);
             this.label17.TabIndex = 16;
@@ -654,7 +654,7 @@
             this.groupBox3.Location = new System.Drawing.Point(96, 8);
             this.groupBox3.Name = "groupBox3";
             this.tableLayoutPanel2.SetRowSpan(this.groupBox3, 2);
-            this.groupBox3.Size = new System.Drawing.Size(82, 506);
+            this.groupBox3.Size = new System.Drawing.Size(82, 471);
             this.groupBox3.TabIndex = 35;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "EV Yield";
@@ -693,13 +693,13 @@
             this.tableLayoutPanel5.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel5.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16.66667F));
             this.tableLayoutPanel5.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel5.Size = new System.Drawing.Size(76, 487);
+            this.tableLayoutPanel5.Size = new System.Drawing.Size(76, 452);
             this.tableLayoutPanel5.TabIndex = 19;
             // 
             // evSpeedNumericUpDown
             // 
             this.evSpeedNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evSpeedNumericUpDown.Location = new System.Drawing.Point(8, 441);
+            this.evSpeedNumericUpDown.Location = new System.Drawing.Point(8, 408);
             this.evSpeedNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -713,7 +713,7 @@
             // evSpAtkNumericUpDown
             // 
             this.evSpAtkNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evSpAtkNumericUpDown.Location = new System.Drawing.Point(8, 281);
+            this.evSpAtkNumericUpDown.Location = new System.Drawing.Point(8, 260);
             this.evSpAtkNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -728,7 +728,7 @@
             // 
             this.label7.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(8, 245);
+            this.label7.Location = new System.Drawing.Point(8, 227);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(60, 13);
             this.label7.TabIndex = 12;
@@ -737,7 +737,7 @@
             // evDefNumericUpDown
             // 
             this.evDefNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evDefNumericUpDown.Location = new System.Drawing.Point(8, 202);
+            this.evDefNumericUpDown.Location = new System.Drawing.Point(8, 187);
             this.evDefNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -761,7 +761,7 @@
             // evAtkNumericUpDown
             // 
             this.evAtkNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evAtkNumericUpDown.Location = new System.Drawing.Point(8, 123);
+            this.evAtkNumericUpDown.Location = new System.Drawing.Point(8, 114);
             this.evAtkNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -776,7 +776,7 @@
             // 
             this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(8, 87);
+            this.label5.Location = new System.Drawing.Point(8, 81);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(60, 13);
             this.label5.TabIndex = 1;
@@ -786,7 +786,7 @@
             // 
             this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(8, 166);
+            this.label6.Location = new System.Drawing.Point(8, 154);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(60, 13);
             this.label6.TabIndex = 2;
@@ -795,7 +795,7 @@
             // evHpNumericUpDown
             // 
             this.evHpNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evHpNumericUpDown.Location = new System.Drawing.Point(8, 44);
+            this.evHpNumericUpDown.Location = new System.Drawing.Point(8, 41);
             this.evHpNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -810,7 +810,7 @@
             // 
             this.label8.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(8, 324);
+            this.label8.Location = new System.Drawing.Point(8, 300);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(60, 13);
             this.label8.TabIndex = 14;
@@ -819,7 +819,7 @@
             // evSpDefNumericUpDown
             // 
             this.evSpDefNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.evSpDefNumericUpDown.Location = new System.Drawing.Point(8, 360);
+            this.evSpDefNumericUpDown.Location = new System.Drawing.Point(8, 333);
             this.evSpDefNumericUpDown.Maximum = new decimal(new int[] {
             3,
             0,
@@ -834,7 +834,7 @@
             // 
             this.label9.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(8, 403);
+            this.label9.Location = new System.Drawing.Point(8, 373);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(60, 13);
             this.label9.TabIndex = 16;
@@ -846,7 +846,7 @@
             this.groupBox5.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox5.Location = new System.Drawing.Point(314, 8);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(160, 250);
+            this.groupBox5.Size = new System.Drawing.Size(160, 232);
             this.groupBox5.TabIndex = 37;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "Abilities";
@@ -868,7 +868,7 @@
             this.tableLayoutPanel4.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel4.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel4.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel4.Size = new System.Drawing.Size(154, 231);
+            this.tableLayoutPanel4.Size = new System.Drawing.Size(154, 213);
             this.tableLayoutPanel4.TabIndex = 18;
             // 
             // label1
@@ -885,7 +885,7 @@
             // 
             this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(8, 118);
+            this.label2.Location = new System.Drawing.Point(8, 109);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(138, 13);
             this.label2.TabIndex = 1;
@@ -897,7 +897,7 @@
             this.ability1InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.ability1InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.ability1InputComboBox.FormattingEnabled = true;
-            this.ability1InputComboBox.Location = new System.Drawing.Point(8, 59);
+            this.ability1InputComboBox.Location = new System.Drawing.Point(8, 55);
             this.ability1InputComboBox.Name = "ability1InputComboBox";
             this.ability1InputComboBox.Size = new System.Drawing.Size(138, 21);
             this.ability1InputComboBox.TabIndex = 3;
@@ -909,7 +909,7 @@
             this.ability2InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.ability2InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.ability2InputComboBox.FormattingEnabled = true;
-            this.ability2InputComboBox.Location = new System.Drawing.Point(8, 170);
+            this.ability2InputComboBox.Location = new System.Drawing.Point(8, 156);
             this.ability2InputComboBox.Name = "ability2InputComboBox";
             this.ability2InputComboBox.Size = new System.Drawing.Size(138, 21);
             this.ability2InputComboBox.TabIndex = 4;
@@ -921,7 +921,7 @@
             this.groupBox6.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox6.Location = new System.Drawing.Point(480, 8);
             this.groupBox6.Name = "groupBox6";
-            this.groupBox6.Size = new System.Drawing.Size(126, 250);
+            this.groupBox6.Size = new System.Drawing.Size(126, 232);
             this.groupBox6.TabIndex = 38;
             this.groupBox6.TabStop = false;
             this.groupBox6.Text = "Egg";
@@ -951,13 +951,23 @@
             this.tableLayoutPanel9.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.06265F));
             this.tableLayoutPanel9.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel9.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 24.81203F));
-            this.tableLayoutPanel9.Size = new System.Drawing.Size(120, 231);
+            this.tableLayoutPanel9.Size = new System.Drawing.Size(120, 213);
             this.tableLayoutPanel9.TabIndex = 23;
+            // 
+            // hatchResultLabel
+            // 
+            this.hatchResultLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.hatchResultLabel.AutoSize = true;
+            this.hatchResultLabel.Location = new System.Drawing.Point(8, 158);
+            this.hatchResultLabel.Name = "hatchResultLabel";
+            this.hatchResultLabel.Size = new System.Drawing.Size(104, 13);
+            this.hatchResultLabel.TabIndex = 19;
+            this.hatchResultLabel.Text = "Hatch Result";
             // 
             // eggStepsNumericUpDown
             // 
             this.eggStepsNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.eggStepsNumericUpDown.Location = new System.Drawing.Point(8, 142);
+            this.eggStepsNumericUpDown.Location = new System.Drawing.Point(8, 130);
             this.eggStepsNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -982,7 +992,7 @@
             // 
             this.eggGroup2Label.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.eggGroup2Label.AutoSize = true;
-            this.eggGroup2Label.Location = new System.Drawing.Point(8, 63);
+            this.eggGroup2Label.Location = new System.Drawing.Point(8, 58);
             this.eggGroup2Label.Name = "eggGroup2Label";
             this.eggGroup2Label.Size = new System.Drawing.Size(104, 13);
             this.eggGroup2Label.TabIndex = 14;
@@ -994,7 +1004,7 @@
             this.eggGroup1InputCombobox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.eggGroup1InputCombobox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.eggGroup1InputCombobox.FormattingEnabled = true;
-            this.eggGroup1InputCombobox.Location = new System.Drawing.Point(8, 32);
+            this.eggGroup1InputCombobox.Location = new System.Drawing.Point(8, 29);
             this.eggGroup1InputCombobox.Name = "eggGroup1InputCombobox";
             this.eggGroup1InputCombobox.Size = new System.Drawing.Size(104, 21);
             this.eggGroup1InputCombobox.TabIndex = 15;
@@ -1006,7 +1016,7 @@
             this.eggGroup2InputCombobox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.eggGroup2InputCombobox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.eggGroup2InputCombobox.FormattingEnabled = true;
-            this.eggGroup2InputCombobox.Location = new System.Drawing.Point(8, 87);
+            this.eggGroup2InputCombobox.Location = new System.Drawing.Point(8, 79);
             this.eggGroup2InputCombobox.Name = "eggGroup2InputCombobox";
             this.eggGroup2InputCombobox.Size = new System.Drawing.Size(104, 21);
             this.eggGroup2InputCombobox.TabIndex = 16;
@@ -1016,19 +1026,31 @@
             // 
             this.hatchStepsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.hatchStepsLabel.AutoSize = true;
-            this.hatchStepsLabel.Location = new System.Drawing.Point(8, 118);
+            this.hatchStepsLabel.Location = new System.Drawing.Point(8, 108);
             this.hatchStepsLabel.Name = "hatchStepsLabel";
             this.hatchStepsLabel.Size = new System.Drawing.Size(104, 13);
             this.hatchStepsLabel.TabIndex = 17;
             this.hatchStepsLabel.Text = "Hatch Steps";
             // 
+            // hatchResultComboBox
+            // 
+            this.hatchResultComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.hatchResultComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.hatchResultComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.hatchResultComboBox.FormattingEnabled = true;
+            this.hatchResultComboBox.Location = new System.Drawing.Point(8, 181);
+            this.hatchResultComboBox.Name = "hatchResultComboBox";
+            this.hatchResultComboBox.Size = new System.Drawing.Size(104, 21);
+            this.hatchResultComboBox.TabIndex = 20;
+            this.hatchResultComboBox.SelectedIndexChanged += new System.EventHandler(this.hatchResultComboBox_SelectedIndexChanged);
+            // 
             // groupBox7
             // 
             this.groupBox7.Controls.Add(this.tableLayoutPanel8);
             this.groupBox7.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox7.Location = new System.Drawing.Point(184, 264);
+            this.groupBox7.Location = new System.Drawing.Point(184, 246);
             this.groupBox7.Name = "groupBox7";
-            this.groupBox7.Size = new System.Drawing.Size(124, 250);
+            this.groupBox7.Size = new System.Drawing.Size(124, 233);
             this.groupBox7.TabIndex = 39;
             this.groupBox7.TabStop = false;
             this.groupBox7.Text = "Misc";
@@ -1057,7 +1079,7 @@
             this.tableLayoutPanel8.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.tableLayoutPanel8.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.tableLayoutPanel8.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel8.Size = new System.Drawing.Size(118, 231);
+            this.tableLayoutPanel8.Size = new System.Drawing.Size(118, 214);
             this.tableLayoutPanel8.TabIndex = 22;
             // 
             // dexColorInputComboBox
@@ -1066,7 +1088,7 @@
             this.dexColorInputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.dexColorInputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.dexColorInputComboBox.FormattingEnabled = true;
-            this.dexColorInputComboBox.Location = new System.Drawing.Point(8, 154);
+            this.dexColorInputComboBox.Location = new System.Drawing.Point(8, 144);
             this.dexColorInputComboBox.Name = "dexColorInputComboBox";
             this.dexColorInputComboBox.Size = new System.Drawing.Size(102, 21);
             this.dexColorInputComboBox.TabIndex = 20;
@@ -1076,7 +1098,7 @@
             // 
             this.label31.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label31.AutoSize = true;
-            this.label31.Location = new System.Drawing.Point(8, 128);
+            this.label31.Location = new System.Drawing.Point(8, 120);
             this.label31.Name = "label31";
             this.label31.Size = new System.Drawing.Size(102, 13);
             this.label31.TabIndex = 19;
@@ -1098,7 +1120,7 @@
             this.growthCurveInputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.growthCurveInputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.growthCurveInputComboBox.FormattingEnabled = true;
-            this.growthCurveInputComboBox.Location = new System.Drawing.Point(8, 34);
+            this.growthCurveInputComboBox.Location = new System.Drawing.Point(8, 32);
             this.growthCurveInputComboBox.Name = "growthCurveInputComboBox";
             this.growthCurveInputComboBox.Size = new System.Drawing.Size(102, 21);
             this.growthCurveInputComboBox.TabIndex = 15;
@@ -1108,7 +1130,7 @@
             // 
             this.label20.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label20.AutoSize = true;
-            this.label20.Location = new System.Drawing.Point(8, 68);
+            this.label20.Location = new System.Drawing.Point(8, 64);
             this.label20.Name = "label20";
             this.label20.Size = new System.Drawing.Size(102, 13);
             this.label20.TabIndex = 17;
@@ -1117,7 +1139,7 @@
             // baseExpYieldNumericUpDown
             // 
             this.baseExpYieldNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.baseExpYieldNumericUpDown.Location = new System.Drawing.Point(8, 95);
+            this.baseExpYieldNumericUpDown.Location = new System.Drawing.Point(8, 89);
             this.baseExpYieldNumericUpDown.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -1132,7 +1154,7 @@
             // 
             this.flipFlagCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.flipFlagCheckBox.AutoSize = true;
-            this.flipFlagCheckBox.Location = new System.Drawing.Point(8, 197);
+            this.flipFlagCheckBox.Location = new System.Drawing.Point(8, 182);
             this.flipFlagCheckBox.Name = "flipFlagCheckBox";
             this.flipFlagCheckBox.Size = new System.Drawing.Size(102, 17);
             this.flipFlagCheckBox.TabIndex = 21;
@@ -1147,22 +1169,22 @@
             this.tableLayoutPanel3.Controls.Add(this.groupBox8, 0, 1);
             this.tableLayoutPanel3.Controls.Add(this.groupBox9, 0, 0);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tableLayoutPanel3.Location = new System.Drawing.Point(314, 264);
+            this.tableLayoutPanel3.Location = new System.Drawing.Point(314, 246);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
             this.tableLayoutPanel3.RowCount = 2;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 79.83539F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20.16461F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(160, 250);
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(160, 233);
             this.tableLayoutPanel3.TabIndex = 40;
             // 
             // groupBox8
             // 
             this.groupBox8.Controls.Add(this.baseFriendshipNumericUpDown);
             this.groupBox8.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox8.Location = new System.Drawing.Point(3, 202);
+            this.groupBox8.Location = new System.Drawing.Point(3, 189);
             this.groupBox8.Name = "groupBox8";
-            this.groupBox8.Size = new System.Drawing.Size(154, 45);
+            this.groupBox8.Size = new System.Drawing.Size(154, 41);
             this.groupBox8.TabIndex = 23;
             this.groupBox8.TabStop = false;
             this.groupBox8.Text = "Base Friendship";
@@ -1187,7 +1209,7 @@
             this.groupBox9.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox9.Location = new System.Drawing.Point(3, 3);
             this.groupBox9.Name = "groupBox9";
-            this.groupBox9.Size = new System.Drawing.Size(154, 193);
+            this.groupBox9.Size = new System.Drawing.Size(154, 180);
             this.groupBox9.TabIndex = 24;
             this.groupBox9.TabStop = false;
             this.groupBox9.Text = "Held Items";
@@ -1214,7 +1236,7 @@
             this.tableLayoutPanel12.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel12.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel12.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel12.Size = new System.Drawing.Size(148, 174);
+            this.tableLayoutPanel12.Size = new System.Drawing.Size(148, 161);
             this.tableLayoutPanel12.TabIndex = 18;
             // 
             // label30
@@ -1222,7 +1244,7 @@
             this.label30.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label30.AutoSize = true;
             this.tableLayoutPanel12.SetColumnSpan(this.label30, 2);
-            this.label30.Location = new System.Drawing.Point(8, 90);
+            this.label30.Location = new System.Drawing.Point(8, 83);
             this.label30.Name = "label30";
             this.label30.Size = new System.Drawing.Size(132, 13);
             this.label30.TabIndex = 20;
@@ -1243,7 +1265,7 @@
             // 
             this.item2PictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.item2PictureBox.Image = ((System.Drawing.Image)(resources.GetObject("item2PictureBox.Image")));
-            this.item2PictureBox.Location = new System.Drawing.Point(8, 125);
+            this.item2PictureBox.Location = new System.Drawing.Point(8, 115);
             this.item2PictureBox.Name = "item2PictureBox";
             this.item2PictureBox.Size = new System.Drawing.Size(26, 25);
             this.item2PictureBox.TabIndex = 16;
@@ -1254,7 +1276,7 @@
             // 
             this.item1PictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.item1PictureBox.Image = ((System.Drawing.Image)(resources.GetObject("item1PictureBox.Image")));
-            this.item1PictureBox.Location = new System.Drawing.Point(8, 43);
+            this.item1PictureBox.Location = new System.Drawing.Point(8, 40);
             this.item1PictureBox.Name = "item1PictureBox";
             this.item1PictureBox.Size = new System.Drawing.Size(26, 25);
             this.item1PictureBox.TabIndex = 15;
@@ -1267,7 +1289,7 @@
             this.item1InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.item1InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.item1InputComboBox.FormattingEnabled = true;
-            this.item1InputComboBox.Location = new System.Drawing.Point(40, 45);
+            this.item1InputComboBox.Location = new System.Drawing.Point(40, 42);
             this.item1InputComboBox.Name = "item1InputComboBox";
             this.item1InputComboBox.Size = new System.Drawing.Size(100, 21);
             this.item1InputComboBox.TabIndex = 17;
@@ -1279,7 +1301,7 @@
             this.item2InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.item2InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.item2InputComboBox.FormattingEnabled = true;
-            this.item2InputComboBox.Location = new System.Drawing.Point(40, 127);
+            this.item2InputComboBox.Location = new System.Drawing.Point(40, 117);
             this.item2InputComboBox.Name = "item2InputComboBox";
             this.item2InputComboBox.Size = new System.Drawing.Size(100, 21);
             this.item2InputComboBox.TabIndex = 18;
@@ -1297,16 +1319,16 @@
             this.tableLayoutPanel6.RowCount = 2;
             this.tableLayoutPanel6.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 44.4F));
             this.tableLayoutPanel6.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 55.6F));
-            this.tableLayoutPanel6.Size = new System.Drawing.Size(124, 250);
+            this.tableLayoutPanel6.Size = new System.Drawing.Size(124, 232);
             this.tableLayoutPanel6.TabIndex = 44;
             // 
             // groupBox11
             // 
             this.groupBox11.Controls.Add(this.tableLayoutPanel14);
             this.groupBox11.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox11.Location = new System.Drawing.Point(3, 114);
+            this.groupBox11.Location = new System.Drawing.Point(3, 106);
             this.groupBox11.Name = "groupBox11";
-            this.groupBox11.Size = new System.Drawing.Size(118, 133);
+            this.groupBox11.Size = new System.Drawing.Size(118, 123);
             this.groupBox11.TabIndex = 45;
             this.groupBox11.TabStop = false;
             this.groupBox11.Text = "Rates";
@@ -1333,7 +1355,7 @@
             this.tableLayoutPanel14.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel14.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel14.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel14.Size = new System.Drawing.Size(112, 114);
+            this.tableLayoutPanel14.Size = new System.Drawing.Size(112, 104);
             this.tableLayoutPanel14.TabIndex = 24;
             // 
             // label33
@@ -1350,7 +1372,7 @@
             // 
             this.label35.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.label35.AutoSize = true;
-            this.label35.Location = new System.Drawing.Point(8, 60);
+            this.label35.Location = new System.Drawing.Point(8, 55);
             this.label35.Name = "label35";
             this.label35.Size = new System.Drawing.Size(96, 13);
             this.label35.TabIndex = 21;
@@ -1359,7 +1381,7 @@
             // escapeRateNumericUpDown
             // 
             this.escapeRateNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.escapeRateNumericUpDown.Location = new System.Drawing.Point(8, 83);
+            this.escapeRateNumericUpDown.Location = new System.Drawing.Point(8, 75);
             this.escapeRateNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -1373,7 +1395,7 @@
             // catchRateNumericUpDown
             // 
             this.catchRateNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.catchRateNumericUpDown.Location = new System.Drawing.Point(8, 31);
+            this.catchRateNumericUpDown.Location = new System.Drawing.Point(8, 28);
             this.catchRateNumericUpDown.Maximum = new decimal(new int[] {
             255,
             0,
@@ -1390,7 +1412,7 @@
             this.groupBox4.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox4.Location = new System.Drawing.Point(3, 3);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(118, 105);
+            this.groupBox4.Size = new System.Drawing.Size(118, 97);
             this.groupBox4.TabIndex = 37;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Types";
@@ -1410,7 +1432,7 @@
             this.tableLayoutPanel10.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 15F));
             this.tableLayoutPanel10.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel10.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel10.Size = new System.Drawing.Size(112, 86);
+            this.tableLayoutPanel10.Size = new System.Drawing.Size(112, 78);
             this.tableLayoutPanel10.TabIndex = 20;
             // 
             // type2InputComboBox
@@ -1419,7 +1441,7 @@
             this.type2InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.type2InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.type2InputComboBox.FormattingEnabled = true;
-            this.type2InputComboBox.Location = new System.Drawing.Point(8, 55);
+            this.type2InputComboBox.Location = new System.Drawing.Point(8, 49);
             this.type2InputComboBox.Name = "type2InputComboBox";
             this.type2InputComboBox.Size = new System.Drawing.Size(96, 21);
             this.type2InputComboBox.TabIndex = 5;
@@ -1431,7 +1453,7 @@
             this.type1InputComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
             this.type1InputComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.type1InputComboBox.FormattingEnabled = true;
-            this.type1InputComboBox.Location = new System.Drawing.Point(8, 9);
+            this.type1InputComboBox.Location = new System.Drawing.Point(8, 8);
             this.type1InputComboBox.Name = "type1InputComboBox";
             this.type1InputComboBox.Size = new System.Drawing.Size(96, 21);
             this.type1InputComboBox.TabIndex = 4;
@@ -1448,28 +1470,6 @@
             this.pokemonNameInputComboBox.Size = new System.Drawing.Size(230, 21);
             this.pokemonNameInputComboBox.TabIndex = 31;
             this.pokemonNameInputComboBox.SelectedIndexChanged += new System.EventHandler(this.pokemonNameInputComboBox_SelectedIndexChanged);
-            // 
-            // hatchResultLabel
-            // 
-            this.hatchResultLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.hatchResultLabel.AutoSize = true;
-            this.hatchResultLabel.Location = new System.Drawing.Point(8, 173);
-            this.hatchResultLabel.Name = "hatchResultLabel";
-            this.hatchResultLabel.Size = new System.Drawing.Size(104, 13);
-            this.hatchResultLabel.TabIndex = 19;
-            this.hatchResultLabel.Text = "Hatch Result";
-            // 
-            // hatchResultComboBox
-            // 
-            this.hatchResultComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.hatchResultComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.hatchResultComboBox.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.hatchResultComboBox.FormattingEnabled = true;
-            this.hatchResultComboBox.Location = new System.Drawing.Point(8, 197);
-            this.hatchResultComboBox.Name = "hatchResultComboBox";
-            this.hatchResultComboBox.Size = new System.Drawing.Size(104, 21);
-            this.hatchResultComboBox.TabIndex = 20;
-            this.hatchResultComboBox.SelectedIndexChanged += new System.EventHandler(this.hatchResultComboBox_SelectedIndexChanged);
             // 
             // bottomButtonsPanel
             // 

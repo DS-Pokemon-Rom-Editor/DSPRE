@@ -191,6 +191,7 @@
             this.partyCountUpDown = new System.Windows.Forms.NumericUpDown();
             this.groupBox25 = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel5 = new System.Windows.Forms.TableLayoutPanel();
+            this.trainerMessageButton = new System.Windows.Forms.Button();
             this.replacePropertiesButton = new System.Windows.Forms.Button();
             this.exportPropertiesButton = new System.Windows.Forms.Button();
             this.trainerMovesCheckBox = new System.Windows.Forms.CheckBox();
@@ -203,7 +204,7 @@
             this.trainerSaveCurrentButton = new System.Windows.Forms.Button();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.trainerComboBox = new DSPRE.InputComboBox();
-            this.trainerMessageButton = new System.Windows.Forms.Button();
+            this.trainerSearchButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.partyLevel2UpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.partyBall2UpDown)).BeginInit();
             this.party1GroupBox.SuspendLayout();
@@ -2196,6 +2197,20 @@
             this.tableLayoutPanel5.Size = new System.Drawing.Size(121, 116);
             this.tableLayoutPanel5.TabIndex = 48;
             // 
+            // trainerMessageButton
+            // 
+            this.trainerMessageButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.trainerMessageButton.Image = ((System.Drawing.Image)(resources.GetObject("trainerMessageButton.Image")));
+            this.trainerMessageButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.trainerMessageButton.Location = new System.Drawing.Point(3, 3);
+            this.trainerMessageButton.Name = "trainerMessageButton";
+            this.trainerMessageButton.Size = new System.Drawing.Size(115, 32);
+            this.trainerMessageButton.TabIndex = 43;
+            this.trainerMessageButton.Text = "Trainer Text";
+            this.trainerMessageButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.trainerMessageButton.UseVisualStyleBackColor = true;
+            this.trainerMessageButton.Click += new System.EventHandler(this.trainerMessageButton_Click);
+            // 
             // replacePropertiesButton
             // 
             this.replacePropertiesButton.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -2324,19 +2339,15 @@
             this.trainerComboBox.TabIndex = 48;
             this.trainerComboBox.SelectedIndexChanged += new System.EventHandler(this.trainerComboBox_SelectedIndexChanged);
             // 
-            // trainerMessageButton
+            // trainerSearchButton
             // 
-            this.trainerMessageButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.trainerMessageButton.Image = ((System.Drawing.Image)(resources.GetObject("trainerMessageButton.Image")));
-            this.trainerMessageButton.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.trainerMessageButton.Location = new System.Drawing.Point(3, 3);
-            this.trainerMessageButton.Name = "trainerMessageButton";
-            this.trainerMessageButton.Size = new System.Drawing.Size(115, 32);
-            this.trainerMessageButton.TabIndex = 43;
-            this.trainerMessageButton.Text = "Trainer Text";
-            this.trainerMessageButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.trainerMessageButton.UseVisualStyleBackColor = true;
-            this.trainerMessageButton.Click += new System.EventHandler(this.trainerMessageButton_Click);
+            this.trainerSearchButton.Image = global::DSPRE.Properties.Resources.lens;
+            this.trainerSearchButton.Location = new System.Drawing.Point(189, 3);
+            this.trainerSearchButton.Name = "trainerSearchButton";
+            this.trainerSearchButton.Size = new System.Drawing.Size(29, 23);
+            this.trainerSearchButton.TabIndex = 56;
+            this.trainerSearchButton.UseVisualStyleBackColor = true;
+            this.trainerSearchButton.Click += new System.EventHandler(this.trainerSearchButton_Click);
             // 
             // TrainerEditor
             // 
@@ -2348,6 +2359,7 @@
             this.Controls.Add(this.deleteTrainerButton);
             this.Controls.Add(this.addTrainerButton);
             this.Controls.Add(this.label42);
+            this.Controls.Add(this.trainerSearchButton);
             this.Controls.Add(this.trainerSaveCurrentButton);
             this.Controls.Add(this.trainerComboBox);
             this.Controls.Add(this.groupBox25);
@@ -2599,5 +2611,6 @@
         private System.Windows.Forms.Button reorderButton;
         private System.Windows.Forms.Button aiInfoButton;
         private System.Windows.Forms.Button trainerMessageButton;
+        private System.Windows.Forms.Button trainerSearchButton;
     }
 }
