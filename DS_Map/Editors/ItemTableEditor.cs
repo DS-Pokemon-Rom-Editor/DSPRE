@@ -57,6 +57,16 @@ namespace DSPRE.Editors
         {
             itemTableEditorIsReady = true;
 
+            // Hide Hidden Items tab if not supported for this ROM version
+            if (!RomInfo.IsHiddenItemsEditorAvailable())
+            {
+                // Remove the Hidden Items tab if it exists
+                if (tabControl.TabPages.Contains(tabPageHiddenItems))
+                {
+                    tabControl.TabPages.Remove(tabPageHiddenItems);
+                }
+            }
+
             // Select the first tab
             if (tabControl.TabPages.Count > 0)
             {
@@ -109,6 +119,13 @@ namespace DSPRE.Editors
                 itemTableEditorIsReady = false;
                 pickupTableEditor?.Reset();
                 hiddenItemsEditor?.Reset();
+
+                // Re-add hidden items tab if it was removed (for ROM switching scenarios)
+                if (!tabControl.TabPages.Contains(tabPageHiddenItems))
+                {
+                    // Add it back at index 1
+                    tabControl.TabPages.Insert(1, tabPageHiddenItems);
+                }
 
                 // Reset to first tab
                 if (tabControl.TabPages.Count > 0)

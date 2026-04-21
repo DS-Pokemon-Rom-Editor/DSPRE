@@ -9,11 +9,6 @@ namespace DSPRE.Editors
 {
     public partial class PickupTableEditor : UserControl, IEditorWithUnsavedChanges
     {
-        private const int OVERLAY_NUMBER = 12;
-        private const int COMMON_ITEMS_OFFSET = 0x34B44;
-        private const int RARE_ITEMS_OFFSET = 0x34A4C;
-        private const int ACTIVATION_DIVISOR_OFFSET = 0xC852; // _s32_div_f divisor for activation chance
-        private const int WEIGHT_TABLE_OFFSET = 0x3518C; // sPickupWeightTable
         private const int COMMON_ITEMS_COUNT = 18; // 18 pairs
         private const int RARE_ITEMS_COUNT = 11;   // 11 pairs
         private const int WEIGHT_TABLE_SIZE = 9;   // 9 weight thresholds
@@ -67,22 +62,15 @@ namespace DSPRE.Editors
         {
             if (pickupTableEditorIsReady && !force) { return; }
 
-            // Check if this is HeartGold US
-            if (!IsHeartGoldUS())
-            {
-                ShowNotAvailableMessage();
-                return;
-            }
-
             itemNames = RomInfo.GetItemNames();
 
             // Initialize combo box columns with item names
             InitializeComboBoxColumns();
 
-            // Decompress overlay 12 if needed
-            if (OverlayUtils.IsCompressed(OVERLAY_NUMBER))
+            // Decompress overlay if needed
+            if (OverlayUtils.IsCompressed(RomInfo.pickupTableOverlayNumber))
             {
-                OverlayUtils.Decompress(OVERLAY_NUMBER);
+                OverlayUtils.Decompress(RomInfo.pickupTableOverlayNumber);
             }
 
             LoadPickupTable();
@@ -118,34 +106,13 @@ namespace DSPRE.Editors
             }
         }
 
-        private bool IsHeartGoldUS()
-        {
-            return RomInfo.romID == "IPKE" && RomInfo.gameFamily == GameFamilies.HGSS;
-        }
-
-        private void ShowNotAvailableMessage()
-        {
-            // Create a label to show "not available"
-            Label notAvailableLabel = new Label
-            {
-                Text = "Pickup Table Editor is only available for HeartGold (US) version.\n\n" +
-                       "The correct offsets for other game versions are not yet known.",
-                AutoSize = false,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font(Font.FontFamily, 10, FontStyle.Bold)
-            };
-            Controls.Clear();
-            Controls.Add(notAvailableLabel);
-        }
-
         private void LoadPickupTable()
         {
-            string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+            string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
             // Read common items
             commonItemIDs.Clear();
-            byte[] commonData = DSUtils.ReadFromFile(overlayPath, COMMON_ITEMS_OFFSET, COMMON_ITEMS_COUNT * 2);
+            byte[] commonData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupCommonItemsOffset, COMMON_ITEMS_COUNT * 2);
             for (int i = 0; i < COMMON_ITEMS_COUNT; i++)
             {
                 ushort itemID = BitConverter.ToUInt16(commonData, i * 2);
@@ -154,7 +121,7 @@ namespace DSPRE.Editors
 
             // Read rare items
             rareItemIDs.Clear();
-            byte[] rareData = DSUtils.ReadFromFile(overlayPath, RARE_ITEMS_OFFSET, RARE_ITEMS_COUNT * 2);
+            byte[] rareData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupRareItemsOffset, RARE_ITEMS_COUNT * 2);
             for (int i = 0; i < RARE_ITEMS_COUNT; i++)
             {
                 ushort itemID = BitConverter.ToUInt16(rareData, i * 2);
@@ -167,15 +134,15 @@ namespace DSPRE.Editors
 
         private void LoadActivationOdds()
         {
-            string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+            string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
             // Read the activation divisor (1 byte, should be 0x0A = 10)
             // Note: Even though it's used in _s32_div_f, the actual value stored is just 1 byte
-            byte[] divisorData = DSUtils.ReadFromFile(overlayPath, ACTIVATION_DIVISOR_OFFSET, 1);
+            byte[] divisorData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupActivationDivisorOffset, 1);
             activationDivisor = divisorData[0];
 
             // Read the 9-byte pickup weight table
-            byte[] weightData = DSUtils.ReadFromFile(overlayPath, WEIGHT_TABLE_OFFSET, WEIGHT_TABLE_SIZE);
+            byte[] weightData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupWeightTableOffset, WEIGHT_TABLE_SIZE);
             Array.Copy(weightData, pickupWeightTable, WEIGHT_TABLE_SIZE);
 
             PopulateActivationOddsUI();
@@ -359,7 +326,7 @@ namespace DSPRE.Editors
         {
             try
             {
-                string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+                string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
                 // Write common items
                 byte[] commonData = new byte[COMMON_ITEMS_COUNT * 2];
@@ -368,7 +335,7 @@ namespace DSPRE.Editors
                     byte[] itemBytes = BitConverter.GetBytes(commonItemIDs[i]);
                     Array.Copy(itemBytes, 0, commonData, i * 2, 2);
                 }
-                DSUtils.WriteToFile(overlayPath, commonData, COMMON_ITEMS_OFFSET);
+                DSUtils.WriteToFile(overlayPath, commonData, RomInfo.pickupCommonItemsOffset);
 
                 // Write rare items
                 byte[] rareData = new byte[RARE_ITEMS_COUNT * 2];
@@ -377,14 +344,14 @@ namespace DSPRE.Editors
                     byte[] itemBytes = BitConverter.GetBytes(rareItemIDs[i]);
                     Array.Copy(itemBytes, 0, rareData, i * 2, 2);
                 }
-                DSUtils.WriteToFile(overlayPath, rareData, RARE_ITEMS_OFFSET);
+                DSUtils.WriteToFile(overlayPath, rareData, RomInfo.pickupRareItemsOffset);
 
                 // Write activation divisor (1 byte)
                 byte[] divisorData = new byte[1] { (byte)activationDivisor };
-                DSUtils.WriteToFile(overlayPath, divisorData, ACTIVATION_DIVISOR_OFFSET);
+                DSUtils.WriteToFile(overlayPath, divisorData, RomInfo.pickupActivationDivisorOffset);
 
                 // Write activation weight table
-                DSUtils.WriteToFile(overlayPath, pickupWeightTable, WEIGHT_TABLE_OFFSET);
+                DSUtils.WriteToFile(overlayPath, pickupWeightTable, RomInfo.pickupWeightTableOffset);
 
                 SetClean();
                 MessageBox.Show("Pickup table saved successfully!", "Save Complete", 

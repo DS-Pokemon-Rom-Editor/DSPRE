@@ -54,6 +54,16 @@ namespace DSPRE
 
         public static uint headerTableOffset { get; private set; }
 
+        // Pickup Table offsets (in overlay file)
+        public static int pickupTableOverlayNumber { get; private set; }
+        public static uint pickupCommonItemsOffset { get; private set; }
+        public static uint pickupRareItemsOffset { get; private set; }
+        public static uint pickupActivationDivisorOffset { get; private set; }
+        public static uint pickupWeightTableOffset { get; private set; }
+
+        // Item Table offset (in ARM9)
+        public static uint itemTableOffset { get; private set; }
+
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
 
@@ -293,6 +303,8 @@ namespace DSPRE
             SetNarcDirs();
             SetHeaderTableOffset();
             SetNullEncounterID();
+            SetPickupTableOffsets();
+            SetItemTableOffset();
 
             SetAbilityNamesTextNumber();
             SetAttackNamesTextNumber();
@@ -608,6 +620,140 @@ namespace DSPRE
                             break;
                     }
                     break;
+            }
+        }
+
+        public static void SetPickupTableOffsets()
+        {
+            // Initialize to invalid values by default
+            pickupTableOverlayNumber = -1;
+            pickupCommonItemsOffset = 0;
+            pickupRareItemsOffset = 0;
+            pickupActivationDivisorOffset = 0;
+            pickupWeightTableOffset = 0;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    if (gameLanguage == GameLanguages.English)
+                    {
+                        pickupTableOverlayNumber = 11;
+                        pickupCommonItemsOffset = 0x30764;
+                        pickupRareItemsOffset = 0x30688;
+                        pickupActivationDivisorOffset = 0xBCB2;
+                        pickupWeightTableOffset = 0x30B90;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    if (gameLanguage == GameLanguages.English)
+                    {
+                        pickupTableOverlayNumber = 16;
+                        pickupCommonItemsOffset = 0x3352C;
+                        pickupRareItemsOffset = 0x33450;
+                        pickupActivationDivisorOffset = 0xC62A;
+                        pickupWeightTableOffset = 0x33968;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    if (gameLanguage == GameLanguages.English)
+                    {
+                        pickupTableOverlayNumber = 12;
+                        pickupCommonItemsOffset = 0x34B44;
+                        pickupRareItemsOffset = 0x34A4C;
+                        pickupActivationDivisorOffset = 0xC852;
+                        pickupWeightTableOffset = 0x3518C;
+                    }
+                    break;
+            }
+        }
+
+        public static void SetItemTableOffset()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English:
+                            itemTableOffset = 0xF85B4;
+                            break;
+                        case GameLanguages.Japanese:
+                            itemTableOffset = 0xFA520;
+                            break;
+                        case GameLanguages.French:
+                            itemTableOffset = 0xF85F8;
+                            break;
+                        case GameLanguages.German:
+                            itemTableOffset = 0xF85C8;
+                            break;
+                        case GameLanguages.Italian:
+                            itemTableOffset = 0xF856C;
+                            break;
+                        case GameLanguages.Spanish:
+                            itemTableOffset = 0xF8604;
+                            break;
+                        default:
+                            itemTableOffset = 0xF85B4;
+                            break;
+                    }
+                    break;
+                case GameFamilies.Plat:
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English:
+                            itemTableOffset = 0xF0CC4;
+                            break;
+                        case GameLanguages.Japanese:
+                            itemTableOffset = 0xF0354;
+                            break;
+                        case GameLanguages.French:
+                            itemTableOffset = 0xF0D4C;
+                            break;
+                        case GameLanguages.German:
+                            itemTableOffset = 0xF0D1C;
+                            break;
+                        case GameLanguages.Italian:
+                            itemTableOffset = 0xF0CE0;
+                            break;
+                        case GameLanguages.Spanish:
+                            itemTableOffset = 0xF0D58;
+                            break;
+                        default:
+                            itemTableOffset = 0xF0CC4;
+                            break;
+                    }
+                    break;
+                case GameFamilies.HGSS:
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English:
+                            itemTableOffset = 0x100194;
+                            break;
+                        case GameLanguages.Japanese:
+                            itemTableOffset = 0xFF914;
+                            break;
+                        case GameLanguages.French:
+                            itemTableOffset = 0x100178;
+                            break;
+                        case GameLanguages.German:
+                            itemTableOffset = 0x100148;
+                            break;
+                        case GameLanguages.Italian:
+                            itemTableOffset = 0x10010C;
+                            break;
+                        case GameLanguages.Spanish:
+                            itemTableOffset = 0x10017C;
+                            break;
+                        default:
+                            itemTableOffset = 0x100194;
+                            break;
+                    }
+                    break;
+                default:
+                    AppLogger.Error("SetItemTableOffset: Unsupported game");
+                    throw new NotSupportedException("Game not supported");
             }
         }
 
@@ -1944,6 +2090,85 @@ namespace DSPRE
                 OverworldTable.Add(k, (0x3D3D, 0x3D3D)); //ADD 3D overworld data (spriteID and properties are dummy values)
             }
             overworldTableKeys = OverworldTable.Keys.ToArray();
+        }
+
+        /// <summary>
+        /// Checks if the Item Table Editor is available for the current ROM version.
+        /// Item Table Editor requires at least pickup table support.
+        /// </summary>
+        /// <returns>True if the editor is available, false otherwise</returns>
+        public static bool IsItemTableEditorAvailable()
+        {
+            return pickupTableOverlayNumber >= 0;
+        }
+
+        /// <summary>
+        /// Checks if Hidden Items editor is available for the current ROM version.
+        /// Currently only HeartGold US is supported.
+        /// </summary>
+        /// <returns>True if hidden items editor is available, false otherwise</returns>
+        public static bool IsHiddenItemsEditorAvailable()
+        {
+            // Hidden items is only available for HeartGold US
+            return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
+        }
+
+        /// <summary>
+        /// Gets a display name for the current game version.
+        /// </summary>
+        /// <returns>Game display name (e.g., "Diamond (US)", "Platinum (US)", "HeartGold (US)")</returns>
+        public static string GetGameDisplayName()
+        {
+            string gameName;
+            switch (gameVersion)
+            {
+                case GameVersions.Diamond:
+                    gameName = "Diamond";
+                    break;
+                case GameVersions.Pearl:
+                    gameName = "Pearl";
+                    break;
+                case GameVersions.Platinum:
+                    gameName = "Platinum";
+                    break;
+                case GameVersions.HeartGold:
+                    gameName = "HeartGold";
+                    break;
+                case GameVersions.SoulSilver:
+                    gameName = "SoulSilver";
+                    break;
+                default:
+                    gameName = "Unknown";
+                    break;
+            }
+
+            string languageName;
+            switch (gameLanguage)
+            {
+                case GameLanguages.English:
+                    languageName = "US";
+                    break;
+                case GameLanguages.Japanese:
+                    languageName = "JP";
+                    break;
+                case GameLanguages.French:
+                    languageName = "FR";
+                    break;
+                case GameLanguages.German:
+                    languageName = "DE";
+                    break;
+                case GameLanguages.Italian:
+                    languageName = "IT";
+                    break;
+                case GameLanguages.Spanish:
+                    languageName = "ES";
+                    break;
+                default:
+                    languageName = "??";
+                    break;
+            }
+
+            return $"{gameName} ({languageName})";
         }
 
         #endregion System Methods

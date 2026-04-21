@@ -67,7 +67,7 @@ namespace DSPRE.Editors
         public ItemEditor(string[] itemFileNames)
          {      
             OpenEditorsRegistry.Register(this);
-            itemNarcTableOffset = RomInfo.GetItemTableOffset();
+            itemNarcTableOffset = RomInfo.itemTableOffset;
 
             this.itemNames = itemFileNames;
             //this.itemDescriptions = itemDescriptions;
