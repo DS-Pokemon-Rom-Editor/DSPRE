@@ -1617,7 +1617,7 @@ namespace DSPRE
                 EditorPanels.mapEditor.SetupMapEditor(this);
                 nsbtxEditor.SetupNSBTXEditor(this);
                 EditorPanels.eventEditor.SetupEventEditor(this);
-                SetupScriptEditor();
+                EditorPanels.scriptEditor.SetupScriptEditor(this);
                 textEditor.SetupTextEditor(this);
                 trainerEditor.SetupTrainerEditor(this);
 
