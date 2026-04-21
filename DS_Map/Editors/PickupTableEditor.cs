@@ -21,7 +21,7 @@ namespace DSPRE.Editors
         private List<ushort> commonItemIDs = new List<ushort>();
         private List<ushort> rareItemIDs = new List<ushort>();
 
-        // Store the pickup activation divisor (must be multiple of 10)
+        // Store the pickup activation divisor (used in modulo operation: BattleSystem_Random() % divisor)
         private int activationDivisor = 10;
 
         // Store the pickup activation weight table (9 bytes)
@@ -156,12 +156,13 @@ namespace DSPRE.Editors
                 dataGridViewActivation.Rows.Clear();
 
                 // Calculate real probabilities based on the game code logic:
-                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor == 0)
+                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor)
+                //    - Modulo operation: % 10 = 10% (1/10), % 3 = 33.33% (1/3), % 5 = 20% (1/5), etc.
                 // 2. If activated, roll 0-99 for slot selection
                 // 3. For slots 1-9: check if roll < threshold (cumulative)
                 // 4. For rare items: check if roll >= 98 && roll <= 99 (2% of activation)
 
-                double activationChance = (100.0 / activationDivisor); // Calculated from divisor
+                double activationChance = (100.0 / activationDivisor); // 1/divisor converted to percentage
 
                 // Add activation divisor row first
                 var divisorRow = new DataGridViewRow();
@@ -174,7 +175,7 @@ namespace DSPRE.Editors
                 divisorRow.Cells[2].Value = $"{activationChance:F2}%";
                 divisorRow.Cells[2].Style.BackColor = Color.LightYellow;
                 divisorRow.Cells[2].Style.Font = new Font(dataGridViewActivation.Font, FontStyle.Bold);
-                divisorRow.Cells[3].Value = "Divisor (must be multiple of 10)";
+                divisorRow.Cells[3].Value = "Modulo divisor (1-255)";
                 divisorRow.Cells[3].Style.BackColor = Color.LightYellow;
                 dataGridViewActivation.Rows.Add(divisorRow);
 
@@ -428,8 +429,8 @@ namespace DSPRE.Editors
                 var cellValue = dataGridViewActivation.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
                 if (cellValue != null && byte.TryParse(cellValue.ToString(), out byte newDivisor))
                 {
-                    // Validate divisor is a multiple of 10 and positive
-                    if (newDivisor > 0 && newDivisor % 10 == 0)
+                    // Validate divisor is positive (1-255)
+                    if (newDivisor > 0)
                     {
                         activationDivisor = newDivisor;
                         SetDirty();
@@ -437,10 +438,13 @@ namespace DSPRE.Editors
                     }
                     else
                     {
-                        MessageBox.Show("Activation divisor must be a positive multiple of 10 (e.g., 10, 20, 30).\n\n" +
-                            "This is used in _s32_div_f(random, divisor) to determine activation chance.\n" +
-                            "A divisor of 10 = 10% chance, 20 = 5% chance, etc.\n" +
-                            "Valid range: 10-250 (must be multiple of 10).",
+                        MessageBox.Show("Activation divisor must be a positive value (1-255).\n\n" +
+                            "This is used in the modulo operation: BattleSystem_Random() % divisor\n" +
+                            "Probability = 1/divisor converted to percentage:\n" +
+                            "  % 10 = 10% chance (1/10)\n" +
+                            "  % 3 = 33.33% chance (1/3)\n" +
+                            "  % 5 = 20% chance (1/5)\n" +
+                            "  etc.",
                             "Invalid Divisor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         PopulateActivationOddsUI(); // Reset to previous value
                     }
