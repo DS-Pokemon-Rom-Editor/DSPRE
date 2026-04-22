@@ -57,6 +57,16 @@ namespace DSPRE.Editors
         {
             itemTableEditorIsReady = true;
 
+            // Hide Pickup Table tab if not supported for this ROM version
+            if (RomInfo.pickupTableOverlayNumber == -1)
+            {
+                // Remove the Pickup Table tab if it exists
+                if (tabControl.TabPages.Contains(tabPagePickup))
+                {
+                    tabControl.TabPages.Remove(tabPagePickup);
+                }
+            }
+
             // Hide Hidden Items tab if not supported for this ROM version
             if (!RomInfo.IsHiddenItemsEditorAvailable())
             {
@@ -119,6 +129,13 @@ namespace DSPRE.Editors
                 itemTableEditorIsReady = false;
                 pickupTableEditor?.Reset();
                 hiddenItemsEditor?.Reset();
+
+                // Re-add pickup tab if it was removed (for ROM switching scenarios)
+                if (!tabControl.TabPages.Contains(tabPagePickup))
+                {
+                    // Add it back at index 0
+                    tabControl.TabPages.Insert(0, tabPagePickup);
+                }
 
                 // Re-add hidden items tab if it was removed (for ROM switching scenarios)
                 if (!tabControl.TabPages.Contains(tabPageHiddenItems))

@@ -42,6 +42,8 @@ namespace DSPRE.Editors
             if (!isDirty)
             {
                 isDirty = true;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
             }
         }
 
@@ -50,6 +52,31 @@ namespace DSPRE.Editors
             if (isDirty)
             {
                 isDirty = false;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
+            }
+        }
+
+        private void OnDirtyStateChanged()
+        {
+            // Don't update title if we're being disposed
+            if (this.IsDisposed || this.Disposing)
+                return;
+
+            // Walk up the control hierarchy to find ItemTableEditorForm
+            Control parent = this.Parent;
+            while (parent != null)
+            {
+                if (parent is ItemTableEditorForm form)
+                {
+                    // Don't update if form is closing/disposed
+                    if (!form.IsDisposed && !form.Disposing)
+                    {
+                        form.RefreshTitle();
+                    }
+                    break;
+                }
+                parent = parent.Parent;
             }
         }
 
@@ -61,6 +88,14 @@ namespace DSPRE.Editors
         public void SetupPickupTableEditor(bool force = false)
         {
             if (pickupTableEditorIsReady && !force) { return; }
+
+            // Check if pickup table is supported for this ROM
+            if (RomInfo.pickupTableOverlayNumber == -1)
+            {
+                MessageBox.Show("Pickup Table Editor is not available for this ROM version/language.",
+                    "Editor Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             itemNames = RomInfo.GetItemNames();
 
@@ -230,6 +265,49 @@ namespace DSPRE.Editors
             finally
             {
                 Helpers.EnableHandlers();
+            }
+        }
+
+        private void UpdateProbabilityDisplay()
+        {
+            // Update calculated probabilities without clearing rows (avoids NullRef during editing)
+            double activationChance = (100.0 / activationDivisor);
+
+            // Update divisor row (row 0)
+            if (dataGridViewActivation.Rows.Count > 0)
+            {
+                dataGridViewActivation.Rows[0].Cells[1].Value = activationDivisor;
+                dataGridViewActivation.Rows[0].Cells[2].Value = $"{activationChance:F2}%";
+            }
+
+            // Update slot probabilities (rows 1-9)
+            int prevThreshold = 0;
+            for (int i = 0; i < WEIGHT_TABLE_SIZE && i + 1 < dataGridViewActivation.Rows.Count; i++)
+            {
+                int threshold = pickupWeightTable[i];
+                int range = threshold - prevThreshold;
+                double slotProbability = (activationChance / 100.0) * (range / 100.0) * 100.0;
+
+                dataGridViewActivation.Rows[i + 1].Cells[1].Value = threshold;
+                dataGridViewActivation.Rows[i + 1].Cells[2].Value = $"{slotProbability:F2}%";
+                dataGridViewActivation.Rows[i + 1].Cells[3].Value = $"{prevThreshold}-{threshold - 1} ({range} values)";
+
+                prevThreshold = threshold;
+            }
+
+            // Update rare/miss rows if they exist
+            // Note: This is simplified - rare rows are static, only miss probability changes
+            int rareRowIndex = WEIGHT_TABLE_SIZE + 1; // After 9 slot rows and 1 divisor row
+            if (rareRowIndex < dataGridViewActivation.Rows.Count && prevThreshold < 98)
+            {
+                int missRange = 98 - prevThreshold;
+                double missProbability = (activationChance / 100.0) * (missRange / 100.0) * 100.0;
+                // The miss row is after rare row
+                int missRowIndex = rareRowIndex + 1;
+                if (missRowIndex < dataGridViewActivation.Rows.Count)
+                {
+                    dataGridViewActivation.Rows[missRowIndex].Cells[2].Value = $"{missProbability:F2}%";
+                }
             }
         }
 
@@ -434,8 +512,8 @@ namespace DSPRE.Editors
                     {
                         activationDivisor = newDivisor;
                         SetDirty();
-                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
-                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
+                        // Update only calculated cells, don't rebuild the grid
+                        UpdateProbabilityDisplay();
                     }
                     else
                     {
@@ -447,8 +525,8 @@ namespace DSPRE.Editors
                             "  % 5 = 20% chance (1/5)\n" +
                             "  etc.",
                             "Invalid Divisor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
-                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
                 return;
@@ -471,23 +549,23 @@ namespace DSPRE.Editors
                         {
                             pickupWeightTable[thresholdIndex] = newThreshold;
                             SetDirty();
-                            // Defer UI refresh until cell editing completes to avoid NullReferenceException
-                            BeginInvoke(new Action(() => PopulateActivationOddsUI()));
+                            // Update only calculated cells, don't rebuild the grid
+                            UpdateProbabilityDisplay();
                         }
                         else
                         {
                             MessageBox.Show($"Threshold must be between {prevThreshold} and {nextThreshold}.",
                                 "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            // Defer UI refresh until cell editing completes to avoid NullReferenceException
-                            BeginInvoke(new Action(() => PopulateActivationOddsUI()));
+                            // Reset to previous value
+                            UpdateProbabilityDisplay();
                         }
                     }
                     else
                     {
                         MessageBox.Show("Threshold must be between 0 and 100.",
                             "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        // Defer UI refresh until cell editing completes to avoid NullReferenceException
-                        BeginInvoke(new Action(() => PopulateActivationOddsUI()));
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
             }

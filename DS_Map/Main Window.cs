@@ -2066,22 +2066,16 @@ namespace DSPRE
             }
 
             // Open the item table editor in a new window
-            Form editorForm = new Form
+            ItemTableEditorForm editorForm = new ItemTableEditorForm
             {
-                Text = $"Item Table Editor - {RomInfo.GetGameDisplayName()}",
                 Size = new Size(1100, 750),
                 StartPosition = FormStartPosition.CenterScreen,
                 FormBorderStyle = FormBorderStyle.Sizable,
                 MinimumSize = new Size(800, 600)
             };
 
-            ItemTableEditor itemTableEditor = new ItemTableEditor
-            {
-                Dock = DockStyle.Fill
-            };
-
-            editorForm.Controls.Add(itemTableEditor);
-            itemTableEditor.SetupItemTableEditor();
+            // Register for unsaved changes tracking
+            OpenEditorsRegistry.Register(editorForm);
 
             editorForm.Show();
 
