@@ -48,6 +48,8 @@ namespace DSPRE.Editors
             this.columnRareLevel = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnRareItem1 = new System.Windows.Forms.DataGridViewComboBoxColumn();
             this.columnRareItem2 = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.panelTop = new System.Windows.Forms.Panel();
+            this.buttonSave = new System.Windows.Forms.Button();
             this.labelInfo = new System.Windows.Forms.Label();
             this.groupBoxActivation = new System.Windows.Forms.GroupBox();
             this.dataGridViewActivation = new System.Windows.Forms.DataGridView();
@@ -61,6 +63,7 @@ namespace DSPRE.Editors
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewCommon)).BeginInit();
             this.groupBoxRare.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewRare)).BeginInit();
+            this.panelTop.SuspendLayout();
             this.groupBoxActivation.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewActivation)).BeginInit();
             this.SuspendLayout();
@@ -71,7 +74,7 @@ namespace DSPRE.Editors
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.Controls.Add(this.groupBoxCommon, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.groupBoxRare, 0, 3);
-            this.tableLayoutPanel1.Controls.Add(this.labelInfo, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.panelTop, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.groupBoxActivation, 0, 1);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
@@ -218,13 +221,36 @@ namespace DSPRE.Editors
             this.columnRareItem2.HeaderText = "Slot 2";
             this.columnRareItem2.Name = "columnRareItem2";
             // 
+            // panelTop
+            // 
+            this.panelTop.Controls.Add(this.buttonSave);
+            this.panelTop.Controls.Add(this.labelInfo);
+            this.panelTop.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelTop.Location = new System.Drawing.Point(3, 3);
+            this.panelTop.Name = "panelTop";
+            this.panelTop.Size = new System.Drawing.Size(994, 74);
+            this.panelTop.TabIndex = 4;
+            // 
+            // buttonSave
+            // 
+            this.buttonSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonSave.Location = new System.Drawing.Point(869, 20);
+            this.buttonSave.Name = "buttonSave";
+            this.buttonSave.Size = new System.Drawing.Size(120, 30);
+            this.buttonSave.TabIndex = 3;
+            this.buttonSave.Text = "Save All Changes";
+            this.buttonSave.UseVisualStyleBackColor = true;
+            this.buttonSave.Click += new System.EventHandler(this.buttonSave_Click);
+            // 
             // labelInfo
             // 
-            this.labelInfo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.labelInfo.Location = new System.Drawing.Point(3, 0);
+            this.labelInfo.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.labelInfo.Location = new System.Drawing.Point(0, 0);
             this.labelInfo.Name = "labelInfo";
             this.labelInfo.Padding = new System.Windows.Forms.Padding(5);
-            this.labelInfo.Size = new System.Drawing.Size(994, 80);
+            this.labelInfo.Size = new System.Drawing.Size(863, 74);
             this.labelInfo.TabIndex = 2;
             this.labelInfo.Text = resources.GetString("labelInfo.Text");
             // 
@@ -298,6 +324,7 @@ namespace DSPRE.Editors
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewCommon)).EndInit();
             this.groupBoxRare.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewRare)).EndInit();
+            this.panelTop.ResumeLayout(false);
             this.groupBoxActivation.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewActivation)).EndInit();
             this.ResumeLayout(false);
@@ -311,6 +338,8 @@ namespace DSPRE.Editors
         private System.Windows.Forms.DataGridView dataGridViewCommon;
         private System.Windows.Forms.GroupBox groupBoxRare;
         private System.Windows.Forms.DataGridView dataGridViewRare;
+        private System.Windows.Forms.Panel panelTop;
+        private System.Windows.Forms.Button buttonSave;
         private System.Windows.Forms.Label labelInfo;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnCommonLevel;

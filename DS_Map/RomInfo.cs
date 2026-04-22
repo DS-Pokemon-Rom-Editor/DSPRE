@@ -635,35 +635,149 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    if (gameLanguage == GameLanguages.English)
+                    pickupTableOverlayNumber = 11;
+                    switch (gameLanguage)
                     {
-                        pickupTableOverlayNumber = 11;
-                        pickupCommonItemsOffset = 0x30764;
-                        pickupRareItemsOffset = 0x30688;
-                        pickupActivationDivisorOffset = 0xBCB2;
-                        pickupWeightTableOffset = 0x30B90;
+                        case GameLanguages.English:
+                            pickupCommonItemsOffset = 0x30764;
+                            pickupRareItemsOffset = 0x30688;
+                            pickupActivationDivisorOffset = 0xBCB2;
+                            pickupWeightTableOffset = 0x30B90;
+                            break;
+                        case GameLanguages.Japanese:
+                            pickupCommonItemsOffset = 0x32E64;
+                            pickupRareItemsOffset = 0x32D9C;
+                            pickupActivationDivisorOffset = 0xADE4;
+                            pickupWeightTableOffset = 0x32D68;
+                            break;
+                        case GameLanguages.French:
+                            pickupCommonItemsOffset = 0x308CC;
+                            pickupRareItemsOffset = 0x307F0;
+                            pickupActivationDivisorOffset = 0xBDBA;
+                            pickupWeightTableOffset = 0x30CF8;
+                            break;
+                        case GameLanguages.German:
+                            pickupCommonItemsOffset = 0x307E0;
+                            pickupRareItemsOffset = 0x30704;
+                            pickupActivationDivisorOffset = 0xBCCE;
+                            pickupWeightTableOffset = 0x30C0C;
+                            break;
+                        case GameLanguages.Italian:
+                            pickupCommonItemsOffset = 0x307E0;
+                            pickupRareItemsOffset = 0x30704;
+                            pickupActivationDivisorOffset = 0xBCCE;
+                            pickupWeightTableOffset = 0x30C0C;
+                            break;
+                        case GameLanguages.Spanish:
+                            pickupCommonItemsOffset = 0x308CC;
+                            pickupRareItemsOffset = 0x307F0;
+                            pickupActivationDivisorOffset = 0xBDBA;
+                            pickupWeightTableOffset = 0x30CF8;
+                            break;
+                        default:
+                            pickupCommonItemsOffset = 0x30764;
+                            pickupRareItemsOffset = 0x30688;
+                            pickupActivationDivisorOffset = 0xBCB2;
+                            pickupWeightTableOffset = 0x30B90;
+                            break;
                     }
                     break;
 
                 case GameFamilies.Plat:
-                    if (gameLanguage == GameLanguages.English)
+                    pickupTableOverlayNumber = 16;
+                    switch (gameLanguage)
                     {
-                        pickupTableOverlayNumber = 16;
-                        pickupCommonItemsOffset = 0x3352C;
-                        pickupRareItemsOffset = 0x33450;
-                        pickupActivationDivisorOffset = 0xC62A;
-                        pickupWeightTableOffset = 0x33968;
+                        case GameLanguages.English:
+                            pickupCommonItemsOffset = 0x3352C;
+                            pickupRareItemsOffset = 0x33450;
+                            pickupActivationDivisorOffset = 0xC62A;
+                            pickupWeightTableOffset = 0x33968;
+                            break;
+                        case GameLanguages.Japanese:
+                            pickupCommonItemsOffset = 0x33520;
+                            pickupRareItemsOffset = 0x33444;
+                            pickupActivationDivisorOffset = 0xC622;
+                            pickupWeightTableOffset = 0x3395C;
+                            break;
+                        case GameLanguages.French:
+                            pickupCommonItemsOffset = 0x33634;
+                            pickupRareItemsOffset = 0x33558;
+                            pickupActivationDivisorOffset = 0xC732;
+                            pickupWeightTableOffset = 0x33A70;
+                            break;
+                        case GameLanguages.German:
+                            pickupCommonItemsOffset = 0x33548;
+                            pickupRareItemsOffset = 0x3346C;
+                            pickupActivationDivisorOffset = 0xC646;
+                            pickupWeightTableOffset = 0x33984;
+                            break;
+                        case GameLanguages.Italian:
+                            pickupCommonItemsOffset = 0x33548;
+                            pickupRareItemsOffset = 0x3346C;
+                            pickupActivationDivisorOffset = 0xC646;
+                            pickupWeightTableOffset = 0x33984;
+                            break;
+                        case GameLanguages.Spanish:
+                            pickupCommonItemsOffset = 0x33634;
+                            pickupRareItemsOffset = 0x33558;
+                            pickupActivationDivisorOffset = 0xC732;
+                            pickupWeightTableOffset = 0x33A70;
+                            break;
+                        default:
+                            pickupCommonItemsOffset = 0x3352C;
+                            pickupRareItemsOffset = 0x33450;
+                            pickupActivationDivisorOffset = 0xC62A;
+                            pickupWeightTableOffset = 0x33968;
+                            break;
                     }
                     break;
 
                 case GameFamilies.HGSS:
-                    if (gameLanguage == GameLanguages.English)
+                    pickupTableOverlayNumber = 12;
+                    switch (gameLanguage)
                     {
-                        pickupTableOverlayNumber = 12;
-                        pickupCommonItemsOffset = 0x34B44;
-                        pickupRareItemsOffset = 0x34A4C;
-                        pickupActivationDivisorOffset = 0xC852;
-                        pickupWeightTableOffset = 0x3518C;
+                        case GameLanguages.English:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
+                        case GameLanguages.Japanese:
+                            pickupCommonItemsOffset = 0x34B00;
+                            pickupRareItemsOffset = 0x34A0A;
+                            pickupActivationDivisorOffset = 0xC85A;
+                            pickupWeightTableOffset = 0x35148;
+                            break;
+                        case GameLanguages.French:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
+                        case GameLanguages.German:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
+                        case GameLanguages.Italian:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
+                        case GameLanguages.Spanish:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
+                        default:
+                            pickupCommonItemsOffset = 0x34B44;
+                            pickupRareItemsOffset = 0x34A4E;
+                            pickupActivationDivisorOffset = 0xC852;
+                            pickupWeightTableOffset = 0x3518C;
+                            break;
                     }
                     break;
             }

@@ -21,7 +21,7 @@ namespace DSPRE.Editors
         private List<ushort> commonItemIDs = new List<ushort>();
         private List<ushort> rareItemIDs = new List<ushort>();
 
-        // Store the pickup activation divisor (must be multiple of 10)
+        // Store the pickup activation divisor (used in modulo operation: BattleSystem_Random() % divisor)
         private int activationDivisor = 10;
 
         // Store the pickup activation weight table (9 bytes)
@@ -42,6 +42,8 @@ namespace DSPRE.Editors
             if (!isDirty)
             {
                 isDirty = true;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
             }
         }
 
@@ -50,6 +52,31 @@ namespace DSPRE.Editors
             if (isDirty)
             {
                 isDirty = false;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
+            }
+        }
+
+        private void OnDirtyStateChanged()
+        {
+            // Don't update title if we're being disposed
+            if (this.IsDisposed || this.Disposing)
+                return;
+
+            // Walk up the control hierarchy to find ItemTableEditorForm
+            Control parent = this.Parent;
+            while (parent != null)
+            {
+                if (parent is ItemTableEditorForm form)
+                {
+                    // Don't update if form is closing/disposed
+                    if (!form.IsDisposed && !form.Disposing)
+                    {
+                        form.RefreshTitle();
+                    }
+                    break;
+                }
+                parent = parent.Parent;
             }
         }
 
@@ -61,6 +88,14 @@ namespace DSPRE.Editors
         public void SetupPickupTableEditor(bool force = false)
         {
             if (pickupTableEditorIsReady && !force) { return; }
+
+            // Check if pickup table is supported for this ROM
+            if (RomInfo.pickupTableOverlayNumber == -1)
+            {
+                MessageBox.Show("Pickup Table Editor is not available for this ROM version/language.",
+                    "Editor Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             itemNames = RomInfo.GetItemNames();
 
@@ -156,12 +191,13 @@ namespace DSPRE.Editors
                 dataGridViewActivation.Rows.Clear();
 
                 // Calculate real probabilities based on the game code logic:
-                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor == 0)
+                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor)
+                //    - Modulo operation: % 10 = 10% (1/10), % 3 = 33.33% (1/3), % 5 = 20% (1/5), etc.
                 // 2. If activated, roll 0-99 for slot selection
                 // 3. For slots 1-9: check if roll < threshold (cumulative)
                 // 4. For rare items: check if roll >= 98 && roll <= 99 (2% of activation)
 
-                double activationChance = (100.0 / activationDivisor); // Calculated from divisor
+                double activationChance = (100.0 / activationDivisor); // 1/divisor converted to percentage
 
                 // Add activation divisor row first
                 var divisorRow = new DataGridViewRow();
@@ -174,7 +210,7 @@ namespace DSPRE.Editors
                 divisorRow.Cells[2].Value = $"{activationChance:F2}%";
                 divisorRow.Cells[2].Style.BackColor = Color.LightYellow;
                 divisorRow.Cells[2].Style.Font = new Font(dataGridViewActivation.Font, FontStyle.Bold);
-                divisorRow.Cells[3].Value = "Divisor (must be multiple of 10)";
+                divisorRow.Cells[3].Value = "Modulo divisor (1-255)";
                 divisorRow.Cells[3].Style.BackColor = Color.LightYellow;
                 dataGridViewActivation.Rows.Add(divisorRow);
 
@@ -229,6 +265,49 @@ namespace DSPRE.Editors
             finally
             {
                 Helpers.EnableHandlers();
+            }
+        }
+
+        private void UpdateProbabilityDisplay()
+        {
+            // Update calculated probabilities without clearing rows (avoids NullRef during editing)
+            double activationChance = (100.0 / activationDivisor);
+
+            // Update divisor row (row 0)
+            if (dataGridViewActivation.Rows.Count > 0)
+            {
+                dataGridViewActivation.Rows[0].Cells[1].Value = activationDivisor;
+                dataGridViewActivation.Rows[0].Cells[2].Value = $"{activationChance:F2}%";
+            }
+
+            // Update slot probabilities (rows 1-9)
+            int prevThreshold = 0;
+            for (int i = 0; i < WEIGHT_TABLE_SIZE && i + 1 < dataGridViewActivation.Rows.Count; i++)
+            {
+                int threshold = pickupWeightTable[i];
+                int range = threshold - prevThreshold;
+                double slotProbability = (activationChance / 100.0) * (range / 100.0) * 100.0;
+
+                dataGridViewActivation.Rows[i + 1].Cells[1].Value = threshold;
+                dataGridViewActivation.Rows[i + 1].Cells[2].Value = $"{slotProbability:F2}%";
+                dataGridViewActivation.Rows[i + 1].Cells[3].Value = $"{prevThreshold}-{threshold - 1} ({range} values)";
+
+                prevThreshold = threshold;
+            }
+
+            // Update rare/miss rows if they exist
+            // Note: This is simplified - rare rows are static, only miss probability changes
+            int rareRowIndex = WEIGHT_TABLE_SIZE + 1; // After 9 slot rows and 1 divisor row
+            if (rareRowIndex < dataGridViewActivation.Rows.Count && prevThreshold < 98)
+            {
+                int missRange = 98 - prevThreshold;
+                double missProbability = (activationChance / 100.0) * (missRange / 100.0) * 100.0;
+                // The miss row is after rare row
+                int missRowIndex = rareRowIndex + 1;
+                if (missRowIndex < dataGridViewActivation.Rows.Count)
+                {
+                    dataGridViewActivation.Rows[missRowIndex].Cells[2].Value = $"{missProbability:F2}%";
+                }
             }
         }
 
@@ -428,21 +507,26 @@ namespace DSPRE.Editors
                 var cellValue = dataGridViewActivation.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
                 if (cellValue != null && byte.TryParse(cellValue.ToString(), out byte newDivisor))
                 {
-                    // Validate divisor is a multiple of 10 and positive
-                    if (newDivisor > 0 && newDivisor % 10 == 0)
+                    // Validate divisor is positive (1-255)
+                    if (newDivisor > 0)
                     {
                         activationDivisor = newDivisor;
                         SetDirty();
-                        PopulateActivationOddsUI(); // Refresh all probabilities
+                        // Update only calculated cells, don't rebuild the grid
+                        UpdateProbabilityDisplay();
                     }
                     else
                     {
-                        MessageBox.Show("Activation divisor must be a positive multiple of 10 (e.g., 10, 20, 30).\n\n" +
-                            "This is used in _s32_div_f(random, divisor) to determine activation chance.\n" +
-                            "A divisor of 10 = 10% chance, 20 = 5% chance, etc.\n" +
-                            "Valid range: 10-250 (must be multiple of 10).",
+                        MessageBox.Show("Activation divisor must be a positive value (1-255).\n\n" +
+                            "This is used in the modulo operation: BattleSystem_Random() % divisor\n" +
+                            "Probability = 1/divisor converted to percentage:\n" +
+                            "  % 10 = 10% chance (1/10)\n" +
+                            "  % 3 = 33.33% chance (1/3)\n" +
+                            "  % 5 = 20% chance (1/5)\n" +
+                            "  etc.",
                             "Invalid Divisor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
                 return;
@@ -465,23 +549,31 @@ namespace DSPRE.Editors
                         {
                             pickupWeightTable[thresholdIndex] = newThreshold;
                             SetDirty();
-                            PopulateActivationOddsUI(); // Refresh probabilities
+                            // Update only calculated cells, don't rebuild the grid
+                            UpdateProbabilityDisplay();
                         }
                         else
                         {
                             MessageBox.Show($"Threshold must be between {prevThreshold} and {nextThreshold}.",
                                 "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            PopulateActivationOddsUI(); // Reset to previous value
+                            // Reset to previous value
+                            UpdateProbabilityDisplay();
                         }
                     }
                     else
                     {
                         MessageBox.Show("Threshold must be between 0 and 100.",
                             "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
             }
+        }
+
+        private void buttonSave_Click(object sender, EventArgs e)
+        {
+            SavePickupTable();
         }
 
         public void Reset()

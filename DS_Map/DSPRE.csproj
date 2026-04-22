@@ -148,6 +148,9 @@
     <Compile Include="Editors\ItemTableEditor.Designer.cs">
       <DependentUpon>ItemTableEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\ItemTableEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
