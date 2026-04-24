@@ -792,6 +792,7 @@
             this.spawnablesListBox.TabIndex = 0;
             this.spawnablesListBox.SelectedIndexChanged += new System.EventHandler(this.spawnablesListBox_SelectedIndexChanged);
             this.spawnablesListBox.DoubleClick += new System.EventHandler(this.spawnablesListBox_DoubleClick);
+            this.spawnablesListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.spawnablesListBox_KeyDown);
             // 
             // overworldsTabPage
             // 
@@ -1423,6 +1424,7 @@
             this.overworldsListBox.TabIndex = 3;
             this.overworldsListBox.SelectedIndexChanged += new System.EventHandler(this.overworldsListBox_SelectedIndexChanged);
             this.overworldsListBox.DoubleClick += new System.EventHandler(this.overworldsListBox_DoubleClick);
+            this.overworldsListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.overworldsListBox_KeyDown);
             // 
             // warpsTabPage
             // 
@@ -1731,6 +1733,7 @@
             this.warpsListBox.Size = new System.Drawing.Size(177, 290);
             this.warpsListBox.TabIndex = 4;
             this.warpsListBox.SelectedIndexChanged += new System.EventHandler(this.warpsListBox_SelectedIndexChanged);
+            this.warpsListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.warpsListBox_KeyDown);
             // 
             // triggersTabPage
             // 
@@ -2146,6 +2149,7 @@
             this.triggersListBox.TabIndex = 4;
             this.triggersListBox.SelectedIndexChanged += new System.EventHandler(this.triggersListBox_SelectedIndexChanged);
             this.triggersListBox.DoubleClick += new System.EventHandler(this.triggersListBox_DoubleClick);
+            this.triggersListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.triggersListBox_KeyDown);
             // 
             // eventPanel
             // 

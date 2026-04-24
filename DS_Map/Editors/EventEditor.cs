@@ -1362,6 +1362,42 @@ namespace DSPRE.Editors
                     DisplayActiveEvents();
                 }
             }
+            else if (mea.Button == MouseButtons.Right && Control.ModifierKeys == Keys.Shift)
+            {
+                // Shift+Right-Click: duplicate the currently selected event at the mouse position
+                if (selectedEvent == null) return;
+                switch (selectedEvent.evType)
+                {
+                    case Event.EventType.Spawnable:
+                        duplicateSpawnableButton_Click(sender, e);
+                        spawnablexMapUpDown.Value = (short)mouseTilePos.X;
+                        spawnableYMapUpDown.Value = (short)mouseTilePos.Y;
+                        spawnableXMatrixUpDown.Value = (short)eventMatrixXUpDown.Value;
+                        spawnableYMatrixUpDown.Value = (short)eventMatrixYUpDown.Value;
+                        break;
+                    case Event.EventType.Overworld:
+                        duplicateOverworldsButton_Click(sender, e);
+                        owXMapUpDown.Value = (short)mouseTilePos.X;
+                        owYMapUpDown.Value = (short)mouseTilePos.Y;
+                        owXMatrixUpDown.Value = (short)eventMatrixXUpDown.Value;
+                        owYMatrixUpDown.Value = (short)eventMatrixYUpDown.Value;
+                        break;
+                    case Event.EventType.Warp:
+                        duplicateWarpsButton_Click(sender, e);
+                        warpXMapUpDown.Value = (short)mouseTilePos.X;
+                        warpYMapUpDown.Value = (short)mouseTilePos.Y;
+                        warpXMatrixUpDown.Value = (short)eventMatrixXUpDown.Value;
+                        warpYMatrixUpDown.Value = (short)eventMatrixYUpDown.Value;
+                        break;
+                    case Event.EventType.Trigger:
+                        duplicateTriggersButton_Click(sender, e);
+                        triggerXMapUpDown.Value = (short)mouseTilePos.X;
+                        triggerYMapUpDown.Value = (short)mouseTilePos.Y;
+                        triggerXMatrixUpDown.Value = (short)eventMatrixXUpDown.Value;
+                        triggerYMatrixUpDown.Value = (short)eventMatrixYUpDown.Value;
+                        break;
+                }
+            }
             else if (mea.Button == MouseButtons.Right)
             {
                 if (showWarpsCheckBox.Checked)
@@ -1670,6 +1706,20 @@ namespace DSPRE.Editors
             currentEvFile.spawnables[selectedSpawnable].type = (ushort)spawnableTypeComboBox.SelectedIndex;
             updateSelectedSpawnableName();
             SetDirty();
+        }
+        private void spawnablesListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!eventEditorIsReady || currentEvFile == null) return;
+            if (e.KeyCode == Keys.Delete)
+            {
+                removeSpawnableButton_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.D && e.Control)
+            {
+                duplicateSpawnableButton_Click(sender, e);
+                e.Handled = true;
+            }
         }
         #endregion
 
@@ -2383,6 +2433,20 @@ namespace DSPRE.Editors
                     "Script File Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        private void overworldsListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!eventEditorIsReady || currentEvFile == null) return;
+            if (e.KeyCode == Keys.Delete)
+            {
+                removeOverworldButton_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.D && e.Control)
+            {
+                duplicateOverworldsButton_Click(sender, e);
+                e.Handled = true;
+            }
+        }
 
         #endregion
 
@@ -2702,6 +2766,20 @@ namespace DSPRE.Editors
             warpsListBox.SelectedIndex = destAnchor;
             centerEventViewOnSelectedEvent_Click(sender, e);
         }
+        private void warpsListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!eventEditorIsReady || currentEvFile == null) return;
+            if (e.KeyCode == Keys.Delete)
+            {
+                removeWarpButton_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.D && e.Control)
+            {
+                duplicateWarpsButton_Click(sender, e);
+                e.Handled = true;
+            }
+        }
         #endregion
 
         #region Triggers Tab
@@ -2756,6 +2834,20 @@ namespace DSPRE.Editors
             triggersListBox.SelectedIndex = currentEvFile.triggers.Count - 1;
             updateSelectedTriggerName();
             SetDirty();
+        }
+        private void triggersListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!eventEditorIsReady || currentEvFile == null) return;
+            if (e.KeyCode == Keys.Delete)
+            {
+                removeTriggerButton_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.D && e.Control)
+            {
+                duplicateTriggersButton_Click(sender, e);
+                e.Handled = true;
+            }
         }
         private void triggersListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
