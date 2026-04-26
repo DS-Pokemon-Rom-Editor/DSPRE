@@ -1610,7 +1610,7 @@ namespace DSPRE.Editors
 
         private void trainerMessageButton_Click(object sender, EventArgs e)
         {
-            var battleMessageEditor = new BattleMessageEditor(currentTrainerFile.trp.trainerID);
+            var battleMessageEditor = new TrainerMessageEditor(currentTrainerFile.trp.trainerID);
 
             battleMessageEditor.ShowDialog();
 
