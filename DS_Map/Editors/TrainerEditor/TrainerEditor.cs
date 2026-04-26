@@ -749,6 +749,7 @@ namespace DSPRE.Editors
             {
                 partyPokemonComboboxList[i].SelectedIndex = currentTrainerFile.party[i].pokeID ?? 0;
                 partyItemsComboboxList[i].SelectedIndex = currentTrainerFile.party[i].heldItem ?? 0;
+                partyItemsComboboxList[i].Enabled = currentTrainerFile.trp.chooseItems;
                 partyLevelUpdownList[i].Value = Math.Max((ushort)1, currentTrainerFile.party[i].level);
                 partyIVUpdownList[i].Value = currentTrainerFile.party[i].difficulty;
                 partyBallUpdownList[i].Value = currentTrainerFile.party[i].ballSeals;
@@ -776,15 +777,19 @@ namespace DSPRE.Editors
                 {
                     for (int j = 0; j < Party.MOVES_PER_POKE; j++)
                     {
-                        (partyMovesGroupboxList[i].Controls[j] as ComboBox).SelectedIndex = 0;
+                        var cb = partyMovesGroupboxList[i].Controls[j] as ComboBox;
+                        cb.SelectedIndex = 0;
+                        cb.Enabled = currentTrainerFile.trp.chooseMoves;
                     }
                 }
                 else
                 {
                     for (int j = 0; j < Party.MOVES_PER_POKE; j++)
                     {
-                        (partyMovesGroupboxList[i].Controls[j] as ComboBox).SelectedIndex = currentTrainerFile.party[i].moves[j];
-                        (partyMovesGroupboxList[i].Controls[j] as ComboBox).ForeColor = SystemColors.WindowText;
+                        var cb = partyMovesGroupboxList[i].Controls[j] as ComboBox;
+                        cb.SelectedIndex = currentTrainerFile.party[i].moves[j];
+                        cb.ForeColor = SystemColors.WindowText;
+                        cb.Enabled = currentTrainerFile.trp.chooseMoves;
                     }
                 }
             }
