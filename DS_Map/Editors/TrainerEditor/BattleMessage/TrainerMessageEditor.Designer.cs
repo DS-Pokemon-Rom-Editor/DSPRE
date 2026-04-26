@@ -1,6 +1,6 @@
 ﻿namespace DSPRE.Editors
 {
-    partial class BattleMessageEditor
+    partial class TrainerMessageEditor
     {
         /// <summary>
         /// Required designer variable.
