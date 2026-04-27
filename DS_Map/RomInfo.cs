@@ -26,6 +26,16 @@ namespace DSPRE
 
         public static bool IsDsRomProject { get; internal set; }
         public static bool isHGE { get; private set; }
+
+        /// <summary>True when a decomp project was loaded via "Load decomp ROM".</summary>
+        public static bool isDecompProject { get; internal set; }
+
+        /// <summary>
+        /// Holds the parsed xMAP overrides for the currently loaded decomp project.
+        /// Null when no decomp project is loaded.
+        /// </summary>
+        public static DecompProjectInfo DecompProjectOverrides { get; internal set; }
+
         public static string romID { get; private set; }
         public static string projectName { get; private set; }
         public static string workDir { get; private set; }
@@ -52,7 +62,7 @@ namespace DSPRE
         public static int cameraTblOverlayNumber { get; private set; }
         public static uint[] cameraTblOffsetsToRAMaddress { get; private set; }
 
-        public static uint headerTableOffset { get; private set; }
+        public static uint headerTableOffset { get; internal set; }
 
         // Pickup Table offsets (in overlay file)
         public static int pickupTableOverlayNumber { get; private set; }
@@ -76,7 +86,7 @@ namespace DSPRE
         public static uint effectsComboTableOffsetToSizeLimiter { get; internal set; }
 
         public static uint OWTableOffset { get; internal set; }
-        public static string OWtablePath { get; private set; }
+        public static string OWtablePath { get; internal set; }
 
         public static uint monIconPalTableAddress { get; private set; }
 
@@ -84,11 +94,11 @@ namespace DSPRE
         public static int abilityNamesTextNumber { get; private set; }
         public static int attackNamesTextNumber { get; private set; }
         public static int[] pokemonNamesTextNumbers { get; private set; }
-        public static int itemNamesTextNumber { get; private set; }
-        public static int itemDescriptionsTextNumber { get; private set; }
+        public static int itemNamesTextNumber { get; internal set; }
+        public static int itemDescriptionsTextNumber { get; internal set; }
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
-        public static int trainerNamesMessageNumber { get; private set; }
+        public static int trainerNamesMessageNumber { get; internal set; }
         public static int moveDescriptionsTextNumbers { get; private set; }
         public static int moveNamesTextNumbers { get; private set; }
         public static int locationNamesTextNumber { get; private set; }
@@ -101,7 +111,7 @@ namespace DSPRE
 
         public static string internalNamesLocation { get; private set; }
         public static readonly byte internalNameLength = 16;
-        public static string internalNamesPath { get; private set; }
+        public static string internalNamesPath { get; internal set; }
 
         public static int cameraSize { get; private set; }
 
@@ -213,6 +223,8 @@ namespace DSPRE
             string path = Path.GetFullPath(romFolderName);
 
             IsDsRomProject = DSUtils.GetFolderType(romFolderName) == 0;
+            isDecompProject = false;
+            DecompProjectOverrides = null;
             
             if (IsDsRomProject)
             {

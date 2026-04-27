@@ -1069,6 +1069,195 @@ namespace DSPRE
 
         }
 
+        private void loadDecompProject_Click(object sender, EventArgs e)
+        {
+            // Check for unsaved changes in current project
+            if (!TryCloseCurrentProject())
+            {
+                AppLogger.Info("loadDecompProject_Click: User cancelled due to unsaved changes");
+                return;
+            }
+
+            OpenFileDialog xmapDialog = new OpenFileDialog
+            {
+                Title = "Select xMAP file",
+                Filter = "xMAP files (*.xMAP;*.xmap)|*.xMAP;*.xmap|All files (*.*)|*.*"
+            };
+            if (xmapDialog.ShowDialog(this) != DialogResult.OK)
+            {
+                AppLogger.Debug("User cancelled the xMAP file dialog.");
+                return;
+            }
+
+            string xmapPath = xmapDialog.FileName;
+            AppLogger.Info($"[Decomp] xMAP selected: {xmapPath}");
+
+            OpenFileDialog openRom = new OpenFileDialog
+            {
+                Title = "Select built decomp ROM",
+                Filter = DSUtils.NDSRomFilter
+            };
+            if (openRom.ShowDialog(this) != DialogResult.OK)
+            {
+                AppLogger.Debug("[Decomp] User cancelled the ROM file dialog.");
+                return;
+            }
+
+            if (!ValidateFilePath(openRom.FileName))
+            {
+                AppLogger.Warn("[Decomp] ROM path validation failed. Aborting.");
+                return;
+            }
+
+            string workDir = DSUtils.WorkDirPathFromFile(openRom.FileName);
+            AppLogger.Info($"[Decomp] Work directory: {workDir}");
+
+            int userchoice = UnpackRomCheckUserChoice(workDir);
+            switch (userchoice)
+            {
+                case -1:
+                    if (!DSUtils.UnpackRom(openRom.FileName, workDir))
+                    {
+                        AppLogger.Error($"[Decomp] Unpacking of ROM \"{openRom.FileName}\" has failed!");
+                        Helpers.statusLabelError($"[Decomp] Unpacking of ROM \"{openRom.FileName}\" has failed");
+                        Update();
+                        return;
+                    }
+                    break;
+                case 0:
+                    AppLogger.Info("[Decomp] User chose to abort.");
+                    Helpers.statusLabelMessage("Loading aborted");
+                    Update();
+                    return;
+                case 1:
+                    AppLogger.Info("[Decomp] User chose to load existing extracted data from " + workDir);
+                    Application.DoEvents();
+                    break;
+                case 2:
+                    AppLogger.Info("[Decomp] User chose to re-extract ROM from " + openRom.FileName);
+                    Application.DoEvents();
+                    Helpers.statusLabelMessage("Deleting old data...");
+                    Update();
+                    try
+                    {
+                        Directory.Delete(workDir, true);
+                        AppLogger.Debug(workDir + " deleted.");
+                    }
+                    catch (IOException)
+                    {
+                        AppLogger.Error("Concurrent access detected while trying to delete " + workDir);
+                        MessageBox.Show("Concurrent access detected: \n" + workDir +
+                            "\nMake sure no other process is using the extracted ROM folder while DSPRE is running.",
+                            "Concurrent Access", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    if (!DSUtils.UnpackRom(openRom.FileName, workDir))
+                    {
+                        AppLogger.Error($"[Decomp] Unpacking of ROM \"{openRom.FileName}\" has failed!");
+                        Helpers.statusLabelError($"[Decomp] Unpacking of ROM \"{openRom.FileName}\" has failed");
+                        Update();
+                        return;
+                    }
+                    break;
+            }
+
+            AppLogger.Info("[Decomp] ROM unpacked successfully.");
+            Update();
+
+            string headerFile = DSUtils.GetFolderType(workDir) == 0 ? "header.yaml" : "header.bin";
+            gameCode = null;
+            SetupROMLanguage(Path.Combine(workDir, headerFile));
+
+            if (string.IsNullOrEmpty(gameCode))
+            {
+                AppLogger.Error("[Decomp] Failed to read game code from ROM header. Aborting.");
+                MessageBox.Show("Failed to read game code from ROM header.", "ROM Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Decomp project mode only supports Pokémon Platinum English (ROM ID: CPUE).
+            if (!gameCode.Equals("CPUE", StringComparison.OrdinalIgnoreCase))
+            {
+                AppLogger.Error($"[Decomp] Unsupported ROM ID \"{gameCode}\". Only Platinum EN (CPUE) is supported.");
+                MessageBox.Show(
+                    $"Decomp project mode only supports Pokémon Platinum (English).\n\n" +
+                    $"Detected ROM ID: {gameCode}\nExpected: CPUE",
+                    "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            romInfo = new RomInfo(gameCode, workDir);
+
+            if (string.IsNullOrWhiteSpace(RomInfo.romID))
+            {
+                AppLogger.Error("[Decomp] ROM ID is empty after initialization. Aborting.");
+                return;
+            }
+
+            AppLogger.Info($"[Decomp] Base ROM loaded: ID = {RomInfo.romID}, family = {RomInfo.gameFamily}");
+
+            // Parse the xMAP now that RomInfo and the overlay table are ready
+            // (OWTableOffset conversion needs the overlay 5 RAM base from the overlay table)
+            DecompProjectInfo overrides = DecompProjectInfo.ParseXMAP(xmapPath);
+            if (overrides == null)
+            {
+                AppLogger.Error("[Decomp] xMAP parsing returned null. Aborting.");
+                return;
+            }
+
+            // Apply the two offset overrides into the live RomInfo state
+            overrides.ApplyToRomInfo();
+            RomInfo.isDecompProject = true;
+            RomInfo.DecompProjectOverrides = overrides;
+            AppLogger.Info("[Decomp] Offset overrides applied to RomInfo.");
+
+            // Decompress ARM9 if needed (same as normal load)
+            if (!CheckAndDecompressARM9())
+            {
+                AppLogger.Error("[Decomp] ARM9 decompression failed. Aborting.");
+                return;
+            }
+
+            // Enable only Map Editor and Event Editor
+            ReadROMInitDataDecomp();
+        }
+
+        /// <summary>
+        /// Minimal version of <see cref="ReadROMInitData"/> that only activates the
+        /// Map Editor and Event Editor, as required for a decomp project.
+        /// </summary>
+        private void ReadROMInitDataDecomp()
+        {
+            EditorPanels.headerEditor.SetupHeaderEditor(this);
+            EditorPanels.headerEditor.DisableDecompUnavailableButtons();
+
+            mainTabControl.Show();
+
+            // Allow switching to another project
+            loadRomButton.Enabled = true;
+            readDataFromFolderButton.Enabled = true;
+            openROMToolStripMenuItem.Enabled = true;
+            openFolderToolStripMenuItem.Enabled = true;
+            loadDecompProjectToolStripMenuItem.Enabled = true;
+
+            // Disable Tools and Other Editors
+            otherEditorsToolStripMenuItem.Enabled = false;
+
+            // Hide every tab except Header Editor, Map Editor, and Event Editor
+            TabPage[] allowedTabs = { EditorPanels.headerEditorTabPage, EditorPanels.mapEditorTabPage, EditorPanels.eventEditorTabPage };
+            foreach (TabPage tab in mainTabControl.TabPages.Cast<TabPage>().ToList())
+            {
+                if (!allowedTabs.Contains(tab))
+                {
+                    tab.Parent = null;
+                }
+            }
+
+            Helpers.statusLabelMessage();
+            this.Text += "  -  " + RomInfo.projectName + "  [Decomp Project]";
+            AppLogger.Info("[Decomp] Decomp project UI ready. Header Editor, Map Editor, and Event Editor are active.");
+        }
+
         private bool ValidateFilePath(string fileName)
         {
             // Empty file name check

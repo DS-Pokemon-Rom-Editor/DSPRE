@@ -105,6 +105,7 @@
     </Compile>
     <Compile Include="AppLogger.cs" />
     <Compile Include="CrashReporter.cs" />
+    <Compile Include="DecompProjectInfo.cs" />
     <Compile Include="DocTool.cs" />
     <Compile Include="DSUtils\ARM9.cs" />
     <Compile Include="DSUtils\DSUtils.cs" />

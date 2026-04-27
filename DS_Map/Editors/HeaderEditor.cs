@@ -185,6 +185,20 @@ namespace DSPRE.Editors
             }
         }
 
+        /// <summary>
+        /// Disables navigation buttons that lead to editors unavailable in decomp-project mode
+        /// (only Map Editor and Event Editor are active).
+        /// </summary>
+        public void DisableDecompUnavailableButtons()
+        {
+            openWildEditorWithIdButton.Enabled = false;
+            openScriptButton.Enabled = false;
+            openLevelScriptButton.Enabled = false;
+            openMatrixButton.Enabled = false;
+            openAreaDataButton.Enabled = false;
+            // openEventsButton stays enabled – Event Editor is active in decomp mode.
+        }
+
         private void openWildEditorWithIdButtonClick(object sender, EventArgs e)
         {
             _parent.openWildEditor(loadCurrent: true);

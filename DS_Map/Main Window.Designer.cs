@@ -74,6 +74,7 @@
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openROMToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.loadDecompProjectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveROMToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.settingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -663,6 +664,7 @@
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openROMToolStripMenuItem,
             this.openFolderToolStripMenuItem,
+            this.loadDecompProjectToolStripMenuItem,
             this.saveROMToolStripMenuItem,
             this.settingsToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -688,8 +690,15 @@
             this.openFolderToolStripMenuItem.Text = "Open Folder";
             this.openFolderToolStripMenuItem.Click += new System.EventHandler(this.readDataFromFolderButton_Click);
             // 
-            // saveROMToolStripMenuItem
+            // loadDecompProjectToolStripMenuItem
             // 
+            this.loadDecompProjectToolStripMenuItem.Name = "loadDecompProjectToolStripMenuItem";
+            this.loadDecompProjectToolStripMenuItem.Size = new System.Drawing.Size(233, 38);
+            this.loadDecompProjectToolStripMenuItem.Text = "Load Decomp Project...";
+            this.loadDecompProjectToolStripMenuItem.Click += new System.EventHandler(this.loadDecompProject_Click);
+            // 
+            // saveROMToolStripMenuItem
+            //
             this.saveROMToolStripMenuItem.Enabled = false;
             this.saveROMToolStripMenuItem.Image = global::DSPRE.Properties.Resources.save_rom;
             this.saveROMToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
@@ -1688,6 +1697,7 @@
         private System.Windows.Forms.ToolStripMenuItem spawnEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem moveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem settingsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem loadDecompProjectToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton weatherMapEditor;
         private System.Windows.Forms.ToolStripMenuItem addressHelperToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem overworldEditorToolStripMenuItem;
