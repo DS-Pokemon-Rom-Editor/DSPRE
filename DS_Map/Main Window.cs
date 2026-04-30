@@ -1240,8 +1240,16 @@ namespace DSPRE
             openFolderToolStripMenuItem.Enabled = true;
             loadDecompProjectToolStripMenuItem.Enabled = true;
 
+            // Enable save and NARC buttons
+            saveRomButton.Enabled = true;
+            saveROMToolStripMenuItem.Enabled = true;
+            unpackAllButton.Enabled = true;
+            updateMapNarcsButton.Enabled = true;
+            NarcUtilityToolStripMenuItem.Enabled = true;
+
             // Disable Tools and Other Editors
             otherEditorsToolStripMenuItem.Enabled = false;
+            
 
             // Hide every tab except Header Editor, Map Editor, and Event Editor
             TabPage[] allowedTabs = { EditorPanels.headerEditorTabPage, EditorPanels.mapEditorTabPage, EditorPanels.eventEditorTabPage };
