@@ -229,6 +229,10 @@
     <Compile Include="Editors\EventEditor.Designer.cs">
       <DependentUpon>EventEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\EventEditor.MovementEditor.cs">
+      <DependentUpon>EventEditor.cs</DependentUpon>
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Editors\HeadbuttEncounterEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -898,6 +902,24 @@
     <None Include="Resources\Graphics\Program Icons\move_editor_icon.png" />
     <None Include="Resources\Graphics\Program Icons\item_editor_icon.png" />
     <None Include="Resources\Graphics\Program Icons\trade_editor_icon.png" />
+    <None Include="Resources\Graphics\Program Icons\pasteIconMedium.png" />
+    <None Include="Resources\Graphics\Program Icons\exclamationMark.png" />
+    <None Include="Resources\Graphics\Program Icons\exclamationMarkDouble.png" />
+    <None Include="Resources\Graphics\Program Icons\EthanSpotLocked.png" />
+    <None Include="Resources\Graphics\Program Icons\smalllistup.png" />
+    <None Include="Resources\Graphics\Program Icons\smalllistdown.png" />
+    <None Include="Resources\Graphics\Program Icons\smalllistdelete.png" />
+    <None Include="Resources\Graphics\Program Icons\smalllistset.png" />
+    <None Include="Resources\Graphics\Program Icons\smallundoListIcon.png" />
+    <None Include="Resources\Graphics\Program Icons\smallredoListIcon.png" />
+    <None Include="Resources\Graphics\Program Icons\smallcopyIcon.png" />
+    <None Include="Resources\Graphics\Program Icons\warpUp.png" />
+    <None Include="Resources\Graphics\Program Icons\warpDown.png" />
+    <None Include="Resources\Graphics\Program Icons\pasteIconMed.png" />
+    <None Include="Resources\Graphics\Program Icons\EthanInvisibleIcon.png" />
+    <None Include="Resources\Graphics\Program Icons\EthanVisibleIcon.png" />
+    <None Include="Resources\Graphics\Program Icons\lockDirection.png" />
+    <None Include="Resources\Graphics\Program Icons\unlockDirection.png" />
     <Content Include="Tools\chatot.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

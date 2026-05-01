@@ -19,6 +19,7 @@ namespace DSPRE.ROMFiles
 
         private static List<(int fileID, ushort commandID, long offset)> invalidCommandsEncountered = new List<(int, ushort, long)>();
         private static bool suppressInvalidCommandErrors = false;
+        public static bool SuppressUnusedReferenceWarnings { get; set; } = false;
 
         /// <summary>
         /// Clears the plaintext script cache. Useful when closing ROM or reloading.
@@ -27,6 +28,16 @@ namespace DSPRE.ROMFiles
         {
             plaintextCache.Clear();
             AppLogger.Info("Script: Plaintext cache cleared.");
+        }
+
+        /// <summary>
+        /// Invalidates the plaintext cache for a single script file. Use when another editor (e.g. Movement Editor) modifies a script.
+        /// </summary>
+        public static void InvalidatePlaintextCacheForFile(int fileID)
+        {
+            if (fileID < 0) return;
+            string txtPath = GetFilePaths(fileID).txtPath;
+            plaintextCache.Remove(txtPath);
         }
 
         public static List<(int fileID, ushort commandID, long offset)> GetInvalidCommands()
@@ -1842,7 +1853,7 @@ namespace DSPRE.ROMFiles
                         errorMsg += Environment.NewLine;
                     }
 
-                    if (!string.IsNullOrEmpty(errorMsg))
+                    if (!string.IsNullOrEmpty(errorMsg) && !SuppressUnusedReferenceWarnings)
                     {
                         MessageBox.Show(errorMsg + Environment.NewLine + "Remember that every unused Function or Action is always lost upon reloading the Script File.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         errorMsg = "";
