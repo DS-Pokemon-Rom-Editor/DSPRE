@@ -14,16 +14,17 @@ env:
 
 jobs:
   get_latest_tag:
-    name: Get Latest Tag
     runs-on: ubuntu-latest
     outputs:
-      latest_tag: ${{ steps.get_latest_tag.outputs.tag }}
+      latest_tag: ${{ steps.latest_release.outputs.tag }}
     steps:
-         - uses: oprypin/find-latest-tag@v1
-           with:
-            repository: ${{ github.repository }}
-            releases-only: true
-           id: get_latest_tag
+      - name: Get latest release tag (exclude pre-releases)
+        id: latest_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh release list --limit 1 --exclude-pre-releases --json tagName --jq '.[0].tagName')
+          echo "tag=$tag" >> $GITHUB_OUTPUT
 
   deploy_to_github_releases:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
@@ -59,7 +60,7 @@ jobs:
           fi
           
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
-          echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
+          echo "dotnet_version=v$dotnet_version" >> $GITHUB_OUTPUT
       - name: Debug Output
         run: |
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
