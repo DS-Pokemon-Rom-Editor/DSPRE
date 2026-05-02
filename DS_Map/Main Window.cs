@@ -1533,30 +1533,6 @@ namespace DSPRE
 
             Helpers.statusLabelMessage("Repacking ROM...");
 
-            if (OverlayUtils.OverlayTable.IsDefaultCompressed(1))
-            {
-                if (PatchToolboxDialog.overlay1MustBeRestoredFromBackup)
-                {
-                    OverlayUtils.RestoreFromCompressedBackup(1, EditorPanels.eventEditor.eventEditorIsReady);
-                }
-                else
-                {
-                    if (!OverlayUtils.IsCompressed(1))
-                    {
-                        OverlayUtils.Compress(1);
-                    }
-                }
-            }
-
-            if (OverlayUtils.OverlayTable.IsDefaultCompressed(RomInfo.initialMoneyOverlayNumber))
-            {
-                if (!OverlayUtils.IsCompressed(RomInfo.initialMoneyOverlayNumber))
-                {
-                    OverlayUtils.Compress(RomInfo.initialMoneyOverlayNumber);
-                }
-            }
-
-
             Update();
 
             bool success = DSUtils.RepackROM(saveRom.FileName);
