@@ -48,6 +48,13 @@ namespace NarcAPI {
             Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath));
             String[] fileNames = Directory.GetFiles(dirPath, "*.*", SearchOption.AllDirectories);
 
+            // Filter out *.bak and *.backup files
+            fileNames = Array.FindAll(fileNames, f => {
+                string ext = Path.GetExtension(f).ToLower();
+                return ext != ".bak" && ext != ".backup";
+            });
+            // Sort files by name in a case-insensitive manner to ensure consistent ordering#
+            // This step is crucial to maintain compatibility with files on other drives and filesystems (like WSL)
             Array.Sort(fileNames, StringComparer.OrdinalIgnoreCase);
 
             uint numberOfElements = (uint)fileNames.Length;
