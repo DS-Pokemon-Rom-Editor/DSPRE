@@ -1146,7 +1146,7 @@
             // trainerAI2CheckBox
             // 
             this.trainerAI2CheckBox.AutoSize = true;
-            this.trainerAI2CheckBox.Location = new System.Drawing.Point(80, 21);
+            this.trainerAI2CheckBox.Location = new System.Drawing.Point(65, 21);
             this.trainerAI2CheckBox.Name = "trainerAI2CheckBox";
             this.trainerAI2CheckBox.Size = new System.Drawing.Size(102, 17);
             this.trainerAI2CheckBox.TabIndex = 1;
@@ -1192,18 +1192,18 @@
             // trainerAI6CheckBox
             // 
             this.trainerAI6CheckBox.AutoSize = true;
-            this.trainerAI6CheckBox.Location = new System.Drawing.Point(80, 44);
+            this.trainerAI6CheckBox.Location = new System.Drawing.Point(65, 44);
             this.trainerAI6CheckBox.Name = "trainerAI6CheckBox";
             this.trainerAI6CheckBox.Size = new System.Drawing.Size(100, 17);
             this.trainerAI6CheckBox.TabIndex = 5;
-            this.trainerAI6CheckBox.Text = "Damage Priority";
-            this.toolTip.SetToolTip(this.trainerAI6CheckBox, "Prioritize non-standard/flat damage moves or \"Risky\" attacking moves.");
+            this.trainerAI6CheckBox.Text = "Prioritize Extremes";
+            this.toolTip.SetToolTip(this.trainerAI6CheckBox, "Prioritize moves with variable power, flat damage, high base power, or zero power.");
             this.trainerAI6CheckBox.UseVisualStyleBackColor = true;
             // 
             // trainerAI7CheckBox
             // 
             this.trainerAI7CheckBox.AutoSize = true;
-            this.trainerAI7CheckBox.Location = new System.Drawing.Point(80, 67);
+            this.trainerAI7CheckBox.Location = new System.Drawing.Point(65, 67);
             this.trainerAI7CheckBox.Name = "trainerAI7CheckBox";
             this.trainerAI7CheckBox.Size = new System.Drawing.Size(80, 17);
             this.trainerAI7CheckBox.TabIndex = 6;
@@ -1215,7 +1215,7 @@
             // trainerAI8CheckBox
             // 
             this.trainerAI8CheckBox.AutoSize = true;
-            this.trainerAI8CheckBox.Location = new System.Drawing.Point(80, 90);
+            this.trainerAI8CheckBox.Location = new System.Drawing.Point(65, 90);
             this.trainerAI8CheckBox.Name = "trainerAI8CheckBox";
             this.trainerAI8CheckBox.Size = new System.Drawing.Size(87, 17);
             this.trainerAI8CheckBox.TabIndex = 7;
