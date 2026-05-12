@@ -1203,7 +1203,7 @@
             // trainerAI7CheckBox
             // 
             this.trainerAI7CheckBox.AutoSize = true;
-            this.trainerAI7CheckBox.Location = new System.Drawing.Point(65, 67);
+            this.trainerAI7CheckBox.Location = new System.Drawing.Point(72, 67);
             this.trainerAI7CheckBox.Name = "trainerAI7CheckBox";
             this.trainerAI7CheckBox.Size = new System.Drawing.Size(80, 17);
             this.trainerAI7CheckBox.TabIndex = 6;
