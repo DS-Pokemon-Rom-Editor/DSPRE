@@ -17,7 +17,7 @@ Edit Bug Catching Contest Pokémon pools, levels, and encounter rates.
 Edit the daily rotating Pokémon in the Great Marsh.
 
 ### Honey Tree Encounter Editor *(DPPt only)*
-Edit Honey Tree encounter groups, species, and levels.
+Edit Honey Tree encounter groups, and species.
 
 ### Pickup Table Editor
 Edit the item table for the Pickup ability: common items, rare items, and activation odds.
@@ -78,6 +78,8 @@ Edit form sprites for Pokémon that have multiple forms (Unown, Rotom, Giratina,
 
 ### Personal Data Editor
 - Import/export via CSV
+
+### Item Editor
 - Item checkbox label corrected to "Prevent Toss & Hold"
 
 ### Matrix Editor
