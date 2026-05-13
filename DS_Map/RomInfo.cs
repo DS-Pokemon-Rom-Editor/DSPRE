@@ -738,43 +738,43 @@ namespace DSPRE
                     {
                         case GameLanguages.English:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
                         case GameLanguages.Japanese:
                             pickupCommonItemsOffset = 0x34B00;
-                            pickupRareItemsOffset = 0x34A0A;
+                            pickupRareItemsOffset = 0x34A08;
                             pickupActivationDivisorOffset = 0xC85A;
                             pickupWeightTableOffset = 0x35148;
                             break;
                         case GameLanguages.French:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
                         case GameLanguages.German:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
                         case GameLanguages.Italian:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
                         case GameLanguages.Spanish:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
                         default:
                             pickupCommonItemsOffset = 0x34B44;
-                            pickupRareItemsOffset = 0x34A4E;
+                            pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
                             break;
