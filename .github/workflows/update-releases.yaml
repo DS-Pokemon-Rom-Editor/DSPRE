@@ -18,7 +18,7 @@ jobs:
     outputs:
       latest_tag: ${{ steps.latest_release.outputs.tag }}
     steps:
-     - name: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
       - name: Get latest release tag (exclude pre-releases)
         id: latest_release
