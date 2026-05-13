@@ -124,7 +124,7 @@
   <data name="trainerMessageButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABUAAAASCAYAAAC0EpUuAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        wAAADsABataJCQAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC41ZYUyZQAAAMJJREFUOE+l0DES
+        vwAADr8BOAVTJAAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC41ZYUyZQAAAMJJREFUOE+l0DES
         QiEMBFCO5REsLT2Cx/lH8DiWlpYewZKOP2FcTHZIyHyLbQi8BUprrXg5X65Nh+dezGEeylq515FsST9Y
         b6U9T8Vs7Ov1Y6ILuGSKMgx027aRqETjv1sRzECmALD5P4YjhGfYb1AP9hCOi65gr0CD408N+N0koGSG
         cFIoNj5e7x6NcQGDBp09U9YQwXl+CJXgtsgKHChugmfx4cOo/sOoYAWa52s8U5BGswURGKJRAW7+F6qj
@@ -148,4 +148,7 @@
         RK5CYII=
 </value>
   </data>
+  <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
 </root>

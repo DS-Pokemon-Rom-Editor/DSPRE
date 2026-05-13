@@ -205,6 +205,7 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.trainerComboBox = new DSPRE.InputComboBox();
             this.trainerSearchButton = new System.Windows.Forms.Button();
+            this.animateTrainerFramesCheckbox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.partyLevel2UpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.partyBall2UpDown)).BeginInit();
             this.party1GroupBox.SuspendLayout();
@@ -1197,7 +1198,8 @@
             this.trainerAI6CheckBox.Size = new System.Drawing.Size(111, 17);
             this.trainerAI6CheckBox.TabIndex = 5;
             this.trainerAI6CheckBox.Text = "Prioritize Extremes";
-            this.toolTip.SetToolTip(this.trainerAI6CheckBox, "Prioritize moves with variable power, flat damage, high base power, or zero power.");
+            this.toolTip.SetToolTip(this.trainerAI6CheckBox, "Prioritize moves with variable power, flat damage, high base power, or zero power" +
+        ".");
             this.trainerAI6CheckBox.UseVisualStyleBackColor = true;
             // 
             // trainerAI7CheckBox
@@ -1325,7 +1327,7 @@
             // eyeContactMusicAltLabel
             // 
             this.eyeContactMusicAltLabel.AutoSize = true;
-            this.eyeContactMusicAltLabel.Location = new System.Drawing.Point(286, 69);
+            this.eyeContactMusicAltLabel.Location = new System.Drawing.Point(285, 77);
             this.eyeContactMusicAltLabel.Name = "eyeContactMusicAltLabel";
             this.eyeContactMusicAltLabel.Size = new System.Drawing.Size(117, 13);
             this.eyeContactMusicAltLabel.TabIndex = 36;
@@ -1334,7 +1336,7 @@
             // encounterSSEQAltUpDown
             // 
             this.encounterSSEQAltUpDown.Enabled = false;
-            this.encounterSSEQAltUpDown.Location = new System.Drawing.Point(290, 85);
+            this.encounterSSEQAltUpDown.Location = new System.Drawing.Point(288, 93);
             this.encounterSSEQAltUpDown.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -1347,7 +1349,7 @@
             // eyeContactMusicLabel
             // 
             this.eyeContactMusicLabel.AutoSize = true;
-            this.eyeContactMusicLabel.Location = new System.Drawing.Point(143, 69);
+            this.eyeContactMusicLabel.Location = new System.Drawing.Point(147, 76);
             this.eyeContactMusicLabel.Name = "eyeContactMusicLabel";
             this.eyeContactMusicLabel.Size = new System.Drawing.Size(128, 13);
             this.eyeContactMusicLabel.TabIndex = 34;
@@ -2025,6 +2027,7 @@
             // 
             // groupBox27
             // 
+            this.groupBox27.Controls.Add(this.animateTrainerFramesCheckbox);
             this.groupBox27.Controls.Add(this.eyeContactMusicAltLabel);
             this.groupBox27.Controls.Add(this.encounterSSEQAltUpDown);
             this.groupBox27.Controls.Add(this.eyeContactMusicLabel);
@@ -2045,7 +2048,7 @@
             // 
             // encounterSSEQMainUpDown
             // 
-            this.encounterSSEQMainUpDown.Location = new System.Drawing.Point(146, 85);
+            this.encounterSSEQMainUpDown.Location = new System.Drawing.Point(146, 93);
             this.encounterSSEQMainUpDown.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -2349,6 +2352,17 @@
             this.trainerSearchButton.UseVisualStyleBackColor = true;
             this.trainerSearchButton.Click += new System.EventHandler(this.trainerSearchButton_Click);
             // 
+            // animateTrainerFramesCheckbox
+            // 
+            this.animateTrainerFramesCheckbox.AutoSize = true;
+            this.animateTrainerFramesCheckbox.Location = new System.Drawing.Point(146, 55);
+            this.animateTrainerFramesCheckbox.Name = "animateTrainerFramesCheckbox";
+            this.animateTrainerFramesCheckbox.Size = new System.Drawing.Size(64, 17);
+            this.animateTrainerFramesCheckbox.TabIndex = 37;
+            this.animateTrainerFramesCheckbox.Text = "Animate";
+            this.animateTrainerFramesCheckbox.UseVisualStyleBackColor = true;
+            this.animateTrainerFramesCheckbox.CheckedChanged += new System.EventHandler(this.animateTrainerFramesCheckbox_CheckedChanged);
+            // 
             // TrainerEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -2612,5 +2626,6 @@
         private System.Windows.Forms.Button aiInfoButton;
         private System.Windows.Forms.Button trainerMessageButton;
         private System.Windows.Forms.Button trainerSearchButton;
+        private System.Windows.Forms.CheckBox animateTrainerFramesCheckbox;
     }
 }
