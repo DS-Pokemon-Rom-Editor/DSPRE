@@ -119,6 +119,8 @@ namespace DSPRE.Editors
         public ImageBase trainerTile;
         public SpriteBase trainerSprite;
 
+        private Timer trainerClassAnimTimer;
+
         Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> trainerClassEncounterMusicDict;
         private void SetupTrainerClassEncounterMusicTable()
         {
@@ -1221,10 +1223,22 @@ namespace DSPRE.Editors
 
                 trClassFramePreviewUpDown.Maximum = maxFrames;
                 trainerClassFrameMaxLabel.Text = "/" + maxFrames;
+
+                animateTrainerFramesCheckbox.Enabled = maxFrames > 0;
             }
             catch
             {
                 trClassFramePreviewUpDown.Maximum = 0;
+                animateTrainerFramesCheckbox.Enabled = false;
+            }
+
+            if (animateTrainerFramesCheckbox.Checked)
+            {
+                animateTrainerFramesCheckbox.Checked = false;
+            }
+            else
+            {
+                StopTrainerClassAnimation();
             }
 
             trainerClassNameTextbox.Text = GetTrainerClassNameFromListbox(trainerClassListBox.SelectedItem);
@@ -1410,7 +1424,54 @@ namespace DSPRE.Editors
 
         private void trClassFramePreviewUpDown_ValueChanged(object sender, EventArgs e)
         {
-            UpdateTrainerClassPic(trainerClassPicBox);
+            UpdateTrainerClassPic(trainerClassPicBox, (int)trClassFramePreviewUpDown.Value);
+        }
+
+        private void animateTrainerFramesCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (animateTrainerFramesCheckbox.Checked)
+            {
+                trClassFramePreviewUpDown.Enabled = false;
+                StartTrainerClassAnimation();
+            }
+            else
+            {
+                StopTrainerClassAnimation();
+                trClassFramePreviewUpDown.Enabled = true;
+            }
+        }
+
+        private void StartTrainerClassAnimation()
+        {
+            if (trainerClassAnimTimer == null)
+            {
+                trainerClassAnimTimer = new Timer();
+                trainerClassAnimTimer.Interval = 200;
+                trainerClassAnimTimer.Tick += TrainerClassAnimTimer_Tick;
+            }
+            trainerClassAnimTimer.Start();
+        }
+
+        private void StopTrainerClassAnimation()
+        {
+            if (trainerClassAnimTimer != null)
+            {
+                trainerClassAnimTimer.Stop();
+            }
+        }
+
+        private void TrainerClassAnimTimer_Tick(object sender, EventArgs e)
+        {
+            int maxFrames = (int)trClassFramePreviewUpDown.Maximum;
+            if (maxFrames <= 0)
+            {
+                StopTrainerClassAnimation();
+                return;
+            }
+
+            int nextFrame = ((int)trClassFramePreviewUpDown.Value + 1) % (maxFrames + 1);
+            trClassFramePreviewUpDown.Value = nextFrame;
+            UpdateTrainerClassPic(trainerClassPicBox, nextFrame);
         }
 
         private (int abi1, int abi2)[] getPokemonAbilities(int numPokemonSpecies)
