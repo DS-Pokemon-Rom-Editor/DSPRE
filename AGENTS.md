@@ -1,36 +1,121 @@
 # AGENTS.md
 
-This file provides guidance to LLM agents when working with code in this repository. It has been updated with research on migrating the project to .NET 8.
+This file provides guidance to LLM agents when working with code in this repository.
 
 ## Project Overview
 
 DS Pokemon ROM Editor (DSPRE) Reloaded is a C# Windows Forms application for editing Nintendo DS Pokemon ROM files. This is a major overhaul of the original DSPRE by Nomura with significant new features, performance improvements, and bug fixes. The editor supports multiple Pokemon games: Diamond/Pearl/Platinum (DPPt), and HeartGold/SoulSilver (HGSS).
 
-## .NET 8 Migration Research
+## Working Guidelines for Agents
 
-A feasibility study was conducted to assess migrating this project from .NET Framework 4.8 to .NET 8.
+Behavioral guidelines for agents working on this project. These bias toward caution over speed; for trivial tasks, use judgment.
 
-### Migration Feasibility: **FEASIBLE with Significant Effort**
+### 1. Think Before Coding
 
-The migration is technically possible but requires a substantial overhaul of the graphics and UI layers.
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-### Key Migration Blockers & Challenges
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-| Component | Severity | Issue | Migration Path |
-|-----------|----------|-------|----------------|
-| **OpenGL Stack** | **CRITICAL** | Uses legacy **Tao.OpenGl** and **OpenTK 1.0**. These use immediate mode rendering (glBegin/glEnd) which is deprecated and incompatible with modern .NET Core/8. | Complete rewrite using **OpenTK 4.x** or **Silk.NET**. Requires implementing shaders and VBOs to replace the fixed-function pipeline. |
-| **WinForms UI** | **HIGH** | 110+ files using Windows Forms. While supported in .NET 8, it remains Windows-only. | Port to .NET 8 WinForms (remains Windows-only) or migrate to **Avalonia** for true cross-platform support. |
-| **WPF Interop** | **HIGH** | Uses WPF components for 3D rendering in some editors. | Replace WPF interop with pure OpenGL (OpenTK) or modern WinUI 3 controls. |
-| **ScintillaNET** | **MEDIUM** | Version 3.6.3 is archived and does not support .NET Core. | Migrate to **Scintilla5.NET** (maintained fork). |
-| **Platform Code** | **MEDIUM** | 1,400+ references to Windows-specific code (P/Invoke, backslash paths, Registry). | Refactor to use `Path.Combine`, cross-platform dialogs, and managed alternatives for native calls. |
+### 2. Simplicity First
 
-### Migration Roadmap Recommendation
+**Minimum code that solves the problem. Nothing speculative.**
 
-1.  **Phase 1: Dependency Modernization** - Replace WindowsAPICodePack with modern .NET dialogs. Update LibGit2Sharp and Velopack to .NET 8 versions.
-2.  **Phase 2: Project Conversion** - Convert `.csproj` files to SDK-style format and target `net8.0-windows`.
-3.  **Phase 3: OpenGL Layer Rewrite** - (The most complex phase) Replace Tao.OpenGl with OpenTK 4.x. This involves writing shaders to mimic the old fixed-function pipeline.
-4.  **Phase 4: Script Editor Port** - Migrate ScintillaNET to Scintilla5.NET.
-5.  **Phase 5: Cross-Platform Refactoring** - (Optional) Replace WinForms with Avalonia and eliminate remaining P/Invokes to support Linux/macOS.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+**Build/lint what you touch.** This repo spans C# (the DSPRE app, builds with `msbuild` on Windows) and Rust (the bundled `ds-rom/` crate, plus the uxie integration). After substantive C# edits, ensure the solution still builds. After substantive Rust edits, run Clippy on the crate(s) you changed (e.g. `cargo clippy` in `ds-rom/` or `~/dev/uxie`) and address **new** warnings in files you touched. Note: DSPRE itself cannot be built on Linux — it needs a Windows toolchain.
+
+### 5. Don't Reimplement Upstream Logic
+
+**When a dependency already solves the problem, don't rewrite it.**
+
+- The whole point of the uxie integration is to *stop* reimplementing parsers DSPRE doesn't need to own. Before adding a new binary parser, serializer, or resolver, check whether uxie (or ds-rom) already exposes it.
+- If the logic lives in a sister crate but isn't exposed over FFI, add a thin FFI seam there — never copy the logic into a parallel implementation.
+- Don't round-trip through text (serialize → deserialize) when you already have structured data. (The JSON-over-FFI wire format is a deliberate boundary choice, not license to re-stringify data that's already in hand.)
+
+Ask yourself: "Is this logic already in a dependency's domain?" If yes, add the seam there, not here.
+
+### 6. Game-Specific Quirks Belong in Game-Specific Code
+
+**Don't break one game to fix another.**
+
+DSPRE supports DP, Pt, and HGSS, which differ in offsets, header formats, script command sets, and encounter layouts. When a change fixes behavior for one game:
+- Confirm it doesn't regress the others. Always branch on `RomInfo.gameFamily` / `RomInfo.gameVersion` where behavior diverges.
+- Keep shared code paths game-agnostic; isolate per-game differences behind the version checks rather than special-casing the shared path.
+
+### 7. Consolidate, Don't Proliferate
+
+**Remove cruft before adding new things.**
+
+- If you see 5 functions that could be 3, simplify before extending.
+- Don't add `_with_options`-style variants. Use default parameters or just let callers pass what they need.
+- Don't add helper functions called exactly once. Inline them.
+- **Never add a module or shared helper for a few lines** used only once or twice. Duplicate the snippet inline until several real call sites justify extraction.
+- When your changes make a function or module dead, delete it.
+- Before defining a new type, search the codebase. If an equivalent type already exists — same shape, same domain — use it. Wrapper types that only rename another type are never acceptable.
+
+### 8. Ask Before Building Infrastructure
+
+**If you're about to add a new module, class, or abstraction, stop and ask.**
+
+- More than ~30 lines of new infrastructure code is a yellow flag.
+- If the approach requires re-reading files, building synthetic content, or duplicating existing logic, it's probably wrong.
+- State the approach before coding. If the user says "why aren't you just using X?", you've missed something.
+
+### 9. Document What You Touch
+
+**If a function lacks a doc comment and you modify it, add one.**
+
+- Keep docs concise and in simple language. Use the language's doc-comment convention (C# XML `///`, Rust `///`).
+- Surface-level APIs (public entry points, P/Invoke shims, editor entry handlers) deserve fuller docs: one-line summary, inputs/outputs, and non-obvious errors or options.
+- Deep internals can be a single clear sentence.
+- Don't document the obvious. Don't restate what the code does — explain *why* (this aligns with "Avoid Useless Comments" below).
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, clarifying questions come before implementation rather than after mistakes, and touched code is built/linted without dumping unrelated cleanups into the same change.
 
 ---
 
@@ -370,6 +455,9 @@ External tools in `DS_Map\Tools\`:
 - **blz.exe**: Legacy compression utilities (kept for conversion from ndstool projects only)
 - **charmap.xml**: Character encoding map
 - **pokefacts.txt**: Pokemon facts for loading screens (optional)
+
+Native libraries copied next to `DSPRE.exe` (see `DS_Map/Native/README.md`):
+- **uxie.dll** + **nitroarc_ffi.dll**: Built from `~/dev/uxie` via `cargo build --release` (Windows target); FFI shim in `DS_Map/Interop/Uxie.cs`
 
 ## ROM Extraction and Building
 

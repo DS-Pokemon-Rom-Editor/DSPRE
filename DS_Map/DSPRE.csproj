@@ -106,6 +106,7 @@
     <Compile Include="AppLogger.cs" />
     <Compile Include="CrashReporter.cs" />
     <Compile Include="DocTool.cs" />
+    <Compile Include="Interop\Uxie.cs" />
     <Compile Include="DSUtils\ARM9.cs" />
     <Compile Include="DSUtils\DSUtils.cs" />
     <Compile Include="DSUtils\ModelUtils.cs" />
@@ -1037,6 +1038,14 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Tools\dsrom.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Native\uxie.dll" Condition="Exists('Native\uxie.dll')">
+      <Link>uxie.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Native\nitroarc_ffi.dll" Condition="Exists('Native\nitroarc_ffi.dll')">
+      <Link>nitroarc_ffi.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\DLLs\HelixToolkit.dll" />

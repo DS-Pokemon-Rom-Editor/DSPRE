@@ -364,5 +364,8 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
+# uxie FFI native libraries (built from ~/dev/uxie for now)
+DS_Map/Native/*.dll
+
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
