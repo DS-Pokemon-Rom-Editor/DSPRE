@@ -1326,6 +1326,18 @@ namespace DSPRE
 
             AppLogger.Info($"ROM loaded successfully: ID = {RomInfo.romID}, Project Name = {RomInfo.projectName}");
 
+            // TODO: remove once korean is fully supported
+            if (RomInfo.gameLanguage == GameLanguages.Korean)
+            {
+                AppLogger.Warn("Korean ROM loaded with partial support.");
+                MessageBox.Show(
+                    "This Korean ROM was recognized, and identification and text editing work.\n\n" +
+                    "Offset-dependent features (map headers, spawns, pickup/item tables, music, " +
+                    "trainer name length) are not yet supported for Korean ROMs and may not function correctly.",
+                    "Korean ROM — partial support",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
             CheckROMLanguage();
             AppLogger.Debug("ROM language checked and applied.");
 
@@ -1387,7 +1399,7 @@ namespace DSPRE
 
         private bool CheckAndDecompressARM9()
         {
-            if (!ARM9.CheckCompressionMark())
+            if (!ARM9.IsCompressed())
             {
                 return true; // ARM9 is not compressed, proceed normally
             }
@@ -1535,7 +1547,7 @@ namespace DSPRE
                 }
             }
 
-            if (ARM9.CheckCompressionMark())
+            if (ARM9.IsCompressed())
             {
                 Helpers.statusLabelMessage("Awaiting user response...");
                 DialogResult d = MessageBox.Show("The ARM9 file of this ROM is currently uncompressed, but marked as compressed.\n" +

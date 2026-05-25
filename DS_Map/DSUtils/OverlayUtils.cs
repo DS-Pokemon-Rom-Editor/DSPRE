@@ -152,6 +152,11 @@ namespace DSPRE
          **/
         public static bool IsCompressed(int ovNumber)
         {
+            // ds-rom always extracts decompressed overlay binaries; build re-compresses per config.yaml.
+            if (RomInfo.IsDsRomProject) {
+                return false;
+            }
+
             string overlayPath = GetPath(ovNumber);
 
             if (!File.Exists(overlayPath))

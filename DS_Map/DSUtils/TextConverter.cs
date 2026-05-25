@@ -19,6 +19,7 @@ namespace DSPRE
             { RomInfo.GameLanguages.German, "de_DE" },
             { RomInfo.GameLanguages.Spanish, "es_ES" },
             { RomInfo.GameLanguages.Japanese, "ja_JP" },
+            { RomInfo.GameLanguages.Korean, "ko_KR" },
         };
 
         public static string GetExpandedFolderPath()

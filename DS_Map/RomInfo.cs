@@ -424,6 +424,16 @@ namespace DSPRE
 
         }
 
+        /// <summary>
+        /// Records that a per-language offset table has no entry for the current
+        /// language (today: Korean). The offset is left at its default; the owning
+        /// feature is not supported for this ROM until real offsets are added.
+        /// </summary>
+        private static void WarnUnsupportedLanguageOffset(string subsystem)
+        {
+            AppLogger.Warn($"[lang] No '{subsystem}' offset for {gameLanguage} ROMs — this feature will not work correctly until {gameLanguage} offsets are added.");
+        }
+
         public static void SetHeaderTableOffset()
         {
             switch (gameFamily)
@@ -433,6 +443,10 @@ namespace DSPRE
                     {
                         case GameLanguages.English:
                             headerTableOffset = 0xEEDBC;
+                            break;
+
+                        case GameLanguages.Korean:
+                            headerTableOffset = 0xEA408;
                             break;
 
                         case GameLanguages.Spanish:
@@ -454,6 +468,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             headerTableOffset = gameVersion == GameVersions.Diamond ? (uint)0xF0D68 : 0xF0D6C;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("map header table offset");
+                            break;
                     }
                     break;
 
@@ -462,6 +480,10 @@ namespace DSPRE
                     {
                         case GameLanguages.English:
                             headerTableOffset = 0xE601C;
+                            break;
+
+                        case GameLanguages.Korean:
+                            headerTableOffset = 0xE6DD4;
                             break;
 
                         case GameLanguages.Spanish:
@@ -483,6 +505,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             headerTableOffset = 0xE56F0;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("map header table offset");
+                            break;
                     }
                     break;
 
@@ -491,6 +517,10 @@ namespace DSPRE
                     {
                         case GameLanguages.English:
                             headerTableOffset = 0xF6BE0;
+                            break;
+
+                        case GameLanguages.Korean:
+                            headerTableOffset = gameVersion == GameVersions.HeartGold ? (uint)0xF728C : 0xF7284;
                             break;
 
                         case GameLanguages.Spanish:
@@ -511,6 +541,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             headerTableOffset = 0xF6390;
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("map header table offset");
                             break;
                     }
                     break;
@@ -549,6 +583,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             arm9spawnOffset = 0xF4B48;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("spawn settings");
+                            break;
                     }
                     break;
 
@@ -580,6 +618,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             arm9spawnOffset = 0xE9800;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("spawn settings");
+                            break;
                     }
                     break;
 
@@ -610,6 +652,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             arm9spawnOffset = 0xF992C;
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("spawn settings");
                             break;
                     }
                     break;
@@ -896,6 +942,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             cameraTblOffsetsToRAMaddress = new uint[] { 0x5324, 0x5474 };
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("camera table");
+                            break;
                     }
                     break;
             }
@@ -1045,6 +1095,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             conditionalMusicTableOffsetToRAMAddress = 0x66238;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("conditional music table");
+                            break;
                     }
                     break;
             }
@@ -1077,6 +1131,10 @@ namespace DSPRE
                             vsTrainerEntryTableOffsetToRAMAddress = 0x51328;
                             effectsComboTableOffsetToRAMAddress = 0x51260;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("battle effects table");
+                            break;
                     }
                     vsPokemonEntryTableOffsetToSizeLimiter = vsPokemonEntryTableOffsetToRAMAddress - 0xA;
                     vsTrainerEntryTableOffsetToSizeLimiter = vsTrainerEntryTableOffsetToRAMAddress - 0xA;
@@ -1099,6 +1157,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             effectsComboTableOffsetToRAMAddress = 0x514C0;
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("battle effects table");
                             break;
                     }
                     break;
@@ -1126,6 +1188,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             encounterMusicTableOffsetToRAMAddress = 0x54B44;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("encounter music table");
+                            break;
                     }
                     break;
 
@@ -1146,6 +1212,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             encounterMusicTableOffsetToRAMAddress = 0x54F04;
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("encounter music table");
+                            break;
                     }
                     break;
 
@@ -1165,6 +1235,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             encounterMusicTableOffsetToRAMAddress = 0x4D9AC;
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("encounter music table");
                             break;
                     }
                     break;
@@ -1195,6 +1269,10 @@ namespace DSPRE
                         case GameLanguages.Japanese:
                             monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x6FDEC, 4), 0);
                             break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("mon icon palette table");
+                            break;
                     }
                     break;
 
@@ -1214,6 +1292,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x79858, 4), 0);
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("mon icon palette table");
                             break;
                     }
                     break;
@@ -1242,6 +1324,10 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(0x73EA0, 4), 0);
+                            break;
+
+                        default:
+                            WarnUnsupportedLanguageOffset("mon icon palette table");
                             break;
                     }
                     break;
@@ -1575,6 +1661,10 @@ namespace DSPRE
 
                             case GameLanguages.Spanish:
                                 trainerNameLenOffset = 0x73426;
+                                break;
+
+                            default:
+                                WarnUnsupportedLanguageOffset("trainer name length offset");
                                 break;
                         }
                     }

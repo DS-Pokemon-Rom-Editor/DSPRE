@@ -112,7 +112,7 @@ namespace DSPRE.Editors
             comboBoxItem.Items.AddRange(itemNames);
 
             // Decompress ARM9 if needed
-            if (ARM9.CheckCompressionMark())
+            if (ARM9.IsCompressed())
             {
                 ARM9.Decompress(RomInfo.arm9Path);
             }
