@@ -85,7 +85,7 @@ namespace DSPRE.Editors
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     lightTypes = new string[3] { "Day/Night Light", "Model's light", "Unknown Light" };
                     break;
                 default:

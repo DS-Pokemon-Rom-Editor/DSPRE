@@ -832,7 +832,7 @@ namespace DSPRE.Editors
                 switch (RomInfo.gameFamily)
                 {
                     case GameFamilies.DP:
-                    case GameFamilies.Plat:
+                    case GameFamilies.Platinum:
                         break;
                     default:
                         // HGSS Overlay 1 must be decompressed in order to read the overworld table
@@ -2554,7 +2554,7 @@ namespace DSPRE.Editors
                         locNum = h.locationName;
                         break;
                     }
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     {
                         HeaderPt h = (HeaderPt)destHeader;
 

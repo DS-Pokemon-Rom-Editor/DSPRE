@@ -109,7 +109,7 @@ namespace DSPRE.Editors
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     pbEffectsMonGroupBox.Enabled = false;
                     pbEffectsTrainerGroupBox.Enabled = false;
                     conditionalMusicGroupBox.Enabled = false;
@@ -128,7 +128,7 @@ namespace DSPRE.Editors
             if (battleTableEditorIsReady && !force) { return; }
             battleTableEditorIsReady = true;
             this._parent = parent;
-            if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.gameFamily == GameFamilies.Plat)
+            if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.gameFamily == GameFamilies.Platinum)
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
                     DirNames.trainerGraphics,
@@ -306,7 +306,7 @@ namespace DSPRE.Editors
                 case GameFamilies.DP:
                     locationNameConditionalMusicLBL.Text = RomInfo.GetLocationNames()[(selected as HeaderDP).locationName];
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     locationNameConditionalMusicLBL.Text = RomInfo.GetLocationNames()[(selected as HeaderPt).locationName];
                     break;
                 case GameFamilies.HGSS:

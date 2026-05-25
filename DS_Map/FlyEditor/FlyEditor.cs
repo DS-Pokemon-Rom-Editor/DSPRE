@@ -95,7 +95,7 @@ namespace DSPRE.Editors
                             default: throw new ArgumentOutOfRangeException(nameof(GameLanguages), "Unknown language for Diamond/Pearl");
                         }
 
-                    case GameFamilies.Plat:
+                    case GameFamilies.Platinum:
                         switch (GameLanguage)
                         {
                             case GameLanguages.Japanese: return PTjpOffset;
@@ -135,7 +135,7 @@ namespace DSPRE.Editors
                     case GameFamilies.DP:
                         return DiamondPearlTableSize;
 
-                    case GameFamilies.Plat:
+                    case GameFamilies.Platinum:
                         return PlatinumTableSize;
 
                     case GameFamilies.HGSS:
@@ -150,7 +150,7 @@ namespace DSPRE.Editors
         public async void BeginPopulateFlyTableData()
         {
             await PopulateFlyTableDataAsync();
-            if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
+            if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Platinum)
             {
                 await PopulateTablesFromDataDpPlatAsync();
             }
@@ -195,7 +195,7 @@ namespace DSPRE.Editors
                             };
                             TableDataHgss.Add(row);
                         }
-                        else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
+                        else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Platinum)
                         {
                             FlyTableRowDpPlat row = new FlyTableRowDpPlat
                             {
@@ -498,7 +498,7 @@ namespace DSPRE.Editors
                 };
                 dt_UnlockSettings.Columns.Add(isFlyPointColumn);
             }
-            else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
+            else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Platinum)
             {
                 AddComboBoxColumn(dt_GameOverWarps, "headerIdGameOver", "Header ID (GameOver)", Headers);
                 AddComboBoxColumn(dt_FlyWarps, "headerIdFly", "Header ID (Fly)", Headers);
@@ -635,7 +635,7 @@ namespace DSPRE.Editors
                         ushort unlockGlobalY = (ushort)dt_UnlockSettings.Rows[i].Cells[2].Value;
                         writer.Write(unlockGlobalY);
                     }
-                    else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
+                    else if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Platinum)
                     {
                         DataGridViewComboBoxCell comboBoxCellGameOver = (DataGridViewComboBoxCell)dt_GameOverWarps.Rows[i].Cells[0];
                         ushort gameOverHeaderId = (ushort)comboBoxCellGameOver.Items.IndexOf(comboBoxCellGameOver.Value);

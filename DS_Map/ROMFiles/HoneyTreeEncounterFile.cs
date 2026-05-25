@@ -299,7 +299,7 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public static bool IsAvailable() {
             return RomInfo.gameFamily == RomInfo.GameFamilies.DP || 
-                   RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
+                   RomInfo.gameFamily == RomInfo.GameFamilies.Platinum;
         }
     }
 }

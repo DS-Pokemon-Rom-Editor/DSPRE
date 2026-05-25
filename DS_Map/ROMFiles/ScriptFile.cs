@@ -1055,7 +1055,7 @@ namespace DSPRE.ROMFiles
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (id)
                     {
                         case 0x16: //Jump

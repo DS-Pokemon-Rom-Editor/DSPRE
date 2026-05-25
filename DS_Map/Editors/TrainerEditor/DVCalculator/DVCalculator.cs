@@ -208,12 +208,12 @@ namespace DSPRE
                 { (RomInfo.GameFamilies.DP, RomInfo.GameLanguages.Spanish), 0xF8060 },
 
                 // Plat
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.English), 0xF0714 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Japanese), 0xEFDA4 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.French), 0xF079C },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.German), 0xF076C },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Italian), 0xF0730 },
-                { (RomInfo.GameFamilies.Plat, RomInfo.GameLanguages.Spanish), 0xF07A8 },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.English), 0xF0714 },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.Japanese), 0xEFDA4 },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.French), 0xF079C },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.German), 0xF076C },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.Italian), 0xF0730 },
+                { (RomInfo.GameFamilies.Platinum, RomInfo.GameLanguages.Spanish), 0xF07A8 },
 
                 // HG/SS
                 { (RomInfo.GameFamilies.HGSS, RomInfo.GameLanguages.English), 0xFFB90 },
@@ -259,7 +259,7 @@ namespace DSPRE
             {
                 switch (RomInfo.gameFamily)
                 {
-                    case RomInfo.GameFamilies.Plat:
+                    case RomInfo.GameFamilies.Platinum:
                         return 105; // Platinum has 105 trainer classes
                     case RomInfo.GameFamilies.HGSS:
                         return 128;

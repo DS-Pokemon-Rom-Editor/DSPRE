@@ -85,7 +85,7 @@ namespace DSPRE
             }
 
             // BDHCam routine and ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS and Platinum
-            if ( (RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat) 
+            if ( (RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Platinum) 
                 || ( RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
             {
                 DisableBDHCamPatch("Unsupported\nlanguage");
@@ -104,7 +104,7 @@ namespace DSPRE
                     DisableKillTextureAnimationsPatch("Unsupported");
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     DisableOverlay1patch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
@@ -365,7 +365,7 @@ namespace DSPRE
 
             switch (RomInfo.gameFamily)
             {
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                 case GameFamilies.HGSS:
                     BDHCamARM9requiredLBL.Visible = false;
                     BDHCamPatchButton.Enabled = true;
@@ -669,7 +669,7 @@ namespace DSPRE
                     };
 
                     //Distortion world - turnback cave Griseous Orb fix
-                    if (gameFamily.Equals(GameFamilies.Plat))
+                    if (gameFamily.Equals(GameFamilies.Platinum))
                     {
                         string ow9path = OverlayUtils.GetPath(9);
                         int ow9offs = 0x8E20 + 10;
@@ -776,7 +776,7 @@ namespace DSPRE
 
                     switch (RomInfo.gameFamily)
                     {
-                        case GameFamilies.Plat:
+                        case GameFamilies.Platinum:
                         case GameFamilies.HGSS:
                             BDHCamPatchButton.Text = "Apply Patch";
                             BDHCamPatchButton.Enabled = true;

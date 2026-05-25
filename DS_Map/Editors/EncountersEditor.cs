@@ -11,7 +11,7 @@ namespace DSPRE.Editors
     public bool HasUnsavedChanges {
       get {
         // Aggregate dirty state from child editors based on game family
-        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Platinum) {
           return (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false) ||
                  (greatMarshEncounterEditor?.HasUnsavedChanges ?? false);
         } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
@@ -26,7 +26,7 @@ namespace DSPRE.Editors
     public string UnsavedChangesDescription {
       get {
         var descriptions = new System.Collections.Generic.List<string>();
-        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+        if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Platinum) {
           if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
             descriptions.Add(honeyTreeEncounterEditor.UnsavedChangesDescription);
           if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
@@ -45,7 +45,7 @@ namespace DSPRE.Editors
 
     public void SaveChanges() {
       // Save all child editors with unsaved changes
-      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Platinum) {
         if (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false)
           honeyTreeEncounterEditor.SaveChanges();
         if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
@@ -62,7 +62,7 @@ namespace DSPRE.Editors
 
     public void DiscardChanges() {
       // Discard changes in all child editors
-      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+      if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Platinum) {
         honeyTreeEncounterEditor?.DiscardChanges();
         greatMarshEncounterEditor?.DiscardChanges();
       } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
@@ -98,7 +98,7 @@ namespace DSPRE.Editors
         // Disable handlers to prevent Enter events from firing during tab manipulation
         Helpers.DisableHandlers();
         try {
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Platinum) {
                 // Remove HGSS-only tabs
                 if (tabControl.TabPages.Contains(tabPageHeadbuttEditor)) {
                     tabControl.TabPages.Remove(tabPageHeadbuttEditor);

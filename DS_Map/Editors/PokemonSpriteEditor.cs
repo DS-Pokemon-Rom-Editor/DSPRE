@@ -470,7 +470,7 @@ namespace DSPRE.Editors {
             switch (RomInfo.gameFamily) {
                 case RomInfo.GameFamilies.DP:
                     return validPalettesDP;
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     return validPalettesPt;
                 default:
                     return validPalettesHGSS;
@@ -1294,7 +1294,7 @@ namespace DSPRE.Editors {
                     case RomInfo.GameFamilies.DP:
                         currentFormData = GetFormDataDP();
                         break;
-                    case RomInfo.GameFamilies.Plat:
+                    case RomInfo.GameFamilies.Platinum:
                         currentFormData = GetFormDataPt();
                         break;
                     case RomInfo.GameFamilies.HGSS:

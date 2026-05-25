@@ -217,7 +217,7 @@ namespace DSPRE.Editors
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     mapPartsTabControl.TabPages.Remove(bgsTabPage);
                     break;
                 default:
@@ -239,7 +239,7 @@ namespace DSPRE.Editors
                     switch (RomInfo.gameFamily)
                     {
                         case GameFamilies.DP:
-                        case GameFamilies.Plat:
+                        case GameFamilies.Platinum:
                             reader.BaseStream.Position = 0x10 + reader.ReadUInt32() + reader.ReadUInt32();
                             break;
                         default:
@@ -311,7 +311,7 @@ namespace DSPRE.Editors
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     mapTextureComboBox.SelectedIndex = 7;
                     buildTextureComboBox.SelectedIndex = 1;
                     break;
@@ -361,7 +361,7 @@ namespace DSPRE.Editors
                 if (RomInfo.gameFamily == GameFamilies.HGSS)
                 {
                     //If HGSS didn't work try reading as Platinum Map
-                    temp = new MapFile(of.FileName, GameFamilies.Plat, false);
+                    temp = new MapFile(of.FileName, GameFamilies.Platinum, false);
                 }
                 else
                 {

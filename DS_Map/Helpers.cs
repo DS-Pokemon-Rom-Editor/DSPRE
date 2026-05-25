@@ -374,7 +374,7 @@ namespace DSPRE
                 case GameFamilies.HGSS:
                     databaseJsonPath = Path.Combine(Program.DatabasePath, "hgss_scrcmd_database.json");
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     databaseJsonPath = Path.Combine(Program.DatabasePath, "platinum_scrcmd_database.json");
                     break;
                 default:
@@ -698,7 +698,7 @@ namespace DSPRE
                 case RomInfo.GameFamilies.DP:
                     iconPalTableBuf = ARM9.ReadBytes(0x6B838, 4);
                     break;
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     iconPalTableBuf = ARM9.ReadBytes(0x79F80, 4);
                     break;
                 case RomInfo.GameFamilies.HGSS:

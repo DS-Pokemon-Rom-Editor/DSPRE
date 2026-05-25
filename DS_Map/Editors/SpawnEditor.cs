@@ -203,7 +203,7 @@ namespace DSPRE {
                 case GameFamilies.DP:
                     locationNameLBL.Text = locations[((HeaderDP)currentHeader).locationName];
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     locationNameLBL.Text = locations[((HeaderPt)currentHeader).locationName];
                     break;
                 case GameFamilies.HGSS:

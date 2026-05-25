@@ -135,7 +135,7 @@ namespace DSPRE
         {
             NULL,
             DP,
-            Plat,
+            Platinum,
             HGSS,
             BW,
             BW2
@@ -149,7 +149,8 @@ namespace DSPRE
             Italian,
             Spanish,
             French,
-            German
+            German,
+            Korean,
         }
 
         public enum DirNames : byte
@@ -207,7 +208,7 @@ namespace DSPRE
 
         #region Constructors (1)
 
-        public RomInfo(string id, string romFolderName)
+        public RomInfo(Interop.RomIdentity identity, string romFolderName)
         {
 
             string path = Path.GetFullPath(romFolderName);
@@ -252,18 +253,13 @@ namespace DSPRE
             unpackedPath = Path.Combine(workDir, @"unpacked");
             internalNamesPath = Path.Combine(dataPath, @"fielddata\maptable\mapname.bin");
 
-            try
-            {
-                gameVersion = PokeDatabase.System.versionsDict[id];
-            }
-            catch (KeyNotFoundException)
-            {
-                MessageBox.Show("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+            // uxie owns ROM identification (no fallback): version/family/language come
+            // straight from the identity it derived from the header.
+            gameVersion = identity.Version;
+            gameFamily = identity.Family;
+            gameLanguage = identity.Language;
+            romID = identity.GameCode;
 
-            romID = id;
             if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
             {
                 string ov129path = OverlayUtils.GetPath(129);
@@ -296,9 +292,6 @@ namespace DSPRE
             {
                 projectName = folderName;
             }
-
-            LoadGameFamily();
-            LoadGameLanguage();
 
             SetNarcDirs();
             SetHeaderTableOffset();
@@ -361,7 +354,7 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                     return ScriptDatabase.DPScrCmdInfo;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     return ScriptDatabase.PlatScrCmdInfo;
                 case GameFamilies.HGSS:
                     return ScriptDatabase.HGSSScrCmdInfo;
@@ -398,7 +391,7 @@ namespace DSPRE
             switch (gameFam)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                 case GameFamilies.HGSS:
                     return ScriptDatabase.comparisonOperatorsDict;
 
@@ -464,7 +457,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -559,7 +552,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     initialMoneyOverlayNumber = 57;
                     initialMoneyOverlayOffset = 0x1EC;
                     switch (gameLanguage)
@@ -683,7 +676,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     pickupTableOverlayNumber = 16;
                     switch (gameLanguage)
                     {
@@ -813,7 +806,7 @@ namespace DSPRE
                             break;
                     }
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -881,7 +874,7 @@ namespace DSPRE
                     cameraSize = 24;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     cameraTblOverlayNumber = 5;
                     cameraTblOffsetsToRAMaddress = new uint[] { 0x4E24 };
                     cameraSize = 24;
@@ -930,7 +923,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     OWtablePath = OverlayUtils.GetPath(5);
                     switch (gameLanguage)
                     { // Go to the beginning of the overworld table
@@ -1090,7 +1083,7 @@ namespace DSPRE
                     effectsComboTableOffsetToSizeLimiter = effectsComboTableOffsetToRAMAddress - 0x1E;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -1136,7 +1129,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -1205,7 +1198,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -1263,7 +1256,7 @@ namespace DSPRE
                     itemScriptFileNumber = 370;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     itemScriptFileNumber = 404;
                     break;
 
@@ -1278,7 +1271,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     nullEncounterID = ushort.MaxValue;
                     break;
 
@@ -1296,7 +1289,7 @@ namespace DSPRE
                     abilityNamesTextNumber = 552;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     abilityNamesTextNumber = 610;
                     break;
 
@@ -1317,7 +1310,7 @@ namespace DSPRE
                     attackNamesTextNumber = 588;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     attackNamesTextNumber = 647;
                     break;
 
@@ -1336,7 +1329,7 @@ namespace DSPRE
                     itemDescriptionsTextNumber = 0;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     itemNamesTextNumber = 392;
                     itemDescriptionsTextNumber = 0;
                     break;
@@ -1356,7 +1349,7 @@ namespace DSPRE
                     locationNamesTextNumber = 382;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     locationNamesTextNumber = 433;
                     break;
 
@@ -1374,7 +1367,7 @@ namespace DSPRE
                     pokemonNamesTextNumbers = new int[2] { 362, 363 };
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     pokemonNamesTextNumbers = new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
                     break;
 
@@ -1396,7 +1389,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     trainerNamesMessageNumber = 618;
                     break;
 
@@ -1422,7 +1415,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     trainerClassMessageNumber = 619;
                     break;
 
@@ -1443,7 +1436,7 @@ namespace DSPRE
                     moveDescriptionsTextNumbers = 587;
                     moveNamesTextNumbers = 588;
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     moveDescriptionsTextNumbers = 646;
                     moveNamesTextNumbers = 647;
                     break;
@@ -1463,7 +1456,7 @@ namespace DSPRE
                     trainerFunnyScriptNumber = 851;
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     trainerFunnyScriptNumber = 929;
                     break;
 
@@ -1480,7 +1473,7 @@ namespace DSPRE
                 case GameFamilies.DP:
                     typesTextNumber = 565;
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     typesTextNumber = 624;
                     break;
                 case GameFamilies.HGSS:
@@ -1496,7 +1489,7 @@ namespace DSPRE
                 case GameFamilies.DP:
                     trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 549 : 558;
                     break;
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     trainerMessageTextNumber = 617;
                     break;
                 case GameFamilies.HGSS:
@@ -1533,7 +1526,7 @@ namespace DSPRE
                     }
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     switch (RomInfo.gameLanguage)
                     {
                         case GameLanguages.English:
@@ -1611,7 +1604,7 @@ namespace DSPRE
                         default:
                             return 0xF84EC;
                     }
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     switch (RomInfo.gameLanguage)
                     {
                         case RomInfo.GameLanguages.English:
@@ -1675,7 +1668,7 @@ namespace DSPRE
                         default:
                             return 0xF85B4;
                     }
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     switch (RomInfo.gameLanguage)
                     {
                         case RomInfo.GameLanguages.English:
@@ -1739,7 +1732,7 @@ namespace DSPRE
                         default:
                             return 0x20668;
                     }
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     switch (RomInfo.gameLanguage)
                     {
                         case RomInfo.GameLanguages.English:
@@ -1779,7 +1772,7 @@ namespace DSPRE
 
         public static void SetAIBackportEnabled()
         {
-            if (gameFamily != GameFamilies.Plat)
+            if (gameFamily != GameFamilies.Platinum)
             {
                 AIBackportEnabled = false;
                 return;
@@ -1860,77 +1853,6 @@ namespace DSPRE
 
         #region System Methods
 
-        private void LoadGameLanguage()
-        {
-            switch (romID)
-            {
-                case "ADAE":
-                case "APAE":
-                case "CPUE":
-                case "IPKE":
-                case "IPGE":
-                    gameLanguage = GameLanguages.English;
-                    break;
-
-                case "ADAS":
-                case "APAS":
-                case "CPUS":
-                case "IPKS":
-                case "IPGS":
-                case "LATA":
-                    gameLanguage = GameLanguages.Spanish;
-                    break;
-
-                case "ADAI":
-                case "APAI":
-                case "CPUI":
-                case "IPKI":
-                case "IPGI":
-                    gameLanguage = GameLanguages.Italian;
-                    break;
-
-                case "ADAF":
-                case "APAF":
-                case "CPUF":
-                case "IPKF":
-                case "IPGF":
-                    gameLanguage = GameLanguages.French;
-                    break;
-
-                case "ADAD":
-                case "APAD":
-                case "CPUD":
-                case "IPKD":
-                case "IPGD":
-                    gameLanguage = GameLanguages.German;
-                    break;
-
-                default:
-                    gameLanguage = GameLanguages.Japanese;
-                    break;
-            }
-        }
-
-        private void LoadGameFamily()
-        {
-            switch (gameVersion)
-            {
-                case GameVersions.Diamond:
-                case GameVersions.Pearl:
-                    gameFamily = GameFamilies.DP;
-                    break;
-
-                case GameVersions.Platinum:
-                    gameFamily = GameFamilies.Plat;
-                    break;
-
-                case GameVersions.HeartGold:
-                case GameVersions.SoulSilver:
-                    gameFamily = GameFamilies.HGSS;
-                    break;
-            }
-        }
-
         private void SetNarcDirs()
         {
             Dictionary<DirNames, string> packedDirsDict = null;
@@ -2004,7 +1926,7 @@ namespace DSPRE
 
                     break;
 
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     suffix = gameVersion.ToString().Substring(0, 2).ToLower();
 
                     packedDirsDict = new Dictionary<DirNames, string>()
@@ -2150,7 +2072,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     MapCellsColorDictionary = PokeDatabase.System.MatrixCellColors.DPPtmatrixColorsDict;
                     break;
 
@@ -2166,7 +2088,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open)))
                     {
                         idReader.BaseStream.Position = OWTableOffset;

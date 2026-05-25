@@ -612,44 +612,6 @@ namespace DSPRE.Resources {
             }
         }
         public static class System {
-            public static Dictionary<string, GameVersions> versionsDict = new Dictionary<string, GameVersions>() {
-                ["ADAE"] = GameVersions.Diamond,
-                ["ADAS"] = GameVersions.Diamond,
-                ["ADAI"] = GameVersions.Diamond,
-                ["ADAF"] = GameVersions.Diamond,
-                ["ADAD"] = GameVersions.Diamond,
-                ["ADAJ"] = GameVersions.Diamond,
-
-                ["APAE"] = GameVersions.Pearl,
-                ["APAS"] = GameVersions.Pearl,
-                ["APAI"] = GameVersions.Pearl,
-                ["APAF"] = GameVersions.Pearl,
-                ["APAD"] = GameVersions.Pearl,
-                ["APAJ"] = GameVersions.Pearl,
-
-                ["CPUE"] = GameVersions.Platinum,
-                ["CPUS"] = GameVersions.Platinum,
-                ["CPUI"] = GameVersions.Platinum,
-                ["CPUF"] = GameVersions.Platinum,
-                ["CPUD"] = GameVersions.Platinum,
-                ["CPUJ"] = GameVersions.Platinum,
-                ["CPUP"] = GameVersions.Platinum,
-
-                ["IPKE"] = GameVersions.HeartGold,
-                ["IPKS"] = GameVersions.HeartGold,
-                ["IPKI"] = GameVersions.HeartGold,
-                ["IPKF"] = GameVersions.HeartGold,
-                ["IPKD"] = GameVersions.HeartGold,
-                ["IPKJ"] = GameVersions.HeartGold,
-
-                ["IPGE"] = GameVersions.SoulSilver,
-                ["IPGS"] = GameVersions.SoulSilver,
-                ["IPGI"] = GameVersions.SoulSilver,
-                ["IPGF"] = GameVersions.SoulSilver,
-                ["IPGD"] = GameVersions.SoulSilver,
-                ["IPGJ"] = GameVersions.SoulSilver
-            };
-
             public static Dictionary<byte, string> MapCollisionPainters = new Dictionary<byte, string>() {
                 [0x00] = "[00] Walkable",
                 [0x01] = "[01] Snow",

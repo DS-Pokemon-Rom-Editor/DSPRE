@@ -329,7 +329,7 @@ namespace DSPRE.Editors
                         default:
                             return 326;
                     }
-                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.Platinum:
                     switch (RomInfo.gameLanguage)
                     {
                         case RomInfo.GameLanguages.Japanese:

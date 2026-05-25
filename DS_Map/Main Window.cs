@@ -61,7 +61,7 @@ namespace DSPRE
             Helpers.Initialize(this);
             WireEditorsPopout();
 
-            SetMenuLayout((LayoutStyle) SettingsManager.Settings.menuLayout); //Read user settings for menu layout
+            SetMenuLayout((LayoutStyle)SettingsManager.Settings.menuLayout); //Read user settings for menu layout
             Text = "DS Pokémon Rom Editor Reloaded " + GetDSPREVersion();
 
             string romFolder = SettingsManager.Settings.openDefaultRom;
@@ -93,7 +93,7 @@ namespace DSPRE
             else
             {
                 AppLogger.Debug("No stored ROM folder found on startup.");
-            }          
+            }
 
         }
 
@@ -130,7 +130,7 @@ namespace DSPRE
             {
                 EditorPanels.trainerEditor.trainerComboBox.SelectedIndex = trainerID;
             }
-            
+
             if (EditorPanels.PopoutRegistry.TryGetHost(EditorPanels.trainerEditor, out var host))
             {
                 host.Focus();
@@ -374,10 +374,10 @@ namespace DSPRE
             IList list = menuViewToolStripMenuItem.DropDownItems;
             for (int i = 0; i < list.Count; i++)
             {
-                (list[i] as ToolStripMenuItem).Checked = (i == (int) layoutStyle);
+                (list[i] as ToolStripMenuItem).Checked = (i == (int)layoutStyle);
             }
 
-            SettingsManager.Settings.menuLayout = (byte) layoutStyle;
+            SettingsManager.Settings.menuLayout = (byte)layoutStyle;
 
             // Hide all buttons first so we can selectively show them later
             foreach (ToolStripItem c in mainToolStrip.Items)
@@ -493,7 +493,7 @@ namespace DSPRE
                     "Please update it to avoid potential issues when editing text.\n" +
                     "You can do this by opening the Charmap Manager and clicking the \"Rebase\" button, " +
                     "DSPRE will attempt to merge your custom map and the base map for you.\n" +
-                    "You may need to manually copy or recreate your custom mappings.", 
+                    "You may need to manually copy or recreate your custom mappings.",
                     "Outdated Character Map", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
@@ -517,7 +517,7 @@ namespace DSPRE
         private void PaintGameIconFromDsRomBanner(PaintEventArgs e)
         {
             string bitmapPath = Path.Combine(RomInfo.workDir, "banner", "bitmap.png");
-            
+
             if (!File.Exists(bitmapPath))
             {
                 AppLogger.Debug("ds-rom banner bitmap.png not found, skipping icon display");
@@ -552,92 +552,92 @@ namespace DSPRE
             }
 
             BinaryReader readIcon = new BinaryReader(banner);
-                #region Read Icon Palette
-                readIcon.BaseStream.Position = 0x220;
-                byte firstByte, secondByte;
-                int palR, palG, palB;
-                int palCounter = 0;
-                int[] paletteArray = new int[48];
+            #region Read Icon Palette
+            readIcon.BaseStream.Position = 0x220;
+            byte firstByte, secondByte;
+            int palR, palG, palB;
+            int palCounter = 0;
+            int[] paletteArray = new int[48];
 
-                for (int i = 0; i < 16; i++)
+            for (int i = 0; i < 16; i++)
+            {
+                palR = 0;
+                palG = 0;
+                palB = 0;
+                secondByte = readIcon.ReadByte();
+                firstByte = readIcon.ReadByte();
+
+                if ((firstByte & (1 << 6)) != 0)
+                    palB |= (1 << 4);
+                if ((firstByte & (1 << 5)) != 0)
+                    palB |= (1 << 3);
+                if ((firstByte & (1 << 4)) != 0)
+                    palB |= (1 << 2);
+                if ((firstByte & (1 << 3)) != 0)
+                    palB |= (1 << 1);
+                if ((firstByte & (1 << 2)) != 0)
+                    palB |= (1 << 0);
+                if ((firstByte & (1 << 1)) != 0)
+                    palG |= (1 << 4);
+                if ((firstByte & (1 << 0)) != 0)
+                    palG |= (1 << 3);
+                if ((secondByte & (1 << 7)) != 0)
+                    palG |= (1 << 2);
+                if ((secondByte & (1 << 6)) != 0)
+                    palG |= (1 << 1);
+                if ((secondByte & (1 << 5)) != 0)
+                    palG |= (1 << 0);
+                if ((secondByte & (1 << 4)) != 0)
+                    palR |= (1 << 4);
+                if ((secondByte & (1 << 3)) != 0)
+                    palR |= (1 << 3);
+                if ((secondByte & (1 << 2)) != 0)
+                    palR |= (1 << 2);
+                if ((secondByte & (1 << 1)) != 0)
+                    palR |= (1 << 1);
+                if ((secondByte & (1 << 0)) != 0)
+                    palR |= (1 << 0);
+
+                paletteArray[palCounter++] = palR * 8;
+                paletteArray[palCounter++] = palG * 8;
+                paletteArray[palCounter++] = palB * 8;
+            }
+            #endregion
+            #region Read Icon Image
+            readIcon.BaseStream.Position = 0x20;
+            int iconY = 0;
+            int xTile = 0;
+            int yTile = 0;
+            for (int o = 0; o < 4; o++)
+            {
+                for (int a = 0; a < 4; a++)
                 {
-                    palR = 0;
-                    palG = 0;
-                    palB = 0;
-                    secondByte = readIcon.ReadByte();
-                    firstByte = readIcon.ReadByte();
-
-                    if ((firstByte & (1 << 6)) != 0)
-                        palB |= (1 << 4);
-                    if ((firstByte & (1 << 5)) != 0)
-                        palB |= (1 << 3);
-                    if ((firstByte & (1 << 4)) != 0)
-                        palB |= (1 << 2);
-                    if ((firstByte & (1 << 3)) != 0)
-                        palB |= (1 << 1);
-                    if ((firstByte & (1 << 2)) != 0)
-                        palB |= (1 << 0);
-                    if ((firstByte & (1 << 1)) != 0)
-                        palG |= (1 << 4);
-                    if ((firstByte & (1 << 0)) != 0)
-                        palG |= (1 << 3);
-                    if ((secondByte & (1 << 7)) != 0)
-                        palG |= (1 << 2);
-                    if ((secondByte & (1 << 6)) != 0)
-                        palG |= (1 << 1);
-                    if ((secondByte & (1 << 5)) != 0)
-                        palG |= (1 << 0);
-                    if ((secondByte & (1 << 4)) != 0)
-                        palR |= (1 << 4);
-                    if ((secondByte & (1 << 3)) != 0)
-                        palR |= (1 << 3);
-                    if ((secondByte & (1 << 2)) != 0)
-                        palR |= (1 << 2);
-                    if ((secondByte & (1 << 1)) != 0)
-                        palR |= (1 << 1);
-                    if ((secondByte & (1 << 0)) != 0)
-                        palR |= (1 << 0);
-
-                    paletteArray[palCounter++] = palR * 8;
-                    paletteArray[palCounter++] = palG * 8;
-                    paletteArray[palCounter++] = palB * 8;
-                }
-                #endregion
-                #region Read Icon Image
-                readIcon.BaseStream.Position = 0x20;
-                int iconY = 0;
-                int xTile = 0;
-                int yTile = 0;
-                for (int o = 0; o < 4; o++)
-                {
-                    for (int a = 0; a < 4; a++)
+                    for (int i = 0; i < 8; i++)
                     {
-                        for (int i = 0; i < 8; i++)
-                        {
-                            int iconX = xTile;
+                        int iconX = xTile;
 
-                            for (int counter = 0; counter < 4; counter++)
-                            {
-                                byte pixelByte = readIcon.ReadByte();
-                                int pixelPalId = pixelByte & 0x0F;
-                                Brush icon = new SolidBrush(Color.FromArgb(255, paletteArray[pixelPalId * 3], paletteArray[pixelPalId * 3 + 1], paletteArray[pixelPalId * 3 + 2]));
-                                e.Graphics.FillRectangle(icon, iconX, i + yTile, 1, 1);
-                                iconX++;
-                                pixelPalId = (pixelByte & 0xF0) >> 4;
-                                icon = new SolidBrush(Color.FromArgb(255, paletteArray[pixelPalId * 3], paletteArray[pixelPalId * 3 + 1], paletteArray[pixelPalId * 3 + 2]));
-                                e.Graphics.FillRectangle(icon, iconX, i + yTile, 1, 1);
-                                iconX++;
-                            }
-                            iconY++;
+                        for (int counter = 0; counter < 4; counter++)
+                        {
+                            byte pixelByte = readIcon.ReadByte();
+                            int pixelPalId = pixelByte & 0x0F;
+                            Brush icon = new SolidBrush(Color.FromArgb(255, paletteArray[pixelPalId * 3], paletteArray[pixelPalId * 3 + 1], paletteArray[pixelPalId * 3 + 2]));
+                            e.Graphics.FillRectangle(icon, iconX, i + yTile, 1, 1);
+                            iconX++;
+                            pixelPalId = (pixelByte & 0xF0) >> 4;
+                            icon = new SolidBrush(Color.FromArgb(255, paletteArray[pixelPalId * 3], paletteArray[pixelPalId * 3 + 1], paletteArray[pixelPalId * 3 + 2]));
+                            e.Graphics.FillRectangle(icon, iconX, i + yTile, 1, 1);
+                            iconX++;
                         }
-                        iconY = 0;
-                        xTile += 8;
+                        iconY++;
                     }
-                    xTile = 0;
-                    yTile += 8;
+                    iconY = 0;
+                    xTile += 8;
                 }
-                #endregion
-                readIcon.Close();
+                xTile = 0;
+                yTile += 8;
+            }
+            #endregion
+            readIcon.Close();
         }
 
         public void SetupScriptEditor()
@@ -674,7 +674,8 @@ namespace DSPRE
             int folderType = DSUtils.GetFolderType(romDir);
 
             // No valid extracted data found, proceed with unpacking
-            if (folderType == -1) { return  -1; };
+            if (folderType == -1) { return -1; }
+            ;
 
             DialogResult extract;
 
@@ -1256,13 +1257,13 @@ namespace DSPRE
                     "Convert to ds-rom?",
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question);
-            
+
                 if (convertResult == DialogResult.Cancel)
                 {
                     AppLogger.Debug("User cancelled loading from conversion dialog.");
                     return;
                 }
-            
+
                 if (convertResult == DialogResult.Yes)
                 {
                     Helpers.statusLabelMessage("Converting project to ds-rom format...");
@@ -1286,8 +1287,9 @@ namespace DSPRE
             }
 
             string headerFile = DSUtils.GetFolderType(romFolderPath) == 0 ? "header.yaml" : "header.bin";
+            string headerPath = Path.Combine(romFolderPath, headerFile);
             gameCode = null;
-            SetupROMLanguage(Path.Combine(romFolderPath, headerFile));
+            SetupROMLanguage(headerPath);
             AppLogger.Debug("ROM language setup completed.");
 
             if (string.IsNullOrEmpty(gameCode))
@@ -1298,7 +1300,23 @@ namespace DSPRE
                 return;
             }
 
-            romInfo = new RomInfo(gameCode, romFolderPath);
+            // uxie owns ROM identification. Fail loud if it can't identify.
+            Interop.RomIdentity identity;
+            try
+            {
+                identity = Interop.Uxie.Identify(headerPath);
+                AppLogger.Info($"uxie identified ROM: {identity.GameCode} ({identity.Version}, {identity.Family}, {identity.Language})");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"uxie failed to identify ROM: {ex.Message}");
+                MessageBox.Show("uxie could not identify this ROM:\n\n" + ex.Message +
+                    "\n\nYou can only load Gen IV Pokémon ROMs.", "Unsupported ROM",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            romInfo = new RomInfo(identity, romFolderPath);
 
             if (string.IsNullOrWhiteSpace(RomInfo.romID) || string.IsNullOrWhiteSpace(RomInfo.projectName))
             {
@@ -1329,7 +1347,7 @@ namespace DSPRE
         private void SetupROMLanguage(string headerPath)
         {
             AppLogger.Debug($"SetupROMLanguage called with headerPath: {headerPath}");
-            
+
             if (headerPath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase))
             {
                 AppLogger.Debug("Header file is YAML format, attempting to parse...");
@@ -1341,7 +1359,7 @@ namespace DSPRE
                     AppLogger.Info($"Successfully loaded game code from YAML: {gameCode}");
                     return;
                 }
-                
+
                 // YAML parsing failed, try binary fallback
                 AppLogger.Warn("YAML parsing failed, attempting binary fallback...");
                 string binaryPath = headerPath.Replace(".yaml", ".bin");
@@ -1356,7 +1374,7 @@ namespace DSPRE
                     return;
                 }
             }
-            
+
             AppLogger.Debug($"Reading binary header from: {headerPath}");
             using (DSUtils.EasyReader br = new DSUtils.EasyReader(headerPath, 0xC))
             {
@@ -1458,9 +1476,9 @@ namespace DSPRE
                 pokemonEditorToolStripMenuItem.Visible = false; // Hide Personal Data Editor menu item for HGE
                 pokemonEditorButton.Visible = false; // Hide Pokemon Editor button for HGE
                 itemEditorToolStripMenuItem.Visible = false; // Hide Item Editor menu item for HGE
-                MessageBox.Show("HGE ROM detected.\nCertain editors have been disabled as they are not compatible with HGE ROMs.\nAdditionally the following information is important:"+
-                    "\n\n- Certain editors such as Move Data or Trade Editor seem to work without crashing but it is no gaurantee, use at your own peril. Also, move data will always get overwritten by hg-engine."+
-                    "\n\n- Certain text files or script files that HGE edits will be overwritten, please make sure you are aware which are the ones you have to manage with hg-engine."+
+                MessageBox.Show("HGE ROM detected.\nCertain editors have been disabled as they are not compatible with HGE ROMs.\nAdditionally the following information is important:" +
+                    "\n\n- Certain editors such as Move Data or Trade Editor seem to work without crashing but it is no gaurantee, use at your own peril. Also, move data will always get overwritten by hg-engine." +
+                    "\n\n- Certain text files or script files that HGE edits will be overwritten, please make sure you are aware which are the ones you have to manage with hg-engine." +
                     "\n\n- After making edits in DSPRE and want to use as the new base rom for hg-engine make sure to run 'make clean' or otherwise hg-engine will just grab your old rom.nds data.",
                     "HGE Detected", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -1537,7 +1555,7 @@ namespace DSPRE
 
             bool success = DSUtils.RepackROM(saveRom.FileName);
 
-            if (RomInfo.gameFamily != GameFamilies.DP && RomInfo.gameFamily != GameFamilies.Plat)
+            if (RomInfo.gameFamily != GameFamilies.DP && RomInfo.gameFamily != GameFamilies.Platinum)
             {
                 if (EditorPanels.eventEditor.eventEditorIsReady)
                 {
@@ -1632,8 +1650,8 @@ namespace DSPRE
         }
         private void platinumToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OpenCommandsDatabase(RomInfo.BuildCommandNamesDatabase(GameFamilies.Plat), RomInfo.BuildCommandParametersDatabase(GameFamilies.Plat),
-                RomInfo.BuildActionNamesDatabase(GameFamilies.Plat), RomInfo.BuildComparisonOperatorsDatabase(GameFamilies.Plat));
+            OpenCommandsDatabase(RomInfo.BuildCommandNamesDatabase(GameFamilies.Platinum), RomInfo.BuildCommandParametersDatabase(GameFamilies.Platinum),
+                RomInfo.BuildActionNamesDatabase(GameFamilies.Platinum), RomInfo.BuildComparisonOperatorsDatabase(GameFamilies.Platinum));
         }
         private void heartGoldAndSoulSilverToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1731,7 +1749,7 @@ namespace DSPRE
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                case GameFamilies.Plat:
+                case GameFamilies.Platinum:
                     WildEditorDPPt wildEditorDppt = new WildEditorDPPt(wildPokeUnpackedPath, RomInfo.GetPokemonNames(),
                         encToOpen, EditorPanels.headerEditor.internalNames.Count);
                     wildEditorDppt.Show();
@@ -2300,7 +2318,7 @@ namespace DSPRE
         }
 
         private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
+        {
             EggMoveEditor eggMoveEditor = new EggMoveEditor();
             eggMoveEditor.ShowDialog();
         }

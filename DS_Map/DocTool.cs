@@ -137,7 +137,7 @@ namespace DSPRE
                 object encObj;
 
                 if (RomInfo.gameFamily == RomInfo.GameFamilies.DP ||
-                    RomInfo.gameFamily == RomInfo.GameFamilies.Plat)
+                    RomInfo.gameFamily == RomInfo.GameFamilies.Platinum)
                 {
                     encObj = ExportDPPt(fileId, path, pokeNames);
                 }

@@ -973,7 +973,7 @@ namespace DSPRE.Editors
                                         }
                                     }
                                 }
-                                else if (gameFamily.Equals(GameFamilies.Plat))
+                                else if (gameFamily.Equals(GameFamilies.Platinum))
                                 {
                                     foreach (ushort r in result)
                                     {
