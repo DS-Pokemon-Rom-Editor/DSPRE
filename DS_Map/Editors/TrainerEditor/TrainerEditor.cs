@@ -1140,6 +1140,13 @@ namespace DSPRE.Editors
                 MessageBox.Show(sb.ToString(), "Duplicate Moves", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
+            // Prevent trainer zero bug from occuring
+            if (trainerComboBox.SelectedIndex < 0)
+            {
+                MessageBox.Show("Error: Trainer index is out of range. Changes will not be saved.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             /*Write to File*/
             string indexStr = "\\" + trainerComboBox.SelectedIndex.ToString("D4");
             File.WriteAllBytes(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, currentTrainerFile.trp.ToByteArray());
@@ -1308,6 +1315,12 @@ namespace DSPRE.Editors
 
                 byte partySize = reader.ReadByte();
                 byte[] pDat = reader.ReadBytes(partySize);
+
+                if (trainerComboBox.SelectedIndex < 0)
+                {
+                    MessageBox.Show("Error: Trainer index is out of range. Import failed.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
                 string pathData = RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + "\\" + trainerComboBox.SelectedIndex.ToString("D4");
                 string pathParty = RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + "\\" + trainerComboBox.SelectedIndex.ToString("D4");
