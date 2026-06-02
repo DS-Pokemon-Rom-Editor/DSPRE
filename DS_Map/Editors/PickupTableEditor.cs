@@ -9,11 +9,6 @@ namespace DSPRE.Editors
 {
     public partial class PickupTableEditor : UserControl, IEditorWithUnsavedChanges
     {
-        private const int OVERLAY_NUMBER = 12;
-        private const int COMMON_ITEMS_OFFSET = 0x34B44;
-        private const int RARE_ITEMS_OFFSET = 0x34A4C;
-        private const int ACTIVATION_DIVISOR_OFFSET = 0xC852; // _s32_div_f divisor for activation chance
-        private const int WEIGHT_TABLE_OFFSET = 0x3518C; // sPickupWeightTable
         private const int COMMON_ITEMS_COUNT = 18; // 18 pairs
         private const int RARE_ITEMS_COUNT = 11;   // 11 pairs
         private const int WEIGHT_TABLE_SIZE = 9;   // 9 weight thresholds
@@ -26,7 +21,7 @@ namespace DSPRE.Editors
         private List<ushort> commonItemIDs = new List<ushort>();
         private List<ushort> rareItemIDs = new List<ushort>();
 
-        // Store the pickup activation divisor (must be multiple of 10)
+        // Store the pickup activation divisor (used in modulo operation: BattleSystem_Random() % divisor)
         private int activationDivisor = 10;
 
         // Store the pickup activation weight table (9 bytes)
@@ -47,6 +42,8 @@ namespace DSPRE.Editors
             if (!isDirty)
             {
                 isDirty = true;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
             }
         }
 
@@ -55,6 +52,31 @@ namespace DSPRE.Editors
             if (isDirty)
             {
                 isDirty = false;
+                // Notify parent to update its state
+                OnDirtyStateChanged();
+            }
+        }
+
+        private void OnDirtyStateChanged()
+        {
+            // Don't update title if we're being disposed
+            if (this.IsDisposed || this.Disposing)
+                return;
+
+            // Walk up the control hierarchy to find ItemTableEditorForm
+            Control parent = this.Parent;
+            while (parent != null)
+            {
+                if (parent is ItemTableEditorForm form)
+                {
+                    // Don't update if form is closing/disposed
+                    if (!form.IsDisposed && !form.Disposing)
+                    {
+                        form.RefreshTitle();
+                    }
+                    break;
+                }
+                parent = parent.Parent;
             }
         }
 
@@ -67,10 +89,11 @@ namespace DSPRE.Editors
         {
             if (pickupTableEditorIsReady && !force) { return; }
 
-            // Check if this is HeartGold US
-            if (!IsHeartGoldUS())
+            // Check if pickup table is supported for this ROM
+            if (RomInfo.pickupTableOverlayNumber == -1)
             {
-                ShowNotAvailableMessage();
+                MessageBox.Show("Pickup Table Editor is not available for this ROM version/language.",
+                    "Editor Not Available", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -79,10 +102,10 @@ namespace DSPRE.Editors
             // Initialize combo box columns with item names
             InitializeComboBoxColumns();
 
-            // Decompress overlay 12 if needed
-            if (OverlayUtils.IsCompressed(OVERLAY_NUMBER))
+            // Decompress overlay if needed
+            if (OverlayUtils.IsCompressed(RomInfo.pickupTableOverlayNumber))
             {
-                OverlayUtils.Decompress(OVERLAY_NUMBER);
+                OverlayUtils.Decompress(RomInfo.pickupTableOverlayNumber);
             }
 
             LoadPickupTable();
@@ -118,34 +141,13 @@ namespace DSPRE.Editors
             }
         }
 
-        private bool IsHeartGoldUS()
-        {
-            return RomInfo.romID == "IPKE" && RomInfo.gameFamily == GameFamilies.HGSS;
-        }
-
-        private void ShowNotAvailableMessage()
-        {
-            // Create a label to show "not available"
-            Label notAvailableLabel = new Label
-            {
-                Text = "Pickup Table Editor is only available for HeartGold (US) version.\n\n" +
-                       "The correct offsets for other game versions are not yet known.",
-                AutoSize = false,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font(Font.FontFamily, 10, FontStyle.Bold)
-            };
-            Controls.Clear();
-            Controls.Add(notAvailableLabel);
-        }
-
         private void LoadPickupTable()
         {
-            string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+            string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
             // Read common items
             commonItemIDs.Clear();
-            byte[] commonData = DSUtils.ReadFromFile(overlayPath, COMMON_ITEMS_OFFSET, COMMON_ITEMS_COUNT * 2);
+            byte[] commonData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupCommonItemsOffset, COMMON_ITEMS_COUNT * 2);
             for (int i = 0; i < COMMON_ITEMS_COUNT; i++)
             {
                 ushort itemID = BitConverter.ToUInt16(commonData, i * 2);
@@ -154,7 +156,7 @@ namespace DSPRE.Editors
 
             // Read rare items
             rareItemIDs.Clear();
-            byte[] rareData = DSUtils.ReadFromFile(overlayPath, RARE_ITEMS_OFFSET, RARE_ITEMS_COUNT * 2);
+            byte[] rareData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupRareItemsOffset, RARE_ITEMS_COUNT * 2);
             for (int i = 0; i < RARE_ITEMS_COUNT; i++)
             {
                 ushort itemID = BitConverter.ToUInt16(rareData, i * 2);
@@ -167,15 +169,15 @@ namespace DSPRE.Editors
 
         private void LoadActivationOdds()
         {
-            string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+            string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
             // Read the activation divisor (1 byte, should be 0x0A = 10)
             // Note: Even though it's used in _s32_div_f, the actual value stored is just 1 byte
-            byte[] divisorData = DSUtils.ReadFromFile(overlayPath, ACTIVATION_DIVISOR_OFFSET, 1);
+            byte[] divisorData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupActivationDivisorOffset, 1);
             activationDivisor = divisorData[0];
 
             // Read the 9-byte pickup weight table
-            byte[] weightData = DSUtils.ReadFromFile(overlayPath, WEIGHT_TABLE_OFFSET, WEIGHT_TABLE_SIZE);
+            byte[] weightData = DSUtils.ReadFromFile(overlayPath, RomInfo.pickupWeightTableOffset, WEIGHT_TABLE_SIZE);
             Array.Copy(weightData, pickupWeightTable, WEIGHT_TABLE_SIZE);
 
             PopulateActivationOddsUI();
@@ -189,12 +191,13 @@ namespace DSPRE.Editors
                 dataGridViewActivation.Rows.Clear();
 
                 // Calculate real probabilities based on the game code logic:
-                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor == 0)
+                // 1. First check: activationChance% to activate (BattleSystem_Random(battleSystem) % divisor)
+                //    - Modulo operation: % 10 = 10% (1/10), % 3 = 33.33% (1/3), % 5 = 20% (1/5), etc.
                 // 2. If activated, roll 0-99 for slot selection
                 // 3. For slots 1-9: check if roll < threshold (cumulative)
                 // 4. For rare items: check if roll >= 98 && roll <= 99 (2% of activation)
 
-                double activationChance = (100.0 / activationDivisor); // Calculated from divisor
+                double activationChance = (100.0 / activationDivisor); // 1/divisor converted to percentage
 
                 // Add activation divisor row first
                 var divisorRow = new DataGridViewRow();
@@ -207,7 +210,7 @@ namespace DSPRE.Editors
                 divisorRow.Cells[2].Value = $"{activationChance:F2}%";
                 divisorRow.Cells[2].Style.BackColor = Color.LightYellow;
                 divisorRow.Cells[2].Style.Font = new Font(dataGridViewActivation.Font, FontStyle.Bold);
-                divisorRow.Cells[3].Value = "Divisor (must be multiple of 10)";
+                divisorRow.Cells[3].Value = "Modulo divisor (1-255)";
                 divisorRow.Cells[3].Style.BackColor = Color.LightYellow;
                 dataGridViewActivation.Rows.Add(divisorRow);
 
@@ -262,6 +265,49 @@ namespace DSPRE.Editors
             finally
             {
                 Helpers.EnableHandlers();
+            }
+        }
+
+        private void UpdateProbabilityDisplay()
+        {
+            // Update calculated probabilities without clearing rows (avoids NullRef during editing)
+            double activationChance = (100.0 / activationDivisor);
+
+            // Update divisor row (row 0)
+            if (dataGridViewActivation.Rows.Count > 0)
+            {
+                dataGridViewActivation.Rows[0].Cells[1].Value = activationDivisor;
+                dataGridViewActivation.Rows[0].Cells[2].Value = $"{activationChance:F2}%";
+            }
+
+            // Update slot probabilities (rows 1-9)
+            int prevThreshold = 0;
+            for (int i = 0; i < WEIGHT_TABLE_SIZE && i + 1 < dataGridViewActivation.Rows.Count; i++)
+            {
+                int threshold = pickupWeightTable[i];
+                int range = threshold - prevThreshold;
+                double slotProbability = (activationChance / 100.0) * (range / 100.0) * 100.0;
+
+                dataGridViewActivation.Rows[i + 1].Cells[1].Value = threshold;
+                dataGridViewActivation.Rows[i + 1].Cells[2].Value = $"{slotProbability:F2}%";
+                dataGridViewActivation.Rows[i + 1].Cells[3].Value = $"{prevThreshold}-{threshold - 1} ({range} values)";
+
+                prevThreshold = threshold;
+            }
+
+            // Update rare/miss rows if they exist
+            // Note: This is simplified - rare rows are static, only miss probability changes
+            int rareRowIndex = WEIGHT_TABLE_SIZE + 1; // After 9 slot rows and 1 divisor row
+            if (rareRowIndex < dataGridViewActivation.Rows.Count && prevThreshold < 98)
+            {
+                int missRange = 98 - prevThreshold;
+                double missProbability = (activationChance / 100.0) * (missRange / 100.0) * 100.0;
+                // The miss row is after rare row
+                int missRowIndex = rareRowIndex + 1;
+                if (missRowIndex < dataGridViewActivation.Rows.Count)
+                {
+                    dataGridViewActivation.Rows[missRowIndex].Cells[2].Value = $"{missProbability:F2}%";
+                }
             }
         }
 
@@ -359,7 +405,7 @@ namespace DSPRE.Editors
         {
             try
             {
-                string overlayPath = OverlayUtils.GetPath(OVERLAY_NUMBER);
+                string overlayPath = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
                 // Write common items
                 byte[] commonData = new byte[COMMON_ITEMS_COUNT * 2];
@@ -368,7 +414,7 @@ namespace DSPRE.Editors
                     byte[] itemBytes = BitConverter.GetBytes(commonItemIDs[i]);
                     Array.Copy(itemBytes, 0, commonData, i * 2, 2);
                 }
-                DSUtils.WriteToFile(overlayPath, commonData, COMMON_ITEMS_OFFSET);
+                DSUtils.WriteToFile(overlayPath, commonData, RomInfo.pickupCommonItemsOffset);
 
                 // Write rare items
                 byte[] rareData = new byte[RARE_ITEMS_COUNT * 2];
@@ -377,14 +423,14 @@ namespace DSPRE.Editors
                     byte[] itemBytes = BitConverter.GetBytes(rareItemIDs[i]);
                     Array.Copy(itemBytes, 0, rareData, i * 2, 2);
                 }
-                DSUtils.WriteToFile(overlayPath, rareData, RARE_ITEMS_OFFSET);
+                DSUtils.WriteToFile(overlayPath, rareData, RomInfo.pickupRareItemsOffset);
 
                 // Write activation divisor (1 byte)
                 byte[] divisorData = new byte[1] { (byte)activationDivisor };
-                DSUtils.WriteToFile(overlayPath, divisorData, ACTIVATION_DIVISOR_OFFSET);
+                DSUtils.WriteToFile(overlayPath, divisorData, RomInfo.pickupActivationDivisorOffset);
 
                 // Write activation weight table
-                DSUtils.WriteToFile(overlayPath, pickupWeightTable, WEIGHT_TABLE_OFFSET);
+                DSUtils.WriteToFile(overlayPath, pickupWeightTable, RomInfo.pickupWeightTableOffset);
 
                 SetClean();
                 MessageBox.Show("Pickup table saved successfully!", "Save Complete", 
@@ -461,21 +507,26 @@ namespace DSPRE.Editors
                 var cellValue = dataGridViewActivation.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
                 if (cellValue != null && byte.TryParse(cellValue.ToString(), out byte newDivisor))
                 {
-                    // Validate divisor is a multiple of 10 and positive
-                    if (newDivisor > 0 && newDivisor % 10 == 0)
+                    // Validate divisor is positive (1-255)
+                    if (newDivisor > 0)
                     {
                         activationDivisor = newDivisor;
                         SetDirty();
-                        PopulateActivationOddsUI(); // Refresh all probabilities
+                        // Update only calculated cells, don't rebuild the grid
+                        UpdateProbabilityDisplay();
                     }
                     else
                     {
-                        MessageBox.Show("Activation divisor must be a positive multiple of 10 (e.g., 10, 20, 30).\n\n" +
-                            "This is used in _s32_div_f(random, divisor) to determine activation chance.\n" +
-                            "A divisor of 10 = 10% chance, 20 = 5% chance, etc.\n" +
-                            "Valid range: 10-250 (must be multiple of 10).",
+                        MessageBox.Show("Activation divisor must be a positive value (1-255).\n\n" +
+                            "This is used in the modulo operation: BattleSystem_Random() % divisor\n" +
+                            "Probability = 1/divisor converted to percentage:\n" +
+                            "  % 10 = 10% chance (1/10)\n" +
+                            "  % 3 = 33.33% chance (1/3)\n" +
+                            "  % 5 = 20% chance (1/5)\n" +
+                            "  etc.",
                             "Invalid Divisor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
                 return;
@@ -498,23 +549,31 @@ namespace DSPRE.Editors
                         {
                             pickupWeightTable[thresholdIndex] = newThreshold;
                             SetDirty();
-                            PopulateActivationOddsUI(); // Refresh probabilities
+                            // Update only calculated cells, don't rebuild the grid
+                            UpdateProbabilityDisplay();
                         }
                         else
                         {
                             MessageBox.Show($"Threshold must be between {prevThreshold} and {nextThreshold}.",
                                 "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            PopulateActivationOddsUI(); // Reset to previous value
+                            // Reset to previous value
+                            UpdateProbabilityDisplay();
                         }
                     }
                     else
                     {
                         MessageBox.Show("Threshold must be between 0 and 100.",
                             "Invalid Threshold", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        PopulateActivationOddsUI(); // Reset to previous value
+                        // Reset to previous value
+                        UpdateProbabilityDisplay();
                     }
                 }
             }
+        }
+
+        private void buttonSave_Click(object sender, EventArgs e)
+        {
+            SavePickupTable();
         }
 
         public void Reset()

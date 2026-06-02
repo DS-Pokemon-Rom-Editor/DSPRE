@@ -148,6 +148,9 @@
     <Compile Include="Editors\ItemTableEditor.Designer.cs">
       <DependentUpon>ItemTableEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\ItemTableEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\LearnsetBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -176,11 +179,11 @@
     <Compile Include="Editors\TMEditor.Designer.cs">
       <DependentUpon>TMEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.cs">
+    <Compile Include="Editors\TrainerEditor\BattleMessage\TrainerMessageEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.Designer.cs">
-      <DependentUpon>BattleMessageEditor.cs</DependentUpon>
+    <Compile Include="Editors\TrainerEditor\BattleMessage\TrainerMessageEditor.Designer.cs">
+      <DependentUpon>TrainerMessageEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="Editors\TrainerEditor\BattleMessage\DSTextBox.cs">
       <SubType>UserControl</SubType>
@@ -619,6 +622,12 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\writeText.Designer.cs" />
+    <Compile Include="Editors\\TrainerEditor\\TrainerSearch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\\TrainerEditor\\TrainerSearch.Designer.cs">
+      <DependentUpon>TrainerSearch.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Editors\BugContestEncounterEditor.resx">
       <DependentUpon>BugContestEncounterEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -632,11 +641,14 @@
       <DependentUpon>HoneyTreeEncounterEditor.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="Editors\PickupTableEditor.resx">
+      <DependentUpon>PickupTableEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Editors\TMEditor.resx">
       <DependentUpon>TMEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Editors\TrainerEditor\BattleMessage\BattleMessageEditor.resx">
-      <DependentUpon>BattleMessageEditor.cs</DependentUpon>
+    <EmbeddedResource Include="Editors\TrainerEditor\BattleMessage\TrainerMessageEditor.resx">
+      <DependentUpon>TrainerMessageEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\TrainerEditor\BattleMessage\DSTextBox.resx">
       <DependentUpon>DSTextBox.cs</DependentUpon>

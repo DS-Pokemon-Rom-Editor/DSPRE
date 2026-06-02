@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors
 {
-    public partial class BattleMessageEditor : Form, IEditorWithUnsavedChanges
+    public partial class TrainerMessageEditor : Form, IEditorWithUnsavedChanges
     {
 
         private static readonly string trainerTextOffsetPath = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerTextOffset].unpackedDir, "0000");
@@ -102,7 +102,7 @@ namespace DSPRE.Editors
 
         #region IEditorWithUnsavedChanges Implementation
         public bool HasUnsavedChanges => dirty;
-        public string UnsavedChangesDescription => "Battle Message Editor";
+        public string UnsavedChangesDescription => "Trainer Message Editor";
         public void SaveChanges() => SaveAndSort();
         public void DiscardChanges() => SetDirty(false);
         #endregion
@@ -115,7 +115,7 @@ namespace DSPRE.Editors
         private int hoveredListBoxIndex = -1;
         private string currentComboTooltipText;
 
-        public BattleMessageEditor()
+        public TrainerMessageEditor()
         {
             InitializeComponent();
             OpenEditorsRegistry.Register(this);
@@ -126,9 +126,14 @@ namespace DSPRE.Editors
             trainerTextListBox.MouseLeave += trainerTextListBox_MouseLeave;
             triggerTypeComboBox.MouseMove += triggerTypeComboBox_MouseMove;
             triggerTypeComboBox.MouseLeave += triggerTypeComboBox_MouseLeave;
+
+            if (gameFamily == GameFamilies.DP)
+            {
+                hoverToolTip.SetToolTip(trainerClassPicBox, "Trainer graphics cannot be displayed for Diamond and Pearl.");
+            }
         }
 
-        public BattleMessageEditor(int trainerID)
+        public TrainerMessageEditor(int trainerID)
             : this()
         {
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames>() 
@@ -376,11 +381,6 @@ namespace DSPRE.Editors
             string tilesFilename = tilesFileID.ToString("D4");
             trainerTile = new NCGR(gameDirs[DirNames.trainerGraphics].unpackedDir + "\\" + tilesFilename, tilesFileID, tilesFilename);
 
-            if (gameFamily == GameFamilies.DP)
-            {
-                return 0;
-            }
-
             int spriteFileID = (trClassID * 5 + 2);
             string spriteFilename = spriteFileID.ToString("D4");
             trainerSprite = new NCER(gameDirs[DirNames.trainerGraphics].unpackedDir + "\\" + spriteFilename, spriteFileID, spriteFilename);
@@ -582,8 +582,13 @@ namespace DSPRE.Editors
             UpdateCurrentTrainerInfo(currentTrainerID);
 
             // Load and display trainer class pic
-            LoadTrainerClassPic(currentTrainerClass);
-            UpdateTrainerClassPic(trainerClassPicBox);
+
+            if (gameFamily != GameFamilies.DP)
+            {
+                // Reading trainer graphics for DP doesn't work
+                LoadTrainerClassPic(currentTrainerClass);
+                UpdateTrainerClassPic(trainerClassPicBox);
+            }
 
             if (trainerTextEntriesByTrainerId.TryGetValue((uint)currentTrainerID, out List<TrainerTextTableEntry> entries))
             {
@@ -592,7 +597,6 @@ namespace DSPRE.Editors
             else
             {
                 currentTextEntries = new List<TrainerTextTableEntry>();
-                AppLogger.Error($"No trainer text entries found for trainer ID {currentTrainerID}. This should not have happened.");
             }
 
             ReadCurrentTrainerTextEntries();
