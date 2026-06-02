@@ -268,14 +268,11 @@ namespace DSPRE.Editors
         private void exportTextFileButton_Click(object sender, EventArgs e)
         {
             int selectedArchiveID = selectTextFileComboBox.SelectedIndex;
-
-            string msgFileType = "Gen IV Text Archive";
-            string jsonFileType = "JSON Text Archive";
             string suggestedFileName = "Text Archive " + selectedArchiveID;
 
             SaveFileDialog sf = new SaveFileDialog
             {
-                Filter = $"{msgFileType} (*.msg)|*.msg|{jsonFileType} (*.json)|*.json",
+                Filter = "JSON Text Archive (*.json)|*.json|Binary Text Archive (*.msg)|*.msg",
             };
 
             if (!string.IsNullOrWhiteSpace(suggestedFileName))
@@ -297,7 +294,7 @@ namespace DSPRE.Editors
                 string binPath = sf.FileName;
                 string jsonPath = TextArchive.GetFilePaths(selectedArchiveID).jsonPath;
 
-                TextConverter.JSONToBin(binPath, binPath, CharMapManager.GetCharMapPath());
+                TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
             }
             else if (selectedExtension == ".json")
             {
@@ -365,7 +362,7 @@ namespace DSPRE.Editors
             /* Prompt user to select .msg or .json file */
             OpenFileDialog of = new OpenFileDialog
             {
-                Filter = "Gen IV Text Archive (*.msg)|*.msg|JSON Text Archive (*.json)|*.json",
+                Filter = "JSON Text Archive (*.json)|*.json|Binary Text Archive|*.msg|Binary Text Archive|*.bin",
             };
             if (of.ShowDialog(this) != DialogResult.OK)
             {
@@ -377,7 +374,7 @@ namespace DSPRE.Editors
             string jsonPath = TextArchive.GetFilePaths(currentTextArchive.ID).jsonPath;
             string selectedExtension = Path.GetExtension(of.FileName);
 
-            if (selectedExtension == ".msg" || selectedExtension == "")
+            if (selectedExtension == ".msg" || selectedExtension == ".bin" || selectedExtension == "")
             {
                 // Handle .msg case
                 File.Copy(of.FileName, binPath, true);
