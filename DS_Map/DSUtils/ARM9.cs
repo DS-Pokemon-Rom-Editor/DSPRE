@@ -71,7 +71,7 @@ namespace DSPRE {
             return DSUtils.ReadFromFile(RomInfo.arm9Path, startOffset, 1)[0];
         }
         public static void WriteByte(byte value, uint destOffset) {
-            DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(value), destOffset, 0);
+            DSUtils.WriteToFile(RomInfo.arm9Path, new byte[] { value }, destOffset, 0);
         }
     }
 }

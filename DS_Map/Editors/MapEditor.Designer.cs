@@ -42,7 +42,7 @@
             this.exportCurrentMapBinButton = new System.Windows.Forms.Button();
             this.saveMapButton = new System.Windows.Forms.Button();
             this.mapRenderPanel = new System.Windows.Forms.Panel();
-            this.mapOpenGlControl = new Tao.Platform.Windows.SimpleOpenGlControl();
+            this.mapOpenGlControl = new DSPRE.SimpleOpenGlControl2();
             this.movPictureBox = new System.Windows.Forms.PictureBox();
             this.label26 = new System.Windows.Forms.Label();
             this.buildTextureComboBox = new System.Windows.Forms.ComboBox();
@@ -1630,7 +1630,7 @@
         private System.Windows.Forms.Button exportCurrentMapBinButton;
         private System.Windows.Forms.Button saveMapButton;
         private System.Windows.Forms.Panel mapRenderPanel;
-        public Tao.Platform.Windows.SimpleOpenGlControl mapOpenGlControl;
+        public DSPRE.SimpleOpenGlControl2 mapOpenGlControl;
         private System.Windows.Forms.PictureBox movPictureBox;
         private System.Windows.Forms.Label label26;
         public System.Windows.Forms.ComboBox buildTextureComboBox;

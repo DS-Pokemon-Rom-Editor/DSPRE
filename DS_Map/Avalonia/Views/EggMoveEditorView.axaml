@@ -1,0 +1,113 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+		x:Class="DSPRE.Avalonia.Views.EggMoveEditorView"
+		x:DataType="vm:EggMoveEditorViewModel"
+		Title="{Binding Title}"
+		Width="900" Height="640"
+		WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="8" LastChildFill="True">
+
+	<!-- Status / size labels at the top -->
+	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="20" Margin="0,0,0,6">
+	  <TextBlock Text="{Binding MonCountText}"/>
+	  <TextBlock Text="{Binding ListSizeText}" Foreground="{Binding ListSizeBrush}"/>
+	</StackPanel>
+
+	<!-- Save / Export / Import buttons at the bottom -->
+	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
+				HorizontalAlignment="Right" Margin="0,8,0,0">
+	  <Button Content="Export" Click="Export_Click"/>
+	  <Button Content="Import" Click="Import_Click"/>
+	  <Button Content="Save"   Click="Save_Click"/>
+	</StackPanel>
+
+	<!-- Three-column layout -->
+	<Grid ColumnDefinitions="220,*,220" ColumnSpacing="8">
+
+	  <!-- LEFT: Pokémon list + search -->
+	  <DockPanel Grid.Column="0">
+		<TextBlock DockPanel.Dock="Top" Text="Pokémon with Egg Moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
+
+		<!-- Search -->
+		<StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+		  <Grid ColumnDefinitions="*,Auto">
+			<TextBox Grid.Column="0" Text="{Binding SearchText}" Watermark="Search…" KeyDown="Search_KeyDown"/>
+			<Button  Grid.Column="1" Content="🔍" Margin="4,0,0,0" Click="Search_Click"/>
+		  </Grid>
+		  <ListBox ItemsSource="{Binding SearchResults}"
+				   SelectedIndex="{Binding SelectedSearchIndex}"
+				   MaxHeight="80"
+				   DoubleTapped="SearchResult_DoubleTapped"/>
+		</StackPanel>
+
+		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
+		  <TextBlock Text="{Binding EntryIdText}" FontSize="11"/>
+		  <Grid ColumnDefinitions="*,*">
+			<ComboBox Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding MonNames}"
+					  SelectedIndex="{Binding CbMonIndex}" Margin="0,0,0,4"/>
+		  </Grid>
+		  <TextBlock Text="{Binding MonStatusText}" FontSize="11" TextWrapping="Wrap"/>
+		  <StackPanel Orientation="Horizontal" Spacing="4">
+			<Button Content="Add"     IsEnabled="{Binding CanAddMon}"     Click="AddMon_Click"/>
+			<Button Content="Replace" IsEnabled="{Binding CanReplaceMon}" Click="ReplaceMon_Click"/>
+			<Button Content="Delete"  IsEnabled="{Binding CanDeleteMon}"  Click="DeleteMon_Click"/>
+		  </StackPanel>
+		</StackPanel>
+
+		<ListBox ItemsSource="{Binding MonList}"
+				 SelectedIndex="{Binding SelectedMonIndex}"/>
+	  </DockPanel>
+
+	  <!-- MIDDLE: Egg move list for selected Pokémon -->
+	  <DockPanel Grid.Column="1">
+		<TextBlock DockPanel.Dock="Top" Text="Egg Moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
+
+		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
+		  <StackPanel Orientation="Horizontal" Spacing="12">
+			<TextBlock Text="{Binding MoveCountText}" Foreground="{Binding MoveCountBrush}" FontSize="11"/>
+			<TextBlock Text="{Binding MoveIdText}"    FontSize="11"/>
+		  </StackPanel>
+		  <ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbMoveIndex}"/>
+		  <TextBlock Text="{Binding MoveStatusText}" FontSize="11" TextWrapping="Wrap"/>
+		  <StackPanel Orientation="Horizontal" Spacing="4">
+			<Button Content="Add"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"/>
+			<Button Content="Replace" IsEnabled="{Binding CanReplaceMove}" Click="ReplaceMove_Click"/>
+			<Button Content="Delete"  IsEnabled="{Binding CanDeleteMove}"  Click="DeleteMove_Click"/>
+		  </StackPanel>
+		</StackPanel>
+
+		<ListBox ItemsSource="{Binding MoveList}"
+				 SelectedIndex="{Binding SelectedMoveIndex}"/>
+	  </DockPanel>
+
+	  <!-- RIGHT: Bulk operations -->
+	  <StackPanel Grid.Column="2" Spacing="10">
+		<TextBlock Text="Bulk Operations" FontWeight="SemiBold"/>
+
+		<Border BorderThickness="1"
+				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
+		  <StackPanel Spacing="4">
+			<TextBlock Text="Bulk Replace Move" FontWeight="SemiBold" FontSize="12"/>
+			<TextBlock Text="Replace:" FontSize="11"/>
+			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
+			<TextBlock Text="With:" FontSize="11"/>
+			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplacerIndex}"/>
+			<Button Content="Bulk Replace" HorizontalAlignment="Stretch" Click="BulkReplace_Click"/>
+		  </StackPanel>
+		</Border>
+
+		<Border BorderThickness="1"
+				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
+		  <StackPanel Spacing="4">
+			<TextBlock Text="Bulk Delete Move" FontWeight="SemiBold" FontSize="12"/>
+			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbDeleteAllIndex}"/>
+			<Button Content="Bulk Delete" HorizontalAlignment="Stretch" Click="BulkDelete_Click"/>
+		  </StackPanel>
+		</Border>
+	  </StackPanel>
+
+	</Grid>
+  </DockPanel>
+</Window>

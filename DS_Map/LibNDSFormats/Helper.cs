@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Drawing;
-using OpenTK;
 
 namespace SM64DSe {
     static class Helper {
@@ -35,12 +34,18 @@ namespace SM64DSe {
             return (ushort)(rf | (gf << 5) | (bf << 10));
         }
 
-        public static bool VectorsEqual(Vector3 a, Vector3 b) {
+        public static bool VectorsEqual(Vec3 a, Vec3 b) {
             float epsilon = 0.00001f;
             if (Math.Abs(a.X - b.X) > epsilon){ return false; }
             if (Math.Abs(a.Y - b.Y) > epsilon){ return false; }
             if (Math.Abs(a.Z - b.Z) > epsilon){ return false; }
             return true;
         }
+    }
+
+    /// <summary>Lightweight 3-component float vector (replaces OpenTK.Vector3).</summary>
+    public struct Vec3 {
+        public float X, Y, Z;
+        public Vec3(float x, float y, float z) { X = x; Y = y; Z = z; }
     }
 }

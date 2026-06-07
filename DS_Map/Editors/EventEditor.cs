@@ -13,10 +13,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
-using static Tao.Platform.Windows.Winmm;
 
 namespace DSPRE.Editors
 {

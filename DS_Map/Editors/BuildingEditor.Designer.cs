@@ -32,7 +32,7 @@
             this.textureComboBox = new System.Windows.Forms.ComboBox();
             this.importButton = new System.Windows.Forms.Button();
             this.exportButton = new System.Windows.Forms.Button();
-            this.buildingOpenGLControl = new Tao.Platform.Windows.SimpleOpenGlControl();
+            this.buildingOpenGLControl = new DSPRE.SimpleOpenGlControl2();
             this.interiorCheckBox = new System.Windows.Forms.CheckBox();
             this.buildingEditorBldListBox = new System.Windows.Forms.ListBox();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -182,7 +182,7 @@
         private System.Windows.Forms.ComboBox textureComboBox;
         private System.Windows.Forms.Button importButton;
         private System.Windows.Forms.Button exportButton;
-        private Tao.Platform.Windows.SimpleOpenGlControl buildingOpenGLControl;
+        private DSPRE.SimpleOpenGlControl2 buildingOpenGLControl;
         private System.Windows.Forms.CheckBox interiorCheckBox;
         private System.Windows.Forms.ListBox buildingEditorBldListBox;
         private System.Windows.Forms.Panel panel1;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Windows.Controls.Primitives;
 using static DSPRE.RomInfo;
 using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
 

@@ -1,0 +1,183 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Platform.Storage;
+
+namespace DSPRE.Avalonia
+{
+    /// <summary>
+    /// Wraps Avalonia 12 async message-box and file-dialog APIs behind a simple static interface.
+    /// Use this everywhere instead of System.Windows.Forms.MessageBox or OpenFileDialog/SaveFileDialog.
+    /// </summary>
+    public static class DialogHelper
+    {
+        // ----------------------------------------------------------------
+        // Message box result enum (replaces WinForms DialogResult)
+        // ----------------------------------------------------------------
+
+        public enum MsgResult { Ok, Yes, No, Cancel }
+
+        // ----------------------------------------------------------------
+        // Message Boxes (built from plain Avalonia Window — no 3rd-party dep)
+        // ----------------------------------------------------------------
+
+        public static Task ShowInfo(string message, string title = "Information")
+            => ShowMsg(message, title, MsgButtons.Ok);
+
+        public static Task ShowError(string message, string title = "Error")
+            => ShowMsg(message, title, MsgButtons.Ok);
+
+        /// <returns>true = Yes, false = No</returns>
+        public static async Task<bool> AskYesNo(string message, string title = "Confirm")
+        {
+            var result = await ShowMsg(message, title, MsgButtons.YesNo);
+            return result == MsgResult.Yes;
+        }
+
+        /// <returns>MsgResult.Yes / No / Cancel</returns>
+        public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
+            => ShowMsg(message, title, MsgButtons.YesNoCancel);
+
+        // ----------------------------------------------------------------
+        // File Dialogs  (requires the owning Window)
+        // ----------------------------------------------------------------
+
+        /// <summary>Opens a file-open dialog. Returns null if cancelled.</summary>
+        public static async Task<string> OpenFile(
+            Window owner,
+            string title,
+            IReadOnlyList<FilePickerFileType> filters = null)
+        {
+            var opts = new FilePickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false,
+                FileTypeFilter = filters
+            };
+
+            var files = await owner.StorageProvider.OpenFilePickerAsync(opts);
+            return files?.Count > 0 ? files[0].TryGetLocalPath() : null;
+        }
+
+        /// <summary>Opens a folder-picker dialog. Returns null if cancelled.</summary>
+        public static async Task<string> OpenFolder(Window owner, string title)
+        {
+            var opts = new FolderPickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false
+            };
+
+            var folders = await owner.StorageProvider.OpenFolderPickerAsync(opts);
+            return folders?.Count > 0 ? folders[0].TryGetLocalPath() : null;
+        }
+
+        /// <summary>Opens a file-save dialog. Returns null if cancelled.</summary>
+        public static async Task<string> SaveFile(
+            Window owner,
+            string title,
+            IReadOnlyList<FilePickerFileType> filters = null,
+            string suggestedFileName = null)
+        {
+            var opts = new FilePickerSaveOptions
+            {
+                Title = title,
+                FileTypeChoices = filters,
+                SuggestedFileName = suggestedFileName
+            };
+
+            var file = await owner.StorageProvider.SaveFilePickerAsync(opts);
+            return file?.TryGetLocalPath();
+        }
+
+        // ----------------------------------------------------------------
+        // Common FilePickerFileType presets
+        // ----------------------------------------------------------------
+
+        public static readonly FilePickerFileType CsvFilter =
+            new FilePickerFileType("CSV Files") { Patterns = new[] { "*.csv" } };
+
+        public static readonly FilePickerFileType AllFilter =
+            new FilePickerFileType("All Files") { Patterns = new[] { "*.*" } };
+
+        // ----------------------------------------------------------------
+        // Internal: lightweight dialog window built in code (no AXAML)
+        // ----------------------------------------------------------------
+
+        private enum MsgButtons { Ok, YesNo, YesNoCancel }
+
+        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons)
+        {
+            var tcs = new TaskCompletionSource<MsgResult>();
+
+            var win = new Window
+            {
+                Title = title,
+                Width = 420,
+                MinHeight = 140,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                SizeToContent = SizeToContent.Height,
+            };
+
+            var msgText = new TextBlock
+            {
+                Text = message,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
+            };
+
+            var btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
+                Spacing = 6,
+            };
+
+            void AddBtn(string label, MsgResult result)
+            {
+                var btn = new Button { Content = label, MinWidth = 72 };
+                btn.Click += (_, _) => { tcs.TrySetResult(result); win.Close(); };
+                btnRow.Children.Add(btn);
+            }
+
+            switch (buttons)
+            {
+                case MsgButtons.Ok:
+                    AddBtn("OK", MsgResult.Ok);
+                    break;
+                case MsgButtons.YesNo:
+                    AddBtn("Yes", MsgResult.Yes);
+                    AddBtn("No", MsgResult.No);
+                    break;
+                case MsgButtons.YesNoCancel:
+                    AddBtn("Yes", MsgResult.Yes);
+                    AddBtn("No", MsgResult.No);
+                    AddBtn("Cancel", MsgResult.Cancel);
+                    break;
+            }
+
+            win.Closed += (_, _) => tcs.TrySetResult(MsgResult.Cancel);
+
+            var root = new StackPanel();
+            root.Children.Add(msgText);
+            root.Children.Add(btnRow);
+            win.Content = root;
+
+            // ShowDialog requires a parent; fall back to Show if none available
+            var app = global::Avalonia.Application.Current?.ApplicationLifetime
+                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+            var owner = app?.MainWindow;
+
+            if (owner != null)
+                await win.ShowDialog(owner);
+            else
+                win.Show();
+
+            return await tcs.Task;
+        }
+    }
+}

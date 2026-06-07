@@ -187,7 +187,7 @@
             this.triggersListBox = new System.Windows.Forms.ListBox();
             this.eventPanel = new System.Windows.Forms.Panel();
             this.eventPictureBox = new System.Windows.Forms.PictureBox();
-            this.eventOpenGlControl = new Tao.Platform.Windows.SimpleOpenGlControl();
+            this.eventOpenGlControl = new DSPRE.SimpleOpenGlControl2();
             this.rightClickPicture = new System.Windows.Forms.PictureBox();
             this.wheelClickPicture = new System.Windows.Forms.PictureBox();
             this.LeftClickPicture = new System.Windows.Forms.PictureBox();
@@ -2645,7 +2645,7 @@
         private System.Windows.Forms.Button exportEventFileButton;
         private System.Windows.Forms.Button importEventFileButton;
         private System.Windows.Forms.Button saveEventsButton;
-        public Tao.Platform.Windows.SimpleOpenGlControl eventOpenGlControl;
+        public DSPRE.SimpleOpenGlControl2 eventOpenGlControl;
         public System.Windows.Forms.ComboBox selectEventComboBox;
         public System.Windows.Forms.Button itemsSelectorHelpBtn;
         public System.Windows.Forms.ComboBox owItemComboBox;

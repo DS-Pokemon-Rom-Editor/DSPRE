@@ -1935,8 +1935,7 @@ namespace DSPRE
 
         private void addressHelperToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AddressHelper form = new AddressHelper();
-            form.Show();
+            new DSPRE.Avalonia.Views.AddressHelperView().Show();
         }
 
 
@@ -1986,16 +1985,13 @@ namespace DSPRE
 
         private void flyWarpEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var flyEditor = new FlyEditor(gameFamily, gameLanguage, EditorPanels.headerEditor.headerListBoxNames);
-            flyEditor.Show();
+            new DSPRE.Avalonia.Views.FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).Show();
         }
 
         private void tradeEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData });
-
-            TradeEditor tradeEditor = new TradeEditor();
-            tradeEditor.Show();
+            new DSPRE.Avalonia.Views.TradeEditorView().Show();
         }
 
         private void itemEditorToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2235,9 +2231,7 @@ namespace DSPRE
         {
             Helpers.statusLabelMessage("Setting up Overlay Editor...");
             Update();
-            OverlayEditor ovlEditor = new OverlayEditor();
-            ovlEditor.Show();
-
+            new DSPRE.Avalonia.Views.OverlayEditorView().Show();
             Helpers.statusLabelMessage();
             Update();
         }
@@ -2249,14 +2243,7 @@ namespace DSPRE
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
 
-            string[] moveDescriptions = new TextArchive(RomInfo.moveDescriptionsTextNumbers).messages.Select(
-            x => x.Replace("\\n", Environment.NewLine)).ToArray();
-
-            MoveDataEditor mde = new MoveDataEditor(
-                new TextArchive(RomInfo.moveNamesTextNumbers).messages.ToArray(),
-                moveDescriptions
-            );
-            mde.Show();
+            new DSPRE.Avalonia.Views.MoveDataEditorView().Show();
 
             Helpers.statusLabelMessage();
             Update();
@@ -2264,8 +2251,7 @@ namespace DSPRE
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SettingsWindow editor = new SettingsWindow();
-            editor.Show();
+            new DSPRE.Avalonia.Views.SettingsWindowView().Show();
         }
 
         private void pokemonEditorToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2289,20 +2275,18 @@ namespace DSPRE
 
         private void tMEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var tmEditor = new TMEditor();
-            tmEditor.ShowDialog();
+            var tmEditorView = new DSPRE.Avalonia.Views.TMEditorView();
+            tmEditorView.Show();
         }
 
         private void openCharmapManagerToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            CharMaps.CharMapManagerForm charMapManager = new CharMaps.CharMapManagerForm();
-            charMapManager.ShowDialog();
+            new DSPRE.Avalonia.Views.CharMapManagerView().Show();
         }
 
         private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
-            EggMoveEditor eggMoveEditor = new EggMoveEditor();
-            eggMoveEditor.ShowDialog();
+        {
+            new DSPRE.Avalonia.Views.EggMoveEditorView().Show();
         }
 
         private void researchHelperToolStripMenuItem_Click(object sender, EventArgs e)
