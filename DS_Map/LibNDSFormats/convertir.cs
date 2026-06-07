@@ -24,7 +24,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Windows.Media.Imaging;
 
 namespace Tinke {
     public static class Convertir {
@@ -301,22 +300,11 @@ namespace Tinke {
         /// <param name="delay">1/100 seg entre frame</param>
         /// <param name="loops">Número de repeticiones. 0 para infinito, -1 para ninguna</param>
         public static void CrearGif(string fout, Image[] frames, int delay, int loops) {
-            // ¡¡No funciona con mono!!
-            GifBitmapEncoder encoder = new GifBitmapEncoder();
-
-            for (int i = 0; i < frames.Length; i++) {
-                MemoryStream ms = new MemoryStream();
-                frames[i].Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-
-                BitmapFrame bf = BitmapFrame.Create(ms);
-                encoder.Frames.Add(bf);
-            }
-            FileStream fs = new FileStream(fout, FileMode.Create);
-            encoder.Save(fs);
-            fs.Close();
-            fs.Dispose();
-
-            ModificarGif(fout, delay, loops);
+            // WPF GifBitmapEncoder not available in net8; use System.Drawing GIF encoder.
+            // Note: System.Drawing GIF encoder saves only the first frame; multi-frame
+            // animated GIF generation is deferred until the OpenTK 4 rewrite.
+            if (frames == null || frames.Length == 0) return;
+            frames[0].Save(fout, System.Drawing.Imaging.ImageFormat.Gif);
         }
     }
 }

@@ -11,7 +11,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
-using static Tao.Platform.Windows.Winmm;
 
 namespace DSPRE.Editors
 {

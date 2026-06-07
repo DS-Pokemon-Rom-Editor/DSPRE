@@ -6,7 +6,6 @@ using DSPRE.Editors;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using Microsoft.WindowsAPICodePack.Dialogs;
-using Tao.OpenGl;
 using static DSPRE.RomInfo;
 
 namespace DSPRE {
@@ -48,7 +47,7 @@ namespace DSPRE {
             buildingOpenGLControl.InitializeContexts();
             buildingOpenGLControl.MakeCurrent();
             buildingOpenGLControl.MouseWheel += new MouseEventHandler(buildingOpenGLControl_MouseWheel);
-            Gl.glEnable(Gl.GL_TEXTURE_2D);
+            // Gl.glEnable(Gl.GL_TEXTURE_2D) stubbed — awaiting OpenTK 4 rewrite
 
             if (RomInfo.gameFamily == GameFamilies.HGSS) {
                 interiorCheckBox.Enabled = true;
@@ -114,49 +113,13 @@ namespace DSPRE {
             int[] aniframeS = new int[0];
 
             buildingOpenGLControl.Invalidate(); // Invalidate drawing surface
-            SetupRenderer(ang, dist, elev, perspective); // Adjust rendering settings
-
-            /* Render the building model */
+            // SetupRenderer and Gl calls stubbed — awaiting OpenTK 4 rewrite (migration step 33)
             renderer.Model = currentNSBMD.models[0];
-            Gl.glScalef(currentNSBMD.models[0].modelScale / 32, currentNSBMD.models[0].modelScale / 32, currentNSBMD.models[0].modelScale / 32);
+            // Gl.glScalef stubbed
             renderer.RenderModel("", bta, aniframeS, aniframeS, aniframeS, aniframeS, aniframeS, bca, false, -1, 0.0f, 0.0f, dist, elev, ang, true, btp, currentNSBMD);
         }
         private void SetupRenderer(float ang, float dist, float elev, float perspective) {
-            Gl.glEnable(Gl.GL_RESCALE_NORMAL);
-            Gl.glEnable(Gl.GL_COLOR_MATERIAL);
-            Gl.glEnable(Gl.GL_DEPTH_TEST);
-            Gl.glEnable(Gl.GL_NORMALIZE);
-            Gl.glDisable(Gl.GL_CULL_FACE);
-            Gl.glFrontFace(Gl.GL_CCW);
-            Gl.glClearDepth(1);
-            Gl.glEnable(Gl.GL_ALPHA_TEST);
-            Gl.glBlendFunc(Gl.GL_SRC_ALPHA, Gl.GL_ONE_MINUS_SRC_ALPHA);
-            Gl.glEnable(Gl.GL_BLEND);
-            Gl.glAlphaFunc(Gl.GL_GREATER, 0f);
-            Gl.glClearColor(51f / 255f, 51f / 255f, 51f / 255f, 1f);
-            float aspect;
-            Gl.glViewport(0, 0, buildingOpenGLControl.Width, buildingOpenGLControl.Height);
-            aspect = buildingOpenGLControl.Width / buildingOpenGLControl.Height;//(vp[2] - vp[0]) / (vp[3] - vp[1]);
-            Gl.glMatrixMode(Gl.GL_PROJECTION);
-            Gl.glLoadIdentity();
-            Glu.gluPerspective(perspective, aspect, 0.2f, 500.0f);//0.02f, 32.0f);
-            Gl.glTranslatef(0, 0, -dist);
-            Gl.glRotatef(elev, 1, 0, 0);
-            Gl.glRotatef(ang, 0, 1, 0);
-            Gl.glMatrixMode(Gl.GL_MODELVIEW);
-            Gl.glLoadIdentity();
-            Gl.glTranslatef(0, 0, -dist);
-            Gl.glRotatef(elev, 1, 0, 0);
-            Gl.glRotatef(-ang, 0, 1, 0);
-            Gl.glLightfv(Gl.GL_LIGHT0, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
-            Gl.glLightfv(Gl.GL_LIGHT1, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
-            Gl.glLightfv(Gl.GL_LIGHT2, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
-            Gl.glLightfv(Gl.GL_LIGHT3, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
-            Gl.glLoadIdentity();
-            Gl.glBindTexture(Gl.GL_TEXTURE_2D, 0);
-            Gl.glColor3f(1.0f, 1.0f, 1.0f);
-            Gl.glDepthMask(Gl.GL_TRUE);
-            Gl.glClear(Gl.GL_COLOR_BUFFER_BIT | Gl.GL_DEPTH_BUFFER_BIT);
+            // TODO (Avalonia migration - step 33): Implement with OpenTK 4.x.
         }
         #endregion
 

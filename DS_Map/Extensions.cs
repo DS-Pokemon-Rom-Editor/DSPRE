@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.ComponentModel;
-using Tao.Platform.Windows;
 
 namespace DSPRE {
     public static class Extensions {
@@ -151,26 +150,25 @@ namespace DSPRE {
         }
     }
 
-    public class SimpleOpenGlControl2 : SimpleOpenGlControl {
-        private bool designMode;
-
-        public SimpleOpenGlControl2() : base() {
-            designMode = LicenseManager.UsageMode == LicenseUsageMode.Designtime;
-        }
-
-        public new bool DesignMode { get { return designMode; } }
-
-        protected override void OnPaint(PaintEventArgs e) {
-            //if the control is allowed to paint in design mode, a message box prevents working with it
-            //"No device or rendering context available!"
-            if (DesignMode) {
-                e.Graphics.Clear(this.BackColor);
-                if (this.BackgroundImage != null)
-                    e.Graphics.DrawImage(this.BackgroundImage, this.ClientRectangle, 0, 0, this.BackgroundImage.Width, this.BackgroundImage.Height, GraphicsUnit.Pixel);
-                e.Graphics.Flush();
-                return;
-            };
-            base.OnPaint(e);
-        }
+    // TODO (Avalonia migration - step 33): Replace with an Avalonia NativeControlHost wrapping OpenTK.
+    // For now this is a plain Panel stub so the project compiles without the Tao dependency.
+    public class SimpleOpenGlControl2 : Panel {
+        // --- Tao.Platform.Windows.SimpleOpenGlControl stub properties (ignored at runtime) ---
+        public byte AccumBits        { get; set; }
+        public bool AutoCheckErrors  { get; set; }
+        public bool AutoFinish       { get; set; }
+        public bool AutoMakeCurrent  { get; set; } = true;
+        public bool AutoSwapBuffers  { get; set; } = true;
+        public byte ColorBits        { get; set; } = 32;
+        public byte DepthBits        { get; set; } = 64;
+        public byte StencilBits      { get; set; }
+        // Load event wired up by Designer
+        public new event EventHandler Load;
+        protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Load?.Invoke(this, EventArgs.Empty); }
+        // --- Rendering stubs ---
+        public SimpleOpenGlControl2() { BackColor = System.Drawing.Color.Black; }
+        public void InitializeContexts() { /* stub */ }
+        public void MakeCurrent()        { /* stub */ }
+        public void SwapBuffers()        { /* stub */ }
     }
 }

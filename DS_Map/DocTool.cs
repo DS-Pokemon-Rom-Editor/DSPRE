@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 using System.Windows.Forms;
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
@@ -81,8 +80,7 @@ namespace DSPRE
             ExportMoveDataToCSV(moveDataPath, moveNames, typeNames);
             ExportTMHMDataToCSV(TMHMDataPath, pokeNames);
 
-            var eggMoveEditor = new EggMoveEditor();
-            ExportEggMoveDataToCSV(eggMoveEditor.GetEggMoveData(), eggMoveDataPath, pokeNames, moveNames);
+            ExportEggMoveDataToCSV(ReadEggMoveDataForDocTool(), eggMoveDataPath, pokeNames, moveNames);
 
             ExportEventOverworldsToCSV(eventOverworldsPath);
             ExportMapHeadersToCSV(mapHeadersPath);
@@ -883,6 +881,12 @@ namespace DSPRE
             }
 
             sw.Close();
+        }
+
+        /// <summary>Reads egg move data from the ROM for use by DocTool exports.</summary>
+        private static List<EggMoveEntry> ReadEggMoveDataForDocTool()
+        {
+            return DSPRE.Avalonia.ViewModels.EggMoveEditorViewModel.ReadFromRom();
         }
 
         public static bool ExportEggMoveDataToCSV(List<EggMoveEntry> eggMoveData, string filePath, string[] pokeNames, string[] moveNames)
