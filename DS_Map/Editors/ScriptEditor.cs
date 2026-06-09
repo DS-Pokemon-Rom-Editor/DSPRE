@@ -100,6 +100,8 @@ namespace DSPRE.Editors
         }
         public void SetupScriptEditor(MainProgram parent, bool force = false)
         {
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            if (RomInfo.hasRotomProject) { return; }
             if (scriptEditorIsReady && !force) { return; }
             scriptEditorIsReady = true;
             this._parent = parent;
