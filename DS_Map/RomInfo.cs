@@ -26,6 +26,7 @@ namespace DSPRE
 
         public static bool IsDsRomProject { get; internal set; }
         public static bool isHGE { get; private set; }
+        public static bool hasRotomProject { get; private set; }
         public static string romID { get; private set; }
         public static string projectName { get; private set; }
         public static string workDir { get; private set; }
@@ -226,6 +227,7 @@ namespace DSPRE
             }
 
             workDir = path + "\\"; // This is required still. Ideally all paths should be combined with Path.Combine and not by string concatenation
+            hasRotomProject = File.Exists(Path.Combine(workDir, "rotom.toml"));
             
             if (IsDsRomProject)
             {
