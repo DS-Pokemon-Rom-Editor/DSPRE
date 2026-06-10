@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Media;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
@@ -99,6 +100,21 @@ namespace DSPRE.Avalonia.ViewModels
 
         public OverlayEditorViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                Title = "Overlay Editor (Preview)";
+                SaveEnabled = true;
+                for (int i = 0; i < 5; i++)
+                    Overlays.Add(new OverlayRow
+                    {
+                        Number = i,
+                        IsCompressed = i % 2 == 0,
+                        IsMarkedCompressed = i % 2 == 0,
+                        RAMAddressHex = $"0200{i * 100:X4}",
+                        UncompressedSize = (uint)(4096 + i * 512)
+                    });
+                return;
+            }
             _isDsRomProject = RomInfo.IsDsRomProject;
             SaveEnabled = !_isDsRomProject;
             LoadOverlays();

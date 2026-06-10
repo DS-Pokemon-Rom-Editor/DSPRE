@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.MapEditorView"
+        x:DataType="vm:MapEditorViewModel"
+        Title="Map Editor"
+        Width="1040" Height="700"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:MapEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="View:" VerticalAlignment="Center"/>
+        <ComboBox Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
+        <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
+        <ComboBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
+        <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
+        <ComboBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Import…" Click="Import_Click"/>
+        <Button Content="Export…" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <TextBlock Text="Map tex:" VerticalAlignment="Center"/>
+        <ComboBox Width="130" ItemsSource="{Binding MapTilesets}" SelectedIndex="{Binding MapTilesetIndex}"/>
+        <TextBlock Text="Bld tex:" VerticalAlignment="Center"/>
+        <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
+        <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="*,420">
+      <!-- 3D preview (geometry; textures deferred) -->
+      <Border x:Name="GlHost" Grid.Column="0" Background="Transparent" Margin="4">
+        <gl:NsbmdGlControl x:Name="GlView"/>
+      </Border>
+
+      <!-- Editing panels (single-map only; matrix view is render-only) -->
+      <TabControl Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding IsSingleMap}">
+        <TabItem Header="Permissions">
+          <DockPanel Margin="4">
+            <StackPanel DockPanel.Dock="Top" Spacing="4">
+              <TextBlock Text="Collision painter" FontWeight="Bold"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CollisionPainters}" SelectedIndex="{Binding CollisionPainterIndex}"/>
+              <TextBlock Text="Type painter" FontWeight="Bold"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TypePainters}" SelectedIndex="{Binding TypePainterIndex}"/>
+              <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="#777" Margin="0,2,0,4"/>
+            </StackPanel>
+            <Grid RowDefinitions="Auto,*,Auto,*">
+              <TextBlock Grid.Row="0" Text="Collision" FontWeight="Bold" Margin="0,2"/>
+              <gl:PermissionGridControl Grid.Row="1" x:Name="CollisionGrid" MinHeight="180"/>
+              <TextBlock Grid.Row="2" Text="Type" FontWeight="Bold" Margin="0,4,0,2"/>
+              <gl:PermissionGridControl Grid.Row="3" x:Name="TypeGrid" MinHeight="180"/>
+            </Grid>
+          </DockPanel>
+        </TabItem>
+        <TabItem Header="Buildings">
+          <DockPanel Margin="4">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+              <Button Content="Add"    Click="AddBuilding_Click"/>
+              <Button Content="Remove" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+            </StackPanel>
+            <Grid ColumnDefinitions="*,170">
+              <ListBox Grid.Column="0" ItemsSource="{Binding Buildings}" SelectedIndex="{Binding SelectedBuildingIndex}"/>
+              <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="3" IsVisible="{Binding HasBuildingSelected}">
+                <TextBlock Text="Model ID" FontSize="10"/>
+                <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
+                <TextBlock Text="X / Y / Z" FontSize="10"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BX}"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BY}"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BZ}"/>
+                <TextBlock Text="Rotation X / Y / Z (°)" FontSize="10"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}"/>
+              </StackPanel>
+            </Grid>
+          </DockPanel>
+        </TabItem>
+      </TabControl>
+    </Grid>
+  </DockPanel>
+</Window>

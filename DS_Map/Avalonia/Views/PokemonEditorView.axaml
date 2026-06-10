@@ -1,0 +1,126 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        x:Class="DSPRE.Avalonia.Views.PokemonEditorView"
+        x:DataType="vm:PokemonEditorViewModel"
+        Title="{Binding Title}"
+        Width="1060" Height="700" MinWidth="860" MinHeight="580"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:PokemonEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.lbl">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+    </Style>
+  </Window.Styles>
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="8,6" Background="#F0F0F0">
+      <Grid ColumnDefinitions="44,8,115,8,*,8,90,8,70">
+        <Border Grid.Column="0" Width="40" Height="40" Background="#E0E0E0" CornerRadius="4">
+          <Image Source="{Binding MonIconBitmap}" Stretch="Uniform"/>
+        </Border>
+        <NumericUpDown Grid.Column="2" Value="{Binding SelectedMonIndex}" Minimum="0" Maximum="{Binding MaxMonIndex}" FormatString="0" Width="115" FontSize="13"/>
+        <ComboBox Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedMonIndex}" HorizontalAlignment="Stretch" FontSize="13"/>
+        <Button Grid.Column="6" Content="Save All" Click="SaveAll_Click" Width="90" IsDefault="True"/>
+        <Button Grid.Column="8" Content="Close"    Click="Close_Click"   Width="70"/>
+      </Grid>
+    </Border>
+    <TabControl Margin="4,2,4,4">
+      <TabItem Header="Personal Data">
+        <views:PersonalDataEditorView DataContext="{Binding PersonalVM}"/>
+      </TabItem>
+      <TabItem Header="Learnset">
+        <DockPanel Margin="8" DataContext="{Binding LearnsetVM}">
+          <Border DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <TextBlock Text="{Binding EntryCount, StringFormat=Entries: {0}}" VerticalAlignment="Center"/>
+              <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="OrangeRed" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding StatusText}" Foreground="Red" FontStyle="Italic" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Border DockPanel.Dock="Bottom" Padding="0,6,0,0">
+            <Grid ColumnDefinitions="Auto,8,80,8,*,8,Auto,4,Auto,4,Auto,4,Auto">
+              <TextBlock Grid.Column="0" Text="Level:" Classes="lbl"/>
+              <NumericUpDown Grid.Column="2" Value="{Binding AddLevel}" Minimum="1" Maximum="100" FormatString="0" Width="80"/>
+              <ComboBox Grid.Column="4" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding AddMoveIndex}" HorizontalAlignment="Stretch"/>
+              <Button Grid.Column="6"  Content="Add"    Click="Learnset_Add_Click"      Width="60" IsEnabled="{Binding CanAdd}"/>
+              <Button Grid.Column="8"  Content="Delete" Click="Learnset_Delete_Click"   Width="60" IsEnabled="{Binding CanEdit}"/>
+              <Button Grid.Column="10" Content="Up"     Click="Learnset_MoveUp_Click"   Width="44" IsEnabled="{Binding CanMoveUp}"/>
+              <Button Grid.Column="12" Content="Down"   Click="Learnset_MoveDown_Click" Width="44" IsEnabled="{Binding CanMoveDown}"/>
+            </Grid>
+          </Border>
+          <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Evolutions">
+        <DockPanel Margin="8" DataContext="{Binding EvolutionsVM}">
+          <Button DockPanel.Dock="Bottom" Content="Save Evolutions" Click="SaveEvolutions_Click" HorizontalAlignment="Right" Width="140" Margin="0,6,0,0"/>
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="6">
+              <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+                <TextBlock Grid.Column="0" Text="Method"         FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="2" Text="Param"          FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="4" Text="Target Pokemon" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="6" Text="Param Type"     FontWeight="SemiBold" FontSize="11"/>
+              </Grid><Separator/>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[0].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[0].Param}" Minimum="0" Maximum="{Binding EvoRows[0].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[0].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[0].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[0].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[1].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[1].Param}" Minimum="0" Maximum="{Binding EvoRows[1].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[1].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[1].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[1].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[2].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[2].Param}" Minimum="0" Maximum="{Binding EvoRows[2].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[2].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[2].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[2].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[3].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[3].Param}" Minimum="0" Maximum="{Binding EvoRows[3].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[3].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[3].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[3].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[4].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[4].Param}" Minimum="0" Maximum="{Binding EvoRows[4].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[4].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[4].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[4].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[5].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[5].Param}" Minimum="0" Maximum="{Binding EvoRows[5].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[5].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[5].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[5].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+<Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
+  <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[6].MethodIndex}"  MinWidth="180"/>
+  <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[6].Param}" Minimum="0" Maximum="{Binding EvoRows[6].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[6].IsParamEnabled}"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[6].TargetIndex}" MinWidth="180"/>
+  <TextBlock Grid.Column="6" Text="{Binding EvoRows[6].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+</Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ─── Sprites ──────────────────────────────────────────────────── -->
+      <TabItem Header="Sprites">
+        <views:PokemonSpriteEditorView DataContext="{Binding SpriteVM}"/>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

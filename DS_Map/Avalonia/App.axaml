@@ -6,6 +6,11 @@
 	<Application.Styles>
 		<FluentTheme />
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
+		<!-- Ensure numeric spinners are always wide enough to show their value -->
+		<Style Selector="NumericUpDown">
+			<Setter Property="MinWidth" Value="90"/>
+		</Style>
 	</Application.Styles>
 
 </Application>

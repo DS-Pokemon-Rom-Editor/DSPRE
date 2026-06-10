@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+             x:Class="DSPRE.Avalonia.Views.BugContestEncounterView"
+             x:DataType="vm:BugContestEncounterViewModel">
+  <Design.DataContext>
+    <vm:BugContestEncounterViewModel/>
+  </Design.DataContext>
+
+  <Grid>
+    <TextBlock IsVisible="{Binding IsNotAvailable}" Margin="16" TextWrapping="Wrap"
+               Text="Bug Contest encounters are not available for this ROM version."/>
+
+    <DockPanel IsVisible="{Binding IsAvailable}">
+      <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+              BorderThickness="0,0,0,1" Padding="6,4">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Export…" Click="Export_Click"/>
+          <Button Content="Import…" Click="Import_Click"/>
+          <Button Content="Locate"  Click="Locate_Click"/>
+        </StackPanel>
+      </Border>
+
+      <Grid ColumnDefinitions="*,250" Margin="8">
+        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+          <StackPanel DockPanel.Dock="Top" Spacing="4">
+            <TextBlock Text="Encounter Set" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding SetNames}"
+                      SelectedIndex="{Binding SelectedSetIndex}"/>
+            <TextBlock Text="{Binding SetDescription}" Foreground="#666"
+                       TextWrapping="Wrap" Margin="0,2,0,4"/>
+          </StackPanel>
+          <ListBox ItemsSource="{Binding EncounterRows}"
+                   SelectedIndex="{Binding SelectedEncounterIndex}"/>
+        </DockPanel>
+
+        <StackPanel Grid.Column="1" Spacing="6">
+          <TextBlock Text="Species" FontWeight="Bold"/>
+          <ComboBox HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding SpeciesNames}"
+                    SelectedIndex="{Binding SpeciesIndex}"/>
+          <Border Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1"
+                  Height="72" Width="72" HorizontalAlignment="Left">
+            <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
+          </Border>
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Min Level" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MinLevel}" Margin="0,0,0,2"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Max Level" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MaxLevel}" Margin="0,0,0,2"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Rate" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" Value="{Binding Rate}" Margin="0,0,0,2"/>
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Score" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Score}" Margin="0,0,0,2"/>
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Terminator*" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding DummyValue}" IsEnabled="False" Margin="0,0,0,2"/>
+          </Grid>
+          <TextBlock Text="{Binding EffectiveRateText}" Foreground="{Binding EffectiveRateColor}" FontWeight="Bold"/>
+          <TextBlock Text="{Binding RateWarning}" Foreground="DarkRed" TextWrapping="Wrap" FontSize="11"/>
+          <Button Content="Rate help…" Click="RateHelp_Click" HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Grid>
+    </DockPanel>
+  </Grid>
+</UserControl>

@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,8 +13,8 @@ namespace DSPRE.Avalonia.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        private int _overlaysSize;
 
-        private readonly int _overlaysSize = OverlayUtils.OverlayTable.GetNumberOfOverlays();
         private const int ARM9LoadAddress = 0x02000000;
 
         // ── Bound properties ──────────────────────────────────────────────
@@ -41,8 +42,19 @@ namespace DSPRE.Avalonia.ViewModels
             Results.Clear();
             StatusMessage = string.Empty;
 
+            if (Design.IsDesignMode)
+            {
+                _overlaysSize = 0;
+                Results.Add(new AddressRow("Overlay 42", "0x1234"));
+                Results.Add(new AddressRow("ARM9", "0x0A2C"));
+                Results.Add(new AddressRow("SynthOVL", "0x00F8"));
+                StatusMessage = "Design‑time preview (no actual ROM loaded)";
+                return;
+            }
+
             try
             {
+                _overlaysSize = OverlayUtils.OverlayTable.GetNumberOfOverlays();
                 int addr = Convert.ToInt32(AddressInput.Trim(), 16);
 
                 foreach (int ovl in GetOverlayNumbersFromAddress(addr))

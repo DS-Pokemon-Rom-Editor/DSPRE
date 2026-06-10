@@ -102,6 +102,7 @@
             this.generateCSVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateDexExportsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.researchHelperToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.avaloniaMainWindowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.essentialToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.simpleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -724,7 +725,8 @@
             this.nSBMDUtilityToolStripMenuItem,
             this.openCharmapManagerToolStripMenuItem,
             this.generateCSVToolStripMenuItem,
-            this.researchHelperToolStripMenuItem});
+            this.researchHelperToolStripMenuItem,
+            this.avaloniaMainWindowToolStripMenuItem});
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
             this.aboutToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
             this.aboutToolStripMenuItem.Text = "Tools";
@@ -949,7 +951,15 @@
             this.researchHelperToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.researchHelperToolStripMenuItem.Text = "Research Helper";
             this.researchHelperToolStripMenuItem.Click += new System.EventHandler(this.researchHelperToolStripMenuItem_Click);
-            // 
+            //
+            // avaloniaMainWindowToolStripMenuItem
+            //
+            this.avaloniaMainWindowToolStripMenuItem.Enabled = false;
+            this.avaloniaMainWindowToolStripMenuItem.Name = "avaloniaMainWindowToolStripMenuItem";
+            this.avaloniaMainWindowToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.avaloniaMainWindowToolStripMenuItem.Text = "Avalonia Main Window (Preview)";
+            this.avaloniaMainWindowToolStripMenuItem.Click += new System.EventHandler(this.avaloniaMainWindowToolStripMenuItem_Click);
+            //
             // menuViewToolStripMenuItem
             // 
             this.menuViewToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1739,6 +1749,7 @@
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem researchHelperToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem avaloniaMainWindowToolStripMenuItem;
     }
 }
 

@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -5,8 +6,8 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
+using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
 namespace DSPRE.Avalonia.ViewModels
 {
@@ -152,8 +153,10 @@ namespace DSPRE.Avalonia.ViewModels
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         // Column-visibility helpers (bound to DataGrid column widths / IsVisible)
-        public bool IsHgss     => gameFamily == GameFamilies.HGSS;
-        public bool IsDpOrPlat => gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat;
+        private bool DesignTimeIsHgss = true; // set to true if you want HGSS preview
+
+        public bool IsHgss => Design.IsDesignMode ? DesignTimeIsHgss : (gameFamily == GameFamilies.HGSS);
+        public bool IsDpOrPlat => Design.IsDesignMode ? !DesignTimeIsHgss : (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat);
 
         private string _statusText = string.Empty;
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
@@ -164,6 +167,49 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var h in headerNames)
                 Headers.Add(h.TrimEnd('\0'));
             LoadRows();
+        }
+
+        // Parameterless constructor is only for design time. Use the constructor with headerNames.
+        public FlyEditorViewModel()
+        {
+            if (Design.IsDesignMode)
+            {
+                // Dummy headers
+                for (int i = 0; i < 10; i++) Headers.Add($"Header {i}");
+
+                // Add 3 dummy rows
+                for (int i = 0; i < 3; i++)
+                {
+                    var row = new FlyRow();
+                    // Set properties to show something in the DataGrid
+                    row.HeaderIdGameOver = i % Headers.Count;
+                    row.HeaderIdFly = i % Headers.Count;
+                    row.LocalX = (ushort)(i * 10);
+                    row.LocalY = (ushort)(i * 10);
+                    row.GlobalX = (ushort)(i * 100);
+                    row.GlobalY = (ushort)(i * 100);
+
+                    // For DP/Plat columns
+                    row.IsTeleportPos = i % 2 == 0;
+                    row.UnlockOnMapEntry = i % 2 == 1;
+                    row.UnlockId = (ushort)i;
+
+                    // For HGSS columns (won't be visible unless you force IsHgss true)
+                    row.FlagIdx = (byte)i;
+                    row.IsBlackoutSpawn = i % 2 == 0;
+                    row.IsFlyPoint = i % 2 == 1;
+                    row.HeaderIdUnlockWarp = i % Headers.Count;
+                    row.GlobalXUnlock = (ushort)(i * 50);
+                    row.GlobalYUnlock = (ushort)(i * 50);
+
+                    Rows.Add(row);
+                }
+
+                StatusText = "Design‑time preview (dummy data)";
+                Title = "Fly / Warp Editor (Preview)";
+                return;
+            }
+            throw new InvalidOperationException("Parameterless constructor only for design time.");
         }
 
         // ── Commands ──────────────────────────────────────────────────────────

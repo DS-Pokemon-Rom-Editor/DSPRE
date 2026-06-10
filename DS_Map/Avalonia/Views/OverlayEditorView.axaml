@@ -6,6 +6,10 @@
 		Title="{Binding Title}"
 		Width="620" Height="500"
 		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:OverlayEditorViewModel/>
+  </Design.DataContext>
+
 
   <DockPanel Margin="10" LastChildFill="True">
 

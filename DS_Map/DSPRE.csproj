@@ -12,6 +12,16 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Windows-only app — suppress platform-compatibility warnings -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <!-- Avalonia views intentionally have no parameterless constructor (require ViewModel) -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    <!-- Pre-existing transitional NuGet packages (WinForms bridge phase) -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <!-- Pre-existing code warnings in legacy/generated files -->
+    <NoWarn>$(NoWarn);CS0649;CS0414;CS0169;CS0168;CS0197;CS0109;CS8981;CA2200</NoWarn>
+    <!-- BinaryFormatter in WinForms .resx — pre-existing, will be removed with WinForms -->
+    <GenerateResourceWarnOnBinaryFormatterUse>false</GenerateResourceWarnOnBinaryFormatterUse>
   </PropertyGroup>
 
   <!-- ============================================================
@@ -23,6 +33,7 @@
        ============================================================ -->
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />

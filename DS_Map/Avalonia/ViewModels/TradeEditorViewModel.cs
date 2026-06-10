@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using DSPRE.ROMFiles;
 
@@ -166,6 +167,24 @@ namespace DSPRE.Avalonia.ViewModels
         public TradeEditorViewModel()
         {
             _loading = true;
+
+            if (Design.IsDesignMode)
+            {
+                for (int i = 0; i < 10; i++) PokemonNames.Add($"Pokémon {i}");
+                for (int i = 0; i < 5;  i++) AbilityNames.Add($"Ability {i}");
+                for (int i = 0; i < 10; i++) ItemNames.Add($"Item {i}");
+                foreach (var n in System.Enum.GetNames(typeof(TradeOriginLang))) LanguageNames.Add(n);
+                SelectedSpecies   = 1;
+                SelectedRequested = 2;
+                SelectedAbility   = 0;
+                SelectedHeldItem  = 0;
+                HpIV = AtkIV = DefIV = SpeIV = SpaIV = SpdIV = 31;
+                OtName   = "Trainer";
+                Nickname = "Ditto";
+                TradeID  = 0;
+                _loading = false;
+                return;
+            }
 
             foreach (var n in RomInfo.GetPokemonNames())  PokemonNames.Add(n);
             foreach (var n in RomInfo.GetAbilityNames())  AbilityNames.Add(n);

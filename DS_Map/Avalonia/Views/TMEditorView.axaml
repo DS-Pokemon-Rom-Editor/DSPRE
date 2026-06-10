@@ -7,6 +7,10 @@
 		Width="400" Height="480"
 		CanResize="False"
 		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:TMEditorViewModel/>
+  </Design.DataContext>
+
 
 	<Window.Styles>
 		<Style Selector="Button">

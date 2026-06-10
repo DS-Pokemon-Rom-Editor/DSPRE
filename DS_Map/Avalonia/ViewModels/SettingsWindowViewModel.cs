@@ -88,6 +88,17 @@ namespace DSPRE.Avalonia.ViewModels
 
         public SettingsWindowViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                VersionLabel = "DSPRE Version 1.0.0 (Preview)";
+                ExportPath = @"C:\Export";
+                MapImportPath = @"C:\Maps";
+                OpenDefaultRom = @"C:\game.nds";
+                AutoCheckUpdates = true;
+                AutoUpdateDBs = false;
+                NeverAskForOpening = false;
+                return;
+            }
             VersionLabel = $"DSPRE Version {Helpers.GetDSPREVersion()}";
 
             ExportPath       = SettingsManager.Settings.exportPath        ?? string.Empty;

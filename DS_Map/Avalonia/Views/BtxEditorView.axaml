@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.BtxEditorView"
+        x:DataType="vm:BtxEditorViewModel"
+        Title="Overworld Editor (BTX)"
+        Width="480" Height="380"
+        MinWidth="400" MinHeight="320"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:BtxEditorViewModel/>
+  </Design.DataContext>
+
+  <Grid ColumnDefinitions="160,8,*" Margin="8">
+    <!-- Left: entry list -->
+    <DockPanel Grid.Column="0">
+      <TextBlock DockPanel.Dock="Top" Text="OW Entries" FontWeight="SemiBold" Margin="0,0,0,4"/>
+      <ListBox ItemsSource="{Binding OwEntries}"
+               SelectedIndex="{Binding SelectedIndex}"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+    </DockPanel>
+
+    <!-- Right: preview + controls -->
+    <DockPanel Grid.Column="2">
+      <!-- Bottom controls -->
+      <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+        <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"/>
+        <Grid ColumnDefinitions="*,8,*">
+          <Button Grid.Column="0" Content="Import PNG" Click="Import_Click"
+                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
+          <Button Grid.Column="2" Content="Export PNG" Click="Export_Click"
+                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,8,*">
+          <Button Grid.Column="0" Content="Save Selected" Click="SaveSelected_Click"
+                  IsEnabled="{Binding HasUnsavedChanges}" HorizontalAlignment="Stretch"/>
+          <Button Grid.Column="2" Content="Save All"      Click="SaveAll_Click"
+                  IsEnabled="{Binding HasUnsavedChanges}" HorizontalAlignment="Stretch"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,8,*">
+          <Button Grid.Column="0" Content="Show File" Click="ShowFile_Click"
+                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
+          <TextBlock Grid.Column="2" Text="{Binding ModifiedCount}"
+                     VerticalAlignment="Center" Foreground="OrangeRed" FontSize="11"/>
+        </Grid>
+        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#555"
+                   TextWrapping="Wrap"/>
+      </StackPanel>
+
+      <!-- Image preview -->
+      <Border BorderBrush="#DDD" BorderThickness="1" Background="#F8F8F8" Margin="0,0,0,0">
+        <Image Source="{Binding CurrentImage}"
+               Stretch="None"
+               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Border>
+    </DockPanel>
+  </Grid>
+</Window>
