@@ -660,10 +660,7 @@ namespace DSPRE.Editors
             int matrixX = selectedCell.ColumnIndex;
             int matrixY = selectedCell.RowIndex;
 
-            using (SpawnEditor ed = new SpawnEditor(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY))
-            {
-                ed.ShowDialog();
-            }
+            new DSPRE.Avalonia.Views.SpawnEditorView(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY).Show();
         }
         private void selectMatrixComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {

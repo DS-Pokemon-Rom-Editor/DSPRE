@@ -126,6 +126,32 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Constructor ────────────────────────────────────────────────────────
         public MoveDataEditorViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                // Provide dummy data so the UI renders
+                for (int i = 1; i <= 10; i++) MoveNames.Add($"Dummy Move {i}");
+                for (int i = 1; i <= 5; i++) TypeNames.Add($"Type {i}");
+                SplitNames.Add("Physical"); SplitNames.Add("Special");
+                RangeItems.Add("Single target");
+                BattleSeqItems.Add("001 - Dummy Effect");
+                ContestNames.Add("Cool");
+                Flags.Add(new FlagEntry { Name = "Dummy Flag" });
+                Description = "Design‑time preview – no ROM loaded";
+                Title = "Move Data Editor (Preview)";
+                _selectedMoveIndex = 0;
+                _typeIndex = 0;
+                _splitIndex = 0;
+                _rangeIndex = 0;
+                _battleSeqIndex = 0;
+                _contestIndex = 0;
+                _power = 40;
+                _accuracy = 100;
+                _pp = 20;
+                _priority = 0;
+                _sideEffectPct = 0;
+                _contestAppeal = 0;
+                return;
+            }
             string[] rawDescs = new TextArchive(moveDescriptionsTextNumbers).messages.ToArray();
             _moveDescriptions = rawDescs.Select(x => x.Replace("\\n", Environment.NewLine)).ToArray();
 

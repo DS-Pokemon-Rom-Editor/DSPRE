@@ -99,6 +99,9 @@ namespace DSPRE.Avalonia
         public static readonly FilePickerFileType CsvFilter =
             new FilePickerFileType("CSV Files") { Patterns = new[] { "*.csv" } };
 
+        public static readonly FilePickerFileType PngFilter =
+            new FilePickerFileType("PNG Images") { Patterns = new[] { "*.png" } };
+
         public static readonly FilePickerFileType AllFilter =
             new FilePickerFileType("All Files") { Patterns = new[] { "*.*" } };
 

@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        x:Class="DSPRE.Avalonia.Views.ScriptEditorView"
+        x:DataType="vm:ScriptEditorViewModel"
+        Title="Script Editor"
+        Width="900" Height="720"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:ScriptEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="Script file:" VerticalAlignment="Center" Foreground="#222"/>
+        <ComboBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Import…" Click="Import_Click"/>
+        <Button Content="Export…" Click="Export_Click"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    </Border>
+
+    <TabControl Margin="4">
+      <TabItem Header="Scripts">
+        <ae:TextEditor x:Name="ScriptsEditor" ShowLineNumbers="True"
+                       FontFamily="Consolas, Cascadia Mono, Menlo, monospace" FontSize="13"
+                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
+      </TabItem>
+      <TabItem Header="Functions">
+        <ae:TextEditor x:Name="FunctionsEditor" ShowLineNumbers="True"
+                       FontFamily="Consolas, Cascadia Mono, Menlo, monospace" FontSize="13"
+                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
+      </TabItem>
+      <TabItem Header="Actions">
+        <ae:TextEditor x:Name="ActionsEditor" ShowLineNumbers="True"
+                       FontFamily="Consolas, Cascadia Mono, Menlo, monospace" FontSize="13"
+                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

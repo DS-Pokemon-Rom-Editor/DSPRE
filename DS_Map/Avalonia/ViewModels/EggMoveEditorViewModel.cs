@@ -162,6 +162,31 @@ namespace DSPRE.Avalonia.ViewModels
 
         public EggMoveEditorViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                // Create dummy name arrays (so MonLabel and MoveLabel don't crash)
+                _monNames = Enumerable.Range(0, 30).Select(i => $"Dummy Pokémon {i}").ToArray();
+                _moveNames = Enumerable.Range(0, 50).Select(i => $"Dummy Move {i}").ToArray();
+
+                // Add dummy entries to _eggMoveData
+                _eggMoveData = new List<EggMoveEntry>
+                {
+                    new EggMoveEntry(0, new List<ushort> { 1, 2, 3 }),
+                    new EggMoveEntry(1, new List<ushort> { 4, 5 })
+                };
+
+                // Populate observable collections
+                foreach (var n in _monNames) MonNames.Add(n);
+                foreach (var n in _moveNames) MoveNames.Add(n);
+
+                RefreshMonList();      // Uses _monNames and _eggMoveData
+                RefreshMoveList(0);    // Populates MoveList for first entry
+
+                UpdateEntryCountLabel();
+                UpdateListSizeLabel();
+                SetDirty(false);
+                return;
+            }
             _monNames  = RomInfo.GetPokemonNames();
             _moveNames = RomInfo.GetAttackNames();
 

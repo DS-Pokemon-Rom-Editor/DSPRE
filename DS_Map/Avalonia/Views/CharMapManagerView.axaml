@@ -6,6 +6,10 @@
 		Title="{Binding Title}"
 		Width="680" Height="560" MinWidth="520" MinHeight="420"
 		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:CharMapManagerViewModel/>
+  </Design.DataContext>
+
 
   <DockPanel Margin="8" LastChildFill="True">
 
@@ -32,7 +36,7 @@
 	  <!-- Search row under charmap list -->
 	  <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
 		<Button DockPanel.Dock="Right" Content="Search" Click="Search_Click" Margin="6,0,0,0"/>
-		<TextBox Text="{Binding SearchText}" Watermark="Search (0x... for hex code)"
+		<TextBox Text="{Binding SearchText}" PlaceholderText="Search (0x... for hex code)"
 				 KeyDown="Search_KeyDown"/>
 	  </DockPanel>
 
@@ -52,7 +56,7 @@
 		<ComboBox ItemsSource="{Binding CodeItems}"
 				  SelectedIndex="{Binding SelectedCodeIndex}"
 				  HorizontalAlignment="Stretch"/>
-		<TextBox Text="{Binding NewAliasText}" Watermark="New alias text"/>
+		<TextBox Text="{Binding NewAliasText}" PlaceholderText="New alias text"/>
 		<StackPanel Orientation="Horizontal" Spacing="6">
 		  <Button Content="Add Alias"    IsEnabled="{Binding HasMap}" Click="AddAlias_Click"/>
 		  <Button Content="Remove Alias" IsEnabled="{Binding HasMap}" Click="RemoveAlias_Click"/>

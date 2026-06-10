@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using DSPRE.CharMaps;
 
 namespace DSPRE.Avalonia.ViewModels
@@ -63,6 +64,19 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Constructor ───────────────────────────────────────────────────────
         public CharMapManagerViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                Title = "Character Map Manager (Preview)";
+                HasMap = true;
+                CharMapItems.Add("0x00 → \\x00 (NULL)");
+                CharMapItems.Add("0x41 → A");
+                CharMapItems.Add("0x42 → B");
+                AliasItems.Add("[PK] → 0xE1");
+                AliasItems.Add("[MN] → 0xE2");
+                CodeItems.Add("0x41 → A");
+                CodeItems.Add("0x42 → B");
+                return;
+            }
             LoadCharMap();
             PopulateListsFromMap();
         }

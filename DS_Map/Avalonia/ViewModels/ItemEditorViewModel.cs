@@ -1,0 +1,622 @@
+using Avalonia.Controls;
+using DSPRE;
+using DSPRE.Avalonia;
+using DSPRE.Editors;
+using DSPRE.ROMFiles;
+using Images;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text;
+using static DSPRE.ROMFiles.ItemData;
+using static DSPRE.RomInfo;
+using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
+using GdiBitmap = System.Drawing.Bitmap;
+
+namespace DSPRE.Avalonia.ViewModels
+{
+    public class ItemEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string n = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(f, v)) return false;
+            f = v; OnPropertyChanged(n); return true;
+        }
+
+        // ── Design-time constructor ──────────────────────────────────────────
+        public ItemEditorViewModel()
+        {
+            if (!Design.IsDesignMode) return;
+
+            for (int i = 0; i < 20; i++) ItemNames.Add($"Item {i:D3}");
+            PopulateEnumCollections();
+            for (int i = 0; i < 6; i++) { IconImages.Add((i * 2 + 1).ToString("D4")); IconPalettes.Add((i * 2 + 2).ToString("D4")); }
+
+            MaxItemIndex  = 19;
+            MaxItemDataId = 9;
+
+            _selectedItemIndex   = 0;
+            _selectedIconImage   = IconImages[0];
+            _selectedIconPalette = IconPalettes[0];
+            _itemDataId          = 1;
+            _holdEffectName      = HoldEffectNames[0];
+            _fieldPocketName     = FieldPocketNames[0];
+            _fieldUseFuncName    = FieldUseFuncNames[0];
+            _battleUseFuncName   = BattleUseFuncNames[0];
+            _naturalGiftTypeName = NaturalGiftTypeNames[0];
+            _price               = 500;
+            _naturalGiftPower    = 80;
+            _flingPower          = 60;
+            _partyUse            = true;  // show party params as enabled in preview
+            _hpRestore           = true;
+            _hpRestoreParam      = 50;
+            _slpHeal             = true;
+            _psnHeal             = true;
+        }
+
+        // ── Runtime constructor ──────────────────────────────────────────────
+        public ItemEditorViewModel(string[] itemNames)
+        {
+            foreach (var n in itemNames) ItemNames.Add(n);
+            PopulateEnumCollections();
+            MaxItemIndex  = itemNames.Length - 1;
+            MaxItemDataId = GetItemDataFileCount() - 1;
+            PopulateIconPaletteDropdowns();
+
+            if (RomInfo.gameFamily == GameFamilies.DP)
+                HoldEffectNames.Remove(nameof(HoldEffect.GiratinaBoost));
+
+            // Load first item
+            _selectedItemIndex = 1;
+            OnPropertyChanged(nameof(SelectedItemIndex));
+            LoadFile(1);
+        }
+
+        // ── Collections ─────────────────────────────────────────────────────
+        public ObservableCollection<string> ItemNames          { get; } = new();
+        public ObservableCollection<string> IconImages         { get; } = new();
+        public ObservableCollection<string> IconPalettes       { get; } = new();
+        public ObservableCollection<string> HoldEffectNames    { get; } = new();
+        public ObservableCollection<string> FieldPocketNames   { get; } = new();
+        public ObservableCollection<string> FieldUseFuncNames  { get; } = new();
+        public ObservableCollection<string> BattleUseFuncNames { get; } = new();
+        public ObservableCollection<string> NaturalGiftTypeNames { get; } = new();
+
+        // ── Selector ─────────────────────────────────────────────────────────
+        public int MaxItemIndex  { get; private set; }
+        public int MaxItemDataId { get; private set; }
+
+        private int _selectedItemIndex = -1;
+        public int SelectedItemIndex
+        {
+            get => _selectedItemIndex;
+            set
+            {
+                if (_selectedItemIndex == value) return;
+                _selectedItemIndex = value;
+                OnPropertyChanged();
+                if (!_isLoading && value >= 0 && value < ItemNames.Count)
+                    LoadFile(value);
+            }
+        }
+
+        // ── Item Table Entry ─────────────────────────────────────────────────
+        private string _selectedIconImage;
+        public string SelectedIconImage
+        {
+            get => _selectedIconImage;
+            set
+            {
+                if (!Set(ref _selectedIconImage, value)) return;
+                if (_isLoading || value == null) return;
+                _currentEntry.itemIcon = uint.Parse(value);
+                UpdateIcon();
+                SetEntryDirty();
+            }
+        }
+
+        private string _selectedIconPalette;
+        public string SelectedIconPalette
+        {
+            get => _selectedIconPalette;
+            set
+            {
+                if (!Set(ref _selectedIconPalette, value)) return;
+                if (_isLoading || value == null) return;
+                _currentEntry.itemPalette = uint.Parse(value);
+                UpdateIcon();
+                SetEntryDirty();
+            }
+        }
+
+        private int _itemDataId;
+        public int ItemDataId
+        {
+            get => _itemDataId;
+            set
+            {
+                if (!Set(ref _itemDataId, value)) return;
+                if (_isLoading || value < 0 || value > MaxItemDataId) return;
+                _currentEntry.itemData = (uint)value;
+                LoadItemData(value);
+                SetEntryDirty();
+            }
+        }
+
+        private AvaBitmap _itemIcon;
+        public AvaBitmap ItemIcon { get => _itemIcon; private set => Set(ref _itemIcon, value); }
+
+        // ── Hold Effect ──────────────────────────────────────────────────────
+        private string _holdEffectName;
+        public string HoldEffectName
+        {
+            get => _holdEffectName;
+            set
+            {
+                if (!Set(ref _holdEffectName, value)) return;
+                if (_isLoading || _currentData == null || value == null) return;
+                if (Enum.TryParse<HoldEffect>(value, out var he)) _currentData.holdEffect = he;
+                SetDataDirty();
+            }
+        }
+
+        private int _holdEffectParam;
+        public int HoldEffectParam
+        {
+            get => _holdEffectParam;
+            set
+            {
+                if (!Set(ref _holdEffectParam, value)) return;
+                if (_isLoading || _currentData == null) return;
+                _currentData.HoldEffectParam = (byte)value;
+                SetDataDirty();
+            }
+        }
+
+        // ── Pocket ───────────────────────────────────────────────────────────
+        private string _fieldPocketName;
+        public string FieldPocketName
+        {
+            get => _fieldPocketName;
+            set
+            {
+                if (!Set(ref _fieldPocketName, value)) return;
+                if (_isLoading || _currentData == null || value == null) return;
+                if (Enum.TryParse<FieldPocket>(value, out var fp)) _currentData.fieldPocket = fp;
+                SetDataDirty();
+            }
+        }
+
+        private bool _pokeBallsBattlePocket;
+        public bool PokeBallsBattlePocket     { get => _pokeBallsBattlePocket;     set { if (Set(ref _pokeBallsBattlePocket,     value) && !_isLoading && _currentData != null) { UpdateBattlePocket(); SetDataDirty(); } } }
+        private bool _battleItemsBattlePocket;
+        public bool BattleItemsBattlePocket   { get => _battleItemsBattlePocket;   set { if (Set(ref _battleItemsBattlePocket,   value) && !_isLoading && _currentData != null) { UpdateBattlePocket(); SetDataDirty(); } } }
+        private bool _hpRestoreBattlePocket;
+        public bool HpRestoreBattlePocket     { get => _hpRestoreBattlePocket;     set { if (Set(ref _hpRestoreBattlePocket,     value) && !_isLoading && _currentData != null) { UpdateBattlePocket(); SetDataDirty(); } } }
+        private bool _statusHealersBattlePocket;
+        public bool StatusHealersBattlePocket { get => _statusHealersBattlePocket; set { if (Set(ref _statusHealersBattlePocket, value) && !_isLoading && _currentData != null) { UpdateBattlePocket(); SetDataDirty(); } } }
+        private bool _ppRestoreBattlePocket;
+        public bool PpRestoreBattlePocket     { get => _ppRestoreBattlePocket;     set { if (Set(ref _ppRestoreBattlePocket,     value) && !_isLoading && _currentData != null) { UpdateBattlePocket(); SetDataDirty(); } } }
+
+        private void UpdateBattlePocket()
+        {
+            if (_currentData == null) return;
+            BattlePocket bp = BattlePocket.None;
+            if (_pokeBallsBattlePocket)       bp |= BattlePocket.PokeBalls;
+            if (_battleItemsBattlePocket)     bp |= BattlePocket.BattleItems;
+            if (_hpRestoreBattlePocket)       bp |= BattlePocket.HpRestore;
+            if (_statusHealersBattlePocket)   bp |= BattlePocket.StatusHealers;
+            if (_ppRestoreBattlePocket)       bp |= BattlePocket.PpRestore;
+            _currentData.battlePocket = bp;
+        }
+
+        // ── Checks ───────────────────────────────────────────────────────────
+        private bool _preventToss;
+        public bool PreventToss
+        {
+            get => _preventToss;
+            set { if (Set(ref _preventToss, value) && !_isLoading && _currentData != null) { _currentData.PreventToss = value; SetDataDirty(); } }
+        }
+
+        private bool _selectable;
+        public bool Selectable
+        {
+            get => _selectable;
+            set { if (Set(ref _selectable, value) && !_isLoading && _currentData != null) { _currentData.Selectable = value; SetDataDirty(); } }
+        }
+
+        private bool _partyUse;
+        public bool PartyUse
+        {
+            get => _partyUse;
+            set
+            {
+                if (!Set(ref _partyUse, value)) return;
+                if (!_isLoading && _currentData != null) { _currentData.PartyUse = (byte)(value ? 1 : 0); SetDataDirty(); }
+                OnPropertyChanged(nameof(PartyParamsEnabled));
+            }
+        }
+        public bool PartyParamsEnabled => _partyUse;
+
+        // ── Price ────────────────────────────────────────────────────────────
+        private int _price;
+        public int Price
+        {
+            get => _price;
+            set { if (Set(ref _price, value) && !_isLoading && _currentData != null) { _currentData.price = (ushort)value; SetDataDirty(); } }
+        }
+
+        // ── Move Related ─────────────────────────────────────────────────────
+        private string _naturalGiftTypeName;
+        public string NaturalGiftTypeName
+        {
+            get => _naturalGiftTypeName;
+            set
+            {
+                if (!Set(ref _naturalGiftTypeName, value)) return;
+                if (_isLoading || _currentData == null || value == null) return;
+                if (Enum.TryParse<NaturalGiftType>(value, out var ngt)) _currentData.naturalGiftType = ngt;
+                SetDataDirty();
+            }
+        }
+
+        private int _naturalGiftPower;
+        public int NaturalGiftPower { get => _naturalGiftPower; set { if (Set(ref _naturalGiftPower, value) && !_isLoading && _currentData != null) { _currentData.NaturalGiftPower = (byte)value; SetDataDirty(); } } }
+
+        private int _flingEffect;
+        public int FlingEffect      { get => _flingEffect;      set { if (Set(ref _flingEffect,      value) && !_isLoading && _currentData != null) { _currentData.FlingEffect      = (byte)value; SetDataDirty(); } } }
+
+        private int _flingPower;
+        public int FlingPower       { get => _flingPower;       set { if (Set(ref _flingPower,       value) && !_isLoading && _currentData != null) { _currentData.FlingPower       = (byte)value; SetDataDirty(); } } }
+
+        private int _pluckEffect;
+        public int PluckEffect      { get => _pluckEffect;      set { if (Set(ref _pluckEffect,      value) && !_isLoading && _currentData != null) { _currentData.PluckEffect      = (byte)value; SetDataDirty(); } } }
+
+        // ── Functions ────────────────────────────────────────────────────────
+        private string _fieldUseFuncName;
+        public string FieldUseFuncName
+        {
+            get => _fieldUseFuncName;
+            set
+            {
+                if (!Set(ref _fieldUseFuncName, value)) return;
+                if (_isLoading || _currentData == null || value == null) return;
+                if (value.StartsWith("Unknown (") && value.EndsWith(")"))
+                {
+                    if (byte.TryParse(value.Substring(9, value.Length - 10), out byte raw))
+                        _currentData.fieldUseFunc = (FieldUseFunc)raw;
+                }
+                else if (Enum.TryParse<FieldUseFunc>(value, out var fuf))
+                    _currentData.fieldUseFunc = fuf;
+                SetDataDirty();
+            }
+        }
+
+        private string _battleUseFuncName;
+        public string BattleUseFuncName
+        {
+            get => _battleUseFuncName;
+            set
+            {
+                if (!Set(ref _battleUseFuncName, value)) return;
+                if (_isLoading || _currentData == null || value == null) return;
+                if (value.StartsWith("Unknown (") && value.EndsWith(")"))
+                {
+                    if (byte.TryParse(value.Substring(9, value.Length - 10), out byte raw))
+                        _currentData.battleUseFunc = (BattleUseFunc)raw;
+                }
+                else if (Enum.TryParse<BattleUseFunc>(value, out var buf))
+                    _currentData.battleUseFunc = buf;
+                SetDataDirty();
+            }
+        }
+
+        // ── Party Params — Status Heals ──────────────────────────────────────
+        private bool _slpHeal;   public bool SlpHeal   { get => _slpHeal;   set { if (Set(ref _slpHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SlpHeal   = value; SetDataDirty(); } } }
+        private bool _psnHeal;   public bool PsnHeal   { get => _psnHeal;   set { if (Set(ref _psnHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PsnHeal   = value; SetDataDirty(); } } }
+        private bool _brnHeal;   public bool BrnHeal   { get => _brnHeal;   set { if (Set(ref _brnHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.BrnHeal   = value; SetDataDirty(); } } }
+        private bool _frzHeal;   public bool FrzHeal   { get => _frzHeal;   set { if (Set(ref _frzHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FrzHeal   = value; SetDataDirty(); } } }
+        private bool _przHeal;   public bool PrzHeal   { get => _przHeal;   set { if (Set(ref _przHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PrzHeal   = value; SetDataDirty(); } } }
+        private bool _cfsHeal;   public bool CfsHeal   { get => _cfsHeal;   set { if (Set(ref _cfsHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.CfsHeal   = value; SetDataDirty(); } } }
+        private bool _infHeal;   public bool InfHeal   { get => _infHeal;   set { if (Set(ref _infHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.InfHeal   = value; SetDataDirty(); } } }
+        private bool _guardSpec; public bool GuardSpec { get => _guardSpec; set { if (Set(ref _guardSpec, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.GuardSpec = value; SetDataDirty(); } } }
+        private bool _revive;    public bool Revive    { get => _revive;    set { if (Set(ref _revive,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.Revive    = value; SetDataDirty(); } } }
+        private bool _reviveAll; public bool ReviveAll { get => _reviveAll; set { if (Set(ref _reviveAll, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.ReviveAll = value; SetDataDirty(); } } }
+        private bool _levelUp;   public bool LevelUp   { get => _levelUp;   set { if (Set(ref _levelUp,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.LevelUp   = value; SetDataDirty(); } } }
+        private bool _evolve;    public bool Evolve    { get => _evolve;    set { if (Set(ref _evolve,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.Evolve    = value; SetDataDirty(); } } }
+
+        // ── Party Params — Stat Stages ───────────────────────────────────────
+        private int _atkStages;      public int AtkStages      { get => _atkStages;      set { if (Set(ref _atkStages,      value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.AtkStages      = value; SetDataDirty(); } } }
+        private int _defStages;      public int DefStages      { get => _defStages;      set { if (Set(ref _defStages,      value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.DefStages      = value; SetDataDirty(); } } }
+        private int _spAtkStages;    public int SpAtkStages    { get => _spAtkStages;    set { if (Set(ref _spAtkStages,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SpAtkStages    = value; SetDataDirty(); } } }
+        private int _spDefStages;    public int SpDefStages    { get => _spDefStages;    set { if (Set(ref _spDefStages,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SpDefStages    = value; SetDataDirty(); } } }
+        private int _speedStages;    public int SpeedStages    { get => _speedStages;    set { if (Set(ref _speedStages,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SpeedStages    = value; SetDataDirty(); } } }
+        private int _accuracyStages; public int AccuracyStages { get => _accuracyStages; set { if (Set(ref _accuracyStages, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.AccuracyStages = value; SetDataDirty(); } } }
+        private int _critRateStages; public int CritRateStages { get => _critRateStages; set { if (Set(ref _critRateStages, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.CritRateStages = value; SetDataDirty(); } } }
+
+        // ── Party Params — Restore ───────────────────────────────────────────
+        private bool _hpRestore;    public bool HpRestore    { get => _hpRestore;    set { if (Set(ref _hpRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestore    = value; SetDataDirty(); } } }
+        private int  _hpRestoreParam; public int HpRestoreParam { get => _hpRestoreParam; set { if (Set(ref _hpRestoreParam, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestoreParam = (byte)value; SetDataDirty(); } } }
+        private bool _ppRestore;    public bool PpRestore    { get => _ppRestore;    set { if (Set(ref _ppRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestore    = value; SetDataDirty(); } } }
+        private int  _ppRestoreParam; public int PpRestoreParam { get => _ppRestoreParam; set { if (Set(ref _ppRestoreParam, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreParam = (byte)value; SetDataDirty(); } } }
+        private bool _ppUps;        public bool PpUps        { get => _ppUps;        set { if (Set(ref _ppUps,        value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPUps        = value; SetDataDirty(); } } }
+        private bool _ppMax;        public bool PpMax        { get => _ppMax;        set { if (Set(ref _ppMax,        value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPMax        = value; SetDataDirty(); } } }
+        private bool _ppRestoreAll; public bool PpRestoreAll { get => _ppRestoreAll; set { if (Set(ref _ppRestoreAll, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreAll = value; SetDataDirty(); } } }
+
+        // ── Party Params — EVs ───────────────────────────────────────────────
+        private bool _evHp;    public bool EVHp    { get => _evHp;    set { if (Set(ref _evHp,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVHp    = value; SetDataDirty(); } } }
+        private bool _evAtk;   public bool EVAtk   { get => _evAtk;   set { if (Set(ref _evAtk,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVAtk   = value; SetDataDirty(); } } }
+        private bool _evDef;   public bool EVDef   { get => _evDef;   set { if (Set(ref _evDef,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVDef   = value; SetDataDirty(); } } }
+        private bool _evSpeed; public bool EVSpeed { get => _evSpeed; set { if (Set(ref _evSpeed, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpeed = value; SetDataDirty(); } } }
+        private bool _evSpAtk; public bool EVSpAtk { get => _evSpAtk; set { if (Set(ref _evSpAtk, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpAtk = value; SetDataDirty(); } } }
+        private bool _evSpDef; public bool EVSpDef { get => _evSpDef; set { if (Set(ref _evSpDef, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpDef = value; SetDataDirty(); } } }
+
+        private int _evHpValue;    public int EVHpValue    { get => _evHpValue;    set { if (Set(ref _evHpValue,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVHpValue    = (sbyte)value; SetDataDirty(); } } }
+        private int _evAtkValue;   public int EVAtkValue   { get => _evAtkValue;   set { if (Set(ref _evAtkValue,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVAtkValue   = (sbyte)value; SetDataDirty(); } } }
+        private int _evDefValue;   public int EVDefValue   { get => _evDefValue;   set { if (Set(ref _evDefValue,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVDefValue   = (sbyte)value; SetDataDirty(); } } }
+        private int _evSpeedValue; public int EVSpeedValue { get => _evSpeedValue; set { if (Set(ref _evSpeedValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpeedValue = (sbyte)value; SetDataDirty(); } } }
+        private int _evSpAtkValue; public int EVSpAtkValue { get => _evSpAtkValue; set { if (Set(ref _evSpAtkValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpAtkValue = (sbyte)value; SetDataDirty(); } } }
+        private int _evSpDefValue; public int EVSpDefValue { get => _evSpDefValue; set { if (Set(ref _evSpDefValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpDefValue = (sbyte)value; SetDataDirty(); } } }
+
+        // ── Party Params — Friendship ────────────────────────────────────────
+        private bool _friendshipLow;  public bool FriendshipLow  { get => _friendshipLow;  set { if (Set(ref _friendshipLow,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipLow  = value; SetDataDirty(); } } }
+        private bool _friendshipMid;  public bool FriendshipMid  { get => _friendshipMid;  set { if (Set(ref _friendshipMid,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipMid  = value; SetDataDirty(); } } }
+        private bool _friendshipHigh; public bool FriendshipHigh { get => _friendshipHigh; set { if (Set(ref _friendshipHigh, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipHigh = value; SetDataDirty(); } } }
+
+        private int _friendshipLowValue;  public int FriendshipLowValue  { get => _friendshipLowValue;  set { if (Set(ref _friendshipLowValue,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipLowValue  = (sbyte)value; SetDataDirty(); } } }
+        private int _friendshipMidValue;  public int FriendshipMidValue  { get => _friendshipMidValue;  set { if (Set(ref _friendshipMidValue,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipMidValue  = (sbyte)value; SetDataDirty(); } } }
+        private int _friendshipHighValue; public int FriendshipHighValue { get => _friendshipHighValue; set { if (Set(ref _friendshipHighValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipHighValue = (sbyte)value; SetDataDirty(); } } }
+
+        // ── IEditorWithUnsavedChanges ────────────────────────────────────────
+        private bool _dataDirty;
+        private bool _entryDirty;
+        public bool HasUnsavedChanges       => _dataDirty || _entryDirty;
+        public string UnsavedChangesDescription => $"Item Editor (item {_selectedItemIndex})";
+
+        public void SaveChanges()
+        {
+            if (_entryDirty) SaveTableEntry();
+            if (_dataDirty)  SaveItemData();
+        }
+
+        public void DiscardChanges()
+        {
+            _dataDirty = _entryDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void SetDataDirty()  { if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetEntryDirty() { if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Internal state ────────────────────────────────────────────────────
+        private bool _isLoading;
+        private ItemNarcTableEntry _currentEntry;
+        private ItemData _currentData;
+
+        // ── Load ──────────────────────────────────────────────────────────────
+        private void LoadFile(int id)
+        {
+            _isLoading = true;
+            try
+            {
+                _currentEntry = ReadTableEntry(id);
+
+                string iconID = _currentEntry.itemIcon.ToString("D4");
+                string palID  = _currentEntry.itemPalette.ToString("D4");
+
+                _selectedIconImage   = IconImages.Contains(iconID) ? iconID : null;
+                _selectedIconPalette = IconPalettes.Contains(palID) ? palID  : null;
+                _itemDataId          = (int)_currentEntry.itemData;
+
+                OnPropertyChanged(nameof(SelectedIconImage));
+                OnPropertyChanged(nameof(SelectedIconPalette));
+                OnPropertyChanged(nameof(ItemDataId));
+
+                LoadItemData((int)_currentEntry.itemData);
+                UpdateIcon();
+
+                _dataDirty = _entryDirty = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
+            finally { _isLoading = false; }
+        }
+
+        private void LoadItemData(int dataId)
+        {
+            string path = Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, dataId.ToString("D4"));
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            _currentData = new ItemData(stream, dataId);
+            PopulateFromCurrentData();
+        }
+
+        private void PopulateFromCurrentData()
+        {
+            // Hold effect — may be unknown value
+            string heName = Enum.IsDefined(typeof(HoldEffect), _currentData.holdEffect)
+                ? _currentData.holdEffect.ToString()
+                : $"Unknown ({(int)_currentData.holdEffect})";
+            if (!HoldEffectNames.Contains(heName)) HoldEffectNames.Add(heName);
+            _holdEffectName  = heName;
+            _holdEffectParam = _currentData.HoldEffectParam;
+            OnPropertyChanged(nameof(HoldEffectName));
+            OnPropertyChanged(nameof(HoldEffectParam));
+
+            // Field pocket
+            _fieldPocketName = _currentData.fieldPocket.ToString();
+            OnPropertyChanged(nameof(FieldPocketName));
+
+            // Battle pocket flags
+            var bp = _currentData.battlePocket;
+            _pokeBallsBattlePocket     = (bp & BattlePocket.PokeBalls)     != 0;
+            _battleItemsBattlePocket   = (bp & BattlePocket.BattleItems)   != 0;
+            _hpRestoreBattlePocket     = (bp & BattlePocket.HpRestore)     != 0;
+            _statusHealersBattlePocket = (bp & BattlePocket.StatusHealers) != 0;
+            _ppRestoreBattlePocket     = (bp & BattlePocket.PpRestore)     != 0;
+            OnPropertyChanged(nameof(PokeBallsBattlePocket));
+            OnPropertyChanged(nameof(BattleItemsBattlePocket));
+            OnPropertyChanged(nameof(HpRestoreBattlePocket));
+            OnPropertyChanged(nameof(StatusHealersBattlePocket));
+            OnPropertyChanged(nameof(PpRestoreBattlePocket));
+
+            // Checks
+            _preventToss = _currentData.PreventToss;
+            _selectable  = _currentData.Selectable;
+            _partyUse    = _currentData.PartyUse == 1;
+            OnPropertyChanged(nameof(PreventToss));
+            OnPropertyChanged(nameof(Selectable));
+            OnPropertyChanged(nameof(PartyUse));
+            OnPropertyChanged(nameof(PartyParamsEnabled));
+
+            // Price
+            _price = _currentData.price;
+            OnPropertyChanged(nameof(Price));
+
+            // Move related
+            _naturalGiftTypeName = _currentData.naturalGiftType.ToString();
+            _naturalGiftPower    = _currentData.NaturalGiftPower;
+            _flingEffect         = _currentData.FlingEffect;
+            _flingPower          = _currentData.FlingPower;
+            _pluckEffect         = _currentData.PluckEffect;
+            OnPropertyChanged(nameof(NaturalGiftTypeName));
+            OnPropertyChanged(nameof(NaturalGiftPower));
+            OnPropertyChanged(nameof(FlingEffect));
+            OnPropertyChanged(nameof(FlingPower));
+            OnPropertyChanged(nameof(PluckEffect));
+
+            // Functions — may have unknown values
+            _fieldUseFuncName = Enum.IsDefined(typeof(FieldUseFunc), _currentData.fieldUseFunc)
+                ? _currentData.fieldUseFunc.ToString()
+                : $"Unknown ({(int)_currentData.fieldUseFunc})";
+            if (!FieldUseFuncNames.Contains(_fieldUseFuncName)) FieldUseFuncNames.Add(_fieldUseFuncName);
+            OnPropertyChanged(nameof(FieldUseFuncName));
+
+            _battleUseFuncName = Enum.IsDefined(typeof(BattleUseFunc), _currentData.battleUseFunc)
+                ? _currentData.battleUseFunc.ToString()
+                : $"Unknown ({(int)_currentData.battleUseFunc})";
+            if (!BattleUseFuncNames.Contains(_battleUseFuncName)) BattleUseFuncNames.Add(_battleUseFuncName);
+            OnPropertyChanged(nameof(BattleUseFuncName));
+
+            // Party params
+            var p = _currentData.PartyUseParam;
+            _slpHeal = p.SlpHeal; _psnHeal = p.PsnHeal; _brnHeal = p.BrnHeal; _frzHeal = p.FrzHeal;
+            _przHeal = p.PrzHeal; _cfsHeal = p.CfsHeal; _infHeal = p.InfHeal; _guardSpec = p.GuardSpec;
+            _revive  = p.Revive;  _reviveAll = p.ReviveAll; _levelUp = p.LevelUp; _evolve = p.Evolve;
+            _atkStages = p.AtkStages; _defStages = p.DefStages; _spAtkStages = p.SpAtkStages;
+            _spDefStages = p.SpDefStages; _speedStages = p.SpeedStages; _accuracyStages = p.AccuracyStages;
+            _critRateStages = p.CritRateStages;
+            _hpRestore = p.HPRestore; _hpRestoreParam = p.HPRestoreParam;
+            _ppRestore = p.PPRestore; _ppRestoreParam = p.PPRestoreParam;
+            _ppUps = p.PPUps; _ppMax = p.PPMax; _ppRestoreAll = p.PPRestoreAll;
+            _evHp = p.EVHp; _evAtk = p.EVAtk; _evDef = p.EVDef; _evSpeed = p.EVSpeed;
+            _evSpAtk = p.EVSpAtk; _evSpDef = p.EVSpDef;
+            _evHpValue = p.EVHpValue; _evAtkValue = p.EVAtkValue; _evDefValue = p.EVDefValue;
+            _evSpeedValue = p.EVSpeedValue; _evSpAtkValue = p.EVSpAtkValue; _evSpDefValue = p.EVSpDefValue;
+            _friendshipLow = p.FriendshipLow; _friendshipMid = p.FriendshipMid; _friendshipHigh = p.FriendshipHigh;
+            _friendshipLowValue = p.FriendshipLowValue; _friendshipMidValue = p.FriendshipMidValue;
+            _friendshipHighValue = p.FriendshipHighValue;
+
+            foreach (var name in _partyPropNames) OnPropertyChanged(name);
+        }
+
+        private static readonly string[] _partyPropNames =
+        {
+            nameof(SlpHeal),   nameof(PsnHeal),   nameof(BrnHeal),   nameof(FrzHeal),
+            nameof(PrzHeal),   nameof(CfsHeal),   nameof(InfHeal),   nameof(GuardSpec),
+            nameof(Revive),    nameof(ReviveAll),  nameof(LevelUp),   nameof(Evolve),
+            nameof(AtkStages), nameof(DefStages),  nameof(SpAtkStages),  nameof(SpDefStages),
+            nameof(SpeedStages), nameof(AccuracyStages), nameof(CritRateStages),
+            nameof(HpRestore), nameof(HpRestoreParam), nameof(PpRestore), nameof(PpRestoreParam),
+            nameof(PpUps),     nameof(PpMax),      nameof(PpRestoreAll),
+            nameof(EVHp),      nameof(EVAtk),      nameof(EVDef),     nameof(EVSpeed),
+            nameof(EVSpAtk),   nameof(EVSpDef),
+            nameof(EVHpValue), nameof(EVAtkValue), nameof(EVDefValue), nameof(EVSpeedValue),
+            nameof(EVSpAtkValue), nameof(EVSpDefValue),
+            nameof(FriendshipLow),  nameof(FriendshipMid),  nameof(FriendshipHigh),
+            nameof(FriendshipLowValue), nameof(FriendshipMidValue), nameof(FriendshipHighValue)
+        };
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        private static ItemNarcTableEntry ReadTableEntry(int index)
+        {
+            uint offset = RomInfo.itemTableOffset;
+            return new ItemNarcTableEntry
+            {
+                itemData    = ARM9.ReadWordLE((uint)(offset + index * 8)),
+                itemIcon    = ARM9.ReadWordLE((uint)(offset + index * 8 + 2)),
+                itemPalette = ARM9.ReadWordLE((uint)(offset + index * 8 + 4)),
+                itemAGB     = ARM9.ReadWordLE((uint)(offset + index * 8 + 6))
+            };
+        }
+
+        private void SaveTableEntry()
+        {
+            uint offset = (uint)(_selectedItemIndex * 8);
+            uint base_  = RomInfo.itemTableOffset;
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemData),    base_ + offset);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemIcon),    base_ + offset + 2);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemPalette), base_ + offset + 4);
+            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemAGB),     base_ + offset + 6);
+            _entryDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void SaveItemData()
+        {
+            _currentData?.SaveToFileDefaultDir((int)_currentEntry.itemData, false);
+            _dataDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void UpdateIcon()
+        {
+            if (Design.IsDesignMode) return;
+            try
+            {
+                string dir     = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
+                string palFile = _currentEntry.itemPalette.ToString("D4");
+                string imgFile = _currentEntry.itemIcon.ToString("D4");
+                var palette = new NCLR(Path.Combine(dir, palFile), (int)_currentEntry.itemPalette, palFile);
+                var image   = new NCGR(Path.Combine(dir, imgFile), (int)_currentEntry.itemIcon,    imgFile);
+                var sprite  = new NCER(Path.Combine(dir, "0001"),  2, "0001");
+                var bmp     = sprite.Get_Image(image, palette, 0, image.Width, image.Height, false, false, false, true, true, -1);
+                ItemIcon = ImageConverter.ToAvaloniaBitmap((GdiBitmap)bmp);
+            }
+            catch { ItemIcon = null; }
+        }
+
+        private void PopulateIconPaletteDropdowns()
+        {
+            string dir = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
+            var files  = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
+            uint idx   = 0;
+            foreach (var file in files)
+            {
+                using var stream = File.OpenRead(file);
+                byte[] header = new byte[4];
+                stream.Read(header, 0, 4);
+                string magic = Encoding.ASCII.GetString(header);
+                if      (magic == "RGCN") IconImages.Add(idx.ToString("D4"));
+                else if (magic == "RLCN") IconPalettes.Add(idx.ToString("D4"));
+                idx++;
+            }
+        }
+
+        private void PopulateEnumCollections()
+        {
+            foreach (var n in Enum.GetNames(typeof(HoldEffect)))    HoldEffectNames.Add(n);
+            foreach (var n in Enum.GetNames(typeof(FieldPocket)))   FieldPocketNames.Add(n);
+            foreach (var n in Enum.GetNames(typeof(FieldUseFunc)))  FieldUseFuncNames.Add(n);
+            foreach (var n in Enum.GetNames(typeof(BattleUseFunc))) BattleUseFuncNames.Add(n);
+            foreach (var n in Enum.GetNames(typeof(NaturalGiftType))) NaturalGiftTypeNames.Add(n);
+        }
+
+        private static int GetItemDataFileCount() =>
+            Directory.GetFiles(RomInfo.gameDirs[DirNames.itemData].unpackedDir, "*", SearchOption.TopDirectoryOnly).Length;
+    }
+}

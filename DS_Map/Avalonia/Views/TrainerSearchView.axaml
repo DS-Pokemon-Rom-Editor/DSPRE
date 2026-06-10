@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.TrainerSearchView"
+        x:DataType="vm:TrainerSearchViewModel"
+        Title="Search Trainers"
+        Width="380" Height="440"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:TrainerSearchViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Spacing="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <ComboBox Width="150" ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
+        <CheckBox Content="Case sensitive" IsChecked="{Binding CaseSensitive}" VerticalAlignment="Center"/>
+      </StackPanel>
+      <TextBox Text="{Binding SearchText}" PlaceholderText="Search text" KeyUp="Search_KeyUp"/>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Search" Click="Search_Click"/>
+        <Button Content="Reset"  Click="Reset_Click"/>
+        <CheckBox Content="Auto-search" IsChecked="{Binding AutoSearch}" VerticalAlignment="Center"/>
+      </StackPanel>
+      <TextBlock Text="Results (double-click to go):" Margin="0,4,0,0"/>
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
+      <Button Content="Go To"  Click="GoTo_Click" IsDefault="True"/>
+      <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+    </StackPanel>
+
+    <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
+             DoubleTapped="Result_DoubleTapped" Margin="0,4,0,0"/>
+  </DockPanel>
+</Window>

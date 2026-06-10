@@ -8,6 +8,10 @@
 		MinWidth="360" MinHeight="260"
 		CanResize="True"
 		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:AddressHelperViewModel/>
+  </Design.DataContext>
+
 
 	<StackPanel Margin="8" Spacing="6">
 
@@ -15,7 +19,7 @@
 		<Grid ColumnDefinitions="*,Auto">
 			<TextBox Grid.Column="0"
 					 Text="{Binding AddressInput}"
-					 Watermark="e.g. 02004800"/>
+					 PlaceholderText="e.g. 02004800"/>
 			<Button Grid.Column="1" Content="Search"
 					Margin="6,0,0,0"
 					Click="SearchButton_Click"/>

@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.BattleMessageEditorView"
+        x:DataType="vm:BattleMessageEditorViewModel"
+        Title="Trainer Battle Messages"
+        Width="900" Height="620"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:BattleMessageEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
+        <ComboBox Width="320" ItemsSource="{Binding Trainers}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Button Content="Save all…" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="*,300" Margin="6">
+      <!-- Entries -->
+      <DockPanel Grid.Column="0" Margin="0,0,6,0">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+          <Button Content="Add"    Click="Add_Click"/>
+          <Button Content="Delete" Click="Delete_Click"/>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding InfoText}" Foreground="{Binding InfoColor}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}"/>
+      </DockPanel>
+
+      <!-- Editor + sprite -->
+      <DockPanel Grid.Column="1">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <Border Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1" Width="96" Height="96" HorizontalAlignment="Left">
+            <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasSprite}">
+            <TextBlock Text="Frame" VerticalAlignment="Center"/>
+            <NumericUpDown Width="90" Minimum="0" Maximum="{Binding FrameMax}" Increment="1" Value="{Binding Frame}"/>
+          </StackPanel>
+          <TextBlock Text="Trigger type" FontWeight="Bold"/>
+          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerTypes}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
+          <TextBlock Text="Message" FontWeight="Bold"/>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+          <Button Content="Edit trigger" Click="EditTrigger_Click"/>
+          <Button Content="Save message" Click="SaveMessage_Click"/>
+        </StackPanel>
+        <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding MessageText}" Margin="0,4,0,0"/>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

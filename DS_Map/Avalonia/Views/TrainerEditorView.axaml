@@ -1,0 +1,173 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.TrainerEditorView"
+        x:DataType="vm:TrainerEditorViewModel"
+        Title="Trainer Editor"
+        Width="980" Height="760"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:TrainerEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Button Content="Search…"        Click="Search_Click"/>
+        <Button Content="Reorder party…" Click="Reorder_Click"/>
+        <Button Content="DV Calc…"       Click="DVCalc_Click"/>
+        <Button Content="Battle messages…" Click="BattleMessages_Click"/>
+      </StackPanel>
+    </Border>
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="240,*">
+      <ListBox Grid.Column="0" Margin="4"
+               ItemsSource="{Binding TrainerNames}"
+               SelectedIndex="{Binding SelectedTrainerIndex}"/>
+
+      <ScrollViewer Grid.Column="1" Padding="8">
+        <StackPanel Spacing="8">
+
+          <!-- Properties -->
+          <HeaderedContentControl Header="Trainer">
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" Margin="0,0,6,2"/>
+              <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TrainerName}" Margin="0,0,8,2"/>
+              <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Width="96" Height="96"
+                      Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
+                <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
+              </Border>
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Class" VerticalAlignment="Center" Margin="0,0,6,2"/>
+              <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,8,2"
+                        ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
+
+              <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}"/>
+                <CheckBox Content="Custom moves"  IsChecked="{Binding ChooseMoves}"/>
+                <CheckBox Content="Held items"    IsChecked="{Binding ChooseItems}"/>
+                <TextBlock Text="Party size" VerticalAlignment="Center"/>
+                <NumericUpDown Width="90" Minimum="1" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasClassSprite}">
+                  <TextBlock Text="Frame" VerticalAlignment="Center"/>
+                  <NumericUpDown Width="80" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"/>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+          </HeaderedContentControl>
+
+          <!-- Held items -->
+          <HeaderedContentControl Header="Trainer-held items">
+            <ItemsControl ItemsSource="{Binding TrainerItems}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TrainerItemSlotViewModel">
+                  <ComboBox Width="200" Margin="2"
+                            ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </HeaderedContentControl>
+
+          <!-- AI flags -->
+          <HeaderedContentControl Header="AI flags">
+            <ItemsControl ItemsSource="{Binding AiFlags}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AiFlagViewModel">
+                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="150" Margin="0,0,4,0"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </HeaderedContentControl>
+
+          <!-- Party -->
+          <HeaderedContentControl Header="Party">
+            <ItemsControl ItemsSource="{Binding Party}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
+                  <Border IsVisible="{Binding IsVisible}" BorderBrush="#DDD" BorderThickness="1"
+                          CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="#FCFCFC">
+                    <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto">
+                      <Border Grid.Column="0" Grid.RowSpan="3" Width="56" Height="56" VerticalAlignment="Top"
+                              Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="1">
+                        <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
+                      </Border>
+
+                      <!-- Row 0: species + level -->
+                      <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,4,2">
+                        <TextBlock Text="Species" FontSize="10"/>
+                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      </StackPanel>
+                      <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,2">
+                        <TextBlock Text="Level" FontSize="10"/>
+                        <NumericUpDown Minimum="1" Maximum="100" Increment="1" Value="{Binding Level}"/>
+                      </StackPanel>
+
+                      <!-- Row 1: form/gender/ability/iv/ball -->
+                      <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,2">
+                        <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding FormVisible}">
+                          <TextBlock Text="Form" FontSize="10"/>
+                          <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding FormId}"/>
+                        </StackPanel>
+                        <StackPanel Width="120" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
+                          <TextBlock Text="Gender" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderItems}" SelectedIndex="{Binding GenderIndex}"/>
+                        </StackPanel>
+                        <StackPanel Width="150" Margin="0,0,6,0">
+                          <TextBlock Text="Ability" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AbilityItems}" SelectedIndex="{Binding AbilityIndex}" IsEnabled="{Binding AbilityEnabled}"/>
+                        </StackPanel>
+                        <StackPanel Width="90" Margin="0,0,6,0">
+                          <TextBlock Text="IV (diff.)" FontSize="10"/>
+                          <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
+                        </StackPanel>
+                        <StackPanel Width="110" IsVisible="{Binding BallEnabled}">
+                          <TextBlock Text="Ball seals" FontSize="10"/>
+                          <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BallSeals}"/>
+                        </StackPanel>
+                      </WrapPanel>
+
+                      <!-- Row 2: held item + moves -->
+                      <WrapPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,0">
+                        <StackPanel Width="180" Margin="0,0,6,0" IsVisible="{Binding ItemEnabled}">
+                          <TextBlock Text="Held item" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
+                        </StackPanel>
+                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                          <TextBlock Text="Move 1" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
+                        </StackPanel>
+                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                          <TextBlock Text="Move 2" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
+                        </StackPanel>
+                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                          <TextBlock Text="Move 3" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
+                        </StackPanel>
+                        <StackPanel Width="150" IsVisible="{Binding MovesEnabled}">
+                          <TextBlock Text="Move 4" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
+                        </StackPanel>
+                      </WrapPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </HeaderedContentControl>
+
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

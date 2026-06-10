@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        x:Class="DSPRE.Avalonia.Views.MainWindowView"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1100" Height="720"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:MainWindowViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+
+    <!-- ── Menu bar ───────────────────────────────────────────────────────── -->
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="Close" Click="Close_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_Pokémon" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click"/>
+        <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click"/>
+        <MenuItem Header="TM Editor…"        Click="TMEditor_Click"/>
+        <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
+        <Separator/>
+        <MenuItem Header="Item Editor…"       Click="ItemEditor_Click"/>
+        <MenuItem Header="Item Table Editor…" Click="ItemTableEditor_Click"/>
+        <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
+        <Separator/>
+        <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="Te_xt" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
+        <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="Ta_bles" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Table Editor…" Click="TableEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_World" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
+        <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
+        <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
+        <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
+        <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click"/>
+        <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click"/>
+        <MenuItem Header="Overworld Sprites (BTX)…" Click="OverworldEditor_Click"/>
+        <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
+        <MenuItem Header="Encounters Editor…"      Click="EncountersEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_Tools">
+        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"  IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <Separator/>
+        <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
+        <MenuItem Header="Settings…" Click="Settings_Click"/>
+      </MenuItem>
+    </Menu>
+
+    <!-- ── Status bar ─────────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock FontSize="11" Foreground="#444" VerticalAlignment="Center"
+                 Text="Avalonia MainWindow preview — migrated editors appear as tabs; the rest open from the menu."/>
+    </Border>
+
+    <!-- ── Embedded editor tabs (Header is the default view) ──────────────── -->
+    <TabControl Margin="4">
+      <TabItem Header="Header">
+        <views:HeaderEditorView DataContext="{Binding HeaderVM}"/>
+      </TabItem>
+      <TabItem Header="Camera">
+        <views:CameraEditorView DataContext="{Binding CameraVM}"/>
+      </TabItem>
+    </TabControl>
+
+  </DockPanel>
+</Window>

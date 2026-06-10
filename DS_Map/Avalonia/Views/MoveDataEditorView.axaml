@@ -7,6 +7,10 @@
 		Width="820" Height="620"
 		MinWidth="700" MinHeight="520"
 		WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:MoveDataEditorViewModel/>
+  </Design.DataContext>
+
 
   <Window.Styles>
 	<Style Selector="TextBlock.label">

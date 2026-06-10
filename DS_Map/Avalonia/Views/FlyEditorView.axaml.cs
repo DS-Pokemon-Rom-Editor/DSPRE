@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using DSPRE.Avalonia.ViewModels;
+using System;
 
 namespace DSPRE.Avalonia.Views
 {
@@ -15,6 +16,21 @@ namespace DSPRE.Avalonia.Views
             _vm = new FlyEditorViewModel(headerNames);
             DataContext = _vm;
             Closing += OnWindowClosing;
+        }
+
+        // Parameterless constructor for previewer only
+        public FlyEditorView()
+        {
+            AvaloniaXamlLoader.Load(this);
+            if (Design.IsDesignMode)
+            {
+                // Create a design-time ViewModel (parameterless ctor will provide dummy data)
+                _vm = new FlyEditorViewModel();
+                DataContext = _vm;
+                return;
+            }
+            // Runtime should never call this – keep it to avoid errors
+            throw new InvalidOperationException("Parameterless constructor only for design time.");
         }
 
         private async void OnWindowClosing(object sender, WindowClosingEventArgs e)

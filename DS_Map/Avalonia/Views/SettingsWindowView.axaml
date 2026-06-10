@@ -7,6 +7,10 @@
 		Width="880" Height="440"
 		CanResize="False"
 		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:SettingsWindowViewModel/>
+  </Design.DataContext>
+
 
   <StackPanel Margin="12" Spacing="10">
 

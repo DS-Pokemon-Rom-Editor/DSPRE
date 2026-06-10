@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+             x:Class="DSPRE.Avalonia.Views.PokemonSpriteEditorView"
+             x:DataType="vm:PokemonSpriteEditorViewModel">
+  <Design.DataContext>
+    <vm:PokemonSpriteEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.header">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.sub">
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Foreground" Value="#888"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.sprite-btn">
+      <Setter Property="Padding" Value="6,3"/>
+      <Setter Property="MinWidth" Value="80"/>
+      <Setter Property="Margin" Value="2,0"/>
+    </Style>
+    <Style Selector="Border.sprite-cell">
+      <Setter Property="Background" Value="#2A2A2A"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="4"/>
+      <Setter Property="Width" Value="340"/>
+      <Setter Property="Height" Value="180"/>
+    </Style>
+    <Style Selector="Image.sprite-img">
+      <Setter Property="Stretch" Value="Uniform"/>
+      <Setter Property="Width" Value="320"/>
+      <Setter Property="Height" Value="160"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel LastChildFill="True" Margin="8">
+
+    <!-- Alternate forms toolbar -->
+    <Border DockPanel.Dock="Top" Padding="0,0,0,8">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Content="{Binding ToggleButtonText}" Click="ToggleAlternateForms_Click" Width="140"/>
+        <ComboBox IsVisible="{Binding IsAlternateForms}"
+                  ItemsSource="{Binding AlternateFormNames}"
+                  SelectedIndex="{Binding SelectedFormIndex}"
+                  MinWidth="220"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="4,4,4,0">
+      <TextBlock Text="{Binding StatusText}" FontStyle="Italic" Foreground="OrangeRed"
+                 TextWrapping="Wrap" IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+    </Border>
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="16" Margin="4">
+        <GroupBox Header="Normal Sprites">
+          <Grid ColumnDefinitions="*,8,*,8,*,8,*" Margin="4">
+            <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Female Back"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding FemaleBackNormal}"/>
+              </Border>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
+                          IsVisible="{Binding !IsAlternateForms}">
+                <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleBackNormal_Click"/>
+                <Button Classes="sprite-btn" Content="Export" Click="ExportFemaleBackNormal_Click"/>
+              </StackPanel>
+              <TextBlock Classes="sub" Text="Slot 0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Male Back"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding MaleBackNormal}"/>
+              </Border>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
+                          IsVisible="{Binding !IsAlternateForms}">
+                <Button Classes="sprite-btn" Content="Import" Click="ImportMaleBackNormal_Click"/>
+                <Button Classes="sprite-btn" Content="Export" Click="ExportMaleBackNormal_Click"/>
+              </StackPanel>
+              <TextBlock Classes="sub" Text="Slot 1"/>
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Female Front"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding FemaleFrontNormal}"/>
+              </Border>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
+                          IsVisible="{Binding !IsAlternateForms}">
+                <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleFrontNormal_Click"/>
+                <Button Classes="sprite-btn" Content="Export" Click="ExportFemaleFrontNormal_Click"/>
+              </StackPanel>
+              <TextBlock Classes="sub" Text="Slot 2"/>
+            </StackPanel>
+            <StackPanel Grid.Column="6" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Male Front"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding MaleFrontNormal}"/>
+              </Border>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
+                          IsVisible="{Binding !IsAlternateForms}">
+                <Button Classes="sprite-btn" Content="Import" Click="ImportMaleFrontNormal_Click"/>
+                <Button Classes="sprite-btn" Content="Export" Click="ExportMaleFrontNormal_Click"/>
+              </StackPanel>
+              <TextBlock Classes="sub" Text="Slot 3"/>
+            </StackPanel>
+          </Grid>
+        </GroupBox>
+        <GroupBox Header="Shiny Sprites">
+          <Grid ColumnDefinitions="*,8,*,8,*,8,*" Margin="4">
+            <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Female Back (Shiny)"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding FemaleBackShiny}"/>
+              </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Male Back (Shiny)"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding MaleBackShiny}"/>
+              </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="4" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Female Front (Shiny)"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding FemaleFrontShiny}"/>
+              </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="6" Spacing="4" HorizontalAlignment="Center">
+              <TextBlock Classes="header" Text="Male Front (Shiny)"/>
+              <Border Classes="sprite-cell">
+                <Image Classes="sprite-img" Source="{Binding MaleFrontShiny}"/>
+              </Border>
+            </StackPanel>
+          </Grid>
+        </GroupBox>
+        <TextBlock Text="Shiny sprites share pixel data with normal sprites; only the palette differs. Import replaces raw pixels; palette data is managed separately."
+                   TextWrapping="Wrap" FontSize="11" Foreground="#777" Margin="4,0"/>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

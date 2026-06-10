@@ -126,6 +126,21 @@ namespace DSPRE.Avalonia.ViewModels
 
         public TMEditorViewModel()
         {
+            if (Design.IsDesignMode)
+            {
+                _curMachineMoves = new int[5];
+                _curMachinePalettes = new int[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    MachineItems.Add($"TM{i + 1:D2} - Dummy Move {i + 1}");
+                    MoveNames.Add($"Dummy Move {i + 1}");
+                    TypeNames.Add($"Type {i + 1}");
+                    _curMachineMoves[i] = i;
+                    _curMachinePalettes[i] = i;
+                }
+                Title = "TM/HM Editor (Preview)";
+                return;
+            }
             TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
 
             PopulateMoveNames();

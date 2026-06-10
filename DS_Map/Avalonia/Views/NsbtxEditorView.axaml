@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.NsbtxEditorView"
+        x:DataType="vm:NsbtxEditorViewModel"
+        Title="NSBTX (Texture) Editor"
+        Width="800" Height="560"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:NsbtxEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
+        <RadioButton Content="Building textures" GroupName="tt" IsChecked="{Binding BuildingTextures}"/>
+        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Button Content="Import…" Click="Import_Click"/>
+        <Button Content="Export…" Click="Export_Click"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="170,170,170,*" Margin="4">
+      <DockPanel Grid.Column="0" Margin="0,0,4,0">
+        <TextBlock DockPanel.Dock="Top" Text="Texture packs" FontWeight="Bold" Margin="0,0,0,2"/>
+        <ListBox ItemsSource="{Binding PackNames}" SelectedIndex="{Binding PackIndex}"/>
+      </DockPanel>
+      <DockPanel Grid.Column="1" Margin="0,0,4,0">
+        <TextBlock DockPanel.Dock="Top" Text="Textures" FontWeight="Bold" Margin="0,0,0,2"/>
+        <ListBox ItemsSource="{Binding TextureNames}" SelectedIndex="{Binding TextureIndex}"/>
+      </DockPanel>
+      <DockPanel Grid.Column="2" Margin="0,0,4,0">
+        <TextBlock DockPanel.Dock="Top" Text="Palettes" FontWeight="Bold" Margin="0,0,0,2"/>
+        <ListBox ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
+      </DockPanel>
+      <Border Grid.Column="3" Background="#2A2A2E" BorderBrush="#DDD" BorderThickness="1">
+        <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
+               RenderOptions.BitmapInterpolationMode="None"/>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

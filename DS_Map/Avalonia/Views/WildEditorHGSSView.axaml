@@ -1,0 +1,314 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.WildEditorHGSSView"
+        x:DataType="vm:WildEditorHGSSViewModel"
+        Title="{Binding Title}"
+        Width="900" Height="680"
+        MinWidth="750" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:WildEditorHGSSViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.lbl">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+    </Style>
+    <Style Selector="NumericUpDown">
+      <Setter Property="MinWidth" Value="90"/>
+      <Setter Property="FormatString" Value="0"/>
+      <Setter Property="Increment" Value="1"/>
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="MinWidth" Value="160"/>
+    </Style>
+  </Window.Styles>
+  <DockPanel LastChildFill="True" Margin="10">
+    <Border DockPanel.Dock="Top" Margin="0,0,0,8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold"/>
+        <ComboBox ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="320"/>
+      </StackPanel>
+    </Border>
+    <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Save" Click="Save_Click" Width="100" IsDefault="True"/>
+      </StackPanel>
+    </Border>
+    <TabControl>
+      <!-- Walking Morning -->
+      <TabItem Header="Morning">
+        <DockPanel Margin="8">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
+            <TextBlock Text="Walk Rate:" Classes="lbl"/>
+            <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"/>
+          </StackPanel>
+          <DataGrid ItemsSource="{Binding MorningRows}" AutoGenerateColumns="False" CanUserResizeColumns="True">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="60" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Pokemon" Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                              SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Level" Width="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate><NumericUpDown Value="{Binding Level}" Minimum="1" Maximum="100"/></DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+      <!-- Walking Day -->
+      <TabItem Header="Day">
+        <DataGrid Margin="8" ItemsSource="{Binding DayRows}" AutoGenerateColumns="False" CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="60" IsReadOnly="True"/>
+            <DataGridTemplateColumn Header="Pokemon" Width="*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                            SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Level" Width="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><NumericUpDown Value="{Binding Level}" Minimum="1" Maximum="100"/></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+      <!-- Walking Night -->
+      <TabItem Header="Night">
+        <DataGrid Margin="8" ItemsSource="{Binding NightRows}" AutoGenerateColumns="False" CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Chance" Binding="{Binding Label}" Width="60" IsReadOnly="True"/>
+            <DataGridTemplateColumn Header="Pokemon" Width="*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                            SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Level" Width="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><NumericUpDown Value="{Binding Level}" Minimum="1" Maximum="100"/></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+      <!-- Special -->
+      <TabItem Header="Special">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="8">
+            <GroupBox Header="Swarm">
+              <DataGrid ItemsSource="{Binding SwarmRows}" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                  <DataGridTemplateColumn Header="Pokemon" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                  SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </GroupBox>
+            <GroupBox Header="Hoenn Radio">
+              <DataGrid ItemsSource="{Binding HoennRadioRows}" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                  <DataGridTemplateColumn Header="Pokemon" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                  SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </GroupBox>
+            <GroupBox Header="Sinnoh Radio">
+              <DataGrid ItemsSource="{Binding SinnohRadioRows}" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                  <DataGridTemplateColumn Header="Pokemon" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                  SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </GroupBox>
+            <GroupBox Header="Rock Smash">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="Rock Smash Rate:" Classes="lbl"/>
+                  <NumericUpDown Value="{Binding RockSmashRate}" Minimum="0" Maximum="255" Width="100"/>
+                </StackPanel>
+                <DataGrid ItemsSource="{Binding RockSmashRows}" AutoGenerateColumns="False">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="100" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Pokemon" Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                    SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </StackPanel>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <!-- Water -->
+      <TabItem Header="Water">
+        <DockPanel Margin="8">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
+            <TextBlock Text="Surf Rate:"      Classes="lbl"/>
+            <NumericUpDown Value="{Binding SurfRate}"     Minimum="0" Maximum="255" Width="100"/>
+            <TextBlock Text="Old Rod Rate:"   Classes="lbl"/>
+            <NumericUpDown Value="{Binding OldRodRate}"   Minimum="0" Maximum="255" Width="100"/>
+            <TextBlock Text="Good Rod Rate:"  Classes="lbl"/>
+            <NumericUpDown Value="{Binding GoodRodRate}"  Minimum="0" Maximum="255" Width="100"/>
+            <TextBlock Text="Super Rod Rate:" Classes="lbl"/>
+            <NumericUpDown Value="{Binding SuperRodRate}" Minimum="0" Maximum="255" Width="100"/>
+          </StackPanel>
+          <ScrollViewer>
+            <StackPanel Spacing="8">
+              <GroupBox Header="Surf">
+                <DataGrid ItemsSource="{Binding SurfRows}" AutoGenerateColumns="False">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Pokemon" Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                    SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </GroupBox>
+              <GroupBox Header="Old Rod">
+                <DataGrid ItemsSource="{Binding OldRodRows}" AutoGenerateColumns="False">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Pokemon" Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                    SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </GroupBox>
+              <GroupBox Header="Good Rod">
+                <DataGrid ItemsSource="{Binding GoodRodRows}" AutoGenerateColumns="False">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Pokemon" Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                    SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </GroupBox>
+              <GroupBox Header="Super Rod">
+                <DataGrid ItemsSource="{Binding SuperRodRows}" AutoGenerateColumns="False">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Pokemon" Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                                    SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </GroupBox>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>
