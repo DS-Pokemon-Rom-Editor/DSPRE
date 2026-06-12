@@ -56,8 +56,17 @@ namespace DSPRE.Avalonia.Views
         private void ScriptEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenScriptEditor();
 
+        private void LevelScriptEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenLevelScriptEditor();
+
         private void TableEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTableEditor();
+
+        private void HiddenItemsEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHiddenItemsEditor();
+
+        private void PickupTableEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenPickupTableEditor();
 
         // ── World ───────────────────────────────────────────────────────────
         private void HeaderEditor_Click(object sender, RoutedEventArgs e)
@@ -65,6 +74,9 @@ namespace DSPRE.Avalonia.Views
 
         private void MapEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenMapEditor();
+
+        private void BuildingEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBuildingEditor();
 
         private void MatrixEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenMatrixEditor();
@@ -74,6 +86,9 @@ namespace DSPRE.Avalonia.Views
 
         private void NsbtxEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNsbtxEditor();
+
+        private void AreaDataEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenAreaDataEditor();
 
         private void FlyWarpEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenFlyWarpEditor();
@@ -87,6 +102,12 @@ namespace DSPRE.Avalonia.Views
         private void EncountersEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenEncountersEditor();
 
+        private void HeadbuttEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHeadbuttEncounterEditor();
+
+        private void WildEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenWildEditor();
+
         // ── Tools ───────────────────────────────────────────────────────────
         private void AddressHelper_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenAddressHelper();
@@ -99,6 +120,9 @@ namespace DSPRE.Avalonia.Views
 
         private void Settings_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenSettings();
+
+        private void ToggleTheme_Click(object sender, RoutedEventArgs e)
+            => DSPRE.Avalonia.ThemeManager.Toggle();
 
         private void GlTest_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenGlTest();

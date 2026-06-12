@@ -16,7 +16,7 @@
     <!-- Main panel -->
     <DockPanel IsVisible="{Binding IsAvailable}">
       <!-- Toolbar -->
-      <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+      <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="0,0,0,1" Padding="6,4">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -34,7 +34,7 @@
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding GroupNames}"
                       SelectedIndex="{Binding SelectedGroupIndex}"/>
-            <TextBlock Text="{Binding GroupDescription}" Foreground="#666"
+            <TextBlock Text="{Binding GroupDescription}" Foreground="{DynamicResource Editor.Subtle}"
                        TextWrapping="Wrap" Margin="0,2,0,4"/>
           </StackPanel>
           <ListBox ItemsSource="{Binding EncounterSlots}"
@@ -47,11 +47,11 @@
           <ComboBox HorizontalAlignment="Stretch"
                     ItemsSource="{Binding SpeciesNames}"
                     SelectedIndex="{Binding SelectedSpeciesIndex}"/>
-          <Border Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1"
+          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                   Height="80" Width="80" HorizontalAlignment="Left">
             <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
           </Border>
-          <TextBlock Text="{Binding EncounterRateText}" Foreground="#444"/>
+          <TextBlock Text="{Binding EncounterRateText}" Foreground="{DynamicResource Editor.Subtle}"/>
         </StackPanel>
       </Grid>
     </DockPanel>

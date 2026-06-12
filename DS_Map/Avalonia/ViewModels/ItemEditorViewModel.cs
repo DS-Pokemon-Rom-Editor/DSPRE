@@ -391,6 +391,12 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
+        /// <summary>Export the current item's data to a file (WinForms "Save to file").</summary>
+        public void ExportToFile()
+        {
+            _currentData?.SaveToFileExplorePath($"itemdata_{_itemDataId:D4}", showSuccessMessage: true);
+        }
+
         private void SetDataDirty()  { if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetEntryDirty() { if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 

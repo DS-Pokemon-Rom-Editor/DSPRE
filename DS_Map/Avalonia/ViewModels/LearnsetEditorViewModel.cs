@@ -122,6 +122,18 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var n in moveNames) MoveNames.Add(n);
         }
 
+        public int CurrentId => _currentId;
+
+        /// <summary>Builds the current mon's learnset as CSV (level, move id, move name).</summary>
+        public string BuildCsv()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Level,MoveID,MoveName");
+            foreach (var e in Entries)
+                sb.AppendLine($"{e.Level},{e.MoveIndex},{(e.MoveIndex >= 0 && e.MoveIndex < MoveNames.Count ? MoveNames[e.MoveIndex] : "")}");
+            return sb.ToString();
+        }
+
         // ─── Load ─────────────────────────────────────────────────────────────────
         public void LoadMon(int id)
         {

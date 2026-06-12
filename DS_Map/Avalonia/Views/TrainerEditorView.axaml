@@ -12,20 +12,20 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Search…"        Click="Search_Click"/>
         <Button Content="Reorder party…" Click="Reorder_Click"/>
         <Button Content="DV Calc…"       Click="DVCalc_Click"/>
         <Button Content="Battle messages…" Click="BattleMessages_Click"/>
       </StackPanel>
     </Border>
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="240,*">
@@ -42,7 +42,7 @@
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" Margin="0,0,6,2"/>
               <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TrainerName}" Margin="0,0,8,2"/>
               <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Width="96" Height="96"
-                      Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
+                      Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
                 <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
               </Border>
 
@@ -94,11 +94,11 @@
             <ItemsControl ItemsSource="{Binding Party}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
-                  <Border IsVisible="{Binding IsVisible}" BorderBrush="#DDD" BorderThickness="1"
+                  <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                           CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="#FCFCFC">
                     <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto">
                       <Border Grid.Column="0" Grid.RowSpan="3" Width="56" Height="56" VerticalAlignment="Top"
-                              Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="1">
+                              Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
                         <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
                       </Border>
 

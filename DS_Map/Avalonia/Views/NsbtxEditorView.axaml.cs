@@ -29,6 +29,8 @@ namespace DSPRE.Avalonia.Views
 
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private void AddPack_Click(object sender, RoutedEventArgs e) => VM?.AddPack();
+        private async void RemPack_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastPackAsync());
 
         private static async Task Safe(Task task)
         {

@@ -3,6 +3,34 @@
 			 x:Class="DSPRE.AvaloniaApp"
 			 RequestedThemeVariant="Dark">
 
+	<!-- Theme-aware editor chrome brushes (toolbars, status bars, separators, subtle text).
+	     Defined per ThemeVariant so editors stay readable in both Dark and Light, and the app
+	     can be switched at runtime via Application.RequestedThemeVariant (see ThemeManager). -->
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.ThemeDictionaries>
+				<ResourceDictionary x:Key="Light">
+					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#F5F5F5"/>
+					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#FAFAFA"/>
+					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#F0F0F0"/>
+					<SolidColorBrush x:Key="Editor.Border"     Color="#DDDDDD"/>
+					<SolidColorBrush x:Key="Editor.Separator"  Color="#CCCCCC"/>
+					<SolidColorBrush x:Key="Editor.Text"       Color="#202020"/>
+					<SolidColorBrush x:Key="Editor.Subtle"     Color="#666666"/>
+				</ResourceDictionary>
+				<ResourceDictionary x:Key="Dark">
+					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#2D2D30"/>
+					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#2A2A2D"/>
+					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#252526"/>
+					<SolidColorBrush x:Key="Editor.Border"     Color="#3F3F46"/>
+					<SolidColorBrush x:Key="Editor.Separator"  Color="#4A4A52"/>
+					<SolidColorBrush x:Key="Editor.Text"       Color="#E6E6E6"/>
+					<SolidColorBrush x:Key="Editor.Subtle"     Color="#A8A8A8"/>
+				</ResourceDictionary>
+			</ResourceDictionary.ThemeDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
+
 	<Application.Styles>
 		<FluentTheme />
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>

@@ -24,7 +24,8 @@
                                Minimum="0" Maximum="{Binding MaxItemIndex}"
                                Width="100" FormatString="0"/>
                 <Separator Width="12"/>
-                <Button x:Name="SaveAllButton">Save All</Button>
+                <Button x:Name="SaveAllButton">💾 Save All</Button>
+                <Button x:Name="ExportButton" Click="Export_Click">📤 Export…</Button>
             </StackPanel>
         </Border>
 

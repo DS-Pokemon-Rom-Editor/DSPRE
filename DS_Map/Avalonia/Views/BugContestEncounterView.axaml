@@ -12,7 +12,7 @@
                Text="Bug Contest encounters are not available for this ROM version."/>
 
     <DockPanel IsVisible="{Binding IsAvailable}">
-      <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+      <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="0,0,0,1" Padding="6,4">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -29,7 +29,7 @@
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding SetNames}"
                       SelectedIndex="{Binding SelectedSetIndex}"/>
-            <TextBlock Text="{Binding SetDescription}" Foreground="#666"
+            <TextBlock Text="{Binding SetDescription}" Foreground="{DynamicResource Editor.Subtle}"
                        TextWrapping="Wrap" Margin="0,2,0,4"/>
           </StackPanel>
           <ListBox ItemsSource="{Binding EncounterRows}"
@@ -41,7 +41,7 @@
           <ComboBox HorizontalAlignment="Stretch"
                     ItemsSource="{Binding SpeciesNames}"
                     SelectedIndex="{Binding SpeciesIndex}"/>
-          <Border Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1"
+          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                   Height="72" Width="72" HorizontalAlignment="Left">
             <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
           </Border>

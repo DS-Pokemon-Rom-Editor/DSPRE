@@ -51,6 +51,14 @@ namespace DSPRE.Avalonia.ViewModels
         public int GetHeight(int c, int r) => _matrix.altitudes[r, c];
         public void SetHeight(int c, int r, int v) => _matrix.altitudes[r, c] = (byte)v;
 
+        // ── Selected cell (for "Set spawn to selection") ─────────────────────────────────
+        private int _selCol, _selRow;
+        public int SelCol => _selCol;
+        public int SelRow => _selRow;
+        public void SetSelectedCell(int c, int r) { _selCol = c; _selRow = r; }
+        public bool InBounds => _matrix != null && _selCol >= 0 && _selRow >= 0 && _selCol < _matrix.width && _selRow < _matrix.height;
+        public ushort SpawnHeaderNumber => (InBounds && _matrix.hasHeadersSection) ? (ushort)_matrix.headers[_selRow, _selCol] : (ushort)0;
+
         private decimal _mapPaint, _headerPaint, _heightPaint;
         public decimal MapPaint { get => _mapPaint; set => Set(ref _mapPaint, value); }
         public decimal HeaderPaint { get => _headerPaint; set => Set(ref _headerPaint, value); }
@@ -79,6 +87,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public MatrixEditorViewModel() { if (Design.IsDesignMode) MatrixNames.Add("Matrix 0"); }
         public MatrixEditorViewModel(bool _) { }
+        public int InitialIndex { get; set; }
 
         public async Task SetupAsync(Window owner)
         {
@@ -91,7 +100,7 @@ namespace DSPRE.Avalonia.ViewModels
                 for (int i = 0; i < count; i++) MatrixNames.Add(new GameMatrix(i).ToString());
                 _suppress = false;
                 StatusText = $"{count} matrices.";
-                if (count > 0) SelectedMatrixIndex = 0;
+                if (count > 0) SelectedMatrixIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {

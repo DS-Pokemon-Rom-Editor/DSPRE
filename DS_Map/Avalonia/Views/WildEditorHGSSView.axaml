@@ -27,9 +27,15 @@
   </Window.Styles>
   <DockPanel LastChildFill="True" Margin="10">
     <Border DockPanel.Dock="Top" Margin="0,0,0,8">
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold"/>
-        <ComboBox ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="320"/>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <ComboBox ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
+        <Button Content="＋ Add"     Click="AddFile_Click"/>
+        <Button Content="🗑 Rem last" Click="RemFile_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="📥 Import" Click="ImportFile_Click"/>
+        <Button Content="📤 Export" Click="ExportFile_Click"/>
+        <Button Content="🛠 Repair all" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
       </StackPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">

@@ -34,7 +34,16 @@ namespace DSPRE.Avalonia.Views
 
         private void SetCellInfo(string which, (int col, int row, int value) e)
         {
-            if (VM != null) VM.CellInfo = $"{which} [{e.col}, {e.row}] = {e.value}";
+            if (VM == null) return;
+            VM.CellInfo = $"{which} [{e.col}, {e.row}] = {e.value}";
+            VM.SetSelectedCell(e.col, e.row);
+        }
+
+        private void SetSpawn_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || !VM.InBounds) return;
+            var names = Helpers.getHeaderListBoxNames();
+            new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).Show();
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)

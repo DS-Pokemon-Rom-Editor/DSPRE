@@ -29,11 +29,72 @@ namespace DSPRE.Avalonia.Gl
         public float MapMinX, MapMaxX, MapMinY, MapMaxY, MapMinZ, MapMaxZ;
         public bool HasMapBounds;
 
+        // Debug gizmo lines (8 floats/vertex, normalized space): per-cell the expected 32×32 tile-cell
+        // boundary (cyan) and the actual map-geometry extent (yellow), so the user can SEE whether a map
+        // fills its 32×32 cell or is partial/misplaced.
+        public float[] GizmoMesh;
+        public int GizmoVertexCount;
+
         // For stitched matrix scenes: the authored footprint of a single map cell, in raw space.
         // Tile (tx,ty in 0..32) of matrix cell (cx,cy) is at raw
         //   x = CellBaseX + (cx + tx/32) * CellStrideX,  z = CellBaseZ + (cy + ty/32) * CellStrideZ.
+        // (Kept as a representative average; prefer per-cell CellPlacements for exact placement.)
         public float CellBaseX, CellBaseZ, CellStrideX, CellStrideZ;
         public bool IsMatrix;
+
+        // Per-matrix-cell placement: each map is laid out CONTINUOUSLY (cumulative column widths /
+        // row heights) and min-aligned so its actual geometry box tiles edge-to-edge with neighbours.
+        // OriginX/Z is the map's min-corner (its tile-(0,0)) in raw space; Width/Height is its real
+        // footprint. Event tile (tx,ty) of cell (cx,cy) sits at OriginX + (tx/32)*Width, etc.
+        public struct CellPlacement { public float OriginX, OriginZ, Width, Height; }
+        public Dictionary<long, CellPlacement> CellPlacements;
+        public static long CellKey(int cx, int cy) => ((long)cx << 32) | (uint)cy;
+        public bool TryCellPlacement(int cx, int cy, out CellPlacement p)
+        {
+            p = default;
+            return CellPlacements != null && CellPlacements.TryGetValue(CellKey(cx, cy), out p);
+        }
+
+        /// <summary>Inverse of cell placement: finds which matrix cell + tile (0..32) a raw-space point
+        /// falls in (the cell containing it, else the nearest). Used to drag events across maps.</summary>
+        public bool TryRawToTile(float rawX, float rawZ, out int matX, out int matY, out float tileFx, out float tileFy)
+        {
+            matX = matY = 0; tileFx = tileFy = 0f;
+            if (CellPlacements == null || CellPlacements.Count == 0) return false;
+            long bestKey = 0; float bestD = float.MaxValue; bool inside = false;
+            foreach (var kv in CellPlacements)
+            {
+                var p = kv.Value;
+                bool within = rawX >= p.OriginX && rawX <= p.OriginX + p.Width && rawZ >= p.OriginZ && rawZ <= p.OriginZ + p.Height;
+                if (within) { bestKey = kv.Key; inside = true; break; }
+                float ccx = p.OriginX + p.Width * 0.5f, ccz = p.OriginZ + p.Height * 0.5f;
+                float d = (rawX - ccx) * (rawX - ccx) + (rawZ - ccz) * (rawZ - ccz);
+                if (d < bestD) { bestD = d; bestKey = kv.Key; }
+            }
+            if (!inside && bestD == float.MaxValue) return false;
+            var bp = CellPlacements[bestKey];
+            matX = (int)(bestKey >> 32); matY = (int)(uint)bestKey;
+            tileFx = bp.Width > 0 ? (rawX - bp.OriginX) / bp.Width * 32f : 0f;
+            tileFy = bp.Height > 0 ? (rawZ - bp.OriginZ) / bp.Height * 32f : 0f;
+            return true;
+        }
+
+        // Per-tile top-surface height of the MAP geometry (raw space), so events can sit on the
+        // floor rather than the scene's lowest point. NaN cells fall back to DefaultSurfaceY.
+        public float[] HeightGrid;
+        public int HCols, HRows;
+        public float HOriginX, HOriginZ, HTileX, HTileZ, DefaultSurfaceY;
+
+        /// <summary>Top-of-floor Y (raw space) under a point, or the fallback when off-grid.</summary>
+        public float SurfaceY(float x, float z)
+        {
+            if (HeightGrid == null || HTileX <= 0 || HTileZ <= 0) return DefaultSurfaceY;
+            int c = (int)Math.Floor((x - HOriginX) / HTileX);
+            int r = (int)Math.Floor((z - HOriginZ) / HTileZ);
+            if (c < 0 || r < 0 || c >= HCols || r >= HRows) return DefaultSurfaceY;
+            float v = HeightGrid[r * HCols + c];
+            return float.IsNaN(v) ? DefaultSurfaceY : v;
+        }
 
         /// <summary>Maps a raw-space point into the normalized render space.</summary>
         public (float x, float y, float z) ToNormalized(float x, float y, float z)
@@ -105,70 +166,305 @@ namespace DSPRE.Avalonia.Gl
             public int CellX, CellY;
         }
 
+        // A map is a 32×32 tile grid. One tile is 256/1024 raw units in the map-model coordinate space
+        // (the same factor the building-placement transform uses: sf*tf = (ms/1024)*(256/ms) = 0.25),
+        // so a full map cell spans exactly MapStride. These are fixed — they do NOT depend on how much
+        // geometry a given map has, which is what lets under-filled maps still sit in the right grid cell.
+        public const int MapTiles = 32;
+        public const float TileSize = 256f / 1024f;        // 0.25
+        public const float MapStride = MapTiles * TileSize; // 8.0
+
+        private sealed class CellBuild
+        {
+            public int CellX, CellY;
+            public Dictionary<int, List<float>> MapMats;
+            public Dictionary<int, List<float>> BldMats;
+            public float MinX, MinZ, FpX, FpZ; public bool HasBounds;
+            public float OffX, OffZ;        // geometry placement offset (added to raw verts)
+            public float ColW, RowH;        // allotted cell width/height (max in column/row)
+        }
+
         /// <summary>
         /// Builds a stitched scene from several matrix cells: every cell's map (and its buildings)
-        /// is translated to its grid position so the whole matrix is visible at once, then the
-        /// combined model is centred/scaled once for the orbit camera. The single-map footprint
-        /// (stride) is measured from the first cell that has a map and assumed uniform.
+        /// is translated to its grid position so the whole matrix is visible at once. The per-cell
+        /// stride is the MEDIAN map footprint (robust to maps whose decorative borders overrun the
+        /// 32-tile play area, which otherwise leaves gaps). A per-tile top-surface height grid is
+        /// captured so callers can drop events onto the floor. Centred/scaled once at the end.
         /// </summary>
         public static NsbmdRenderModel BuildMatrixScene(IReadOnlyList<MatrixCellGeometry> cells)
         {
             var result = new NsbmdRenderModel { IsMatrix = true };
-            var byMat = new Dictionary<int, List<float>>();
             int offset = 0;
 
-            // Measure a single map's footprint to use as the per-cell stride.
-            float strideX = 0, strideZ = 0, baseX = 0, baseZ = 0;
+            // Phase 1 — interpret each cell once into temp buffers; collect map footprints + mins.
+            var stored = new List<CellBuild>();
+            var fxList = new List<float>(); var fzList = new List<float>();
+            int minCx = int.MaxValue, minCy = int.MaxValue, maxCx = int.MinValue, maxCy = int.MinValue;
+
             foreach (var cell in cells)
             {
-                if (cell.Map == null) continue;
-                var probe = new Dictionary<int, List<float>>();
-                var scratch = new NsbmdRenderModel();
-                Accumulate(cell.Map, null, 0, scratch, probe);
-                if (ComputeRawBounds(probe, out float mnx, out float mxx, out float _, out float _, out float mnz, out float mxz))
-                {
-                    strideX = mxx - mnx; strideZ = mxz - mnz;
-                    baseX = mnx; baseZ = mnz;   // authored min of a cell, before grid offset
-                }
-                break;
-            }
-            if (strideX <= 0) strideX = 1f;
-            if (strideZ <= 0) strideZ = 1f;
-
-            // Accumulate every cell at its grid offset.
-            foreach (var cell in cells)
-            {
-                float ox = cell.CellX * strideX, oz = cell.CellY * strideZ;
-                var cellOffset = Mat4.Translate(ox, 0f, oz);
-
+                var mapMats = new Dictionary<int, List<float>>();
+                float cMinX = 0, cMinZ = 0, cFpX = 0, cFpZ = 0; bool cHas = false;
                 if (cell.Map != null)
                 {
-                    Accumulate(cell.Map, cellOffset, offset, result, byMat);
+                    Accumulate(cell.Map, null, offset, result, mapMats);
                     offset += Math.Max(1, cell.Map.Materials.Count);
+                    if (ComputeRawBounds(mapMats, out float mnx, out float mxx, out float _, out float _, out float mnz, out float mxz))
+                    {
+                        cFpX = mxx - mnx; cFpZ = mxz - mnz;
+                        fxList.Add(cFpX); fzList.Add(cFpZ);
+                        cMinX = mnx; cMinZ = mnz; cHas = true;
+                    }
                 }
+                var bldMats = new Dictionary<int, List<float>>();
                 if (cell.Buildings != null)
                     foreach (var b in cell.Buildings)
                     {
                         if (b.model == null) continue;
-                        var t = b.transform != null ? Mat4.Multiply(cellOffset, b.transform) : cellOffset;
-                        Accumulate(b.model, t, offset, result, byMat);
+                        Accumulate(b.model, b.transform, offset, result, bldMats);
                         offset += Math.Max(1, b.model.Materials.Count);
                     }
+                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas });
+                minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
+                minCy = Math.Min(minCy, cell.CellY); maxCy = Math.Max(maxCy, cell.CellY);
+            }
+            // Maps come in DIFFERENT real sizes (decorative overhang, under-filled play areas), so a single
+            // uniform stride leaves them spread apart with gaps. Instead lay them out CONTINUOUSLY: each
+            // matrix column gets the width of its widest map, each row the height of its tallest, and offsets
+            // accumulate so consecutive maps' actual geometry boxes tile edge-to-edge (touch, never overlap).
+            float fallback = Math.Max(Mode(fxList), Mode(fzList)); if (fallback <= 0) fallback = MapStride;
+
+            var colW = new Dictionary<int, float>();
+            var rowH = new Dictionary<int, float>();
+            foreach (var cb in stored)
+            {
+                if (!cb.HasBounds) continue;
+                if (!colW.TryGetValue(cb.CellX, out float w) || cb.FpX > w) colW[cb.CellX] = cb.FpX;
+                if (!rowH.TryGetValue(cb.CellY, out float h) || cb.FpZ > h) rowH[cb.CellY] = cb.FpZ;
+            }
+            // Cumulative column-start X / row-start Z (in matrix order), filling empty cols/rows with fallback.
+            var colX = new Dictionary<int, float>();
+            float accX = 0f;
+            for (int cx = minCx; cx <= maxCx; cx++)
+            {
+                colX[cx] = accX;
+                accX += colW.TryGetValue(cx, out float w) ? w : fallback;
+            }
+            var rowZ = new Dictionary<int, float>();
+            float accZ = 0f;
+            for (int cy = minCy; cy <= maxCy; cy++)
+            {
+                rowZ[cy] = accZ;
+                accZ += rowH.TryGetValue(cy, out float h) ? h : fallback;
             }
 
-            // Whole stitched footprint becomes the "map bounds" (for overlays); record cell stride.
+            // Place each map MIN-ALIGNED to its column/row start so its geometry box's min corner (its
+            // authored tile-(0,0)) lands exactly on the grid line shared with the previous neighbour.
+            var byMat = new Dictionary<int, List<float>>();
+            var placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
+            foreach (var cb in stored)
+            {
+                float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
+                cb.ColW = colW.TryGetValue(cb.CellX, out float cw) ? cw : fallback;
+                cb.RowH = rowH.TryGetValue(cb.CellY, out float ch) ? ch : fallback;
+                // OffX added to every vertex; geometry min (cb.MinX) then lands at the column start ox.
+                cb.OffX = ox - cb.MinX;
+                cb.OffZ = oz - cb.MinZ;
+                MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffZ);
+                MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffZ);
+                // Events use this cell's OWN footprint so they stay within its actual geometry box.
+                placements[NsbmdRenderModel.CellKey(cb.CellX, cb.CellY)] = new NsbmdRenderModel.CellPlacement
+                {
+                    OriginX = ox, OriginZ = oz,
+                    Width = cb.HasBounds ? cb.FpX : cb.ColW,
+                    Height = cb.HasBounds ? cb.FpZ : cb.RowH,
+                };
+            }
+            result.CellPlacements = placements;
+
             if (ComputeRawBounds(byMat, out float wmnx, out float wmxx, out float wmny, out float wmxy, out float wmnz, out float wmxz))
             {
                 result.MapMinX = wmnx; result.MapMaxX = wmxx; result.MapMinY = wmny;
                 result.MapMaxY = wmxy; result.MapMinZ = wmnz; result.MapMaxZ = wmxz;
                 result.HasMapBounds = true;
             }
-            result.CellBaseX = baseX; result.CellBaseZ = baseZ;
-            result.CellStrideX = strideX; result.CellStrideZ = strideZ;
+            // Representative stride (average column/row size) kept for legacy callers; exact placement uses CellPlacements.
+            float repStride = Math.Max(accX / Math.Max(1, maxCx - minCx + 1), accZ / Math.Max(1, maxCy - minCy + 1));
+            result.CellBaseX = 0f; result.CellBaseZ = 0f;
+            result.CellStrideX = repStride; result.CellStrideZ = repStride;
+
+            BuildHeightGrid(result, stored, minCx, minCy, maxCx, maxCy);
 
             Finalize(result, byMat);
-            NormalizePositions(result);
+            NormalizePositions(result);     // sets Cx/Cy/Cz/Scale used by ToNormalized
+            BuildGizmos(result, stored);
             return result;
+        }
+
+        /// <summary>Per-tile top-surface (max Y) of the MAP geometry, for dropping events on the floor.
+        /// A spatial hash over the scene's actual world bounds (variable-size maps mean tiles no longer
+        /// align to a uniform stride, but SurfaceY only needs a fine bucket grid to look up max-Y).</summary>
+        private static void BuildHeightGrid(NsbmdRenderModel result, List<CellBuild> stored,
+            int minCx, int minCy, int maxCx, int maxCy)
+        {
+            if (stored.Count == 0 || maxCx < minCx || !result.HasMapBounds) return;
+            const int Per = 32;
+            int cols = (maxCx - minCx + 1) * Per, rows = (maxCy - minCy + 1) * Per;
+            if (cols <= 0 || rows <= 0) return;
+            float spanX = result.MapMaxX - result.MapMinX, spanZ = result.MapMaxZ - result.MapMinZ;
+            if (spanX <= 0 || spanZ <= 0) return;
+            float tileX = spanX / cols, tileZ = spanZ / rows;
+            float originX = result.MapMinX, originZ = result.MapMinZ;
+            var grid = new float[cols * rows];
+            for (int i = 0; i < grid.Length; i++) grid[i] = float.NaN;
+
+            foreach (var cb in stored)
+            {
+                float ox = cb.OffX, oz = cb.OffZ;
+                foreach (var list in cb.MapMats.Values)
+                    for (int i = 0; i + 2 < list.Count; i += 8)
+                    {
+                        float x = list[i] + ox, y = list[i + 1], z = list[i + 2] + oz;
+                        int c = (int)Math.Floor((x - originX) / tileX);
+                        int r = (int)Math.Floor((z - originZ) / tileZ);
+                        if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
+                        int idx = r * cols + c;
+                        if (float.IsNaN(grid[idx]) || y > grid[idx]) grid[idx] = y;
+                    }
+            }
+
+            // Representative floor (median of sampled tiles) as the fallback — NOT the global max,
+            // which would launch events on un-sampled tiles up to the tallest geometry in the scene.
+            var samples = new List<float>();
+            foreach (var g in grid) if (!float.IsNaN(g)) samples.Add(g);
+            float def = samples.Count > 0 ? Median(samples) : (result.HasMapBounds ? result.MapMinY : 0f);
+
+            // Fill empty tiles (void/edge gaps) by spreading from sampled neighbours so events there
+            // still land near the floor. Skipped for very large grids (the map editor doesn't query it).
+            if ((long)cols * rows <= 200000)
+                for (int pass = 0; pass < 24; pass++)
+                {
+                    bool changed = false;
+                    var src = (float[])grid.Clone();
+                    for (int r = 0; r < rows; r++)
+                        for (int c = 0; c < cols; c++)
+                        {
+                            int idx = r * cols + c;
+                            if (!float.IsNaN(src[idx])) continue;
+                            float sum = 0; int n = 0;
+                            if (c > 0 && !float.IsNaN(src[idx - 1])) { sum += src[idx - 1]; n++; }
+                            if (c < cols - 1 && !float.IsNaN(src[idx + 1])) { sum += src[idx + 1]; n++; }
+                            if (r > 0 && !float.IsNaN(src[idx - cols])) { sum += src[idx - cols]; n++; }
+                            if (r < rows - 1 && !float.IsNaN(src[idx + cols])) { sum += src[idx + cols]; n++; }
+                            if (n > 0) { grid[idx] = sum / n; changed = true; }
+                        }
+                    if (!changed) break;
+                }
+
+            result.HeightGrid = grid; result.HCols = cols; result.HRows = rows;
+            result.HOriginX = originX; result.HOriginZ = originZ; result.HTileX = tileX; result.HTileZ = tileZ;
+            result.DefaultSurfaceY = def;
+        }
+
+        /// <summary>Builds debug gizmo lines: per cell, the allotted cell boundary (cyan) and the actual
+        /// map-geometry extent (yellow). Both share the min corner now that maps are corner-aligned, so a
+        /// smaller yellow inside cyan = a genuinely under-filled map; matching = a full map. Normalized space.</summary>
+        private static void BuildGizmos(NsbmdRenderModel m, List<CellBuild> stored)
+        {
+            if (stored.Count == 0) return;
+            float ext = (m.HasMapBounds ? m.MapMaxX - m.MapMinX : m.RawMaxX - m.RawMinX);
+            float y = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + ext * 0.004f;
+            float lw = ext * 0.0015f;               // line half-width in raw units
+            var v = new List<float>(stored.Count * 96);
+
+            foreach (var cb in stored)
+            {
+                // The min corner (column/row start) shared by both boxes.
+                float x0 = cb.OffX + cb.MinX, z0 = cb.OffZ + cb.MinZ;
+                // Allotted cell boundary (cyan): the continuous grid slot this map occupies.
+                Rect(v, m, x0, z0, x0 + cb.ColW, z0 + cb.RowH, y, lw, 0.1f, 0.9f, 1.0f);
+                // Actual geometry extent (yellow), if measured.
+                if (cb.HasBounds)
+                    Rect(v, m, x0, z0, x0 + cb.FpX, z0 + cb.FpZ, y, lw, 1.0f, 0.85f, 0.1f);
+            }
+
+            m.GizmoMesh = v.ToArray();
+            m.GizmoVertexCount = v.Count / 8;
+        }
+
+        private static void Rect(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y, float w, float r, float g, float b)
+        {
+            Line(v, m, x0, z0, x1, z0, y, w, r, g, b);
+            Line(v, m, x1, z0, x1, z1, y, w, r, g, b);
+            Line(v, m, x1, z1, x0, z1, y, w, r, g, b);
+            Line(v, m, x0, z1, x0, z0, y, w, r, g, b);
+        }
+
+        private static void Line(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y, float w, float r, float g, float b)
+        {
+            float dx = x1 - x0, dz = z1 - z0; float len = (float)Math.Sqrt(dx * dx + dz * dz); if (len < 1e-6f) return;
+            float px = -dz / len * w, pz = dx / len * w;   // perpendicular, scaled to half-width
+            var a = m.ToNormalized(x0 + px, y, z0 + pz);
+            var bb = m.ToNormalized(x1 + px, y, z1 + pz);
+            var c = m.ToNormalized(x1 - px, y, z1 - pz);
+            var d = m.ToNormalized(x0 - px, y, z0 - pz);
+            void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(r); v.Add(g); v.Add(b); }
+            Vtx(a); Vtx(bb); Vtx(c);
+            Vtx(a); Vtx(c); Vtx(d);
+        }
+
+        private static float Median(List<float> values)
+        {
+            if (values == null || values.Count == 0) return 0f;
+            var s = new List<float>(values); s.Sort();
+            int n = s.Count;
+            return (n & 1) == 1 ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) * 0.5f;
+        }
+
+        /// <summary>The most common value (within ±2% bins), returned as the average of that cluster.
+        /// Robust to under-/over-sized outliers — the "standard" map footprint wins.</summary>
+        private static float Mode(List<float> values)
+        {
+            if (values == null || values.Count == 0) return 0f;
+            float best = values[0]; int bestCount = -1;
+            foreach (var v in values)
+            {
+                if (v <= 0) continue;
+                float lo = v * 0.98f, hi = v * 1.02f, sum = 0f; int count = 0;
+                foreach (var u in values) if (u >= lo && u <= hi) { sum += u; count++; }
+                if (count > bestCount) { bestCount = count; best = sum / count; }
+            }
+            return best;
+        }
+
+        /// <summary>The geometry min of the cell whose footprint best matches the stride (a standard,
+        /// full map) — i.e. the authored tile-(0,0) origin shared by the maps.</summary>
+        private static float OriginOfStandardCell(List<CellBuild> stored, float stride, bool xAxis)
+        {
+            float bestOrigin = 0f, bestDiff = float.MaxValue; bool found = false;
+            foreach (var cb in stored)
+            {
+                if (!cb.HasBounds) continue;
+                float fp = xAxis ? cb.FpX : cb.FpZ;
+                float diff = Math.Abs(fp - stride);
+                if (diff < bestDiff) { bestDiff = diff; bestOrigin = xAxis ? cb.MinX : cb.MinZ; found = true; }
+            }
+            return found ? bestOrigin : 0f;
+        }
+
+        private static void MergeOffset(Dictionary<int, List<float>> src, Dictionary<int, List<float>> dst, float ox, float oz)
+        {
+            foreach (var kv in src)
+            {
+                if (!dst.TryGetValue(kv.Key, out var list)) { list = new List<float>(kv.Value.Count); dst[kv.Key] = list; }
+                var s = kv.Value;
+                for (int i = 0; i + 7 < s.Count; i += 8)
+                {
+                    list.Add(s[i] + ox); list.Add(s[i + 1]); list.Add(s[i + 2] + oz);
+                    list.Add(s[i + 3]); list.Add(s[i + 4]);
+                    list.Add(s[i + 5]); list.Add(s[i + 6]); list.Add(s[i + 7]);
+                }
+            }
         }
 
         private static void Accumulate(NSBMDModel model, float[] sceneTransform, int matOffset,
@@ -200,6 +496,9 @@ namespace DSPRE.Avalonia.Gl
                 NSBMDMaterial mat = (matId >= 0 && matId < model.Materials.Count) ? model.Materials[matId] : null;
                 int key = matOffset + matId;
 
+                // The "h_kage" material is a building drop-shadow plane — render it transparent (skip).
+                if (mat != null && IsHiddenMaterial(mat)) continue;
+
                 Color c = mat?.DiffuseColor ?? Color.LightGray;
                 float r = c.R / 255f, g = c.G / 255f, b = c.B / 255f;
                 if (r + g + b < 0.05f) { r = g = b = 0.85f; }
@@ -213,6 +512,16 @@ namespace DSPRE.Avalonia.Gl
                     if (tex != null) target.Textures[key] = tex;
                 }
             }
+        }
+
+        /// <summary>Materials that should not be drawn (rendered transparent). "h_kage" (影 = shadow)
+        /// is the building drop-shadow plane.</summary>
+        private static bool IsHiddenMaterial(NSBMDMaterial mat)
+        {
+            string n = mat.MaterialName;
+            if (!string.IsNullOrEmpty(n) && n.IndexOf("h_kage", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            string t = mat.texname;
+            return !string.IsNullOrEmpty(t) && t.IndexOf("h_kage", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool ComputeRawBounds(Dictionary<int, List<float>> byMat,

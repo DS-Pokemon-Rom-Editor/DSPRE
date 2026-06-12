@@ -13,31 +13,62 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="View:" VerticalAlignment="Center"/>
-        <ComboBox Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
-        <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
-        <ComboBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
-        <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
-        <ComboBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
-        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Import…" Click="Import_Click"/>
-        <Button Content="Export…" Click="Export_Click"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
-        <TextBlock Text="Map tex:" VerticalAlignment="Center"/>
-        <ComboBox Width="130" ItemsSource="{Binding MapTilesets}" SelectedIndex="{Binding MapTilesetIndex}"/>
-        <TextBlock Text="Bld tex:" VerticalAlignment="Center"/>
-        <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
-        <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
-        <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Vertical" Spacing="4">
+        <!-- Row 1: selection + file actions -->
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="View:" VerticalAlignment="Center"/>
+          <ComboBox Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
+          <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
+          <ComboBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
+          <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
+          <ComboBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
+          <TextBlock Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="📥 Import"   Click="Import_Click"/>
+          <Button Content="📤 Export"   Click="Export_Click"/>
+          <Button Content="＋ Add map"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
+          <Button Content="🗑 Rem last" Click="RemMap_Click" IsVisible="{Binding IsSingleMap}"/>
+        </StackPanel>
+        <!-- Row 2: textures + overlay -->
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="Map tex:" VerticalAlignment="Center"/>
+          <ComboBox Width="130" ItemsSource="{Binding MapTilesets}" SelectedIndex="{Binding MapTilesetIndex}"/>
+          <TextBlock Text="Bld tex:" VerticalAlignment="Center"/>
+          <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
+          <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
+          <TextBlock Text="Height:" VerticalAlignment="Center"/>
+          <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
+                  Value="{Binding OverlayHeight}" VerticalAlignment="Center"
+                  ToolTip.Tip="Lift the permission overlay off the map surface (in tiles)"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"/>
+          <CheckBox Content="Interior buildings" IsChecked="{Binding InteriorBuildings}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
+                    ToolTip.Tip="Load buildings from the interior model set (HGSS)"/>
+          <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center"
+                    IsCheckedChanged="Gizmos_Toggled"
+                    ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
+                        ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile."/>
+          <CheckBox Content="Snap to tile" IsChecked="{Binding SnapToTile}" VerticalAlignment="Center"
+                    ToolTip.Tip="Snap building dragging to whole tiles (arrow keys always snap; the input boxes still do fine sub-tile adjustment)"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <TextBlock Text="View:" VerticalAlignment="Center"/>
+          <Button Content="Top" Click="CamTop_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Top-down camera"/>
+          <Button Content="Iso" Click="CamIso_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Isometric (3/4) camera"/>
+          <Button Content="Front" Click="CamFront_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Front camera"/>
+          <Button Content="Side" Click="CamSide_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Side camera"/>
+          <Button Content="⟲" Click="CamReset_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Reset camera"/>
+        </StackPanel>
       </StackPanel>
     </Border>
 
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="*,420">
@@ -52,10 +83,21 @@
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <TextBlock Text="Collision painter" FontWeight="Bold"/>
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CollisionPainters}" SelectedIndex="{Binding CollisionPainterIndex}"/>
-              <TextBlock Text="Type painter" FontWeight="Bold"/>
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TypePainters}" SelectedIndex="{Binding TypePainterIndex}"/>
-              <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="#777" Margin="0,2,0,4"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CollisionPainters}" SelectedIndex="{Binding CollisionPainterIndex}" IsEnabled="{Binding !UseRawCollision}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <CheckBox Content="Raw value" IsChecked="{Binding UseRawCollision}"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawCollision}" IsEnabled="{Binding UseRawCollision}"/>
+              </StackPanel>
+              <TextBlock Text="Type painter" FontWeight="Bold" Margin="0,4,0,0"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TypePainters}" SelectedIndex="{Binding TypePainterIndex}" IsEnabled="{Binding !UseRawType}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <CheckBox Content="Raw value" IsChecked="{Binding UseRawType}"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,4">
+                <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+                <Button Content="🔎 Scan used types" Click="ScanTypes_Click"/>
+              </StackPanel>
             </StackPanel>
             <Grid RowDefinitions="Auto,*,Auto,*">
               <TextBlock Grid.Row="0" Text="Collision" FontWeight="Bold" Margin="0,2"/>
@@ -67,19 +109,23 @@
         </TabItem>
         <TabItem Header="Buildings">
           <DockPanel Margin="4">
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
               <Button Content="Add"    Click="AddBuilding_Click"/>
               <Button Content="Remove" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+              <Button Content="Duplicate" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+              <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+              <Button Content="📥 Import" Click="ImportBuildings_Click"/>
+              <Button Content="📤 Export" Click="ExportBuildings_Click"/>
             </StackPanel>
             <Grid ColumnDefinitions="*,170">
               <ListBox Grid.Column="0" ItemsSource="{Binding Buildings}" SelectedIndex="{Binding SelectedBuildingIndex}"/>
               <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="3" IsVisible="{Binding HasBuildingSelected}">
                 <TextBlock Text="Model ID" FontSize="10"/>
                 <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
-                <TextBlock Text="X / Y / Z" FontSize="10"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BX}"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BY}"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" Value="{Binding BZ}"/>
+                <TextBlock Text="X / Y / Z (tiles · fine)" FontSize="10"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BX}"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BY}"/>
+                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BZ}"/>
                 <TextBlock Text="Rotation X / Y / Z (°)" FontSize="10"/>
                 <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}"/>
                 <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}"/>
@@ -87,6 +133,39 @@
               </StackPanel>
             </Grid>
           </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Files / I/O">
+          <ScrollViewer>
+            <StackPanel Margin="8" Spacing="10">
+              <HeaderedContentControl Header="3D model">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Button Content="📤 Export NSBMD" Click="ExportNsbmd_Click"/>
+                  <Button Content="📤 Export DAE"   Click="ExportDae_Click"/>
+                  <Button Content="📤 Export GLB"   Click="ExportGlb_Click"/>
+                </StackPanel>
+              </HeaderedContentControl>
+              <HeaderedContentControl Header="Terrain (BDHC)">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Button Content="📥 Import" Click="ImportTerrain_Click"/>
+                  <Button Content="📤 Export" Click="ExportTerrain_Click"/>
+                </StackPanel>
+              </HeaderedContentControl>
+              <HeaderedContentControl Header="Sound plates (BGS)">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Button Content="📥 Import" Click="ImportSound_Click"/>
+                  <Button Content="📤 Export" Click="ExportSound_Click"/>
+                  <Button Content="🚫 Blank"  Click="BlankSound_Click"/>
+                </StackPanel>
+              </HeaderedContentControl>
+              <HeaderedContentControl Header="Movement permissions">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Button Content="📥 Import" Click="ImportPerms_Click"/>
+                  <Button Content="📤 Export" Click="ExportPerms_Click"/>
+                </StackPanel>
+              </HeaderedContentControl>
+            </StackPanel>
+          </ScrollViewer>
         </TabItem>
       </TabControl>
     </Grid>

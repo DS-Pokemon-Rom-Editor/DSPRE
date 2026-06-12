@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.PickupTableEditorView"
+        x:DataType="vm:PickupTableEditorViewModel"
+        Title="Pickup Table Editor"
+        Width="760" Height="620"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:PickupTableEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <TextBlock Text="Activation divisor:" VerticalAlignment="Center"/>
+        <NumericUpDown Width="100" Minimum="1" Maximum="255" Increment="1" Value="{Binding ActivationDivisor}" IsEnabled="{Binding IsAvailable}"/>
+        <TextBlock Text="{Binding ActivationChanceText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <ScrollViewer IsVisible="{Binding IsAvailable}">
+      <Grid ColumnDefinitions="*,*,220" Margin="8" >
+        <!-- Common items -->
+        <StackPanel Grid.Column="0" Margin="0,0,8,0" Spacing="3">
+          <TextBlock Text="Common items (18)" FontWeight="Bold" Margin="0,0,0,4"/>
+          <ItemsControl ItemsSource="{Binding CommonSlots}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PickupSlot">
+                <Grid ColumnDefinitions="80,*" Margin="0,1">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                  <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Items}" SelectedIndex="{Binding ItemIndex}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Rare items -->
+        <StackPanel Grid.Column="1" Margin="0,0,8,0" Spacing="3">
+          <TextBlock Text="Rare items (11)" FontWeight="Bold" Margin="0,0,0,4"/>
+          <ItemsControl ItemsSource="{Binding RareSlots}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PickupSlot">
+                <Grid ColumnDefinitions="80,*" Margin="0,1">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                  <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Items}" SelectedIndex="{Binding ItemIndex}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Weight thresholds -->
+        <StackPanel Grid.Column="2" Spacing="3">
+          <TextBlock Text="Weight thresholds (9)" FontWeight="Bold" Margin="0,0,0,4"/>
+          <TextBlock Text="Cumulative 0-255; higher = more likely earlier slots." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+          <ItemsControl ItemsSource="{Binding Weights}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PickupWeight">
+                <Grid ColumnDefinitions="*,90" Margin="0,1">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                  <NumericUpDown Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Value}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

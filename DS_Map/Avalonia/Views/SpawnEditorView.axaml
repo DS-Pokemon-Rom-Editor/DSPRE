@@ -48,7 +48,7 @@
       </Grid>
 
       <!-- Row 2: Location name -->
-      <TextBlock Text="{Binding LocationName}" FontStyle="Italic" Foreground="#555"/>
+      <TextBlock Text="{Binding LocationName}" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 
       <!-- Row 3: Coordinates -->
       <Grid ColumnDefinitions="Auto,8,90,16,Auto,8,90,16,Auto,8,90,16,Auto,8,90">

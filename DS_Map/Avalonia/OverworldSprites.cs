@@ -40,10 +40,14 @@ namespace DSPRE.Avalonia
         // Mirrors EventEditor.GetOverworldImage.
         private static Bitmap LoadBitmap(ushort eventEntryID, ushort orientation)
         {
-            if (ow3DSpriteDict.TryGetValue(eventEntryID, out string imageName))
+            // The lookup tables are populated during ROM/event setup; make sure they exist.
+            if (ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch { }
+            if (OverworldTable == null) try { SetOWtable(); ReadOWTable(); } catch { }
+
+            if (ow3DSpriteDict != null && ow3DSpriteDict.TryGetValue(eventEntryID, out string imageName))
                 return (Bitmap)DSPRE.Properties.Resources.ResourceManager.GetObject(imageName);
 
-            if (!OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
+            if (OverworldTable == null || !OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
                 return (Bitmap)DSPRE.Properties.Resources.ResourceManager.GetObject("overworld");
 
             try

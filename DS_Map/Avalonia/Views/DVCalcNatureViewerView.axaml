@@ -12,7 +12,7 @@
   </Design.DataContext>
 
   <DockPanel Margin="6">
-    <TextBlock DockPanel.Dock="Top" Text="Double-click a row to pick its DV." Margin="0,0,0,4" FontSize="11" Foreground="#666"/>
+    <TextBlock DockPanel.Dock="Top" Text="Double-click a row to pick its DV." Margin="0,0,0,4" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
       <Button Content="Select" Click="Select_Click" IsDefault="True"/>
       <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>

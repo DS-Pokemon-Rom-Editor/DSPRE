@@ -39,6 +39,88 @@ namespace DSPRE.Avalonia.Gl
         private int _markerVbo, _markerCount;
         private bool _markerDirty;
 
+        // Debug gizmo lines (cell boundaries / geometry extents), 8 floats/vertex. Comes from the model.
+        private float[] _gizmoMesh;
+        private int _gizmoVbo, _gizmoCount;
+        private bool _gizmoDirty;
+        private bool _showGizmos;
+        public bool ShowGizmos { get => _showGizmos; set { _showGizmos = value; RequestNextFrameRendering(); } }
+
+        // ── Translate gizmo (move-tool) ──────────────────────────────────────────────
+        // A Unity-style 3-axis move handle drawn at a target point (normalized space) when edit
+        // mode is on. Axis dragging is orchestrated by the view via WorldToScreen / HitTestGizmoAxis.
+        private bool _editMode;
+        public bool EditMode { get => _editMode; set { _editMode = value; RequestNextFrameRendering(); } }
+        private bool _gizmoTargetVisible;
+        private float _gtx, _gty, _gtz;            // gizmo target in normalized render space
+        private int _editVbo; private bool _haveEditVbo;
+        private float[] _lastMvp;                    // cached each frame for picking
+        private float _lastLogW = 1f, _lastLogH = 1f;
+
+        public void SetGizmoTarget(float x, float y, float z)
+        { _gtx = x; _gty = y; _gtz = z; _gizmoTargetVisible = true; RequestNextFrameRendering(); }
+        public void ClearGizmoTarget() { _gizmoTargetVisible = false; RequestNextFrameRendering(); }
+
+        /// <summary>On-screen length of one gizmo axis (kept ~constant size regardless of zoom).</summary>
+        public float GizmoLength => _distance * 0.14f;
+        public static (float x, float y, float z) AxisDir(int axis)
+            => axis == 0 ? (1f, 0f, 0f) : axis == 1 ? (0f, 1f, 0f) : (0f, 0f, 1f);
+
+        /// <summary>Projects a normalized-space point to logical control pixels. False if behind camera.</summary>
+        public bool WorldToScreen(float x, float y, float z, out float sx, out float sy)
+        {
+            sx = sy = 0f;
+            if (_lastMvp == null) return false;
+            var m = _lastMvp;
+            float cx = m[0] * x + m[4] * y + m[8] * z + m[12];
+            float cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+            float cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+            if (cw <= 1e-5f) return false;
+            sx = (cx / cw * 0.5f + 0.5f) * _lastLogW;
+            sy = (1f - (cy / cw * 0.5f + 0.5f)) * _lastLogH;
+            return true;
+        }
+
+        /// <summary>Which gizmo axis (0=X,1=Y,2=Z) is under the given screen point, or -1.</summary>
+        public int HitTestGizmoAxis(float px, float py, float threshold = 9f)
+        {
+            if (!_editMode || !_gizmoTargetVisible) return -1;
+            if (!WorldToScreen(_gtx, _gty, _gtz, out float ox, out float oy)) return -1;
+            float len = GizmoLength;
+            int best = -1; float bestD = threshold;
+            for (int a = 0; a < 3; a++)
+            {
+                var (dx, dy, dz) = AxisDir(a);
+                if (!WorldToScreen(_gtx + dx * len, _gty + dy * len, _gtz + dz * len, out float tx, out float ty)) continue;
+                float d = DistToSegment(px, py, ox, oy, tx, ty);
+                if (d < bestD) { bestD = d; best = a; }
+            }
+            return best;
+        }
+
+        private static float DistToSegment(float px, float py, float ax, float ay, float bx, float by)
+        {
+            float vx = bx - ax, vy = by - ay; float wx = px - ax, wy = py - ay;
+            float c1 = vx * wx + vy * wy; if (c1 <= 0) return (float)Math.Sqrt(wx * wx + wy * wy);
+            float c2 = vx * vx + vy * vy; if (c2 <= c1) { float ex = px - bx, ey = py - by; return (float)Math.Sqrt(ex * ex + ey * ey); }
+            float t = c1 / c2; float dx = px - (ax + t * vx), dy = py - (ay + t * vy);
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        /// <summary>Converts a screen drag (dx,dy px) into a movement along the given gizmo axis,
+        /// in normalized-space units. Uses the axis's on-screen projection at the target.</summary>
+        public float ScreenDragToAxis(int axis, float dxScreen, float dyScreen)
+        {
+            if (!WorldToScreen(_gtx, _gty, _gtz, out float ox, out float oy)) return 0f;
+            float len = GizmoLength;
+            var (ax, ay, az) = AxisDir(axis);
+            if (!WorldToScreen(_gtx + ax * len, _gty + ay * len, _gtz + az * len, out float tx, out float ty)) return 0f;
+            float sxv = tx - ox, syv = ty - oy;
+            float denom = sxv * sxv + syv * syv; if (denom < 1e-4f) return 0f;
+            float t = (dxScreen * sxv + dyScreen * syv) / denom;   // fraction of one len-unit
+            return t * len;
+        }
+
         // Optional textured billboard sprites (e.g. overworld sprites). Each carries a centre
         // in normalized space + half extents; the quad is rebuilt each frame to face the camera.
         private IReadOnlyList<SpriteInstance> _sprites;
@@ -48,9 +130,33 @@ namespace DSPRE.Avalonia.Gl
 
         // ── Camera ───────────────────────────────────────────────────────────────────
         private float _yaw = 30f, _pitch = 20f, _distance = 4f;
+        private float _targetX, _targetY, _targetZ;   // pivot the orbit looks at (for panning)
         public float Yaw { get => _yaw; set { _yaw = value; RequestNextFrameRendering(); } }
         public float Pitch { get => _pitch; set { _pitch = Math.Max(-89f, Math.Min(89f, value)); RequestNextFrameRendering(); } }
         public float Distance { get => _distance; set { _distance = Math.Max(0.2f, value); RequestNextFrameRendering(); } }
+
+        /// <summary>Pans the camera pivot across the ground plane by a screen-space delta.</summary>
+        public void PanByScreen(float dx, float dy)
+        {
+            float yaw = _yaw * (float)Math.PI / 180f;
+            float rx = (float)Math.Cos(yaw), rz = (float)Math.Sin(yaw);   // screen-right on ground
+            float fx = -(float)Math.Sin(yaw), fz = (float)Math.Cos(yaw);  // screen-up on ground
+            float k = _distance * 0.0015f;
+            _targetX += (-dx * rx + dy * fx) * k;
+            _targetZ += (-dx * rz + dy * fz) * k;
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>Recentres the camera pivot.</summary>
+        public void ResetView() { _targetX = _targetY = _targetZ = 0f; RequestNextFrameRendering(); }
+
+        /// <summary>Sets the orbit camera to a fixed orientation (degrees), e.g. a top-down or side view.</summary>
+        public void SetOrientation(float yaw, float pitch)
+        {
+            _yaw = yaw;
+            _pitch = Math.Max(-89f, Math.Min(89f, pitch));
+            RequestNextFrameRendering();
+        }
 
         public string LastError => _error;
         public event EventHandler ErrorChanged;
@@ -63,6 +169,10 @@ namespace DSPRE.Avalonia.Gl
         {
             _model = model;
             _uploadPending = true;
+            _targetX = _targetY = _targetZ = 0f;   // recentre when the scene changes
+            _gizmoMesh = model?.GizmoMesh;
+            _gizmoCount = model?.GizmoVertexCount ?? 0;
+            _gizmoDirty = true;
             RequestNextFrameRendering();
         }
 
@@ -157,10 +267,13 @@ namespace DSPRE.Avalonia.Gl
                 if (_overlayVbo != 0) _f?.DeleteBuffers(1, new[] { _overlayVbo });
                 if (_markerVbo != 0) _f?.DeleteBuffers(1, new[] { _markerVbo });
                 if (_spriteVbo != 0) _f?.DeleteBuffers(1, new[] { _spriteVbo });
+                if (_gizmoVbo != 0) _f?.DeleteBuffers(1, new[] { _gizmoVbo });
+                if (_haveEditVbo && _editVbo != 0) _f?.DeleteBuffers(1, new[] { _editVbo });
                 if (_vao != 0) _f?.DeleteVertexArrays(1, new[] { _vao });
             }
             catch { }
-            _f = null; _program = _vao = _overlayVbo = _markerVbo = _spriteVbo = 0;
+            _f = null; _program = _vao = _overlayVbo = _markerVbo = _spriteVbo = _gizmoVbo = 0;
+            _haveEditVbo = false; _editVbo = 0;
         }
 
         private void FreeGpuParts()
@@ -174,30 +287,40 @@ namespace DSPRE.Avalonia.Gl
             _parts.Clear();
         }
 
+        // Sprite GPU textures are cached by their pixel-buffer reference (OverworldSprites.Get returns the
+        // SAME cached array for a given sprite), so re-positioning sprites during a drag only rebuilds the
+        // lightweight GpuSprite list — it does NOT re-upload textures (that was the move-gizmo lag).
+        private readonly Dictionary<byte[], int> _spriteTexCache = new Dictionary<byte[], int>();
+
         private void FreeGpuSprites()
         {
-            if (_f == null) return;
-            foreach (var s in _gpuSprites)
-                if (s.Tex != 0) _f.DeleteTextures(1, new[] { s.Tex });
+            if (_f != null)
+                foreach (var kv in _spriteTexCache)
+                    if (kv.Value != 0) _f.DeleteTextures(1, new[] { kv.Value });
+            _spriteTexCache.Clear();
             _gpuSprites.Clear();
         }
 
         private void UploadSprites()
         {
-            FreeGpuSprites();
+            _gpuSprites.Clear();
             if (_sprites != null)
                 foreach (var s in _sprites)
                 {
                     if (s.Rgba == null || s.Width <= 0 || s.Height <= 0) continue;
-                    var arr = new int[1];
-                    _f.GenTextures(1, arr); int id = arr[0];
-                    _f.BindTexture(GlFunctions.GL_TEXTURE_2D, id);
-                    _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, s.Width, s.Height, 0,
-                        GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, s.Rgba);
-                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
-                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
-                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_S, GlFunctions.GL_CLAMP_TO_EDGE);
-                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
+                    if (!_spriteTexCache.TryGetValue(s.Rgba, out int id))
+                    {
+                        var arr = new int[1];
+                        _f.GenTextures(1, arr); id = arr[0];
+                        _f.BindTexture(GlFunctions.GL_TEXTURE_2D, id);
+                        _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, s.Width, s.Height, 0,
+                            GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, s.Rgba);
+                        _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
+                        _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
+                        _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_S, GlFunctions.GL_CLAMP_TO_EDGE);
+                        _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
+                        _spriteTexCache[s.Rgba] = id;
+                    }
                     _gpuSprites.Add(new GpuSprite { Tex = id, Cx = s.Cx, Cy = s.Cy, Cz = s.Cz, HalfW = s.HalfW, HalfH = s.HalfH });
                 }
             _spritesDirty = false;
@@ -265,8 +388,9 @@ namespace DSPRE.Avalonia.Gl
 
             float aspect = ph == 0 ? 1f : (float)pw / ph;
             var proj = Mat4.Perspective(45f * (float)Math.PI / 180f, aspect, 0.05f, 1000f);
-            var view = Mat4.OrbitView(_distance, _yaw, _pitch);
+            var view = Mat4.Multiply(Mat4.OrbitView(_distance, _yaw, _pitch), Mat4.Translate(-_targetX, -_targetY, -_targetZ));
             var mvp = Mat4.Multiply(proj, view);
+            _lastMvp = mvp; _lastLogW = (float)Math.Max(1.0, Bounds.Width); _lastLogH = (float)Math.Max(1.0, Bounds.Height);
 
             _f.UseProgram(_program);
             _f.UniformMatrix4fv(_mvpLoc, 1, false, mvp);
@@ -299,6 +423,95 @@ namespace DSPRE.Avalonia.Gl
             RenderOverlay(stride);
             RenderSprites(stride);
             RenderMarkers(stride);
+            if (_showGizmos) RenderGizmos(stride);
+            if (_editMode && _gizmoTargetVisible) RenderEditGizmo(stride);
+        }
+
+        /// <summary>Draws the 3-axis translate handle (X red, Y green, Z blue) at the target, as
+        /// camera-facing thin quads with a square grab handle at each tip. Depth test off.</summary>
+        private void RenderEditGizmo(int stride)
+        {
+            // Camera basis (world space) from the orbit rotation, for billboarding the axis lines.
+            var rot = Mat4.Multiply(Mat4.RotateX(_pitch * (float)Math.PI / 180f), Mat4.RotateY(_yaw * (float)Math.PI / 180f));
+            var fwd = (x: -rot[2], y: -rot[6], z: -rot[10]);   // camera forward in world space
+            float len = GizmoLength, hw = len * 0.03f, hh = len * 0.10f;
+            var v = new List<float>(192);
+
+            for (int a = 0; a < 3; a++)
+            {
+                var (dx, dy, dz) = AxisDir(a);
+                // perpendicular to the axis and the view direction → keeps the line edge-on to camera.
+                float px = dy * fwd.z - dz * fwd.y, py = dz * fwd.x - dx * fwd.z, pz = dx * fwd.y - dy * fwd.x;
+                float pl = (float)Math.Sqrt(px * px + py * py + pz * pz);
+                if (pl < 1e-4f) { px = 0; py = 1; pz = 0; pl = 1; }
+                px /= pl; py /= pl; pz /= pl;
+                float r = a == 0 ? 1f : 0.15f, g = a == 1 ? 1f : 0.15f, b = a == 2 ? 1f : 0.2f;
+                if (a == 2) { r = 0.25f; g = 0.45f; b = 1f; }
+                float ex = _gtx + dx * len, ey = _gty + dy * len, ez = _gtz + dz * len;
+                // Shaft quad.
+                AddQuad(v, _gtx + px * hw, _gty + py * hw, _gtz + pz * hw,
+                            _gtx - px * hw, _gty - py * hw, _gtz - pz * hw,
+                            ex - px * hw, ey - py * hw, ez - pz * hw,
+                            ex + px * hw, ey + py * hw, ez + pz * hw, r, g, b);
+                // Tip grab handle (a fatter billboarded square so it's easy to click).
+                float ux = py * fwd.z - pz * fwd.y, uy = pz * fwd.x - px * fwd.z, uz = px * fwd.y - py * fwd.x;
+                AddQuad(v, ex + px * hh, ey + py * hh, ez + pz * hh,
+                            ex + ux * hh, ey + uy * hh, ez + uz * hh,
+                            ex - px * hh, ey - py * hh, ez - pz * hh,
+                            ex - ux * hh, ey - uy * hh, ez - uz * hh, r, g, b);
+            }
+
+            var data = v.ToArray();
+            if (!_haveEditVbo) { var arr = new int[1]; _f.GenBuffers(1, arr); _editVbo = arr[0]; _haveEditVbo = true; }
+            _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _editVbo);
+            var hnd = GCHandle.Alloc(data, GCHandleType.Pinned);
+            try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(data.Length * sizeof(float)), hnd.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
+            finally { hnd.Free(); }
+
+            _f.Disable(GlFunctions.GL_DEPTH_TEST);
+            _f.Uniform1i(_hasTexLoc, 0);
+            _f.Uniform1f(_alphaLoc, 1f);
+            _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
+            _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
+            _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
+            _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, data.Length / 8);
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
+        }
+
+        private static void AddQuad(List<float> v, float x0, float y0, float z0, float x1, float y1, float z1,
+            float x2, float y2, float z2, float x3, float y3, float z3, float r, float g, float b)
+        {
+            void P(float x, float y, float z) { v.Add(x); v.Add(y); v.Add(z); v.Add(0); v.Add(0); v.Add(r); v.Add(g); v.Add(b); }
+            P(x0, y0, z0); P(x1, y1, z1); P(x2, y2, z2);
+            P(x0, y0, z0); P(x2, y2, z2); P(x3, y3, z3);
+        }
+
+        private void RenderGizmos(int stride)
+        {
+            if (_gizmoDirty)
+            {
+                if (_gizmoVbo != 0) { _f.DeleteBuffers(1, new[] { _gizmoVbo }); _gizmoVbo = 0; }
+                if (_gizmoMesh != null && _gizmoCount > 0)
+                {
+                    var arr = new int[1]; _f.GenBuffers(1, arr); _gizmoVbo = arr[0];
+                    _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _gizmoVbo);
+                    var h = GCHandle.Alloc(_gizmoMesh, GCHandleType.Pinned);
+                    try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(_gizmoMesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
+                    finally { h.Free(); }
+                }
+                _gizmoDirty = false;
+            }
+            if (_gizmoVbo == 0 || _gizmoCount == 0) return;
+
+            _f.Disable(GlFunctions.GL_DEPTH_TEST);   // gizmos always visible
+            _f.Uniform1i(_hasTexLoc, 0);
+            _f.Uniform1f(_alphaLoc, 1f);
+            _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _gizmoVbo);
+            _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
+            _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
+            _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
+            _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, _gizmoCount);
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
         }
 
         private void RenderOverlay(int stride)
