@@ -16,7 +16,7 @@
     <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <TextBlock Text="Archive:" VerticalAlignment="Center"/>
         <ComboBox Width="160" ItemsSource="{Binding ArchiveNames}"
                   SelectedIndex="{Binding SelectedArchiveIndex}"/>
@@ -28,7 +28,7 @@
         <Button Content="Export…" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <!-- ── Status bar ──────────────────────────────────────────────────────── -->

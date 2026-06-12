@@ -12,7 +12,7 @@
     <!-- Toolbar -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Vertical" Spacing="4">
-        <StackPanel Orientation="Horizontal" Spacing="4">
+        <WrapPanel Classes="toolbar">
           <Button Content="💾  Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="↺  Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
@@ -27,15 +27,15 @@
           <TextBlock Text="Go to #" VerticalAlignment="Center"/>
           <NumericUpDown Width="100" Minimum="0" Maximum="65535" Value="{Binding GoToValue}"/>
           <Button Content="Go" Click="GoTo_Click"/>
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="4">
+        </WrapPanel>
+        <WrapPanel Classes="toolbar">
           <TextBlock Text="Open linked:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
           <Button Content="🔗 Matrix"        Click="OpenMatrix_Click"/>
           <Button Content="🔗 Events"        Click="OpenEvents_Click"/>
           <Button Content="🔗 Scripts"       Click="OpenScripts_Click"/>
           <Button Content="🔗 Level Scripts" Click="OpenLevelScripts_Click"/>
           <Button Content="🔗 Texts"         Click="OpenTexts_Click"/>
-        </StackPanel>
+        </WrapPanel>
       </StackPanel>
     </Border>
 

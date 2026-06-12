@@ -13,14 +13,14 @@
 
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <TextBlock Text="Filter:" VerticalAlignment="Center"/>
         <ComboBox Width="200" ItemsSource="{Binding SpeciesFilter}" SelectedIndex="{Binding FilterIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="💾 Save all" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="＋ Add row"  Click="Add_Click"/>
         <Button Content="🗑 Remove"   Click="Remove_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">

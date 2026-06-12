@@ -12,12 +12,12 @@
     <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <Button Content="Save Table"    Click="SaveTable_Click"   IsEnabled="{Binding IsReady}" Width="90"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Export Table…" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
         <Button Content="Import Table…" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <!-- ── Status bar ──────────────────────────────────────────────────── -->

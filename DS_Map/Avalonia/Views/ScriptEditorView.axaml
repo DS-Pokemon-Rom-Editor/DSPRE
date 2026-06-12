@@ -14,7 +14,7 @@
 
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <TextBlock Text="Script file:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <Button Content="＋ Add"     Click="Add_Click"/>
@@ -29,7 +29,7 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <ComboBox Width="150" ItemsSource="{Binding NumberFormats}" SelectedIndex="{Binding NumberFormatIndex}"
                   ToolTip.Tip="How numeric command parameters are displayed"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">

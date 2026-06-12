@@ -35,9 +35,36 @@
 		<FluentTheme />
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
-		<!-- Ensure numeric spinners are always wide enough to show their value -->
+
+		<!-- ── Crisp, consistent control sizing across every editor ── -->
+		<Style Selector="Button">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="10,4"/>
+			<Setter Property="CornerRadius" Value="4"/>
+		</Style>
+		<Style Selector="ToggleButton">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="10,4"/>
+			<Setter Property="CornerRadius" Value="4"/>
+		</Style>
+		<Style Selector="ComboBox">
+			<Setter Property="MinHeight" Value="28"/>
+		</Style>
+		<Style Selector="TextBox">
+			<Setter Property="MinHeight" Value="28"/>
+		</Style>
+		<!-- Numeric spinners: wide enough to read, tall enough to match buttons -->
 		<Style Selector="NumericUpDown">
-			<Setter Property="MinWidth" Value="90"/>
+			<Setter Property="MinWidth" Value="84"/>
+			<Setter Property="MinHeight" Value="28"/>
+		</Style>
+
+		<!-- ── Wrapping toolbars: a WrapPanel marked Classes="toolbar" reflows its controls onto a new
+		     line when the window is narrow, instead of letting buttons run off-screen. The child margin
+		     replaces StackPanel Spacing, and everything is vertically centred for a tidy single baseline. -->
+		<Style Selector="WrapPanel.toolbar > :is(Control)">
+			<Setter Property="Margin" Value="0,2,6,2"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 	</Application.Styles>
 
