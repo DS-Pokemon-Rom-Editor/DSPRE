@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.EventEditorView"
         x:DataType="vm:EventEditorViewModel"
         Title="Event Editor"
-        Width="1120" Height="720"
+        Width="1200" Height="720" MinWidth="980" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
@@ -14,7 +14,7 @@
 
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <TextBlock Text="Event file:" VerticalAlignment="Center"/>
         <ComboBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
         <Button Content="＋ Add"     Click="AddFile_Click"/>
@@ -23,7 +23,7 @@
         <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="📥 Import" Click="Import_Click"/>
         <Button Content="📤 Export" Click="Export_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
@@ -40,7 +40,7 @@
               <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
               <TextBlock Text="— drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <WrapPanel Classes="toolbar">
               <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
               <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="11"/>
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="11"/>
@@ -57,7 +57,7 @@
               <Button Content="Top" Click="CamTop_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Top-down camera"/>
               <Button Content="Iso" Click="CamIso_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Isometric camera"/>
               <Button Content="⟲" Click="CamReset_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Reset camera"/>
-            </StackPanel>
+            </WrapPanel>
           </StackPanel>
         </Border>
         <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">

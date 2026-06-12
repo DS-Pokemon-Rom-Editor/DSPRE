@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.MainWindowView"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
-        Width="1100" Height="720"
+        Width="1200" Height="720" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>

@@ -14,14 +14,14 @@
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Search…"        Click="Search_Click"/>
         <Button Content="Reorder party…" Click="Reorder_Click"/>
         <Button Content="DV Calc…"       Click="DVCalc_Click"/>
         <Button Content="Battle messages…" Click="BattleMessages_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">

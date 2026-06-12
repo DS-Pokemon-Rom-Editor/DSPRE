@@ -14,7 +14,7 @@
 
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <WrapPanel Classes="toolbar">
         <CheckBox Content="Interior (HGSS)" IsChecked="{Binding Interior}" IsEnabled="{Binding IsHGSS}" VerticalAlignment="Center"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <TextBlock Text="Textures:" VerticalAlignment="Center"/>
@@ -22,7 +22,7 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Import…" Click="Import_Click"/>
         <Button Content="Export…" Click="Export_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
