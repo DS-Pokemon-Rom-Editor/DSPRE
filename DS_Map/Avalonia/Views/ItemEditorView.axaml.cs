@@ -15,6 +15,8 @@ namespace DSPRE.Avalonia.Views
             this.FindControl<Button>("SaveAllButton").Click += (_, _) => VM?.SaveChanges();
         }
 
+        private void Export_Click(object sender, RoutedEventArgs e) => VM?.ExportToFile();
+
         protected override async void OnClosing(WindowClosingEventArgs e)
         {
             if (VM?.HasUnsavedChanges == true)

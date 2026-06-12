@@ -57,6 +57,19 @@ namespace DSPRE.Avalonia.Views
         private void Learnset_MoveDown_Click(object sender, RoutedEventArgs e)
             => ViewModel.LearnsetVM.MoveEntryDown();
 
+        private void Learnset_BulkEdit_Click(object sender, RoutedEventArgs e)
+            => new BulkLearnsetEditorView(new BulkLearnsetEditorViewModel(true)).Show();
+
+        private async void Learnset_Export_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = ViewModel.LearnsetVM;
+            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("CSV") { Patterns = new[] { "*.csv" } };
+            string path = await DialogHelper.SaveFile(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
+            if (path == null) return;
+            try { System.IO.File.WriteAllText(path, vm.BuildCsv()); }
+            catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+        }
+
         // ─── Evolutions button handler ────────────────────────────────────────────
         private void SaveEvolutions_Click(object sender, RoutedEventArgs e)
             => ViewModel.EvolutionsVM.Save();

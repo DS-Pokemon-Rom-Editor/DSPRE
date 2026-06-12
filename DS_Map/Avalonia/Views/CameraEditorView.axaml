@@ -10,20 +10,20 @@
   <DockPanel>
 
     <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save Table"    Click="SaveTable_Click"   IsEnabled="{Binding IsReady}" Width="90"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Export Table…" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
         <Button Content="Import Table…" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
       </StackPanel>
     </Border>
 
     <!-- ── Status bar ──────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444"
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 

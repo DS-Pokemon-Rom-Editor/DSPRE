@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.HiddenItemsEditorView"
+        x:DataType="vm:HiddenItemsEditorViewModel"
+        Title="Hidden Items Editor"
+        Width="640" Height="480"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:HiddenItemsEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Add" Click="Add_Click"/>
+        <Button Content="Remove" Click="Remove_Click" IsEnabled="{Binding HasEntry}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <TextBlock Text="{Binding CountText}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="*,260" Margin="6">
+      <ListBox Grid.Column="0" Margin="0,0,6,0" ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedIndex}"/>
+      <StackPanel Grid.Column="1" Spacing="6" IsVisible="{Binding HasEntry}">
+        <TextBlock Text="Item" FontSize="11"/>
+        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
+        <TextBlock Text="Amount" FontSize="11"/>
+        <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding Amount}"/>
+        <TextBlock Text="Script ID" FontSize="11"/>
+        <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding ScriptId}"/>
+        <TextBlock Text="{Binding ScriptCall}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Grid>
+  </DockPanel>
+</Window>

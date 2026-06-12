@@ -88,9 +88,9 @@ namespace DSPRE.Avalonia.ViewModels
         private decimal _xMap, _yMap, _zPos, _xMat, _yMat;
         public decimal XMap { get => _xMap; set { if (Set(ref _xMap, value) && !_suppress && _current != null) { _current.xMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
         public decimal YMap { get => _yMap; set { if (Set(ref _yMap, value) && !_suppress && _current != null) { _current.yMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
-        public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)value; Dirty(); } } }
-        public decimal XMatrix { get => _xMat; set { if (Set(ref _xMat, value) && !_suppress && _current != null) { _current.xMatrixPosition = (ushort)value; Dirty(); RefreshMarkers(); } } }
-        public decimal YMatrix { get => _yMat; set { if (Set(ref _yMat, value) && !_suppress && _current != null) { _current.yMatrixPosition = (ushort)value; Dirty(); RefreshMarkers(); } } }
+        public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)value; Dirty(); RefreshMarkers(); } } }
+        public decimal XMatrix { get => _xMat; set { if (Set(ref _xMat, value) && !_suppress && _current != null) { _current.xMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
+        public decimal YMatrix { get => _yMat; set { if (Set(ref _yMat, value) && !_suppress && _current != null) { _current.yMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
 
         // ── Spawnable fields ────────────────────────────────────────────────────────
         private decimal _spScript, _spType, _spDir;
@@ -141,6 +141,15 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadFile(value); }
         }
 
+        public int InitialIndex { get; set; }
+
+        // ── 3D marker visibility toggles (per event type) ────────────────────────────────
+        private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true;
+        public bool ShowOverworlds { get => _showOw; set { if (Set(ref _showOw, value)) RefreshMarkers(); } }
+        public bool ShowWarps { get => _showWarp; set { if (Set(ref _showWarp, value)) RefreshMarkers(); } }
+        public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
+        public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
+
         public EventEditorViewModel() { if (Design.IsDesignMode) EventNames.Add("Event 0"); }
         public EventEditorViewModel(bool _) { }
 
@@ -153,11 +162,17 @@ namespace DSPRE.Avalonia.ViewModels
                     DirNames.eventFiles, DirNames.maps, DirNames.exteriorBuildingModels,
                     DirNames.buildingTextures, DirNames.mapTextures, DirNames.matrices,
                     DirNames.areaData, DirNames.dynamicHeaders, DirNames.OWSprites });
+                if (gameFamily == GameFamilies.HGSS)
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
                 _eventToHeader = BuildEventHeaderLookup();
+                // Overworld sprite lookups are populated during ROM/event setup in WinForms;
+                // ensure they exist for the 3D sprite billboards here (SetOWtable must run first).
+                try { if (ow3DSpriteDict == null) Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Error("Set3DOverworldsDict: " + ex.Message); }
+                try { if (OverworldTable == null) { SetOWtable(); ReadOWTable(); } } catch (Exception ex) { AppLogger.Error("ReadOWTable: " + ex.Message); }
                 int count = Filesystem.GetEventFileCount();
                 for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
                 StatusText = $"{count} event files.";
-                if (count > 0) SelectedEventIndex = 0;
+                if (count > 0) SelectedEventIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {
@@ -263,6 +278,62 @@ namespace DSPRE.Avalonia.ViewModels
         public void AddTrigger() { if (_file == null) return; _file.triggers.Add(new Trigger(0, 0)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
         public void RemoveTrigger() { if (_file == null || _selTrig < 0 || _selTrig >= _file.triggers.Count) return; _file.triggers.RemoveAt(_selTrig); RefreshLists(); Dirty(); SelectedTriggerIndex = -1; RefreshMarkers(); }
 
+        // ── Duplicate selected (copy ctors) ──────────────────────────────────────────────
+        public void DuplicateSpawnable() { if (_file == null || _spawn == null) return; _file.spawnables.Add(new Spawnable(_spawn)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
+        public void DuplicateOverworld() { if (_file == null || _ow == null) return; _file.overworlds.Add(new Overworld(_ow)); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1; }
+        public void DuplicateWarp() { if (_file == null || _warp == null) return; _file.warps.Add(new Warp(_warp)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
+        public void DuplicateTrigger() { if (_file == null || _trig == null) return; _file.triggers.Add(new Trigger(_trig)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
+
+        /// <summary>Follow the selected warp to its destination: switch to that header's event file.</summary>
+        public void TestWarp()
+        {
+            if (_warp == null) return;
+            try
+            {
+                var h = MapHeader.GetMapHeader(_warp.header);
+                if (h == null) { StatusText = $"Destination header {_warp.header} not found."; return; }
+                int dest = h.eventFileID;
+                if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.header} → event file {dest} (out of range)."; return; }
+                SelectedEventIndex = dest;
+                StatusText = $"Warp leads to header {_warp.header} → event file {dest}.";
+            }
+            catch (Exception ex) { StatusText = "Test warp failed: " + ex.Message; }
+        }
+
+        // ── Sort overworlds by OW id ─────────────────────────────────────────────────────
+        public void SortOverworldsAsc() { if (_file == null) return; _file.overworlds.Sort((a, b) => a.owID.CompareTo(b.owID)); RefreshLists(); Dirty(); }
+        public void SortOverworldsDesc() { if (_file == null) return; _file.overworlds.Sort((a, b) => b.owID.CompareTo(a.owID)); RefreshLists(); Dirty(); }
+
+        // ── Event file add / remove ──────────────────────────────────────────────────────
+        public void AddEventFile()
+        {
+            try
+            {
+                int newId = Filesystem.GetEventFileCount();
+                new EventFile().SaveToFileDefaultDir(newId, showSuccessMessage: false);
+                EventNames.Add("Event File " + newId);
+                SelectedEventIndex = newId;
+                StatusText = $"Added event file {newId}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add event file:\n{ex.Message}", "Event Editor"); }
+        }
+
+        public async Task RemoveLastEventFileAsync()
+        {
+            int count = EventNames.Count;
+            if (count == 0) return;
+            int last = count - 1;
+            if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Confirm deletion")) return;
+            try
+            {
+                File.Delete(gameDirs[DirNames.eventFiles].unpackedDir + "\\" + last.ToString("D4"));
+                if (_selectedIndex == last) SelectedEventIndex = last - 1;
+                EventNames.RemoveAt(last);
+                StatusText = $"Removed event file {last}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove event file:\n{ex.Message}", "Event Editor"); }
+        }
+
         // ── 3D map view + event markers ─────────────────────────────────────────────────
 
         /// <summary>
@@ -312,9 +383,10 @@ namespace DSPRE.Avalonia.ViewModels
         private int _matrixId = -1;
 
         /// <summary>
-        /// Renders all maps of the event's matrix stitched together, so every map the event
-        /// file can reach is visible at once (mirrors how an event file spans a whole matrix).
-        /// Each cell's tileset is resolved through its header section / the file's area data.
+        /// Renders only the maps this event file's events actually sit on (the cells they
+        /// occupy in the header's matrix), stitched together. This keeps the view focused on
+        /// the maps the file belongs to rather than loading an entire (possibly world-sized)
+        /// matrix. Each cell's tileset is resolved through its header section / the file's area.
         /// </summary>
         private void DisplayMap()
         {
@@ -327,10 +399,18 @@ namespace DSPRE.Avalonia.ViewModels
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
-                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null);
+                // Small matrices (interiors / routes / regions) render in full — exactly like the
+                // map editor's working full-matrix view — so the per-cell stride is derived from the
+                // whole matrix (correct true map size) and maps stitch seamlessly. Only a giant world
+                // matrix falls back to the bounding box of the event's own cells (to avoid loading it all).
+                int total = _matrix.width * _matrix.height;
+                ISet<(int x, int y)> include = total <= 256 ? null : EventCells();
+
+                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include);
+                string scope = include == null ? "full" : $"{include.Count}-cell region";
                 MapInfo = Model3D != null
-                    ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height}  ·  area {_areaDataId}"
-                    : $"Matrix {_matrixId} has no renderable maps.";
+                    ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height} ({scope})  ·  area {_areaDataId}"
+                    : $"Matrix {_matrixId}: no renderable maps.";
             }
             catch (Exception ex)
             {
@@ -339,6 +419,40 @@ namespace DSPRE.Avalonia.ViewModels
             }
             MapLoaded?.Invoke(this, EventArgs.Empty);
             RefreshMarkers();
+        }
+
+        /// <summary>
+        /// The matrix cells to render for this event file: the bounding box spanning every cell its
+        /// events occupy, so the maps between them are loaded too and stitch into one continuous
+        /// surface (rather than just the exact occupied cells, which leaves holes where an event
+        /// skips a cell). Capped so a stray far-flung event can't pull in a whole world matrix.
+        /// </summary>
+        private HashSet<(int x, int y)> EventCells()
+        {
+            var set = new HashSet<(int x, int y)>();
+            if (_file == null || _matrix == null) return set;
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+            void Note(Event e)
+            {
+                int x = e.xMatrixPosition, y = e.yMatrixPosition;
+                if (x < 0 || y < 0 || x >= _matrix.width || y >= _matrix.height) return;
+                minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+                minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
+            }
+            foreach (var e in _file.overworlds) Note(e);
+            foreach (var e in _file.warps) Note(e);
+            foreach (var e in _file.triggers) Note(e);
+            foreach (var e in _file.spawnables) Note(e);
+            if (maxX < minX) return set;   // no events
+
+            const int MaxSpan = 12;        // cap the bounding box per axis (keeps loads sane)
+            if (maxX - minX > MaxSpan) maxX = minX + MaxSpan;
+            if (maxY - minY > MaxSpan) maxY = minY + MaxSpan;
+
+            for (int y = minY; y <= maxY; y++)
+                for (int x = minX; x <= maxX; x++)
+                    set.Add((x, y));
+            return set;
         }
 
         // Per-type marker colours (RGB 0..1).
@@ -367,17 +481,19 @@ namespace DSPRE.Avalonia.ViewModels
             var m = Model3D;
             if (_file != null && m != null && m.CellStrideX != 0)
             {
-                float ground = m.HasMapBounds ? m.MapMinY : m.RawMinY;
                 float tileX = m.CellStrideX / MapTiles;
                 float tileZ = m.CellStrideZ / MapTiles;
-                float surfEps = tileX * 0.05f;
+
+                (float x, float z) Cell(Event e) => EventCellRaw(m, e);
+                // The map is a 3D model whose top plane is the walkable ground. Place each event on
+                // the sampled surface at its tile (so it sits ON the plane, not at world-Y 0 which is
+                // below it), then lift by its z height (fixed-point /4096; 0 == on the ground).
+                float EventY(float rawX, float rawZ, Event e) => EventSurfaceY(m, rawX, rawZ, e);
 
                 (float x, float y, float z) Foot(Event e)
                 {
-                    float rawX = m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX;
-                    float rawZ = m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ;
-                    float rawY = ground + surfEps + e.zPosition * tileX * ZStepInTiles;
-                    return m.ToNormalized(rawX, rawY, rawZ);
+                    var (rawX, rawZ) = Cell(e);
+                    return m.ToNormalized(rawX, EventY(rawX, rawZ, e), rawZ);
                 }
 
                 var v = new List<float>(256);
@@ -386,19 +502,18 @@ namespace DSPRE.Avalonia.ViewModels
                     bool sel = ReferenceEquals(e, _current);
                     var c = sel ? (1f, 1f, 1f) : col;
                     float half = (sel ? 0.46f : 0.40f);
-                    float rawX = m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX;
-                    float rawZ = m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ;
-                    float rawY = ground + surfEps + e.zPosition * tileX * ZStepInTiles;
-                    AddMarker(v, m, rawX, rawY, rawZ, half * tileX, half * tileZ, c);
+                    var (rawX, rawZ) = Cell(e);
+                    AddMarker(v, m, rawX, EventY(rawX, rawZ, e), rawZ, half * tileX, half * tileZ, c);
                 }
 
-                foreach (var e in _file.warps) Quad(e, MarkerColor(1));
-                foreach (var e in _file.triggers) Quad(e, MarkerColor(2));
-                foreach (var e in _file.spawnables) Quad(e, MarkerColor(3));
+                if (_showWarp) foreach (var e in _file.warps) Quad(e, MarkerColor(1));
+                if (_showTrig) foreach (var e in _file.triggers) Quad(e, MarkerColor(2));
+                if (_showSpawn) foreach (var e in _file.spawnables) Quad(e, MarkerColor(3));
 
                 // Overworlds → real sprite billboards (foot anchored on the surface). Selected
                 // overworlds also get a white ground ring so the selection is obvious.
                 float spriteH = tileX * m.Scale * 1.6f;
+                if (_showOw)
                 foreach (var ow in _file.overworlds)
                 {
                     bool sel = ReferenceEquals(ow, _current);
@@ -426,6 +541,145 @@ namespace DSPRE.Avalonia.ViewModels
             Sprites = sprites;
             MarkersChanged?.Invoke(this, EventArgs.Empty);
             SpritesChanged?.Invoke(this, EventArgs.Empty);
+            GizmoTargetChanged?.Invoke(this, EventArgs.Empty);   // keep the move-gizmo on the selected event
+        }
+
+        // ── Event world placement (shared by markers + the move gizmo) ────────────────────
+        private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
+        {
+            if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out var p))
+                return (p.OriginX + (e.xMapPosition + 0.5f) / MapTiles * p.Width,
+                        p.OriginZ + (e.yMapPosition + 0.5f) / MapTiles * p.Height);
+            return (m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
+                    m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
+        }
+
+        private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)
+        {
+            float surfEps = (m.CellStrideX / MapTiles + m.CellStrideZ / MapTiles) * 0.04f;
+            return m.SurfaceY(rawX, rawZ) + e.zPosition / 4096f + surfEps;
+        }
+
+        // ── 3D edit mode (drag the selected event with the translate gizmo) ───────────────
+        private bool _editMode3D;
+        public bool EditMode3D
+        {
+            get => _editMode3D;
+            set { if (Set(ref _editMode3D, value)) { OnPropertyChanged(nameof(EditMode3D)); EditModeChanged?.Invoke(this, EventArgs.Empty); } }
+        }
+        public event EventHandler EditModeChanged;
+        public event EventHandler GizmoTargetChanged;
+        public float ModelScale => Model3D?.Scale ?? 1f;
+
+        public bool TrySelectedEventAnchorNorm(out float nx, out float ny, out float nz)
+            => EventAnchorNorm(_current, out nx, out ny, out nz);
+
+        private bool EventAnchorNorm(Event e, out float nx, out float ny, out float nz)
+        {
+            nx = ny = nz = 0f;
+            var m = Model3D;
+            if (m == null || e == null) return false;
+            var (rx, rz) = EventCellRaw(m, e);
+            float ry = EventSurfaceY(m, rx, rz, e);
+            var (a, b, c) = m.ToNormalized(rx, ry, rz);
+            nx = a; ny = b; nz = c;
+            return true;
+        }
+
+        /// <summary>All visible event anchors (type 0=ow,1=warp,2=trigger,3=spawnable) in normalized
+        /// space, so the view can pick the nearest one under the cursor.</summary>
+        public IEnumerable<(int type, int index, float nx, float ny, float nz)> EventAnchorsNorm()
+        {
+            if (_file == null || Model3D == null) yield break;
+            if (_showOw) for (int i = 0; i < _file.overworlds.Count; i++) if (EventAnchorNorm(_file.overworlds[i], out var x, out var y, out var z)) yield return (0, i, x, y, z);
+            if (_showWarp) for (int i = 0; i < _file.warps.Count; i++) if (EventAnchorNorm(_file.warps[i], out var x, out var y, out var z)) yield return (1, i, x, y, z);
+            if (_showTrig) for (int i = 0; i < _file.triggers.Count; i++) if (EventAnchorNorm(_file.triggers[i], out var x, out var y, out var z)) yield return (2, i, x, y, z);
+            if (_showSpawn) for (int i = 0; i < _file.spawnables.Count; i++) if (EventAnchorNorm(_file.spawnables[i], out var x, out var y, out var z)) yield return (3, i, x, y, z);
+        }
+
+        public void SelectEvent(int type, int index)
+        {
+            switch (type)
+            {
+                case 0: SelectedOverworldIndex = index; break;
+                case 1: SelectedWarpIndex = index; break;
+                case 2: SelectedTriggerIndex = index; break;
+                case 3: SelectedSpawnableIndex = index; break;
+            }
+        }
+
+        // Event positions are INTEGER tiles (no fraction field), so a mouse drag accumulates sub-tile
+        // movement here and only steps the tile when it crosses a whole-tile boundary — exactly how the
+        // building gizmo carries its fraction. Reset at the start of each drag via BeginGizmoDrag().
+        private float _dragAccumX, _dragAccumZ;
+        public void BeginGizmoDrag() { _dragAccumX = 0f; _dragAccumZ = 0f; }
+
+        /// <summary>Moves the selected event by a raw-space delta along one world axis (0=X,1=Y,2=Z).
+        /// X/Z step the in-map tile in whole-tile increments (carrying the remainder), rolling over into
+        /// the neighbouring matrix cell at the map edge; Y edits the event height (zPosition).</summary>
+        public void NudgeSelectedEventRaw(int axis, float rawDelta)
+        {
+            var m = Model3D;
+            if (m == null || _current == null || rawDelta == 0f) return;
+            if (axis == 1)
+            {
+                long nz = _current.zPosition + (long)Math.Round(rawDelta * 4096f);
+                _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+            }
+            else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out var p))
+            {
+                if (axis == 0)
+                {
+                    float per = p.Width / MapTiles; if (per <= 0) return;     // raw units per tile
+                    _dragAccumX += rawDelta / per;
+                    int step = (int)_dragAccumX;                              // whole tiles to move now
+                    if (step != 0) { _dragAccumX -= step; StepEventTile(ref step, isX: true); }
+                }
+                else
+                {
+                    float per = p.Height / MapTiles; if (per <= 0) return;
+                    _dragAccumZ += rawDelta / per;
+                    int step = (int)_dragAccumZ;
+                    if (step != 0) { _dragAccumZ -= step; StepEventTile(ref step, isX: false); }
+                }
+            }
+            _suppress = true;
+            XMap = _current.xMapPosition; YMap = _current.yMapPosition; ZPos = _current.zPosition;
+            XMatrix = _current.xMatrixPosition; YMatrix = _current.yMatrixPosition;
+            _suppress = false;
+            Dirty();
+            RefreshMarkers();   // also raises GizmoTargetChanged
+        }
+
+        /// <summary>Moves the selected event by whole tiles along X / Z (for arrow keys), rolling over
+        /// into the neighbouring matrix cell at the map edges.</summary>
+        public void NudgeSelectedEventTiles(int dx, int dz)
+        {
+            if (_current == null) return;
+            if (dx != 0) { int s = dx; StepEventTile(ref s, isX: true); }
+            if (dz != 0) { int s = dz; StepEventTile(ref s, isX: false); }
+            _suppress = true;
+            XMap = _current.xMapPosition; YMap = _current.yMapPosition;
+            XMatrix = _current.xMatrixPosition; YMatrix = _current.yMatrixPosition;
+            _suppress = false;
+            Dirty();
+            RefreshMarkers();
+        }
+
+        public bool HasSelectedEvent => _current != null;
+
+        /// <summary>Adds <paramref name="step"/> tiles to the event's X (or Y) position, rolling whole
+        /// maps over into the neighbouring matrix cell at the 0/31 edges.</summary>
+        private void StepEventTile(ref int step, bool isX)
+        {
+            int tile = isX ? _current.xMapPosition : _current.yMapPosition;
+            int mat = isX ? _current.xMatrixPosition : _current.yMatrixPosition;
+            tile += step;
+            while (tile < 0) { mat--; tile += MapTiles; }
+            while (tile >= MapTiles) { mat++; tile -= MapTiles; }
+            if (mat < 0) { mat = 0; tile = 0; }
+            if (isX) { _current.xMapPosition = (short)tile; _current.xMatrixPosition = (ushort)mat; }
+            else { _current.yMapPosition = (short)tile; _current.yMatrixPosition = (ushort)mat; }
         }
 
         private static void AddMarker(List<float> v, NsbmdRenderModel m, float cx, float cy, float cz,

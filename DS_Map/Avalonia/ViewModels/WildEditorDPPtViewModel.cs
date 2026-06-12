@@ -267,11 +267,16 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void LoadFile(int id)
         {
-            _loading = true;
             string path = Path.Combine(_dirPath, id.ToString("D4"));
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             _current = new EncounterFileDPPt(stream);
+            PopulateRows();
+            SetClean();
+        }
 
+        private void PopulateRows()
+        {
+            _loading = true;
             WalkingRate  = _current.walkingRate;
             SurfRate     = _current.surfRate;
             OldRodRate   = _current.oldRodRate;
@@ -305,8 +310,50 @@ namespace DSPRE.Avalonia.ViewModels
             SyncRows(GoodRodRows,  5, i => $"Good Rod {i+1}", i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
             SyncRows(SuperRodRows, 5, i => $"Super Rod {i+1}",i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
 
-            SetClean();
             _loading = false;
+        }
+
+        // ── Encounter-file management ────────────────────────────────────────────────────
+        public void AddEncounterFile()
+        {
+            int count = EncounterNames.Count;
+            using (var w = new BinaryWriter(new FileStream(Path.Combine(_dirPath, count.ToString("D4")), FileMode.Create)))
+                w.Write(new EncounterFileDPPt().ToByteArray());
+            EncounterNames.Add($"[{count}] (new)");
+            SelectedEncounterIndex = count;
+        }
+
+        public async Task RemoveLastEncounterFileAsync()
+        {
+            int count = EncounterNames.Count;
+            if (count == 0) return;
+            int last = count - 1;
+            if (!await DialogHelper.AskYesNo($"Delete the last encounter file ({last})?", "Confirm deletion")) return;
+            File.Delete(Path.Combine(_dirPath, last.ToString("D4")));
+            if (_selectedEncounterIndex == last) SelectedEncounterIndex = last - 1;
+            EncounterNames.RemoveAt(last);
+        }
+
+        public void ImportEncounterFile(string path)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            _current = new EncounterFileDPPt(stream);
+            PopulateRows();
+            SetDirty();
+        }
+
+        public void ExportEncounterFile(string path) => File.WriteAllBytes(path, _current.ToByteArray());
+
+        public async Task RepairAllAsync()
+        {
+            if (!await DialogHelper.AskYesNo("Open every encounter file and reset corrupted fields to their defaults?", "Repair all encounter files?")) return;
+            int n = Directory.GetFiles(_dirPath).Length;
+            for (int i = 0; i < n; i++)
+            {
+                using var s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
+                new EncounterFileDPPt(s).SaveToFileDefaultDir(i, showSuccessMessage: false);
+            }
+            LoadFile(_selectedEncounterIndex);
         }
 
         private static void SyncRows(

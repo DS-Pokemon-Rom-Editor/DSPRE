@@ -155,6 +155,45 @@ namespace DSPRE.Avalonia.ViewModels
             return wb;
         }
 
+        // ── Add / remove texture packs ───────────────────────────────────────────────────
+        public void AddPack()
+        {
+            try
+            {
+                int newId = PackNames.Count;
+                File.Copy(PackPath(0), PackPath(newId));
+                if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
+                {
+                    string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir;
+                    if (File.Exists(cfg + "\\0000")) File.Copy(cfg + "\\0000", cfg + "\\" + newId.ToString("D4"));
+                }
+                PackNames.Add("Texture Pack " + newId);
+                PackIndex = newId;
+                StatusText = $"Added texture pack {newId}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "NSBTX Editor"); }
+        }
+
+        public async Task RemoveLastPackAsync()
+        {
+            if (PackNames.Count <= 1) { StatusText = "Can't remove the last pack."; return; }
+            int last = PackNames.Count - 1;
+            if (!await DialogHelper.AskYesNo($"Delete the last texture pack ({last})?", "Confirm deletion")) return;
+            try
+            {
+                File.Delete(PackPath(last));
+                if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
+                {
+                    string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir + "\\" + last.ToString("D4");
+                    if (File.Exists(cfg)) File.Delete(cfg);
+                }
+                if (_packIndex == last) PackIndex = last - 1;
+                PackNames.RemoveAt(last);
+                StatusText = $"Removed texture pack {last}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "NSBTX Editor"); }
+        }
+
         // ── Import / export whole packs ─────────────────────────────────────────────────
         public async Task ExportAsync()
         {

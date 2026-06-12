@@ -13,30 +13,51 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Event file:" VerticalAlignment="Center"/>
         <ComboBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
-        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Import…" Click="Import_Click"/>
-        <Button Content="Export…" Click="Export_Click"/>
+        <Button Content="＋ Add"     Click="AddFile_Click"/>
+        <Button Content="🗑 Rem last" Click="RemFile_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="📥 Import" Click="Import_Click"/>
+        <Button Content="📤 Export" Click="Export_Click"/>
       </StackPanel>
     </Border>
 
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="*,520">
 
       <!-- 3D map with event markers -->
       <DockPanel Grid.Column="0" Margin="4">
-        <Border DockPanel.Dock="Top" Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1" Padding="6,4" Margin="0,0,0,4">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="Map (whole matrix):" VerticalAlignment="Center" FontWeight="Bold" Foreground="#444"/>
-            <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="11" Foreground="#555"/>
-            <TextBlock Text="— drag to orbit, wheel to zoom" VerticalAlignment="Center" FontSize="11" Foreground="#999"/>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Padding="6,4" Margin="0,0,0,4">
+          <StackPanel Spacing="3">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="— drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="11"/>
+              <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="11"/>
+              <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="11"/>
+              <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="11"/>
+              <CheckBox Content="Gizmos" IsChecked="False" FontSize="11"
+                        IsCheckedChanged="Gizmos_Toggled"
+                        ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+              <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+              <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="11" Padding="6,2"
+                            ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
+              <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+              <TextBlock Text="View:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Button Content="Top" Click="CamTop_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Top-down camera"/>
+              <Button Content="Iso" Click="CamIso_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Isometric camera"/>
+              <Button Content="⟲" Click="CamReset_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Reset camera"/>
+            </StackPanel>
           </StackPanel>
         </Border>
         <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
@@ -54,17 +75,21 @@
               <Border Width="12" Height="12" Background="#3FF259" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" Click="AddOw_Click"/>
               <Button Content="Remove" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"/>
+              <Button Content="Duplicate" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
+              <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+              <Button Content="Sort ↑" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
+              <Button Content="Sort ↓" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}" SelectedIndex="{Binding SelectedOverworldIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasOw}">
                   <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding YMatrix}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   <TextBlock Text="OW ID / Sprite / Movement / Type" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwId}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSprite}"/>
@@ -91,17 +116,21 @@
               <Border Width="12" Height="12" Background="#FF9E1A" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" Click="AddWarp_Click"/>
               <Button Content="Remove" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
+              <Button Content="Duplicate" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
+              <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+              <Button Content="🔗 Test warp" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
+                      ToolTip.Tip="Jump to the destination header's event file"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasWarp}">
                   <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding YMatrix}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   <TextBlock Text="Destination header / anchor / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpAnchor}"/>
@@ -119,17 +148,18 @@
               <Border Width="12" Height="12" Background="#F23FE5" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" Click="AddTrig_Click"/>
               <Button Content="Remove" Click="RemoveTrig_Click" IsEnabled="{Binding HasTrig}"/>
+              <Button Content="Duplicate" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasTrig}">
                   <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding YMatrix}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   <TextBlock Text="Script / width / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrWidth}"/>
@@ -150,17 +180,18 @@
               <Border Width="12" Height="12" Background="#33D9F2" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" Click="AddSpawn_Click"/>
               <Button Content="Remove" Click="RemoveSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
+              <Button Content="Duplicate" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasSpawn}">
                   <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding YMatrix}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   <TextBlock Text="Script / type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpType}"/>

@@ -13,9 +13,9 @@
 
   <DockPanel>
     <!-- Status bar -->
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,4">
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
       <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
         <ProgressBar Grid.Column="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
                      Width="100" Height="12" Margin="8,0,0,0"/>
       </Grid>
@@ -26,7 +26,7 @@
       <!-- ── Tab 1: Scripts ──────────────────────────────────────────────── -->
       <TabItem Header="Scripts">
         <DockPanel Margin="4">
-          <TextBlock DockPanel.Dock="Top" Text="All script files and their content counts" Margin="0,0,0,4" FontSize="11" Foreground="#555"/>
+          <TextBlock DockPanel.Dock="Top" Text="All script files and their content counts" Margin="0,0,0,4" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
           <DataGrid ItemsSource="{Binding ScriptStats}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -47,7 +47,7 @@
       <!-- ── Tab 2: Level Scripts ────────────────────────────────────────── -->
       <TabItem Header="Level Scripts">
         <DockPanel Margin="4">
-          <TextBlock DockPanel.Dock="Top" Text="Level script files and trigger type counts" Margin="0,0,0,4" FontSize="11" Foreground="#555"/>
+          <TextBlock DockPanel.Dock="Top" Text="Level script files and trigger type counts" Margin="0,0,0,4" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
           <DataGrid ItemsSource="{Binding LevelScriptStats}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -78,7 +78,7 @@
             <Button Content="Search"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="VarClear_Click"/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+          <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                      Text="Files containing this variable. Double-click a row to copy ID to clipboard."/>
           <DataGrid ItemsSource="{Binding VariableResults}"
                     AutoGenerateColumns="False"
@@ -106,7 +106,7 @@
             <Button Content="Search"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="FlagClear_Click"/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+          <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                      Text="Event overworld flags and script flag operations. Double-click to copy to clipboard."/>
           <DataGrid ItemsSource="{Binding FlagResults}"
                     AutoGenerateColumns="False"
@@ -136,7 +136,7 @@
                 <NumericUpDown Value="{Binding FileWatcherScriptFileId}" Minimum="0" Width="90" FormatString="0"/>
                 <Button Content="Search" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
               </StackPanel>
-              <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+              <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                          Text="Headers that reference this script file. Double-click to copy to clipboard."/>
               <DataGrid ItemsSource="{Binding FileWatcherResults}"
                         AutoGenerateColumns="False"
@@ -167,7 +167,7 @@
                           Width="120"/>
                 <Button Content="Search" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
               </StackPanel>
-              <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+              <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                          Text="Event entities in files associated with this script that call the selected script ID."/>
               <DataGrid ItemsSource="{Binding ScriptIdResults}"
                         AutoGenerateColumns="False"
@@ -201,7 +201,7 @@
             <!-- Header properties -->
             <DockPanel Grid.Column="0">
               <TextBlock DockPanel.Dock="Top" Text="Header Properties" FontWeight="SemiBold" Margin="0,0,0,4" FontSize="12"/>
-              <TextBlock DockPanel.Dock="Top" FontSize="10" Foreground="#666" Margin="0,0,0,4" Text="Double-click a row to copy value"/>
+              <TextBlock DockPanel.Dock="Top" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4" Text="Double-click a row to copy value"/>
               <DataGrid ItemsSource="{Binding HeaderProperties}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
@@ -219,7 +219,7 @@
             <TabControl Grid.Column="2">
               <TabItem Header="Incoming Warps">
                 <DockPanel Margin="4">
-                  <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+                  <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                              Text="Warps in other event files that lead TO this header. Double-click to navigate to that header."/>
                   <DataGrid ItemsSource="{Binding IncomingWarps}"
                             AutoGenerateColumns="False"
@@ -238,7 +238,7 @@
               </TabItem>
               <TabItem Header="Outgoing Warps">
                 <DockPanel Margin="4">
-                  <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="#555" Margin="0,0,0,4"
+                  <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
                              Text="Warps FROM this header's event file. Double-click to navigate to destination header."/>
                   <DataGrid ItemsSource="{Binding OutgoingWarps}"
                             AutoGenerateColumns="False"

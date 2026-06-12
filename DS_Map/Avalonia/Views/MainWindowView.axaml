@@ -36,22 +36,29 @@
       <MenuItem Header="Te_xt" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
         <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
+        <MenuItem Header="Level Script Editor…" Click="LevelScriptEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="Ta_bles" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Table Editor…" Click="TableEditor_Click"/>
+        <MenuItem Header="Hidden Items Editor… (HGSS)" Click="HiddenItemsEditor_Click"/>
+        <MenuItem Header="Pickup Table Editor…" Click="PickupTableEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="_World" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
         <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
+        <MenuItem Header="Building Editor…"        Click="BuildingEditor_Click"/>
         <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
         <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
         <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click"/>
         <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click"/>
         <MenuItem Header="Overworld Sprites (BTX)…" Click="OverworldEditor_Click"/>
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
-        <MenuItem Header="Encounters Editor…"      Click="EncountersEditor_Click"/>
+        <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
+        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click"/>
+        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click"/>
+        <MenuItem Header="Headbutt Editor… (HGSS)" Click="HeadbuttEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Tools">
@@ -59,15 +66,16 @@
         <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
+        <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"/>
         <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
         <MenuItem Header="Settings…" Click="Settings_Click"/>
       </MenuItem>
     </Menu>
 
     <!-- ── Status bar ─────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock FontSize="11" Foreground="#444" VerticalAlignment="Center"
+      <TextBlock FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"
                  Text="Avalonia MainWindow preview — migrated editors appear as tabs; the rest open from the menu."/>
     </Border>
 

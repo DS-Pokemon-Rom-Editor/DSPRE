@@ -43,12 +43,12 @@
           <TextBlock Grid.Column="2" Text="{Binding ModifiedCount}"
                      VerticalAlignment="Center" Foreground="OrangeRed" FontSize="11"/>
         </Grid>
-        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#555"
+        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
                    TextWrapping="Wrap"/>
       </StackPanel>
 
       <!-- Image preview -->
-      <Border BorderBrush="#DDD" BorderThickness="1" Background="#F8F8F8" Margin="0,0,0,0">
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="#F8F8F8" Margin="0,0,0,0">
         <Image Source="{Binding CurrentImage}"
                Stretch="None"
                HorizontalAlignment="Center" VerticalAlignment="Center"/>

@@ -27,13 +27,13 @@
         <DockPanel Margin="4">
           <!-- Activation divisor above the activation table -->
           <Border DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="6"
-                  BorderBrush="#CCC" BorderThickness="1" CornerRadius="4">
+                  BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="Activation Divisor (1-255):" VerticalAlignment="Center"/>
               <NumericUpDown Value="{Binding ActivationDivisorEdit}"
                              Minimum="1" Maximum="255" FormatString="0" Width="100"/>
               <TextBlock Text="(Pickup activates when BattleSystem_Random() % divisor == 0)"
-                         VerticalAlignment="Center" Foreground="#666" FontSize="11"/>
+                         VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
             </StackPanel>
           </Border>
 
@@ -202,7 +202,7 @@
           </DockPanel>
 
           <!-- Right: edit panel -->
-          <Border Grid.Column="2" Padding="10" BorderBrush="#CCC" BorderThickness="1" CornerRadius="4"
+          <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
                   IsEnabled="{Binding HiddenItemSelected}">
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
@@ -224,7 +224,7 @@
                 </StackPanel>
               </Grid>
               <TextBlock Text="{Binding SelectedScriptLabel}"
-                         FontStyle="Italic" Foreground="#555" FontSize="11"/>
+                         FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
             </StackPanel>
           </Border>
         </Grid>

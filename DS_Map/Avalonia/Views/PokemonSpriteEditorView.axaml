@@ -137,7 +137,7 @@
           </Grid>
         </GroupBox>
         <TextBlock Text="Shiny sprites share pixel data with normal sprites; only the palette differs. Import replaces raw pixels; palette data is managed separately."
-                   TextWrapping="Wrap" FontSize="11" Foreground="#777" Margin="4,0"/>
+                   TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="4,0"/>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>

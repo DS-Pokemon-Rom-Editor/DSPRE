@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using AvaloniaEdit;
+using AvaloniaEdit.Search;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -23,6 +24,7 @@ namespace DSPRE.Avalonia.Views
                 ed.SyntaxHighlighting = ScriptSyntax.Definition;
                 ed.Options.ConvertTabsToSpaces = false;
                 ed.Options.IndentationSize = 4;
+                SearchPanel.Install(ed);   // Ctrl+F find within each editor
             }
 
             ScriptsEditor.TextChanged += (_, _) => { if (!_syncing && VM != null) VM.ScriptsText = ScriptsEditor.Text; };
@@ -68,6 +70,16 @@ namespace DSPRE.Avalonia.Views
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
+        private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddScriptFile();
+        private async void Remove_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastScriptFileAsync());
+        private void ViewLevelScript_Click(object sender, RoutedEventArgs e) => VM?.ViewLevelScript();
+
+        private void Find_Click(object sender, RoutedEventArgs e)
+        {
+            var editor = Tabs.SelectedIndex switch { 1 => FunctionsEditor, 2 => ActionsEditor, _ => ScriptsEditor };
+            editor.Focus();
+            SearchPanel.Install(editor).Open();
+        }
 
         protected override async void OnClosing(WindowClosingEventArgs e)
         {

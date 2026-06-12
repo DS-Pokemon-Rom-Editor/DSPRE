@@ -14,9 +14,9 @@
   <DockPanel>
 
     <!-- ── Status bar ──────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444"
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
@@ -39,7 +39,7 @@
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding HeaderNames}"
                       SelectedIndex="{Binding CondHeaderIndex}"/>
-            <TextBlock Text="{Binding CondLocationName}" Foreground="#666" FontStyle="Italic"/>
+            <TextBlock Text="{Binding CondLocationName}" Foreground="{DynamicResource Editor.Subtle}" FontStyle="Italic"/>
             <TextBlock Text="Flag" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondFlag}"/>
             <TextBlock Text="Music ID" FontWeight="Bold"/>
@@ -87,7 +87,7 @@
                       ItemsSource="{Binding ComboItems}"
                       SelectedIndex="{Binding TrainerComboIndex}"/>
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
-              <Border Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1" Width="80" Height="80">
+              <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="80" Height="80">
                 <Image Source="{Binding TrainerSpriteImage}" Stretch="Uniform"/>
               </Border>
               <StackPanel Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasTrainerSprite}">

@@ -9,12 +9,12 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="File:" VerticalAlignment="Center"/>
         <ComboBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Save As…" Click="SaveAs_Click"/>
         <Button Content="Import…"  Click="Import_Click"/>

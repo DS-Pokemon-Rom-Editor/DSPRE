@@ -22,20 +22,25 @@ namespace DSPRE.Avalonia.Gl
         /// Builds the stitched matrix scene. <paramref name="areaForMap"/> resolves a map index
         /// to its area-data id (used when the matrix has no per-cell header section); when it is
         /// null or returns no value, <paramref name="fallbackAreaId"/> is used.
+        /// <paramref name="includeCells"/>, when supplied, limits the build to those matrix cells
+        /// (e.g. only the cells an event file's events occupy) instead of the whole matrix.
         /// </summary>
         public static NsbmdRenderModel Build(GameMatrix matrix, byte fallbackAreaId,
-            GameFamilies gameFamily, Func<int, byte?> areaForMap = null)
+            GameFamilies gameFamily, Func<int, byte?> areaForMap = null,
+            ISet<(int x, int y)> includeCells = null)
         {
             if (matrix == null) return null;
             var cells = new List<NsbmdGeometry.MatrixCellGeometry>();
             string mapTexDir = gameDirs[DirNames.mapTextures].unpackedDir;
-            string bldDir = gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
+            string extBldDir = gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
+            string intBldDir = gameDirs.ContainsKey(DirNames.interiorBuildingModels) ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : null;
             string bldTexDir = gameDirs[DirNames.buildingTextures].unpackedDir;
             var areaCache = new Dictionary<byte, AreaData>();
 
             for (int y = 0; y < matrix.height; y++)
                 for (int x = 0; x < matrix.width; x++)
                 {
+                    if (includeCells != null && !includeCells.Contains((x, y))) continue;
                     int mapIndex = matrix.maps[y, x];
                     if (mapIndex == GameMatrix.EMPTY) continue;
 
@@ -43,6 +48,10 @@ namespace DSPRE.Avalonia.Gl
                     {
                         byte areaId = ResolveAreaId(matrix, x, y, fallbackAreaId, mapIndex, areaForMap);
                         if (!areaCache.TryGetValue(areaId, out var area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
+
+                        // HGSS indoor areas use the interior building model set.
+                        bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
+                        string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
 
                         var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
 

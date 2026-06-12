@@ -13,22 +13,30 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="6,4">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="Script file:" VerticalAlignment="Center" Foreground="#222"/>
+        <TextBlock Text="Script file:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
-        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Import…" Click="Import_Click"/>
-        <Button Content="Export…" Click="Export_Click"/>
+        <Button Content="＋ Add"     Click="Add_Click"/>
+        <Button Content="🗑 Rem last" Click="Remove_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="💾 Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="📥 Import"  Click="Import_Click"/>
+        <Button Content="📤 Export"  Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="🔍 Find"    Click="Find_Click" ToolTip.Tip="Search in the current tab (Ctrl+F)"/>
+        <Button Content="🔗 Level script" Click="ViewLevelScript_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <ComboBox Width="150" ItemsSource="{Binding NumberFormats}" SelectedIndex="{Binding NumberFormatIndex}"
+                  ToolTip.Tip="How numeric command parameters are displayed"/>
       </StackPanel>
     </Border>
 
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444" VerticalAlignment="Center"/>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <TabControl Margin="4">
+    <TabControl x:Name="Tabs" Margin="4">
       <TabItem Header="Scripts">
         <ae:TextEditor x:Name="ScriptsEditor" ShowLineNumbers="True"
                        FontFamily="Consolas, Cascadia Mono, Menlo, monospace" FontSize="13"

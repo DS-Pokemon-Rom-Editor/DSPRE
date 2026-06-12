@@ -87,17 +87,23 @@ namespace DSPRE.Avalonia
             new TradeEditorView().Show();
         }
 
-        public static void OpenTextEditor()
+        public static void OpenTextEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
-            new TextEditorView(new TextEditorViewModel(true)).Show();
+            new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
-        public static void OpenScriptEditor()
+        public static void OpenScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new ScriptEditorView(new ScriptEditorViewModel(true)).Show();
+            new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+        }
+
+        public static void OpenLevelScriptEditor(int initialIndex = 0)
+        {
+            if (!IsRomLoaded) return;
+            new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         public static void OpenTableEditor()
@@ -106,10 +112,41 @@ namespace DSPRE.Avalonia
             new TableEditorView(new TableEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).Show();
         }
 
+        public static void OpenHiddenItemsEditor()
+        {
+            if (!IsRomLoaded) return;
+            new HiddenItemsEditorView(new HiddenItemsEditorViewModel(true)).Show();
+        }
+
+        public static void OpenPickupTableEditor()
+        {
+            if (!IsRomLoaded) return;
+            new PickupTableEditorView(new PickupTableEditorViewModel(true)).Show();
+        }
+
         public static void OpenEncountersEditor()
         {
             if (!IsRomLoaded) return;
             new EncountersEditorView(new EncountersEditorViewModel(true)).Show();
+        }
+
+        public static void OpenHeadbuttEncounterEditor()
+        {
+            if (!IsRomLoaded) return;
+            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true)).Show();
+        }
+
+        public static void OpenWildEditor(int initialIndex = 0)
+        {
+            if (!IsRomLoaded) return;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
+            string path = gameDirs[DirNames.encounters].unpackedDir;
+            string[] names = GetPokemonNames();
+            int headerCount = GetHeaderCount();
+            if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+                new WildEditorDPPtView(new WildEditorDPPtViewModel(path, names, initialIndex, headerCount)).Show();
+            else
+                new WildEditorHGSSView(new WildEditorHGSSViewModel(path, names, initialIndex, headerCount)).Show();
         }
 
         public static void OpenHeaderEditor()
@@ -139,22 +176,34 @@ namespace DSPRE.Avalonia
             new MapEditorView(new MapEditorViewModel(true)).Show();
         }
 
-        public static void OpenMatrixEditor()
+        public static void OpenBuildingEditor()
         {
             if (!IsRomLoaded) return;
-            new MatrixEditorView(new MatrixEditorViewModel(true)).Show();
+            new BuildingEditorView(new BuildingEditorViewModel(true)).Show();
         }
 
-        public static void OpenEventEditor()
+        public static void OpenMatrixEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new EventEditorView(new EventEditorViewModel(true)).Show();
+            new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+        }
+
+        public static void OpenEventEditor(int initialIndex = 0)
+        {
+            if (!IsRomLoaded) return;
+            new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         public static void OpenNsbtxEditor()
         {
             if (!IsRomLoaded) return;
             new NsbtxEditorView(new NsbtxEditorViewModel(true)).Show();
+        }
+
+        public static void OpenAreaDataEditor()
+        {
+            if (!IsRomLoaded) return;
+            new AreaDataEditorView(new AreaDataEditorViewModel(true)).Show();
         }
 
         public static void OpenOverlayEditor()

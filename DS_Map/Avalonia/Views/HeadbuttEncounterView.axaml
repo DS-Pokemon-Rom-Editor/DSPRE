@@ -1,0 +1,143 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.HeadbuttEncounterView"
+        x:DataType="vm:HeadbuttEncounterViewModel"
+        Title="Headbutt Encounter Editor"
+        Width="1180" Height="700"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:HeadbuttEncounterViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="Headbutt file:" VerticalAlignment="Center"/>
+        <ComboBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <ToggleButton Content="✋ Move trees" IsChecked="{Binding EditMode3D}"
+                      ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <TextBlock Text="View:" VerticalAlignment="Center"/>
+        <Button Content="Top" Click="CamTop_Click" Padding="6,2" ToolTip.Tip="Top-down camera"/>
+        <Button Content="Iso" Click="CamIso_Click" Padding="6,2" ToolTip.Tip="Isometric camera"/>
+        <Button Content="⟲" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="600,*" IsVisible="{Binding IsAvailable}">
+      <TabControl Grid.Column="0" Margin="4">
+        <TabItem Header="Normal">
+          <Grid ColumnDefinitions="*,290" Margin="4">
+            <ScrollViewer Grid.Column="0" Margin="0,0,6,0">
+              <ItemsControl ItemsSource="{Binding NormalEncounters}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:HeadbuttEncRow">
+                    <Grid ColumnDefinitions="70,*,70,70" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
+                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <DockPanel Grid.Column="1">
+              <TextBlock DockPanel.Dock="Top" Text="Tree groups" FontWeight="Bold" Margin="0,0,0,4"/>
+              <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding NormalTreeGroups}" SelectedIndex="{Binding SelectedNormalGroupIndex}"/>
+              <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                  <Button Content="＋" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
+                  <Button Content="🗑" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
+                </StackPanel>
+                <TextBlock Text="Trees in group" FontWeight="Bold" VerticalAlignment="Center"/>
+              </DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="{Binding GroupTreeSummary}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"/>
+              <ListBox ItemsSource="{Binding SelectedGroupTrees}" SelectedIndex="{Binding SelectedTreeIndex}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:HeadbuttTreeRow">
+                    <StackPanel Margin="0,1">
+                      <Grid ColumnDefinitions="46,*,*">
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                        <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
+                        <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
+                      </Grid>
+                      <StackPanel Orientation="Horizontal" Margin="48,0,0,0">
+                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MatrixX, StringFormat='cell ({0}'}"/>
+                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MatrixY, StringFormat=',{0})'}"/>
+                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MapX, StringFormat='  tile ({0}'}"/>
+                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MapY, StringFormat=',{0})'}"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="Special">
+          <Grid ColumnDefinitions="*,290" Margin="4">
+            <ScrollViewer Grid.Column="0" Margin="0,0,6,0">
+              <ItemsControl ItemsSource="{Binding SpecialEncounters}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:HeadbuttEncRow">
+                    <Grid ColumnDefinitions="70,*,70,70" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
+                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <DockPanel Grid.Column="1">
+              <TextBlock DockPanel.Dock="Top" Text="Tree groups" FontWeight="Bold" Margin="0,0,0,4"/>
+              <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding SpecialTreeGroups}" SelectedIndex="{Binding SelectedSpecialGroupIndex}"/>
+              <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                  <Button Content="＋" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
+                  <Button Content="🗑" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
+                </StackPanel>
+                <TextBlock Text="Trees in group" FontWeight="Bold" VerticalAlignment="Center"/>
+              </DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="{Binding GroupTreeSummary}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"/>
+              <ListBox ItemsSource="{Binding SelectedGroupTrees}" SelectedIndex="{Binding SelectedTreeIndex}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:HeadbuttTreeRow">
+                    <Grid ColumnDefinitions="46,*,*" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
+                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </Grid>
+        </TabItem>
+      </TabControl>
+
+      <!-- 3D map with the selected group's trees -->
+      <DockPanel Grid.Column="1" Margin="0,4,4,4">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding MapInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
+        <TextBlock DockPanel.Dock="Top" Text="drag orbit · right-drag pan · wheel zoom · trees: 🟢 normal 🟡 special"
+                   FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
+        <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
+          <gl:NsbmdGlControl x:Name="GlView"/>
+        </Border>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

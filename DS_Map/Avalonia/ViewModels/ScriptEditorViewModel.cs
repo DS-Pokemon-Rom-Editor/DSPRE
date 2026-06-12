@@ -56,6 +56,20 @@ namespace DSPRE.Avalonia.ViewModels
         public bool IsReadOnly { get => _isReadOnly; set => Set(ref _isReadOnly, value); }
         public bool IsEditable => !_isReadOnly;
 
+        // ── Number-format display (default / decimal / hex) ──────────────────────────────
+        public ObservableCollection<string> NumberFormats { get; } = new ObservableCollection<string> { "Numbers: default", "Numbers: decimal", "Numbers: hex" };
+        private int _numberFormatIndex;
+        public int NumberFormatIndex { get => _numberFormatIndex; set { if (Set(ref _numberFormatIndex, value) && !_suppress) ApplyNumberFormat(); } }
+        private void ApplyNumberFormat()
+        {
+            var style = _numberFormatIndex == 1 ? System.Globalization.NumberStyles.Integer
+                      : _numberFormatIndex == 2 ? System.Globalization.NumberStyles.HexNumber
+                      : System.Globalization.NumberStyles.None;
+            SettingsManager.Settings.scriptEditorFormatPreference = (int)style;
+            ScriptFile.ClearPlaintextCache();
+            if (_selectedIndex >= 0) LoadScript(_selectedIndex);
+        }
+
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
@@ -70,6 +84,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public ScriptEditorViewModel() { if (Design.IsDesignMode) ScriptNames.Add("Script 0"); }
         public ScriptEditorViewModel(bool _) { }
+        public int InitialIndex { get; set; }
 
         public async Task SetupAsync(Window owner)
         {
@@ -79,8 +94,15 @@ namespace DSPRE.Avalonia.ViewModels
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
                 int count = Filesystem.GetScriptCount();
                 for (int i = 0; i < count; i++) ScriptNames.Add("Script File " + i);
+                // Match the combo to the saved number-format preference (None=0, Integer=7, HexNumber=515).
+                _suppress = true;
+                int pref = SettingsManager.Settings.scriptEditorFormatPreference;
+                _numberFormatIndex = pref == (int)System.Globalization.NumberStyles.Integer ? 1
+                                   : pref == (int)System.Globalization.NumberStyles.HexNumber ? 2 : 0;
+                OnPropertyChanged(nameof(NumberFormatIndex));
+                _suppress = false;
                 StatusText = $"{count} script files.";
-                if (count > 0) SelectedScriptIndex = 0;
+                if (count > 0) SelectedScriptIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {
@@ -155,6 +177,43 @@ namespace DSPRE.Avalonia.ViewModels
 
         private static List<string> Lines(string text)
             => text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').Select(l => l.Trim()).ToList();
+
+        // ── Add / remove file · linked editors ──────────────────────────────────────────
+        public void AddScriptFile()
+        {
+            try
+            {
+                int fileID = ScriptNames.Count;
+                var sf = new ScriptFile(new[] { "Script 1:", "End" }, null, null, fileID);
+                if (sf.SaveToFileDefaultDir(fileID, showSuccessMessage: false))
+                {
+                    ScriptNames.Add("Script File " + fileID);
+                    SelectedScriptIndex = fileID;
+                    StatusText = $"Added script file {fileID}.";
+                }
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add script file:\n{ex.Message}", "Script Editor"); }
+        }
+
+        public async Task RemoveLastScriptFileAsync()
+        {
+            if (ScriptNames.Count == 0) return;
+            int last = ScriptNames.Count - 1;
+            if (!await DialogHelper.AskYesNo($"Delete the last script file ({last})?", "Confirm deletion")) return;
+            try
+            {
+                File.Delete(Filesystem.GetScriptPath(last));
+                if (_selectedIndex == last) SelectedScriptIndex = last - 1;
+                ScriptNames.RemoveAt(last);
+                StatusText = $"Removed script file {last}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove script file:\n{ex.Message}", "Script Editor"); }
+        }
+
+        public void ViewLevelScript()
+        {
+            if (_selectedIndex >= 0) AvaloniaEditorLauncher.OpenLevelScriptEditor(_selectedIndex);
+        }
 
         // ── Save / import / export ─────────────────────────────────────────────────────
         public void Save()

@@ -154,6 +154,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _hexNumbering = SettingsManager.Settings.textEditorPreferHex;
         }
+        public int InitialIndex { get; set; }
 
         // ── Setup ────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
@@ -187,7 +188,7 @@ namespace DSPRE.Avalonia.ViewModels
                 StatusText = $"Loaded {count} text archives.";
 
                 if (count > 0)
-                    SelectedArchiveIndex = 0;
+                    SelectedArchiveIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {

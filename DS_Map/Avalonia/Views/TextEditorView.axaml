@@ -14,7 +14,7 @@
   <DockPanel>
 
     <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="#F5F5F5" BorderBrush="#DDD"
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Archive:" VerticalAlignment="Center"/>
@@ -22,25 +22,25 @@
                   SelectedIndex="{Binding SelectedArchiveIndex}"/>
         <Button Content="Add"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
         <Button Content="Remove" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Import…" Click="Import_Click"/>
         <Button Content="Export…" Click="Export_Click"/>
-        <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
       </StackPanel>
     </Border>
 
     <!-- ── Status bar ──────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#444"
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
     <!-- ── Search / replace panel ──────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Right" Width="300" Background="#FAFAFA"
-            BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="8">
+    <Border DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" Padding="8">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="4">
           <TextBlock Text="Search &amp; Replace" FontWeight="Bold"/>
@@ -62,12 +62,12 @@
 
     <!-- ── Message grid + line controls ────────────────────────────────────── -->
     <DockPanel>
-      <Border DockPanel.Dock="Bottom" Padding="4" Background="#F5F5F5"
-              BorderBrush="#DDD" BorderThickness="0,1,0,0">
+      <Border DockPanel.Dock="Bottom" Padding="4" Background="{DynamicResource Editor.ToolbarBg}"
+              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Add String"    Click="AddString_Click"/>
           <Button Content="Remove String" Click="RemoveString_Click"/>
-          <Rectangle Width="1" Fill="#CCC" Margin="2,2"/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
           <Button Content="Move Up"   Click="MoveUp_Click"   IsEnabled="{Binding CanMoveUp}"/>
           <Button Content="Move Down" Click="MoveDown_Click" IsEnabled="{Binding CanMoveDown}"/>
         </StackPanel>

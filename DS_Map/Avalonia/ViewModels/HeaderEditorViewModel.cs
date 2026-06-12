@@ -332,6 +332,16 @@ namespace DSPRE.Avalonia.ViewModels
                 : MapHeader.LoadFromARM9(headerNumber);
             if (_header == null) return;
 
+            PopulateFromHeader();
+            SetClean();
+            StatusText = $"Header {_header.ID} loaded.";
+            OnPropertyChanged(nameof(UnsavedChangesDescription));
+        }
+
+        /// <summary>Pushes the current <see cref="_header"/> into the editor fields (no ROM read).</summary>
+        private void PopulateFromHeader()
+        {
+            if (_header == null) return;
             _suppress = true;
             try
             {
@@ -378,10 +388,6 @@ namespace DSPRE.Avalonia.ViewModels
                 UpdateAreaIconImage();
             }
             finally { _suppress = false; }
-
-            SetClean();
-            StatusText = $"Header {_header.ID} loaded.";
-            OnPropertyChanged(nameof(UnsavedChangesDescription));
         }
 
         private int FindAreaSettingsBySpecifier(int specifier)
@@ -543,6 +549,77 @@ namespace DSPRE.Avalonia.ViewModels
             SetClean();
             StatusText = $"Header {_header.ID} saved.";
         }
+
+        // ── Copy / paste / reset / import / export / go-to / quick-open ──────────────────
+        private static byte[] _clipboard;
+
+        public void Copy()
+        {
+            if (_header == null) return;
+            _clipboard = _header.ToByteArray();
+            StatusText = $"Copied header {_header.ID}.";
+        }
+
+        public void Paste()
+        {
+            if (_header == null || _clipboard == null) { StatusText = "Nothing to paste."; return; }
+            var h = MapHeader.LoadFromByteArray(_clipboard, (ushort)_header.ID, gameFamily);
+            if (h == null) { StatusText = "Clipboard header is incompatible."; return; }
+            _header = h;
+            PopulateFromHeader();
+            SetDirty();
+            StatusText = "Pasted header (unsaved).";
+        }
+
+        public void Reset()
+        {
+            if (_selectedHeaderIndex >= 0) { LoadHeader(_selectedHeaderIndex); StatusText = "Reverted to saved header."; }
+        }
+
+        public async Task ImportAsync()
+        {
+            if (_header == null) return;
+            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header")
+            { Patterns = new[] { "*.dsh", "*.bin", "*.*" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import header", new[] { filter });
+            if (path == null) return;
+            try
+            {
+                if (new FileInfo(path).Length > 48) throw new InvalidDataException();
+                var h = MapHeader.LoadFromFile(path, (ushort)_header.ID, 0);
+                if (h == null) throw new InvalidDataException();
+                _header = h;
+                PopulateFromHeader();
+                SetDirty();
+                StatusText = "Imported header (unsaved).";
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed — malformed or not a header file.\n{ex.Message}", "Import Error"); }
+        }
+
+        public async Task ExportAsync()
+        {
+            if (_header == null) return;
+            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header") { Patterns = new[] { "*.dsh" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
+            if (path == null) return;
+            try { File.WriteAllBytes(path, _header.ToByteArray()); StatusText = "Exported header."; }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+        }
+
+        private decimal _goToValue;
+        public decimal GoToValue { get => _goToValue; set => Set(ref _goToValue, value); }
+        public void GoTo()
+        {
+            int n = (int)_goToValue;
+            if (n >= 0 && n < HeaderItems.Count) SelectedHeaderIndex = n;
+        }
+
+        // Jump to the related editor at this header's referenced file.
+        public void OpenMatrix() { if (_header != null) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID); }
+        public void OpenEvents() { if (_header != null) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
+        public void OpenScripts() { if (_header != null) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
+        public void OpenLevelScripts() { if (_header != null) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.levelScriptID); }
+        public void OpenTexts() { if (_header != null) AvaloniaEditorLauncher.OpenTextEditor(_header.textArchiveID); }
 
         private void UpdateCurrentInternalName()
         {

@@ -13,9 +13,9 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#CCC"
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3" IsVisible="{Binding HasPending}">
-      <TextBlock Text="{Binding PendingNote}" FontSize="11" Foreground="#777"
+      <TextBlock Text="{Binding PendingNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center" FontStyle="Italic"/>
     </Border>
 
