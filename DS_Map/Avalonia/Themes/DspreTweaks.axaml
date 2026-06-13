@@ -1,0 +1,55 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- DSPRE-local tweaks layered on top of the vendored SoftDark theme.
+         Kept separate so the vendored ControlStyles stay close to upstream. -->
+
+    <!-- Rounded corners. The vendored templates all bind {TemplateBinding CornerRadius}
+         but never set a value (so they render square); these setters supply it. -->
+    <!-- The window itself must use our palette. We dropped the vendored Window theme, so without
+         this the window falls back to SimpleTheme's background and the whole palette looks "unchanged"
+         (only the controls were getting our colours). -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{DynamicResource Window.Static.Background}"/>
+    </Style>
+
+    <!-- 3px corner radius (a touch more than Fusion's nominal 2px, reads better at our DPI). -->
+    <Style Selector="Button">        <Setter Property="CornerRadius" Value="3"/></Style>
+    <Style Selector="ToggleButton">  <Setter Property="CornerRadius" Value="3"/></Style>
+    <Style Selector="ButtonSpinner"> <Setter Property="CornerRadius" Value="3"/></Style>
+    <!-- (RepeatButton intentionally left square: spin up/down are internal segments) -->
+    <Style Selector="ComboBox">      <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="24"/></Style>
+    <Style Selector="TextBox">       <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="24"/></Style>
+    <Style Selector="ListBox">       <Setter Property="CornerRadius" Value="3"/></Style>
+    <Style Selector="TabItem">       <Setter Property="CornerRadius" Value="3,3,0,0"/></Style>
+
+    <!-- NumericUpDown has no ControlTheme in the vendored set, so its own background falls
+         through to the SimpleTheme default (the white patch behind the transparent spinner
+         column). Pin it to the text-field background and round it. -->
+    <Style Selector="NumericUpDown">
+        <Setter Property="Background" Value="{DynamicResource TextBox.Static.Background}"/>
+        <!-- BorderThickness/Brush propagate to the inner ButtonSpinner frame (SimpleTheme's
+             NumericUpDown template binds them through). So THIS draws the spinbox's dark outline —
+             setting it to 0 earlier is exactly what removed the outline. Keep it dark + 1px; the
+             inner TextBox is separately de-bordered below so there's no double frame. -->
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TextBox.Static.Border}"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <!-- Compact + sizes to its content instead of stretching to fill the cell (Fusion spinboxes
+             are tight). HorizontalAlignment=Left stops it filling star columns; MinWidth keeps single
+             digits from collapsing. Shorter than the 28px default fields. -->
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="MinWidth" Value="54"/>
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <!-- Avalonia NumericUpDown hosts a TextBox inside the ButtonSpinner; strip its frame/fill so it
+         doesn't double-border, RELEASE the global TextBox MinHeight=28 (that's what was forcing the
+         spin box tall), and centre the number vertically. -->
+    <Style Selector="NumericUpDown /template/ TextBox">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="6,0"/>
+    </Style>
+</Styles>

@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Design.PreviewWith>
+        <Grid Background="#353535" Width="220" Height="160">
+            <TabControl>
+                <TabItem Header="A"><TextBlock Text="content" Margin="8"/></TabItem>
+                <TabItem Header="B"></TabItem>
+                <TabItem Header="C"></TabItem>
+            </TabControl>
+        </Grid>
+    </Design.PreviewWith>
+    <!-- Qt Fusion tab widget: the content sits in a frame filled with tabFrameColor (Tone4) and the
+         SELECTED tab is the same colour, overlapping the frame's top edge so the two merge with no
+         seam (PE_FrameTabWidget). Unselected tabs are darker + recessed, so the frame line shows
+         under them but not under the selected one. -->
+    <ControlTheme x:Key="{x:Type TabControl}" TargetType="{x:Type TabControl}">
+        <Setter Property="Background" Value="{DynamicResource ABrush.Tone4.Background.Static}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DockPanel>
+                    <!-- tab strip; ZIndex above the frame so the selected tab can cover the frame's top line -->
+                    <ItemsPresenter x:Name="PART_ItemsPresenter"
+                                    DockPanel.Dock="Top"
+                                    ZIndex="1"
+                                    ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                    <!-- content frame (tabFrameColor); pulled up 1px so its top border tucks under the tabs -->
+                    <Border x:Name="PART_ContentFrame" Margin="0,-1,0,0"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="0,2,2,2">
+                      <!-- same white innerContrastLine the tabs have (PE_FrameTabWidget), so the tab's
+                           bright edge continues into the content frame instead of stopping at a seam -->
+                      <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                              BorderThickness="1,0,1,1" CornerRadius="0,0,1,1">
+                        <ContentPresenter x:Name="PART_SelectedContentHost"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding SelectedContent}"
+                                          ContentTemplate="{TemplateBinding SelectedContentTemplate}"/>
+                      </Border>
+                    </Border>
+                </DockPanel>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^[TabStripPlacement=Bottom] /template/ ItemsPresenter#PART_ItemsPresenter">
+            <Setter Property="DockPanel.Dock" Value="Bottom"/>
+        </Style>
+        <Style Selector="^[TabStripPlacement=Left] /template/ ItemsPresenter#PART_ItemsPresenter">
+            <Setter Property="DockPanel.Dock" Value="Left"/>
+        </Style>
+        <Style Selector="^[TabStripPlacement=Left] /template/ ItemsPresenter#PART_ItemsPresenter > WrapPanel">
+            <Setter Property="Orientation" Value="Vertical"/>
+        </Style>
+        <Style Selector="^[TabStripPlacement=Right] /template/ ItemsPresenter#PART_ItemsPresenter">
+            <Setter Property="DockPanel.Dock" Value="Right"/>
+        </Style>
+        <Style Selector="^[TabStripPlacement=Right] /template/ ItemsPresenter#PART_ItemsPresenter > WrapPanel">
+            <Setter Property="Orientation" Value="Vertical"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

@@ -1,0 +1,114 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Qt Fusion non-editable combo (CC_ComboBox, non-editable branch) draws the WHOLE combo with
+         PE_PanelButtonCommand — i.e. it IS a push button, with the arrow painted on top. So this
+         reuses the exact Button structure (dark outer outline + face gradient + white inner ring)
+         and just adds the arrow glyph on the right. No separate arrow box, no separator. -->
+    <ControlTheme x:Key="{x:Type ComboBox}" TargetType="{x:Type ComboBox}">
+        <Setter Property="Background" Value="{DynamicResource Button.Static.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Padding" Value="7,0,0,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="PlaceholderForeground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border x:Name="OuterBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border x:Name="InnerContrast"
+                            BorderBrush="{DynamicResource Button.InnerContrast}"
+                            BorderThickness="1" CornerRadius="2.5">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock x:Name="PlaceholderTextBlock"
+                                       Grid.Column="0"
+                                       Margin="{TemplateBinding Padding}"
+                                       VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding PlaceholderForeground}"
+                                       IsVisible="{TemplateBinding SelectionBoxItem, Converter={x:Static ObjectConverters.IsNull}}"
+                                       Text="{TemplateBinding PlaceholderText}"/>
+                            <ContentControl Grid.Column="0"
+                                            Margin="{TemplateBinding Padding}"
+                                            VerticalContentAlignment="Center"
+                                            HorizontalContentAlignment="Left"
+                                            Content="{TemplateBinding SelectionBoxItem}"
+                                            ContentTemplate="{TemplateBinding ItemTemplate}"/>
+                            <!-- Invisible toggle keeps the dropdown behaviour; the arrow sits on the button face -->
+                            <ToggleButton x:Name="toggle"
+                                          Grid.Column="1"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          ClickMode="Press"
+                                          Focusable="False"
+                                          IsChecked="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                                          Padding="6,0,11,0">
+                                <ToggleButton.Template>
+                                    <ControlTemplate>
+                                        <Border Background="Transparent" Padding="6,0,9,0">
+                                            <Path Width="8" Height="5"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Data="M0,0 L4,4 L8,0 Z"
+                                                  Fill="{DynamicResource ABrush.Glyph.Static}"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup Grid.Column="0" x:Name="PART_Popup"
+                                   MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                                   MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                   IsLightDismissEnabled="True"
+                                   IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                                   PlacementTarget="{TemplateBinding}">
+                                <Border Background="{DynamicResource Popup.Static.Background}"
+                                        BorderBrush="{DynamicResource ComboBox.Static.Border}"
+                                        BorderThickness="1" CornerRadius="2">
+                                    <ScrollViewer HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                                  VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                                  IsDeferredScrollingEnabled="{TemplateBinding (ScrollViewer.IsDeferredScrollingEnabled)}"
+                                                  VerticalSnapPointsType="Mandatory">
+                                        <ItemsPresenter x:Name="PART_ItemsPresenter"
+                                                        ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.MouseOver.Border}"/>
+        </Style>
+        <Style Selector="^:pressed /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.Pressed.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.Pressed.Border}"/>
+        </Style>
+        <Style Selector="^:pressed /template/ Border#InnerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
+        <!-- Fusion: the combo stays dark/sunken the entire time the dropdown is OPEN, not just for
+             the instant of the click. Driven off IsDropDownOpen rather than the momentary :pressed. -->
+        <Style Selector="^[IsDropDownOpen=True] /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.Pressed.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.Pressed.Border}"/>
+        </Style>
+        <Style Selector="^[IsDropDownOpen=True] /template/ Border#InnerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="^:disabled /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.Disabled.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.Disabled.Border}"/>
+        </Style>
+        <Style Selector="^:disabled /template/ Border#InnerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>
