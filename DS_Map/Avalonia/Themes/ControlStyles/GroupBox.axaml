@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Qt Fusion group box: a thin rounded frame (PE_FrameGroupBox) with the title sitting on the
+         top line and interrupting it (the title's background masks the frame line behind it).
+         No filled header bar. Targets Avalonia's built-in GroupBox (HeaderedContentControl). -->
+    <ControlTheme x:Key="{x:Type GroupBox}" TargetType="GroupBox">
+        <Setter Property="Background" Value="{DynamicResource ABrush.Tone4.Background.Static}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource GroupBox.Static.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid>
+                    <!-- the frame; pushed down so the title can straddle its top line -->
+                    <Border x:Name="PART_Frame" Margin="0,8,0,0"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Margin="{TemplateBinding Padding}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <!-- title, top-left, with a window-coloured backing that breaks the frame line -->
+                    <Border x:Name="PART_HeaderHost" VerticalAlignment="Top" HorizontalAlignment="Left"
+                            Margin="8,0,0,0" Padding="4,0,4,0"
+                            Background="{DynamicResource Window.Static.Background}">
+                        <ContentPresenter x:Name="PART_HeaderPresenter"
+                                          Content="{TemplateBinding Header}"
+                                          ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"
+                                          TextElement.FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+</ResourceDictionary>

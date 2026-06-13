@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Qt Fusion push button, ported from qfusionstyle.cpp (PE_PanelButtonCommand):
+           1. fill a rounded rect (r=2) with the face gradient
+           2. stroke a DARK outer outline (window.darker(140))
+           3. stroke a bright innerContrastLine (white @30) one pixel inside
+         Implemented as two nested Borders: OuterBorder = outline + gradient fill,
+         InnerContrast = the white ring. Pressed drops the gradient + the ring (sunken). -->
+    <ControlTheme x:Key="{x:Type Button}" TargetType="{x:Type Button}">
+        <Setter Property="Background" Value="{DynamicResource Button.Static.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Button.Static.Foreground}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border x:Name="OuterBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border x:Name="InnerContrast"
+                            BorderBrush="{DynamicResource Button.InnerContrast}"
+                            BorderThickness="1"
+                            CornerRadius="2.5">
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Padding="{TemplateBinding Padding}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          RecognizesAccessKey="True"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.MouseOver.Border}"/>
+        </Style>
+
+        <!-- Pressed: flat darker fill, and the bright top ring goes away so it reads sunken -->
+        <Style Selector="^:pressed /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.Pressed.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.Pressed.Border}"/>
+        </Style>
+        <Style Selector="^:pressed /template/ Border#InnerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="^:disabled /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource Button.Disabled.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.Disabled.Border}"/>
+        </Style>
+        <Style Selector="^:disabled /template/ Border#InnerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource Button.Disabled.Foreground}"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

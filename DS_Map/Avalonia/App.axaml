@@ -8,6 +8,11 @@
 	     can be switched at runtime via Application.RequestedThemeVariant (see ThemeManager). -->
 	<Application.Resources>
 		<ResourceDictionary>
+			<!-- DSPRE SoftDark palette + control-colour mapping (vendored from WPFDarkTheme, MIT). -->
+			<ResourceDictionary.MergedDictionaries>
+				<MergeResourceInclude Source="Themes/Colours/SoftDark.axaml"/>
+				<MergeResourceInclude Source="Themes/ControlColours.axaml"/>
+			</ResourceDictionary.MergedDictionaries>
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
 					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#F5F5F5"/>
@@ -19,11 +24,12 @@
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#666666"/>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key="Dark">
-					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#2D2D30"/>
-					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#2A2A2D"/>
-					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#252526"/>
-					<SolidColorBrush x:Key="Editor.Border"     Color="#3F3F46"/>
-					<SolidColorBrush x:Key="Editor.Separator"  Color="#4A4A52"/>
+					<!-- Aligned to the Fusion palette so editor chrome matches the controls -->
+					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#353535"/>
+					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#3C3C3C"/>
+					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#2E2E2E"/>
+					<SolidColorBrush x:Key="Editor.Border"     Color="#262626"/>
+					<SolidColorBrush x:Key="Editor.Separator"  Color="#2E2E2E"/>
 					<SolidColorBrush x:Key="Editor.Text"       Color="#E6E6E6"/>
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#A8A8A8"/>
 				</ResourceDictionary>
@@ -32,11 +38,13 @@
 	</Application.Resources>
 
 	<Application.Styles>
-		<FluentTheme />
+		<!-- DSPRE SoftDark control themes (vendored from WPFDarkTheme, MIT) over Avalonia SimpleTheme. -->
+		<SimpleTheme/>
+		<StyleInclude Source="Themes/Controls.axaml"/>
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
 
-		<!-- ── Crisp, consistent control sizing across every editor ── -->
+		<!-- ── Crisp, consistent control sizing across every editor (from feature/avalonia) ── -->
 		<Style Selector="Button">
 			<Setter Property="MinHeight" Value="28"/>
 			<Setter Property="Padding" Value="10,4"/>
@@ -66,6 +74,9 @@
 			<Setter Property="Margin" Value="0,2,6,2"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
+
+		<!-- DSPRE-local rounding + tweaks (last so its setters win over the vendored themes). -->
+		<StyleInclude Source="Themes/DspreTweaks.axaml"/>
 	</Application.Styles>
 
 </Application>

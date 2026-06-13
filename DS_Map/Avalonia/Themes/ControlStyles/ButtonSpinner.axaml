@@ -1,0 +1,105 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Qt Fusion CC_SpinBox: the field is a line-edit (sunken base); the up/down area is filled with
+         ONE gradient over the COMBINED rect (not per-button), buttons are transparent over it, a dark
+         vertical separator sits at the island's left, and hovering a half overlays innerContrastLine. -->
+
+    <!-- Spin up/down buttons: transparent (the island's single gradient shows through); hover/press
+         just overlay a translucent highlight/shadow on the hovered half. -->
+    <ControlTheme x:Key="SimpleButtonSpinnerRepeatButton" TargetType="{x:Type RepeatButton}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border x:Name="bg" Background="{TemplateBinding Background}">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      HorizontalContentAlignment="Center"
+                                      VerticalContentAlignment="Center"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#bg">
+            <Setter Property="Background" Value="{DynamicResource Button.InnerContrast}"/>
+        </Style>
+        <Style Selector="^:pressed /template/ Border#bg">
+            <Setter Property="Background" Value="#30000000"/>
+        </Style>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type ButtonSpinner}" TargetType="{x:Type ButtonSpinner}">
+        <!-- Transparent so the NumericUpDown's (field-base) background shows behind the number -->
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TextBox.Static.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Static}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Focusable" Value="True"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DataValidationErrors>
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <DockPanel>
+                            <!-- The whole up/down island: ONE gradient, dark separator on its left -->
+                            <Border x:Name="SpinIsland" DockPanel.Dock="Right" Width="20"
+                                    Background="{DynamicResource Button.Static.Background}"
+                                    BorderBrush="{DynamicResource TextBox.Static.Border}"
+                                    BorderThickness="1,0,0,0"
+                                    CornerRadius="0,3,3,0"
+                                    ClipToBounds="True"
+                                    IsVisible="{TemplateBinding ShowButtonSpinner}">
+                                <!-- white innerContrastLine ring on top/right/bottom (left is the dark separator) -->
+                                <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                                        BorderThickness="0,1,1,1" CornerRadius="0,3,3,0">
+                                <UniformGrid x:Name="PART_SpinnerPanel" Rows="2">
+                                    <RepeatButton x:Name="PART_IncreaseButton"
+                                                  IsTabStop="{TemplateBinding IsTabStop}"
+                                                  Theme="{StaticResource SimpleButtonSpinnerRepeatButton}">
+                                        <Path Width="10" Height="4"
+                                              HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,1"
+                                              Data="M0,4 L5,0 10,4 Z" Fill="{TemplateBinding Foreground}"/>
+                                    </RepeatButton>
+                                    <RepeatButton x:Name="PART_DecreaseButton"
+                                                  IsTabStop="{TemplateBinding IsTabStop}"
+                                                  Theme="{StaticResource SimpleButtonSpinnerRepeatButton}">
+                                        <Path Width="10" Height="4"
+                                              HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1,0,0"
+                                              Data="M0,0 L5,4 10,0 Z" Fill="{TemplateBinding Foreground}"/>
+                                    </RepeatButton>
+                                </UniformGrid>
+                                </Border>
+                            </Border>
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              TabIndex="1"
+                                              Padding="{TemplateBinding Padding}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </DockPanel>
+                    </Border>
+                </DataValidationErrors>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:left">
+            <Style Selector="^ /template/ Border#SpinIsland">
+                <Setter Property="DockPanel.Dock" Value="Left"/>
+                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+            </Style>
+        </Style>
+        <Style Selector="^:pointerover /template/ Border#border">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextBox.MouseOver.Border}"/>
+        </Style>
+        <Style Selector="^:focus /template/ Border#border">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextBox.Focus.Border}"/>
+        </Style>
+        <Style Selector="^:error /template/ Border#border">
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonSpinner.Error.Border}"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>
