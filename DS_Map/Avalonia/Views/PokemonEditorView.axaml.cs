@@ -23,16 +23,18 @@ namespace DSPRE.Avalonia.Views
             InitializeComponent();
             DataContext = vm;
             Closing += OnWindowClosing;
+            EditorWindowChrome.Attach(this, vm, manageTitle: false);   // VM owns the bound Title (+ marker)
         }
 
         private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
         {
-            if (!ViewModel.HasUnsavedChanges) return;
+            if (!ViewModel.HasUnsavedChanges) { ViewModel.Detach(); return; }
             e.Cancel = true;
             bool confirmed = await DialogHelper.AskYesNo(
                 "There are unsaved changes. Close and discard them?", "Unsaved Changes");
             if (confirmed)
             {
+                ViewModel.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

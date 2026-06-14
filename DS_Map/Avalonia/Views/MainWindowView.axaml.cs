@@ -15,7 +15,20 @@ namespace DSPRE.Avalonia.Views
         public MainWindowView()
         {
             InitializeComponent();
+            // Ctrl+P → quick-open command palette (jump to any editor by name).
+            KeyDown += (s, e) =>
+            {
+                if (e.Key == global::Avalonia.Input.Key.P &&
+                    e.KeyModifiers.HasFlag(global::Avalonia.Input.KeyModifiers.Control))
+                {
+                    AvaloniaEditorLauncher.OpenCommandPalette(this);
+                    e.Handled = true;
+                }
+            };
         }
+
+        private void CommandPalette_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenCommandPalette(this);
 
         public MainWindowView(MainWindowViewModel vm) : this()
         {
@@ -117,6 +130,12 @@ namespace DSPRE.Avalonia.Views
 
         private void CharMapManager_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCharMapManager();
+
+        private void LabelEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenLabelEditor();
+
+        private void ProjectChecks_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenProjectChecks();
 
         private void Settings_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenSettings();

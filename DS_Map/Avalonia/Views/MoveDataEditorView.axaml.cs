@@ -14,14 +14,16 @@ namespace DSPRE.Avalonia.Views
             InitializeComponent();
             DataContext = new MoveDataEditorViewModel();
             Closing += OnWindowClosing;
+            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false);   // VM owns the bound Title (+ "*" marker)
         }
 
         private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
         {
-            if (!ViewModel.HasUnsavedChanges) return;
+            if (!ViewModel.HasUnsavedChanges) { ViewModel.Detach(); return; }
             e.Cancel = true;
             if (await ViewModel.ConfirmCloseAsync())
             {
+                ViewModel.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

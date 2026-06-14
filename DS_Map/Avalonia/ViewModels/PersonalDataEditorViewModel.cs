@@ -175,9 +175,7 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var n in _typeNamesArr)    TypeNames.Add(n);
             foreach (var n in _abilityNamesArr) AbilityNames.Add(n);
             foreach (var n in _itemNamesArr)    ItemNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonGrowthCurve))) GrowthCurveNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonDexColor)))    DexColorNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonEggGroup)))    EggGroupNames.Add(n);
+            LoadEnumLabels();
 
             // LoadMon is called by parent PokemonEditorViewModel
         }
@@ -198,11 +196,45 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var n in _typeNamesArr)    TypeNames.Add(n);
             foreach (var n in _abilityNamesArr) AbilityNames.Add(n);
             foreach (var n in _itemNamesArr)    ItemNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonGrowthCurve))) GrowthCurveNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonDexColor)))    DexColorNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(PokemonEggGroup)))    EggGroupNames.Add(n);
+            LoadEnumLabels();
             // LoadMon is called by parent PokemonEditorViewModel after all child VMs are ready
         }
+
+        /// <summary>Growth-curve / egg-group / dex-color dropdowns come from the customisable LabelStore
+        /// (Tools ▸ Edit Dropdown Labels), so a ROM hack can rename/add them. Indices stay stable.</summary>
+        private void LoadEnumLabels()
+        {
+            DSPRE.Avalonia.Data.LabelStore.Sync(GrowthCurveNames, "pokemon_growth_curves");
+            DSPRE.Avalonia.Data.LabelStore.Sync(DexColorNames,    "pokemon_dex_colors");
+            DSPRE.Avalonia.Data.LabelStore.Sync(EggGroupNames,    "pokemon_egg_groups");
+            AppEvents.LabelsChanged -= OnLabelsChanged;   // idempotent (re)subscribe so live edits refresh
+            AppEvents.LabelsChanged += OnLabelsChanged;
+        }
+
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            LoadEnumLabels();
+            // Re-resolve each combo's displayed text (Avalonia keeps a stale SelectedItem when the selected
+            // entry is replaced in place). Toggle via the backing field only — no data write.
+            Repoke(_growthCurveIndex, nameof(GrowthCurveIndex), v => _growthCurveIndex = v);
+            Repoke(_dexColorIndex,    nameof(DexColorIndex),   v => _dexColorIndex = v);
+            Repoke(_eggGroup1Index,   nameof(EggGroup1Index),  v => _eggGroup1Index = v);
+            Repoke(_eggGroup2Index,   nameof(EggGroup2Index),  v => _eggGroup2Index = v);
+        }
+
+        // Blank the combo this frame, restore on a LATER frame so the ComboBox re-resolves its displayed
+        // item (a synchronous -1→v toggle gets coalesced into one update and the stale text stays).
+        private void Repoke(int current, string name, Action<int> set)
+        {
+            if (current < 0) return;
+            set(-1); OnPropertyChanged(name);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => { set(current); OnPropertyChanged(name); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>Unsubscribes from app-wide events; called when the host window closes.</summary>
+        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
 
         // ── Commands ──────────────────────────────────────────────────────────
 

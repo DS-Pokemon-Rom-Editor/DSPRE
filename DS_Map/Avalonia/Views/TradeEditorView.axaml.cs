@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views
             AvaloniaXamlLoader.Load(this);
             DataContext = new TradeEditorViewModel();
             Closing += OnWindowClosing;
+            EditorWindowChrome.Attach(this, (TradeEditorViewModel)DataContext, manageTitle: false);   // VM owns the bound Title (+ "*" marker)
         }
 
         private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
@@ -20,6 +21,7 @@ namespace DSPRE.Avalonia.Views
             e.Cancel = true;
             if (await VM.ConfirmCloseAsync())
             {
+                VM.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

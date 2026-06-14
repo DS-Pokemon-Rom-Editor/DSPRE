@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Views
                 {
                     var pos = pt.Position;
                     int axis = GlView.HitTestGizmoAxis((float)pos.X, (float)pos.Y);
-                    if (axis >= 0) _dragAxis = axis;                 // grab the handle — drag moves the building
+                    if (axis >= 0) _dragAxis = axis;                 // grab the handle drag moves the building
                     else { int b = PickBuilding(pos); if (b >= 0) VM.SelectedBuildingIndex = b; }
                 }
                 _lastPointer = pt.Position;
@@ -110,6 +110,7 @@ namespace DSPRE.Avalonia.Views
             if (vm == null) return;
             _setupDone = true;
 
+            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
             vm.MapLoaded += OnMapLoaded;
             vm.OverlayChanged += (_, _) => GlView.SetOverlay(VM.OverlayMesh, VM.OverlayVertexCount);
             vm.PropertyChanged += OnVmPropertyChanged;

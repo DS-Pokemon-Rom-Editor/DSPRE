@@ -121,6 +121,16 @@ namespace DSPRE.Avalonia.ViewModels
 
         public TrainerEditorViewModel(bool _) { }
 
+        private void OnNamesChanged(object sender, System.EventArgs e)
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, new System.Collections.Generic.List<string>(Helpers.GetTrainerNames()));
+        }
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+
         // ── Setup ─────────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
         {
@@ -145,6 +155,7 @@ namespace DSPRE.Avalonia.ViewModels
                 LoadAbilities();
 
                 foreach (var n in Helpers.GetTrainerNames()) TrainerNames.Add(n);
+                AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
 
                 string[] classNames = GetTrainerClassNames();
                 for (int i = 0; i < classNames.Length; i++) TrainerClassItems.Add($"[{i:D3}] {classNames[i]}");

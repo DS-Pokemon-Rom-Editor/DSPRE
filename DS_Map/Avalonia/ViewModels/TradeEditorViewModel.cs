@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var n in RomInfo.GetPokemonNames())  PokemonNames.Add(n);
             foreach (var n in RomInfo.GetAbilityNames())  AbilityNames.Add(n);
             foreach (var n in RomInfo.GetItemNames())     ItemNames.Add(n);
-            foreach (var n in System.Enum.GetNames(typeof(TradeOriginLang))) LanguageNames.Add(n);
+            ReloadLanguages();
 
             _tradeArchive = new TextArchive(GetTextBankIndex());
 
@@ -198,6 +198,40 @@ namespace DSPRE.Avalonia.ViewModels
 
             _loading = false;
         }
+
+        private void ReloadLanguages()
+        {
+            DSPRE.Avalonia.Data.LabelStore.Sync(LanguageNames, "trade_languages");
+            AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
+            AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
+        }
+        private void OnLabelsChanged(object sender, System.EventArgs e)
+        {
+            ReloadLanguages();
+            Repoke(_selectedLanguage, nameof(SelectedLanguage), v => _selectedLanguage = v);
+        }
+        private void OnNamesChanged(object sender, System.EventArgs e)
+        {
+            // Pokémon / ability / item names live in ROM text archives — refresh when the Text editor saves.
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(AbilityNames, RomInfo.GetAbilityNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    RomInfo.GetItemNames());
+            // Re-resolve the species / requested / ability / held-item combos' displayed text.
+            Repoke(_selectedSpecies,   nameof(SelectedSpecies),   v => _selectedSpecies = v);
+            Repoke(_selectedRequested, nameof(SelectedRequested), v => _selectedRequested = v);
+            Repoke(_selectedAbility,   nameof(SelectedAbility),   v => _selectedAbility = v);
+            Repoke(_selectedHeldItem,  nameof(SelectedHeldItem),  v => _selectedHeldItem = v);
+        }
+        private void Repoke(int current, string name, System.Action<int> set)
+        {
+            if (current < 0) return;
+            set(-1); OnPropertyChanged(name);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => { set(current); OnPropertyChanged(name); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; }
 
         // ----------------------------------------------------------------
         // Commands

@@ -19,10 +19,11 @@ namespace DSPRE.Avalonia.Views
 
         private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
         {
-            if (!ViewModel.HasUnsavedChanges) return;
+            if (!ViewModel.HasUnsavedChanges) { ViewModel.Detach(); return; }
             e.Cancel = true;
             if (await ViewModel.ConfirmCloseAsync())
             {
+                ViewModel.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

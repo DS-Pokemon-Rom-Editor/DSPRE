@@ -149,6 +149,7 @@ namespace DSPRE.Avalonia.ViewModels
             _curMachineMoves = TMEditor.ReadMachineMoves();
             _curMachinePalettes = TMEditor.ReadMachinePalettes();
             RefreshMachineMoveList();
+            AppEvents.NamesChanged += OnNamesChanged;   // live-refresh move/type names from the Text editor
         }
 
         // ----------------------------------------------------------------
@@ -329,6 +330,14 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var name in RomInfo.GetAttackNames())
                 MoveNames.Add(name);
         }
+
+        private void OnNamesChanged(object sender, System.EventArgs e)
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(TypeNames, RomInfo.GetTypeNames());
+        }
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
         private void PopulateTypeNames()
         {

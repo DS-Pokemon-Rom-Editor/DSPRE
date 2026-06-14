@@ -25,6 +25,7 @@ namespace DSPRE.Avalonia.Views
             if (canClose)
             {
                 // Detach handler to avoid re-entry, then close for real
+                ViewModel.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

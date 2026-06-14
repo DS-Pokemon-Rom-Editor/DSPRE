@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views
             DataContext = vm;
             InitializeComponent();
             this.FindControl<Button>("SaveAllButton").Click += (_, _) => VM?.SaveChanges();
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private void Export_Click(object sender, RoutedEventArgs e) => VM?.ExportToFile();
@@ -26,7 +27,9 @@ namespace DSPRE.Avalonia.Views
                     $"Discard unsaved changes to {VM.UnsavedChangesDescription}?",
                     "Unsaved Changes");
                 if (discard) { VM.DiscardChanges(); Close(); }
+                return;
             }
+            VM?.Detach();
             base.OnClosing(e);
         }
     }

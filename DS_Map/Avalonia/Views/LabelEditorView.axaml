@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.LabelEditorView"
+        x:DataType="vm:LabelEditorViewModel"
+        Title="Dropdown Labels"
+        Width="760" Height="600" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:LabelEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBlock Text="Scope:" VerticalAlignment="Center"/>
+        <RadioButton Content="This project" GroupName="scope" IsChecked="{Binding !GlobalScope}"/>
+        <RadioButton Content="Global"       GroupName="scope" IsChecked="{Binding GlobalScope}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="＋ Add entry" Click="Add_Click" IsEnabled="{Binding CanAddEntry}"/>
+        <Button Content="↺ Reset category" Click="Reset_Click"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <TabStrip DockPanel.Dock="Top" ItemsSource="{Binding GroupNames}" SelectedIndex="{Binding SelectedGroupIndex}"
+              Background="{DynamicResource Editor.PanelBg}" Margin="4,2,4,0"/>
+
+    <Grid ColumnDefinitions="220,*" Margin="6">
+      <DockPanel Grid.Column="0" Margin="0,0,6,0">
+        <TextBlock DockPanel.Dock="Top" Text="Categories" FontWeight="Bold" Margin="2,0,0,4"/>
+        <ListBox ItemsSource="{Binding CategoryNames}" SelectedIndex="{Binding SelectedCategoryIndex}"/>
+      </DockPanel>
+
+      <DockPanel Grid.Column="1">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding ScopeText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
+                   TextWrapping="Wrap" Margin="2,0,0,4"/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="44,*,150,150" Margin="2,2,2,2">
+          <TextBlock Grid.Column="0" Text="#"        FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="1" Text="Label"    FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="2" Text="Default"  FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="3" Text="{Binding AttrColumnHeader}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Editor.Subtle}"
+                     IsVisible="{Binding CurrentHasAttr}"/>
+        </Grid>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Entries}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LabelEntryRow">
+                <Grid ColumnDefinitions="44,*,150,150" Margin="0,1">
+                  <TextBlock Grid.Column="0" Text="{Binding Index}" VerticalAlignment="Center" FontFamily="Consolas" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBox     Grid.Column="1" Text="{Binding Value}" Margin="0,0,6,0"/>
+                  <TextBlock   Grid.Column="2" Text="{Binding DefaultHint}" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
+                  <ComboBox    Grid.Column="3" ItemsSource="{Binding AttrOptions}" SelectedIndex="{Binding AttrIndex}"
+                               IsVisible="{Binding HasAttr}" HorizontalAlignment="Stretch"
+                               ToolTip.Tip="What this method's Parameter means (Level / Item / Move / Species / Beauty)"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

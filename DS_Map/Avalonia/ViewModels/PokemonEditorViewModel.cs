@@ -39,8 +39,9 @@ namespace DSPRE.Avalonia.ViewModels
             private set => Set(ref _monIconBitmap, value);
         }
 
-        private string _title = "Pokémon Editor";
-        public string Title { get => _title; private set => Set(ref _title, value); }
+        private string _baseTitle = "Pokémon Editor";
+        public string Title => (HasUnsavedChanges ? "● " : "") + _baseTitle;
+        private void SetBaseTitle(string t) { _baseTitle = t; OnPropertyChanged(nameof(Title)); }
 
         // ─── Pokémon selector (shared) ────────────────────────────────────────────
         public int MaxMonIndex => PokemonNames.Count > 0 ? PokemonNames.Count - 1 : 0;
@@ -83,7 +84,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!Design.IsDesignMode) return;
 
-            Title = "Pokémon Editor (Preview)";
+            _baseTitle = "Pokémon Editor (Preview)";
             for (int i = 0; i < 10; i++) PokemonNames.Add($"{i:D3} Pokémon {i}");
 
             PersonalVM   = new PersonalDataEditorViewModel();
@@ -103,10 +104,11 @@ namespace DSPRE.Avalonia.ViewModels
             SpriteVM     = new PokemonSpriteEditorViewModel(true);
 
             // Propagate dirty change notifications so the window title can reflect unsaved state
-            PersonalVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(PersonalVM.HasUnsavedChanges))    OnPropertyChanged(nameof(HasUnsavedChanges)); };
-            LearnsetVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(LearnsetVM.HasUnsavedChanges))    OnPropertyChanged(nameof(HasUnsavedChanges)); };
-            EvolutionsVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EvolutionsVM.HasUnsavedChanges)) OnPropertyChanged(nameof(HasUnsavedChanges)); };
-            SpriteVM.PropertyChanged     += (_, e) => { if (e.PropertyName == nameof(SpriteVM.HasUnsavedChanges))     OnPropertyChanged(nameof(HasUnsavedChanges)); };
+            void OnChildDirty() { OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title)); }
+            PersonalVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(PersonalVM.HasUnsavedChanges))    OnChildDirty(); };
+            LearnsetVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(LearnsetVM.HasUnsavedChanges))    OnChildDirty(); };
+            EvolutionsVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EvolutionsVM.HasUnsavedChanges)) OnChildDirty(); };
+            SpriteVM.PropertyChanged     += (_, e) => { if (e.PropertyName == nameof(SpriteVM.HasUnsavedChanges))     OnChildDirty(); };
 
             _selectedMonIndex = initialMon;
             LoadMon(initialMon);
@@ -125,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Update title
             string name = (id >= 0 && id < PokemonNames.Count) ? PokemonNames[id] : $"#{id}";
-            Title = $"Pokémon Editor — #{id} {name}";
+            SetBaseTitle($"Pokémon Editor — #{id} {name}");
 
             // Sync all child VMs
             PersonalVM.LoadMon(id);
@@ -133,6 +135,9 @@ namespace DSPRE.Avalonia.ViewModels
             EvolutionsVM.LoadMon(id);
             SpriteVM.LoadMon(id);
         }
+
+        /// <summary>Releases app-wide event subscriptions held by child VMs; call when the window closes.</summary>
+        public void Detach() { EvolutionsVM?.Detach(); PersonalVM?.Detach(); }
 
         // ─── Save all ─────────────────────────────────────────────────────────────
         public void SaveAll()

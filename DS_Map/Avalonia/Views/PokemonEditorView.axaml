@@ -74,43 +74,43 @@
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[0].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[0].Param}" Minimum="0" Maximum="{Binding EvoRows[0].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[0].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[0].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[0].TargetIndex}" IsEnabled="{Binding EvoRows[0].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[0].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[1].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[1].Param}" Minimum="0" Maximum="{Binding EvoRows[1].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[1].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[1].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[1].TargetIndex}" IsEnabled="{Binding EvoRows[1].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[1].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[2].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[2].Param}" Minimum="0" Maximum="{Binding EvoRows[2].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[2].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[2].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[2].TargetIndex}" IsEnabled="{Binding EvoRows[2].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[2].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[3].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[3].Param}" Minimum="0" Maximum="{Binding EvoRows[3].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[3].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[3].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[3].TargetIndex}" IsEnabled="{Binding EvoRows[3].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[3].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[4].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[4].Param}" Minimum="0" Maximum="{Binding EvoRows[4].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[4].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[4].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[4].TargetIndex}" IsEnabled="{Binding EvoRows[4].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[4].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[5].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[5].Param}" Minimum="0" Maximum="{Binding EvoRows[5].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[5].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[5].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[5].TargetIndex}" IsEnabled="{Binding EvoRows[5].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[5].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
 <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
   <ComboBox  Grid.Column="0" ItemsSource="{Binding MethodNames}"  SelectedIndex="{Binding EvoRows[6].MethodIndex}"  MinWidth="180"/>
   <NumericUpDown Grid.Column="2" Value="{Binding EvoRows[6].Param}" Minimum="0" Maximum="{Binding EvoRows[6].ParamMaximum}" FormatString="0" Width="90" IsEnabled="{Binding EvoRows[6].IsParamEnabled}"/>
-  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[6].TargetIndex}" MinWidth="180"/>
+  <ComboBox  Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding EvoRows[6].TargetIndex}" IsEnabled="{Binding EvoRows[6].IsTargetEnabled}" MinWidth="180"/>
   <TextBlock Grid.Column="6" Text="{Binding EvoRows[6].ParamLabel}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
 </Grid>
             </StackPanel>

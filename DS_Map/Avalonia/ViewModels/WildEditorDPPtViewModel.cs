@@ -157,6 +157,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             foreach (var n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
+            AppEvents.NamesChanged += OnNamesChanged;   // live-refresh species names from the Text editor
 
             int count = EncounterNames.Count;
             if (encToOpen >= count) encToOpen = 0;
@@ -220,6 +221,11 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Private helpers ───────────────────────────────────────────────
+        private void OnNamesChanged(object sender, System.EventArgs e)
+            => DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, DSPRE.RomInfo.GetPokemonNames());
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+
         private void SetDirty() { if (_loading) return; _dirty = true;  Title = "Wild Pokémon Editor (DPPt)*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; Title = "Wild Pokémon Editor (DPPt)";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 

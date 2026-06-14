@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels
         public int MethodIndex
         {
             get => _methodIndex;
-            set { if (_methodIndex != value) { _methodIndex = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); OnPropertyChanged(nameof(IsParamEnabled)); OnPropertyChanged(nameof(ParamMaximum)); Changed?.Invoke(); } }
+            set { if (_methodIndex != value) { _methodIndex = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); OnPropertyChanged(nameof(IsParamEnabled)); OnPropertyChanged(nameof(ParamMaximum)); OnPropertyChanged(nameof(IsTargetEnabled)); Changed?.Invoke(); } }
         }
 
         private int _targetIndex;
@@ -42,15 +42,48 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (_param != value) { _param = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); Changed?.Invoke(); } }
         }
 
+        /// <summary>Forces the bound method combo to re-resolve its displayed text after the label list was
+        /// edited in place (Avalonia keeps a stale SelectedItem when the selected entry is replaced). Toggles
+        /// the index via the backing field only — no data write, no Changed event.</summary>
+        public void RefreshMethodDisplay()
+        {
+            if (_methodIndex < 0) return;
+            int v = _methodIndex;
+            _methodIndex = -1; OnPropertyChanged(nameof(MethodIndex));   // blank the combo this frame …
+            // … then restore on a LATER frame so the ComboBox actually re-resolves its displayed item
+            // (a synchronous -1→v toggle gets coalesced into one update and the stale text stays).
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _methodIndex = v; OnPropertyChanged(nameof(MethodIndex));
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        // The param's MEANING comes from the customisable LabelStore attribute (Tools ▸ Edit Dropdown
+        // Labels ▸ Evolution Methods ▸ Parameter), defaulting to EvolutionFile.evoDescriptions. This lets a
+        // ROM hack repurpose/add methods AND say what their parameter is (level / item / move / species…).
+        private EvolutionParamMeaning Meaning => _methodIndex < 0
+            ? EvolutionParamMeaning.Ignored
+            : (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", _methodIndex);
+
+        /// <summary>The target-species dropdown is disabled for a CustomNumber method — its parameter is a
+        /// raw value and the evolution target is handled by the hack's own code, not a picked species.</summary>
+        public bool IsTargetEnabled => Meaning != EvolutionParamMeaning.CustomNumber;
+
+        /// <summary>Re-raises the parameter-display properties after the param meaning was customised.</summary>
+        public void RefreshParam()
+        {
+            OnPropertyChanged(nameof(ParamLabel));
+            OnPropertyChanged(nameof(IsParamEnabled));
+            OnPropertyChanged(nameof(ParamMaximum));
+            OnPropertyChanged(nameof(IsTargetEnabled));
+        }
+
         public string ParamLabel
         {
             get
             {
-                if (_methodIndex < 0 || _methodIndex >= Enum.GetValues<EvolutionMethod>().Length)
-                    return string.Empty;
-                var method = (EvolutionMethod)_methodIndex;
-                if (!EvolutionFile.evoDescriptions.TryGetValue(method, out var meaning))
-                    return string.Empty;
+                if (_methodIndex < 0) return string.Empty;
+                var meaning = Meaning;
                 switch (meaning)
                 {
                     case EvolutionParamMeaning.FromLevel:
@@ -69,6 +102,8 @@ namespace DSPRE.Avalonia.ViewModels
                         return $"(Pokémon #{_param})";
                     case EvolutionParamMeaning.BeautyValue:
                         return $"Beauty >= {_param}";
+                    case EvolutionParamMeaning.CustomNumber:
+                        return $"Value: {_param}";
                     default:
                         return string.Empty;
                 }
@@ -79,11 +114,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             get
             {
-                if (_methodIndex < 0 || _methodIndex >= Enum.GetValues<EvolutionMethod>().Length)
-                    return 65535;
-                var method = (EvolutionMethod)_methodIndex;
-                if (!EvolutionFile.evoDescriptions.TryGetValue(method, out var meaning))
-                    return 65535;
+                if (_methodIndex < 0) return 65535;
+                var meaning = Meaning;
                 switch (meaning)
                 {
                     case EvolutionParamMeaning.FromLevel:
@@ -96,6 +128,8 @@ namespace DSPRE.Avalonia.ViewModels
                         return PokemonNames != null ? PokemonNames.Length - 1 : 65535;
                     case EvolutionParamMeaning.BeautyValue:
                         return 255;
+                    case EvolutionParamMeaning.CustomNumber:
+                        return short.MaxValue;   // raw value within the param field's (short) range
                     default:
                         return 65535;
                 }
@@ -106,12 +140,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             get
             {
-                if (_methodIndex < 0 || _methodIndex >= Enum.GetValues<EvolutionMethod>().Length)
-                    return false;
-                var method = (EvolutionMethod)_methodIndex;
-                if (!EvolutionFile.evoDescriptions.TryGetValue(method, out var meaning))
-                    return false;
-                return meaning != EvolutionParamMeaning.Ignored;
+                if (_methodIndex < 0) return false;
+                return Meaning != EvolutionParamMeaning.Ignored;
             }
         }
 
@@ -132,6 +162,19 @@ namespace DSPRE.Avalonia.ViewModels
         // ─── Lists ────────────────────────────────────────────────────────────────
         public ObservableCollection<string> MethodNames { get; } = new();
         public ObservableCollection<string> PokemonNames { get; } = new();
+
+        /// <summary>Evolution-method labels come from the customisable LabelStore (Tools ▸ Edit Dropdown
+        /// Labels) so a ROM hack can rename/add methods. Renames keep indices stable; combos refresh in place.</summary>
+        private void ReloadMethodNames() => DSPRE.Avalonia.Data.LabelStore.Sync(MethodNames, "evolution_methods");
+
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            ReloadMethodNames();
+            foreach (var row in EvoRows) { row.RefreshMethodDisplay(); row.RefreshParam(); }   // un-blank + re-read param meaning
+        }
+
+        /// <summary>Unsubscribes from app-wide events; call when the host window closes.</summary>
+        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
 
         // 7 evolution slots
         public ObservableCollection<EvolutionRowViewModel> EvoRows { get; } = new();
@@ -167,8 +210,11 @@ namespace DSPRE.Avalonia.ViewModels
             string[] itemNames = RomInfo.GetItemNames();
             string[] moveNames = RomInfo.GetAttackNames();
 
-            foreach (var n in Enum.GetNames<EvolutionMethod>()) MethodNames.Add(n);
+            ReloadMethodNames();
             foreach (var n in pokemonNames) PokemonNames.Add(n);
+
+            // Live refresh: when dropdown labels are customised (Tools ▸ Edit Dropdown Labels), reload.
+            AppEvents.LabelsChanged += OnLabelsChanged;
 
             for (int i = 0; i < EvolutionFile.numEvolutions; i++)
             {
