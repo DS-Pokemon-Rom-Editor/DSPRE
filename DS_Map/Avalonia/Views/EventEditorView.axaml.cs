@@ -90,6 +90,7 @@ namespace DSPRE.Avalonia.Views
             if (vm == null) return;
             _setupDone = true;
 
+            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
             vm.MarkersChanged += (_, _) => GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
             vm.SpritesChanged += (_, _) => GlView.SetSprites(VM.Sprites);

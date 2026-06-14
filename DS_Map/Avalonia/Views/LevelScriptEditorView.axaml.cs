@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public LevelScriptEditorView(LevelScriptEditorViewModel vm) : this() { DataContext = vm; }
+        public LevelScriptEditorView(LevelScriptEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {

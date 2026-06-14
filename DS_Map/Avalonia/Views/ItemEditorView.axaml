@@ -77,7 +77,7 @@
                             <StackPanel Spacing="4">
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Hold Effect</TextBlock>
                                 <ComboBox ItemsSource="{Binding HoldEffectNames}"
-                                          SelectedItem="{Binding HoldEffectName}"
+                                          SelectedIndex="{Binding HoldEffectIndex}"
                                           HorizontalAlignment="Stretch" MaxDropDownHeight="200"/>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center">Parameter:</TextBlock>
@@ -94,7 +94,7 @@
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Pocket</TextBlock>
                                 <TextBlock>Field Pocket:</TextBlock>
                                 <ComboBox ItemsSource="{Binding FieldPocketNames}"
-                                          SelectedItem="{Binding FieldPocketName}"
+                                          SelectedIndex="{Binding FieldPocketIndex}"
                                           HorizontalAlignment="Stretch"/>
                                 <TextBlock Margin="0,4,0,0">Battle Pockets:</TextBlock>
                                 <WrapPanel>
@@ -141,11 +141,11 @@
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Usage Functions</TextBlock>
                                 <TextBlock>Field Function:</TextBlock>
                                 <ComboBox ItemsSource="{Binding FieldUseFuncNames}"
-                                          SelectedItem="{Binding FieldUseFuncName}"
+                                          SelectedIndex="{Binding FieldUseFuncIndex}"
                                           HorizontalAlignment="Stretch" MaxDropDownHeight="200"/>
                                 <TextBlock>Battle Function:</TextBlock>
                                 <ComboBox ItemsSource="{Binding BattleUseFuncNames}"
-                                          SelectedItem="{Binding BattleUseFuncName}"
+                                          SelectedIndex="{Binding BattleUseFuncIndex}"
                                           HorizontalAlignment="Stretch"/>
                             </StackPanel>
                         </Border>
@@ -160,7 +160,7 @@
                         <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
                             <TextBlock Grid.Column="0" VerticalAlignment="Center">Natural Gift Type:</TextBlock>
                             <ComboBox Grid.Column="1" ItemsSource="{Binding NaturalGiftTypeNames}"
-                                      SelectedItem="{Binding NaturalGiftTypeName}" MaxDropDownHeight="200"/>
+                                      SelectedIndex="{Binding NaturalGiftTypeIndex}" MaxDropDownHeight="200"/>
                             <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Power:</TextBlock>
                             <NumericUpDown Grid.Column="3" Value="{Binding NaturalGiftPower}"
                                            Minimum="0" Maximum="255" FormatString="0" Width="90"/>

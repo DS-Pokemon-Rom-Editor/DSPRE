@@ -21,6 +21,7 @@ namespace DSPRE.Avalonia.Views
             e.Cancel = true;
             if (await VM.ConfirmCloseAsync())
             {
+                VM.Detach();
                 Closing -= OnWindowClosing;
                 Close();
             }

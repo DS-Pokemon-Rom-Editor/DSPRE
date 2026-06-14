@@ -45,11 +45,11 @@ namespace DSPRE.Avalonia.ViewModels
             _selectedIconImage   = IconImages[0];
             _selectedIconPalette = IconPalettes[0];
             _itemDataId          = 1;
-            _holdEffectName      = HoldEffectNames[0];
-            _fieldPocketName     = FieldPocketNames[0];
-            _fieldUseFuncName    = FieldUseFuncNames[0];
-            _battleUseFuncName   = BattleUseFuncNames[0];
-            _naturalGiftTypeName = NaturalGiftTypeNames[0];
+            _holdEffectIndex      = 0;
+            _fieldPocketIndex     = 0;
+            _fieldUseFuncIndex    = 0;
+            _battleUseFuncIndex   = 0;
+            _naturalGiftTypeIndex = 0;
             _price               = 500;
             _naturalGiftPower    = 80;
             _flingPower          = 60;
@@ -69,8 +69,8 @@ namespace DSPRE.Avalonia.ViewModels
             MaxItemDataId = GetItemDataFileCount() - 1;
             PopulateIconPaletteDropdowns();
 
-            if (RomInfo.gameFamily == GameFamilies.DP)
-                HoldEffectNames.Remove(nameof(HoldEffect.GiratinaBoost));
+            // (GiratinaBoost is no longer hidden for DP — the combos bind by index == byte value, so the
+            //  list must stay value-aligned. It's just a harmless unused entry there; relabel it if desired.)
 
             // Load first item
             _selectedItemIndex = 1;
@@ -153,15 +153,15 @@ namespace DSPRE.Avalonia.ViewModels
         public AvaBitmap ItemIcon { get => _itemIcon; private set => Set(ref _itemIcon, value); }
 
         // ── Hold Effect ──────────────────────────────────────────────────────
-        private string _holdEffectName;
-        public string HoldEffectName
+        private int _holdEffectIndex;
+        public int HoldEffectIndex
         {
-            get => _holdEffectName;
+            get => _holdEffectIndex;
             set
             {
-                if (!Set(ref _holdEffectName, value)) return;
-                if (_isLoading || _currentData == null || value == null) return;
-                if (Enum.TryParse<HoldEffect>(value, out var he)) _currentData.holdEffect = he;
+                if (!Set(ref _holdEffectIndex, value)) return;
+                if (_isLoading || _currentData == null || value < 0) return;
+                _currentData.holdEffect = (HoldEffect)value;
                 SetDataDirty();
             }
         }
@@ -180,15 +180,15 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Pocket ───────────────────────────────────────────────────────────
-        private string _fieldPocketName;
-        public string FieldPocketName
+        private int _fieldPocketIndex;
+        public int FieldPocketIndex
         {
-            get => _fieldPocketName;
+            get => _fieldPocketIndex;
             set
             {
-                if (!Set(ref _fieldPocketName, value)) return;
-                if (_isLoading || _currentData == null || value == null) return;
-                if (Enum.TryParse<FieldPocket>(value, out var fp)) _currentData.fieldPocket = fp;
+                if (!Set(ref _fieldPocketIndex, value)) return;
+                if (_isLoading || _currentData == null || value < 0) return;
+                _currentData.fieldPocket = (FieldPocket)value;
                 SetDataDirty();
             }
         }
@@ -253,15 +253,15 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Move Related ─────────────────────────────────────────────────────
-        private string _naturalGiftTypeName;
-        public string NaturalGiftTypeName
+        private int _naturalGiftTypeIndex;
+        public int NaturalGiftTypeIndex
         {
-            get => _naturalGiftTypeName;
+            get => _naturalGiftTypeIndex;
             set
             {
-                if (!Set(ref _naturalGiftTypeName, value)) return;
-                if (_isLoading || _currentData == null || value == null) return;
-                if (Enum.TryParse<NaturalGiftType>(value, out var ngt)) _currentData.naturalGiftType = ngt;
+                if (!Set(ref _naturalGiftTypeIndex, value)) return;
+                if (_isLoading || _currentData == null || value < 0) return;
+                _currentData.naturalGiftType = (NaturalGiftType)value;
                 SetDataDirty();
             }
         }
@@ -279,40 +279,28 @@ namespace DSPRE.Avalonia.ViewModels
         public int PluckEffect      { get => _pluckEffect;      set { if (Set(ref _pluckEffect,      value) && !_isLoading && _currentData != null) { _currentData.PluckEffect      = (byte)value; SetDataDirty(); } } }
 
         // ── Functions ────────────────────────────────────────────────────────
-        private string _fieldUseFuncName;
-        public string FieldUseFuncName
+        private int _fieldUseFuncIndex;
+        public int FieldUseFuncIndex
         {
-            get => _fieldUseFuncName;
+            get => _fieldUseFuncIndex;
             set
             {
-                if (!Set(ref _fieldUseFuncName, value)) return;
-                if (_isLoading || _currentData == null || value == null) return;
-                if (value.StartsWith("Unknown (") && value.EndsWith(")"))
-                {
-                    if (byte.TryParse(value.Substring(9, value.Length - 10), out byte raw))
-                        _currentData.fieldUseFunc = (FieldUseFunc)raw;
-                }
-                else if (Enum.TryParse<FieldUseFunc>(value, out var fuf))
-                    _currentData.fieldUseFunc = fuf;
+                if (!Set(ref _fieldUseFuncIndex, value)) return;
+                if (_isLoading || _currentData == null || value < 0) return;
+                _currentData.fieldUseFunc = (FieldUseFunc)value;
                 SetDataDirty();
             }
         }
 
-        private string _battleUseFuncName;
-        public string BattleUseFuncName
+        private int _battleUseFuncIndex;
+        public int BattleUseFuncIndex
         {
-            get => _battleUseFuncName;
+            get => _battleUseFuncIndex;
             set
             {
-                if (!Set(ref _battleUseFuncName, value)) return;
-                if (_isLoading || _currentData == null || value == null) return;
-                if (value.StartsWith("Unknown (") && value.EndsWith(")"))
-                {
-                    if (byte.TryParse(value.Substring(9, value.Length - 10), out byte raw))
-                        _currentData.battleUseFunc = (BattleUseFunc)raw;
-                }
-                else if (Enum.TryParse<BattleUseFunc>(value, out var buf))
-                    _currentData.battleUseFunc = buf;
+                if (!Set(ref _battleUseFuncIndex, value)) return;
+                if (_isLoading || _currentData == null || value < 0) return;
+                _currentData.battleUseFunc = (BattleUseFunc)value;
                 SetDataDirty();
             }
         }
@@ -443,19 +431,18 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void PopulateFromCurrentData()
         {
-            // Hold effect — may be unknown value
-            string heName = Enum.IsDefined(typeof(HoldEffect), _currentData.holdEffect)
-                ? _currentData.holdEffect.ToString()
-                : $"Unknown ({(int)_currentData.holdEffect})";
-            if (!HoldEffectNames.Contains(heName)) HoldEffectNames.Add(heName);
-            _holdEffectName  = heName;
+            // Hold effect — combo bound by index == byte value; extend the list if the value is beyond the
+            // known labels (a hacked/undefined effect) so it still has a slot.
+            _holdEffectIndex = (int)_currentData.holdEffect;
+            EnsureCovers(HoldEffectNames, "item_hold_effects", _holdEffectIndex);
             _holdEffectParam = _currentData.HoldEffectParam;
-            OnPropertyChanged(nameof(HoldEffectName));
+            OnPropertyChanged(nameof(HoldEffectIndex));
             OnPropertyChanged(nameof(HoldEffectParam));
 
             // Field pocket
-            _fieldPocketName = _currentData.fieldPocket.ToString();
-            OnPropertyChanged(nameof(FieldPocketName));
+            _fieldPocketIndex = (int)_currentData.fieldPocket;
+            EnsureCovers(FieldPocketNames, "item_field_pockets", _fieldPocketIndex);
+            OnPropertyChanged(nameof(FieldPocketIndex));
 
             // Battle pocket flags
             var bp = _currentData.battlePocket;
@@ -484,29 +471,26 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(Price));
 
             // Move related
-            _naturalGiftTypeName = _currentData.naturalGiftType.ToString();
+            _naturalGiftTypeIndex = (int)_currentData.naturalGiftType;
+            EnsureCovers(NaturalGiftTypeNames, "item_natural_gift", _naturalGiftTypeIndex);
             _naturalGiftPower    = _currentData.NaturalGiftPower;
             _flingEffect         = _currentData.FlingEffect;
             _flingPower          = _currentData.FlingPower;
             _pluckEffect         = _currentData.PluckEffect;
-            OnPropertyChanged(nameof(NaturalGiftTypeName));
+            OnPropertyChanged(nameof(NaturalGiftTypeIndex));
             OnPropertyChanged(nameof(NaturalGiftPower));
             OnPropertyChanged(nameof(FlingEffect));
             OnPropertyChanged(nameof(FlingPower));
             OnPropertyChanged(nameof(PluckEffect));
 
-            // Functions — may have unknown values
-            _fieldUseFuncName = Enum.IsDefined(typeof(FieldUseFunc), _currentData.fieldUseFunc)
-                ? _currentData.fieldUseFunc.ToString()
-                : $"Unknown ({(int)_currentData.fieldUseFunc})";
-            if (!FieldUseFuncNames.Contains(_fieldUseFuncName)) FieldUseFuncNames.Add(_fieldUseFuncName);
-            OnPropertyChanged(nameof(FieldUseFuncName));
+            // Functions — combos bound by index == byte value; extend lists for unknown/raw values.
+            _fieldUseFuncIndex = (int)_currentData.fieldUseFunc;
+            EnsureCovers(FieldUseFuncNames, "item_field_use", _fieldUseFuncIndex);
+            OnPropertyChanged(nameof(FieldUseFuncIndex));
 
-            _battleUseFuncName = Enum.IsDefined(typeof(BattleUseFunc), _currentData.battleUseFunc)
-                ? _currentData.battleUseFunc.ToString()
-                : $"Unknown ({(int)_currentData.battleUseFunc})";
-            if (!BattleUseFuncNames.Contains(_battleUseFuncName)) BattleUseFuncNames.Add(_battleUseFuncName);
-            OnPropertyChanged(nameof(BattleUseFuncName));
+            _battleUseFuncIndex = (int)_currentData.battleUseFunc;
+            EnsureCovers(BattleUseFuncNames, "item_battle_use", _battleUseFuncIndex);
+            OnPropertyChanged(nameof(BattleUseFuncIndex));
 
             // Party params
             var p = _currentData.PartyUseParam;
@@ -613,14 +597,55 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        // Item enum dropdowns now bind by SelectedIndex == raw byte value and pull their labels from the
+        // customisable LabelStore (Tools ▸ Edit Dropdown Labels). Synced in place to keep the selection.
         private void PopulateEnumCollections()
         {
-            foreach (var n in Enum.GetNames(typeof(HoldEffect)))    HoldEffectNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(FieldPocket)))   FieldPocketNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(FieldUseFunc)))  FieldUseFuncNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(BattleUseFunc))) BattleUseFuncNames.Add(n);
-            foreach (var n in Enum.GetNames(typeof(NaturalGiftType))) NaturalGiftTypeNames.Add(n);
+            DSPRE.Avalonia.Data.LabelStore.Sync(HoldEffectNames,      "item_hold_effects");
+            DSPRE.Avalonia.Data.LabelStore.Sync(FieldPocketNames,     "item_field_pockets");
+            DSPRE.Avalonia.Data.LabelStore.Sync(FieldUseFuncNames,    "item_field_use");
+            DSPRE.Avalonia.Data.LabelStore.Sync(BattleUseFuncNames,   "item_battle_use");
+            DSPRE.Avalonia.Data.LabelStore.Sync(NaturalGiftTypeNames, "item_natural_gift");
+            AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
         }
+
+        /// <summary>Extends a combo list so it has a slot at <paramref name="index"/> (for a raw byte value
+        /// beyond the known labels), labelling new slots from the LabelStore (overridable / "Singular N").</summary>
+        private static void EnsureCovers(System.Collections.ObjectModel.ObservableCollection<string> coll, string key, int index)
+        {
+            while (coll.Count <= index && coll.Count < 256)
+                coll.Add(DSPRE.Avalonia.Data.LabelStore.GetLabel(key, coll.Count));
+        }
+
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            PopulateEnumCollections();   // re-sync labels
+            if (_currentData != null)    // re-extend for the current item's (possibly raw) values
+            {
+                EnsureCovers(HoldEffectNames,      "item_hold_effects",  (int)_currentData.holdEffect);
+                EnsureCovers(FieldPocketNames,     "item_field_pockets", (int)_currentData.fieldPocket);
+                EnsureCovers(FieldUseFuncNames,    "item_field_use",     (int)_currentData.fieldUseFunc);
+                EnsureCovers(BattleUseFuncNames,   "item_battle_use",    (int)_currentData.battleUseFunc);
+                EnsureCovers(NaturalGiftTypeNames, "item_natural_gift",  (int)_currentData.naturalGiftType);
+            }
+            Repoke(_holdEffectIndex,      nameof(HoldEffectIndex),      v => _holdEffectIndex = v);
+            Repoke(_fieldPocketIndex,     nameof(FieldPocketIndex),     v => _fieldPocketIndex = v);
+            Repoke(_fieldUseFuncIndex,    nameof(FieldUseFuncIndex),    v => _fieldUseFuncIndex = v);
+            Repoke(_battleUseFuncIndex,   nameof(BattleUseFuncIndex),   v => _battleUseFuncIndex = v);
+            Repoke(_naturalGiftTypeIndex, nameof(NaturalGiftTypeIndex), v => _naturalGiftTypeIndex = v);
+        }
+
+        private void Repoke(int current, string name, Action<int> set)
+        {
+            if (current < 0) return;
+            set(-1); OnPropertyChanged(name);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => { set(current); OnPropertyChanged(name); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>Unsubscribes from app-wide events; called when the editor window closes.</summary>
+        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
 
         private static int GetItemDataFileCount() =>
             Directory.GetFiles(RomInfo.gameDirs[DirNames.itemData].unpackedDir, "*", SearchOption.TopDirectoryOnly).Length;

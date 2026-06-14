@@ -162,9 +162,9 @@ namespace DSPRE.Avalonia.ViewModels
 
             foreach (var n in moveNames) MoveNames.Add(n);
             foreach (var n in typeNames) TypeNames.Add(n);
-            foreach (var name in Enum.GetNames(typeof(MoveSplit))) SplitNames.Add(name);
+            // Split / contest dropdowns come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels).
+            ReloadSplitContest();
             foreach (var r in AttackRangeDescriptions) RangeItems.Add($"{r.name}: {r.description}");
-            foreach (var name in Enum.GetNames(typeof(ContestCondition))) ContestNames.Add(name);
 
             for (int i = 0; i < battleSeqFiles.Length; i++)
                 BattleSeqItems.Add(i < db.Length && db[i] != null ? $"{i:D3} - {db[i]}" : $"{i:D3} - Undocumented");
@@ -184,6 +184,37 @@ namespace DSPRE.Avalonia.ViewModels
                 LoadMove(1);
             }
         }
+
+        private void ReloadSplitContest()
+        {
+            DSPRE.Avalonia.Data.LabelStore.Sync(SplitNames,   "move_split");
+            DSPRE.Avalonia.Data.LabelStore.Sync(ContestNames, "move_contest_conditions");
+            AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
+            AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
+        }
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            ReloadSplitContest();
+            // Re-resolve the combos' displayed text after the label lists were replaced in place.
+            Repoke(_splitIndex,   nameof(SplitIndex),   v => _splitIndex = v);
+            Repoke(_contestIndex, nameof(ContestIndex), v => _contestIndex = v);
+        }
+        private void OnNamesChanged(object sender, EventArgs e)
+        {
+            // Move names live in a ROM text archive — refresh when the Text editor saves (the move list is a
+            // ListBox, which re-renders replaced items fine, so no combo re-poke needed here).
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+        }
+        private void Repoke(int current, string name, Action<int> set)
+        {
+            if (current < 0) return;
+            set(-1); OnPropertyChanged(name);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => { set(current); OnPropertyChanged(name); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; }
 
         // ── Commands ──────────────────────────────────────────────────────────
 

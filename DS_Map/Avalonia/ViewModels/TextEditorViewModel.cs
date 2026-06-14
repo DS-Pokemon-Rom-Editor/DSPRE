@@ -360,6 +360,8 @@ namespace DSPRE.Avalonia.ViewModels
             StatusText = $"Saved Text Archive {_current.ID}.";
             if (_current.ID == locationNamesTextNumber)
                 ReloadHeaderEditorLocations(_current.messages);
+            // Names (Pokémon/item/move/…) come from text archives — tell open editors to refresh their combos.
+            AppEvents.RaiseNamesChanged();
         }
 
         // ── Import / export ──────────────────────────────────────────────────────

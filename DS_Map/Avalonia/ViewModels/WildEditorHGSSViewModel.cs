@@ -85,6 +85,9 @@ namespace DSPRE.Avalonia.ViewModels
             _dirPath = dirPath;
             foreach (var n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
+            // Live-refresh the species list when names are edited in the Text editor (grid cells re-render
+            // in place, so no per-combo re-poke is needed here).
+            AppEvents.NamesChanged += OnNamesChanged;
 
             int count = EncounterNames.Count;
             if (encToOpen >= count) encToOpen = 0;
@@ -150,6 +153,11 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Private helpers ───────────────────────────────────────────────
+        private void OnNamesChanged(object sender, System.EventArgs e)
+            => DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, DSPRE.RomInfo.GetPokemonNames());
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+
         private void SetDirty() { if (_loading) return; _dirty = true;  Title = "Wild Pokémon Editor (HGSS)*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; Title = "Wild Pokémon Editor (HGSS)";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 

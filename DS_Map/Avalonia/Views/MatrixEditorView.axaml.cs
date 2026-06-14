@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public MatrixEditorView(MatrixEditorViewModel vm) : this() { DataContext = vm; }
+        public MatrixEditorView(MatrixEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private void SetCellInfo(string which, (int col, int row, int value) e)
         {

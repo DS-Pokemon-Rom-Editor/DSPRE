@@ -13,6 +13,14 @@
 				<MergeResourceInclude Source="Themes/Colours/SoftDark.axaml"/>
 				<MergeResourceInclude Source="Themes/ControlColours.axaml"/>
 			</ResourceDictionary.MergedDictionaries>
+			<!-- Compatibility aliases: a few views (and the old DataGrid theme) reference Fluent
+			     "SystemControl*" resource keys that SimpleTheme doesn't define. Map them to the
+			     SoftDark palette so StaticResource lookups don't throw KeyNotFoundException. -->
+			<SolidColorBrush x:Key="SystemControlTransparentBrush"             Color="Transparent"/>
+			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush"    Color="#A8A8A8"/>
+			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#555555"/>
+			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="#3C3C3C"/>
+
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
 					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#F5F5F5"/>
@@ -41,7 +49,7 @@
 		<!-- DSPRE SoftDark control themes (vendored from WPFDarkTheme, MIT) over Avalonia SimpleTheme. -->
 		<SimpleTheme/>
 		<StyleInclude Source="Themes/Controls.axaml"/>
-		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
 		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
 
 		<!-- ── Crisp, consistent control sizing across every editor (from feature/avalonia) ── -->

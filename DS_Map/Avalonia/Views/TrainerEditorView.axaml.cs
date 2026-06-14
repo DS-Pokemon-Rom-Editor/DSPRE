@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Views
         public TrainerEditorView(TrainerEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -79,9 +80,10 @@ namespace DSPRE.Avalonia.Views
                 e.Cancel = true;
                 bool discard = await DialogHelper.AskYesNo(
                     $"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
+                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); VM.Detach(); Close(); }
                 return;
             }
+            VM?.Detach();
             base.OnClosing(e);
         }
     }

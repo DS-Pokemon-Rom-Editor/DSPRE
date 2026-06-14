@@ -20,6 +20,7 @@ namespace DSPRE.Avalonia.Views
         public TextEditorView(TextEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm, manageTitle: false);   // VM owns the bound Title (+ " *" marker)
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)

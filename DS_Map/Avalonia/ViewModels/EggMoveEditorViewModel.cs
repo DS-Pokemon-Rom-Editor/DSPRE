@@ -192,12 +192,21 @@ namespace DSPRE.Avalonia.ViewModels
 
             foreach (var n in _monNames)  MonNames.Add(n);
             foreach (var n in _moveNames) MoveNames.Add(n);
+            AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
 
             PopulateEggMoveData();
             RefreshMonList();
             UpdateEntryCountLabel();
             UpdateListSizeLabel();
         }
+
+        private void OnNamesChanged(object sender, System.EventArgs e)
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(MonNames,  RomInfo.GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+        }
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
         // ----------------------------------------------------------------
         // Commands (called from code-behind)

@@ -62,9 +62,16 @@
       </MenuItem>
 
       <MenuItem Header="_Tools">
+        <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P"
+                  ToolTip.Tip="Quick-open: jump to any editor by name"/>
+        <Separator/>
         <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"  IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
+        <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods) — per project or global"/>
         <Separator/>
         <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"/>
         <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
