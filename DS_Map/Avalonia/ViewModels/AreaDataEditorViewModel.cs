@@ -37,6 +37,9 @@ namespace DSPRE.Avalonia.ViewModels
         private int _selectedIndex = -1;
         public int SelectedIndex { get => _selectedIndex; set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadArea(value); } }
 
+        /// <summary>Area data entry to select once loaded (e.g. from the Header editor's "Open" button).</summary>
+        public int InitialIndex { get; set; }
+
         private decimal _mapTileset, _buildingsTileset, _dynamicTextureType, _lightType;
         public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) _area.mapTileset = (ushort)value; } }
         public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) _area.buildingsTileset = (ushort)value; } }
@@ -68,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels
                 int count = Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir).Length;
                 for (int i = 0; i < count; i++) AreaNames.Add("Area Data " + i);
                 StatusText = $"{count} area data entries.";
-                if (count > 0) SelectedIndex = 0;
+                if (count > 0) SelectedIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
             catch (Exception ex)
             {

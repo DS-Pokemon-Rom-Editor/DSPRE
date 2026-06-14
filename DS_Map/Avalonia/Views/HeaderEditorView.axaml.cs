@@ -34,6 +34,9 @@ namespace DSPRE.Avalonia.Views
             if (owner == null) return;
             _setupDone = true;
             await vm.SetupAsync(owner);
+            // Location names live in a text archive editable in another editor window; refresh folder
+            // labels when this window regains focus (no-op when nothing changed).
+            owner.Activated += (_, _) => vm.ReloadLocationNames();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
@@ -43,14 +46,18 @@ namespace DSPRE.Avalonia.Views
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void GoTo_Click(object sender, RoutedEventArgs e) => VM?.GoTo();
+        private void ExpandAll_Click(object sender, RoutedEventArgs e) => VM?.ExpandAllFolders();
+        private void CollapseAll_Click(object sender, RoutedEventArgs e) => VM?.CollapseAllFolders();
         private async void AddHeader_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddHeaderAsync());
         private async void RemoveHeader_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveHeaderAsync());
 
         private void OpenMatrix_Click(object sender, RoutedEventArgs e) => VM?.OpenMatrix();
+        private void OpenAreaData_Click(object sender, RoutedEventArgs e) => VM?.OpenAreaData();
         private void OpenEvents_Click(object sender, RoutedEventArgs e) => VM?.OpenEvents();
         private void OpenScripts_Click(object sender, RoutedEventArgs e) => VM?.OpenScripts();
         private void OpenLevelScripts_Click(object sender, RoutedEventArgs e) => VM?.OpenLevelScripts();
         private void OpenTexts_Click(object sender, RoutedEventArgs e) => VM?.OpenTexts();
+        private void OpenEncounters_Click(object sender, RoutedEventArgs e) => VM?.OpenEncounters();
 
         private static async Task Safe(Task task)
         {

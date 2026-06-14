@@ -200,10 +200,10 @@ namespace DSPRE.Avalonia
             new NsbtxEditorView(new NsbtxEditorViewModel(true)).Show();
         }
 
-        public static void OpenAreaDataEditor()
+        public static void OpenAreaDataEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new AreaDataEditorView(new AreaDataEditorViewModel(true)).Show();
+            new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         public static void OpenOverlayEditor()
@@ -301,7 +301,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Overlay Editor",        Run = OpenOverlayEditor },
             new() { Name = "Overworld Sprites (BTX)", Run = OpenOverworldEditor },
             new() { Name = "NSBTX Texture Editor",  Keywords = "texture", Run = OpenNsbtxEditor },
-            new() { Name = "Area Data Editor",      Keywords = "tileset", Run = OpenAreaDataEditor },
+            new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Special Encounters",    Keywords = "bug contest marsh honey safari", Run = OpenEncountersEditor },
             new() { Name = "Headbutt Editor",       Keywords = "tree hgss", Run = OpenHeadbuttEncounterEditor },

@@ -11,6 +11,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
+using DSPRE.Avalonia.Models;
 using DSPRE.Editors;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
@@ -65,7 +66,6 @@ namespace DSPRE.Avalonia.ViewModels
         private List<string> _internalNames = new List<string>();
         private List<string> _headerListNames = new List<string>();
 
-        public ObservableCollection<string> HeaderItems { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> LocationNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AreaSettingsItems { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AreaIconItems { get; } = new ObservableCollection<string>();
@@ -87,13 +87,32 @@ namespace DSPRE.Avalonia.ViewModels
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        // ── Common scalar fields ─────────────────────────────────────────────────────
-        private int _selectedHeaderIndex = -1;
-        public int SelectedHeaderIndex
+        // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
+        public ObservableCollection<HeaderTreeFolder> TreeFolders { get; } = new ObservableCollection<HeaderTreeFolder>();
+        private List<int> _locationIndexByHeader = new List<int>();
+
+        private HeaderTreeNode _selectedTreeNode;
+        public HeaderTreeNode SelectedTreeNode
         {
-            get => _selectedHeaderIndex;
-            set { if (Set(ref _selectedHeaderIndex, value) && !_suppress && value >= 0) LoadHeader(value); }
+            get => _selectedTreeNode;
+            set
+            {
+                if (!Set(ref _selectedTreeNode, value) || _suppress) return;
+                if (value is HeaderTreeLeaf leaf) { SelectedHeaderId = leaf.HeaderId; LoadHeader(leaf.HeaderId); }
+            }
         }
+
+        private ushort _selectedHeaderId;
+        public ushort SelectedHeaderId { get => _selectedHeaderId; private set => Set(ref _selectedHeaderId, value); }
+
+        private string _treeFilterText = "";
+        public string TreeFilterText
+        {
+            get => _treeFilterText;
+            set { if (Set(ref _treeFilterText, value)) RebuildTree(); }
+        }
+
+        // ── Common scalar fields ─────────────────────────────────────────────────────
 
         private string _internalName = "";
         public string InternalName
@@ -113,8 +132,13 @@ namespace DSPRE.Avalonia.ViewModels
         private decimal _levelScriptId; public decimal LevelScriptId { get => _levelScriptId; set { if (Set(ref _levelScriptId, value)) Apply(h => h.levelScriptID = (ushort)value); } }
         private decimal _eventFileId; public decimal EventFileId { get => _eventFileId; set { if (Set(ref _eventFileId, value)) Apply(h => h.eventFileID = (ushort)value); } }
         private decimal _textArchiveId; public decimal TextArchiveId { get => _textArchiveId; set { if (Set(ref _textArchiveId, value)) Apply(h => h.textArchiveID = (ushort)value); } }
-        private decimal _wildPokemon; public decimal WildPokemon { get => _wildPokemon; set { if (Set(ref _wildPokemon, value)) Apply(h => h.wildPokemon = (ushort)value); } }
+        private decimal _wildPokemon; public decimal WildPokemon { get => _wildPokemon; set { if (Set(ref _wildPokemon, value)) { Apply(h => h.wildPokemon = (ushort)value); OnPropertyChanged(nameof(CanOpenEncounters)); } } }
         private decimal _battleBackground; public decimal BattleBackground { get => _battleBackground; set { if (Set(ref _battleBackground, value)) Apply(h => h.battleBackground = (byte)value); } }
+
+        // No-encounter sentinel (0xffff DPPt / 0xff HGSS): the wild editor clamps it to file 0, so the
+        // "Open" affordance is disabled/no-op there rather than silently opening an unrelated file.
+        private int NullEncounterId => IsHgss ? MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID : MapHeader.DPPT_NULL_ENCOUNTER_FILE_ID;
+        public bool CanOpenEncounters => _header != null && (int)_wildPokemon != NullEncounterId;
 
         // ── Camera (combo + numeric + image) ─────────────────────────────────────────
         private decimal _cameraValue;
@@ -222,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => _header != null ? $"Header {_header.ID}" : "Header Editor";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedHeaderIndex >= 0) LoadHeader(_selectedHeaderIndex); }
+        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); LoadHeader(SelectedHeaderId); }
         private void SetDirty() { if (_suppress || _dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -230,7 +254,9 @@ namespace DSPRE.Avalonia.ViewModels
         public HeaderEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            HeaderItems.Add("000 -   DESIGN");
+            var folder = new HeaderTreeFolder { DisplayName = "Jubilife City", IsExpanded = true };
+            folder.Children.Add(new HeaderTreeLeaf { HeaderId = 3, DisplayName = "003 -   JUBILIFE_CITY" });
+            TreeFolders.Add(folder);
         }
 
         public HeaderEditorViewModel(bool _) { }
@@ -254,11 +280,12 @@ namespace DSPRE.Avalonia.ViewModels
                 BuildFamilyCombos();
                 LoadLocationNames();
 
-                HeaderItems.Clear();
-                foreach (var n in _headerListNames) HeaderItems.Add(n);
+                LoadLocationIndices();
+                SelectedHeaderId = FindInitialHeaderId();   // so only this header's folder opens on load
+                RebuildTree();
 
-                StatusText = $"Loaded {HeaderItems.Count} headers ({gameFamily}).";
-                if (HeaderItems.Count > 0) SelectedHeaderIndex = 0;
+                StatusText = $"Loaded {_headerListNames.Count} headers ({gameFamily}).";
+                SelectHeader(SelectedHeaderId);
             }
             catch (FileNotFoundException)
             {
@@ -321,21 +348,171 @@ namespace DSPRE.Avalonia.ViewModels
             catch { /* leave empty */ }
         }
 
-        // ── Load a header into the fields ───────────────────────────────────────────
-        private void LoadHeader(int index)
+        // ── Sidebar tree: grouping, search, selection ───────────────────────────────
+
+        /// <summary>Reads each header's location-name index once (for grouping + initial selection).</summary>
+        private void LoadLocationIndices()
         {
-            if (index < 0 || index >= HeaderItems.Count) return;
-            if (!ushort.TryParse(HeaderItems[index].Substring(0, 3), out ushort headerNumber)) return;
+            int mystery = FindMysteryZoneIndex();
+            _locationIndexByHeader = new List<int>(_headerListNames.Count);
+            for (ushort id = 0; id < _headerListNames.Count; id++)
+                _locationIndexByHeader.Add(
+                    MapHeader.TryReadLocationNameIndex(id, _dynamicHeaders, out int idx) ? idx : mystery);
+        }
+
+        private int FindMysteryZoneIndex()
+        {
+            for (int i = 0; i < LocationNames.Count; i++)
+                if (LocationNames[i] != null && LocationNames[i].Trim().EndsWith("Mystery Zone", StringComparison.OrdinalIgnoreCase))
+                    return i;
+            return 0;
+        }
+
+        private ushort FindInitialHeaderId()
+        {
+            int mystery = FindMysteryZoneIndex();
+            for (ushort id = 0; id < _locationIndexByHeader.Count; id++)
+                if (_locationIndexByHeader[id] != mystery)
+                    return id;
+            return 0;
+        }
+
+        private string FolderNameFor(ushort id)
+        {
+            int idx = id < _locationIndexByHeader.Count ? _locationIndexByHeader[id] : -1;
+            string name = (idx >= 0 && idx < LocationNames.Count) ? (LocationNames[idx] ?? "").Trim() : "";
+            if (name.StartsWith("Route ", StringComparison.OrdinalIgnoreCase)) return "Routes";
+            return string.IsNullOrEmpty(name) ? "Unknown" : name;
+        }
+
+        /// <summary>
+        /// Rebuilds <see cref="TreeFolders"/> from the header list, grouped by location (all "Route *"
+        /// in one "Routes" bucket); folders and leaves come out ascending by ID. A non-empty
+        /// <see cref="TreeFilterText"/> keeps only matching headers and expands every folder; an empty
+        /// one collapses all but the selected header's folder. Selection is preserved.
+        /// </summary>
+        private void RebuildTree()
+        {
+            ushort keep = SelectedHeaderId;
+            string q = (TreeFilterText ?? "").Trim();
+            bool filtering = q.Length > 0;
+
+            var byName = new Dictionary<string, HeaderTreeFolder>(StringComparer.OrdinalIgnoreCase);
+            var order = new List<HeaderTreeFolder>();   // first-seen order == ascending min ID
+
+            for (ushort id = 0; id < _headerListNames.Count; id++)
+            {
+                string label = _headerListNames[id];
+                string folderName = FolderNameFor(id);
+
+                if (filtering
+                    && label.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
+                    && folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
+                    && id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
+                if (!byName.TryGetValue(folderName, out var folder))
+                {
+                    folder = new HeaderTreeFolder { DisplayName = folderName, IsExpanded = filtering };
+                    byName[folderName] = folder;
+                    order.Add(folder);
+                }
+                folder.Children.Add(new HeaderTreeLeaf { HeaderId = id, DisplayName = label });
+            }
+
+            _suppress = true;
+            TreeFolders.Clear();
+            foreach (var folder in order.OrderBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+                TreeFolders.Add(folder);
+            if (!filtering) ExpandFolderContaining(keep);
+            SelectedTreeNode = FindLeaf(keep);   // re-assert highlight (suppressed: no reload)
+            _suppress = false;
+        }
+
+        public void ExpandAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = true; }
+        public void CollapseAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = false; }
+
+        /// <summary>Brings a header into view and selects it (initial load, Go-to, add/remove).</summary>
+        public void SelectHeader(ushort headerId)
+        {
+            ExpandFolderContaining(headerId);
+            _suppress = true;
+            SelectedTreeNode = FindLeaf(headerId);
+            _suppress = false;
+            SelectedHeaderId = headerId;
+            LoadHeader(headerId);
+        }
+
+        private void ExpandFolderContaining(ushort headerId)
+        {
+            foreach (var folder in TreeFolders)
+                if (folder.Children.OfType<HeaderTreeLeaf>().Any(l => l.HeaderId == headerId))
+                {
+                    folder.IsExpanded = true;
+                    return;
+                }
+        }
+
+        private HeaderTreeLeaf FindLeaf(ushort headerId)
+        {
+            foreach (var folder in TreeFolders)
+            {
+                var leaf = folder.Children.OfType<HeaderTreeLeaf>().FirstOrDefault(l => l.HeaderId == headerId);
+                if (leaf != null) return leaf;
+            }
+            return null;
+        }
+
+        /// <summary>Repoints a header to a new location folder and regroups (no-op if unchanged).</summary>
+        private void UpdateHeaderLocationInTree(ushort id, int locIndex)
+        {
+            if (id >= _locationIndexByHeader.Count || _locationIndexByHeader[id] == locIndex) return;
+            _locationIndexByHeader[id] = locIndex;
+            RebuildTree();
+        }
+
+        private int CurrentHeaderLocationIndex()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP: return ((HeaderDP)_header).locationName;
+                case GameFamilies.Plat: return ((HeaderPt)_header).locationName;
+                default: return ((HeaderHGSS)_header).locationName;
+            }
+        }
+
+        /// <summary>
+        /// Re-reads the location-name text archive and relabels folders — for when the archive was
+        /// edited in another editor window. No-op (no flicker) when nothing changed.
+        /// </summary>
+        public void ReloadLocationNames()
+        {
+            if (_headerListNames.Count == 0) return;   // not set up yet
+            var old = LocationNames.ToList();
+            _suppress = true;
+            LoadLocationNames();
+            int keepLoc = _locationNameIndex;
+            _locationNameIndex = -1;
+            LocationNameIndex = keepLoc;   // suppressed: restores the combo without re-applying
+            _suppress = false;
+            if (!old.SequenceEqual(LocationNames)) RebuildTree();
+        }
+
+        // ── Load a header into the fields ───────────────────────────────────────────
+        private void LoadHeader(ushort headerId)
+        {
+            if (headerId >= _headerListNames.Count) return;
 
             _header = _dynamicHeaders
-                ? MapHeader.LoadFromFile(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + headerNumber.ToString("D4"), headerNumber, 0)
-                : MapHeader.LoadFromARM9(headerNumber);
+                ? MapHeader.LoadFromFile(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + headerId.ToString("D4"), headerId, 0)
+                : MapHeader.LoadFromARM9(headerId);
             if (_header == null) return;
 
             PopulateFromHeader();
             SetClean();
             StatusText = $"Header {_header.ID} loaded.";
             OnPropertyChanged(nameof(UnsavedChangesDescription));
+            UpdateHeaderLocationInTree(headerId, CurrentHeaderLocationIndex());   // correct folder after reset/paste/import
         }
 
         /// <summary>Pushes the current <see cref="_header"/> into the editor fields (no ROM read).</summary>
@@ -388,6 +565,7 @@ namespace DSPRE.Avalonia.ViewModels
                 UpdateAreaIconImage();
             }
             finally { _suppress = false; }
+            OnPropertyChanged(nameof(CanOpenEncounters));   // refresh the Open-encounters guard on every (re)load
         }
 
         private int FindAreaSettingsBySpecifier(int specifier)
@@ -421,6 +599,7 @@ namespace DSPRE.Avalonia.ViewModels
                 case GameFamilies.Plat: Apply(h => ((HeaderPt)h).locationName = (byte)index); break;
                 default: Apply(h => ((HeaderHGSS)h).locationName = (byte)index); break;
             }
+            if (_header != null) UpdateHeaderLocationInTree(_header.ID, index);   // regroup live
         }
 
         private void ApplyAreaSettings(int index)
@@ -573,7 +752,8 @@ namespace DSPRE.Avalonia.ViewModels
 
         public void Reset()
         {
-            if (_selectedHeaderIndex >= 0) { LoadHeader(_selectedHeaderIndex); StatusText = "Reverted to saved header."; }
+            LoadHeader(SelectedHeaderId);
+            StatusText = "Reverted to saved header.";
         }
 
         public async Task ImportAsync()
@@ -611,15 +791,19 @@ namespace DSPRE.Avalonia.ViewModels
         public void GoTo()
         {
             int n = (int)_goToValue;
-            if (n >= 0 && n < HeaderItems.Count) SelectedHeaderIndex = n;
+            if (n < 0 || n >= _headerListNames.Count) return;
+            if (!string.IsNullOrWhiteSpace(TreeFilterText)) TreeFilterText = "";   // reveal it if a search is active
+            SelectHeader((ushort)n);
         }
 
         // Jump to the related editor at this header's referenced file.
         public void OpenMatrix() { if (_header != null) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID); }
+        public void OpenAreaData() { if (_header != null) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.areaDataID); }
         public void OpenEvents() { if (_header != null) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
         public void OpenScripts() { if (_header != null) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
         public void OpenLevelScripts() { if (_header != null) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.levelScriptID); }
         public void OpenTexts() { if (_header != null) AvaloniaEditorLauncher.OpenTextEditor(_header.textArchiveID); }
+        public void OpenEncounters() { if (CanOpenEncounters) AvaloniaEditorLauncher.OpenWildEditor(_header.wildPokemon); }
 
         private void UpdateCurrentInternalName()
         {
@@ -628,11 +812,8 @@ namespace DSPRE.Avalonia.ViewModels
                 writer.Write(StringToInternalName(_internalName));
 
             if (id < _internalNames.Count) _internalNames[id] = _internalName;
-            string elem = id.ToString("D3") + MapHeader.nameSeparator + _internalName;
-            if (id < _headerListNames.Count) _headerListNames[id] = elem;
-            _suppress = true;
-            if (id < HeaderItems.Count) HeaderItems[id] = elem;
-            _suppress = false;
+            if (id < _headerListNames.Count) _headerListNames[id] = id.ToString("D3") + MapHeader.nameSeparator + _internalName;
+            RebuildTree();   // refresh the leaf's label (and any active search)
         }
 
         private byte[] StringToInternalName(string text)
@@ -652,11 +833,11 @@ namespace DSPRE.Avalonia.ViewModels
             const string newmap = "NEWMAP";
             DSUtils.WriteToFile(internalNamesPath, StringToInternalName(newmap), (uint)newId * internalNameLength);
 
-            string elem = newId.ToString("D3") + MapHeader.nameSeparator + newmap;
-            HeaderItems.Add(elem);
-            _headerListNames.Add(elem);
+            _headerListNames.Add(newId.ToString("D3") + MapHeader.nameSeparator + newmap);
             _internalNames.Add(newmap);
-            SelectedHeaderIndex = HeaderItems.Count - 1;
+            LoadLocationIndices();
+            RebuildTree();
+            SelectHeader((ushort)newId);
 
             await DialogHelper.ShowInfo(
                 "New header added. (Creating associated Text/Script/Level-Script/Event files is not yet available in the Avalonia editor — add them from the respective editors.)",
@@ -666,20 +847,21 @@ namespace DSPRE.Avalonia.ViewModels
         public async Task RemoveHeaderAsync()
         {
             if (!_dynamicHeaders) return;
-            int lastIndex = HeaderItems.Count - 1;
+            int lastIndex = _headerListNames.Count - 1;
             if (lastIndex <= 0)
             {
                 await DialogHelper.ShowError("You must have at least one header!", "Can't delete last header");
                 return;
             }
-            if (_selectedHeaderIndex == lastIndex) SelectedHeaderIndex = lastIndex - 1;
 
             File.Delete(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + lastIndex.ToString("D4"));
             using (var ew = new DSUtils.EasyWriter(internalNamesPath)) ew.EditSize(-internalNameLength);
 
-            HeaderItems.RemoveAt(lastIndex);
             _internalNames.RemoveAt(lastIndex);
             _headerListNames.RemoveAt(lastIndex);
+            LoadLocationIndices();
+            RebuildTree();
+            SelectHeader(SelectedHeaderId >= lastIndex ? (ushort)(lastIndex - 1) : SelectedHeaderId);
         }
     }
 }

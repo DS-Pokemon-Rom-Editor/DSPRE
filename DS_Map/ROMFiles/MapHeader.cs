@@ -14,7 +14,7 @@ namespace DSPRE.ROMFiles {
        0x8  //  ushort:     Text Archive number
        0xA  //  ushort:     Day music track number
        0xC  //  ushort:     Night music track number
-       0xE  //  ushort:     Wild Pokémon file number
+       0xE  //  ushort:     Wild Pokï¿½mon file number
        0x10 //  ushort:     Event file number
 
        * D/P:
@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles {
 
     /* ---------------------- HEADER DATA STRUCTURE (HGSS):----------------------------
         
-       0x0  //  byte:       Wild Pokémon file number
+       0x0  //  byte:       Wild Pokï¿½mon file number
        0x1  //  byte:       Area data value
        0x2  //  byte:       ?
        0x3  //  byte:       ?
@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles {
        0x13 //  byte:       Map name textbox type value
        0x14 //  byte:       Weather value
        0x15 //  byte:       Camera value
-       0x16 //  byte:       Follow mode (for the Pokémon following hero)
+       0x16 //  byte:       Follow mode (for the Pokï¿½mon following hero)
        0x17 //  byte:       Bitwise permission flags:
 
         DPPT
@@ -81,7 +81,7 @@ namespace DSPRE.ROMFiles {
     ----------------------------------------------------------------------------------*/
 
     /// <summary>
-    /// General class to store common map header data across all Gen IV Pokémon NDS games
+    /// General class to store common map header data across all Gen IV Pokï¿½mon NDS games
     /// </summary>
     public abstract class MapHeader : RomFile {
         /*System*/
@@ -130,6 +130,43 @@ namespace DSPRE.ROMFiles {
         #region Methods (1)
         public static string BuildName(int headerID, string name) {
             return headerID.ToString("D3") + MapHeader.nameSeparator + name;
+        }
+
+        /// <summary>
+        /// Reads just the location-name index (offset 0x12) of one header without building a full
+        /// <see cref="MapHeader"/>, for the Header Editor's location-grouped sidebar. Pass the
+        /// already-known dynamic-headers flag so this doesn't re-probe the patch state per call.
+        /// DP stores it as a ushort; Plat/HGSS as a byte.
+        /// </summary>
+        public static bool TryReadLocationNameIndex(ushort headerId, bool dynamicHeaders, out int locationNameIndex) {
+            locationNameIndex = 0;
+            byte[] data;
+            try {
+                if (dynamicHeaders) {
+                    string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.dynamicHeaders].unpackedDir, headerId.ToString("D4"));
+                    if (!File.Exists(path)) return false;
+                    data = File.ReadAllBytes(path);
+                } else {
+                    long headerOffset = RomInfo.headerTableOffset + MapHeader.length * headerId;
+                    data = DSUtils.ReadFromFile(RomInfo.arm9Path, headerOffset, MapHeader.length);
+                }
+            } catch {
+                return false;
+            }
+
+            if (data == null || data.Length < 0x14) return false;
+
+            switch (RomInfo.gameFamily) {
+                case RomInfo.GameFamilies.DP:
+                    locationNameIndex = System.BitConverter.ToUInt16(data, 0x12);
+                    return true;
+                case RomInfo.GameFamilies.Plat:
+                case RomInfo.GameFamilies.HGSS:
+                    locationNameIndex = data[0x12];
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         public static MapHeader LoadFromByteArray(byte[] headerData, ushort headerNumber, RomInfo.GameFamilies gameFamily = RomInfo.GameFamilies.NULL) {
@@ -210,7 +247,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon D and P
+    /// Class to store map header data from Pokï¿½mon D and P
     /// </summary>
     public class HeaderDP : MapHeader {
         #region Fields (5)
@@ -272,7 +309,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon Plat
+    /// Class to store map header data from Pokï¿½mon Plat
     /// </summary>
     public class HeaderPt : MapHeader {
         #region Fields (5)
@@ -341,7 +378,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon HG and SS
+    /// Class to store map header data from Pokï¿½mon HG and SS
     /// </summary>
     public class HeaderHGSS : MapHeader {
         #region Fields (7)
