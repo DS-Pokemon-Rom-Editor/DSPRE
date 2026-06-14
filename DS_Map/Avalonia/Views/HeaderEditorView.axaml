@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:models="clr-namespace:DSPRE.Avalonia.Models"
         x:Class="DSPRE.Avalonia.Views.HeaderEditorView"
         x:DataType="vm:HeaderEditorViewModel">
 
@@ -11,32 +12,22 @@
   <DockPanel>
     <!-- Toolbar -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Vertical" Spacing="4">
-        <WrapPanel Classes="toolbar">
-          <Button Content="💾  Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="↺  Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="⧉  Copy"  Click="Copy_Click"/>
-          <Button Content="📋  Paste" Click="Paste_Click"/>
-          <Button Content="📥  Import" Click="Import_Click"/>
-          <Button Content="📤  Export" Click="Export_Click"/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="＋  Add"    Click="AddHeader_Click"    IsEnabled="{Binding CanAddRemove}"/>
-          <Button Content="🗑  Remove" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <TextBlock Text="Go to #" VerticalAlignment="Center"/>
-          <NumericUpDown Width="100" Minimum="0" Maximum="65535" Value="{Binding GoToValue}"/>
-          <Button Content="Go" Click="GoTo_Click"/>
-        </WrapPanel>
-        <WrapPanel Classes="toolbar">
-          <TextBlock Text="Open linked:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
-          <Button Content="🔗 Matrix"        Click="OpenMatrix_Click"/>
-          <Button Content="🔗 Events"        Click="OpenEvents_Click"/>
-          <Button Content="🔗 Scripts"       Click="OpenScripts_Click"/>
-          <Button Content="🔗 Level Scripts" Click="OpenLevelScripts_Click"/>
-          <Button Content="🔗 Texts"         Click="OpenTexts_Click"/>
-        </WrapPanel>
-      </StackPanel>
+      <WrapPanel Classes="toolbar">
+        <Button Content="💾  Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="↺  Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="⧉  Copy"  Click="Copy_Click"/>
+        <Button Content="📋  Paste" Click="Paste_Click"/>
+        <Button Content="📥  Import" Click="Import_Click"/>
+        <Button Content="📤  Export" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="＋  Add"    Click="AddHeader_Click"    IsEnabled="{Binding CanAddRemove}"/>
+        <Button Content="🗑  Remove" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <TextBlock Text="Go to #" VerticalAlignment="Center"/>
+        <NumericUpDown Width="100" Minimum="0" Maximum="65535" Value="{Binding GoToValue}"/>
+        <Button Content="Go" Click="GoTo_Click"/>
+      </WrapPanel>
     </Border>
 
     <!-- Status bar -->
@@ -46,10 +37,38 @@
     </Border>
 
     <Grid ColumnDefinitions="280,*">
-      <!-- Header list -->
-      <ListBox Grid.Column="0" Margin="4"
-               ItemsSource="{Binding HeaderItems}"
-               SelectedIndex="{Binding SelectedHeaderIndex}"/>
+      <!-- Header tree (grouped by location) -->
+      <DockPanel Grid.Column="0" Margin="4">
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,4">
+          <TextBox PlaceholderText="Search headers…" Text="{Binding TreeFilterText, Mode=TwoWay}"/>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Content="Expand All"   Click="ExpandAll_Click"/>
+            <Button Content="Collapse All" Click="CollapseAll_Click"/>
+          </StackPanel>
+        </StackPanel>
+
+        <TreeView ItemsSource="{Binding TreeFolders}"
+                  SelectedItem="{Binding SelectedTreeNode, Mode=TwoWay}">
+          <!-- TreeView doesn't bind a node's IsExpanded to its container by default; this is what
+               lets the ViewModel drive Expand/Collapse All, search, and initial selection. -->
+          <TreeView.Styles>
+            <Style Selector="TreeViewItem">
+              <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
+            </Style>
+          </TreeView.Styles>
+          <TreeView.DataTemplates>
+            <TreeDataTemplate DataType="models:HeaderTreeFolder" ItemsSource="{Binding Children}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding Count}" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </TreeDataTemplate>
+            <DataTemplate DataType="models:HeaderTreeLeaf">
+              <TextBlock Text="{Binding DisplayName}"/>
+            </DataTemplate>
+          </TreeView.DataTemplates>
+        </TreeView>
+      </DockPanel>
 
       <!-- Detail form -->
       <ScrollViewer Grid.Column="1" Padding="8">
@@ -64,28 +83,50 @@
             </StackPanel>
           </StackPanel>
 
-          <!-- File / ID fields -->
+          <!-- File / ID fields. Linked files get an inline "🔗 Open" button (like the old editor),
+               kept tight to the value it opens; a spacer column separates the two field pairs. -->
           <HeaderedContentControl Header="IDs">
-            <Grid ColumnDefinitions="120,140,120,140" RowDefinitions="Auto,Auto,Auto,Auto" >
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MatrixId}" Margin="2"/>
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="Area Data" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="0" Maximum="255" Value="{Binding AreaDataId}" Margin="2"/>
+            <Grid ColumnDefinitions="Auto,Auto,24,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MatrixId}"/>
+                <Button Content="🔗 Open" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="Open the linked Matrix"/>
+              </StackPanel>
+              <TextBlock Grid.Row="0" Grid.Column="3" Text="Area Data" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="255" Value="{Binding AreaDataId}"/>
+                <Button Content="🔗 Open" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="Open the linked Area Data"/>
+              </StackPanel>
 
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="Script" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}" Margin="2"/>
-              <TextBlock Grid.Row="1" Grid.Column="2" Text="Level Script" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}" Margin="2"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Script" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}"/>
+                <Button Content="🔗 Open" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Script"/>
+              </StackPanel>
+              <TextBlock Grid.Row="1" Grid.Column="3" Text="Level Script" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}"/>
+                <Button Content="🔗 Open" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Level Script"/>
+              </StackPanel>
 
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Event" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding EventFileId}" Margin="2"/>
-              <TextBlock Grid.Row="2" Grid.Column="2" Text="Text" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}" Margin="2"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Event" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding EventFileId}"/>
+                <Button Content="🔗 Open" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="Open the linked Events"/>
+              </StackPanel>
+              <TextBlock Grid.Row="2" Grid.Column="3" Text="Text" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}"/>
+                <Button Content="🔗 Open" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="Open the linked Text archive"/>
+              </StackPanel>
 
-              <TextBlock Grid.Row="3" Grid.Column="0" Text="Wild Pokémon" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}" Margin="2"/>
-              <TextBlock Grid.Row="3" Grid.Column="2" Text="Battle BG" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="3" Grid.Column="3" Minimum="0" Maximum="255" Value="{Binding BattleBackground}" Margin="2"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Wild Pokémon" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
+                <NumericUpDown Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}"/>
+                <Button Content="🔗 Open" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="Open the linked wild encounters"/>
+              </StackPanel>
+              <TextBlock Grid.Row="3" Grid.Column="3" Text="Battle BG" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <NumericUpDown Grid.Row="3" Grid.Column="4" Minimum="0" Maximum="255" Value="{Binding BattleBackground}" Margin="2"/>
             </Grid>
           </HeaderedContentControl>
 
