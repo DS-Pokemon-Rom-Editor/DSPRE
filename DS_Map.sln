@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.6.11819.183 stable
+VisualStudioVersion = 18.6.11819.183
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSPRE", "DS_Map\DSPRE.csproj", "{E3C66521-EE89-4406-92C4-FC1D40DC4200}"
 EndProject
@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Images", "Images\Images\Ima
 	ProjectSection(ProjectDependencies) = postProject
 		{736010D3-F72F-4C56-B8D2-2EDD1B8F3A87} = {736010D3-F72F-4C56-B8D2-2EDD1B8F3A87}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSPRE.Tests", "DSPRE.Tests\DSPRE.Tests.csproj", "{21091F19-9F30-4A94-B1E6-10F61D217EA3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DS_Map", "DS_Map", "{6DB94213-59C6-1826-5D4B-0A55B53DC745}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,6 +62,18 @@ Global
 		{8BB5DA4B-5B71-4993-8941-4F38D4E6C81B}.Release|x64.Build.0 = Release|x64
 		{8BB5DA4B-5B71-4993-8941-4F38D4E6C81B}.Release|x86.ActiveCfg = Release|x86
 		{8BB5DA4B-5B71-4993-8941-4F38D4E6C81B}.Release|x86.Build.0 = Release|x86
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|x64.Build.0 = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Debug|x86.Build.0 = Debug|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|x64.ActiveCfg = Release|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|x64.Build.0 = Release|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|x86.ActiveCfg = Release|Any CPU
+		{21091F19-9F30-4A94-B1E6-10F61D217EA3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
