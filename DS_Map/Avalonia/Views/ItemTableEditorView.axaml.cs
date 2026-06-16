@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views
         {
             DataContext = vm;
             InitializeComponent();
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
@@ -20,18 +21,5 @@ namespace DSPRE.Avalonia.Views
 
         private void HiddenAdd_Click(object sender, RoutedEventArgs e)    => VM?.AddHiddenItem();
         private void HiddenRemove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelectedHiddenItem();
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM?.HasUnsavedChanges == true)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes to {VM.UnsavedChangesDescription}?",
-                    "Unsaved Changes");
-                if (discard) { VM.DiscardChanges(); Close(); }
-            }
-            base.OnClosing(e);
-        }
     }
 }

@@ -23,6 +23,9 @@
         <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="📥 Import" Click="Import_Click"/>
         <Button Content="📤 Export" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="🐞 Export 3D debug" Click="ExportDebug_Click"
+                ToolTip.Tip="Dumps the matrix layout, exact per-cell map placements (origins/sizes/gaps), every event's computed world position, AND a PNG of the current render — for diagnosing stitching/placement issues."/>
       </WrapPanel>
     </Border>
 
@@ -49,6 +52,8 @@
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="11"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+              <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="11"
+                        ToolTip.Tip="Stitch as a DS-true fixed 32-tile grid (ON) vs continuous geometry-sized layout (OFF)"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="11" Padding="6,2"
                             ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>

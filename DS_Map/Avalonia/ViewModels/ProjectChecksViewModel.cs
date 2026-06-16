@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels
@@ -17,21 +18,30 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Validation tab ─────────────────────────────────────────────────────
         public ObservableCollection<ValidationIssue> Issues { get; } = new();
-        private string _validationStatus = "Click “Run” to scan every header for broken references.";
+        private string _validationStatus = "Click “Run” to scan headers, evolutions and trainers for broken references.";
         public string ValidationStatus { get => _validationStatus; private set => Set(ref _validationStatus, value); }
 
-        public void RunValidation()
+        private bool _isRunning;
+        /// <summary>True while a scan is in flight; the view binds the Run button's IsEnabled to its inverse.</summary>
+        public bool IsRunning { get => _isRunning; private set => Set(ref _isRunning, value); }
+
+        public async void RunValidation()
         {
+            if (_isRunning) return;          // ignore re-clicks while scanning
+            IsRunning = true;
             Issues.Clear();
+            ValidationStatus = "Scanning…";
             try
             {
-                var found = ProjectIndex.Validate();
+                // The scan reads many ROM files; run it off the UI thread so the window stays responsive.
+                var found = await Task.Run(() => ProjectIndex.Validate());
                 foreach (var i in found) Issues.Add(i);
                 ValidationStatus = found.Count == 0
-                    ? "No problems found — every header reference points at a file that exists. ✓"
-                    : $"{found.Count} broken reference(s) found.";
+                    ? "No problems found — every reference points at something that exists. ✓"
+                    : $"{found.Count} issue(s) found.";
             }
             catch (Exception ex) { ValidationStatus = "Validation failed: " + ex.Message; }
+            finally { IsRunning = false; }
         }
 
         // ── Where-used tab ─────────────────────────────────────────────────────

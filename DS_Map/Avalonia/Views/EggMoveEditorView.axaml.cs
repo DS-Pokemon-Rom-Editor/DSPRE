@@ -12,19 +12,11 @@ namespace DSPRE.Avalonia.Views
         public EggMoveEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            DataContext = new EggMoveEditorViewModel();
-            Closing += OnWindowClosing;
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            e.Cancel = true;
-            if (await VM.ConfirmCloseAsync())
-            {
-                VM.Detach();
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            var vm = new EggMoveEditorViewModel();
+            DataContext = vm;
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, vm, manageTitle: false,
+                confirmClose: vm.ConfirmCloseAsync, onClosed: vm.Detach);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)

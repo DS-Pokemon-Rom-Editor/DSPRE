@@ -18,7 +18,7 @@ using GdiBitmap = System.Drawing.Bitmap;
 
 namespace DSPRE.Avalonia.ViewModels
 {
-    public class ItemEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class ItemEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -371,6 +371,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_entryDirty) SaveTableEntry();
             if (_dataDirty)  SaveItemData();
+            _history.MarkSaved();
+            RaiseUndoState();
         }
 
         public void DiscardChanges()
@@ -385,13 +387,78 @@ namespace DSPRE.Avalonia.ViewModels
             _currentData?.SaveToFileExplorePath($"itemdata_{_itemDataId:D4}", showSuccessMessage: true);
         }
 
-        private void SetDataDirty()  { if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetEntryDirty() { if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // RecordUndoSnapshot runs BEFORE the dirty-flag short-circuit, so EVERY edit is captured (not just the first).
+        private void SetDataDirty()  { RecordUndoSnapshot(); if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetEntryDirty() { RecordUndoSnapshot(); if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Internal state ────────────────────────────────────────────────────
         private bool _isLoading;
         private ItemNarcTableEntry _currentEntry;
         private ItemData _currentData;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Composite snapshot: the item-data file bytes + the 4 editable table-entry fields (icon / palette /
+        // itemData mapping / AGB). Edit bursts within CoalesceMs collapse into one step.
+        private sealed class ItemSnapshot { public byte[] Data; public uint Icon, Palette, ItemDataId, Agb; }
+        private readonly UndoHistory<ItemSnapshot> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private ItemSnapshot Snapshot() => new ItemSnapshot
+        {
+            Data       = _currentData?.ToByteArray(),
+            Icon       = _currentEntry.itemIcon,
+            Palette    = _currentEntry.itemPalette,
+            ItemDataId = _currentEntry.itemData,
+            Agb        = _currentEntry.itemAGB,
+        };
+
+        private void ApplyState(ItemSnapshot snap)
+        {
+            if (snap == null || _currentData == null) return;
+            _isLoading = true;
+            _currentEntry.itemIcon    = snap.Icon;
+            _currentEntry.itemPalette = snap.Palette;
+            _currentEntry.itemData    = snap.ItemDataId;
+            _currentEntry.itemAGB     = snap.Agb;
+            if (snap.Data != null) _currentData = new ItemData(new MemoryStream(snap.Data), (int)snap.ItemDataId);
+            RefreshEntryBoundProps();
+            PopulateFromCurrentData();
+            UpdateIcon();
+            _isLoading = false;
+
+            _dataDirty = _entryDirty = _history.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_isLoading || _currentData == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
+
+        /// <summary>Refreshes the icon/palette/itemData bound props from <see cref="_currentEntry"/>.</summary>
+        private void RefreshEntryBoundProps()
+        {
+            string iconID = _currentEntry.itemIcon.ToString("D4");
+            string palID  = _currentEntry.itemPalette.ToString("D4");
+            _selectedIconImage   = IconImages.Contains(iconID) ? iconID : null;
+            _selectedIconPalette = IconPalettes.Contains(palID) ? palID  : null;
+            _itemDataId          = (int)_currentEntry.itemData;
+            OnPropertyChanged(nameof(SelectedIconImage));
+            OnPropertyChanged(nameof(SelectedIconPalette));
+            OnPropertyChanged(nameof(ItemDataId));
+        }
 
         // ── Load ──────────────────────────────────────────────────────────────
         private void LoadFile(int id)
@@ -400,23 +467,17 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 _currentEntry = ReadTableEntry(id);
-
-                string iconID = _currentEntry.itemIcon.ToString("D4");
-                string palID  = _currentEntry.itemPalette.ToString("D4");
-
-                _selectedIconImage   = IconImages.Contains(iconID) ? iconID : null;
-                _selectedIconPalette = IconPalettes.Contains(palID) ? palID  : null;
-                _itemDataId          = (int)_currentEntry.itemData;
-
-                OnPropertyChanged(nameof(SelectedIconImage));
-                OnPropertyChanged(nameof(SelectedIconPalette));
-                OnPropertyChanged(nameof(ItemDataId));
+                RefreshEntryBoundProps();
 
                 LoadItemData((int)_currentEntry.itemData);
                 UpdateIcon();
 
                 _dataDirty = _entryDirty = false;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
+
+                _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this item
+                _lastCaptureUtc = DateTime.MinValue;
+                RaiseUndoState();
             }
             finally { _isLoading = false; }
         }

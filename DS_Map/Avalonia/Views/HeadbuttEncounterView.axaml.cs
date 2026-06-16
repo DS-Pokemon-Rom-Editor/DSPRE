@@ -11,7 +11,6 @@ namespace DSPRE.Avalonia.Views
     {
         private HeadbuttEncounterViewModel VM => DataContext as HeadbuttEncounterViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
         private Point? _lastPointer;
         private bool _panning;
         private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
@@ -116,17 +115,5 @@ namespace DSPRE.Avalonia.Views
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);
         private void CamReset_Click(object sender, RoutedEventArgs e) { GlView.SetOrientation(30f, 20f); GlView.ResetView(); }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
     }
 }

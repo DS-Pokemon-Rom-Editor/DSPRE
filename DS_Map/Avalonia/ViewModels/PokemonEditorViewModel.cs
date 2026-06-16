@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.ViewModels
     /// Top-level ViewModel for the unified Pokémon editor window.
     /// Owns Personal Data, Learnset, and Evolutions sub-ViewModels and keeps them in sync.
     /// </summary>
-    public class PokemonEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class PokemonEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -30,6 +30,7 @@ namespace DSPRE.Avalonia.ViewModels
         public LearnsetEditorViewModel      LearnsetVM  { get; }
         public EvolutionsEditorViewModel    EvolutionsVM { get; }
         public PokemonSpriteEditorViewModel SpriteVM    { get; }
+        public BattleDisplayEditorViewModel BattleDisplayVM { get; }
 
         // ─── Shared header
         private Bitmap _monIconBitmap;
@@ -65,7 +66,8 @@ namespace DSPRE.Avalonia.ViewModels
             PersonalVM.HasUnsavedChanges ||
             LearnsetVM.HasUnsavedChanges ||
             EvolutionsVM.HasUnsavedChanges ||
-            SpriteVM.HasUnsavedChanges;
+            SpriteVM.HasUnsavedChanges ||
+            BattleDisplayVM.HasUnsavedChanges;
 
         public string UnsavedChangesDescription =>
             $"Pokémon Editor (#{_selectedMonIndex} {(PokemonNames.Count > _selectedMonIndex ? PokemonNames[_selectedMonIndex] : "")})";
@@ -77,7 +79,30 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM.DiscardChanges();
             EvolutionsVM.DiscardChanges();
             SpriteVM.DiscardChanges();
+            BattleDisplayVM.DiscardChanges();
         }
+
+        // ─── Undo / redo (routes to the visible tab) ──────────────────────────────
+        // Tab order in the view: 0 = Personal Data, 1 = Learnset, 2 = Evolutions, 3 = Sprites.
+        // Only the tabs whose sub-VM implements ISupportsUndo participate; the rest report nothing.
+        private int _selectedTabIndex;
+        public int SelectedTabIndex
+        {
+            get => _selectedTabIndex;
+            set { if (Set(ref _selectedTabIndex, value)) RaiseUndoState(); }
+        }
+
+        private ISupportsUndo ActiveUndo => _selectedTabIndex switch
+        {
+            0 => PersonalVM,
+            2 => EvolutionsVM,
+            _ => null,
+        };
+        public bool CanUndo => ActiveUndo?.CanUndo ?? false;
+        public bool CanRedo => ActiveUndo?.CanRedo ?? false;
+        public void Undo() => ActiveUndo?.Undo();
+        public void Redo() => ActiveUndo?.Redo();
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         // ─── Design-time constructor ──────────────────────────────────────────────
         public PokemonEditorViewModel()
@@ -91,6 +116,7 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM   = new LearnsetEditorViewModel();
             EvolutionsVM = new EvolutionsEditorViewModel();
             SpriteVM     = new PokemonSpriteEditorViewModel();
+            BattleDisplayVM = new BattleDisplayEditorViewModel();
         }
 
         // ─── Runtime constructor ──────────────────────────────────────────────────
@@ -102,6 +128,7 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM   = new LearnsetEditorViewModel(moveNames);
             EvolutionsVM = new EvolutionsEditorViewModel(pokemonNames);
             SpriteVM     = new PokemonSpriteEditorViewModel(true);
+            BattleDisplayVM = new BattleDisplayEditorViewModel();
 
             // Propagate dirty change notifications so the window title can reflect unsaved state
             void OnChildDirty() { OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title)); }
@@ -109,6 +136,16 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(LearnsetVM.HasUnsavedChanges))    OnChildDirty(); };
             EvolutionsVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EvolutionsVM.HasUnsavedChanges)) OnChildDirty(); };
             SpriteVM.PropertyChanged     += (_, e) => { if (e.PropertyName == nameof(SpriteVM.HasUnsavedChanges))     OnChildDirty(); };
+            BattleDisplayVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(BattleDisplayVM.HasUnsavedChanges)) OnChildDirty(); };
+
+            // Bubble the active tab's undo availability up to the window toolbar / Ctrl+Z.
+            void OnChildUndoState(object _, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(ISupportsUndo.CanUndo) || e.PropertyName == nameof(ISupportsUndo.CanRedo))
+                    RaiseUndoState();
+            }
+            PersonalVM.PropertyChanged   += OnChildUndoState;
+            EvolutionsVM.PropertyChanged += OnChildUndoState;
 
             _selectedMonIndex = initialMon;
             LoadMon(initialMon);
@@ -134,6 +171,7 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM.LoadMon(id);
             EvolutionsVM.LoadMon(id);
             SpriteVM.LoadMon(id);
+            BattleDisplayVM.LoadMon(id);
         }
 
         /// <summary>Releases app-wide event subscriptions held by child VMs; call when the window closes.</summary>
@@ -145,6 +183,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (PersonalVM.HasUnsavedChanges)   ((IEditorWithUnsavedChanges)PersonalVM).SaveChanges();
             if (LearnsetVM.HasUnsavedChanges)   LearnsetVM.SaveChanges();
             if (EvolutionsVM.HasUnsavedChanges) EvolutionsVM.SaveChanges();
+            if (BattleDisplayVM.HasUnsavedChanges) BattleDisplayVM.SaveChanges();
             // Sprites are saved on import (written back to NARC immediately); nothing extra to do here.
         }
 

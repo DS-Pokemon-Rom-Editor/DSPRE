@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.ViewModels
     /// ViewModel for the TM/HM Editor Avalonia window.
     /// Implements IEditorWithUnsavedChanges so it participates in ROM-switch prompts.
     /// </summary>
-    public class TMEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TMEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         // ----------------------------------------------------------------
         // INotifyPropertyChanged
@@ -44,6 +44,51 @@ namespace DSPRE.Avalonia.ViewModels
         private int[] _curMachinePalettes;
         private bool _loading;
         private bool _dirty;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // The whole TM/HM table is one editable unit (one Save writes it all), so history is a single
+        // timeline reset once at load. Snapshot = a clone of both arrays.
+        private sealed class TMSnapshot { public int[] Moves; public int[] Palettes; }
+        private readonly DSPRE.Avalonia.UndoHistory<TMSnapshot> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private TMSnapshot Snapshot() => new TMSnapshot
+        {
+            Moves    = (int[])_curMachineMoves.Clone(),
+            Palettes = (int[])_curMachinePalettes.Clone(),
+        };
+
+        private void ApplyState(TMSnapshot snap)
+        {
+            if (snap == null) return;
+            _loading = true;
+            _curMachineMoves    = (int[])snap.Moves.Clone();      // clone so later edits don't mutate history
+            _curMachinePalettes = (int[])snap.Palettes.Clone();
+            RefreshMachineMoveList();
+            OnMachineSelected(_selectedMachineIndex);             // refresh the move/type combos for the shown machine
+            _loading = false;
+
+            _dirty = _history.IsDirty;
+            Title = _dirty ? "● TM/HM Editor" : "TM/HM Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_curMachineMoves == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
 
         // ----------------------------------------------------------------
         // Observable collections (bound to ListBox / ComboBoxes)
@@ -149,6 +194,7 @@ namespace DSPRE.Avalonia.ViewModels
             _curMachineMoves = TMEditor.ReadMachineMoves();
             _curMachinePalettes = TMEditor.ReadMachinePalettes();
             RefreshMachineMoveList();
+            _history.Reset(Snapshot());   // loaded table is the clean undo baseline
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh move/type names from the Text editor
         }
 
@@ -289,7 +335,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!_dirty) return true;
 
             var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them?",
+                "You have unsaved changes. Do you want to save them before closing?",
                 "Unsaved Changes");
 
             if (result == DialogHelper.MsgResult.Yes)
@@ -365,6 +411,8 @@ namespace DSPRE.Avalonia.ViewModels
                     WritePaletteID(i, _curMachinePalettes[i]);
 
                 SetDirty(false);
+                _history.MarkSaved();
+                RaiseUndoState();
             }
             catch (Exception ex)
             {
@@ -391,8 +439,9 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void SetDirty(bool isDirty)
         {
+            if (isDirty && !_loading) RecordUndoSnapshot();   // capture the edit (coalesced) before flagging dirty
             _dirty = isDirty;
-            Title = isDirty ? "TM/HM Editor*" : "TM/HM Editor";
+            Title = isDirty ? "● TM/HM Editor" : "TM/HM Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             // Avalonia ViewModels are tracked by AvaloniaEditorsRegistry, not the WinForms OpenEditorsRegistry

@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
     }
 
-    public class WildEditorDPPtViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class WildEditorDPPtViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -149,6 +149,61 @@ namespace DSPRE.Avalonia.ViewModels
         private EncounterFileDPPt _current;
         private string _dirPath;
         private bool _loading;
+        private bool _rowsHooked;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Snapshot = the encounter file's bytes. Grid edits live in the row VMs (only synced to _current at
+        // save), so Snapshot() syncs rows → _current first (sync-then-snapshot), like the Trade editor.
+        private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] Snapshot()
+        {
+            if (_current == null) return null;
+            WriteWalkingRowsToFile();   // pull the live grid rows + form fields into _current
+            WriteWaterRowsToFile();
+            return _current.ToByteArray();
+        }
+
+        private void ApplyState(byte[] bytes)
+        {
+            if (bytes == null) return;
+            _current = new EncounterFileDPPt(new MemoryStream(bytes));
+            PopulateRows();   // manages _loading itself; refreshes all rate/form fields + grid rows
+            _dirty = _history.IsDirty;
+            Title = _dirty ? "● Wild Pokémon Editor (DPPt)" : "Wild Pokémon Editor (DPPt)";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_loading || _current == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
+
+        // Grid-row edits don't otherwise reach the dirty/undo pipeline — subscribe each row once so a species
+        // or level change marks the editor dirty (also fixes a latent "edited rows close without prompting").
+        private void HookRowsOnce()
+        {
+            if (_rowsHooked) return;
+            _rowsHooked = true;
+            foreach (var coll in new[] { WalkingRows, DayRows, NightRows, SwarmRows, RadarRows, RubyRows,
+                                         SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows,
+                                         SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
+                foreach (var row in coll)
+                    row.PropertyChanged += (_, _) => { if (!_loading) SetDirty(); };
+        }
 
         // ── Constructor ───────────────────────────────────────────────────
         public WildEditorDPPtViewModel(string dirPath, string[] pokemonNames, int encToOpen, int totalHeaders)
@@ -209,13 +264,15 @@ namespace DSPRE.Avalonia.ViewModels
             WriteWaterRowsToFile();
             _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: true);
             SetClean();
+            _history.MarkSaved();
+            RaiseUndoState();
         }
 
         public async Task<bool> ConfirmCloseAsync()
         {
             if (!_dirty) return true;
             var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Save before closing?", "Unsaved Changes");
+                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
             if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return r == DialogHelper.MsgResult.No;
         }
@@ -226,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
-        private void SetDirty() { if (_loading) return; _dirty = true;  Title = "Wild Pokémon Editor (DPPt)*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon Editor (DPPt)"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; Title = "Wild Pokémon Editor (DPPt)";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmDiscardAsync(int newId)
@@ -278,6 +335,10 @@ namespace DSPRE.Avalonia.ViewModels
             _current = new EncounterFileDPPt(stream);
             PopulateRows();
             SetClean();
+
+            _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this file
+            _lastCaptureUtc = DateTime.MinValue;
+            RaiseUndoState();
         }
 
         private void PopulateRows()
@@ -317,6 +378,7 @@ namespace DSPRE.Avalonia.ViewModels
             SyncRows(SuperRodRows, 5, i => $"Super Rod {i+1}",i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
 
             _loading = false;
+            HookRowsOnce();   // subscribe row edits → SetDirty (idempotent)
         }
 
         // ── Encounter-file management ────────────────────────────────────────────────────

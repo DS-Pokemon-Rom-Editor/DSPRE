@@ -191,8 +191,22 @@ namespace DSPRE.Avalonia.Gl
         /// 32-tile play area, which otherwise leaves gaps). A per-tile top-surface height grid is
         /// captured so callers can drop events onto the floor. Centred/scaled once at the end.
         /// </summary>
-        public static NsbmdRenderModel BuildMatrixScene(IReadOnlyList<MatrixCellGeometry> cells)
+        /// <summary>How matrix cells are laid out in the stitched scene.</summary>
+        public enum MatrixStitchMode
         {
+            /// <summary>Variable-size: each column/row sized to its widest/tallest map's geometry, maps min-aligned
+            /// so neighbours' actual geometry touches (handles decorative overhang/underfill, but a strict grid
+            /// can't make ALL cells touch when sizes vary within a column/row).</summary>
+            Continuous,
+            /// <summary>DS-true fixed 32-tile grid: every cell is exactly MapStride apart; underfilled maps show
+            /// real gaps and overhang overlaps as authored. Tiles always map to the standard 0.25-unit size.</summary>
+            Grid,
+        }
+
+        public static NsbmdRenderModel BuildMatrixScene(IReadOnlyList<MatrixCellGeometry> cells,
+            MatrixStitchMode mode = MatrixStitchMode.Continuous)
+        {
+            bool grid = mode == MatrixStitchMode.Grid;
             var result = new NsbmdRenderModel { IsMatrix = true };
             int offset = 0;
 
@@ -232,16 +246,20 @@ namespace DSPRE.Avalonia.Gl
             // uniform stride leaves them spread apart with gaps. Instead lay them out CONTINUOUSLY: each
             // matrix column gets the width of its widest map, each row the height of its tallest, and offsets
             // accumulate so consecutive maps' actual geometry boxes tile edge-to-edge (touch, never overlap).
-            float fallback = Math.Max(Mode(fxList), Mode(fzList)); if (fallback <= 0) fallback = MapStride;
+            // Grid mode forces every column/row to the fixed 32-tile stride; Continuous sizes by actual geometry.
+            float fallback = grid ? MapStride : Math.Max(Mode(fxList), Mode(fzList));
+            if (fallback <= 0) fallback = MapStride;
 
             var colW = new Dictionary<int, float>();
             var rowH = new Dictionary<int, float>();
-            foreach (var cb in stored)
-            {
-                if (!cb.HasBounds) continue;
-                if (!colW.TryGetValue(cb.CellX, out float w) || cb.FpX > w) colW[cb.CellX] = cb.FpX;
-                if (!rowH.TryGetValue(cb.CellY, out float h) || cb.FpZ > h) rowH[cb.CellY] = cb.FpZ;
-            }
+            if (!grid)
+                foreach (var cb in stored)
+                {
+                    if (!cb.HasBounds) continue;
+                    if (!colW.TryGetValue(cb.CellX, out float w) || cb.FpX > w) colW[cb.CellX] = cb.FpX;
+                    if (!rowH.TryGetValue(cb.CellY, out float h) || cb.FpZ > h) rowH[cb.CellY] = cb.FpZ;
+                }
+            // (Grid mode leaves colW/rowH empty → the colX/rowZ accumulators below use fallback = MapStride.)
             // Cumulative column-start X / row-start Z (in matrix order), filling empty cols/rows with fallback.
             var colX = new Dictionary<int, float>();
             float accX = 0f;
@@ -267,16 +285,23 @@ namespace DSPRE.Avalonia.Gl
                 float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
                 cb.ColW = colW.TryGetValue(cb.CellX, out float cw) ? cw : fallback;
                 cb.RowH = rowH.TryGetValue(cb.CellY, out float ch) ? ch : fallback;
-                // OffX added to every vertex; geometry min (cb.MinX) then lands at the column start ox.
-                cb.OffX = ox - cb.MinX;
-                cb.OffZ = oz - cb.MinZ;
+                // GRID: place the map's AUTHORED ORIGIN (tile-(0,0) at raw 0) on the cell corner, so every
+                // map's play area lands on the shared grid line and aligns with its events — regardless of
+                // decorative overhang. (Min-aligning here would shove each map right/down by its overhang,
+                // the "greedy" misalignment that grows with overhang size.)
+                // CONTINUOUS: min-align so each map's actual geometry box tiles edge-to-edge with neighbours.
+                cb.OffX = grid ? ox : (ox - cb.MinX);
+                cb.OffZ = grid ? oz : (oz - cb.MinZ);
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffZ);
                 MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffZ);
-                // Events use this cell's OWN footprint so they stay within its actual geometry box.
+                // Events ALWAYS anchor at the map's actual geometry-min corner (its tile-(0,0) "start", which
+                // can be at negative raw coords from decorative geometry) and span its real footprint — so they
+                // sit on the map regardless of how the MAPS are stitched (grid vs continuous). The geometry-min
+                // world position is OffX + cb.MinX (continuous min-aligns → that's ox; grid → ox + cb.MinX).
                 placements[NsbmdRenderModel.CellKey(cb.CellX, cb.CellY)] = new NsbmdRenderModel.CellPlacement
                 {
-                    OriginX = ox, OriginZ = oz,
-                    Width = cb.HasBounds ? cb.FpX : cb.ColW,
+                    OriginX = cb.OffX + cb.MinX, OriginZ = cb.OffZ + cb.MinZ,
+                    Width  = cb.HasBounds ? cb.FpX : cb.ColW,
                     Height = cb.HasBounds ? cb.FpZ : cb.RowH,
                 };
             }

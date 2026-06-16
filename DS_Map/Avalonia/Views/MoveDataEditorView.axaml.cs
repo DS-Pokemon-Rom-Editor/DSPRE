@@ -13,24 +13,16 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
             DataContext = new MoveDataEditorViewModel();
-            Closing += OnWindowClosing;
-            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false);   // VM owns the bound Title (+ "*" marker)
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            if (!ViewModel.HasUnsavedChanges) { ViewModel.Detach(); return; }
-            e.Cancel = true;
-            if (await ViewModel.ConfirmCloseAsync())
-            {
-                ViewModel.Detach();
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false,
+                confirmClose: ViewModel.ConfirmCloseAsync, onClosed: ViewModel.Detach);
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await ViewModel.SaveCommand();
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
 
         private async void Export_Click(object sender, RoutedEventArgs e)
             => await ViewModel.ExportCommand(this);

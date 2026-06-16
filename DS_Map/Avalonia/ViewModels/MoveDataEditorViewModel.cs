@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    public class MoveDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class MoveDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -118,6 +118,42 @@ namespace DSPRE.Avalonia.ViewModels
         private MoveData _currentFile;
         private int _currentId;
         private bool _loading;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Snapshots are the move file's bytes; consecutive edits within CoalesceMs collapse into one step.
+        private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_currentFile == null) return;
+            bool coalesce = (System.DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(_currentFile.ToByteArray(), coalesce);
+            _lastCaptureUtc = System.DateTime.UtcNow;
+            RaiseUndoState();
+        }
+
+        private void ApplyState(byte[] bytes)
+        {
+            if (bytes == null) return;
+            _loading = true;
+            _currentFile = new MoveData(new MemoryStream(bytes));
+            PopulateFromCurrentFile();
+            _loading = false;
+
+            _dirty = _history.IsDirty;
+            Title = _dirty ? "● Move Data Editor" : "Move Data Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
         private readonly string[] _moveDescriptions;
         private Dictionary<string, int> _typeNameToId;
         private Dictionary<string, MoveSplit> _splitNameToEnum;
@@ -222,7 +258,9 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_currentFile == null) return;
             _currentFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
+            _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             SetClean();
+            RaiseUndoState();
         }
 
         public async Task ExportCommand(Window owner)
@@ -303,13 +341,13 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!_dirty) return true;
             var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Save before closing?", "Unsaved Changes");
+                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
             if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return r == DialogHelper.MsgResult.No;
         }
 
         // ── Private helpers ────────────────────────────────────────────────────
-        private void SetDirty() { if (_loading) return; _dirty = true; Title = "Move Data Editor*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { if (_loading) return; _dirty = true; Title = "● Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); RecordUndoSnapshot(); }
         private void SetClean() { _dirty = false; Title = "Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmDiscardAsync(int newIndex)
@@ -329,7 +367,19 @@ namespace DSPRE.Avalonia.ViewModels
             _loading = true;
             _currentId   = id;
             _currentFile = new MoveData(id);
+            PopulateFromCurrentFile();
+            SetClean();
+            _loading = false;
 
+            // Loaded state is the clean baseline for undo on this move; switching moves starts fresh history.
+            _history.Reset(_currentFile.ToByteArray());
+            _lastCaptureUtc = System.DateTime.MinValue;
+            RaiseUndoState();
+        }
+
+        /// <summary>Pushes <see cref="_currentFile"/> into the bound fields. Caller must guard with _loading.</summary>
+        private void PopulateFromCurrentFile()
+        {
             TypeIndex       = (int)_currentFile.movetype;
             SplitIndex      = (int)_currentFile.split;
             BattleSeqIndex  = (int)_currentFile.battleeffect;
@@ -340,7 +390,7 @@ namespace DSPRE.Avalonia.ViewModels
             Priority        = _currentFile.priority;
             SideEffectPct   = _currentFile.sideEffectProbability;
             ContestAppeal   = _currentFile.contestAppeal;
-            Description     = id < _moveDescriptions.Length ? _moveDescriptions[id] : string.Empty;
+            Description     = _currentId < _moveDescriptions.Length ? _moveDescriptions[_currentId] : string.Empty;
 
             // Range
             int rangeIdx = 0;
@@ -353,9 +403,6 @@ namespace DSPRE.Avalonia.ViewModels
             var flagNames = Enum.GetNames(typeof(MoveFlags)).Skip(1).ToArray();
             for (int i = 0; i < Flags.Count && i < flagNames.Length; i++)
                 Flags[i].IsSet = (_currentFile.flagField & (1 << i)) != 0;
-
-            SetClean();
-            _loading = false;
         }
 
         private void RebuildFlagField()

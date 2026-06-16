@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -82,6 +83,7 @@ namespace DSPRE.Avalonia.Data
             var issues = new List<ValidationIssue>();
             ValidateHeaders(issues);
             ValidateEvolutions(issues);
+            ValidateTrainers(issues);
             return issues;
         }
 
@@ -147,6 +149,65 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex)
             {
                 issues.Add(new ValidationIssue { Category = "Evolution", Where = "(scan)", Message = "scan failed: " + ex.Message });
+            }
+        }
+
+        /// <summary>Flags trainer party members whose species, held item, or a move points past the end of
+        /// its list (e.g. a party mon still referencing a species removed by a ROM hack). Each trainer and each
+        /// slot is read defensively so one unreadable file never aborts the whole scan.</summary>
+        private static void ValidateTrainers(List<ValidationIssue> issues)
+        {
+            try
+            {
+                int mons = GetPokemonNames().Length;
+                int items = GetItemNames().Length;
+                int moves = GetAttackNames().Length;
+
+                string propDir = gameDirs[DirNames.trainerProperties].unpackedDir;
+                string partyDir = gameDirs[DirNames.trainerParty].unpackedDir;
+                if (!Directory.Exists(propDir) || !Directory.Exists(partyDir)) return;
+
+                int count = Directory.GetFiles(propDir).Length;
+                string[] names; try { names = GetSimpleTrainerNames(); } catch { names = Array.Empty<string>(); }
+
+                for (int id = 0; id < count; id++)
+                {
+                    string suffix = "\\" + id.ToString("D4");
+                    TrainerFile tf;
+                    try
+                    {
+                        using var propStream = new FileStream(propDir + suffix, FileMode.Open, FileAccess.Read);
+                        using var partyStream = new FileStream(partyDir + suffix, FileMode.Open, FileAccess.Read);
+                        tf = new TrainerFile(new TrainerProperties((ushort)id, propStream), partyStream,
+                            id < names.Length ? names[id] : "");
+                    }
+                    catch { continue; }
+
+                    string who = id < names.Length && !string.IsNullOrWhiteSpace(names[id])
+                        ? $"{names[id]} (#{id})" : $"Trainer #{id}";
+                    void Add(string msg) => issues.Add(new ValidationIssue { Category = "Trainer", Where = who, Message = msg });
+
+                    int pc = tf.trp?.partyCount ?? 0;
+                    for (int i = 0; i < pc; i++)
+                    {
+                        PartyPokemon p;
+                        try { p = tf.party[i]; } catch { continue; }
+                        if (p == null || p.CheckEmpty()) continue;
+
+                        int sp = p.pokeID ?? 0;
+                        if (sp >= mons) Add($"party slot {i + 1} species {sp} is out of range (only {mons} exist)");
+                        if (p.heldItem is ushort it && it >= items)
+                            Add($"party slot {i + 1} held item {it} is out of range (only {items} exist)");
+                        if (p.moves != null)
+                            foreach (ushort mv in p.moves)
+                                if (mv != 0 && mv >= moves)
+                                    Add($"party slot {i + 1} move {mv} is out of range (only {moves} exist)");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                issues.Add(new ValidationIssue { Category = "Trainer", Where = "(scan)", Message = "scan failed: " + ex.Message });
             }
         }
 

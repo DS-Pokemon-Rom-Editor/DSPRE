@@ -62,6 +62,9 @@ namespace DSPRE.Avalonia.ViewModels
         public BuildingEditorViewModel() { }
         public BuildingEditorViewModel(bool _) { }
 
+        /// <summary>Building model to select once loaded (set before SetupAsync; e.g. from a "Go to Building #N" jump).</summary>
+        public int InitialIndex { get; set; }
+
         private string BuildingDir() => gameDirs[_interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels].unpackedDir;
 
         public async Task SetupAsync(Window owner)
@@ -82,7 +85,8 @@ namespace DSPRE.Avalonia.ViewModels
 
                 RefreshBuildings();
                 StatusText = $"{Buildings.Count} building models.";
-                if (Buildings.Count > 0) SelectedBuildingIndex = 0;
+                if (Buildings.Count > 0)
+                    SelectedBuildingIndex = System.Math.Clamp(InitialIndex, 0, Buildings.Count - 1);
             }
             catch (Exception ex)
             {

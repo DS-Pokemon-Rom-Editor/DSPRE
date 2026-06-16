@@ -8,7 +8,6 @@ namespace DSPRE.Avalonia.Views
     {
         private HiddenItemsEditorViewModel VM => DataContext as HiddenItemsEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public HiddenItemsEditorView()
         {
@@ -16,7 +15,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public HiddenItemsEditorView(HiddenItemsEditorViewModel vm) : this() { DataContext = vm; }
+        public HiddenItemsEditorView(HiddenItemsEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
@@ -30,17 +29,5 @@ namespace DSPRE.Avalonia.Views
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveEntry();
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
     }
 }

@@ -18,6 +18,7 @@ namespace DSPRE.Avalonia.Views
         public EncountersEditorView(EncountersEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -28,19 +29,5 @@ namespace DSPRE.Avalonia.Views
             _setupDone = true;
             await vm.SetupAsync(this);
         }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
-        private bool _closeConfirmed;
     }
 }

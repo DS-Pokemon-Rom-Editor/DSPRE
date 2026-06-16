@@ -64,6 +64,12 @@ namespace DSPRE.Avalonia.ViewModels
         public bool IsSingleMap => _viewModeIndex == 0;
         public bool IsMatrixView => _viewModeIndex == 1;
 
+        // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
+        // Grid is the default — it matches the DS's logical 32-tile cells, so maps + events share one grid.
+        private bool _stitchGrid = true;
+        public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value) && IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview(); } }
+        private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
+
         private int _selectedMatrix = -1;
         public int SelectedMatrixIndex { get => _selectedMatrix; set { if (Set(ref _selectedMatrix, value) && !_suppress && value >= 0 && IsMatrixView) BuildMatrixPreview(); } }
 
@@ -349,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels
                 case 2: b.zPosition = (short)Math.Round(b.zPosition + b.zFraction / 65536.0); b.zFraction = 0; break;
             }
         }
-
+         
         private void AfterBuildingMoved(Building b)
         {
             _suppress = true;
@@ -489,7 +495,7 @@ namespace DSPRE.Avalonia.ViewModels
                         if (matrix.maps[y, x] != GameMatrix.EMPTY) used++;
                 MatrixInfo = $"{matrix.width}×{matrix.height}, {used} map(s)";
                 byte fallback = AreaForMap(matrix.maps[0, 0]) ?? 0;
-                Model3D = MatrixSceneBuilder.Build(matrix, fallback, gameFamily, AreaForMap);
+                Model3D = MatrixSceneBuilder.Build(matrix, fallback, gameFamily, AreaForMap, mode: StitchMode);
                 StatusText = Model3D != null
                     ? $"Matrix {_selectedMatrix}: {matrix.width}×{matrix.height}, {used} map(s) stitched."
                     : $"Matrix {_selectedMatrix} has no renderable maps.";

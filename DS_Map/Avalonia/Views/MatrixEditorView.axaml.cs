@@ -11,7 +11,6 @@ namespace DSPRE.Avalonia.Views
     {
         private MatrixEditorViewModel VM => DataContext as MatrixEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public MatrixEditorView()
         {
@@ -82,18 +81,6 @@ namespace DSPRE.Avalonia.Views
         private void AddHeights_Click(object sender, RoutedEventArgs e) => VM?.AddHeightsSection();
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
 
         private static async Task Safe(Task task)
         {

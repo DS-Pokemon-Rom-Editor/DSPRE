@@ -27,7 +27,8 @@ namespace DSPRE.Avalonia.Gl
         /// </summary>
         public static NsbmdRenderModel Build(GameMatrix matrix, byte fallbackAreaId,
             GameFamilies gameFamily, Func<int, byte?> areaForMap = null,
-            ISet<(int x, int y)> includeCells = null)
+            ISet<(int x, int y)> includeCells = null,
+            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Continuous)
         {
             if (matrix == null) return null;
             var cells = new List<NsbmdGeometry.MatrixCellGeometry>();
@@ -93,7 +94,7 @@ namespace DSPRE.Avalonia.Gl
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }
                 }
 
-            return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells) : null;
+            return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells, mode) : null;
         }
 
         private static byte ResolveAreaId(GameMatrix matrix, int x, int y, byte fallbackAreaId,

@@ -8,7 +8,6 @@ namespace DSPRE.Avalonia.Views
     {
         private TrainerEditorViewModel VM => DataContext as TrainerEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public TrainerEditorView()
         {
@@ -19,7 +18,7 @@ namespace DSPRE.Avalonia.Views
         public TrainerEditorView(TrainerEditorViewModel vm) : this()
         {
             DataContext = vm;
-            EditorWindowChrome.Attach(this, vm);
+            EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -32,6 +31,9 @@ namespace DSPRE.Avalonia.Views
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
@@ -71,20 +73,6 @@ namespace DSPRE.Avalonia.Views
                 foreach (var s in dlgVm.Slots) results.Add(((int)s.DV, s.GenderIndex, s.AbilityIndex));
                 VM.ApplyDVCalc(results);
             }
-        }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); VM.Detach(); Close(); }
-                return;
-            }
-            VM?.Detach();
-            base.OnClosing(e);
         }
     }
 }

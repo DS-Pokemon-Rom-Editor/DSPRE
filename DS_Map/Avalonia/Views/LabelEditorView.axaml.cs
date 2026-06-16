@@ -24,9 +24,11 @@ namespace DSPRE.Avalonia.Views
             if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
             {
                 e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    "Discard unsaved label changes?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.Discard(); Close(); }
+                var r = await DialogHelper.AskYesNoCancel(
+                    "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
+                if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
+                if (r == DialogHelper.MsgResult.Yes) VM.Save(); else VM.Discard();
+                _closeConfirmed = true; Close();
                 return;
             }
             base.OnClosing(e);

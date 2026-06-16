@@ -14,7 +14,6 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
             DataContext = new PokemonEditorViewModel();
-            Closing += OnWindowClosing;
         }
 
         // Runtime constructor
@@ -22,22 +21,8 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
             DataContext = vm;
-            Closing += OnWindowClosing;
-            EditorWindowChrome.Attach(this, vm, manageTitle: false);   // VM owns the bound Title (+ marker)
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            if (!ViewModel.HasUnsavedChanges) { ViewModel.Detach(); return; }
-            e.Cancel = true;
-            bool confirmed = await DialogHelper.AskYesNo(
-                "There are unsaved changes. Close and discard them?", "Unsaved Changes");
-            if (confirmed)
-            {
-                ViewModel.Detach();
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            // VM owns the bound Title (+ marker); chrome adds Ctrl+S + the close guard (Detach on close).
+            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
 
         private void SaveAll_Click(object sender, RoutedEventArgs e)
@@ -45,6 +30,9 @@ namespace DSPRE.Avalonia.Views
 
         private void Close_Click(object sender, RoutedEventArgs e)
             => Close();
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
 
         // ─── Learnset button handlers ─────────────────────────────────────────────
         private void Learnset_Add_Click(object sender, RoutedEventArgs e)

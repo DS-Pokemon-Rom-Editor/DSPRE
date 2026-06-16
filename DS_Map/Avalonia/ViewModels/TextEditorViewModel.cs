@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         public string Title => _current != null
-            ? $"Text Editor — Archive {_current.ID}{(_dirty ? " *" : "")}"
+            ? $"{(_dirty ? "● " : "")}Text Editor — Archive {_current.ID}"
             : "Text Editor";
 
         // ── Design-time constructor ──────────────────────────────────────────────

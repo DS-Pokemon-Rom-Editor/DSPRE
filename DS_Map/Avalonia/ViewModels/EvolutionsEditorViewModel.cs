@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.ViewModels
         public Action Changed;
     }
 
-    public class EvolutionsEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class EvolutionsEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -189,6 +189,51 @@ namespace DSPRE.Avalonia.ViewModels
         private int _currentId = -1;
         private EvolutionFile _current;
         private bool _loading;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Snapshot = the per-row (method, param, target) values — lossless and independent of how Save()
+        // compacts the file. Edit bursts within CoalesceMs collapse into one step.
+        private readonly DSPRE.Avalonia.UndoHistory<(int, int, int)[]> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyRows(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyRows(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private (int, int, int)[] SnapshotRows()
+        {
+            var s = new (int, int, int)[EvoRows.Count];
+            for (int i = 0; i < EvoRows.Count; i++)
+                s[i] = (EvoRows[i].MethodIndex, EvoRows[i].Param, EvoRows[i].TargetIndex);
+            return s;
+        }
+
+        private void ApplyRows((int, int, int)[] s)
+        {
+            if (s == null) return;
+            _loading = true;
+            for (int i = 0; i < EvoRows.Count && i < s.Length; i++)
+            {
+                EvoRows[i].MethodIndex = s[i].Item1;
+                EvoRows[i].Param       = s[i].Item2;
+                EvoRows[i].TargetIndex = s[i].Item3;
+            }
+            _loading = false;
+            _dirty = _history.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(SnapshotRows(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
 
         // ─── Design-time constructor ──────────────────────────────────────────────
         public EvolutionsEditorViewModel()
@@ -254,6 +299,10 @@ namespace DSPRE.Avalonia.ViewModels
 
                 _dirty = false;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
+
+                _history.Reset(SnapshotRows());   // loaded state is the clean undo baseline for this mon
+                _lastCaptureUtc = DateTime.MinValue;
+                RaiseUndoState();
             }
             finally { _loading = false; }
         }
@@ -283,10 +332,14 @@ namespace DSPRE.Avalonia.ViewModels
             _current = newFile;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            _history.MarkSaved();
+            RaiseUndoState();
         }
 
         private void SetDirty()
         {
+            if (_loading) return;
+            RecordUndoSnapshot();
             if (!_dirty) { _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
     }

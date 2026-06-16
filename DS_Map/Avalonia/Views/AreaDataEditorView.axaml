@@ -17,6 +17,8 @@
         <TextBlock Text="Area data:" VerticalAlignment="Center"/>
         <ComboBox Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       </StackPanel>
     </Border>

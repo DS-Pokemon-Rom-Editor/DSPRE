@@ -8,7 +8,6 @@ namespace DSPRE.Avalonia.Views
     {
         private PickupTableEditorViewModel VM => DataContext as PickupTableEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public PickupTableEditorView()
         {
@@ -16,7 +15,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public PickupTableEditorView(PickupTableEditorViewModel vm) : this() { DataContext = vm; }
+        public PickupTableEditorView(PickupTableEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
@@ -28,17 +27,5 @@ namespace DSPRE.Avalonia.Views
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
     }
 }

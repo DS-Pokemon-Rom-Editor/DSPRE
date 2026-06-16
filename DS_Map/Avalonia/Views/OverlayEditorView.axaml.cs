@@ -11,18 +11,10 @@ namespace DSPRE.Avalonia.Views
         public OverlayEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            DataContext = new OverlayEditorViewModel();
-            Closing += OnWindowClosing;
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            e.Cancel = true;
-            if (await VM.ConfirmCloseAsync())
-            {
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            var vm = new OverlayEditorViewModel();
+            DataContext = vm;
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, vm, manageTitle: false, confirmClose: vm.ConfirmCloseAsync);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)

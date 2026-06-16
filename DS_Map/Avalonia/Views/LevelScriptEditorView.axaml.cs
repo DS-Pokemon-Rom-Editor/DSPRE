@@ -9,7 +9,6 @@ namespace DSPRE.Avalonia.Views
     {
         private LevelScriptEditorViewModel VM => DataContext as LevelScriptEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public LevelScriptEditorView()
         {
@@ -33,18 +32,6 @@ namespace DSPRE.Avalonia.Views
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddTrigger();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveTrigger();
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
 
         private static async Task Safe(Task task)
         {

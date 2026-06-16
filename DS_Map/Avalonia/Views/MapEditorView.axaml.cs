@@ -14,7 +14,6 @@ namespace DSPRE.Avalonia.Views
     {
         private MapEditorViewModel VM => DataContext as MapEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
         private Point? _lastPointer;
         private bool _panning;
         private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
@@ -195,18 +194,6 @@ namespace DSPRE.Avalonia.Views
             var clip = TopLevel.GetTopLevel(this)?.Clipboard;
             clip?.SetTextAsync(report);
             await DialogHelper.ShowInfo($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
-        }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
         }
 
         private static async Task Safe(Task task)

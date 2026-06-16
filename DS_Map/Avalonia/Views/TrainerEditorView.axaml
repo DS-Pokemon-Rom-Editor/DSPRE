@@ -16,6 +16,8 @@
             BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Search…"        Click="Search_Click"/>
         <Button Content="Reorder party…" Click="Reorder_Click"/>

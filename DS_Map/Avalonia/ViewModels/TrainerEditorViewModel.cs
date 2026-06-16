@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels
     /// not applied — the gender selector is editable whenever the game supports it
     /// (HGSS / AI-backport).
     /// </summary>
-    public class TrainerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrainerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -65,6 +65,9 @@ namespace DSPRE.Avalonia.ViewModels
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
+
+        /// <summary>Trainer id to select once the list loads (set before SetupAsync; e.g. from a "Go to Trainer #N" jump).</summary>
+        public int InitialIndex { get; set; }
 
         // ── Trainer selection / properties ──────────────────────────────────────────
         private int _selectedTrainerIndex = -1;
@@ -108,8 +111,60 @@ namespace DSPRE.Avalonia.ViewModels
         public string UnsavedChangesDescription => $"Trainer Editor (Trainer {_loadedTrainerId})";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedTrainerIndex >= 0) LoadTrainer(_selectedTrainerIndex); }
-        private void SetDirty() { if (_suppress || _dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
+        private void SetDirty() { if (_suppress) return; RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Composite snapshot via the SAME serialization the proven Save/Load round-trip uses: trp bytes +
+        // party bytes (synced from the VM first) + the name. Edit bursts within CoalesceMs collapse into one.
+        private sealed class TrainerSnapshot { public byte[] Trp; public byte[] Party; public string Name; }
+        private readonly DSPRE.Avalonia.UndoHistory<TrainerSnapshot> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private TrainerSnapshot Snapshot()
+        {
+            if (_trainer == null) return null;
+            SyncToTrainer();
+            return new TrainerSnapshot
+            {
+                Trp   = _trainer.trp.ToByteArray(),
+                Party = _trainer.party.ToByteArray(),
+                Name  = _trainerName,
+            };
+        }
+
+        private void ApplyState(TrainerSnapshot snap)
+        {
+            if (snap == null || _trainer == null || _loadedTrainerId < 0) return;
+            _suppress = true;
+            _trainer = new TrainerFile(
+                new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp)),
+                new MemoryStream(snap.Party),
+                snap.Name);
+            PopulateFromTrainer();
+            _suppress = false;
+
+            _dirty = _history.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_suppress || _trainer == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
 
         // ── Constructors ────────────────────────────────────────────────────────────
         public TrainerEditorViewModel()
@@ -183,7 +238,8 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 StatusText = $"Loaded {TrainerNames.Count} trainers ({gameFamily}).";
-                if (TrainerNames.Count > 0) SelectedTrainerIndex = 0;
+                if (TrainerNames.Count > 0)
+                    SelectedTrainerIndex = Math.Min(Math.Max(0, InitialIndex), TrainerNames.Count - 1);
             }
             catch (Exception ex)
             {
@@ -231,38 +287,94 @@ namespace DSPRE.Avalonia.ViewModels
                 _loadedTrainerId = index;
 
                 _suppress = true;
-                try
-                {
-                    var trp = _trainer.trp;
-                    TrainerName = _trainer.name;
-                    TrainerClassIndex = trp.trainerClass;
-                    DoubleBattle = trp.doubleBattle;
-                    ChooseMoves = trp.chooseMoves;
-                    ChooseItems = trp.chooseItems;
-                    PartyCount = Math.Max(1, (int)trp.partyCount);
-
-                    for (int i = 0; i < TrainerItems.Count && i < trp.trainerItems.Length; i++)
-                        TrainerItems[i].ItemIndex = trp.trainerItems[i];
-
-                    for (int i = 0; i < AiFlags.Count; i++)
-                        AiFlags[i].Checked = trp.AI != null && i < trp.AI.Count && trp.AI[i];
-
-                    for (int i = 0; i < Party.Count; i++)
-                        LoadMon(Party[i], _trainer.party[i]);
-
-                    ApplyMovesEnabled();
-                    ApplyItemsEnabled();
-                    ApplyPartyVisibility();
-                }
+                try { PopulateFromTrainer(); }
                 finally { _suppress = false; }
 
                 SetClean();
+                _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this trainer
+                _lastCaptureUtc = DateTime.MinValue;
+                RaiseUndoState();
                 StatusText = $"Trainer {index} loaded.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (Exception ex)
             {
                 _ = DialogHelper.ShowError($"Failed to load trainer {index}:\n{ex.Message}", "Trainer Editor Error");
+            }
+        }
+
+        /// <summary>Pushes <see cref="_trainer"/> into the bound fields + party mons. Caller guards with _suppress.</summary>
+        private void PopulateFromTrainer()
+        {
+            var trp = _trainer.trp;
+            TrainerName = _trainer.name;
+            TrainerClassIndex = trp.trainerClass;
+            DoubleBattle = trp.doubleBattle;
+            ChooseMoves = trp.chooseMoves;
+            ChooseItems = trp.chooseItems;
+            PartyCount = Math.Max(1, (int)trp.partyCount);
+
+            for (int i = 0; i < TrainerItems.Count && i < trp.trainerItems.Length; i++)
+                TrainerItems[i].ItemIndex = trp.trainerItems[i];
+
+            for (int i = 0; i < AiFlags.Count; i++)
+                AiFlags[i].Checked = trp.AI != null && i < trp.AI.Count && trp.AI[i];
+
+            for (int i = 0; i < Party.Count; i++)
+                LoadMon(Party[i], _trainer.party[i]);
+
+            ApplyMovesEnabled();
+            ApplyItemsEnabled();
+            ApplyPartyVisibility();
+        }
+
+        /// <summary>Pushes the live VM fields into <see cref="_trainer"/> (shared by Save and snapshotting).</summary>
+        private void SyncToTrainer()
+        {
+            if (_trainer == null) return;
+            var trp = _trainer.trp;
+            trp.partyCount = (byte)_partyCount;
+            trp.chooseMoves = _chooseMoves;
+            trp.chooseItems = _chooseItems;
+            trp.doubleBattle = _doubleBattle;
+            trp.trainerClass = (byte)Math.Max(0, _trainerClassIndex);
+
+            for (int i = 0; i < trp.trainerItems.Length && i < TrainerItems.Count; i++)
+                trp.trainerItems[i] = (ushort)Math.Max(0, TrainerItems[i].ItemIndex);
+
+            for (int i = 0; i < AiFlags.Count && trp.AI != null && i < trp.AI.Count; i++)
+                trp.AI[i] = AiFlags[i].Checked;
+
+            for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
+                _trainer.party[i].moves = _chooseMoves ? new ushort[4] : null;
+
+            for (int i = 0; i < (int)_partyCount; i++)
+            {
+                var mon = Party[i];
+                var p = _trainer.party[i];
+                p.pokeID = (ushort)Math.Max(0, mon.SpeciesIndex);
+                p.formID = (ushort)mon.FormId;
+                p.level = (ushort)mon.Level;
+
+                if (_chooseMoves)
+                    p.moves = new ushort[] { (ushort)Math.Max(0, mon.Move1), (ushort)Math.Max(0, mon.Move2), (ushort)Math.Max(0, mon.Move3), (ushort)Math.Max(0, mon.Move4) };
+
+                if (_chooseItems)
+                    p.heldItem = (ushort)Math.Max(0, mon.ItemIndex);
+
+                p.difficulty = (byte)mon.Difficulty;
+
+                var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
+                if (_genderEditable)
+                {
+                    if (mon.GenderIndex == 1) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
+                    else if (mon.GenderIndex == 2) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
+                }
+                if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
+                else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
+                p.genderAndAbilityFlags = flags;
+
+                p.ballSeals = (ushort)mon.BallSeals;
             }
         }
 
@@ -310,58 +422,17 @@ namespace DSPRE.Avalonia.ViewModels
         public void Save()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
-            var trp = _trainer.trp;
-            trp.partyCount = (byte)_partyCount;
-            trp.chooseMoves = _chooseMoves;
-            trp.chooseItems = _chooseItems;
-            trp.doubleBattle = _doubleBattle;
-            trp.trainerClass = (byte)Math.Max(0, _trainerClassIndex);
-
-            for (int i = 0; i < trp.trainerItems.Length && i < TrainerItems.Count; i++)
-                trp.trainerItems[i] = (ushort)Math.Max(0, TrainerItems[i].ItemIndex);
-
-            for (int i = 0; i < AiFlags.Count && trp.AI != null && i < trp.AI.Count; i++)
-                trp.AI[i] = AiFlags[i].Checked;
-
-            for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
-                _trainer.party[i].moves = _chooseMoves ? new ushort[4] : null;
-
-            for (int i = 0; i < (int)_partyCount; i++)
-            {
-                var mon = Party[i];
-                var p = _trainer.party[i];
-                p.pokeID = (ushort)Math.Max(0, mon.SpeciesIndex);
-                p.formID = (ushort)mon.FormId;
-                p.level = (ushort)mon.Level;
-
-                if (_chooseMoves)
-                    p.moves = new ushort[] { (ushort)Math.Max(0, mon.Move1), (ushort)Math.Max(0, mon.Move2), (ushort)Math.Max(0, mon.Move3), (ushort)Math.Max(0, mon.Move4) };
-
-                if (_chooseItems)
-                    p.heldItem = (ushort)Math.Max(0, mon.ItemIndex);
-
-                p.difficulty = (byte)mon.Difficulty;
-
-                var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
-                if (_genderEditable)
-                {
-                    if (mon.GenderIndex == 1) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
-                    else if (mon.GenderIndex == 2) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
-                }
-                if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
-                else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
-                p.genderAndAbilityFlags = flags;
-
-                p.ballSeals = (ushort)mon.BallSeals;
-            }
+            SyncToTrainer();
 
             string indexStr = "\\" + _selectedTrainerIndex.ToString("D4");
-            File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, trp.ToByteArray());
+            File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, _trainer.trp.ToByteArray());
             File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + indexStr, _trainer.party.ToByteArray());
 
             UpdateTrainerName(_trainerName);
 
             SetClean();
+            _history.MarkSaved();
+            RaiseUndoState();
             StatusText = $"Trainer {_selectedTrainerIndex} saved.";
         }
 

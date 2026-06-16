@@ -6,7 +6,7 @@
         Title="Go to…"
         Width="460" Height="420"
         WindowStartupLocation="CenterOwner"
-        CanResize="False" ShowInTaskbar="False" SystemDecorations="BorderOnly">
+        CanResize="False" ShowInTaskbar="False" WindowDecorations="None">
 
   <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
     <DockPanel Margin="8">

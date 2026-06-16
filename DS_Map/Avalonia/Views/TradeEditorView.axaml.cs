@@ -11,20 +11,11 @@ namespace DSPRE.Avalonia.Views
         public TradeEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            DataContext = new TradeEditorViewModel();
-            Closing += OnWindowClosing;
-            EditorWindowChrome.Attach(this, (TradeEditorViewModel)DataContext, manageTitle: false);   // VM owns the bound Title (+ "*" marker)
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            e.Cancel = true;
-            if (await VM.ConfirmCloseAsync())
-            {
-                VM.Detach();
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            var vm = new TradeEditorViewModel();
+            DataContext = vm;
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, vm, manageTitle: false,
+                confirmClose: vm.ConfirmCloseAsync, onClosed: vm.Detach);
         }
 
         private void SaveTrade_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -35,6 +26,9 @@ namespace DSPRE.Avalonia.Views
 
         private void SaveAll_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.SaveAllCommand();
+
+        private void Undo_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.Undo();
+        private void Redo_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.Redo();
 
         private async void TradeID_Changed(object sender, NumericUpDownValueChangedEventArgs e)
         {

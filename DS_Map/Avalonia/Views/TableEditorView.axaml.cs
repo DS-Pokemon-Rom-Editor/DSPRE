@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Views
         public TableEditorView(TableEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -38,21 +39,6 @@ namespace DSPRE.Avalonia.Views
         private async void EffectComboHelp_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ShowEffectsComboHelp());
         private async void VsTrainerHelp_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ShowVsTrainerHelp());
         private async void VsPokemonHelp_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ShowVsPokemonHelp());
-
-        // ── Unsaved-changes guard on close ───────────────────────────────────
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    "Discard unsaved changes to the Table Editor?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
-        private bool _closeConfirmed;
 
         private static async Task Safe(Task task)
         {

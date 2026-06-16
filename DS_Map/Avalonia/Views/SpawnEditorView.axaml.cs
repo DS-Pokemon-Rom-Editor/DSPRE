@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views
         {
             DataContext = vm;
             InitializeComponent();
+            EditorWindowChrome.Attach(this, vm);
         }
 
         // Called from matrix editor with pre-selected header + coords
@@ -28,18 +29,5 @@ namespace DSPRE.Avalonia.Views
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await (VM?.SaveChangesAsync() ?? System.Threading.Tasks.Task.CompletedTask);
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM?.HasUnsavedChanges == true)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    "Discard unsaved changes to spawn settings?",
-                    "Unsaved Changes");
-                if (discard) { VM.DiscardChanges(); Close(); }
-            }
-            base.OnClosing(e);
-        }
     }
 }

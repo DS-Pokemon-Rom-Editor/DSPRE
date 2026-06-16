@@ -107,6 +107,9 @@ namespace DSPRE.Avalonia.ViewModels
         public HeadbuttEncounterViewModel() { }
         public HeadbuttEncounterViewModel(bool _) { }
 
+        /// <summary>Headbutt file to open once loaded (set before SetupAsync; e.g. from a "Go to Headbutt #N" jump).</summary>
+        public int InitialIndex { get; set; }
+
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
@@ -126,7 +129,7 @@ namespace DSPRE.Avalonia.ViewModels
                 int count = Filesystem.GetHeadbuttCount();
                 for (int i = 0; i < count; i++) FileNames.Add("Headbutt File " + i);
                 StatusText = $"{count} headbutt files.";
-                if (count > 0) SelectedFileIndex = 0;
+                if (count > 0) SelectedFileIndex = System.Math.Clamp(InitialIndex, 0, count - 1);
             }
             catch (Exception ex)
             {

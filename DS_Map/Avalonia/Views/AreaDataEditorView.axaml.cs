@@ -8,7 +8,6 @@ namespace DSPRE.Avalonia.Views
     {
         private AreaDataEditorViewModel VM => DataContext as AreaDataEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public AreaDataEditorView()
         {
@@ -16,7 +15,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public AreaDataEditorView(AreaDataEditorViewModel vm) : this() { DataContext = vm; }
+        public AreaDataEditorView(AreaDataEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
@@ -29,16 +28,7 @@ namespace DSPRE.Avalonia.Views
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
 
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
+        private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
     }
 }

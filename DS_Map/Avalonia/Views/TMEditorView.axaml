@@ -4,8 +4,8 @@
 		x:Class="DSPRE.Avalonia.Views.TMEditorView"
 		x:DataType="vm:TMEditorViewModel"
 		Title="{Binding Title}"
-		Width="400" Height="480"
-		CanResize="False"
+		Width="400" Height="480" MinWidth="340" MinHeight="380"
+		CanResize="True"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
     <vm:TMEditorViewModel/>
@@ -69,6 +69,11 @@
 		<!-- ── Right column bottom: save / export / import ─────────── -->
 		<StackPanel Grid.Column="1" Grid.Row="1"
 					Spacing="6" VerticalAlignment="Bottom">
+
+			<Grid ColumnDefinitions="*,6,*">
+				<Button Grid.Column="0" Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+				<Button Grid.Column="2" Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+			</Grid>
 
 			<Button Content="Save"
 					Click="SaveButton_Click"

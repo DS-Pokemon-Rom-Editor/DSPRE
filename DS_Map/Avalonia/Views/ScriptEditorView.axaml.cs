@@ -12,7 +12,6 @@ namespace DSPRE.Avalonia.Views
     {
         private ScriptEditorViewModel VM => DataContext as ScriptEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
         private bool _syncing;   // guards the editor⇄VM text loop
 
         public ScriptEditorView()
@@ -79,18 +78,6 @@ namespace DSPRE.Avalonia.Views
             var editor = Tabs.SelectedIndex switch { 1 => FunctionsEditor, 2 => ActionsEditor, _ => ScriptsEditor };
             editor.Focus();
             SearchPanel.Install(editor).Open();
-        }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
         }
 
         private static async Task Safe(Task task)

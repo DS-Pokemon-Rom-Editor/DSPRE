@@ -231,13 +231,13 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!_dirty) return true;
             var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Save before closing?", "Unsaved Changes");
+                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
             if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return r == DialogHelper.MsgResult.No;
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
-        private void SetDirty()  { _dirty = true;  Title = "Fly / Warp Editor*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()  { _dirty = true;  Title = "● Fly / Warp Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean()  { _dirty = false; Title = "Fly / Warp Editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private void LoadRows()

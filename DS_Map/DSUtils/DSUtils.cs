@@ -43,6 +43,37 @@ namespace DSPRE {
                 writer.Write(toOutput, indexFirstByteToWrite, indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite);
             }
         }
+        // ── Mon party-icon palette table (1 byte per species: 0/1/2) ──────────────────────────────
+        // The table lives at RomInfo.monIconPalTableAddress; which file + offset depends on the overlay
+        // setup, exactly as GetPokePic resolves it when rendering icons. Reused here for the editor.
+        // Requires RomInfo.SetMonIconsPalTableAddress() to have been called first.
+        public static bool TryResolveMonIconPalTable(out string path, out int baseOffset) {
+            path = null; baseOffset = 0;
+            if (RomInfo.isHGE) {
+                baseOffset = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
+                path = OverlayUtils.GetPath(129);
+            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+                baseOffset = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
+                path = Filesystem.expArmPath;
+            } else {
+                baseOffset = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
+                path = RomInfo.arm9Path;
+            }
+            return path != null && baseOffset >= 0;
+        }
+
+        /// <summary>Reads the party-icon palette id (0/1/2) for a species, or 0 if unavailable.</summary>
+        public static int GetMonIconPaletteId(int species) {
+            if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return 0;
+            using (EasyReader r = new EasyReader(path, baseOff + species)) return r.ReadByte();
+        }
+
+        /// <summary>Writes the party-icon palette id (0/1/2) for a species into the resolved table file.</summary>
+        public static void SetMonIconPaletteId(int species, byte palId) {
+            if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return;
+            using (EasyWriter w = new EasyWriter(path, baseOff + species)) w.Write(palId);
+        }
+
         public static byte[] ReadFromFile(string filepath, long startOffset = 0, long numberOfBytes = 0) {
             byte[] buffer = null;
 
@@ -677,7 +708,9 @@ namespace DSPRE {
             });
         }
 
-        public static Image GetPokePic(int species, int w, int h) {
+        /// <param name="paletteIdOverride">When &gt;= 0, render with this icon-palette id (0/1/2) instead of
+        /// the one stored in the ARM9 table — used to PREVIEW a palette change before it is saved.</param>
+        public static Image GetPokePic(int species, int w, int h, int paletteIdOverride = -1) {
             PaletteBase paletteBase;
             bool fiveDigits = false; // some extreme future proofing
             string filename = "0000";
@@ -690,30 +723,33 @@ namespace DSPRE {
                 fiveDigits = true;
             }
 
-            // read arm9 table to grab pal ID
+            // Palette id: caller override (preview) or the value stored in the ARM9 table.
             int paletteId = 0;
-            string iconTablePath;
-
-            int iconPalTableOffsetFromFileStart;
-            if (RomInfo.isHGE) {
-                // if overlay 129 exists, read it from there
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
-                iconTablePath = OverlayUtils.GetPath(129);
-            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
-                // if there is a synthetic overlay, read it from there
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
-                iconTablePath = Filesystem.expArmPath;
+            if (paletteIdOverride >= 0) {
+                paletteId = paletteIdOverride;
             } else {
-                // default handling
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
-                iconTablePath = RomInfo.arm9Path;
+                string iconTablePath;
+                int iconPalTableOffsetFromFileStart;
+                if (RomInfo.isHGE) {
+                    // if overlay 129 exists, read it from there
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
+                    iconTablePath = OverlayUtils.GetPath(129);
+                } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+                    // if there is a synthetic overlay, read it from there
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
+                    iconTablePath = Filesystem.expArmPath;
+                } else {
+                    // default handling
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
+                    iconTablePath = RomInfo.arm9Path;
+                }
+
+                using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
+                    paletteId = idReader.ReadByte();
+                }
             }
 
-            using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
-                paletteId = idReader.ReadByte();
-            }
-
-            if (paletteId != 0) {
+            if (paletteId != 0 && paletteId < paletteBase.Palette.Length) {
                 paletteBase.Palette[0] = paletteBase.Palette[paletteId]; // update pal 0 to be the new pal
             }
 

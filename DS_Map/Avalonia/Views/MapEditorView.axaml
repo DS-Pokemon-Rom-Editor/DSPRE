@@ -51,6 +51,8 @@
           <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center"
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+          <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsMatrixView}" VerticalAlignment="Center"
+                    ToolTip.Tip="Full-matrix stitch: ON = DS-true fixed 32-tile grid (underfilled maps gap, overhang overlaps); OFF = continuous geometry-sized layout"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
                         ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile."/>

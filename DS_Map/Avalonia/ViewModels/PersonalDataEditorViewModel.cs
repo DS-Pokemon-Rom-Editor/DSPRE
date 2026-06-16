@@ -16,7 +16,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
 {
-    public class PersonalDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class PersonalDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -124,6 +124,47 @@ namespace DSPRE.Avalonia.ViewModels
         private PokemonPersonalData _current;
         private int _currentId;
         private bool _loading;
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Composite snapshot: the personal-data file bytes + the hatch-result (which lives in a separate
+        // table, not in the file). Edit bursts within CoalesceMs collapse into one undo step.
+        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; }
+        private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private PersonalSnapshot Snapshot() =>
+            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex };
+
+        private void ApplyState(PersonalSnapshot snap)
+        {
+            if (snap == null || _current == null) return;
+            _loading = true;
+            _current = new PokemonPersonalData(new MemoryStream(snap.Data));
+            PopulateFromCurrent();
+            _hatchResultIndex = snap.Hatch; OnPropertyChanged(nameof(HatchResultIndex));
+            _loading = false;
+
+            _dirty = _history.IsDirty;
+            Title = _dirty ? "● Personal Data Editor" : "Personal Data Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_current == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
         private string[] _allFileNames;
         private string[] _machineMoveNames;
         private string[] _typeNamesArr;
@@ -243,7 +284,9 @@ namespace DSPRE.Avalonia.ViewModels
             if (_current == null) return;
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
             WriteHatchResult(_currentId, HatchResultIndex);
+            _history.MarkSaved();
             SetClean();
+            RaiseUndoState();
         }
 
         public async Task ExportCommand(Window owner)
@@ -366,14 +409,14 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!_dirty) return true;
             var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Save before closing?", "Unsaved Changes");
+                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
             if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return r == DialogHelper.MsgResult.No;
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
 
-        private void SetDirty()  { if (_loading) return; _dirty = true;  Title = "Personal Data Editor*"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()  { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Personal Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean()  { _dirty = false; Title = "Personal Data Editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmDiscardAsync(int newId)
@@ -391,6 +434,32 @@ namespace DSPRE.Avalonia.ViewModels
             _currentId = id;
             _current   = new PokemonPersonalData(id);
 
+            PopulateFromCurrent();
+            _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
+
+            // Load sprite icon
+            int iconId = id;
+            int excess = iconId - GetPokemonNames().Length;
+            if (excess >= 0 && excess < PokeDatabase.PersonalData.personalExtraFiles.Length)
+                iconId = PokeDatabase.PersonalData.personalExtraFiles[excess].iconId;
+            try
+            {
+                var drawingImg = DSUtils.GetPokePic(iconId, 64, 64);
+                MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
+            }
+            catch { MonIconBitmap = null; }
+
+            SetClean();
+            _loading = false;
+
+            _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this mon
+            _lastCaptureUtc = DateTime.MinValue;
+            RaiseUndoState();
+        }
+
+        /// <summary>Pushes <see cref="_current"/> into the bound fields + machine lists. Caller guards with _loading.</summary>
+        private void PopulateFromCurrent()
+        {
             BaseHP  = _current.baseHP;  BaseAtk = _current.baseAtk; BaseDef = _current.baseDef;
             BaseSpe = _current.baseSpeed; BaseSpA = _current.baseSpAtk; BaseSpD = _current.baseSpDef;
             EvHP  = _current.evHP;  EvAtk = _current.evAtk; EvDef = _current.evDef;
@@ -414,24 +483,8 @@ namespace DSPRE.Avalonia.ViewModels
 
             _flipFlag = _current.flip; OnPropertyChanged(nameof(FlipFlag));
             GenderLabel = GetGenderText(_current.genderVec);
-            _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             RebuildMachineLists();
-
-            // Load sprite icon
-            int iconId = id;
-            int excess = iconId - GetPokemonNames().Length;
-            if (excess >= 0 && excess < PokeDatabase.PersonalData.personalExtraFiles.Length)
-                iconId = PokeDatabase.PersonalData.personalExtraFiles[excess].iconId;
-            try
-            {
-                var drawingImg = DSUtils.GetPokePic(iconId, 64, 64);
-                MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
-            }
-            catch { MonIconBitmap = null; }
-
-            SetClean();
-            _loading = false;
         }
 
         private void RebuildMachineLists()

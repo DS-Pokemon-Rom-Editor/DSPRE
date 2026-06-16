@@ -19,17 +19,21 @@
   </Window.Styles>
   <DockPanel>
     <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
-      <Grid ColumnDefinitions="44,8,115,8,*,8,90,8,70">
+      <Grid ColumnDefinitions="44,8,115,8,*,8,Auto">
         <Border Grid.Column="0" Width="40" Height="40" Background="#E0E0E0" CornerRadius="4">
           <Image Source="{Binding MonIconBitmap}" Stretch="Uniform"/>
         </Border>
         <NumericUpDown Grid.Column="2" Value="{Binding SelectedMonIndex}" Minimum="0" Maximum="{Binding MaxMonIndex}" FormatString="0" Width="115" FontSize="13"/>
         <ComboBox Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedMonIndex}" HorizontalAlignment="Stretch" FontSize="13"/>
-        <Button Grid.Column="6" Content="Save All" Click="SaveAll_Click" Width="90" IsDefault="True"/>
-        <Button Grid.Column="8" Content="Close"    Click="Close_Click"   Width="70"/>
+        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8">
+          <Button Content="↶" Click="Undo_Click" Width="36" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+          <Button Content="↷" Click="Redo_Click" Width="36" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+          <Button Content="Save All" Click="SaveAll_Click" Width="90" IsDefault="True"/>
+          <Button Content="Close"    Click="Close_Click"   Width="70"/>
+        </StackPanel>
       </Grid>
     </Border>
-    <TabControl Margin="4,2,4,4">
+    <TabControl Margin="4,2,4,4" SelectedIndex="{Binding SelectedTabIndex}">
       <TabItem Header="Personal Data">
         <views:PersonalDataEditorView DataContext="{Binding PersonalVM}"/>
       </TabItem>
@@ -121,6 +125,9 @@
       <!-- ─── Sprites ──────────────────────────────────────────────────── -->
       <TabItem Header="Sprites">
         <views:PokemonSpriteEditorView DataContext="{Binding SpriteVM}"/>
+      </TabItem>
+      <TabItem Header="Battle Display">
+        <views:BattleDisplayEditorView DataContext="{Binding BattleDisplayVM}"/>
       </TabItem>
 
     </TabControl>

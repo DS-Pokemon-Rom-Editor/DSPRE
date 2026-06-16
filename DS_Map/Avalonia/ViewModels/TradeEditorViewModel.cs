@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.ViewModels
         NONE = 0, JAPANESE = 1, ENGLISH = 2, FRENCH = 3,
         ITALIAN = 4, GERMAN = 5, UNUSED = 6, SPANISH = 7, KOREAN = 8
     }
-    public class TradeEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TradeEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -37,6 +37,110 @@ namespace DSPRE.Avalonia.ViewModels
         public string UnsavedChangesDescription => "Trade Editor";
         void IEditorWithUnsavedChanges.SaveChanges() { SaveTradeCore(); SaveTextCore(); }
         public void DiscardChanges() { _tradeDirty = false; _textDirty = false; }
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        // Trade edits live in the VM fields (only synced to _cur at save), and the nickname/OT names live in a
+        // text archive — so the snapshot is composite: the synced trade-data bytes + the two text strings.
+        private sealed class TradeSnapshot { public byte[] Data; public string OtName; public string Nickname; }
+        private readonly DSPRE.Avalonia.UndoHistory<TradeSnapshot> _history = new();
+        private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private TradeSnapshot Snapshot()
+        {
+            if (_cur == null) return null;
+            SyncTradeFieldsToCur();   // pull the live VM fields into _cur so its bytes reflect the edits
+            return new TradeSnapshot { Data = _cur.ToByteArray(), OtName = OtName, Nickname = Nickname };
+        }
+
+        private void ApplyState(TradeSnapshot snap)
+        {
+            if (snap == null || _cur == null) return;
+            _loading = true;
+            _cur = new TradeData(TradeID, new MemoryStream(snap.Data));
+            PopulateFromCur();
+            OtName = snap.OtName;
+            Nickname = snap.Nickname;
+            _loading = false;
+
+            _tradeDirty = _textDirty = _history.IsDirty;
+            Title = _history.IsDirty ? "● Trade Editor" : "Trade Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_loading || _cur == null) return;
+            bool coalesce = (System.DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(Snapshot(), coalesce);
+            _lastCaptureUtc = System.DateTime.UtcNow;
+            RaiseUndoState();
+        }
+
+        private void MarkSavedIfClean()
+        {
+            if (!_tradeDirty && !_textDirty) { _history.MarkSaved(); RaiseUndoState(); }
+        }
+
+        /// <summary>Copies the live trade VM fields into <see cref="_cur"/> (shared by Save and snapshotting).</summary>
+        private void SyncTradeFieldsToCur()
+        {
+            if (_cur == null) return;
+            _cur.species          = SelectedSpecies;
+            _cur.hpIV             = HpIV;
+            _cur.atkIV            = AtkIV;
+            _cur.defIV            = DefIV;
+            _cur.speedIV          = SpeIV;
+            _cur.spAtkIV          = SpaIV;
+            _cur.spDefIV          = SpdIV;
+            _cur.ability          = SelectedAbility;
+            _cur.otID             = OtID;
+            _cur.cool             = Cool;
+            _cur.beauty           = Beauty;
+            _cur.cute             = Cute;
+            _cur.smart            = Smart;
+            _cur.tough            = Tough;
+            _cur.pid              = Pid;
+            _cur.heldItem         = SelectedHeldItem;
+            _cur.otGender         = SelectedOTGender;
+            _cur.sheen            = Sheen;
+            _cur.language         = SelectedLanguage;
+            _cur.requestedSpecies = SelectedRequested;
+            _cur.unknown          = IsHGSS ? Unknown : 0;
+        }
+
+        /// <summary>Pushes <see cref="_cur"/> into the bound trade fields. Caller guards with _loading.</summary>
+        private void PopulateFromCur()
+        {
+            SelectedSpecies  = _cur.species;
+            HpIV  = _cur.hpIV;
+            AtkIV = _cur.atkIV;
+            DefIV = _cur.defIV;
+            SpeIV = _cur.speedIV;
+            SpaIV = _cur.spAtkIV;
+            SpdIV = _cur.spDefIV;
+            SelectedAbility  = _cur.ability;
+            OtID             = _cur.otID;
+            Cool   = _cur.cool;
+            Beauty = _cur.beauty;
+            Cute   = _cur.cute;
+            Smart  = _cur.smart;
+            Tough  = _cur.tough;
+            Pid    = _cur.pid;
+            SelectedHeldItem = _cur.heldItem;
+            SelectedOTGender = _cur.otGender;
+            Sheen            = _cur.sheen;
+            SelectedLanguage = _cur.language;
+            SelectedRequested = _cur.requestedSpecies;
+            Unknown          = _cur.unknown;
+        }
 
         // ----------------------------------------------------------------
         // Lists (ComboBox sources)
@@ -273,7 +377,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!HasUnsavedChanges) return true;
 
             var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save before closing?",
+                "You have unsaved changes. Do you want to save them before closing?",
                 "Unsaved Changes");
 
             if (result == DialogHelper.MsgResult.Yes)
@@ -296,27 +400,7 @@ namespace DSPRE.Avalonia.ViewModels
             _tradeArchive = new TextArchive(GetTextBankIndex());
 
             TradeID          = tradeID;
-            SelectedSpecies  = _cur.species;
-            HpIV  = _cur.hpIV;
-            AtkIV = _cur.atkIV;
-            DefIV = _cur.defIV;
-            SpeIV = _cur.speedIV;
-            SpaIV = _cur.spAtkIV;
-            SpdIV = _cur.spDefIV;
-            SelectedAbility  = _cur.ability;
-            OtID             = _cur.otID;
-            Cool   = _cur.cool;
-            Beauty = _cur.beauty;
-            Cute   = _cur.cute;
-            Smart  = _cur.smart;
-            Tough  = _cur.tough;
-            Pid    = _cur.pid;
-            SelectedHeldItem = _cur.heldItem;
-            SelectedOTGender = _cur.otGender;
-            Sheen            = _cur.sheen;
-            SelectedLanguage = _cur.language;
-            SelectedRequested = _cur.requestedSpecies;
-            Unknown          = _cur.unknown;
+            PopulateFromCur();
 
             OtName   = GetOTName(tradeID);
             Nickname = GetMonNickname(tradeID);
@@ -326,37 +410,22 @@ namespace DSPRE.Avalonia.ViewModels
             Title = "Trade Editor";
 
             _loading = false;
+
+            _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this trade
+            _lastCaptureUtc = System.DateTime.MinValue;
+            RaiseUndoState();
         }
 
         private void SaveTradeCore()
         {
             if (_cur == null) return;
-            _cur.species          = SelectedSpecies;
-            _cur.hpIV             = HpIV;
-            _cur.atkIV            = AtkIV;
-            _cur.defIV            = DefIV;
-            _cur.speedIV          = SpeIV;
-            _cur.spAtkIV          = SpaIV;
-            _cur.spDefIV          = SpdIV;
-            _cur.ability          = SelectedAbility;
-            _cur.otID             = OtID;
-            _cur.cool             = Cool;
-            _cur.beauty           = Beauty;
-            _cur.cute             = Cute;
-            _cur.smart            = Smart;
-            _cur.tough            = Tough;
-            _cur.pid              = Pid;
-            _cur.heldItem         = SelectedHeldItem;
-            _cur.otGender         = SelectedOTGender;
-            _cur.sheen            = Sheen;
-            _cur.language         = SelectedLanguage;
-            _cur.requestedSpecies = SelectedRequested;
-            _cur.unknown          = IsHGSS ? Unknown : 0;
+            SyncTradeFieldsToCur();
 
             _cur.SaveToFileDefaultDir(TradeID, false);
             _tradeDirty = false;
             if (!_textDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.id}.");
+            MarkSavedIfClean();
         }
 
         private void SaveTextCore()
@@ -374,21 +443,24 @@ namespace DSPRE.Avalonia.ViewModels
             _textDirty = false;
             if (!_tradeDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade text data to message bank {GetTextBankIndex()}");
+            MarkSavedIfClean();
         }
 
         private void MarkTradeDirty()
         {
             if (_loading) return;
+            RecordUndoSnapshot();
             _tradeDirty = true;
-            Title = "Trade Editor*";
+            Title = "● Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private void MarkTextDirty()
         {
             if (_loading) return;
+            RecordUndoSnapshot();
             _textDirty = true;
-            Title = "Trade Editor*";
+            Title = "● Trade Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
