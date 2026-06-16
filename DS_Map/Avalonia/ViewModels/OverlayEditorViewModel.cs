@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!_dirty) return true;
 
             var result = await DialogHelper.AskYesNoCancel(
-                "There are unsaved changes to overlays.\nDo you want to save them before closing?",
+                "You have unsaved changes. Do you want to save them before closing?",
                 "Overlay Editor - Unsaved Changes");
 
             if (result == DialogHelper.MsgResult.Yes)
@@ -292,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void SetDirty()
         {
             _dirty = true;
-            Title = "Overlay Editor*";
+            Title = "● Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

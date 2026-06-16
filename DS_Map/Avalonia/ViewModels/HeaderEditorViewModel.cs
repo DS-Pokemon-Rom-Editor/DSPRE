@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels
     /// prompt on add-header, the Advanced Header Search sub-form, and the
     /// open-wild/script/level-script/area-data navigation buttons.
     /// </summary>
-    public class HeaderEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HeaderEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -247,8 +247,39 @@ namespace DSPRE.Avalonia.ViewModels
         public string UnsavedChangesDescription => _header != null ? $"Header {_header.ID}" : "Header Editor";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); LoadHeader(SelectedHeaderId); }
-        private void SetDirty() { if (_suppress || _dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
+        private void SetDirty() { if (_suppress) return; RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
+        private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private DateTime _lastCaptureUtc = DateTime.MinValue;
+        private const int CoalesceMs = 500;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void ApplyState(byte[] bytes)
+        {
+            if (bytes == null || _header == null) return;
+            _header = MapHeader.LoadFromByteArray(bytes, _header.ID);
+            PopulateFromHeader();   // manages _suppress itself
+            _dirty = _history.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
+        }
+
+        private void RecordUndoSnapshot()
+        {
+            if (_suppress || _header == null) return;
+            bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
+            _history.Capture(_header.ToByteArray(), coalesce);
+            _lastCaptureUtc = DateTime.UtcNow;
+            RaiseUndoState();
+        }
 
         // ── Constructors ────────────────────────────────────────────────────────────
         public HeaderEditorViewModel()
@@ -368,8 +399,13 @@ namespace DSPRE.Avalonia.ViewModels
             return 0;
         }
 
+        /// <summary>Header id to open on load (set before SetupAsync; e.g. from a "Go to Header #N" jump). -1 = auto.</summary>
+        public int InitialHeaderId { get; set; } = -1;
+
         private ushort FindInitialHeaderId()
         {
+            if (InitialHeaderId >= 0 && InitialHeaderId < _locationIndexByHeader.Count)
+                return (ushort)InitialHeaderId;
             int mystery = FindMysteryZoneIndex();
             for (ushort id = 0; id < _locationIndexByHeader.Count; id++)
                 if (_locationIndexByHeader[id] != mystery)
@@ -510,6 +546,9 @@ namespace DSPRE.Avalonia.ViewModels
 
             PopulateFromHeader();
             SetClean();
+            _history.Reset(_header.ToByteArray());   // loaded state is the clean undo baseline for this header
+            _lastCaptureUtc = DateTime.MinValue;
+            RaiseUndoState();
             StatusText = $"Header {_header.ID} loaded.";
             OnPropertyChanged(nameof(UnsavedChangesDescription));
             UpdateHeaderLocationInTree(headerId, CurrentHeaderLocationIndex());   // correct folder after reset/paste/import
@@ -726,6 +765,8 @@ namespace DSPRE.Avalonia.ViewModels
 
             UpdateCurrentInternalName();
             SetClean();
+            _history.MarkSaved();
+            RaiseUndoState();
             StatusText = $"Header {_header.ID} saved.";
         }
 

@@ -26,6 +26,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void On([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private readonly List<CommandItem> _all;
+        private readonly Func<string, IEnumerable<CommandItem>> _dynamic;
         public ObservableCollection<CommandItem> Items { get; } = new();
 
         private string _search = "";
@@ -34,9 +35,13 @@ namespace DSPRE.Avalonia.ViewModels
         private int _selectedIndex;
         public int SelectedIndex { get => _selectedIndex; set { if (_selectedIndex == value) return; _selectedIndex = value; On(); } }
 
-        public CommandPaletteViewModel(IEnumerable<CommandItem> commands)
+        /// <param name="dynamicProvider">Optional generator of query-specific entries (e.g. "Go to Script #42"
+        /// once a number is typed). Its results are listed ABOVE the static matches.</param>
+        public CommandPaletteViewModel(IEnumerable<CommandItem> commands,
+                                       Func<string, IEnumerable<CommandItem>> dynamicProvider = null)
         {
             _all = commands.ToList();
+            _dynamic = dynamicProvider;
             Refilter();
         }
 
@@ -44,6 +49,9 @@ namespace DSPRE.Avalonia.ViewModels
         {
             string q = _search?.Trim() ?? "";
             Items.Clear();
+            // Query-specific "go to #N" entries first — they're the most precise thing the user can mean.
+            if (_dynamic != null)
+                foreach (var c in _dynamic(q)) Items.Add(c);
             IEnumerable<CommandItem> matches = string.IsNullOrEmpty(q)
                 ? _all
                 : _all.Where(c => Match(c, q)).OrderByDescending(c => Score(c, q));

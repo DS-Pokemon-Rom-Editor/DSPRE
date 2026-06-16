@@ -419,7 +419,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!_dirty) return true;
             var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before exiting?",
+                "You have unsaved changes. Do you want to save them before closing?",
                 "Unsaved Changes");
             if (result == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return result == DialogHelper.MsgResult.No;
@@ -546,7 +546,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void SetDirty(bool d)
         {
             _dirty = d;
-            Title  = d ? "Egg Move Editor*" : "Egg Move Editor";
+            Title  = d ? "● Egg Move Editor" : "Egg Move Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

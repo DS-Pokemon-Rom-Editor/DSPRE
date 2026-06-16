@@ -17,7 +17,7 @@
       <TabItem Header="Validation">
         <DockPanel Margin="4">
           <WrapPanel DockPanel.Dock="Top" Classes="toolbar">
-            <Button Content="🔍 Run validation" Click="Run_Click"/>
+            <Button Content="🔍 Run validation" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
             <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
                        Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
           </WrapPanel>

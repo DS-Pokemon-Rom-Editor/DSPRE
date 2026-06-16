@@ -13,26 +13,18 @@ namespace DSPRE.Avalonia.Views
         public TMEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            DataContext = new TMEditorViewModel();
-            Closing += OnWindowClosing;
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            // Cancel immediately so we can await the async confirm dialog
-            e.Cancel = true;
-            bool canClose = await ViewModel.ConfirmCloseAsync();
-            if (canClose)
-            {
-                // Detach handler to avoid re-entry, then close for real
-                ViewModel.Detach();
-                Closing -= OnWindowClosing;
-                Close();
-            }
+            var vm = new TMEditorViewModel();
+            DataContext = vm;
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, vm, manageTitle: false,
+                confirmClose: vm.ConfirmCloseAsync, onClosed: vm.Detach);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
             => ViewModel.SaveCommand();
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
 
         private void AutoPaletteButton_Click(object sender, RoutedEventArgs e)
             => ViewModel.AutoPaletteCommand();

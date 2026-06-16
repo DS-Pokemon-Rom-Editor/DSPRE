@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia
         public static bool IsRomLoaded => gameFamily != GameFamilies.NULL;
 
         // ── Pokémon-related editors ────────────────────────────────────────────
-        public static void OpenPokemonEditor()
+        public static void OpenPokemonEditor(int initialMon = 1)
         {
             if (!IsRomLoaded) return;
 
@@ -43,21 +43,28 @@ namespace DSPRE.Avalonia
 
             string[] moveNames = GetAttackNames();
 
-            var vm = new PokemonEditorViewModel(fullList.ToArray(), moveNames, initialMon: 1);
+            int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Count - 1));
+            var vm = new PokemonEditorViewModel(fullList.ToArray(), moveNames, initialMon: mon);
             new PokemonEditorView(vm).Show();
         }
 
-        public static void OpenMoveDataEditor()
+        public static void OpenMoveDataEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
-            new MoveDataEditorView().Show();
+            var view = new MoveDataEditorView();
+            if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
+                vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
+            view.Show();
         }
 
-        public static void OpenTMEditor()
+        public static void OpenTMEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new TMEditorView().Show();
+            var view = new TMEditorView();
+            if (initialIndex > 0 && view.DataContext is TMEditorViewModel vm)
+                vm.SelectedMachineIndex = initialIndex;   // setter loads the machine
+            view.Show();
         }
 
         public static void OpenEggMoveEditor()
@@ -66,12 +73,14 @@ namespace DSPRE.Avalonia
             new EggMoveEditorView().Show();
         }
 
-        public static void OpenItemEditor()
+        public static void OpenItemEditor(int initialIndex = 1)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
-            new ItemEditorView(new ItemEditorViewModel(GetItemNames())).Show();
+            var vm = new ItemEditorViewModel(GetItemNames());
+            if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
+            new ItemEditorView(vm).Show();
         }
 
         public static void OpenItemTableEditor()
@@ -80,11 +89,14 @@ namespace DSPRE.Avalonia
             new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames())).Show();
         }
 
-        public static void OpenTradeEditor()
+        public static void OpenTradeEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData });
-            new TradeEditorView().Show();
+            var view = new TradeEditorView();
+            if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
+                _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
+            view.Show();
         }
 
         public static void OpenTextEditor(int initialIndex = 0)
@@ -130,10 +142,10 @@ namespace DSPRE.Avalonia
             new EncountersEditorView(new EncountersEditorViewModel(true)).Show();
         }
 
-        public static void OpenHeadbuttEncounterEditor()
+        public static void OpenHeadbuttEncounterEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true)).Show();
+            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         public static void OpenWildEditor(int initialIndex = 0)
@@ -149,18 +161,19 @@ namespace DSPRE.Avalonia
                 new WildEditorHGSSView(new WildEditorHGSSViewModel(path, names, initialIndex, headerCount)).Show();
         }
 
-        public static void OpenHeaderEditor()
+        public static void OpenHeaderEditor(int initialIndex = -1)
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Header Editor", new HeaderEditorView(new HeaderEditorViewModel(true))).Show();
+            new EditorHostWindow("Header Editor",
+                new HeaderEditorView(new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex })).Show();
         }
 
-        public static void OpenTrainerEditor()
+        public static void OpenTrainerEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics });
-            new TrainerEditorView(new TrainerEditorViewModel(true)).Show();
+            new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         // ── World / data editors ───────────────────────────────────────────────
@@ -176,10 +189,10 @@ namespace DSPRE.Avalonia
             new MapEditorView(new MapEditorViewModel(true)).Show();
         }
 
-        public static void OpenBuildingEditor()
+        public static void OpenBuildingEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new BuildingEditorView(new BuildingEditorViewModel(true)).Show();
+            new BuildingEditorView(new BuildingEditorViewModel(true) { InitialIndex = initialIndex }).Show();
         }
 
         public static void OpenMatrixEditor(int initialIndex = 0)
@@ -270,31 +283,76 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the Ctrl+P quick-open palette over the given window.</summary>
         public static void OpenCommandPalette(global::Avalonia.Controls.Window owner)
         {
-            var vm = new CommandPaletteViewModel(BuildCommands());
+            var vm = new CommandPaletteViewModel(BuildCommands(), DynamicCommands);
             var view = new CommandPaletteView(vm);
             if (owner != null) view.ShowDialog(owner); else view.Show();
+        }
+
+        /// <summary>
+        /// Query-specific palette entries: once the user types a number, offer to open the indexable editors
+        /// straight at that file (e.g. "event 42" → "Go to Event file #42"). The text either side of the
+        /// number filters which jumps appear, so "42" alone lists them all and "script 42" narrows to one.
+        /// </summary>
+        private static IEnumerable<CommandItem> DynamicCommands(string query)
+        {
+            if (!IsRomLoaded || string.IsNullOrWhiteSpace(query)) yield break;
+            var m = System.Text.RegularExpressions.Regex.Match(query, @"\d+");
+            if (!m.Success) yield break;
+            int n = int.Parse(m.Value);
+
+            // What the user typed besides the number (minus "go to") — used to filter the jump list.
+            string rest = query.Remove(m.Index, m.Length)
+                               .Replace("go to", "", System.StringComparison.OrdinalIgnoreCase)
+                               .Replace("goto", "", System.StringComparison.OrdinalIgnoreCase)
+                               .Trim();
+
+            (string label, string keywords, System.Action run)[] jumps =
+            {
+                ($"Go to Pokémon #{n}",        "pokemon species mon personal", () => OpenPokemonEditor(n)),
+                ($"Go to Move #{n}",           "move attack",                  () => OpenMoveDataEditor(n)),
+                ($"Go to TM / HM #{n}",        "tm hm machine",                () => OpenTMEditor(n)),
+                ($"Go to Item #{n}",           "item",                         () => OpenItemEditor(n)),
+                ($"Go to Trainer #{n}",        "trainer battle party",         () => OpenTrainerEditor(n)),
+                ($"Go to Trade #{n}",          "trade in-game",                () => OpenTradeEditor(n)),
+                ($"Go to Header #{n}",         "header map",                   () => OpenHeaderEditor(n)),
+                ($"Go to Building #{n}",       "building model",               () => OpenBuildingEditor(n)),
+                ($"Go to Headbutt file #{n}",  "headbutt tree",                () => OpenHeadbuttEncounterEditor(n)),
+                ($"Go to Event file #{n}",     "event warp trigger overworld", () => OpenEventEditor(n)),
+                ($"Go to Script #{n}",         "script",                       () => OpenScriptEditor(n)),
+                ($"Go to Level Script #{n}",   "level script",                 () => OpenLevelScriptEditor(n)),
+                ($"Go to Text archive #{n}",   "text string message archive",  () => OpenTextEditor(n)),
+                ($"Go to Matrix #{n}",         "matrix world grid",            () => OpenMatrixEditor(n)),
+                ($"Go to Area Data #{n}",      "area data tileset",            () => OpenAreaDataEditor(n)),
+                ($"Go to Wild encounters #{n}","wild encounter grass surf",    () => OpenWildEditor(n)),
+            };
+
+            foreach (var (label, keywords, run) in jumps)
+                if (rest.Length == 0
+                    || label.Contains(rest, System.StringComparison.OrdinalIgnoreCase)
+                    || keywords.Contains(rest, System.StringComparison.OrdinalIgnoreCase))
+                    yield return new CommandItem { Name = label, Run = run };
         }
 
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
         public static List<CommandItem> BuildCommands() => new()
         {
-            new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = OpenPokemonEditor },
-            new() { Name = "Move Data Editor",      Keywords = "attack",   Run = OpenMoveDataEditor },
-            new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = OpenTMEditor },
+            new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => OpenPokemonEditor() },
+            new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
+            new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
-            new() { Name = "Item Editor",           Run = OpenItemEditor },
+            new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
             new() { Name = "Item Table Editor",     Keywords = "pickup mart", Run = OpenItemTableEditor },
-            new() { Name = "Trade Editor",          Keywords = "in-game",  Run = OpenTradeEditor },
-            new() { Name = "Trainer Editor",        Keywords = "battle party", Run = OpenTrainerEditor },
+            new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
+            new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },
             new() { Name = "Level Script Editor",   Run = () => OpenLevelScriptEditor() },
             new() { Name = "Table Editor",          Run = OpenTableEditor },
             new() { Name = "Hidden Items Editor",   Keywords = "hgss",     Run = OpenHiddenItemsEditor },
             new() { Name = "Pickup Table Editor",   Run = OpenPickupTableEditor },
-            new() { Name = "Header Editor",         Keywords = "map header", Run = OpenHeaderEditor },
+            new() { Name = "Header Editor",         Keywords = "map header", Run = () => OpenHeaderEditor() },
             new() { Name = "Map Editor",            Keywords = "3d model buildings", Run = OpenMapEditor },
-            new() { Name = "Building Editor",       Run = OpenBuildingEditor },
+            new() { Name = "Building Editor",       Run = () => OpenBuildingEditor() },
             new() { Name = "Matrix Editor",         Keywords = "world grid", Run = () => OpenMatrixEditor() },
             new() { Name = "Event Editor",          Keywords = "overworld warp trigger spawn", Run = () => OpenEventEditor() },
             new() { Name = "Fly / Warp Editor",     Run = OpenFlyWarpEditor },
@@ -304,13 +362,15 @@ namespace DSPRE.Avalonia
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Special Encounters",    Keywords = "bug contest marsh honey safari", Run = OpenEncountersEditor },
-            new() { Name = "Headbutt Editor",       Keywords = "tree hgss", Run = OpenHeadbuttEncounterEditor },
+            new() { Name = "Headbutt Editor",       Keywords = "tree hgss", Run = () => OpenHeadbuttEncounterEditor() },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
             new() { Name = "Edit Dropdown Labels",  Keywords = "enum custom", Run = OpenLabelEditor },
             new() { Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
             new() { Name = "Settings",              Run = OpenSettings },
+            // ── Actions (not editors) ──
+            new() { Name = "Toggle theme (Dark / Light)", Keywords = "dark light appearance", Run = ThemeManager.Toggle },
         };
     }
 }

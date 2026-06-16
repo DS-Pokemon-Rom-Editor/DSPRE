@@ -64,26 +64,6 @@ namespace DSPRE.Avalonia.Views
                 VM?.GoToResult(r);
         }
 
-        // ── Unsaved-changes guard on close ───────────────────────────────────
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard)
-                {
-                    _closeConfirmed = true;
-                    VM.DiscardChanges();
-                    Close();
-                }
-                return;
-            }
-            base.OnClosing(e);
-        }
-        private bool _closeConfirmed;
-
         private static async Task RunSafe(System.Func<Task> action)
         {
             var task = action?.Invoke();

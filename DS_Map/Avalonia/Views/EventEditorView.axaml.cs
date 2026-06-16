@@ -12,7 +12,6 @@ namespace DSPRE.Avalonia.Views
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
         private Point? _lastPointer;
         private bool _panning;
         private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
@@ -137,6 +136,54 @@ namespace DSPRE.Avalonia.Views
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
 
+        // Diagnostic dump: text report (matrix layout, per-cell map placements, event world positions)
+        // + a PNG of the current render, written to a user-chosen folder, for diagnosing stitching issues.
+        private async void ExportDebug_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            try
+            {
+                string dir = await DialogHelper.OpenFolder(this, "Choose a folder for the 3D debug dump");
+                if (dir == null) return;
+
+                string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string txtPath = System.IO.Path.Combine(dir, $"dspre_event_debug_{stamp}.txt");
+                string pngPath = System.IO.Path.Combine(dir, $"dspre_event_render_{stamp}.png");
+
+                System.IO.File.WriteAllText(txtPath, VM.BuildDebugReport());
+
+                // Capture the live GL render (async — fires after the next frame).
+                GlView.CaptureFrame((rgba, w, h) =>
+                {
+                    bool pngOk = false;
+                    try { if (rgba != null && w > 0 && h > 0) { SaveRgbaToPng(rgba, w, h, pngPath); pngOk = true; } }
+                    catch { pngOk = false; }
+                    _ = DialogHelper.ShowInfo(
+                        $"3D debug dump written:\n\n• {System.IO.Path.GetFileName(txtPath)}\n" +
+                        (pngOk ? $"• {System.IO.Path.GetFileName(pngPath)}" : "• (render capture failed)") +
+                        $"\n\nFolder:\n{dir}", "3D debug dump");
+                });
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Debug dump failed:\n{ex.Message}", "3D debug dump"); }
+        }
+
+        // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
+        private static void SaveRgbaToPng(byte[] rgba, int w, int h, string path)
+        {
+            var bmp = new global::Avalonia.Media.Imaging.WriteableBitmap(
+                new PixelSize(w, h), new Vector(96, 96),
+                global::Avalonia.Platform.PixelFormats.Rgba8888,
+                global::Avalonia.Platform.AlphaFormat.Unpremul);
+            using (var fb = bmp.Lock())
+            {
+                int rowBytes = w * 4;
+                for (int y = 0; y < h; y++)
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        rgba, (h - 1 - y) * rowBytes, fb.Address + y * fb.RowBytes, rowBytes);
+            }
+            bmp.Save(path);
+        }
+
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();
         private void RemoveOw_Click(object sender, RoutedEventArgs e) => VM?.RemoveOverworld();
         private void DupOw_Click(object sender, RoutedEventArgs e) => VM?.DuplicateOverworld();
@@ -154,18 +201,6 @@ namespace DSPRE.Avalonia.Views
         private void DupSpawn_Click(object sender, RoutedEventArgs e) => VM?.DuplicateSpawnable();
         private void AddFile_Click(object sender, RoutedEventArgs e) => VM?.AddEventFile();
         private async void RemFile_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastEventFileAsync());
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo($"Discard unsaved changes to {VM.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
 
         private static async Task Safe(Task task)
         {

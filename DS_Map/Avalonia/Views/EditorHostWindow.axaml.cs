@@ -22,6 +22,11 @@ namespace DSPRE.Avalonia.Views
             Height = height;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Content = content;
+
+            // Hosted UserControl editors don't get EditorWindowChrome; forward Ctrl+Z / Ctrl+Y here when
+            // their VM supports undo (e.g. the Header editor).
+            if (content?.DataContext is DSPRE.Avalonia.ISupportsUndo undo)
+                DSPRE.Avalonia.EditorWindowChrome.AttachUndoKeys(this, undo);
         }
 
         protected override async void OnClosing(WindowClosingEventArgs e)
@@ -29,9 +34,12 @@ namespace DSPRE.Avalonia.Views
             if (!_closeConfirmed && Content is Control c && c.DataContext is IEditorWithUnsavedChanges ed && ed.HasUnsavedChanges)
             {
                 e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes to {ed.UnsavedChangesDescription}?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; ed.DiscardChanges(); Close(); }
+                var r = await DialogHelper.AskYesNoCancel(
+                    $"You have unsaved changes to {ed.UnsavedChangesDescription}. Do you want to save them before closing?",
+                    "Unsaved Changes");
+                if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
+                if (r == DialogHelper.MsgResult.Yes) ed.SaveChanges(); else ed.DiscardChanges();
+                _closeConfirmed = true; Close();
                 return;
             }
             base.OnClosing(e);

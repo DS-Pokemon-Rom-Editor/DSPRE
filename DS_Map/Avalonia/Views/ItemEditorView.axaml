@@ -24,6 +24,9 @@
                                Minimum="0" Maximum="{Binding MaxItemIndex}"
                                Width="100" FormatString="0"/>
                 <Separator Width="12"/>
+                <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+                <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+                <Separator Width="12"/>
                 <Button x:Name="SaveAllButton">💾 Save All</Button>
                 <Button x:Name="ExportButton" Click="Export_Click">📤 Export…</Button>
             </StackPanel>

@@ -150,6 +150,12 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
 
+        // Matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
+        // Grid is the default — it matches the DS's logical 32-tile cells, so maps + events share one grid.
+        private bool _stitchGrid = true;
+        public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value)) DisplayMap(); } }
+        private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
+
         public EventEditorViewModel() { if (Design.IsDesignMode) EventNames.Add("Event 0"); }
         public EventEditorViewModel(bool _) { }
 
@@ -406,7 +412,7 @@ namespace DSPRE.Avalonia.ViewModels
                 int total = _matrix.width * _matrix.height;
                 ISet<(int x, int y)> include = total <= 256 ? null : EventCells();
 
-                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include);
+                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include, mode: StitchMode);
                 string scope = include == null ? "full" : $"{include.Count}-cell region";
                 MapInfo = Model3D != null
                     ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height} ({scope})  ·  area {_areaDataId}"
@@ -716,6 +722,72 @@ namespace DSPRE.Avalonia.ViewModels
                 StatusText = "Imported event file (unsaved).";
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+        }
+
+        /// <summary>Builds a complete text dump of the current 3D scene — matrix layout, per-cell map
+        /// placements (origin/size + the gap/overlap to each neighbour), and every event's exact computed
+        /// world position — so a render screenshot can be correlated against the numbers to find stitching/
+        /// placement issues. Paired with a PNG of the live render by the view.</summary>
+        public string BuildDebugReport()
+        {
+            var sb = new System.Text.StringBuilder();
+            var m = Model3D;
+            sb.AppendLine("=== DSPRE Event Editor — 3D Debug Dump ===");
+            sb.AppendLine($"Timestamp:   {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Event file:  {_selectedIndex}");
+            sb.AppendLine($"Matrix id:   {_matrixId}    Area data: {_areaDataId}");
+            sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid (fixed 32-tile)" : "Continuous (geometry-sized)")}");
+            if (_matrix != null) sb.AppendLine($"Matrix size: {_matrix.width} x {_matrix.height}");
+            sb.AppendLine("Units: 1 matrix cell = 32 tiles; Grid stride = 8.0 raw units (0.25/tile).");
+            sb.AppendLine();
+
+            if (m == null) { sb.AppendLine("(No 3D model is currently built.)"); return sb.ToString(); }
+
+            sb.AppendLine("--- Model bounds (raw space) ---");
+            sb.AppendLine($"Scale={m.Scale:F4}  Center=({m.Cx:F3}, {m.Cy:F3}, {m.Cz:F3})");
+            sb.AppendLine($"Raw bounds  X[{m.RawMinX:F3}, {m.RawMaxX:F3}]  Y[{m.RawMinY:F3}, {m.RawMaxY:F3}]  Z[{m.RawMinZ:F3}, {m.RawMaxZ:F3}]");
+            sb.AppendLine($"Map  bounds X[{m.MapMinX:F3}, {m.MapMaxX:F3}]  Z[{m.MapMinZ:F3}, {m.MapMaxZ:F3}]");
+            sb.AppendLine($"Representative CellStride X={m.CellStrideX:F3} Z={m.CellStrideZ:F3}");
+            sb.AppendLine();
+
+            sb.AppendLine("--- Per-cell map placement (raw space) ---");
+            sb.AppendLine("  cell    map | originX  originZ |  width  height | rightGap bottomGap   (gap<0 = OVERLAP)");
+            if (_matrix != null && m.CellPlacements != null)
+            {
+                for (int cy = 0; cy < _matrix.height; cy++)
+                    for (int cx = 0; cx < _matrix.width; cx++)
+                    {
+                        int map; try { map = _matrix.maps[cy, cx]; } catch { continue; }
+                        if (map == GameMatrix.EMPTY) continue;
+                        if (!m.TryCellPlacement(cx, cy, out var p)) { sb.AppendLine($"({cx,2},{cy,2}) {map,5} | (no placement in scene)"); continue; }
+                        string rg = m.TryCellPlacement(cx + 1, cy, out var pr) ? (pr.OriginX - (p.OriginX + p.Width)).ToString("F3") : "  -";
+                        string bg = m.TryCellPlacement(cx, cy + 1, out var pb) ? (pb.OriginZ - (p.OriginZ + p.Height)).ToString("F3") : "  -";
+                        sb.AppendLine($"({cx,2},{cy,2}) {map,5} | {p.OriginX,7:F3} {p.OriginZ,7:F3} | {p.Width,6:F3} {p.Height,6:F3} | {rg,8} {bg,9}");
+                    }
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("--- Events (exact computed world position) ---");
+            sb.AppendLine("type        idx | matrix  map(x,y) | z(fixed)  z(raw) |   rawX    rawZ  surfaceY");
+            if (_file != null)
+            {
+                void Dump(string type, System.Collections.IEnumerable list)
+                {
+                    int i = 0;
+                    foreach (Event e in list)
+                    {
+                        var (rx, rz) = EventCellRaw(m, e);
+                        float sy = EventSurfaceY(m, rx, rz, e);
+                        sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {e.zPosition / 4096f,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3}");
+                        i++;
+                    }
+                }
+                Dump("overworld", _file.overworlds);
+                Dump("warp", _file.warps);
+                Dump("trigger", _file.triggers);
+                Dump("spawnable", _file.spawnables);
+            }
+            return sb.ToString();
         }
 
         public async Task ExportAsync()

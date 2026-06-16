@@ -39,6 +39,26 @@ namespace DSPRE
             WriteCrashReport(e.Exception);
         }
 
+        /// <summary>
+        /// Writes a crash-report file for a NON-fatal, already-handled exception (e.g. one caught by the
+        /// Avalonia UI-thread net) and returns the file path. Unlike <see cref="WriteCrashReport"/> it does
+        /// NOT show the "application crashed" dialog — the caller surfaces a friendlier message and keeps
+        /// the app running. Returns null if the report could not be written.
+        /// </summary>
+        public static string LogHandled(Exception ex)
+        {
+            try
+            {
+                string filePath = GetCrashReportFilePath();
+                File.WriteAllText(filePath, BuildCrashReport(ex), Encoding.UTF8);
+                return filePath;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static void WriteCrashReport(Exception ex)
         {
             string crashReport = BuildCrashReport(ex);

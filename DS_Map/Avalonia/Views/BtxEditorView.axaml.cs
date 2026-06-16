@@ -15,6 +15,7 @@ namespace DSPRE.Avalonia.Views
         {
             DataContext = vm;
             InitializeComponent();
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -65,19 +66,6 @@ namespace DSPRE.Avalonia.Views
         {
             string path = VM?.GetCurrentFilePath();
             if (path != null) Helpers.ExplorerSelect(path);
-        }
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM?.HasUnsavedChanges == true)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    $"Discard unsaved changes?\n{VM.UnsavedChangesDescription}",
-                    "Unsaved Changes");
-                if (discard) { VM.DiscardChanges(); Close(); }
-            }
-            base.OnClosing(e);
         }
     }
 }

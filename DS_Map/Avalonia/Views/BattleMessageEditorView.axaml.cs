@@ -9,7 +9,6 @@ namespace DSPRE.Avalonia.Views
     {
         private BattleMessageEditorViewModel VM => DataContext as BattleMessageEditorViewModel;
         private bool _setupDone;
-        private bool _closeConfirmed;
 
         public BattleMessageEditorView()
         {
@@ -20,6 +19,7 @@ namespace DSPRE.Avalonia.Views
         public BattleMessageEditorView(BattleMessageEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
@@ -36,19 +36,6 @@ namespace DSPRE.Avalonia.Views
         private void Delete_Click(object sender, RoutedEventArgs e) => VM?.DeleteEntry();
         private void EditTrigger_Click(object sender, RoutedEventArgs e) => VM?.EditTrigger();
         private void SaveMessage_Click(object sender, RoutedEventArgs e) => VM?.SaveMessage();
-
-        protected override async void OnClosing(WindowClosingEventArgs e)
-        {
-            if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
-            {
-                e.Cancel = true;
-                bool discard = await DialogHelper.AskYesNo(
-                    "Discard unsaved trainer message changes?", "Unsaved Changes");
-                if (discard) { _closeConfirmed = true; VM.DiscardChanges(); Close(); }
-                return;
-            }
-            base.OnClosing(e);
-        }
 
         private static async Task Safe(Task task)
         {

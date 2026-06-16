@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        public BuildingEditorView(BuildingEditorViewModel vm) : this() { DataContext = vm; }
+        public BuildingEditorView(BuildingEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {

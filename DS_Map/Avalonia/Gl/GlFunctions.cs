@@ -59,6 +59,7 @@ namespace DSPRE.Avalonia.Gl
         public delegate void BlendFuncDelegate(int sfactor, int dfactor);
         public delegate void Uniform1fDelegate(int location, float v);
         public delegate void DepthMaskDelegate(bool flag);
+        public delegate void ReadPixelsDelegate(int x, int y, int w, int h, int format, int type, byte[] data);
 
         // ── Bound functions ──────────────────────────────────────────────────────────
         public readonly GenBuffersDelegate GenBuffers;
@@ -100,6 +101,7 @@ namespace DSPRE.Avalonia.Gl
         public readonly BlendFuncDelegate BlendFunc;
         public readonly Uniform1fDelegate Uniform1f;
         public readonly DepthMaskDelegate DepthMask;
+        public readonly ReadPixelsDelegate ReadPixels;
 
         // ── GL constants ─────────────────────────────────────────────────────────────
         public const int GL_ARRAY_BUFFER = 0x8892;
@@ -179,6 +181,7 @@ namespace DSPRE.Avalonia.Gl
             Viewport = Bind<ViewportDelegate>(gl, "glViewport");
             Enable = Bind<EnableDelegate>(gl, "glEnable");
             Disable = Bind<DisableDelegate>(gl, "glDisable");
+            ReadPixels = Bind<ReadPixelsDelegate>(gl, "glReadPixels");
         }
 
         public int CompileShaderOrThrow(int type, string source)

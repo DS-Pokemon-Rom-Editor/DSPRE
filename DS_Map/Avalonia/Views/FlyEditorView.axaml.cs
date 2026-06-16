@@ -15,7 +15,8 @@ namespace DSPRE.Avalonia.Views
             AvaloniaXamlLoader.Load(this);
             _vm = new FlyEditorViewModel(headerNames);
             DataContext = _vm;
-            Closing += OnWindowClosing;
+            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            EditorWindowChrome.Attach(this, _vm, manageTitle: false, confirmClose: _vm.ConfirmCloseAsync);
         }
 
         // Parameterless constructor for previewer only
@@ -31,16 +32,6 @@ namespace DSPRE.Avalonia.Views
             }
             // Runtime should never call this – keep it to avoid errors
             throw new InvalidOperationException("Parameterless constructor only for design time.");
-        }
-
-        private async void OnWindowClosing(object sender, WindowClosingEventArgs e)
-        {
-            e.Cancel = true;
-            if (await _vm.ConfirmCloseAsync())
-            {
-                Closing -= OnWindowClosing;
-                Close();
-            }
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

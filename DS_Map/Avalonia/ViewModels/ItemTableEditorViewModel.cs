@@ -134,7 +134,6 @@ namespace DSPRE.Avalonia.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         public string Label { get; }
-        public bool IsEditable { get; }
 
         private int _value;
         public int Value
@@ -149,9 +148,11 @@ namespace DSPRE.Avalonia.ViewModels
         private string _description = "";
         public string Description { get => _description; set { _description = value; OnPC(); } }
 
-        public ActivationRowVM(string label, int value, bool isEditable)
+        // Activation rows are a READ-ONLY view (the DataGrid is IsReadOnly): the divisor + slot thresholds are
+        // computed by RecalcActivation; only the divisor (ActivationDivisorEdit) is user-editable and saved.
+        public ActivationRowVM(string label, int value)
         {
-            Label = label; _value = value; IsEditable = isEditable;
+            Label = label; _value = value;
         }
     }
 
@@ -408,7 +409,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (ActivationRows.Count == 0)
             {
                 // Build initial rows
-                var divisorRow = new ActivationRowVM("Activation %", _activationDivisor, false);
+                var divisorRow = new ActivationRowVM("Activation %", _activationDivisor);
                 divisorRow.Probability  = $"{chance:F2}%";
                 divisorRow.Description  = "1/divisor × 100 (modulo-based)";
                 ActivationRows.Add(divisorRow);
@@ -419,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels
                     int thresh = _weightTable[i];
                     int range  = thresh - prev;
                     double prob = chance / 100.0 * range;
-                    var row = new ActivationRowVM($"Slot {i + 1}", thresh, true);
+                    var row = new ActivationRowVM($"Slot {i + 1}", thresh);
                     row.Probability  = $"{prob:F2}%";
                     row.Description  = $"{prev}–{thresh - 1} ({range} values)";
                     ActivationRows.Add(row);
@@ -428,7 +429,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                 // Rare
                 double rareProb = chance / 100.0 * 2;
-                var rareRow = new ActivationRowVM("Rare (98-99)", 0, false);
+                var rareRow = new ActivationRowVM("Rare (98-99)", 0);
                 rareRow.Probability = $"{rareProb:F2}%";
                 rareRow.Description = "98–99 (2 values)";
                 ActivationRows.Add(rareRow);

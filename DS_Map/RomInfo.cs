@@ -157,6 +157,7 @@ namespace DSPRE
             personalPokeData,
             pokemonBattleSprites,
             otherPokemonBattleSprites,
+            pokemonSpriteOffsets,   // /a/1/8/0 (HGSS): 89 bytes/mon — movement type + sprite/shadow coords
 
             synthOverlay,
             dynamicHeaders,
@@ -2069,6 +2070,7 @@ namespace DSPRE
                         [DirNames.personalPokeData] = $@"{dataFolderName}\a\0\0\2",
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\a\0\0\4",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
+                        [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

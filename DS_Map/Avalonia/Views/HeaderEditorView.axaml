@@ -15,6 +15,8 @@
       <WrapPanel Classes="toolbar">
         <Button Content="💾  Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="↺  Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="⧉  Copy"  Click="Copy_Click"/>
         <Button Content="📋  Paste" Click="Paste_Click"/>

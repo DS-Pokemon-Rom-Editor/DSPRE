@@ -26,6 +26,8 @@
 	<!-- Save buttons -->
 	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
 				HorizontalAlignment="Right" Margin="0,8,0,0">
+	  <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+	  <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
 	  <Button Content="Save Trade Data" Click="SaveTrade_Click"/>
 	  <Button Content="Save Text Data"  Click="SaveText_Click"/>
 	  <Button Content="Save All"        Click="SaveAll_Click"/>

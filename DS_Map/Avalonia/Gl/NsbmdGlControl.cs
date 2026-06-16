@@ -46,6 +46,16 @@ namespace DSPRE.Avalonia.Gl
         private bool _showGizmos;
         public bool ShowGizmos { get => _showGizmos; set { _showGizmos = value; RequestNextFrameRendering(); } }
 
+        // One-shot framebuffer capture: callback receives raw RGBA (bottom-up) + pixel width/height.
+        private Action<byte[], int, int> _captureCb;
+        /// <summary>Grabs the next rendered frame's pixels (for a debug screenshot). The callback runs on the
+        /// UI thread with the raw RGBA buffer (origin bottom-left) and its pixel dimensions, or null on failure.</summary>
+        public void CaptureFrame(Action<byte[], int, int> onCaptured)
+        {
+            _captureCb = onCaptured;
+            RequestNextFrameRendering();
+        }
+
         // ── Translate gizmo (move-tool) ──────────────────────────────────────────────
         // A Unity-style 3-axis move handle drawn at a target point (normalized space) when edit
         // mode is on. Axis dragging is orchestrated by the view via WorldToScreen / HitTestGizmoAxis.
@@ -425,6 +435,16 @@ namespace DSPRE.Avalonia.Gl
             RenderMarkers(stride);
             if (_showGizmos) RenderGizmos(stride);
             if (_editMode && _gizmoTargetVisible) RenderEditGizmo(stride);
+
+            if (_captureCb != null)
+            {
+                var cb = _captureCb; _captureCb = null;
+                byte[] px = null;
+                try { px = new byte[pw * ph * 4]; _f.ReadPixels(0, 0, pw, ph, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, px); }
+                catch { px = null; }
+                int cw = pw, ch = ph;
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => cb(px, cw, ch));
+            }
         }
 
         /// <summary>Draws the 3-axis translate handle (X red, Y green, Z blue) at the target, as

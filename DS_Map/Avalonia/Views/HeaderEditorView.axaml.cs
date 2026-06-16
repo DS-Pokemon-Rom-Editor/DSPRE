@@ -40,6 +40,8 @@ namespace DSPRE.Avalonia.Views
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
         private void Copy_Click(object sender, RoutedEventArgs e) => VM?.Copy();
         private void Paste_Click(object sender, RoutedEventArgs e) => VM?.Paste();
