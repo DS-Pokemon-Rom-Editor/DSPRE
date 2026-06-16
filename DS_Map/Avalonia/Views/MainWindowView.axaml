@@ -47,6 +47,7 @@
 
       <MenuItem Header="_World" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
+        <MenuItem Header="Camera Editor…"          Click="CameraEditor_Click"/>
         <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
         <MenuItem Header="Building Editor…"        Click="BuildingEditor_Click"/>
         <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
@@ -83,18 +84,11 @@
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"
-                 Text="Avalonia MainWindow preview — migrated editors appear as tabs; the rest open from the menu."/>
+                 Text="Avalonia preview — the Maps workspace is below; other editors open from the menu."/>
     </Border>
 
-    <!-- ── Embedded editor tabs (Header is the default view) ──────────────── -->
-    <TabControl Margin="4">
-      <TabItem Header="Header">
-        <views:HeaderEditorView DataContext="{Binding HeaderVM}"/>
-      </TabItem>
-      <TabItem Header="Camera">
-        <views:CameraEditorView DataContext="{Binding CameraVM}"/>
-      </TabItem>
-    </TabControl>
+    <!-- ── Main editing surface: the Maps workspace (other editors open from the menu) ── -->
+    <views:MapsWorkspaceView DataContext="{Binding HeaderVM}"/>
 
   </DockPanel>
 </Window>

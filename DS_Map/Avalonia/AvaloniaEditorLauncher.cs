@@ -168,6 +168,12 @@ namespace DSPRE.Avalonia
                 new HeaderEditorView(new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex })).Show();
         }
 
+        public static void OpenCameraEditor()
+        {
+            if (!IsRomLoaded) return;
+            new EditorHostWindow("Camera Editor", new CameraEditorView(new CameraEditorViewModel(true))).Show();
+        }
+
         public static void OpenTrainerEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
@@ -351,6 +357,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Hidden Items Editor",   Keywords = "hgss",     Run = OpenHiddenItemsEditor },
             new() { Name = "Pickup Table Editor",   Run = OpenPickupTableEditor },
             new() { Name = "Header Editor",         Keywords = "map header", Run = () => OpenHeaderEditor() },
+            new() { Name = "Camera Editor",         Keywords = "angle map header", Run = OpenCameraEditor },
             new() { Name = "Map Editor",            Keywords = "3d model buildings", Run = OpenMapEditor },
             new() { Name = "Building Editor",       Run = () => OpenBuildingEditor() },
             new() { Name = "Matrix Editor",         Keywords = "world grid", Run = () => OpenMatrixEditor() },

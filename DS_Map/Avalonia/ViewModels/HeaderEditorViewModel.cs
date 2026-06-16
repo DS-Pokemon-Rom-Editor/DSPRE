@@ -87,6 +87,14 @@ namespace DSPRE.Avalonia.ViewModels
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
+        // Context-strip identity for the Maps workspace: the location name (falling back to the internal
+        // name) and the header number.
+        public string SelectedHeaderTitle =>
+            _locationNameIndex >= 0 && _locationNameIndex < LocationNames.Count && !string.IsNullOrWhiteSpace(LocationNames[_locationNameIndex])
+                ? LocationNames[_locationNameIndex].Trim()
+                : (_header != null ? _internalName : "—");
+        public string SelectedHeaderSubtitle => _header != null ? $"header {_header.ID:D3}" : "";
+
         // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
         public ObservableCollection<HeaderTreeFolder> TreeFolders { get; } = new ObservableCollection<HeaderTreeFolder>();
         private List<int> _locationIndexByHeader = new List<int>();
@@ -202,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels
         public int LocationNameIndex
         {
             get => _locationNameIndex;
-            set { if (Set(ref _locationNameIndex, value) && !_suppress && value >= 0) ApplyLocationName(value); }
+            set { if (Set(ref _locationNameIndex, value)) { OnPropertyChanged(nameof(SelectedHeaderTitle)); if (!_suppress && value >= 0) ApplyLocationName(value); } }
         }
 
         // ── Area settings (DP/Plat = locationSpecifier; HGSS = locationType) ───────────
@@ -413,10 +421,16 @@ namespace DSPRE.Avalonia.ViewModels
             return 0;
         }
 
-        private string FolderNameFor(ushort id)
+        /// <summary>Raw location name for a header (before the "Routes" collapse); "" if none.</summary>
+        private string LocationNameFor(ushort id)
         {
             int idx = id < _locationIndexByHeader.Count ? _locationIndexByHeader[id] : -1;
-            string name = (idx >= 0 && idx < LocationNames.Count) ? (LocationNames[idx] ?? "").Trim() : "";
+            return (idx >= 0 && idx < LocationNames.Count) ? (LocationNames[idx] ?? "").Trim() : "";
+        }
+
+        private string FolderNameFor(ushort id)
+        {
+            string name = LocationNameFor(id);
             if (name.StartsWith("Route ", StringComparison.OrdinalIgnoreCase)) return "Routes";
             return string.IsNullOrEmpty(name) ? "Unknown" : name;
         }
@@ -444,6 +458,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (filtering
                     && label.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
                     && folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
+                    && LocationNameFor(id).IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
                     && id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
                     continue;
 
@@ -605,6 +620,8 @@ namespace DSPRE.Avalonia.ViewModels
             }
             finally { _suppress = false; }
             OnPropertyChanged(nameof(CanOpenEncounters));   // refresh the Open-encounters guard on every (re)load
+            OnPropertyChanged(nameof(SelectedHeaderTitle));
+            OnPropertyChanged(nameof(SelectedHeaderSubtitle));
         }
 
         private int FindAreaSettingsBySpecifier(int specifier)
