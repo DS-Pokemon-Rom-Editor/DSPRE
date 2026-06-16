@@ -23,7 +23,6 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Embedded editor sub-VMs ────────────────────────────────────────────
         public HeaderEditorViewModel HeaderVM { get; }
-        public CameraEditorViewModel CameraVM { get; }
 
         // ── ROM state ──────────────────────────────────────────────────────────
         public bool IsRomLoaded => AvaloniaEditorLauncher.IsRomLoaded;
@@ -37,14 +36,12 @@ namespace DSPRE.Avalonia.ViewModels
         public MainWindowViewModel()
         {
             HeaderVM = new HeaderEditorViewModel();
-            CameraVM = new CameraEditorViewModel();
         }
 
         // ── Runtime constructor ────────────────────────────────────────────────
         public MainWindowViewModel(bool runtime)
         {
             HeaderVM = new HeaderEditorViewModel(runtime);
-            CameraVM = new CameraEditorViewModel(runtime);
         }
     }
 }
