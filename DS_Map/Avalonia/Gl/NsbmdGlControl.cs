@@ -160,6 +160,37 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Recentres the camera pivot.</summary>
         public void ResetView() { _targetX = _targetY = _targetZ = 0f; RequestNextFrameRendering(); }
 
+        // ── Mouse-driven camera input (honours the user's camera preferences) ─────────────
+        // All host views route their right-drag / left-drag / wheel gestures through these so the
+        // behaviour (speed + axis inversion) is consistent and configurable in Settings.
+        private static DspreSettings Cam => SettingsManager.Settings;
+
+        /// <summary>Orbit (rotate) the camera from a mouse drag, in raw screen-pixel deltas.</summary>
+        public void OrbitByDrag(float screenDx, float screenDy)
+        {
+            var c = Cam;
+            float spd = (c?.camOrbitSpeed ?? 1f) * 0.5f;
+            Yaw   += screenDx * spd * ((c?.camInvertOrbitX ?? false) ? -1f : 1f);
+            Pitch += screenDy * spd * ((c?.camInvertOrbitY ?? false) ? -1f : 1f);
+        }
+
+        /// <summary>Pan (slide) the camera pivot from a mouse drag, in raw screen-pixel deltas. The default
+        /// direction grabs the world (the scene follows the cursor); invert flags flip each axis.</summary>
+        public void PanByDrag(float screenDx, float screenDy)
+        {
+            var c = Cam;
+            float spd = c?.camPanSpeed ?? 1f;
+            PanByScreen(screenDx * spd * ((c?.camInvertPanX ?? false) ? -1f : 1f),
+                        screenDy * spd * ((c?.camInvertPanY ?? false) ? -1f : 1f));
+        }
+
+        /// <summary>Zoom from a mouse-wheel notch (raw wheel delta-Y).</summary>
+        public void ZoomByWheel(float wheelDeltaY)
+        {
+            var c = Cam;
+            Distance -= wheelDeltaY * 0.4f * (c?.camZoomSpeed ?? 1f) * ((c?.camInvertZoom ?? false) ? -1f : 1f);
+        }
+
         /// <summary>Sets the orbit camera to a fixed orientation (degrees), e.g. a top-down or side view.</summary>
         public void SetOrientation(float yaw, float pitch)
         {

@@ -82,6 +82,22 @@ namespace DSPRE.Avalonia.ViewModels
             private set => Set(ref _versionLabel, value);
         }
 
+        // ── 3D-view camera behaviour (mouse) ──────────────────────────────────────────
+        private decimal _camPanSpeed = 1m;
+        public decimal CamPanSpeed { get => _camPanSpeed; set => Set(ref _camPanSpeed, value); }
+
+        private decimal _camOrbitSpeed = 1m;
+        public decimal CamOrbitSpeed { get => _camOrbitSpeed; set => Set(ref _camOrbitSpeed, value); }
+
+        private decimal _camZoomSpeed = 1m;
+        public decimal CamZoomSpeed { get => _camZoomSpeed; set => Set(ref _camZoomSpeed, value); }
+
+        private bool _camInvertPanX;   public bool CamInvertPanX   { get => _camInvertPanX;   set => Set(ref _camInvertPanX, value); }
+        private bool _camInvertPanY;   public bool CamInvertPanY   { get => _camInvertPanY;   set => Set(ref _camInvertPanY, value); }
+        private bool _camInvertOrbitX; public bool CamInvertOrbitX { get => _camInvertOrbitX; set => Set(ref _camInvertOrbitX, value); }
+        private bool _camInvertOrbitY; public bool CamInvertOrbitY { get => _camInvertOrbitY; set => Set(ref _camInvertOrbitY, value); }
+        private bool _camInvertZoom;   public bool CamInvertZoom   { get => _camInvertZoom;   set => Set(ref _camInvertZoom, value); }
+
         // ----------------------------------------------------------------
         // Constructor
         // ----------------------------------------------------------------
@@ -108,6 +124,15 @@ namespace DSPRE.Avalonia.ViewModels
             AutoCheckUpdates = SettingsManager.Settings.automaticallyCheckForUpdates;
             AutoUpdateDBs    = SettingsManager.Settings.automaticallyUpdateDBs;
 
+            CamPanSpeed      = (decimal)SettingsManager.Settings.camPanSpeed;
+            CamOrbitSpeed    = (decimal)SettingsManager.Settings.camOrbitSpeed;
+            CamZoomSpeed     = (decimal)SettingsManager.Settings.camZoomSpeed;
+            CamInvertPanX    = SettingsManager.Settings.camInvertPanX;
+            CamInvertPanY    = SettingsManager.Settings.camInvertPanY;
+            CamInvertOrbitX  = SettingsManager.Settings.camInvertOrbitX;
+            CamInvertOrbitY  = SettingsManager.Settings.camInvertOrbitY;
+            CamInvertZoom    = SettingsManager.Settings.camInvertZoom;
+
             // snapshot for unsaved-changes detection
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;
@@ -126,6 +151,15 @@ namespace DSPRE.Avalonia.ViewModels
             SettingsManager.Settings.neverAskForOpening     = NeverAskForOpening;
             SettingsManager.Settings.automaticallyCheckForUpdates = AutoCheckUpdates;
             SettingsManager.Settings.automaticallyUpdateDBs = AutoUpdateDBs;
+
+            SettingsManager.Settings.camPanSpeed     = (float)CamPanSpeed;
+            SettingsManager.Settings.camOrbitSpeed   = (float)CamOrbitSpeed;
+            SettingsManager.Settings.camZoomSpeed    = (float)CamZoomSpeed;
+            SettingsManager.Settings.camInvertPanX   = CamInvertPanX;
+            SettingsManager.Settings.camInvertPanY   = CamInvertPanY;
+            SettingsManager.Settings.camInvertOrbitX = CamInvertOrbitX;
+            SettingsManager.Settings.camInvertOrbitY = CamInvertOrbitY;
+            SettingsManager.Settings.camInvertZoom   = CamInvertZoom;
 
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;

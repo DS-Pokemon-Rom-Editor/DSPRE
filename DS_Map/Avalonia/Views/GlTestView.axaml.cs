@@ -54,13 +54,12 @@ namespace DSPRE.Avalonia.Views
         {
             if (_lastPointer is not Point last) return;
             var p = e.GetPosition(GlHost);
-            GlView.Yaw += (float)(p.X - last.X) * 0.5f;
-            GlView.Pitch += (float)(p.Y - last.Y) * 0.5f;
+            GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
             _lastPointer = p;
         }
 
         private void OnWheel(object sender, PointerWheelEventArgs e)
-            => GlView.Distance -= (float)e.Delta.Y * 0.4f;
+            => GlView.ZoomByWheel((float)e.Delta.Y);
 
         private async void OpenNsbmd_Click(object sender, RoutedEventArgs e)
         {

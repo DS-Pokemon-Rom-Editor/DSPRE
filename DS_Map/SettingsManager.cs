@@ -28,6 +28,16 @@ namespace DSPRE
         public bool automaticallyUpdateDBs { get; set; } = true;
         public bool useDecompNames { get; set; } = false;
         public bool convertLegacyText { get; set; } = true;
+
+        // 3D-view camera behaviour (mouse). Speeds are multipliers (1.0 = default); invert flags flip an axis.
+        public float camPanSpeed { get; set; } = 1.0f;
+        public float camOrbitSpeed { get; set; } = 1.0f;
+        public float camZoomSpeed { get; set; } = 1.0f;
+        public bool camInvertPanX { get; set; } = false;
+        public bool camInvertPanY { get; set; } = false;
+        public bool camInvertOrbitX { get; set; } = false;
+        public bool camInvertOrbitY { get; set; } = false;
+        public bool camInvertZoom { get; set; } = false;
     }
 
     public static class SettingsManager

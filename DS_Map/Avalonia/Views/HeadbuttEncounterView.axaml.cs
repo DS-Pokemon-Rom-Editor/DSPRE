@@ -47,11 +47,11 @@ namespace DSPRE.Avalonia.Views
                     float scale = VM.ModelScale; if (scale <= 0) scale = 1f;
                     VM.NudgeSelectedTreeRaw(_dragAxis, normDelta / scale);
                 }
-                else if (_panning) GlView.PanByScreen(-(float)(p.X - last.X), -(float)(p.Y - last.Y));
-                else { GlView.Yaw += (float)(p.X - last.X) * 0.5f; GlView.Pitch += (float)(p.Y - last.Y) * 0.5f; }
+                else if (_panning) GlView.PanByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
+                else GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
                 _lastPointer = p;
             };
-            GlHost.PointerWheelChanged += (s, e) => GlView.Distance -= (float)e.Delta.Y * 0.4f;
+            GlHost.PointerWheelChanged += (s, e) => GlView.ZoomByWheel((float)e.Delta.Y);
 
             KeyDown += (s, e) =>
             {
