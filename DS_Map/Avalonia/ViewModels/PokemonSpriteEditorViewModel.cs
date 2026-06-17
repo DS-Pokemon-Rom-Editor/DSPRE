@@ -46,6 +46,14 @@ namespace DSPRE.Avalonia.ViewModels
         private AvaBitmap _femaleFrontNormal; public AvaBitmap FemaleFrontNormal { get => _femaleFrontNormal; private set => Set(ref _femaleFrontNormal, value); }
         private AvaBitmap _maleFrontNormal;   public AvaBitmap MaleFrontNormal   { get => _maleFrontNormal;   private set => Set(ref _maleFrontNormal,   value); }
 
+        // Battle-mock sprites: the 160×80 sheet is TWO 80×80 frames (a small battle-entry animation), so we
+        // expose each frame separately (native size, palette index 0 made transparent). Front (enemy) + back
+        // (player), male slot with female fallback; the Battle Display tab loops the two frames.
+        private AvaBitmap _battleFront0; public AvaBitmap BattleFront0 { get => _battleFront0; private set => Set(ref _battleFront0, value); }
+        private AvaBitmap _battleFront1; public AvaBitmap BattleFront1 { get => _battleFront1; private set => Set(ref _battleFront1, value); }
+        private AvaBitmap _battleBack0;  public AvaBitmap BattleBack0  { get => _battleBack0;  private set => Set(ref _battleBack0,  value); }
+        private AvaBitmap _battleBack1;  public AvaBitmap BattleBack1  { get => _battleBack1;  private set => Set(ref _battleBack1,  value); }
+
         private AvaBitmap _femaleBackShiny;   public AvaBitmap FemaleBackShiny   { get => _femaleBackShiny;   private set => Set(ref _femaleBackShiny,   value); }
         private AvaBitmap _maleBackShiny;     public AvaBitmap MaleBackShiny     { get => _maleBackShiny;     private set => Set(ref _maleBackShiny,     value); }
         private AvaBitmap _femaleFrontShiny;  public AvaBitmap FemaleFrontShiny  { get => _femaleFrontShiny;  private set => Set(ref _femaleFrontShiny,  value); }
@@ -579,6 +587,14 @@ namespace DSPRE.Avalonia.ViewModels
             MaleBackShiny     = RenderSprite(1, _shinyPal);
             FemaleFrontShiny  = RenderSprite(2, _shinyPal);
             MaleFrontShiny    = RenderSprite(3, _shinyPal);
+
+            // Battle-mock sprites: the 160×80 sheet is two 80×80 frames (a small send-out animation), so
+            // split each into frame 0 (left) + frame 1 (right). Native size, transparent colour 0. Male
+            // slot with female fallback.
+            BattleBack0  = RenderBattleSprite(1, _normalPal, 0) ?? RenderBattleSprite(0, _normalPal, 0);
+            BattleBack1  = RenderBattleSprite(1, _normalPal, 1) ?? RenderBattleSprite(0, _normalPal, 1);
+            BattleFront0 = RenderBattleSprite(3, _normalPal, 0) ?? RenderBattleSprite(2, _normalPal, 0);
+            BattleFront1 = RenderBattleSprite(3, _normalPal, 1) ?? RenderBattleSprite(2, _normalPal, 1);
         }
 
         private AvaBitmap RenderSprite(int slot, System.Drawing.Imaging.ColorPalette palette)
@@ -595,10 +611,33 @@ namespace DSPRE.Avalonia.ViewModels
             catch { return null; }
         }
 
+        // Crops one of the two 80×80 frames (frame 0 = left half, frame 1 = right half) out of the 160×80
+        // sheet, drawn into a 32bpp ARGB surface with palette index 0 made transparent (in-game colour 0).
+        private AvaBitmap RenderBattleSprite(int slot, System.Drawing.Imaging.ColorPalette palette, int frame)
+        {
+            if (_rawSprites[slot] == null) return null;
+            try
+            {
+                var src = (GdiBitmap)_rawSprites[slot].Clone();
+                src.Palette = palette;
+                int fw = src.Width / 2;   // 80
+                var argb = new GdiBitmap(fw, src.Height, PixelFormat.Format32bppArgb);
+                using (var g = System.Drawing.Graphics.FromImage(argb))
+                    g.DrawImage(src,
+                        new System.Drawing.Rectangle(0, 0, fw, src.Height),
+                        new System.Drawing.Rectangle(frame * fw, 0, fw, src.Height),
+                        System.Drawing.GraphicsUnit.Pixel);
+                argb.MakeTransparent(palette.Entries[0]);
+                return ImageConverter.ToAvaloniaBitmap(argb);
+            }
+            catch { return null; }
+        }
+
         private void ClearBitmaps()
         {
             FemaleBackNormal = MaleBackNormal = FemaleFrontNormal = MaleFrontNormal = null;
             FemaleBackShiny  = MaleBackShiny  = FemaleFrontShiny  = MaleFrontShiny  = null;
+            BattleFront0 = BattleFront1 = BattleBack0 = BattleBack1 = null;
             _rawSprites = new GdiBitmap[4];
             _normalPal = null; _shinyPal = null;
         }

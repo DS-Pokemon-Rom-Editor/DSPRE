@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels
             LearnsetVM   = new LearnsetEditorViewModel(moveNames);
             EvolutionsVM = new EvolutionsEditorViewModel(pokemonNames);
             SpriteVM     = new PokemonSpriteEditorViewModel(true);
-            BattleDisplayVM = new BattleDisplayEditorViewModel();
+            BattleDisplayVM = new BattleDisplayEditorViewModel(SpriteVM);
 
             // Propagate dirty change notifications so the window title can reflect unsaved state
             void OnChildDirty() { OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title)); }

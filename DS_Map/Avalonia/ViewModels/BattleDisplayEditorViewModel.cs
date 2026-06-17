@@ -38,6 +38,44 @@ namespace DSPRE.Avalonia.ViewModels
         private int _currentId = -1;
         private bool _loading;
 
+        // ── Battle mock (shows the mon vs itself: enemy = front sprite, player = back sprite) ──────
+        // Layout/coords mirror PokEditor's battle scene (256×192): front sprite at (152, 10 − spriteY),
+        // back sprite at (23, 72), enemy shadow at size-specific X (179/174/167 + shadowX), Y 83/83/82.
+        private readonly PokemonSpriteEditorViewModel _sprites;
+
+        // The send-out sheet is two 80×80 frames; we loop them so the preview animates like the game.
+        private int _frame;   // 0 or 1
+        private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
+
+        public Bitmap EnemySprite  => _frame == 0 ? _sprites?.BattleFront0 : _sprites?.BattleFront1;
+        public Bitmap PlayerSprite => _frame == 0 ? _sprites?.BattleBack0  : _sprites?.BattleBack1;
+
+        // PokEditor draws front at (152, 10 − globalFrontY − frontModifier) and back at (23, 72 − backModifier),
+        // i.e. BOTH sprites take a per-mon Y offset. HGSS exposes one signed sprite-Y byte (86), so we apply it
+        // to both. The 24 / 84 bases fold in PokEditor's global/per-mon constants we don't read here.
+        public double EnemyLeft => 152;
+        public double EnemyTop  => 24 - _spriteY;     // byte 86: + moves the sprite up (top decreases)
+        public double PlayerLeft => 23;
+        public double PlayerTop  => 84 - _spriteY;
+
+        public bool ShadowSmallVisible  => HasSpriteData && _shadowSize == 1;
+        public bool ShadowMediumVisible => HasSpriteData && _shadowSize == 2;
+        public bool ShadowLargeVisible  => HasSpriteData && _shadowSize == 3;
+        public double ShadowSmallLeft  => 179 + _shadowX;
+        public double ShadowMediumLeft => 174 + _shadowX;
+        public double ShadowLargeLeft  => 167 + _shadowX;
+
+        private void RaiseLayout()
+        {
+            OnPropertyChanged(nameof(EnemyTop)); OnPropertyChanged(nameof(PlayerTop));
+            OnPropertyChanged(nameof(ShadowSmallVisible)); OnPropertyChanged(nameof(ShadowMediumVisible)); OnPropertyChanged(nameof(ShadowLargeVisible));
+            OnPropertyChanged(nameof(ShadowSmallLeft)); OnPropertyChanged(nameof(ShadowMediumLeft)); OnPropertyChanged(nameof(ShadowLargeLeft));
+        }
+        private void RaiseSprites()
+        {
+            OnPropertyChanged(nameof(EnemySprite)); OnPropertyChanged(nameof(PlayerSprite));
+        }
+
         private int _partyPaletteIndex;
         public int PartyPaletteIndex
         {
@@ -60,67 +98,75 @@ namespace DSPRE.Avalonia.ViewModels
             catch { IconPreview = null; }
         }
 
-        // ── Battle sprite / shadow coordinates (NARC /a/1/8/0, 89 bytes per mon) ──────────────
-        // byte 1 = movement type on send-out; byte 86 = sprite Y (signed); byte 87 = shadow X (signed);
-        // byte 88 = shadow size (0 none/1 small/2 medium/3 large).
+        // ── Battle sprite / shadow coordinates (NARC /a/1/8/0) ────────────────────────────────
+        // /a/1/8/0 is a NARC holding ONE file; within it each Pokémon occupies 89 bytes, so mon N's
+        // record starts at N*89. byte 1 = movement type on send-out; byte 86 = sprite Y (signed);
+        // byte 87 = shadow X (signed); byte 88 = shadow size (0 none/1 small/2 medium/3 large).
         private const int OFF_MOVEMENT = 1, OFF_SPRITE_Y = 86, OFF_SHADOW_X = 87, OFF_SHADOW_SIZE = 88, REC_LEN = 89;
         private bool _spriteNarcReady;
-        private byte[] _spriteData;     // the current mon's 89-byte record, edited in place, written on Save
+        private byte[] _spriteBlob;     // the whole single file; the current mon's record is at _recOffset
+        private int _recOffset = -1;    // = currentId * REC_LEN when this mon has a record, else -1
 
-        /// <summary>True when this mon has a sprite-coordinate record loaded (enables those fields).</summary>
+        /// <summary>True when this mon has a sprite-coordinate record (enables those fields).</summary>
         private bool _hasSpriteData;
         public bool HasSpriteData { get => _hasSpriteData; private set => Set(ref _hasSpriteData, value); }
 
+        private bool CanEditSprite => _spriteBlob != null && _recOffset >= 0 && !_loading;
+
         private int _movementType;
-        public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && !_loading && _spriteData != null) { _spriteData[OFF_MOVEMENT] = (byte)value; SetDirty(); } } }
+        public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && CanEditSprite) { _spriteBlob[_recOffset + OFF_MOVEMENT] = (byte)value; SetDirty(); } } }
 
         private int _spriteY;   // signed −128..127 (negative = down, positive = up)
-        public int SpriteY { get => _spriteY; set { if (Set(ref _spriteY, value) && !_loading && _spriteData != null) { _spriteData[OFF_SPRITE_Y] = (byte)(sbyte)value; SetDirty(); } } }
+        public int SpriteY { get => _spriteY; set { if (Set(ref _spriteY, value)) { if (CanEditSprite) { _spriteBlob[_recOffset + OFF_SPRITE_Y] = (byte)(sbyte)value; SetDirty(); } RaiseLayout(); } } }
 
         private int _shadowX;   // signed −128..127 (negative = left, positive = right)
-        public int ShadowX { get => _shadowX; set { if (Set(ref _shadowX, value) && !_loading && _spriteData != null) { _spriteData[OFF_SHADOW_X] = (byte)(sbyte)value; SetDirty(); } } }
+        public int ShadowX { get => _shadowX; set { if (Set(ref _shadowX, value)) { if (CanEditSprite) { _spriteBlob[_recOffset + OFF_SHADOW_X] = (byte)(sbyte)value; SetDirty(); } RaiseLayout(); } } }
 
         private int _shadowSize;   // 0 none / 1 small / 2 medium / 3 large
-        public int ShadowSize { get => _shadowSize; set { if (Set(ref _shadowSize, value) && !_loading && _spriteData != null) { _spriteData[OFF_SHADOW_SIZE] = (byte)value; SetDirty(); } } }
+        public int ShadowSize { get => _shadowSize; set { if (Set(ref _shadowSize, value)) { if (CanEditSprite) { _spriteBlob[_recOffset + OFF_SHADOW_SIZE] = (byte)value; SetDirty(); } RaiseLayout(); } } }
 
         public ObservableCollection<string> ShadowSizes { get; } =
             new ObservableCollection<string> { "None", "Small", "Medium", "Large" };
 
-        private string SpriteFilePath(int id) =>
-            Path.Combine(gameDirs[DirNames.pokemonSpriteOffsets].unpackedDir, id.ToString("D4"));
+        // The NARC unpacks to a single file (index 0 → "0000").
+        private string SpriteBlobPath => Path.Combine(gameDirs[DirNames.pokemonSpriteOffsets].unpackedDir, "0000");
+
+        private void EnsureBlobLoaded()
+        {
+            if (_spriteBlob != null) return;
+            if (!_spriteNarcReady) { DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonSpriteOffsets }); _spriteNarcReady = true; }
+            if (File.Exists(SpriteBlobPath)) _spriteBlob = File.ReadAllBytes(SpriteBlobPath);
+        }
 
         private void LoadSpriteData(int id)
         {
-            _spriteData = null;
+            _recOffset = -1;
             HasSpriteData = false;
             if (!IsAvailable || id < 0) return;
             try
             {
-                if (!_spriteNarcReady) { DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonSpriteOffsets }); _spriteNarcReady = true; }
-                string path = SpriteFilePath(id);
-                if (!File.Exists(path)) return;
-                byte[] data = File.ReadAllBytes(path);
-                if (data.Length < REC_LEN) return;
-                _spriteData = data;
-                _movementType = data[OFF_MOVEMENT];
-                _spriteY      = (sbyte)data[OFF_SPRITE_Y];
-                _shadowX      = (sbyte)data[OFF_SHADOW_X];
-                _shadowSize   = data[OFF_SHADOW_SIZE];
+                EnsureBlobLoaded();
+                if (_spriteBlob == null) return;
+                int off = id * REC_LEN;
+                if (off + REC_LEN > _spriteBlob.Length) return;   // mon beyond the table
+                _recOffset = off;
+                _movementType = _spriteBlob[off + OFF_MOVEMENT];
+                _spriteY      = (sbyte)_spriteBlob[off + OFF_SPRITE_Y];
+                _shadowX      = (sbyte)_spriteBlob[off + OFF_SHADOW_X];
+                _shadowSize   = _spriteBlob[off + OFF_SHADOW_SIZE];
                 OnPropertyChanged(nameof(MovementType));
                 OnPropertyChanged(nameof(SpriteY));
                 OnPropertyChanged(nameof(ShadowX));
                 OnPropertyChanged(nameof(ShadowSize));
                 HasSpriteData = true;
             }
-            catch { _spriteData = null; HasSpriteData = false; }
+            catch { _recOffset = -1; HasSpriteData = false; }
         }
 
         private void SaveSpriteData()
         {
-            if (!IsAvailable || _spriteData == null || _currentId < 0) return;
-            string path = SpriteFilePath(_currentId);
-            if (!File.Exists(path)) return;
-            File.WriteAllBytes(path, _spriteData);   // _spriteData was the full record, patched in the setters
+            if (!IsAvailable || _spriteBlob == null) return;
+            if (File.Exists(SpriteBlobPath)) File.WriteAllBytes(SpriteBlobPath, _spriteBlob);
         }
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
@@ -128,11 +174,35 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => $"Battle Display (Mon {_currentId})";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_currentId >= 0) LoadMon(_currentId); }
+        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); _spriteBlob = null; if (_currentId >= 0) LoadMon(_currentId); }   // drop in-memory edits → reload from disk
         private void SetDirty() { if (_loading || _dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public BattleDisplayEditorViewModel() { }
+
+        /// <summary>Runtime ctor: takes the sibling Sprite VM so the battle mock can show this mon's
+        /// front (enemy) and back (player) sprites, refreshing when they re-render.</summary>
+        public BattleDisplayEditorViewModel(PokemonSpriteEditorViewModel sprites)
+        {
+            _sprites = sprites;
+            if (_sprites != null)
+                _sprites.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName is nameof(PokemonSpriteEditorViewModel.BattleFront0)
+                        or nameof(PokemonSpriteEditorViewModel.BattleFront1)
+                        or nameof(PokemonSpriteEditorViewModel.BattleBack0)
+                        or nameof(PokemonSpriteEditorViewModel.BattleBack1))
+                        RaiseSprites();
+                };
+
+            // Loop the two send-out frames so the preview animates like the game does on entry.
+            _animTimer = new global::Avalonia.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(350)
+            };
+            _animTimer.Tick += (_, _) => { _frame ^= 1; RaiseSprites(); };
+            _animTimer.Start();
+        }
 
         public void LoadMon(int id)
         {
@@ -147,6 +217,8 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(PartyPaletteIndex));
             RefreshPreview();
             LoadSpriteData(id);
+            RaiseLayout();
+            RaiseSprites();
             SetClean();
             _loading = false;
         }

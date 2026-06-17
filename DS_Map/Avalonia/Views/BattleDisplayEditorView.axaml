@@ -8,7 +8,7 @@
   </Design.DataContext>
 
   <ScrollViewer>
-    <StackPanel Margin="14" Spacing="12" MaxWidth="460" HorizontalAlignment="Left">
+    <StackPanel Margin="14" Spacing="12" HorizontalAlignment="Left">
 
       <!-- Shown only when the loaded ROM isn't a supported version. -->
       <Border IsVisible="{Binding !IsAvailable}" Padding="10" CornerRadius="4"
@@ -16,48 +16,83 @@
         <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="OrangeRed"/>
       </Border>
 
-      <StackPanel Spacing="12" IsEnabled="{Binding IsAvailable}" IsVisible="{Binding IsAvailable}">
+      <Grid IsEnabled="{Binding IsAvailable}" IsVisible="{Binding IsAvailable}" ColumnDefinitions="Auto,24,*">
 
-        <!-- Party icon palette -->
-        <StackPanel Spacing="4">
-          <TextBlock Text="Party Icon Palette" FontWeight="SemiBold"/>
-          <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses. The icons themselves are in the icon NARC (/a/0/2/0)."
-                     TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
-            <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
-                    ToolTip.Tip="Live preview with the selected palette (before saving)">
-              <Image Source="{Binding IconPreview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
-            </Border>
+        <!-- LEFT COLUMN: live battle preview (this Pokémon vs itself; enemy = front, player = back). -->
+        <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Top">
+          <TextBlock Text="Battle preview (this Pokémon vs itself)" FontWeight="SemiBold"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
+                  HorizontalAlignment="Left" Background="Black">
+            <Viewbox Width="512" Height="384" Stretch="Uniform">
+              <Canvas Width="256" Height="192" ClipToBounds="True">
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/background.png" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_opponent.png" Canvas.Left="129" Canvas.Top="72"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_you.png" Canvas.Left="-42" Canvas.Top="122"/>
+
+                <!-- Enemy shadow (one visible per size) -->
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_small.png"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
+
+                <!-- Enemy (front) + player (back) sprites -->
+                <Image Source="{Binding EnemySprite}"  Canvas.Left="{Binding EnemyLeft}"  Canvas.Top="{Binding EnemyTop}"  Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+                <Image Source="{Binding PlayerSprite}" Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding PlayerTop}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+
+                <!-- Battle UI chrome -->
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"/>
+                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
+              </Canvas>
+            </Viewbox>
+          </Border>
+          <TextBlock Text="Live — reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
+                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="512"/>
+        </StackPanel>
+
+        <!-- RIGHT COLUMN: the editable fields. -->
+        <StackPanel Grid.Column="2" Spacing="14" VerticalAlignment="Top" MinWidth="320">
+
+          <!-- Party icon palette -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="Party Icon Palette" FontWeight="SemiBold"/>
+            <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses (icons live in NARC /a/0/2/0)."
+                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+              <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
+              <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
+                      ToolTip.Tip="Live preview with the selected palette (before saving)">
+                <Image Source="{Binding IconPreview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+
+          <Separator/>
+
+          <!-- Battle sprite & shadow coordinates (/a/1/8/0) -->
+          <StackPanel Spacing="6">
+            <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
+            <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
+                       FontSize="11" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
+
+            <Grid IsVisible="{Binding HasSpriteData}" ColumnDefinitions="150,10,160" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Sprite Y position" VerticalAlignment="Center"
+                         ToolTip.Tip="Moves the sprite up (positive) or down (negative). Signed −128…127."/>
+              <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Shadow X position" VerticalAlignment="Center"
+                         ToolTip.Tip="Moves the shadow right (positive) or left (negative). Signed −128…127."/>
+              <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding ShadowX}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Shadow size" VerticalAlignment="Center"/>
+              <ComboBox Grid.Row="4" Grid.Column="2" ItemsSource="{Binding ShadowSizes}" SelectedIndex="{Binding ShadowSize}" HorizontalAlignment="Stretch"/>
+
+              <TextBlock Grid.Row="6" Grid.Column="0" Text="Movement type" VerticalAlignment="Center"
+                         ToolTip.Tip="Animation played when the Pokémon is sent out (e.g. 0x13 = electricity flash like Raichu/Jolteon). Raw byte 0–255."/>
+              <NumericUpDown Grid.Row="6" Grid.Column="2" Value="{Binding MovementType}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+            </Grid>
           </StackPanel>
         </StackPanel>
-
-        <Separator Margin="0,4"/>
-
-        <!-- Battle sprite & shadow coordinates (/a/1/8/0) -->
-        <StackPanel Spacing="6">
-          <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
-          <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
-                     FontSize="11" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
-
-          <Grid IsVisible="{Binding HasSpriteData}" ColumnDefinitions="150,10,160" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Sprite Y position" VerticalAlignment="Center"
-                       ToolTip.Tip="Moves the sprite up (positive) or down (negative). Signed −128…127."/>
-            <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Shadow X position" VerticalAlignment="Center"
-                       ToolTip.Tip="Moves the shadow right (positive) or left (negative). Signed −128…127."/>
-            <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding ShadowX}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="Shadow size" VerticalAlignment="Center"/>
-            <ComboBox Grid.Row="4" Grid.Column="2" ItemsSource="{Binding ShadowSizes}" SelectedIndex="{Binding ShadowSize}" HorizontalAlignment="Stretch"/>
-
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="Movement type" VerticalAlignment="Center"
-                       ToolTip.Tip="Animation played when the Pokémon is sent out (e.g. 0x13 = electricity flash like Raichu/Jolteon). Raw byte 0–255."/>
-            <NumericUpDown Grid.Row="6" Grid.Column="2" Value="{Binding MovementType}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-          </Grid>
-        </StackPanel>
-      </StackPanel>
+      </Grid>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

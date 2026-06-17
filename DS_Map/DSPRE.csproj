@@ -50,6 +50,11 @@
     <PackageReference Include="YamlDotNet" Version="16.2.0" />
   </ItemGroup>
 
+  <!-- Avalonia image assets (embedded resources, referenced via avares://DSPRE/Avalonia/Assets/...) -->
+  <ItemGroup>
+    <AvaloniaResource Include="Avalonia\Assets\**" />
+  </ItemGroup>
+
   <!-- ============================================================
        Project references — Ekona image library and Images plugin
        ============================================================ -->
