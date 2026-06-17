@@ -85,6 +85,9 @@ namespace DSPRE.Avalonia.Views
         private void HeaderEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHeaderEditor();
 
+        private void CameraEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenCameraEditor();
+
         private void MapEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenMapEditor();
 

@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        x:Class="DSPRE.Avalonia.Views.MapsWorkspaceView"
+        x:DataType="vm:HeaderEditorViewModel">
+  <!-- Porymap-like Maps workspace over a HeaderEditorViewModel: the shared header sidebar drives a
+       context strip + map-bound tabs. Phase 1: Header is embedded; the rest open the standalone editor
+       at the selected header's linked file id. -->
+  <Design.DataContext>
+    <vm:HeaderEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="Border.chip">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="7,2"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="Background" Value="{DynamicResource Editor.PanelBg}"/>
+    </Style>
+    <Style Selector="Border.chip TextBlock.k">
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+    <Style Selector="StackPanel.placeholder">
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Spacing" Value="12"/>
+      <Setter Property="MaxWidth" Value="460"/>
+    </Style>
+    <Style Selector="StackPanel.placeholder > TextBlock.title">
+      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="280,*">
+      <views:HeaderSidebarView Grid.Column="0" Margin="4"/>
+
+      <DockPanel Grid.Column="1" Margin="0,4,4,4">
+        <!-- Context strip: selected header identity + Save/Reset + linked-file id chips -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3"
+                Padding="10,7" Margin="0,0,0,4">
+          <StackPanel Spacing="7">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+                <Button Content="↺ Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="📍" FontSize="15" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectedHeaderTitle}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectedHeaderSubtitle}" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DockPanel>
+            <WrapPanel>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId}"/></StackPanel></Border>
+              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon}"/></StackPanel></Border>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <TabControl>
+          <TabItem Header="Header">
+            <views:HeaderFieldsView/>
+          </TabItem>
+          <TabItem Header="Map">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Map Editor"/>
+              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
+                         Text="Opens in its own window for now."/>
+              <Button Content="🔗 Open Map Editor" HorizontalAlignment="Center" Click="OpenMap_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Events">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Event Editor"/>
+              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
+                         Text="Opens in its own window for now. Once embedded, the event file for the selected header loads here and retargets as you pick headers."/>
+              <Button Content="🔗 Open Events" HorizontalAlignment="Center" Click="OpenEvents_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Matrix">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Matrix Editor"/>
+              <Button Content="🔗 Open Matrix" HorizontalAlignment="Center" Click="OpenMatrix_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Area Data">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Area Data Editor"/>
+              <Button Content="🔗 Open Area Data" HorizontalAlignment="Center" Click="OpenAreaData_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Encounters">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Wild Encounters"/>
+              <Button Content="🔗 Open Encounters" HorizontalAlignment="Center" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Scripts">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Script Editor"/>
+              <Button Content="🔗 Open Scripts" HorizontalAlignment="Center" Click="OpenScripts_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Level Scripts">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Level Script Editor"/>
+              <Button Content="🔗 Open Level Scripts" HorizontalAlignment="Center" Click="OpenLevelScripts_Click"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Text">
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Text Editor"/>
+              <Button Content="🔗 Open Text" HorizontalAlignment="Center" Click="OpenTexts_Click"/>
+            </StackPanel>
+          </TabItem>
+        </TabControl>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>
