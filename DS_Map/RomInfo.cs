@@ -158,7 +158,14 @@ namespace DSPRE
             personalPokeData,
             pokemonBattleSprites,
             otherPokemonBattleSprites,
-            pokemonSpriteOffsets,   // /a/1/8/0 (HGSS): 89 bytes/mon — movement type + sprite/shadow coords
+            pokemonSpriteOffsets,   // combined per-mon record: HGSS /a/1/8/0 (89 B/mon) · Plat pl_poke_data.narc — last 3 bytes = sprite Y/shadow X/shadow size
+            pokeYofs,               // DP /poketool/pokegra/poke_yofs.narc — signed front-sprite Y, 1 B/mon
+            pokeShadowOfx,          // DP /poketool/pokegra/poke_shadow_ofx.narc — signed shadow X, 1 B/mon
+            pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc — shadow size, 1 B/mon
+            pokeHeight,             // DP+Plat /poketool/pokegra/height.narc — 4 files/mon (F-back,M-back,F-front,M-front), heights
+            pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc — 2 files/form (back, front; both genders)
+            pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc — 28 B/mon battle-animation table (POKE_ANM_DATA)
+            pokeAnimDefs,           // DP /pokeanime/poke_anm.narc — the PAST program-animation scripts (referenced by prg_anm)
 
             synthOverlay,
             dynamicHeaders,
@@ -1980,6 +1987,15 @@ namespace DSPRE
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\otherpoke.narc",
 
+                        // DP keeps the battle-sprite offsets in separate NARCs.
+                        [DirNames.pokeYofs] = $@"{dataFolderName}\poketool\pokegra\poke_yofs.narc",
+                        [DirNames.pokeShadowOfx] = $@"{dataFolderName}\poketool\pokegra\poke_shadow_ofx.narc",
+                        [DirNames.pokeShadow] = $@"{dataFolderName}\poketool\pokegra\poke_shadow.narc",
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
+                        [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
+                        [DirNames.pokeAnim] = $@"{dataFolderName}\poketool\pokeanm\pokeanm.narc",
+                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\poke_anm.narc",
+
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
@@ -2016,6 +2032,13 @@ namespace DSPRE
 
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pl_pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pl_otherpoke.narc",
+                        // Platinum bundles the battle-sprite offsets (last 3 bytes/record = sprite Y, shadow X, shadow size) here, HGSS-style.
+                        [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\poketool\poke_edit\pl_poke_data.narc",
+                        // Per-gender sprite heights live in their own NARC on Platinum too (same as DP).
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
+                        [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
+                        [DirNames.pokeAnim] = $@"{dataFolderName}\poketool\pokeanm\pl_pokeanm.narc",   // Platinum's animation table (pl_ prefix)
+                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\pl_poke_anm.narc",   // Platinum's PAST program-animation scripts
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2073,6 +2096,8 @@ namespace DSPRE
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\a\0\0\4",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
+                        [DirNames.pokeAnim] = $@"{dataFolderName}\a\1\1\1",   // Pokeanm.narc (28 B/mon POKE_ANM_DATA table)
+                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\a\0\9\0",   // PAST program-animation scripts (poke_anm equivalent)
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

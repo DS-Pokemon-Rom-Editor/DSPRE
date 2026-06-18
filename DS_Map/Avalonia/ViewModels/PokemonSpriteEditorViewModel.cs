@@ -46,13 +46,19 @@ namespace DSPRE.Avalonia.ViewModels
         private AvaBitmap _femaleFrontNormal; public AvaBitmap FemaleFrontNormal { get => _femaleFrontNormal; private set => Set(ref _femaleFrontNormal, value); }
         private AvaBitmap _maleFrontNormal;   public AvaBitmap MaleFrontNormal   { get => _maleFrontNormal;   private set => Set(ref _maleFrontNormal,   value); }
 
-        // Battle-mock sprites: the 160×80 sheet is TWO 80×80 frames (a small battle-entry animation), so we
-        // expose each frame separately (native size, palette index 0 made transparent). Front (enemy) + back
-        // (player), male slot with female fallback; the Battle Display tab loops the two frames.
-        private AvaBitmap _battleFront0; public AvaBitmap BattleFront0 { get => _battleFront0; private set => Set(ref _battleFront0, value); }
-        private AvaBitmap _battleFront1; public AvaBitmap BattleFront1 { get => _battleFront1; private set => Set(ref _battleFront1, value); }
-        private AvaBitmap _battleBack0;  public AvaBitmap BattleBack0  { get => _battleBack0;  private set => Set(ref _battleBack0,  value); }
-        private AvaBitmap _battleBack1;  public AvaBitmap BattleBack1  { get => _battleBack1;  private set => Set(ref _battleBack1,  value); }
+        // Battle-mock sprites: the sheet is N×80 = N 80×80 frames (N = width/80; usually 2 for the HGSS send-out
+        // animation, but future hacks may widen it). Exposed per gender (M/F) as a frame LIST, native size with
+        // palette index 0 transparent. The Battle Display tab picks the gender + frame. (Slots: 0 F-back, 1 M-back,
+        // 2 F-front, 3 M-front.)
+        private int _battleFrameCount = 2;
+        public int BattleFrameCount { get => _battleFrameCount; private set => Set(ref _battleFrameCount, value); }
+        private System.Collections.Generic.IReadOnlyList<AvaBitmap> _bFrontM, _bFrontF, _bBackM, _bBackF;
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleFrontM { get => _bFrontM; private set => Set(ref _bFrontM, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleFrontF { get => _bFrontF; private set => Set(ref _bFrontF, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackM  { get => _bBackM;  private set => Set(ref _bBackM, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackF  { get => _bBackF;  private set => Set(ref _bBackF, value); }
+        private AvaBitmap _bBackF0;  public AvaBitmap BattleBackF0  { get => _bBackF0;  private set => Set(ref _bBackF0, value); }
+        private AvaBitmap _bBackF1;  public AvaBitmap BattleBackF1  { get => _bBackF1;  private set => Set(ref _bBackF1, value); }
 
         private AvaBitmap _femaleBackShiny;   public AvaBitmap FemaleBackShiny   { get => _femaleBackShiny;   private set => Set(ref _femaleBackShiny,   value); }
         private AvaBitmap _maleBackShiny;     public AvaBitmap MaleBackShiny     { get => _maleBackShiny;     private set => Set(ref _maleBackShiny,     value); }
@@ -588,13 +594,23 @@ namespace DSPRE.Avalonia.ViewModels
             FemaleFrontShiny  = RenderSprite(2, _shinyPal);
             MaleFrontShiny    = RenderSprite(3, _shinyPal);
 
-            // Battle-mock sprites: the 160×80 sheet is two 80×80 frames (a small send-out animation), so
-            // split each into frame 0 (left) + frame 1 (right). Native size, transparent colour 0. Male
-            // slot with female fallback.
-            BattleBack0  = RenderBattleSprite(1, _normalPal, 0) ?? RenderBattleSprite(0, _normalPal, 0);
-            BattleBack1  = RenderBattleSprite(1, _normalPal, 1) ?? RenderBattleSprite(0, _normalPal, 1);
-            BattleFront0 = RenderBattleSprite(3, _normalPal, 0) ?? RenderBattleSprite(2, _normalPal, 0);
-            BattleFront1 = RenderBattleSprite(3, _normalPal, 1) ?? RenderBattleSprite(2, _normalPal, 1);
+            // Battle-mock sprites per gender: a LIST of N 80×80 frames (N = sheet width / 80). The pattern
+            // animation (pokeanm) picks which frame to show; the count drives the editor's Frame limit.
+            var frontRaw = _rawSprites[3] ?? _rawSprites[2];
+            BattleFrameCount = frontRaw != null ? Math.Max(1, frontRaw.Width / 80) : 2;
+            BattleFrontM = RenderFrames(3, _normalPal, BattleFrameCount);
+            BattleFrontF = RenderFrames(2, _normalPal, BattleFrameCount);
+            BattleBackM  = RenderFrames(1, _normalPal, BattleFrameCount);
+            BattleBackF  = RenderFrames(0, _normalPal, BattleFrameCount);
+        }
+
+        // Renders all `count` 80×80 frames of a sprite slot (null list if the slot is empty).
+        private System.Collections.Generic.IReadOnlyList<AvaBitmap> RenderFrames(int slot, System.Drawing.Imaging.ColorPalette palette, int count)
+        {
+            if (_rawSprites[slot] == null) return null;
+            var frames = new AvaBitmap[count];
+            for (int i = 0; i < count; i++) frames[i] = RenderBattleSprite(slot, palette, i);
+            return frames;
         }
 
         private AvaBitmap RenderSprite(int slot, System.Drawing.Imaging.ColorPalette palette)
@@ -611,8 +627,8 @@ namespace DSPRE.Avalonia.ViewModels
             catch { return null; }
         }
 
-        // Crops one of the two 80×80 frames (frame 0 = left half, frame 1 = right half) out of the 160×80
-        // sheet, drawn into a 32bpp ARGB surface with palette index 0 made transparent (in-game colour 0).
+        // Crops the 80×80 cell at frame index `frame` (cell at x = frame*80) out of the sheet, into a 32bpp
+        // ARGB surface with palette index 0 made transparent (in-game colour 0). Out-of-range → null.
         private AvaBitmap RenderBattleSprite(int slot, System.Drawing.Imaging.ColorPalette palette, int frame)
         {
             if (_rawSprites[slot] == null) return null;
@@ -620,7 +636,8 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 var src = (GdiBitmap)_rawSprites[slot].Clone();
                 src.Palette = palette;
-                int fw = src.Width / 2;   // 80
+                const int fw = 80;
+                if ((frame + 1) * fw > src.Width) return null;
                 var argb = new GdiBitmap(fw, src.Height, PixelFormat.Format32bppArgb);
                 using (var g = System.Drawing.Graphics.FromImage(argb))
                     g.DrawImage(src,
@@ -637,7 +654,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             FemaleBackNormal = MaleBackNormal = FemaleFrontNormal = MaleFrontNormal = null;
             FemaleBackShiny  = MaleBackShiny  = FemaleFrontShiny  = MaleFrontShiny  = null;
-            BattleFront0 = BattleFront1 = BattleBack0 = BattleBack1 = null;
+            BattleFrontM = BattleFrontF = BattleBackM = BattleBackF = null;
             _rawSprites = new GdiBitmap[4];
             _normalPal = null; _shinyPal = null;
         }

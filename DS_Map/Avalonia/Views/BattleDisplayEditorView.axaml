@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+             xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
              x:Class="DSPRE.Avalonia.Views.BattleDisplayEditorView"
              x:DataType="vm:BattleDisplayEditorViewModel">
   <Design.DataContext>
@@ -21,32 +22,43 @@
         <!-- LEFT COLUMN: live battle preview (this Pokémon vs itself; enemy = front, player = back). -->
         <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Top">
           <TextBlock Text="Battle preview (this Pokémon vs itself)" FontWeight="SemiBold"/>
-          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
-                  HorizontalAlignment="Left" Background="Black">
-            <Viewbox Width="512" Height="384" Stretch="Uniform">
-              <Canvas Width="256" Height="192" ClipToBounds="True">
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/background.png" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_opponent.png" Canvas.Left="129" Canvas.Top="72"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_you.png" Canvas.Left="-42" Canvas.Top="122"/>
+          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <CheckBox Content="Show both genders" IsChecked="{Binding UnifiedDisplay}"
+                      ToolTip.Tip="Show Male and Female battle scenes side by side."/>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding !UnifiedDisplay}">
+              <TextBlock Text="Gender" VerticalAlignment="Center"/>
+              <ComboBox ItemsSource="{Binding Genders}" SelectedIndex="{Binding GenderIndex}" Width="100"
+                        ToolTip.Tip="Which gender's sprites to show (falls back to the other if absent)."/>
+            </StackPanel>
+            <Button Content="{Binding ProgramAnimButtonText}" Click="PlayProgramAnim_Click"
+                    IsEnabled="{Binding CanPlayProgramAnim}"
+                    ToolTip.Tip="Play this Pokémon's program animation (pokeanime) on the sprites."/>
+            <CheckBox Content="Pause frames" IsChecked="{Binding FramePaused}"
+                      ToolTip.Tip="Freeze the sprite-frame (pattern) animation to inspect a single frame."/>
+          </StackPanel>
 
-                <!-- Enemy shadow (one visible per size) -->
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_small.png"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
+          <!-- Separate display: one scene of the selected gender. -->
+          <views:BattleSceneControl Width="512" Height="384" HorizontalAlignment="Left"
+                                    IsVisible="{Binding !UnifiedDisplay}"
+                                    Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
+                                    EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
 
-                <!-- Enemy (front) + player (back) sprites -->
-                <Image Source="{Binding EnemySprite}"  Canvas.Left="{Binding EnemyLeft}"  Canvas.Top="{Binding EnemyTop}"  Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
-                <Image Source="{Binding PlayerSprite}" Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding PlayerTop}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+          <!-- Unified display: Male + Female scenes side by side. -->
+          <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UnifiedDisplay}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Male" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+              <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteM}" Player="{Binding PlayerSpriteM}"
+                                        EnemyY="{Binding EnemyTopM}" PlayerY="{Binding PlayerTopM}"/>
+            </StackPanel>
+            <StackPanel Spacing="2">
+              <TextBlock Text="Female" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+              <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteF}" Player="{Binding PlayerSpriteF}"
+                                        EnemyY="{Binding EnemyTopF}" PlayerY="{Binding PlayerTopF}"/>
+            </StackPanel>
+          </StackPanel>
 
-                <!-- Battle UI chrome -->
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"/>
-                <Image Source="avares://DSPRE/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
-              </Canvas>
-            </Viewbox>
-          </Border>
           <TextBlock Text="Live — reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
-                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="512"/>
+                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
         </StackPanel>
 
         <!-- RIGHT COLUMN: the editable fields. -->
@@ -68,28 +80,175 @@
 
           <Separator/>
 
-          <!-- Battle sprite & shadow coordinates (/a/1/8/0) -->
+          <!-- Battle sprite & shadow data -->
           <StackPanel Spacing="6">
             <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
             <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
                        FontSize="11" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 
-            <Grid IsVisible="{Binding HasSpriteData}" ColumnDefinitions="150,10,160" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Sprite Y position" VerticalAlignment="Center"
-                         ToolTip.Tip="Moves the sprite up (positive) or down (negative). Signed −128…127."/>
-              <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+            <StackPanel IsVisible="{Binding HasSpriteData}" Spacing="6">
+              <Grid ColumnDefinitions="160,10,150">
+                <TextBlock Grid.Column="0" Text="Front Y offset" VerticalAlignment="Center"
+                           ToolTip.Tip="Signed nudge to the front sprite (positive = up, negative = down). −128…127."/>
+                <NumericUpDown Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+              </Grid>
 
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Shadow X position" VerticalAlignment="Center"
-                         ToolTip.Tip="Moves the shadow right (positive) or left (negative). Signed −128…127."/>
-              <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding ShadowX}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+              <!-- Per-gender sprite heights (DP / Platinum, height.narc). Signed. Hidden while viewing a form. -->
+              <StackPanel IsVisible="{Binding ShowBaseHeights}" Spacing="6">
+                <CheckBox Content="Edit both genders together" IsChecked="{Binding UnifiedEdit}"
+                          ToolTip.Tip="Unified: one field per axis writes both ♂ and ♀. Unchecked: edit each gender separately."/>
 
-              <TextBlock Grid.Row="4" Grid.Column="0" Text="Shadow size" VerticalAlignment="Center"/>
-              <ComboBox Grid.Row="4" Grid.Column="2" ItemsSource="{Binding ShadowSizes}" SelectedIndex="{Binding ShadowSize}" HorizontalAlignment="Stretch"/>
+                <!-- Unified edit: one field per axis, writes both genders. -->
+                <StackPanel IsVisible="{Binding UnifiedEdit}" Spacing="6">
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Front height" VerticalAlignment="Center"
+                               ToolTip.Tip="Front-sprite height (both genders). ½ the distance from the sprite's bottom to the image's bottom. Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightUnified}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Back height" VerticalAlignment="Center"
+                               ToolTip.Tip="Back-sprite height (both genders). Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding BackHeightUnified}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                </StackPanel>
 
-              <TextBlock Grid.Row="6" Grid.Column="0" Text="Movement type" VerticalAlignment="Center"
-                         ToolTip.Tip="Animation played when the Pokémon is sent out (e.g. 0x13 = electricity flash like Raichu/Jolteon). Raw byte 0–255."/>
-              <NumericUpDown Grid.Row="6" Grid.Column="2" Value="{Binding MovementType}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-            </Grid>
+                <!-- Separate edit: the 4 per-gender fields. -->
+                <StackPanel IsVisible="{Binding !UnifiedEdit}" Spacing="6">
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Front height ♂" VerticalAlignment="Center"
+                               ToolTip.Tip="Front-sprite height (male). ½ the distance from the sprite's bottom to the image's bottom. Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightM}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Front height ♀" VerticalAlignment="Center"
+                               ToolTip.Tip="Front-sprite height (female). Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightF}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Back height ♂" VerticalAlignment="Center"
+                               ToolTip.Tip="Back-sprite height (male). Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding BackHeightM}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                  <Grid ColumnDefinitions="160,10,150">
+                    <TextBlock Grid.Column="0" Text="Back height ♀" VerticalAlignment="Center"
+                               ToolTip.Tip="Back-sprite height (female). Signed −128…127."/>
+                    <NumericUpDown Grid.Column="2" Value="{Binding BackHeightF}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                  </Grid>
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Alternate-form sprite heights (height_o.narc) — shown while a form is selected in the Sprites tab. -->
+              <StackPanel IsVisible="{Binding HasFormHeights}" Spacing="6">
+                <TextBlock Text="Alternate-form sprite height" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="160,10,150">
+                  <TextBlock Grid.Column="0" Text="Front height" VerticalAlignment="Center"
+                             ToolTip.Tip="Front-sprite height for the alternate form selected in the Sprites tab (both genders). Signed −128…127."/>
+                  <NumericUpDown Grid.Column="2" Value="{Binding FormFrontHeight}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                </Grid>
+                <Grid ColumnDefinitions="160,10,150">
+                  <TextBlock Grid.Column="0" Text="Back height" VerticalAlignment="Center"
+                             ToolTip.Tip="Back-sprite height for the alternate form (both genders). Signed −128…127."/>
+                  <NumericUpDown Grid.Column="2" Value="{Binding FormBackHeight}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                </Grid>
+                <TextBlock Text="From height_o.narc, for the form chosen in the Sprites tab. Both genders share these."
+                           FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="160,10,150">
+                <TextBlock Grid.Column="0" Text="Shadow X position" VerticalAlignment="Center"
+                           ToolTip.Tip="Moves the shadow right (positive) or left (negative). Signed −128…127."/>
+                <NumericUpDown Grid.Column="2" Value="{Binding ShadowX}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="160,10,150">
+                <TextBlock Grid.Column="0" Text="Shadow size" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding ShadowSizes}" SelectedIndex="{Binding ShadowSize}" HorizontalAlignment="Stretch"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding HasMovementType}">
+                <TextBlock Grid.Column="0" Text="Movement type" VerticalAlignment="Center"
+                           ToolTip.Tip="Animation played when the Pokémon is sent out (e.g. 0x13 = electricity flash like Raichu/Jolteon). Raw byte 0–255. HGSS / Platinum."/>
+                <NumericUpDown Grid.Column="2" Value="{Binding MovementType}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+              </Grid>
+
+              <!-- Sprite animation (pokeanm.narc). Pattern steps = the on-field frame wiggle; they drive the preview. -->
+              <StackPanel IsVisible="{Binding HasAnimData}" Spacing="4">
+                <Separator/>
+                <TextBlock Text="Sprite Animation (pokeanm)" FontWeight="SemiBold"/>
+                <TextBlock Text="Pattern steps — the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
+                           FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+
+                <ItemsControl ItemsSource="{Binding AnimSteps}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AnimPatternStep">
+                      <Grid ColumnDefinitions="Auto,76,Auto,76,Auto" Margin="0,0,0,4" ColumnSpacing="6">
+                        <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding Frame}" Minimum="0" Maximum="{Binding $parent[ItemsControl].((vm:BattleDisplayEditorViewModel)DataContext).MaxFrameIndex}" FormatString="0" Increment="1"/>
+                        <TextBlock Grid.Column="2" Text="Wait" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding Wait}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                        <Button Grid.Column="4" Content="🗑" Click="RemoveAnimStep_Click" ToolTip.Tip="Remove this step" VerticalAlignment="Center"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="＋ Add step" Click="AddAnimStep_Click" IsEnabled="{Binding CanAddAnimStep}" HorizontalAlignment="Left"/>
+
+                <Expander Header="Program animation (advanced)" Margin="0,4,0,0">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="Program-animation numbers reference scripts in the pokeanime NARC (the actual motion). Front plays on the enemy sprite, the first back step on the player sprite — press ▶ Play to see them."
+                               FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                    <Grid ColumnDefinitions="160,10,150">
+                      <TextBlock Grid.Column="0" Text="Front program #" VerticalAlignment="Center"/>
+                      <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontProgNum}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="160,10,150">
+                      <TextBlock Grid.Column="0" Text="Front wait" VerticalAlignment="Center"/>
+                      <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontWait}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                    </Grid>
+                    <TextBlock Text="Back program steps" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <ItemsControl ItemsSource="{Binding AnimBack}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AnimProgStep">
+                          <Grid ColumnDefinitions="Auto,76,Auto,76" Margin="0,0,0,4" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Text="#" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Column="1" Value="{Binding Number}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                            <TextBlock Grid.Column="2" Text="Wait" VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Column="3" Value="{Binding Wait}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Script editor: editable PAST command list for the front program animation. -->
+                    <Separator/>
+                    <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
+                    <TextBlock Text="Edits the shared animation script — affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
+                               FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>
+                      <Button Content="💾 Save script" Click="SaveProgramScript_Click" IsEnabled="{Binding ScriptDirty}"/>
+                    </StackPanel>
+                    <Border IsVisible="{Binding HasProgramScript}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" MaxHeight="260">
+                      <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding ProgramRows}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProgramCmdRow">
+                              <Grid ColumnDefinitions="186,*,Auto,Auto,Auto" Margin="2" ColumnSpacing="4">
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" HorizontalAlignment="Stretch"/>
+                                <TextBox Grid.Column="1" Text="{Binding ArgsText}" Watermark="{Binding ArgHint}" FontFamily="Consolas,monospace"/>
+                                <Button Grid.Column="2" Content="↑" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
+                                <Button Grid.Column="3" Content="↓" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
+                                <Button Grid.Column="4" Content="🗑" Click="ProgramCmdRemove_Click" ToolTip.Tip="Remove"/>
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </Border>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+            </StackPanel>
           </StackPanel>
         </StackPanel>
       </Grid>
