@@ -173,63 +173,6 @@ namespace DSPRE
             }
         }
 
-        public static void RestoreFromCompressedBackup(int overlayNumber, bool eventEditorIsReady)
-        {
-            String overlayFilePath = GetPath(overlayNumber);
-
-            if (File.Exists(overlayFilePath + DSUtils.backupSuffix))
-            {
-                if (new FileInfo(overlayFilePath).Length <= new FileInfo(overlayFilePath + DSUtils.backupSuffix).Length)
-                { //if overlay is bigger than its backup
-                    AppLogger.Info($"Overlay {overlayNumber} is already compressed.");
-                    return;
-                }
-                else
-                {
-                    File.Delete(overlayFilePath);
-                    File.Move(overlayFilePath + DSUtils.backupSuffix, overlayFilePath);
-                }
-            }
-            else
-            {
-                string msg = $"Overlay File {overlayFilePath}{DSUtils.backupSuffix} couldn't be found and restored.";
-                AppLogger.Debug(msg);
-
-                if (eventEditorIsReady)
-                {
-                    MessageBox.Show(msg, "Can't restore overlay from backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-        public static int Compress(int overlayNumber)
-        {
-            // ds-rom handles compression automatically during build
-            if (RomInfo.IsDsRomProject)
-            {
-                AppLogger.Info("ds-rom handles overlay compression automatically during ROM build.");
-                return 0; // Success - no action needed
-            }
-
-            string overlayFilePath = GetPath(overlayNumber);
-
-            if (!File.Exists(overlayFilePath))
-            {
-                MessageBox.Show("Overlay to decompress #" + overlayNumber + " doesn't exist",
-                    "Overlay not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return ERR_OVERLAY_NOTFOUND;
-            }
-
-            Process compress = new Process();
-            compress.StartInfo.FileName = @"Tools\blz.exe";
-            compress.StartInfo.Arguments = "-en " + '"' + overlayFilePath + '"';
-            Application.DoEvents();
-            compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            compress.StartInfo.CreateNoWindow = true;
-            compress.Start();
-            compress.WaitForExit();
-            return compress.ExitCode;
-        }
-
         public static int Decompress(string overlayFilePath, bool makeBackup = true)
         {
             // ds-rom overlays are always decompressed on disk
@@ -265,5 +208,63 @@ namespace DSPRE
             return Decompress(GetPath(overlayNumber), makeBackup);
         }
 
-    }
+        public static byte[] ReadBytes(int overlayNumber, uint offset, int length)
+        {
+            string path = GetPath(overlayNumber);
+            if (!File.Exists(path))
+            {
+                AppLogger.Warn($"Overlay file not found: {path}");
+                return new byte[length]; // Return empty data to avoid crashes
+            }
+            try
+            {
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+                {
+                    if (offset + length > fs.Length)
+                    {
+                        AppLogger.Warn($"Attempt to read beyond end of overlay file: {path} (offset={offset}, length={length})");
+                        return new byte[length]; // Return empty data to avoid crashes
+                    }
+                    byte[] buffer = new byte[length];
+                    fs.Seek(offset, SeekOrigin.Begin);
+                    fs.Read(buffer, 0, length);
+                    return buffer;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error reading bytes from overlay {overlayNumber}: {ex.Message}");
+                return new byte[length]; // Return empty data to avoid crashes
+            }
+
+        }
+
+        public static void WriteBytes(int overlayNumber, uint offset, byte[] data)
+        {
+            string path = GetPath(overlayNumber);
+            if (!File.Exists(path))
+            {
+                AppLogger.Warn($"Overlay file not found: {path}");
+                return;
+            }
+            try
+            {
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Write))
+                {
+                    if (offset + data.Length > fs.Length)
+                    {
+                        AppLogger.Warn($"Attempt to write beyond end of overlay file: {path} (offset={offset}, data length={data.Length})");
+                        return;
+                    }
+                    fs.Seek(offset, SeekOrigin.Begin);
+                    fs.Write(data, 0, data.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Error writing bytes to overlay {overlayNumber}: {ex.Message}");
+            }
+
+        }
+}
 }
