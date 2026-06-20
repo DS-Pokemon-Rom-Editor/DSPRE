@@ -1,0 +1,80 @@
+# Offset Database Template - Diamond/Pearl/Platinum
+# Copy this file and modify as needed for your offset database
+# 
+# IMPORTANT: Refer to OFFSET_YAML_SCHEMA.md for complete documentation
+#
+# Common mistakes to avoid:
+# ❌ DON'T put 'type' at the anchor level
+# ❌ DON'T forget 'source:', 'length:', or 'offsets:'
+# ❌ DON'T use tabs for indentation (use spaces only)
+# ❌ DON'T forget the '0x' prefix on hex values
+
+anchors:
+  # Example 1: Simple ARM9 anchor with single offset per language
+  ItemTableOffset:
+	source:
+	  type: arm9
+	length: 4
+	offsets:
+	  English: 0xF85B4
+	  Japanese: 0xF85C0
+
+  # Example 2: ARM9 anchor with multiple languages
+  PokedexTableOffset:
+	source:
+	  type: arm9
+	length: 4
+	offsets:
+	  English: 0x123456
+	  Japanese: 0x123460
+	  French: 0x123464
+	  German: 0x123468
+	  Italian: 0x12346C
+	  Spanish: 0x123470
+
+  # Example 3: Overlay-based anchor
+  # For overlay type, you MUST include overlayNumber
+  SpecialOverlayData:
+	source:
+	  type: overlay
+	  overlayNumber: 5
+	length: 4
+	offsets:
+	  English: 0x1000
+	  Japanese: 0x1004
+
+  # Example 4: Version-specific offsets
+  # Use this when different game versions have different offsets
+  MultiVersionData:
+	source:
+	  type: arm9
+	length: 4
+	offsets:
+	  English:
+		Diamond: 0xF85B4
+		Pearl: 0xF85B8
+		Platinum: 0xF85BC
+	  Japanese:
+		Diamond: 0xF85C0
+		Pearl: 0xF85C4
+		Platinum: 0xF85C8
+
+  # Example 5: Synthetic overlay anchor
+  SyntheticOverlayData:
+	source:
+	  type: syntheticOverlay
+	length: 4
+	offsets:
+	  English: 0x2000
+	  Japanese: 0x2004
+
+  # Example 6: Anchor with decompilation reference
+  DecompReferencedAnchor:
+	source:
+	  type: arm9
+	length: 4
+	offsets:
+	  English: 0xF85B4
+	decompRef:
+	  symbol: ItemTableStart
+	  offset: 0x10

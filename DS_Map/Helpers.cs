@@ -410,6 +410,75 @@ namespace DSPRE
             }
         }
 
+        /// <summary>
+        /// Initialize the OffsetDatabase from YAML files with support for project-specific overrides.
+        /// Follows the same pattern as InitializeScriptDatabase.
+        /// </summary>
+        public static void InitializeOffsetDatabase(string romFileName, GameFamilies gameFamily, GameLanguages gameLanguage, GameVersions gameVersion)
+        {
+            string baseFileName = Path.GetFileNameWithoutExtension(romFileName);
+            string romFileNameClean = baseFileName.EndsWith("_DSPRE_contents")
+                ? baseFileName.Substring(0, baseFileName.Length - "_DSPRE_contents".Length)
+                : baseFileName;
+
+            string editedDatabasesDir = Path.Combine(Program.DatabasePath, "edited_databases");
+            Directory.CreateDirectory(editedDatabasesDir);
+
+            // Create ROM-specific folder
+            string romDatabaseFolder = Path.Combine(editedDatabasesDir, romFileNameClean);
+            Directory.CreateDirectory(romDatabaseFolder);
+
+            // Determine which default offset file to use
+            string defaultOffsetFileName;
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    defaultOffsetFileName = "DP.yaml";
+                    break;
+                case GameFamilies.Plat:
+                    defaultOffsetFileName = "Plat.yaml";
+                    break;
+                case GameFamilies.HGSS:
+                    defaultOffsetFileName = "HGSS.yaml";
+                    break;
+                default:
+                    throw new Exception($"Unknown game family: {gameFamily}");
+            }
+
+            string defaultOffsetPath = Path.Combine(Program.DatabasePath, "Offsets", defaultOffsetFileName);
+            string projectOffsetPath = Path.Combine(romDatabaseFolder, "offsets.yaml");
+
+            // Create an empty project override file if it doesn't exist
+            if (!File.Exists(projectOffsetPath))
+            {
+                // Create empty override template
+                string emptyOverrideTemplate = "# Project-specific offset overrides\n" +
+                    "# Uncomment and modify anchors below to override defaults\n" +
+                    "# Format: copy the anchor from the default file and modify the offsets\n\n" +
+                    "anchors:\n" +
+                    "  # Example: To override ItemTableOffset, uncomment and modify:\n" +
+                    "  # ItemTableOffset:\n" +
+                    "  #   source:\n" +
+                    "  #     type: arm9\n" +
+                    "  #   length: 4\n" +
+                    "  #   offsets:\n" +
+                    "  #     English: 0xF85B4\n";
+
+                File.WriteAllText(projectOffsetPath, emptyOverrideTemplate);
+            }
+
+            try
+            {
+                OffsetDatabase.Initialize(defaultOffsetPath, projectOffsetPath, gameFamily, gameLanguage, gameVersion);
+                AppLogger.Debug("OffsetDatabase initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Failed to load offset database: {ex.Message}");
+                throw;
+            }
+        }
+
         static bool disableHandlersOld;
         static bool disableHandlers;
 

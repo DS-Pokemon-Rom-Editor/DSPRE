@@ -120,20 +120,21 @@ namespace DSPRE {
 
         private void saveSpawnEditorButton_Click(object sender, EventArgs e) {
             DialogResult d = MessageBox.Show("This operation will overwrite: " + Environment.NewLine
-                + "- 10 bytes of data at ARM9 offset 0x" + RomInfo.arm9spawnOffset.ToString("X") + Environment.NewLine
-                + "- 4 bytes of data at Overlay" + RomInfo.initialMoneyOverlayNumber + " offset 0x" + RomInfo.initialMoneyOverlayOffset.ToString("X") + 
+                + "- 10 bytes of data at ARM9 offset 0x" + OffsetDatabase.GetOffset("SpawnOffset").ToString("X") + Environment.NewLine
+                + "- 4 bytes of data at Overlay" + OffsetDatabase.GetOverlayID("InitialMoney").ToString() + " offset 0x" + OffsetDatabase.GetOffset("InitialMoney").ToString("X") + 
                 Environment.NewLine + "\nProceed?", "Confirmation required",  MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (d == DialogResult.Yes) {
-                string moneyOverlayPath = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
                 ushort headerNumber = ushort.Parse(spawnHeaderComboBox.SelectedItem.ToString().Split()[0]);
 
-                ARM9.WriteBytes(BitConverter.GetBytes(headerNumber), RomInfo.arm9spawnOffset);
-                ARM9.WriteBytes(BitConverter.GetBytes((short)(matrixxUpDown.Value * 32 + localmapxUpDown.Value)), RomInfo.arm9spawnOffset + 8);
-                ARM9.WriteBytes(BitConverter.GetBytes((short)(matrixyUpDown.Value * 32 + localmapyUpDown.Value)), RomInfo.arm9spawnOffset + 12);
-                ARM9.WriteBytes(BitConverter.GetBytes((short)playerDirCombobox.SelectedIndex), RomInfo.arm9spawnOffset + 16);
+                Anchor spawnAnchor = OffsetDatabase.GetAnchor("SpawnOffset");
+                spawnAnchor.WriteData(BitConverter.GetBytes(headerNumber), 2, 0);
+                spawnAnchor.WriteData(BitConverter.GetBytes((short)(matrixxUpDown.Value * 32 + localmapxUpDown.Value)), 2, 8);
+                spawnAnchor.WriteData(BitConverter.GetBytes((short)(matrixyUpDown.Value * 32 + localmapyUpDown.Value)), 2, 12);
+                spawnAnchor.WriteData(BitConverter.GetBytes((short)playerDirCombobox.SelectedIndex), 2, 16);
 
-                DSUtils.WriteToFile(moneyOverlayPath, BitConverter.GetBytes((int)initialMoneyUpDown.Value), RomInfo.initialMoneyOverlayOffset);
+                OffsetDatabase.WriteAnchorData("InitialMoney", BitConverter.GetBytes((int)initialMoneyUpDown.Value));
+
                 SetClean();
                 MessageBox.Show("Your spawn settings have been changed.", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } else {
@@ -145,9 +146,10 @@ namespace DSPRE {
             try {
                 SetupFields(names);
 
-                ushort headerNumber = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0);
-                ushort globalX = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0);
-                ushort globalY = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0);
+                byte[] spawnData = OffsetDatabase.GetAnchor("SpawnOffset").ReadData(18);
+                ushort headerNumber = BitConverter.ToUInt16(spawnData, 0);
+                ushort globalX = BitConverter.ToUInt16(spawnData, 8);
+                ushort globalY = BitConverter.ToUInt16(spawnData, 12);
 
                 spawnHeaderComboBox.SelectedIndex = headerNumber;
 
@@ -168,21 +170,14 @@ namespace DSPRE {
                 }
 
                 ReadDefaultMoney();
-                playerDirCombobox.SelectedIndex = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 16, 2), 0);
+                playerDirCombobox.SelectedIndex = BitConverter.ToUInt16(spawnData, 16);
                 SetClean();
             } finally {
                 Helpers.EnableHandlers();
             }
         }
         private void ReadDefaultMoney() {
-            if (OverlayUtils.OverlayTable.IsDefaultCompressed(RomInfo.initialMoneyOverlayNumber)) {
-                if (OverlayUtils.IsCompressed(RomInfo.initialMoneyOverlayNumber)) {
-                    OverlayUtils.Decompress(RomInfo.initialMoneyOverlayNumber);
-                }
-            }
-
-            string pathToMoneyOverlay = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
-            initialMoneyUpDown.Value = BitConverter.ToUInt32(DSUtils.ReadFromFile(pathToMoneyOverlay, RomInfo.initialMoneyOverlayOffset, 4), 0);
+            initialMoneyUpDown.Value = BitConverter.ToUInt32(OffsetDatabase.ReadAnchorData("InitialMoney"), 0);
         }
 
         private void spawnHeaderComboBox_IndexChanged(object sender, EventArgs e) {

@@ -45,10 +45,6 @@ namespace DSPRE
         public static GameFamilies gameFamily { get; private set; }
 
         public static uint synthOverlayLoadAddress = 0x023C8000;
-        public static uint arm9spawnOffset { get; private set; }
-
-        public static int initialMoneyOverlayNumber { get; private set; }
-        public static uint initialMoneyOverlayOffset { get; private set; }
 
         public static int cameraTblOverlayNumber { get; private set; }
         public static uint[] cameraTblOffsetsToRAMaddress { get; private set; }
@@ -322,7 +318,7 @@ namespace DSPRE
             SetTypesTextNumber();
             SetTrainerMessageTextNumber();
 
-            InitScriptDBs();
+            InitDBs();
 
             /* System */
             ScriptCommandParametersDict = BuildCommandParametersDatabase(gameFamily);
@@ -341,9 +337,10 @@ namespace DSPRE
 
         #region Methods (22)
 
-        public static void InitScriptDBs()
+        public static void InitDBs()
         {
             Helpers.InitializeScriptDatabase(projectName, gameFamily, gameVersion);
+            Helpers.InitializeOffsetDatabase(projectName, gameFamily, gameLanguage, gameVersion);
         }
 
         public static void ReloadScriptCommandDictionaries()
@@ -520,105 +517,6 @@ namespace DSPRE
 
                         case GameLanguages.Japanese:
                             headerTableOffset = 0xF6390;
-                            break;
-                    }
-                    break;
-            }
-        }
-
-        public static void SetupSpawnSettings()
-        {
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    initialMoneyOverlayNumber = 52;
-                    initialMoneyOverlayOffset = 0x1E4;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xF2B9C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = 0xF2BE8;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xF2B50;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xF2BDC;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xF2BAC;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xF4B48;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.Plat:
-                    initialMoneyOverlayNumber = 57;
-                    initialMoneyOverlayOffset = 0x1EC;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xEA12C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = 0xEA1C0;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xEA148;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xEA1B4;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xEA184;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xE9800;
-                            break;
-                    }
-                    break;
-
-                case GameFamilies.HGSS:
-                    initialMoneyOverlayNumber = 36;
-                    initialMoneyOverlayOffset = 0x2FC;
-                    switch (gameLanguage)
-                    {
-                        case GameLanguages.English:
-                            arm9spawnOffset = 0xFA17C;
-                            break;
-
-                        case GameLanguages.Spanish:
-                            arm9spawnOffset = gameVersion == GameVersions.HeartGold ? 0xFA164 : (uint)0xFA16C;
-                            break;
-
-                        case GameLanguages.Italian:
-                            arm9spawnOffset = 0xFA0F4;
-                            break;
-
-                        case GameLanguages.French:
-                            arm9spawnOffset = 0xFA160;
-                            break;
-
-                        case GameLanguages.German:
-                            arm9spawnOffset = 0xFA130;
-                            break;
-
-                        case GameLanguages.Japanese:
-                            arm9spawnOffset = 0xF992C;
                             break;
                     }
                     break;

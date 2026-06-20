@@ -184,7 +184,6 @@ namespace DSPRE.Editors
                 AppLogger.Error($"Failed to load color table at path \"{SettingsManager.Settings.lastColorTablePath}\". Default will be used instead.");
                 _parent.romInfo.ResetMapCellsColorDictionary();
             }
-            RomInfo.SetupSpawnSettings();
 
             Helpers.EnableHandlers();
             selectMatrixComboBox.SelectedIndex = 0;

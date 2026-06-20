@@ -152,6 +152,8 @@ namespace DSPRE
          **/
         public static bool IsCompressed(int ovNumber)
         {
+            if (RomInfo.IsDsRomProject) { return false; }
+
             string overlayPath = GetPath(ovNumber);
 
             if (!File.Exists(overlayPath))
@@ -208,14 +210,19 @@ namespace DSPRE
             return Decompress(GetPath(overlayNumber), makeBackup);
         }
 
-        public static byte[] ReadBytes(int overlayNumber, uint offset, int length)
+        public static byte[] ReadBytes(int overlayNumber, uint offset, uint length)
         {
             string path = GetPath(overlayNumber);
             if (!File.Exists(path))
             {
-                AppLogger.Warn($"Overlay file not found: {path}");
+                AppLogger.Error($"Overlay file not found: {path}");
                 return new byte[length]; // Return empty data to avoid crashes
             }
+
+            if (IsCompressed(overlayNumber)) {
+                Decompress(overlayNumber, makeBackup: false);
+            }
+
             try
             {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
@@ -227,7 +234,7 @@ namespace DSPRE
                     }
                     byte[] buffer = new byte[length];
                     fs.Seek(offset, SeekOrigin.Begin);
-                    fs.Read(buffer, 0, length);
+                    fs.Read(buffer, 0, (int)length);
                     return buffer;
                 }
             }
@@ -244,7 +251,7 @@ namespace DSPRE
             string path = GetPath(overlayNumber);
             if (!File.Exists(path))
             {
-                AppLogger.Warn($"Overlay file not found: {path}");
+                AppLogger.Error($"Overlay file not found: {path}");
                 return;
             }
             try
