@@ -210,7 +210,8 @@ namespace DSPRE.Avalonia
         public static void OpenEventEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new EditorHostWindow("Event Editor",
+                new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }), 1200, 720).Show();
         }
 
         public static void OpenNsbtxEditor()

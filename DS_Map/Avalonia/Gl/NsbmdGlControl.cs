@@ -639,9 +639,12 @@ namespace DSPRE.Avalonia.Gl
             if (_gpuSprites.Count == 0) return;
             if (_spriteVbo == 0) { var a = new int[1]; _f.GenBuffers(1, a); _spriteVbo = a[0]; }
 
-            // Upright billboard: horizontal "right" faces the camera, "up" stays world-vertical.
             float yaw = _yaw * (float)Math.PI / 180f;
-            float rx = (float)Math.Cos(yaw), rz = (float)Math.Sin(yaw);
+            float pitch = _pitch * (float)Math.PI / 180f;
+            float cy = (float)Math.Cos(yaw), sy = (float)Math.Sin(yaw);
+            float cp = (float)Math.Cos(pitch), sp = (float)Math.Sin(pitch);
+            float rx = cy, rz = sy;
+            float ux = sy * sp, uy = cp, uz = -cy * sp;
 
             _f.Enable(GlFunctions.GL_BLEND);
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
@@ -653,13 +656,13 @@ namespace DSPRE.Avalonia.Gl
             var buf = new float[6 * 8];
             foreach (var s in _gpuSprites)
             {
-                float ax = rx * s.HalfW, az = rz * s.HalfW;  // right * halfW
-                float uy = s.HalfH;                           // up * halfH
-                // corners: BL, BR, TR, TL  with uv (0,1)(1,1)(1,0)(0,0)
-                float blx = s.Cx - ax, bly = s.Cy - uy, blz = s.Cz - az;
-                float brx = s.Cx + ax, bry = s.Cy - uy, brz = s.Cz + az;
-                float trx = s.Cx + ax, try_ = s.Cy + uy, trz = s.Cz + az;
-                float tlx = s.Cx - ax, tly = s.Cy + uy, tlz = s.Cz - az;
+                float ax = rx * s.HalfW, az = rz * s.HalfW;
+                float bx = ux * (s.HalfH * 2f), by = uy * (s.HalfH * 2f), bz = uz * (s.HalfH * 2f);
+                float footX = s.Cx - bx * 0.5f, footY = s.Cy - s.HalfH, footZ = s.Cz - bz * 0.5f;
+                float blx = footX - ax, bly = footY, blz = footZ - az;
+                float brx = footX + ax, bry = footY, brz = footZ + az;
+                float trx = footX + ax + bx, try_ = footY + by, trz = footZ + az + bz;
+                float tlx = footX - ax + bx, tly = footY + by, tlz = footZ - az + bz;
                 int i = 0;
                 void V(float x, float y, float z, float u, float w)
                 { buf[i++] = x; buf[i++] = y; buf[i++] = z; buf[i++] = u; buf[i++] = w; buf[i++] = 1f; buf[i++] = 1f; buf[i++] = 1f; }

@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views
 
         public EditorHostWindow() { }
 
-        public EditorHostWindow(string title, Control content, double width = 900, double height = 700)
+        public EditorHostWindow(string title, Control content, double width = 1020, double height = 720)
         {
             Title = title;
             Width = width;

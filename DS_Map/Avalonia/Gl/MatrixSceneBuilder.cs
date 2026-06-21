@@ -55,6 +55,8 @@ namespace DSPRE.Avalonia.Gl
                         string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
 
                         var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
+                        BdhcFile.TryParse(map.bdhc, out var bdhc);
+                        float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
 
                         if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
                             BindNsbtx(map.mapModel, mapTexDir + "\\" + area.mapTileset.ToString("D4"));
@@ -89,6 +91,8 @@ namespace DSPRE.Avalonia.Gl
                             Buildings = buildings,
                             CellX = x,
                             CellY = y,
+                            Bdhc = bdhc,
+                            AltitudeY = altitudeY,
                         });
                     }
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }

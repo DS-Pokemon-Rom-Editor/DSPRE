@@ -8,9 +8,10 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
 {
-    public partial class EventEditorView : Window
+    public partial class EventEditorView : UserControl
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
+        private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
         private bool _setupDone;
         private Point? _lastPointer;
         private bool _panning;
@@ -89,13 +90,14 @@ namespace DSPRE.Avalonia.Views
             if (vm == null) return;
             _setupDone = true;
 
-            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
+            // Standalone dirty-close + Ctrl+S/Z/Y come from EditorHostWindow; embedded, the Maps workspace
+            // owns the guard — so no EditorWindowChrome here (same as HeaderEditorView).
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
             vm.MarkersChanged += (_, _) => GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
             vm.SpritesChanged += (_, _) => GlView.SetSprites(VM.Sprites);
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
-            await vm.SetupAsync(this);
+            await vm.SetupAsync(OwnerWindow);
         }
 
         /// <summary>Syncs the GL control's translate gizmo with the VM's edit mode + selected event.</summary>
@@ -143,7 +145,7 @@ namespace DSPRE.Avalonia.Views
             if (VM == null) return;
             try
             {
-                string dir = await DialogHelper.OpenFolder(this, "Choose a folder for the 3D debug dump");
+                string dir = await DialogHelper.OpenFolder(OwnerWindow, "Choose a folder for the 3D debug dump");
                 if (dir == null) return;
 
                 string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");

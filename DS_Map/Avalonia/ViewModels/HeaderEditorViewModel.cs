@@ -120,6 +120,13 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _treeFilterText, value)) RebuildTree(); }
         }
 
+        private bool _fuzzySearch;
+        public bool FuzzySearch
+        {
+            get => _fuzzySearch;
+            set { if (Set(ref _fuzzySearch, value)) RebuildTree(); }
+        }
+
         // ── Common scalar fields ─────────────────────────────────────────────────────
 
         private string _internalName = "";
@@ -435,6 +442,29 @@ namespace DSPRE.Avalonia.ViewModels
             return string.IsNullOrEmpty(name) ? "Unknown" : name;
         }
 
+        /// <summary>Exact substring match on label / folder / location / id, plus optional fuzzy (typo-tolerant) match.</summary>
+        private bool HeaderMatchesFilter(string q, string label, string folderName, string locName, ushort id)
+        {
+            if (label.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || locName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return _fuzzySearch && (FuzzyMatches(q, locName) || FuzzyMatches(q, label));
+        }
+
+        /// <summary>True if any word in <paramref name="text"/> is within a small edit distance of the query.</summary>
+        private static bool FuzzyMatches(string query, string text)
+        {
+            if (query.Length < 3 || string.IsNullOrEmpty(text)) return false;
+            int threshold = Math.Max(1, query.Length / 4);   // ~one typo per four characters
+            query = query.ToLowerInvariant();
+            foreach (var word in text.Split(new[] { ' ', '_', '-', '.', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                if (Helpers.Levenshtein(query, word.ToLowerInvariant()) <= threshold)
+                    return true;
+            return false;
+        }
+
         /// <summary>
         /// Rebuilds <see cref="TreeFolders"/> from the header list, grouped by location (all "Route *"
         /// in one "Routes" bucket); folders and leaves come out ascending by ID. A non-empty
@@ -455,11 +485,7 @@ namespace DSPRE.Avalonia.ViewModels
                 string label = _headerListNames[id];
                 string folderName = FolderNameFor(id);
 
-                if (filtering
-                    && label.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && LocationNameFor(id).IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
+                if (filtering && !HeaderMatchesFilter(q, label, folderName, LocationNameFor(id), id))
                     continue;
 
                 if (!byName.TryGetValue(folderName, out var folder))
