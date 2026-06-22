@@ -114,8 +114,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenLevelScriptEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
-            new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            OpenScriptEditor(initialIndex);
         }
 
         public static void OpenTableEditor()

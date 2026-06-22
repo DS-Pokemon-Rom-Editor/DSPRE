@@ -28,6 +28,7 @@ namespace DSPRE
         public bool automaticallyUpdateDBs { get; set; } = true;
         public bool useDecompNames { get; set; } = false;
         public bool convertLegacyText { get; set; } = true;
+        public string rotomEditorTheme { get; set; } = "OneDark";
 
         // 3D-view camera behaviour (mouse). Speeds are multipliers (1.0 = default); invert flags flip an axis.
         public float camPanSpeed { get; set; } = 1.0f;

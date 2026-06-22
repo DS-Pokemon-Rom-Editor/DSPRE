@@ -20,6 +20,7 @@
 			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush"    Color="#A8A8A8"/>
 			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#555555"/>
 			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="#3C3C3C"/>
+			<x:Double x:Key="ControlContentThemeFontSize">14</x:Double>
 
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
