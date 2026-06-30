@@ -2,10 +2,11 @@ name: MrHam's DSPRE Canary Build
 
 on:
   push:
-    branches:
-      - main
-      - material-alpha-map-preview
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref_name == 'main' && 'canary' || 'alpha' }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
