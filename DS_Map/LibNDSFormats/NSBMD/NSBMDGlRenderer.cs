@@ -111,6 +111,27 @@ namespace LibNDSFormats.NSBMD {
 			Translucent,
 			Picking
 		}
+		private static bool MaterialUsesTextureAlpha(NSBMDMaterial mat) {
+			return mat.format == 1 || mat.format == 6;
+		}
+
+		private static bool MaterialUsesMaterialAlpha(NSBMDMaterial mat) {
+			return mat.Alpha > 0 && mat.Alpha < 31;
+		}
+
+		private static bool ShouldRenderMaterialInPass(NSBMDMaterial mat, RenderMode r) {
+			if (mat.Alpha == 0) {
+				return false;
+			}
+
+			bool translucent = MaterialUsesTextureAlpha(mat) || MaterialUsesMaterialAlpha(mat);
+			return r == RenderMode.Translucent ? translucent : !translucent;
+		}
+
+		private static float MaterialAlpha(NSBMDMaterial mat) {
+			return mat.Alpha >= 31 ? 1.0f : mat.Alpha / 31.0f;
+		}
+
 		public static float[] Rotate(float[] a, float x, float y, float z) {
 			float[] b = loadIdentity();
 			float cx = (float)Math.Cos(x);
@@ -163,6 +184,7 @@ namespace LibNDSFormats.NSBMD {
 		public void RenderModel(string file2, MKDS_Course_Editor.NSBTA.NSBTA.NSBTA_File ani, int[] aniframeS, int[] aniframeT, int[] aniframeScaleS, int[] aniframeScaleT, int[] aniframeR, MKDS_Course_Editor.NSBCA.NSBCA.NSBCA_File ca, RenderMode r, bool anim, bool anim2, int selectedanim, float X, float Y, float dist, float elev, float ang, bool licht, MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File p, NSBMD nsb) {
 			file = file2;
 			int light = Gl.glIsEnabled(Gl.GL_LIGHTING);
+			Gl.glDepthMask(r == RenderMode.Translucent ? Gl.GL_FALSE : Gl.GL_TRUE);
 			Gl.glDisable(Gl.GL_LIGHTING);
 			Gl.glLineWidth(2.0F);
 
@@ -213,13 +235,9 @@ namespace LibNDSFormats.NSBMD {
 							mattt.Add(matt[matid]);
 						}
 						NSBMDMaterial mat = Model.Materials[matid];
-						if ((mat.format == 0 || (mat.format >= 2 && mat.format <= 5) || mat.format == 7) && r != RenderMode.Opaque) {
-                            continue;
-                        }
-
-						if ((mat.format == 1 || mat.format == 6) && r == RenderMode.Translucent) {
-                            continue;
-                        }
+						if (!ShouldRenderMaterialInPass(mat, r)) {
+							continue;
+						}
 
                         Gl.glBindTexture(Gl.GL_TEXTURE_2D, matid + 1 + matstart);
 
@@ -342,7 +360,8 @@ namespace LibNDSFormats.NSBMD {
 						}
 						Gl.glEnable(Gl.GL_ALPHA_TEST);
 						Gl.glAlphaFunc(Gl.GL_GREATER, 0f);
-						Gl.glColor4f(0xff, 0xff, 0xff, 0xff);
+						float materialAlpha = MaterialAlpha(mat);
+						Gl.glColor4f(1.0f, 1.0f, 1.0f, materialAlpha);
 
 						if (licht && (((mat.PolyAttrib >> 0) & 0x1) == 0 && ((mat.PolyAttrib >> 1) & 0x1) == 0 && ((mat.PolyAttrib >> 2) & 0x1) == 0 && ((mat.PolyAttrib >> 3) & 0x1) == 0) == false) {
 							//Gl.glLightfv(Gl.GL_LIGHT0, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
@@ -391,7 +410,7 @@ namespace LibNDSFormats.NSBMD {
 							}
 
 							if (mat.diffuseColor) {
-								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, (float)mat.DiffuseColor.A / 255f);
+								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, materialAlpha);
 							}
 
 						} else {
@@ -402,7 +421,7 @@ namespace LibNDSFormats.NSBMD {
 							Gl.glDisable(Gl.GL_LIGHT3);
 
 							if (mat.diffuseColor) {
-								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, (float)mat.DiffuseColor.A / 255f);
+								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, materialAlpha);
 							}
 
 						}
@@ -463,13 +482,15 @@ namespace LibNDSFormats.NSBMD {
 				}
 				stackID = poly.StackID; // the first matrix used by this polygon
 
-				try {
+                try {
                     Process3DCommand(poly.PolyData, Model.Materials[poly.MatId], poly.JointID, true);
                 } catch {
 					Console.WriteLine($"Invalid MatID {poly.MatId}! Could not read model [file: {file}]");
+					Gl.glDepthMask(Gl.GL_TRUE);
 					return;
 				}
             }
+			Gl.glDepthMask(Gl.GL_TRUE);
 			writevertex = false;
 		}
 		/// <summary>
