@@ -100,6 +100,8 @@ namespace DSPRE.Editors
         }
         public void SetupScriptEditor(MainProgram parent, bool force = false)
         {
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            if (RomInfo.hasRotomProject) { return; }
             if (scriptEditorIsReady && !force) { return; }
             scriptEditorIsReady = true;
             this._parent = parent;
@@ -289,6 +291,19 @@ namespace DSPRE.Editors
         }
         public void OpenScriptEditor(MainProgram parent, int scriptFileID)
         {
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            if (RomInfo.hasRotomProject)
+            {
+                MessageBox.Show(
+                    $"The DSPRE script editor is disabled for this project while rotom support is WIP, scripts are managed by Rotom.\n\n" +
+                    $"You were navigating to Script File {scriptFileID}.\n" +
+                    $"Find the corresponding .rotom file in your project's scripts folder.",
+                    "Script Editor Disabled (Rotom Project)",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
             SetupScriptEditor(parent);
 
             scriptEditorTabControl.SelectedIndex = 0;
@@ -311,8 +326,21 @@ namespace DSPRE.Editors
         /// <param name="scriptNumber">The script number to navigate to within the file</param>
         public void OpenScriptEditorAndNavigate(MainProgram parent, int scriptFileID, int scriptNumber)
         {
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            if (RomInfo.hasRotomProject)
+            {
+                MessageBox.Show(
+                    $"The DSPRE script editor is disabled for this project while rotom support is WIP, scripts are managed by Rotom.\n\n" +
+                    $"You were navigating to Script {scriptNumber} in Script File {scriptFileID}.\n" +
+                    $"Find the corresponding .rotom file in your project's scripts folder.",
+                    "Script Editor Disabled (Rotom Project)",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
             OpenScriptEditor(parent, scriptFileID);
-            
+
             // Navigate to the specific script number
             NavigateToScript(scriptNumber);
         }
@@ -432,7 +460,7 @@ namespace DSPRE.Editors
             // Get the word at the hover position
             int wordStart = textArea.WordStartPosition(e.Position, true);
             int wordEnd = textArea.WordEndPosition(e.Position, true);
-            
+
             if (wordStart >= wordEnd)
                 return;
 
@@ -442,7 +470,7 @@ namespace DSPRE.Editors
 
             // Look for Message command patterns (e.g., "Message 5" or "message 0x5")
             string tooltipText = TryGetMessageTooltip(lineText);
-            
+
             if (!string.IsNullOrEmpty(tooltipText))
             {
                 textArea.CallTipShow(e.Position, tooltipText);
@@ -465,10 +493,10 @@ namespace DSPRE.Editors
             // Check if this line contains a Message command
             // Common patterns: "Message N", "message N", "Message 0xN"
             string[] messageCmdNames = { "message", "message2", "messagenowait", "messagesilent" };
-            
+
             string lineLower = lineText.ToLowerInvariant();
             string foundCmd = null;
-            
+
             foreach (var cmdName in messageCmdNames)
             {
                 if (lineLower.StartsWith(cmdName + " ") || lineLower.Contains("\t" + cmdName + " "))
@@ -489,7 +517,7 @@ namespace DSPRE.Editors
 
             string afterCmd = lineText.Substring(cmdIndex + foundCmd.Length).Trim();
             string[] parts = afterCmd.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            
+
             if (parts.Length == 0)
                 return null;
 
@@ -510,7 +538,7 @@ namespace DSPRE.Editors
 
             // Get the text archive ID for this script file
             int? textArchiveId = GetTextArchiveIdForCurrentScript();
-            
+
             if (textArchiveId == null)
                 return $"[Message {messageId}]\n(No associated header found for this script)";
 
@@ -518,18 +546,18 @@ namespace DSPRE.Editors
             try
             {
                 var textArchive = new ROMFiles.TextArchive(textArchiveId.Value);
-                
+
                 if (messageId < 0 || messageId >= textArchive.messages.Count)
                     return $"[Message {messageId}]\n(Message ID out of range for Text Archive {textArchiveId})";
 
                 string message = textArchive.messages[messageId];
-                
+
                 // Convert game-specific line break sequences to actual newlines for display
                 // \n = newline, \f = form feed (new textbox), \r = carriage return
                 message = message.Replace("\\n", "\n")
                                  .Replace("\\f", "\n")
                                  .Replace("\\r", "\n");
-                
+
                 // Truncate very long messages
                 const int maxLength = 500;
                 if (message.Length > maxLength)
@@ -578,7 +606,7 @@ namespace DSPRE.Editors
             try
             {
                 int headerCount = RomInfo.GetHeaderCount();
-                
+
                 for (ushort i = 0; i < headerCount; i++)
                 {
                     var header = ROMFiles.MapHeader.GetMapHeader(i);

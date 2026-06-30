@@ -77,6 +77,8 @@ namespace DSPRE.Editors
 
         public void SetUpLevelScriptEditor(MainProgram parent, bool force = false)
         {
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            if (RomInfo.hasRotomProject) { return; }
             if (levelScriptEditorIsReady && !force) { return; }
             levelScriptEditorIsReady = true;
             this._parent = parent;

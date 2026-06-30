@@ -119,6 +119,8 @@ namespace DSPRE.Editors
         public ImageBase trainerTile;
         public SpriteBase trainerSprite;
 
+        private Timer trainerClassAnimTimer;
+
         Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> trainerClassEncounterMusicDict;
         private void SetupTrainerClassEncounterMusicTable()
         {
@@ -1138,6 +1140,13 @@ namespace DSPRE.Editors
                 MessageBox.Show(sb.ToString(), "Duplicate Moves", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
+            // Prevent trainer zero bug from occuring
+            if (trainerComboBox.SelectedIndex < 0)
+            {
+                MessageBox.Show("Error: Trainer index is out of range. Changes will not be saved.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             /*Write to File*/
             string indexStr = "\\" + trainerComboBox.SelectedIndex.ToString("D4");
             File.WriteAllBytes(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, currentTrainerFile.trp.ToByteArray());
@@ -1221,10 +1230,22 @@ namespace DSPRE.Editors
 
                 trClassFramePreviewUpDown.Maximum = maxFrames;
                 trainerClassFrameMaxLabel.Text = "/" + maxFrames;
+
+                animateTrainerFramesCheckbox.Enabled = maxFrames > 0;
             }
             catch
             {
                 trClassFramePreviewUpDown.Maximum = 0;
+                animateTrainerFramesCheckbox.Enabled = false;
+            }
+
+            if (animateTrainerFramesCheckbox.Checked)
+            {
+                animateTrainerFramesCheckbox.Checked = false;
+            }
+            else
+            {
+                StopTrainerClassAnimation();
             }
 
             trainerClassNameTextbox.Text = GetTrainerClassNameFromListbox(trainerClassListBox.SelectedItem);
@@ -1294,6 +1315,12 @@ namespace DSPRE.Editors
 
                 byte partySize = reader.ReadByte();
                 byte[] pDat = reader.ReadBytes(partySize);
+
+                if (trainerComboBox.SelectedIndex < 0)
+                {
+                    MessageBox.Show("Error: Trainer index is out of range. Import failed.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
                 string pathData = RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + "\\" + trainerComboBox.SelectedIndex.ToString("D4");
                 string pathParty = RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + "\\" + trainerComboBox.SelectedIndex.ToString("D4");
@@ -1410,7 +1437,54 @@ namespace DSPRE.Editors
 
         private void trClassFramePreviewUpDown_ValueChanged(object sender, EventArgs e)
         {
-            UpdateTrainerClassPic(trainerClassPicBox);
+            UpdateTrainerClassPic(trainerClassPicBox, (int)trClassFramePreviewUpDown.Value);
+        }
+
+        private void animateTrainerFramesCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (animateTrainerFramesCheckbox.Checked)
+            {
+                trClassFramePreviewUpDown.Enabled = false;
+                StartTrainerClassAnimation();
+            }
+            else
+            {
+                StopTrainerClassAnimation();
+                trClassFramePreviewUpDown.Enabled = true;
+            }
+        }
+
+        private void StartTrainerClassAnimation()
+        {
+            if (trainerClassAnimTimer == null)
+            {
+                trainerClassAnimTimer = new Timer();
+                trainerClassAnimTimer.Interval = 200;
+                trainerClassAnimTimer.Tick += TrainerClassAnimTimer_Tick;
+            }
+            trainerClassAnimTimer.Start();
+        }
+
+        private void StopTrainerClassAnimation()
+        {
+            if (trainerClassAnimTimer != null)
+            {
+                trainerClassAnimTimer.Stop();
+            }
+        }
+
+        private void TrainerClassAnimTimer_Tick(object sender, EventArgs e)
+        {
+            int maxFrames = (int)trClassFramePreviewUpDown.Maximum;
+            if (maxFrames <= 0)
+            {
+                StopTrainerClassAnimation();
+                return;
+            }
+
+            int nextFrame = ((int)trClassFramePreviewUpDown.Value + 1) % (maxFrames + 1);
+            trClassFramePreviewUpDown.Value = nextFrame;
+            UpdateTrainerClassPic(trainerClassPicBox, nextFrame);
         }
 
         private (int abi1, int abi2)[] getPokemonAbilities(int numPokemonSpecies)
