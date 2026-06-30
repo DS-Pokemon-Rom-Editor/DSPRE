@@ -111,23 +111,6 @@ namespace LibNDSFormats.NSBMD {
 			Translucent,
 			Picking
 		}
-		private static bool MaterialUsesTextureAlpha(NSBMDMaterial mat) {
-			return mat.format == 1 || mat.format == 6;
-		}
-
-		private static bool MaterialUsesMaterialAlpha(NSBMDMaterial mat) {
-			return mat.Alpha > 0 && mat.Alpha < 31;
-		}
-
-		private static bool ShouldRenderMaterialInPass(NSBMDMaterial mat, RenderMode r) {
-			if (mat.Alpha == 0) {
-				return false;
-			}
-
-			bool translucent = MaterialUsesTextureAlpha(mat) || MaterialUsesMaterialAlpha(mat);
-			return r == RenderMode.Translucent ? translucent : !translucent;
-		}
-
 		private static float MaterialAlpha(NSBMDMaterial mat) {
 			return mat.Alpha >= 31 ? 1.0f : mat.Alpha / 31.0f;
 		}
@@ -184,7 +167,6 @@ namespace LibNDSFormats.NSBMD {
 		public void RenderModel(string file2, MKDS_Course_Editor.NSBTA.NSBTA.NSBTA_File ani, int[] aniframeS, int[] aniframeT, int[] aniframeScaleS, int[] aniframeScaleT, int[] aniframeR, MKDS_Course_Editor.NSBCA.NSBCA.NSBCA_File ca, RenderMode r, bool anim, bool anim2, int selectedanim, float X, float Y, float dist, float elev, float ang, bool licht, MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File p, NSBMD nsb) {
 			file = file2;
 			int light = Gl.glIsEnabled(Gl.GL_LIGHTING);
-			Gl.glDepthMask(r == RenderMode.Translucent ? Gl.GL_FALSE : Gl.GL_TRUE);
 			Gl.glDisable(Gl.GL_LIGHTING);
 			Gl.glLineWidth(2.0F);
 
@@ -235,9 +217,13 @@ namespace LibNDSFormats.NSBMD {
 							mattt.Add(matt[matid]);
 						}
 						NSBMDMaterial mat = Model.Materials[matid];
-						if (!ShouldRenderMaterialInPass(mat, r)) {
-							continue;
-						}
+						if ((mat.format == 0 || (mat.format >= 2 && mat.format <= 5) || mat.format == 7) && r != RenderMode.Opaque) {
+                            continue;
+                        }
+
+						if ((mat.format == 1 || mat.format == 6) && r == RenderMode.Translucent) {
+                            continue;
+                        }
 
                         Gl.glBindTexture(Gl.GL_TEXTURE_2D, matid + 1 + matstart);
 
@@ -482,15 +468,13 @@ namespace LibNDSFormats.NSBMD {
 				}
 				stackID = poly.StackID; // the first matrix used by this polygon
 
-                try {
+				try {
                     Process3DCommand(poly.PolyData, Model.Materials[poly.MatId], poly.JointID, true);
                 } catch {
 					Console.WriteLine($"Invalid MatID {poly.MatId}! Could not read model [file: {file}]");
-					Gl.glDepthMask(Gl.GL_TRUE);
 					return;
 				}
             }
-			Gl.glDepthMask(Gl.GL_TRUE);
 			writevertex = false;
 		}
 		/// <summary>
