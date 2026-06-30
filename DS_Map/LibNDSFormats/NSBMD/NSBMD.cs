@@ -50,9 +50,17 @@ namespace LibNDSFormats.NSBMD {
         public void MatchTextures() {
             foreach (NSBMDModel m in models) {
                 for (int j = 0; j < m.Polygons.Count - 1; j++) {
+                    int matId = m.Polygons[j].MatId;
+                    if (matId < 0 || matId >= m.Materials.Count) {
+                        continue;
+                    }
+
+                    NSBMDMaterial mat = m.Materials[matId];
+                    mat.missingExternalTexture = false;
+
                     for (int t = 0; t < m.Textures.Count; t++) {
-                        if (m.Textures[t].texmatid.Contains((uint)m.Polygons[j].MatId)) {
-                            int texid = t;
+                        if (m.Textures[t].texmatid.Contains((uint)matId)) {
+                            int texid = -1;
                             for (int l = 0; l < Textures.Count; l++) {
                                 if (Textures[l].texname == m.Textures[t].texname) {
                                     texid = l;
@@ -60,7 +68,11 @@ namespace LibNDSFormats.NSBMD {
                                 }
                             }
 
-                            NSBMDMaterial mat = m.Materials[m.Polygons[j].MatId];
+                            if (texid < 0) {
+                                MarkMissingExternalTexture(mat);
+                                break;
+                            }
+
                             NSBMDTexture tex = Textures[texid];
                             mat.spdata = tex.spdata; //RITORNA QUI
                             mat.texdata = tex.texdata;
@@ -74,10 +86,10 @@ namespace LibNDSFormats.NSBMD {
                             break;
                         }
                     }
-                    if (m.Materials[m.Polygons[j].MatId].format != 7) {
+                    if (mat.format != 7) {
                         for (int k = 0; k < m.Palettes.Count; k++) {
-                            if (m.Palettes[k].palmatid.Contains((uint)m.Polygons[j].MatId)) {
-                                int palid = k;
+                            if (m.Palettes[k].palmatid.Contains((uint)matId)) {
+                                int palid = -1;
                                 for (int l = 0; l < Palettes.Count; l++) {
                                     if (Palettes[l].palname == m.Palettes[k].palname) {
                                         palid = l;
@@ -85,7 +97,11 @@ namespace LibNDSFormats.NSBMD {
                                     }
                                 }
 
-                                NSBMDMaterial mat = m.Materials[m.Polygons[j].MatId];
+                                if (palid < 0) {
+                                    MarkMissingExternalTexture(mat);
+                                    break;
+                                }
+
                                 NSBMDPalette pal = Palettes[palid];
 
                                 mat.paldata = pal.paldata;
@@ -99,6 +115,20 @@ namespace LibNDSFormats.NSBMD {
                 }
             }
 
+        }
+
+        private static void MarkMissingExternalTexture(NSBMDMaterial mat) {
+            mat.missingExternalTexture = true;
+            mat.format = 0;
+            mat.texdata = null;
+            mat.spdata = null;
+            mat.paldata = null;
+            mat.texname = String.Empty;
+            mat.palname = String.Empty;
+            mat.DiffuseColor = Color.White;
+            mat.AmbientColor = Color.White;
+            mat.SpecularColor = Color.White;
+            mat.EmissionColor = Color.White;
         }
 
         /// <summary>

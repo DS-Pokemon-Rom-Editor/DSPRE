@@ -46,6 +46,7 @@ namespace LibNDSFormats.NSBMD
         public int Alpha;
         public bool diffuseColor;
 		public bool shine;
+        public bool missingExternalTexture;
         public float[] mtx = null;
 
         #endregion Fields 
