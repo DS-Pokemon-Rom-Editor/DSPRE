@@ -221,7 +221,11 @@ namespace LibNDSFormats.NSBMD {
                             continue;
                         }
 
-                        Gl.glBindTexture(Gl.GL_TEXTURE_2D, matid + 1 + matstart);
+						if (mat.missingExternalTexture || mat.format == 0) {
+							Gl.glBindTexture(Gl.GL_TEXTURE_2D, 0);
+						} else {
+							Gl.glBindTexture(Gl.GL_TEXTURE_2D, matid + 1 + matstart);
+						}
 
 						// Convert pixel coords to normalised STs
 						Gl.glMatrixMode(Gl.GL_TEXTURE);
