@@ -30,6 +30,11 @@ namespace DSPRE.Avalonia.Gl
         public float MapMinX, MapMaxX, MapMinY, MapMaxY, MapMinZ, MapMaxZ;
         public bool HasMapBounds;
 
+        // Raw MAP surface triangles (x,y,z per vertex, post-offset, pre-normalization). The permission overlay
+        // tints only the near-horizontal (floor) triangles from this, so vertical trees/walls stay untinted.
+        public float[] MapSurface;
+
+
         public float[] GizmoMesh;
         public int GizmoVertexCount;
 
@@ -179,33 +184,15 @@ namespace DSPRE.Avalonia.Gl
         /// </summary>
         public static NsbmdRenderModel BuildScene(NSBMDModel map, IReadOnlyList<(NSBMDModel model, float[] transform)> buildings)
         {
-            var result = new NsbmdRenderModel();
-            var byMat = new Dictionary<int, List<float>>();
-            int offset = 0;
-
-            if (map != null)
+            // Build the single map as a 1×1 matrix cell so it gets the SAME fixed 32-tile CellPlacement and
+            // per-tile height grid the matrix/event editor uses. That gives the permission overlay a real tile
+            // grid (fixes oversized tiles on maps that don't fill all 32 tiles) and per-tile surface heights.
+            var scene = BuildMatrixScene(new[]
             {
-                Accumulate(map, MapVertexScale(map), offset, result, byMat);
-                offset += Math.Max(1, map.Materials.Count);
-                // Capture the map-only raw bounds (before buildings are added) for the overlay.
-                if (ComputeRawBounds(byMat, out float mnx, out float mxx, out float mny, out float mxy, out float mnz, out float mxz))
-                {
-                    result.MapMinX = mnx; result.MapMaxX = mxx; result.MapMinY = mny;
-                    result.MapMaxY = mxy; result.MapMinZ = mnz; result.MapMaxZ = mxz;
-                    result.HasMapBounds = true;
-                }
-            }
-            if (buildings != null)
-                foreach (var b in buildings)
-                {
-                    if (b.model == null) continue;
-                    Accumulate(b.model, b.transform, offset, result, byMat);
-                    offset += Math.Max(1, b.model.Materials.Count);
-                }
-
-            Finalize(result, byMat);
-            NormalizePositions(result);
-            return result;
+                new MatrixCellGeometry { Map = map, Buildings = buildings, CellX = 0, CellY = 0 }
+            }, MatrixStitchMode.Grid);
+            scene.IsMatrix = false;   // single-map view — nothing reads this, but keep it honest
+            return scene;
         }
 
         /// <summary>One matrix cell's geometry: its map model, its buildings (already transformed
@@ -286,6 +273,7 @@ namespace DSPRE.Avalonia.Gl
             var placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
             var cellBdhc = new Dictionary<long, BdhcFile>();
             var cellAltitude = new Dictionary<long, float>();
+            var mapSurf = new List<float>();   // map-only triangles (post-offset) for the permission overlay
             foreach (var cb in stored)
             {
                 float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
@@ -293,6 +281,9 @@ namespace DSPRE.Avalonia.Gl
                 cb.OffX = ox + MapStride / 2f; cb.OffY = cb.AltitudeY; cb.OffZ = oz + MapStride / 2f;
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
                 MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
+                foreach (var list in cb.MapMats.Values)
+                    for (int i = 0; i + 7 < list.Count; i += 8)
+                    { mapSurf.Add(list[i] + cb.OffX); mapSurf.Add(list[i + 1] + cb.OffY); mapSurf.Add(list[i + 2] + cb.OffZ); }
                 long key = NsbmdRenderModel.CellKey(cb.CellX, cb.CellY);
                 placements[key] = new NsbmdRenderModel.CellPlacement
                 {
@@ -307,6 +298,7 @@ namespace DSPRE.Avalonia.Gl
             result.CellPlacements = placements;
             result.CellBdhc = cellBdhc;
             result.CellAltitudeY = cellAltitude;
+            result.MapSurface = mapSurf.ToArray();
 
             if (ComputeRawBounds(byMat, out float wmnx, out float wmxx, out float wmny, out float wmxy, out float wmnz, out float wmxz))
             {

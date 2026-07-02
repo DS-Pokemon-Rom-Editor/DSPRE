@@ -135,10 +135,16 @@ namespace DSPRE.Avalonia.ViewModels
         // ── 3D permission overlay ──────────────────────────────────────────────────────
         public ObservableCollection<string> OverlayModes { get; } = new ObservableCollection<string> { "No overlay", "Collision", "Type" };
         private int _overlayModeIndex;
-        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) RebuildOverlay(); } }
+        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
 
-        // User-adjustable overlay height, in tile units above the map's top surface (so the user can
-        // lift the grid off the geometry instead of it being hardcoded). 0 = right on the surface.
+        // Mesh mode (default): the overlay is a re-coloured copy of the real ground mesh, conforming to the
+        // surface. Plane mode: a flat tile grid the user can raise with OverlayHeight (for top-down editing).
+        private bool _overlayAsMesh = true;
+        public bool OverlayAsMesh { get => _overlayAsMesh; set { if (Set(ref _overlayAsMesh, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
+        public bool ShowOverlayHeight => !_overlayAsMesh && _overlayModeIndex > 0;
+
+        // Height (in tiles) to lift the flat PLANE overlay off the surface. Ignored in mesh mode, which
+        // always matches the surface height.
         private double _overlayHeight;
         public double OverlayHeight { get => _overlayHeight; set { if (Set(ref _overlayHeight, value)) RebuildOverlay(); } }
 
@@ -146,50 +152,73 @@ namespace DSPRE.Avalonia.ViewModels
         public int OverlayVertexCount { get; private set; }
         public event EventHandler OverlayChanged;
 
+        // Per-tile texture tint (mesh mode): the map textures themselves are shaded by the collision colour in the
+        // shader, so trees/lamps get the colour on their real pixels and transparent texels stay clear.
+        public bool TintOn { get; private set; }
+        public float TintStrength => 0.5f;
+        public float TintOx { get; private set; }
+        public float TintOz { get; private set; }
+        public float TintSx { get; private set; }
+        public float TintSz { get; private set; }
+        public byte[] TintRgba { get; private set; }
+
         public void RebuildOverlay()
         {
             OverlayMesh = null; OverlayVertexCount = 0;
-            if (_map != null && Model3D != null && _overlayModeIndex > 0)
+            TintOn = false;
+            // The single map is built as a 1×1 cell, so it carries a real tile grid (CellPlacement 0,0): a FIXED
+            // 32 tiles regardless of how much geometry the map has — that's what makes the tiles the right size on
+            // smaller maps.
+            if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out var cell))
             {
                 bool collision = _overlayModeIndex == 1;
                 byte[,] grid = collision ? _map.collisions : _map.types;
                 int n = grid.GetLength(0);     // 32
                 var m = Model3D;
+                float tsx = cell.Width / n, tsz = cell.Height / n;   // real tile size
+                float ox = cell.OriginX, oz = cell.OriginZ;          // real tile-(0,0) corner
 
-                // Fit the overlay to the MAP model footprint (not the whole scene, which
-                // includes buildings), and sit it just above the map's top surface.
-                float minX = m.HasMapBounds ? m.MapMinX : m.RawMinX;
-                float maxX = m.HasMapBounds ? m.MapMaxX : m.RawMaxX;
-                float minZ = m.HasMapBounds ? m.MapMinZ : m.RawMinZ;
-                float maxZ = m.HasMapBounds ? m.MapMaxZ : m.RawMaxZ;
-                float topY = m.HasMapBounds ? m.MapMaxY : m.RawMaxY;
-                // Sit just on the surface by default; the user's OverlayHeight slider lifts it by whole
-                // tiles (one tile = (maxX-minX)/32 raw units) so it can be raised clear of the geometry.
-                float tile = (maxX - minX) / 32f;
-                float yEps = topY + (maxX - minX) * 0.0003f + (float)_overlayHeight * tile;
-                var v = new List<float>(n * n * 48);
-
-                for (int row = 0; row < n; row++)
-                    for (int col = 0; col < n; col++)
-                    {
-                        var (r, g, b) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
-                        float x0 = Lerp(minX, maxX, col / (float)n), x1 = Lerp(minX, maxX, (col + 1) / (float)n);
-                        float z0 = Lerp(minZ, maxZ, row / (float)n), z1 = Lerp(minZ, maxZ, (row + 1) / (float)n);
-                        var a = m.ToNormalized(x0, yEps, z0);
-                        var bb = m.ToNormalized(x1, yEps, z0);
-                        var c = m.ToNormalized(x1, yEps, z1);
-                        var d = m.ToNormalized(x0, yEps, z1);
-                        AddQuad(v, a, bb, c, d, r, g, b);
-                    }
-
-                OverlayMesh = v.ToArray();
-                OverlayVertexCount = v.Count / 8;
+                if (_overlayAsMesh)
+                {
+                    // MESH: hand the shader a 32×32 collision-colour texture + the tile grid (in normalized space).
+                    // It mixes the colour into each opaque map texel, so decorations tint on their own shape.
+                    var rgba = new byte[32 * 32 * 4];
+                    for (int row = 0; row < n && row < 32; row++)
+                        for (int col = 0; col < n && col < 32; col++)
+                        {
+                            var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                            int i = (row * 32 + col) * 4;
+                            rgba[i] = (byte)(cr * 255f); rgba[i + 1] = (byte)(cg * 255f);
+                            rgba[i + 2] = (byte)(cb * 255f); rgba[i + 3] = 255;
+                        }
+                    TintOx = (ox - m.Cx) * m.Scale; TintOz = (oz - m.Cz) * m.Scale;
+                    TintSx = tsx * m.Scale;         TintSz = tsz * m.Scale;
+                    TintRgba = rgba; TintOn = true;
+                }
+                else
+                {
+                    // PLANE: a flat 32×32 tile grid, raised off the surface by the Height slider (top-down editing).
+                    float eps = cell.Width * 0.0006f;
+                    float planeY = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + eps + (float)_overlayHeight * tsx;
+                    var v = new List<float>(n * n * 48);
+                    for (int row = 0; row < n; row++)
+                        for (int col = 0; col < n; col++)
+                        {
+                            var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                            float x0 = ox + col * tsx, x1 = x0 + tsx, z0 = oz + row * tsz, z1 = z0 + tsz;
+                            AddQuad(v, m.ToNormalized(x0, planeY, z0), m.ToNormalized(x1, planeY, z0),
+                                       m.ToNormalized(x1, planeY, z1), m.ToNormalized(x0, planeY, z1), cr, cg, cb);
+                        }
+                    OverlayMesh = v.ToArray();
+                    OverlayVertexCount = v.Count / 8;
+                }
             }
             OverlayChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
+        // One flat-coloured quad (a→b→c→d) as two triangles.
         private static void AddQuad(List<float> v, (float x, float y, float z) a, (float x, float y, float z) b,
             (float x, float y, float z) c, (float x, float y, float z) d, float r, float g, float bl)
         {
@@ -292,6 +321,64 @@ namespace DSPRE.Avalonia.ViewModels
         public event EventHandler EditModeChanged;
         public event EventHandler GizmoTargetChanged;
 
+        // ── 3D paint mode (click/drag the map to paint collision/type onto tiles) ────────────
+        private bool _paintMode;
+        public bool PaintMode
+        {
+            get => _paintMode;
+            set
+            {
+                if (!Set(ref _paintMode, value)) return;
+                if (value)
+                {
+                    EditMode3D = false;                      // paint and move-building can't both own the click
+                    if (_overlayModeIndex == 0) OverlayModeIndex = 1;   // show Collision so painting is visible
+                }
+                PaintModeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        /// <summary>Raised when paint mode toggles, so the view can lock the camera to Top.</summary>
+        public event EventHandler PaintModeChanged;
+        /// <summary>Raised after a tile is painted, so the view can refresh the 2D permission grids.</summary>
+        public event EventHandler PaintedTile;
+
+        /// <summary>Finds the tile whose centre projects nearest to a screen point (for paint picking).
+        /// <paramref name="project"/> maps a normalized-space point to (ok, screenX, screenY).</summary>
+        public bool TryTileAtScreen(float px, float py, Func<float, float, float, (bool ok, float sx, float sy)> project, out int col, out int row)
+        {
+            col = row = -1;
+            if (Model3D == null || !Model3D.TryCellPlacement(0, 0, out var cp)) return false;
+            const int n = 32;
+            float tsx = cp.Width / n, tsz = cp.Height / n;
+            float best = float.MaxValue;
+            for (int r = 0; r < n; r++)
+                for (int c = 0; c < n; c++)
+                {
+                    float rx = cp.OriginX + (c + 0.5f) * tsx, rz = cp.OriginZ + (r + 0.5f) * tsz;
+                    var (nx, ny, nz) = Model3D.ToNormalized(rx, Model3D.SurfaceY(rx, rz), rz);
+                    var (ok, sx, sy) = project(nx, ny, nz);
+                    if (!ok) continue;
+                    float d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
+                    if (d < best) { best = d; col = c; row = r; }
+                }
+            return col >= 0;
+        }
+
+        /// <summary>Paints the current collision or type value (matching the visible overlay) onto one tile.</summary>
+        public void PaintTile(int col, int row)
+        {
+            if (_map == null || _overlayModeIndex <= 0) return;
+            if (col < 0 || col >= 32 || row < 0 || row >= 32) return;
+            bool collision = _overlayModeIndex == 1;
+            var grid = collision ? _map.collisions : _map.types;
+            byte val = collision ? CollisionPaintValue : TypePaintValue;
+            if (grid[row, col] == val) return;
+            grid[row, col] = val;
+            MarkDirty();
+            RebuildOverlay();
+            PaintedTile?.Invoke(this, EventArgs.Empty);
+        }
+
         public int BuildingCount => _map?.buildings?.Count ?? 0;
 
         /// <summary>A building's anchor in normalized render space (raw world = 0.25 × position;
@@ -301,9 +388,17 @@ namespace DSPRE.Avalonia.ViewModels
             nx = ny = nz = 0f;
             if (Model3D == null || _map?.buildings == null || index < 0 || index >= _map.buildings.Count) return false;
             var b = _map.buildings[index];
-            float rx = 0.25f * (b.xPosition + b.xFraction / 65536f);
+            // The single map is placed as cell (0,0): its origin (and its buildings) sit at OriginX + MapStride/2 in
+            // scene space. The gizmo anchor must include that same offset, or it lands NW of the actual building.
+            float offX = 0f, offZ = 0f;
+            if (Model3D.TryCellPlacement(0, 0, out var cp))
+            {
+                offX = cp.OriginX + NsbmdGeometry.MapStride * 0.5f;
+                offZ = cp.OriginZ + NsbmdGeometry.MapStride * 0.5f;
+            }
+            float rx = 0.25f * (b.xPosition + b.xFraction / 65536f) + offX;
             float ry = 0.25f * (b.yPosition + b.yFraction / 65536f);
-            float rz = 0.25f * (b.zPosition + b.zFraction / 65536f);
+            float rz = 0.25f * (b.zPosition + b.zFraction / 65536f) + offZ;
             var (a, c, d) = Model3D.ToNormalized(rx, ry, rz);
             nx = a; ny = c; nz = d;
             return true;
@@ -409,6 +504,7 @@ namespace DSPRE.Avalonia.ViewModels
                 foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
                 foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));
                 if (CollisionPainters.Count > 1) CollisionPainterIndex = 1;
+                if (TypePainters.Count > 0) { _typePainterIndex = 0; OnPropertyChanged(nameof(TypePainterIndex)); OnPropertyChanged(nameof(TypePaintValue)); }
 
                 _suppress = true;
                 int mapTexCount = Filesystem.GetMapTexturesCount();

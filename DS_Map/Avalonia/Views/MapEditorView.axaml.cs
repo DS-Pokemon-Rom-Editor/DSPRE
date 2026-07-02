@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Views
         private bool _setupDone;
         private Point? _lastPointer;
         private bool _panning;
+        private bool _painting;       // left-drag painting collision/type onto tiles
         private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
 
         public MapEditorView()
@@ -32,8 +33,13 @@ namespace DSPRE.Avalonia.Views
             {
                 var pt = e.GetCurrentPoint(GlHost);
                 _panning = pt.Properties.IsRightButtonPressed || pt.Properties.IsMiddleButtonPressed;
-                _dragAxis = -1;
-                if (!_panning && VM != null && VM.EditMode3D)
+                _dragAxis = -1; _painting = false;
+                if (VM != null && VM.PaintMode)
+                {
+                    _panning = false;                                // camera is locked to Top while painting
+                    if (pt.Properties.IsLeftButtonPressed) { _painting = true; PaintAt(pt.Position); }
+                }
+                else if (!_panning && VM != null && VM.EditMode3D)
                 {
                     var pos = pt.Position;
                     int axis = GlView.HitTestGizmoAxis((float)pos.X, (float)pos.Y);
@@ -43,11 +49,13 @@ namespace DSPRE.Avalonia.Views
                 _lastPointer = pt.Position;
                 e.Pointer.Capture(GlHost);
             };
-            GlHost.PointerReleased += (s, e) => { _lastPointer = null; _panning = false; _dragAxis = -1; e.Pointer.Capture(null); };
+            GlHost.PointerReleased += (s, e) => { _lastPointer = null; _panning = false; _painting = false; _dragAxis = -1; e.Pointer.Capture(null); };
             GlHost.PointerMoved += (s, e) =>
             {
                 if (_lastPointer is not Point last) return;
                 var p = e.GetPosition(GlHost);
+                if (_painting) { PaintAt(p); _lastPointer = p; return; }
+                if (VM != null && VM.PaintMode) { _lastPointer = p; return; }   // camera locked while painting
                 if (_dragAxis >= 0 && VM != null)
                 {
                     float normDelta = GlView.ScreenDragToAxis(_dragAxis, (float)(p.X - last.X), (float)(p.Y - last.Y));
@@ -111,7 +119,13 @@ namespace DSPRE.Avalonia.Views
 
             DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
             vm.MapLoaded += OnMapLoaded;
-            vm.OverlayChanged += (_, _) => GlView.SetOverlay(VM.OverlayMesh, VM.OverlayVertexCount);
+            vm.OverlayChanged += (_, _) =>
+            {
+                GlView.SetOverlay(VM.OverlayMesh, VM.OverlayVertexCount);
+                GlView.SetTileTint(VM.TintOn, VM.TintStrength, VM.TintOx, VM.TintOz, VM.TintSx, VM.TintSz, VM.TintRgba);
+            };
+            vm.PaintModeChanged += (_, _) => { if (VM.PaintMode) GlView.SetOrientation(0f, 89f); };   // lock to Top
+            vm.PaintedTile += (_, _) => { CollisionGrid.SetData(VM.Collisions); TypeGrid.SetData(VM.Types); };
             vm.PropertyChanged += OnVmPropertyChanged;
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
@@ -152,6 +166,16 @@ namespace DSPRE.Avalonia.Views
                 if (d < bestD) { bestD = d; best = i; }
             }
             return best;
+        }
+
+        // Paints the tile under the cursor with the current collision/type value (3D paint mode).
+        private void PaintAt(Point pos)
+        {
+            if (VM == null) return;
+            if (VM.TryTileAtScreen((float)pos.X, (float)pos.Y,
+                    (x, y, z) => { bool k = GlView.WorldToScreen(x, y, z, out float sx, out float sy); return (k, sx, sy); },
+                    out int col, out int row))
+                VM.PaintTile(col, row);
         }
 
         private void OnVmPropertyChanged(object sender, PropertyChangedEventArgs e)

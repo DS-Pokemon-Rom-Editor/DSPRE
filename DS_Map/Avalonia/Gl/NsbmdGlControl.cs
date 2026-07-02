@@ -22,7 +22,17 @@ namespace DSPRE.Avalonia.Gl
 
         private GlFunctions _f;
         private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc;
+        private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
+
+        // Per-tile permission tint of the map textures (mesh overlay mode). A 32×32 collision-colour texture is
+        // sampled in the fragment shader; only the tint texture is re-uploaded on paint (cheap).
+        private int _collTex;
+        private bool _tintOn;
+        private float _tintStrength = 0.5f;
+        private float _tileOx, _tileOz, _tileSx, _tileSz;   // tile grid in normalized space
+        private byte[] _collRgb;                            // 32*32*3, pending upload
+        private bool _collDirty;
 
         private NsbmdRenderModel _model;
         private readonly List<GpuPart> _parts = new List<GpuPart>();
@@ -226,6 +236,18 @@ namespace DSPRE.Avalonia.Gl
             RequestNextFrameRendering();
         }
 
+        /// <summary>Enables/updates the per-tile permission tint of the map textures. <paramref name="rgb"/> is a
+        /// 32×32 row-major (col=x, row=z) RGB grid of collision colours; the tile grid is given in normalized space
+        /// (origin + tile size). Pass on=false to disable.</summary>
+        public void SetTileTint(bool on, float strength, float originX, float originZ, float tileX, float tileZ, byte[] rgb)
+        {
+            _tintOn = on && rgb != null && rgb.Length >= 32 * 32 * 4;
+            _tintStrength = strength;
+            _tileOx = originX; _tileOz = originZ; _tileSx = tileX; _tileSz = tileZ;
+            if (_tintOn) { _collRgb = rgb; _collDirty = true; }
+            RequestNextFrameRendering();
+        }
+
         /// <summary>Sets a marker mesh (8 floats/vertex: pos,uv,col) drawn on top of everything
         /// with the depth test disabled — e.g. event markers — or null to clear.</summary>
         public void SetMarkers(float[] mesh, int vertexCount)
@@ -269,14 +291,24 @@ namespace DSPRE.Avalonia.Gl
                     "layout(location=1) in vec2 aUv;\n" +
                     "layout(location=2) in vec3 aColor;\n" +
                     "uniform mat4 uMvp;\n" +
-                    "out vec2 vUv;\nout vec3 vColor;\n" +
-                    "void main(){ vUv = aUv; vColor = aColor; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
+                    "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\n" +
+                    "void main(){ vUv = aUv; vColor = aColor; vWorld = aPos.xz; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
                 string fs = header +
                     "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform float uAlpha;\n" +
-                    "in vec2 vUv;\nin vec3 vColor;\nout vec4 fragColor;\n" +
+                    // Per-tile permission tint (uTint>0): sample a 32x32 collision-colour texture by the fragment's
+                    // world-tile and mix it into the surface AFTER the alpha discard, so the collision colour follows
+                    // the real texture shape (trees/lamps tinted on their pixels; transparent texels stay clear).
+                    "uniform float uTint;\nuniform vec2 uTileOrigin;\nuniform vec2 uTileSize;\nuniform sampler2D uColl;\n" +
+                    "in vec2 vUv;\nin vec3 vColor;\nin vec2 vWorld;\nout vec4 fragColor;\n" +
+                    "vec3 tintRgb(vec3 c){\n" +
+                    "  if (uTint <= 0.0) return c;\n" +
+                    "  vec2 tc = (vWorld - uTileOrigin) / uTileSize;\n" +
+                    "  vec2 cuv = (clamp(floor(tc), 0.0, 31.0) + 0.5) / 32.0;\n" +
+                    "  return mix(c, texture(uColl, cuv).rgb, uTint);\n" +
+                    "}\n" +
                     "void main(){\n" +
-                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(t.rgb, uAlpha); }\n" +
-                    "  else { fragColor = vec4(vColor, uAlpha); }\n" +
+                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(tintRgb(t.rgb), uAlpha); }\n" +
+                    "  else { fragColor = vec4(tintRgb(vColor), uAlpha); }\n" +
                     "}\n";
 
                 int v = _f.CompileShaderOrThrow(GlFunctions.GL_VERTEX_SHADER, vs);
@@ -286,6 +318,10 @@ namespace DSPRE.Avalonia.Gl
                 _texLoc = _f.GetUniformLocation(_program, "uTex");
                 _hasTexLoc = _f.GetUniformLocation(_program, "uHasTex");
                 _alphaLoc = _f.GetUniformLocation(_program, "uAlpha");
+                _tintLoc = _f.GetUniformLocation(_program, "uTint");
+                _tileOriginLoc = _f.GetUniformLocation(_program, "uTileOrigin");
+                _tileSizeLoc = _f.GetUniformLocation(_program, "uTileSize");
+                _collLoc = _f.GetUniformLocation(_program, "uColl");
 
                 var arr = new int[1];
                 _f.GenVertexArrays(1, arr); _vao = arr[0];
@@ -305,6 +341,7 @@ namespace DSPRE.Avalonia.Gl
             {
                 FreeGpuParts();
                 FreeGpuSprites();
+                if (_collTex != 0) { _f?.DeleteTextures(1, new[] { _collTex }); _collTex = 0; _collDirty = true; }
                 if (_overlayVbo != 0) _f?.DeleteBuffers(1, new[] { _overlayVbo });
                 if (_markerVbo != 0) _f?.DeleteBuffers(1, new[] { _markerVbo });
                 if (_spriteVbo != 0) _f?.DeleteBuffers(1, new[] { _spriteVbo });
@@ -437,6 +474,30 @@ namespace DSPRE.Avalonia.Gl
             _f.UniformMatrix4fv(_mvpLoc, 1, false, mvp);
             _f.Uniform1i(_texLoc, 0);
             _f.Uniform1f(_alphaLoc, 1f);
+
+            // Per-tile permission tint of the map textures (mesh overlay mode): upload the 32×32 collision-colour
+            // texture to unit 1 and hand the shader the tile grid. uTint>0 mixes it into each opaque texel.
+            if (_tintOn)
+            {
+                if (_collTex == 0) { var ct = new int[1]; _f.GenTextures(1, ct); _collTex = ct[0]; _collDirty = true; }
+                _f.ActiveTexture(GlFunctions.GL_TEXTURE1);
+                _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _collTex);
+                if (_collDirty && _collRgb != null)
+                {
+                    _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, 32, 32, 0, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, _collRgb);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_S, GlFunctions.GL_CLAMP_TO_EDGE);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
+                    _collDirty = false;
+                }
+                _f.Uniform1i(_collLoc, 1);
+                _f.Uniform1f(_tintLoc, _tintStrength);
+                _f.Uniform2f(_tileOriginLoc, _tileOx, _tileOz);
+                _f.Uniform2f(_tileSizeLoc, _tileSx, _tileSz);
+            }
+            else _f.Uniform1f(_tintLoc, 0f);
+
             _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
             _f.BindVertexArray(_vao);
 
@@ -460,6 +521,7 @@ namespace DSPRE.Avalonia.Gl
 
                 _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, part.VertexCount);
             }
+            _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
             RenderOverlay(stride);
             RenderSprites(stride);
@@ -583,10 +645,14 @@ namespace DSPRE.Avalonia.Gl
             if (_overlayVbo == 0 || _overlayCount == 0) return;
 
             _f.Enable(GlFunctions.GL_BLEND);
+            // Translucent COLOUR tint over the tile's texture (keeps the permission colour, not a darkening shadow).
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
-            _f.DepthMask(false);                 // don't write depth — overlay shouldn't occlude
+            // Depth-test ON (write OFF): trees/rocks/buildings in front occlude the tint, and their transparent
+            // texels were discarded in the map pass, so the tinted ground shows through them — decorations stay clean.
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
+            _f.DepthMask(false);
             _f.Uniform1i(_hasTexLoc, 0);
-            _f.Uniform1f(_alphaLoc, 0.55f);
+            _f.Uniform1f(_alphaLoc, 0.5f);
 
             _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _overlayVbo);
             _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);

@@ -58,6 +58,7 @@ namespace DSPRE.Avalonia.Gl
         public delegate void TexParameteriDelegate(int target, int pname, int param);
         public delegate void BlendFuncDelegate(int sfactor, int dfactor);
         public delegate void Uniform1fDelegate(int location, float v);
+        public delegate void Uniform2fDelegate(int location, float v0, float v1);
         public delegate void DepthMaskDelegate(bool flag);
         public delegate void ReadPixelsDelegate(int x, int y, int w, int h, int format, int type, byte[] data);
 
@@ -100,6 +101,7 @@ namespace DSPRE.Avalonia.Gl
         public readonly TexParameteriDelegate TexParameteri;
         public readonly BlendFuncDelegate BlendFunc;
         public readonly Uniform1fDelegate Uniform1f;
+        public readonly Uniform2fDelegate Uniform2f;
         public readonly DepthMaskDelegate DepthMask;
         public readonly ReadPixelsDelegate ReadPixels;
 
@@ -130,8 +132,11 @@ namespace DSPRE.Avalonia.Gl
         public const int GL_REPEAT = 0x2901;
         public const int GL_MIRRORED_REPEAT = 0x8370;
         public const int GL_TEXTURE0 = 0x84C0;
+        public const int GL_TEXTURE1 = 0x84C1;
         public const int GL_SRC_ALPHA = 0x0302;
         public const int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
+        public const int GL_ZERO = 0x0000;
+        public const int GL_DST_COLOR = 0x0306;
 
         private T Bind<T>(GlInterface gl, string name) where T : Delegate
         {
@@ -174,6 +179,7 @@ namespace DSPRE.Avalonia.Gl
             TexParameteri = Bind<TexParameteriDelegate>(gl, "glTexParameteri");
             BlendFunc = Bind<BlendFuncDelegate>(gl, "glBlendFunc");
             Uniform1f = Bind<Uniform1fDelegate>(gl, "glUniform1f");
+            Uniform2f = Bind<Uniform2fDelegate>(gl, "glUniform2f");
             DepthMask = Bind<DepthMaskDelegate>(gl, "glDepthMask");
             DrawArrays = Bind<DrawArraysDelegate>(gl, "glDrawArrays");
             ClearColor = Bind<ClearColorDelegate>(gl, "glClearColor");

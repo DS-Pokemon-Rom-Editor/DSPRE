@@ -40,10 +40,12 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
           <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
-          <TextBlock Text="Height:" VerticalAlignment="Center"/>
+          <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" VerticalAlignment="Center"
+                    ToolTip.Tip="Show collision painted on the actual map mesh (conforms to the surface). Uncheck for a flat plane you can raise."/>
+          <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
           <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
-                  Value="{Binding OverlayHeight}" VerticalAlignment="Center"
-                  ToolTip.Tip="Lift the permission overlay off the map surface (in tiles)"/>
+                  Value="{Binding OverlayHeight}" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"
+                  ToolTip.Tip="Lift the flat permission plane off the map surface (in tiles)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"/>
           <CheckBox Content="Interior buildings" IsChecked="{Binding InteriorBuildings}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
@@ -56,6 +58,8 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
                         ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile."/>
+          <ToggleButton Content="🖌 Paint" IsChecked="{Binding PaintMode}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
+                        ToolTip.Tip="Paint mode: locks the camera to Top; left-click/drag on the map to paint the selected collision (or type, if the Type overlay is shown) onto tiles."/>
           <CheckBox Content="Snap to tile" IsChecked="{Binding SnapToTile}" VerticalAlignment="Center"
                     ToolTip.Tip="Snap building dragging to whole tiles (arrow keys always snap; the input boxes still do fine sub-tile adjustment)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
