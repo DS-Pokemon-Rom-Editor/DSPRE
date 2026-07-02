@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         private const int TARGET_DX = 35, TARGET_DY = 36, TARGET_RX = 37, TARGET_RY = 38, TARGET_ROT = 39;
         private const int CURVE_SIN = 30, CURVE_COS = 31, CURVE_SIN_MINUS = 32, CURVE_COS_MINUS = 33;
         private const int APPLY_SET = 24, APPLY_ADD = 25, APPLY_SYNTHE = 26;
-        private const int CORRECT_ON_MINUS = 27;
+        private const int CORRECT_ON_MINUS = 27, CORRECT_OFF = 28, CORRECT_ON_NOT_EQ = 29;
         private const int PARAM_X = 8, PARAM_Y = 9, PARAM_DX = 10, PARAM_DY = 11, PARAM_RX = 12, PARAM_RY = 13, PARAM_ROT = 14;
         private const int COMP_MINUS = 15, COMP_PLUS = 16, COMP_EQUAL = 17;
         private const int CALC_WORK = 19, USE_WORK = 21, PARAM_SET = 22;
@@ -43,6 +43,10 @@ namespace DSPRE.Avalonia.Data
         private double _fade, _fadeTarget; private int _fadeFrames, _fadeWaitFrames; private bool _fadeWaiting;
         private byte _fadeR, _fadeG, _fadeB;
 
+        /// <summary>X-mirror flag (PokeReverse in the source): when set, the X translation is negated so motion that
+        /// pushes the mon "forward" goes the other way. The own-mon back sprite and some species are mirrored.</summary>
+        public bool Reverse { get; set; }
+
         public PokeAnimPlayer(IEnumerable<PastCommand> cmds) { _cmds = new List<PastCommand>(cmds ?? Array.Empty<PastCommand>()); Reset(); }
 
         public void Reset()
@@ -55,9 +59,10 @@ namespace DSPRE.Avalonia.Data
         }
 
         public bool Finished => _end;
-        // Output transform for the current frame.
-        public double OffsetX => _correctDy == CORRECT_ON_MINUS ? -(_transX + _dx) : (_transX + _dx);
-        public double OffsetY => _transY + _dy;
+        // Output transform for the current frame (mirrors ApplyTrans/ApplyAffine in p_anm_sys.c).
+        // X: OrgX ± (TransX+dx) per the PokeReverse flag.  Y: OrgY + TransY + dy, plus the scale-anchor DY correction.
+        public double OffsetX => Reverse ? -(_transX + _dx) : (_transX + _dx);
+        public double OffsetY => _transY + _dy + DyCorrection();
         public double ScaleX => (256.0 + _rx) / 256.0;
         public double ScaleY => (256.0 + _ry) / 256.0;
         public double RotationDegrees => (((_rot % 65536) + 65536) % 65536) / 65536.0 * 360.0;
@@ -68,6 +73,9 @@ namespace DSPRE.Avalonia.Data
         public void Step()
         {
             if (_end) return;
+            // The palette fade is driven by the soft-sprite system independently of the command interpreter, so it
+            // keeps ramping even while the script is waiting.
+            if (_fadeFrames > 0) { _fade += (_fadeTarget - _fade) / _fadeFrames; _fadeFrames--; }
             if (_wait > 0) { _wait--; return; }
             Execute();
         }
@@ -86,8 +94,6 @@ namespace DSPRE.Avalonia.Data
             }
             if (_mfs.Count == 0 || invalid == _mfs.Count) _hold = false;
 
-            // Palette-fade ramp.
-            if (_fadeFrames > 0) { _fade += (_fadeTarget - _fade) / _fadeFrames; _fadeFrames--; }
             if (_hold) return;
             if (_fadeWaiting) { if (_fadeWaitFrames > 0) { _fadeWaitFrames--; return; } _fadeWaiting = false; }
 
@@ -110,7 +116,7 @@ namespace DSPRE.Avalonia.Data
             {
                 case PastOp.End: _end = true; break;
                 case PastOp.SetRequest: _request = true; break;
-                case PastOp.SetDefault: _dx = _dy = _rx = _ry = _rot = 0; break;
+                case PastOp.SetDefault: _dx = _dy = _rx = _ry = _rot = _transX = _transY = 0; break;
                 case PastOp.HoldCmd: _hold = true; break;
                 case PastOp.SetWait: _wait = a.Length > 0 ? a[0] : 0; _request = true; break;
                 case PastOp.SetDyCorrect: _correctDy = a.Length > 0 ? a[0] : 0; break;
@@ -291,6 +297,15 @@ namespace DSPRE.Avalonia.Data
             return (int)Math.Round(v * l);
         }
 
+        // CorrectDy (ApplyAffine): when scaling, nudge POS_Y by -ry/8 so the sprite stays anchored (doesn't drift
+        // off its platform). CORRECT_ON_MINUS only when shrinking (ry<0); CORRECT_ON_NOT_EQ whenever scaled.
+        private int DyCorrection()
+        {
+            if (_correctDy == CORRECT_ON_MINUS) return _ry < 0 ? (-_ry) / 8 : 0;
+            if (_correctDy == CORRECT_ON_NOT_EQ) return _ry != 0 ? (-_ry) / 8 : 0;
+            return 0;
+        }
+
         private int AccGet(int target) => target switch
         {
             TARGET_DX => _dx, TARGET_DY => _dy, TARGET_RX => _rx, TARGET_RY => _ry, TARGET_ROT => _rot, _ => 0
@@ -316,7 +331,9 @@ namespace DSPRE.Avalonia.Data
         {
             _fade = startEvy / 16.0;
             _fadeTarget = endEvy / 16.0;
-            _fadeFrames = Math.Max(1, wait);
+            // The soft-sprite fade steps EVY by 1 every (wait+1) frames until it reaches end, so the visible
+            // duration scales with both the EVY delta and the wait — not the wait alone.
+            _fadeFrames = Math.Max(1, Math.Abs(endEvy - startEvy) * (wait + 1));
             _fadeR = (byte)((rgb & 0x1F) * 255 / 31);
             _fadeG = (byte)(((rgb >> 5) & 0x1F) * 255 / 31);
             _fadeB = (byte)(((rgb >> 10) & 0x1F) * 255 / 31);

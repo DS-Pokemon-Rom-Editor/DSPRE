@@ -74,8 +74,8 @@ namespace DSPRE.Avalonia.Gl
             if (!inside && bestD == float.MaxValue) return false;
             var bp = CellPlacements[bestKey];
             matX = (int)(bestKey >> 32); matY = (int)(uint)bestKey;
-            tileFx = bp.Width > 0 ? (rawX - bp.OriginX) / bp.Width * 32f : 0f;
-            tileFy = bp.Height > 0 ? (rawZ - bp.OriginZ) / bp.Height * 32f : 0f;
+            tileFx = (rawX - bp.OriginX) / NsbmdGeometry.TileSize;   // fixed 0.25/tile from the map's tile-(0,0) (its geometry-min)
+            tileFy = (rawZ - bp.OriginZ) / NsbmdGeometry.TileSize;
             return true;
         }
 
@@ -164,6 +164,7 @@ namespace DSPRE.Avalonia.Gl
             public NSBMDModel Map;
             public IReadOnlyList<(NSBMDModel model, float[] transform)> Buildings;
             public int CellX, CellY;
+            public bool Indoor;   // INDOOR maps are authored offset (tile-0 ≈ geometry-min); min-align them to the cell corner
         }
 
         // A map is a 32×32 tile grid. One tile is 256/1024 raw units in the map-model coordinate space
@@ -182,6 +183,7 @@ namespace DSPRE.Avalonia.Gl
             public float MinX, MinZ, FpX, FpZ; public bool HasBounds;
             public float OffX, OffZ;        // geometry placement offset (added to raw verts)
             public float ColW, RowH;        // allotted cell width/height (max in column/row)
+            public bool Indoor;
         }
 
         /// <summary>
@@ -238,7 +240,7 @@ namespace DSPRE.Avalonia.Gl
                         Accumulate(b.model, b.transform, offset, result, bldMats);
                         offset += Math.Max(1, b.model.Materials.Count);
                     }
-                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas });
+                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Indoor = cell.Indoor });
                 minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
                 minCy = Math.Min(minCy, cell.CellY); maxCy = Math.Max(maxCy, cell.CellY);
             }
@@ -290,17 +292,22 @@ namespace DSPRE.Avalonia.Gl
                 // decorative overhang. (Min-aligning here would shove each map right/down by its overhang,
                 // the "greedy" misalignment that grows with overhang size.)
                 // CONTINUOUS: min-align so each map's actual geometry box tiles edge-to-edge with neighbours.
+                // OffX = the cell corner = the map's tile-(0,0) anchor, where buildings + events sit.
                 cb.OffX = grid ? ox : (ox - cb.MinX);
                 cb.OffZ = grid ? oz : (oz - cb.MinZ);
+                // The map model is authored CENTERED on its origin (raw 0), so its play area spans [−MapStride/2, +MapStride/2]
+                // and tile-(0,0) is at the NW corner = raw −MapStride/2 (confirmed: exterior floors log as X[−4,+4]). Placing
+                // it at OffX puts tile-(0,0) at OffX − MapStride/2. Buildings are authored in the same centered space, so
+                // MergeOffset(OffX) already lands them on the floor (exterior confirmed correct).
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffZ);
                 MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffZ);
-                // Events ALWAYS anchor at the map's actual geometry-min corner (its tile-(0,0) "start", which
-                // can be at negative raw coords from decorative geometry) and span its real footprint — so they
-                // sit on the map regardless of how the MAPS are stitched (grid vs continuous). The geometry-min
-                // world position is OffX + cb.MinX (continuous min-aligns → that's ox; grid → ox + cb.MinX).
+                // Event anchor = the map's tile-(0,0) = OffX − MapStride/2 (the centered play area's NW corner, where the
+                // buildings/floor grid start). Events step at the FIXED TileSize (16 units → 0.25) per tile. (The old anchor
+                // at OffX put every event half a block SE — small on big outdoor floors, glaring on interiors.)
+                float t0x = cb.OffX - MapStride * 0.5f, t0z = cb.OffZ - MapStride * 0.5f;
                 placements[NsbmdRenderModel.CellKey(cb.CellX, cb.CellY)] = new NsbmdRenderModel.CellPlacement
                 {
-                    OriginX = cb.OffX + cb.MinX, OriginZ = cb.OffZ + cb.MinZ,
+                    OriginX = t0x, OriginZ = t0z,
                     Width  = cb.HasBounds ? cb.FpX : cb.ColW,
                     Height = cb.HasBounds ? cb.FpZ : cb.RowH,
                 };

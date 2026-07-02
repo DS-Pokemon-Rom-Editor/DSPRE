@@ -166,6 +166,19 @@ namespace DSPRE
             pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc — 28 B/mon battle-animation table (POKE_ANM_DATA)
             pokeAnimDefs,           // DP /pokeanime/poke_anm.narc — the PAST program-animation scripts (referenced by prg_anm)
 
+            wazaSeq,                // battle move sequence scripts (per move) — battle/skill/waza_seq.narc (HGSS a/0/0/0)
+            subSeq,                 // shared move-sequence subroutines — battle/skill/sub_seq.narc (HGSS a/0/0/1)
+            beSeq,                  // per-effect move sequence scripts — battle/skill/be_seq.narc (HGSS a/0/3/0)
+            wazaEffectScripts,      // move VISUAL-effect (WEST) scripts, one per move — wazaeffect/we.arc (HGSS a/0/1/0)
+            wazaEffectSub,          // WEST subroutines / continuous animations — wazaeffect/we_sub.narc (HGSS a/0/6/1)
+            wazaEffectChar,         // effect cell graphics: NCGR char — wazaeffect/effectclact/wechar.narc (HGSS a/0/2/2)
+            wazaEffectPltt,         // effect cell graphics: NCLR palette — wazaeffect/effectclact/wepltt.narc (HGSS a/0/2/3)
+            wazaEffectCell,         // effect cell graphics: NCER cells — wazaeffect/effectclact/wecell.narc (HGSS a/0/2/4)
+            wazaEffectCellAnm,      // effect cell graphics: NANR anims — wazaeffect/effectclact/wecellanm.narc (HGSS a/0/2/5)
+            wazaParticle,           // effect SPA particle systems — wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — battle/graphic/pl_batt_bg.narc
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms — battle/graphic/pl_batt_obj.narc
+
             synthOverlay,
             dynamicHeaders,
 
@@ -1993,6 +2006,17 @@ namespace DSPRE
                         [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\poketool\pokeanm\pokeanm.narc",
                         [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\poke_anm.narc",
+                        [DirNames.wazaSeq] = $@"{dataFolderName}\battle\skill\waza_seq.narc",
+                        [DirNames.subSeq] = $@"{dataFolderName}\battle\skill\sub_seq.narc",
+                        [DirNames.beSeq] = $@"{dataFolderName}\battle\skill\be_seq.narc",
+                        [DirNames.wazaEffectScripts] = $@"{dataFolderName}\wazaeffect\we.arc",
+                        [DirNames.wazaEffectSub] = $@"{dataFolderName}\wazaeffect\we_sub.narc",
+                        [DirNames.wazaEffectChar] = $@"{dataFolderName}\wazaeffect\effectclact\wechar.narc",
+                        [DirNames.wazaEffectPltt] = $@"{dataFolderName}\wazaeffect\effectclact\wepltt.narc",
+                        [DirNames.wazaEffectCell] = $@"{dataFolderName}\wazaeffect\effectclact\wecell.narc",
+                        [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\wazaeffect\effectclact\wecellanm.narc",
+                        [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
+                        [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\batt_bg.narc",
 
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
@@ -2037,6 +2061,19 @@ namespace DSPRE
                         [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\poketool\pokeanm\pl_pokeanm.narc",   // Platinum's animation table (pl_ prefix)
                         [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\pl_poke_anm.narc",   // Platinum's PAST program-animation scripts
+                        // Platinum keeps the move-sequence + effect scripts under shared (non-pl_) names.
+                        [DirNames.wazaSeq] = $@"{dataFolderName}\battle\skill\waza_seq.narc",
+                        [DirNames.subSeq] = $@"{dataFolderName}\battle\skill\sub_seq.narc",
+                        [DirNames.beSeq] = $@"{dataFolderName}\battle\skill\be_seq.narc",
+                        [DirNames.wazaEffectScripts] = $@"{dataFolderName}\wazaeffect\we.arc",
+                        [DirNames.wazaEffectSub] = $@"{dataFolderName}\wazaeffect\we_sub.narc",
+                        [DirNames.wazaEffectChar] = $@"{dataFolderName}\wazaeffect\effectclact\wechar.narc",
+                        [DirNames.wazaEffectPltt] = $@"{dataFolderName}\wazaeffect\effectclact\wepltt.narc",
+                        [DirNames.wazaEffectCell] = $@"{dataFolderName}\wazaeffect\effectclact\wecell.narc",
+                        [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\wazaeffect\effectclact\wecellanm.narc",
+                        [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
+                        [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\pl_batt_bg.narc",
+                        [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\pl_batt_obj.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2096,6 +2133,16 @@ namespace DSPRE
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\a\1\1\1",   // Pokeanm.narc (28 B/mon POKE_ANM_DATA table)
                         [DirNames.pokeAnimDefs] = $@"{dataFolderName}\a\0\9\0",   // PAST program-animation scripts (poke_anm equivalent)
+                        [DirNames.wazaSeq] = $@"{dataFolderName}\a\0\0\0",   // move-sequence scripts (waza_seq)
+                        [DirNames.subSeq] = $@"{dataFolderName}\a\0\0\1",   // shared subroutines (sub_seq)
+                        [DirNames.beSeq] = $@"{dataFolderName}\a\0\3\0",   // per-effect scripts (be_seq)
+                        [DirNames.wazaEffectScripts] = $@"{dataFolderName}\a\0\1\0",   // move animation (WEST we.arc equivalent)
+                        [DirNames.wazaEffectSub] = $@"{dataFolderName}\a\0\6\1",   // continuous animations (we_sub)
+                        [DirNames.wazaEffectChar] = $@"{dataFolderName}\a\0\2\2",   // wechar (NCGR)
+                        [DirNames.wazaEffectPltt] = $@"{dataFolderName}\a\0\2\3",   // wepltt (NCLR)
+                        [DirNames.wazaEffectCell] = $@"{dataFolderName}\a\0\2\4",   // wecell (NCER)
+                        [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\a\0\2\5",   // wecellanm (NANR)
+                        [DirNames.wazaParticle] = $@"{dataFolderName}\a\0\2\9",   // waza_particle (SPA)
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

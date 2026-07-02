@@ -50,8 +50,10 @@ namespace DSPRE.Avalonia.Gl
                         byte areaId = ResolveAreaId(matrix, x, y, fallbackAreaId, mapIndex, areaForMap);
                         if (!areaCache.TryGetValue(areaId, out var area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
 
-                        // HGSS indoor areas use the interior building model set.
-                        bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
+                        // Indoor maps (all games) are authored with their floor offset to negative raw coords — flag it so
+                        // the scene builder min-aligns the model to the cell corner. (HGSS also swaps the building set.)
+                        bool indoor = area.areaType == AreaData.TYPE_INDOOR;
+                        bool interior = gameFamily == GameFamilies.HGSS && indoor;
                         string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
 
                         var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
@@ -89,6 +91,7 @@ namespace DSPRE.Avalonia.Gl
                             Buildings = buildings,
                             CellX = x,
                             CellY = y,
+                            Indoor = indoor,
                         });
                     }
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }

@@ -1,0 +1,227 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+             xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             x:Class="DSPRE.Avalonia.Views.BattleScriptEditorView"
+             x:DataType="vm:BattleScriptEditorViewModel">
+  <Design.DataContext>
+    <vm:BattleScriptEditorViewModel/>
+  </Design.DataContext>
+
+  <Grid Margin="12" RowDefinitions="Auto,Auto,*">
+
+    <!-- Unsupported game banner -->
+    <Border Grid.Row="0" IsVisible="{Binding !IsAvailable}" Padding="10" CornerRadius="4"
+            Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+      <TextBlock Text="{Binding UnavailableText}" TextWrapping="Wrap" Foreground="OrangeRed"/>
+    </Border>
+
+    <!-- Selectors -->
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsAvailable}" Spacing="8" Margin="0,0,0,8">
+      <Grid ColumnDefinitions="120,10,260,40,90,10,*">
+        <TextBlock Grid.Column="0" Text="Archive" VerticalAlignment="Center"/>
+        <ComboBox Grid.Column="2" ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" HorizontalAlignment="Stretch"/>
+        <TextBlock Grid.Column="4" Text="Entry" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
+        <ComboBox Grid.Column="6" ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"/>
+      </Grid>
+      <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
+                 FontSize="11" Foreground="OrangeRed" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
+      <TextBlock Text="Each command is an opcode + argument words. Args are comma/space separated (decimal or 0x..). For waza/be/sub they're padded to the opcode's fixed count on save; WEST opcodes are variable-length so they're written exactly as typed. Edits are shared and repacked into the ROM on the normal save."
+                 FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="＋ Add command" Click="AddCommand_Click"/>
+        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Command list + (WEST) storyboard. 50/50 split so the command-arg column can't expand and crowd out the
+         preview-side controls (background selector etc.); each half scrolls independently. -->
+    <Grid Grid.Row="2" IsVisible="{Binding IsAvailable}" ColumnDefinitions="*,*">
+      <Grid Grid.Column="0" RowDefinitions="*,Auto">
+        <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
+          <!-- Card view: each command as a collapsible container -->
+          <TabItem Header="Cards">
+            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ScriptCmdRow">
+                <!-- Each command is a collapsible card: collapsed → one-line summary; expanded → opcode picker +
+                     a labelled editor per argument (+ a raw-args box for adding/removing variable payload). -->
+                <Expander IsExpanded="{Binding IsExpanded}" Margin="0,1" Padding="6,2"
+                          HorizontalAlignment="Stretch" Background="{DynamicResource Editor.StatusBg}">
+                  <Expander.Header>
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
+                      <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
+                                 FontFamily="Consolas,monospace" FontSize="11" VerticalAlignment="Center"/>
+                      <Button Grid.Column="1" Content="↑" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="11"/>
+                      <Button Grid.Column="2" Content="↓" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="11"/>
+                      <Button Grid.Column="3" Content="🗑" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="11"/>
+                    </Grid>
+                  </Expander.Header>
+                  <StackPanel Spacing="3" Margin="0,4,0,2">
+                    <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="Opcode" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                      <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
+                                ItemsSource="{Binding $parent[ItemsControl].((vm:BattleScriptEditorViewModel)DataContext).OpcodeDisplayNames}"
+                                SelectedIndex="{Binding OpId}"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Params}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ParamVM">
+                          <Grid ColumnDefinitions="86,*" ColumnSpacing="6" Margin="0,1">
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource Editor.Subtle}"/>
+                            <!-- enum param → dropdown; otherwise → numeric entry -->
+                            <ComboBox Grid.Column="1" IsVisible="{Binding IsEnum}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
+                                      ItemsSource="{Binding EnumItems}" SelectedIndex="{Binding SelectedEnumIndex}"/>
+                            <NumericUpDown Grid.Column="1" IsVisible="{Binding IsInt}" Value="{Binding ValueDec}"
+                                           FormatString="0" Increment="1" HorizontalAlignment="Stretch"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
+                      <TextBlock Grid.Column="0" Text="Raw args" VerticalAlignment="Center" FontSize="11"
+                                 Foreground="{DynamicResource Editor.Subtle}"
+                                 ToolTip.Tip="The raw argument words (read-only) — edit values above."/>
+                      <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
+                               FontFamily="Consolas,monospace" FontSize="11" Background="Transparent"/>
+                    </Grid>
+                  </StackPanel>
+                </Expander>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+          </TabItem>
+          <!-- Text view: the same commands as editable "OPCODE_NAME arg arg" lines with live red-squiggle validation.
+               Whatever is here IS the card list and vice-versa (no explicit save); switching to Cards is blocked while
+               the text has errors. -->
+          <TabItem Header="Text">
+            <ae:TextEditor x:Name="CommandsTextEditor" ShowLineNumbers="True" WordWrap="False"
+                           FontFamily="Consolas,monospace" FontSize="12"
+                           BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+          </TabItem>
+        </TabControl>
+        <!-- parse-error banner (shown only while the text has errors) -->
+        <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
+          <TextBlock Text="{Binding TextErrorSummary}" Foreground="#FF8888" FontSize="11" TextWrapping="Wrap"/>
+        </Border>
+      </Grid>
+
+      <!-- WEST side panel: cell-animation preview (Phase 2) + readable storyboard timeline -->
+      <Grid Grid.Column="1" IsVisible="{Binding ShowStoryboard}" MinWidth="320" Margin="10,0,0,0" RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4">
+          <TextBlock Text="Animation preview" FontWeight="SemiBold"/>
+          <TextBlock Text="Reproduces the vanilla-game routines (particles, Pokémon move/rotate/scale/flash, shake, fade). Effects redefined in custom C code may differ."
+                     FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Border Grid.Row="1" Height="225" CornerRadius="4"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" IsVisible="{Binding HasPreview}">
+          <Viewbox Stretch="Uniform">
+            <!-- Move animation plays over the battle scene — Shuckle vs Shuckle 🐢 (RenderTransform = screen shake) -->
+            <Canvas Width="256" Height="192" ClipToBounds="True" Background="Black" RenderTransformOrigin="0.5,0.5">
+              <Canvas.RenderTransform>
+                <TranslateTransform X="{Binding ShakeX}" Y="{Binding ShakeY}"/>
+              </Canvas.RenderTransform>
+              <!-- Software-composited scene: backdrop + platforms + the two mons (WEST transforms) + the effect BG,
+                   blended with the real NDS G2_SetBlendAlpha. Replaces the old stacked image layers. -->
+              <!-- SceneComposite already includes the HAIKEI_PAL_FADE background darken/flash (applied BG-only inside the
+                   compositor, so the mons stay lit) — no full-screen overlay rectangle here any more. -->
+              <Image Source="{Binding SceneComposite}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+              <!-- cell-anim (CATS) + particle glow (SPA) overlays. WE_057 (Surf) scales/fades the wave sprite. -->
+              <Image Source="{Binding CellPreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"
+                     RenderOptions.BitmapInterpolationMode="None" Opacity="{Binding CellOpacity}" RenderTransformOrigin="{Binding CellOrigin}">
+                <Image.RenderTransform>
+                  <TransformGroup>
+                    <ScaleTransform ScaleX="{Binding CellScaleX}" ScaleY="{Binding CellScaleY}"/>
+                    <TranslateTransform X="{Binding CellOffsetX}" Y="{Binding CellOffsetY}"/>
+                  </TransformGroup>
+                </Image.RenderTransform>
+              </Image>
+              <Image Source="{Binding ParticlePreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+              <!-- chrome: real HP gauges (pl_batt_obj frames, placed so the cell origin lands on the game's gauge
+                   position) with fallback to the bundled placeholders; both hide during a move per the WazaData flag -->
+              <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+                     IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
+              <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
+                     IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
+              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+              <!-- gauge readout overlay (name / level / HP bar) from the gauge config popup. Positioned inside the real
+                   gauge boxes: enemy ≈ x[-6..122] y[4..68] (center 58,36); player ≈ x[128..256] y[84..148] (center 192,116).
+                   Values from gauge.c's gage_parts tile layout; pixel coords are TUNABLE. -->
+              <Canvas IsVisible="{Binding GaugesVisible}">
+                <!-- Positions measured from a real DPP top-screen (256×192): name/Lv sit just ABOVE the cell centre,
+                     the HP bar AT the centre. Enemy box ≈ x[-6..122] centre(58,36); player box ≈ x[128..256] centre(192,116). -->
+                <!-- enemy (upper-left) -->
+                <TextBlock Canvas.Left="4"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <TextBlock Canvas.Left="70" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <Border Canvas.Left="46" Canvas.Top="40" Width="50" Height="4" Background="#202020" CornerRadius="1">
+                  <Rectangle Width="{Binding GaugeHpBarWidth}" Height="4" HorizontalAlignment="Left" Fill="{Binding GaugeHpBrush}"/>
+                </Border>
+                <!-- player (lower-right) -->
+                <TextBlock Canvas.Left="152" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <TextBlock Canvas.Left="218" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <Border Canvas.Left="198" Canvas.Top="117" Width="50" Height="4" Background="#202020" CornerRadius="1">
+                  <Rectangle Width="{Binding GaugeHpBarWidth}" Height="4" HorizontalAlignment="Left" Fill="{Binding GaugeHpBrush}"/>
+                </Border>
+                <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game -->
+                <TextBlock Canvas.Left="200" Canvas.Top="123" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="#F8F8F8"/>
+              </Canvas>
+              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
+            </Canvas>
+          </Viewbox>
+        </Border>
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4">
+          <Button Content="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
+          <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
+                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
+                    ToolTip.Tip="Preview the move cast from the enemy (top) side — flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
+          <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
+          <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
+                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
+                    ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc — not a move effect."/>
+          <Button Content="HP gauges…" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
+                  ToolTip.Tip="Configure the gauge readout (species, level, HP %).">
+            <Button.Flyout>
+              <Flyout>
+                <StackPanel Spacing="6" Width="190">
+                  <TextBlock Text="Gauge readout" FontWeight="SemiBold"/>
+                  <TextBlock Text="Pokémon to display" FontSize="11"/>
+                  <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
+                            HorizontalAlignment="Stretch" MaxDropDownHeight="360"
+                            ToolTip.Tip="Loads this species' front/back battle sprites into the preview and names the gauge."/>
+                  <TextBlock Text="Level" FontSize="11"/>
+                  <NumericUpDown Value="{Binding GaugeLevel}" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
+                  <TextBlock Text="Max HP" FontSize="11"/>
+                  <NumericUpDown Value="{Binding GaugeMaxHp}" Minimum="1" Maximum="999" Increment="1" FormatString="0"/>
+                  <TextBlock Text="HP %" FontSize="11"/>
+                  <Slider Value="{Binding GaugeHpPercent}" Minimum="0" Maximum="100"/>
+                  <TextBlock Text="{Binding GaugeHpText, StringFormat='{}{0} HP'}" FontSize="11" HorizontalAlignment="Right"/>
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <TextBlock Text="Terrain:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
+          <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
+                    IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="130" MaxDropDownHeight="360" Margin="0,2,6,2"
+                    ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on — the tray some move animations interact with."/>
+          <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
+                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+        </WrapPanel>
+
+        <TextBlock Grid.Row="3" Text="Animation storyboard" FontWeight="SemiBold" Margin="0,6,0,4"/>
+        <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+          <ScrollViewer>
+            <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas,monospace" FontSize="11" BorderThickness="0" Background="Transparent"/>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

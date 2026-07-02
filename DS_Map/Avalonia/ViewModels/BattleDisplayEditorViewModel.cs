@@ -307,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels
         private OffsetNarc _animNarc;
         private bool _animNarcTried;
 
-        private int _animFrontProg; public int AnimFrontProgNum { get => _animFrontProg; set { if (Set(ref _animFrontProg, value)) { if (!_loading) SetDirty(); RefreshProgramScript(); } } }
+        private int _animFrontProg; public int AnimFrontProgNum { get => _animFrontProg; set { if (Set(ref _animFrontProg, value)) { if (!_loading) SetDirty(); if (_scriptTarget == 0) RefreshProgramScript(); else OnPropertyChanged(nameof(ProgramScriptHeader)); } } }
         private int _animFrontWait; public int AnimFrontWait    { get => _animFrontWait; set { if (Set(ref _animFrontWait, value) && !_loading) SetDirty(); } }
 
         /// <summary>The three back program-animation steps ({number, wait}).</summary>
@@ -425,14 +425,33 @@ namespace DSPRE.Avalonia.ViewModels
             if (IsAvailable) _animDefsNarc = new OffsetNarc(DirNames.pokeAnimDefs, 1);
         }
 
-        /// <summary>Toggles playback of the program animations — front (prg_anm_f) on the enemy sprite and
-        /// the own mon's (prg_anm_b[0]) on the player sprite — looping while playing.</summary>
+        private int _frontDelay, _backDelay;   // pre-delay frames before the front / back program (prg_anm_*_wait)
+
+        // The own-mon back sprite has THREE alternative program animations (prg_anm_b[0..2]); the game plays exactly
+        // ONE, chosen from the Pokémon's nature via PokeAnm_GetBackAnmSlotNo (0 = lively, 1 = neutral, 2 = reserved
+        // natures). We expose the slot directly so the editor can preview each variant. (poke_tool.c PokePrgAnmDataSet)
+        private int _backVariant;
+        public int BackVariantIndex
+        {
+            get => _backVariant;
+            set { if (Set(ref _backVariant, Math.Clamp(value, 0, 2)) && _progPlaying) { StopProgramAnim(); ToggleProgramAnim(); } }
+        }
+        public string[] BackVariantOptions { get; } =
+            { "Slot 0 — lively natures", "Slot 1 — neutral natures", "Slot 2 — reserved natures" };
+
+        /// <summary>Toggles one-shot playback: the front program animation (prg_anm_f) on the enemy sprite, and the
+        /// own mon's selected back variant (prg_anm_b[BackVariant]) on the player sprite, each honouring its wait.</summary>
         public void ToggleProgramAnim()
         {
             if (_progPlaying) { StopProgramAnim(); return; }
             EnsureAnimDefsNarc();
+            _frontDelay = Math.Max(0, _animFrontWait);
             _prog = LoadProgram(_animFrontProg);
-            _progBack = AnimBack.Count > 0 ? LoadProgram(AnimBack[0].Number) : null;
+
+            int slot = Math.Clamp(_backVariant, 0, 2);
+            if (slot < AnimBack.Count) { _backDelay = Math.Max(0, AnimBack[slot].Wait); _progBack = LoadProgram(AnimBack[slot].Number); }
+            else { _backDelay = 0; _progBack = null; }
+
             if (_prog == null && _progBack == null) return;
             _progPlaying = true;
             OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
@@ -450,7 +469,32 @@ namespace DSPRE.Avalonia.ViewModels
         // uses this program-animation number, not just the current mon. Saved via its own "Save script" button.
         public ObservableCollection<ProgramCmdRow> ProgramRows { get; } = new ObservableCollection<ProgramCmdRow>();
         public bool HasProgramScript => ProgramRows.Count > 0;
-        public string ProgramScriptHeader => $"Front program animation #{_animFrontProg} — script ({ProgramRows.Count} cmds)";
+
+        // Which script the editor targets: 0 = front (prg_anm_f), 1..3 = back variant slots 0..2 (prg_anm_b[n]).
+        private int _scriptTarget;
+        public string[] ScriptTargetOptions { get; } = { "Front (prg_anm_f)", "Back slot 0", "Back slot 1", "Back slot 2" };
+        public int ScriptTargetIndex
+        {
+            get => _scriptTarget;
+            set { if (Set(ref _scriptTarget, Math.Clamp(value, 0, 3))) RefreshProgramScript(); }
+        }
+
+        // The pokeanime NARC file index the editor currently edits (front number, or the selected back slot's number).
+        private int CurrentScriptFile()
+        {
+            if (_scriptTarget <= 0) return _animFrontProg;
+            int slot = _scriptTarget - 1;
+            return (slot >= 0 && slot < AnimBack.Count) ? AnimBack[slot].Number : -1;
+        }
+
+        public string ProgramScriptHeader
+        {
+            get
+            {
+                string which = _scriptTarget == 0 ? "Front" : $"Back slot {_scriptTarget - 1}";
+                return $"{which} program animation #{CurrentScriptFile()} — script ({ProgramRows.Count} cmds)";
+            }
+        }
         private bool _scriptDirty;
         public bool ScriptDirty { get => _scriptDirty; private set => Set(ref _scriptDirty, value); }
 
@@ -458,10 +502,11 @@ namespace DSPRE.Avalonia.ViewModels
         {
             foreach (var r in ProgramRows) r.PropertyChanged -= OnProgramRowChanged;
             ProgramRows.Clear();
-            if (IsAvailable)
+            int file = CurrentScriptFile();
+            if (IsAvailable && file >= 0)
             {
                 EnsureAnimDefsNarc();
-                var bytes = _animDefsNarc?.GetRecord(_animFrontProg);
+                var bytes = _animDefsNarc?.GetRecord(file);
                 var cmds = bytes != null ? PokeAnimScript.Parse(bytes) : null;
                 if (cmds != null) foreach (var c in cmds) AddProgramRow(c.Op, c.Args);
             }
@@ -501,9 +546,9 @@ namespace DSPRE.Avalonia.ViewModels
 
         /// <summary>Serializes the edited command list back to the pokeanime NARC file (args padded/truncated to
         /// each opcode's fixed count so the stream stays valid). Repacked into the ROM on the normal save.</summary>
-        public void SaveProgramScript()
+        // Turns the editable rows into a valid command list (args padded/truncated to each opcode's fixed count).
+        private List<PastCommand> BuildCommandsFromRows()
         {
-            if (_animDefsNarc == null) return;
             var cmds = new List<PastCommand>();
             foreach (var row in ProgramRows)
             {
@@ -513,9 +558,48 @@ namespace DSPRE.Avalonia.ViewModels
                 for (int i = 0; i < n; i++) args[i] = i < parsed.Count ? parsed[i] : 0;
                 cmds.Add(new PastCommand(row.Op, args));
             }
-            _animDefsNarc.PutRecord(_animFrontProg, PokeAnimScript.Serialize(cmds));
+            return cmds;
+        }
+
+        public void SaveProgramScript()
+        {
+            int file = CurrentScriptFile();
+            if (_animDefsNarc == null || file < 0) return;
+            _animDefsNarc.PutRecord(file, PokeAnimScript.Serialize(BuildCommandsFromRows()));
             StopProgramAnim();
             RefreshProgramScript();   // reflect the canonical (padded) form
+        }
+
+        /// <summary>Previews just the script the editor is targeting, on its own sprite (front → enemy, back slot →
+        /// player). <paramref name="edited"/> plays the current unsaved rows; otherwise the saved NARC file.</summary>
+        public void PlayScript(bool edited)
+        {
+            EnsureAnimDefsNarc();
+            StopProgramAnim();   // clears both players + delays, then we arm just the target
+
+            PokeAnimPlayer player;
+            if (edited)
+            {
+                var cmds = BuildCommandsFromRows();
+                player = cmds.Count > 0 ? new PokeAnimPlayer(cmds) : null;
+            }
+            else player = LoadProgram(CurrentScriptFile());
+            if (player == null) return;
+
+            if (_scriptTarget == 0)
+            {
+                _prog = player;
+                _frontDelay = Math.Max(0, _animFrontWait);
+            }
+            else
+            {
+                int slot = _scriptTarget - 1;
+                _progBack = player;
+                _backDelay = (slot >= 0 && slot < AnimBack.Count) ? Math.Max(0, AnimBack[slot].Wait) : 0;
+            }
+
+            _progPlaying = true;
+            OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
         }
 
         private static List<int> ParseIntList(string s)
@@ -536,34 +620,42 @@ namespace DSPRE.Avalonia.ViewModels
         private void StopProgramAnim()
         {
             _progPlaying = false; _prog = null; _progBack = null;
+            _frontDelay = 0; _backDelay = 0;
             AnimOffsetX = AnimOffsetY = 0; AnimScaleX = AnimScaleY = 1; AnimRotation = 0; AnimFadeOpacity = 0;
             AnimBackOffsetX = AnimBackOffsetY = 0; AnimBackScaleX = AnimBackScaleY = 1; AnimBackRotation = 0; AnimBackFadeOpacity = 0;
             OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
         }
 
-        // Advances both program animations one frame (called from the 60 fps timer). Plays ONCE: when both
-        // finish, the sprites settle to rest (END resets the transform) and playback stops.
+        // Advances both program animations one frame (called from the 60 fps timer). Plays ONCE: each side waits its
+        // pre-delay then runs its single script; when both have finished the sprites settle and playback stops.
         private void TickProgramAnim()
         {
             if (!_progPlaying) return;
+
+            // Front (enemy): wait the pre-delay, then run the script once.
             if (_prog != null)
             {
-                if (!_prog.Finished) _prog.Step();
+                if (_frontDelay > 0) _frontDelay--;
+                else if (!_prog.Finished) _prog.Step();
                 AnimOffsetX = _prog.OffsetX; AnimOffsetY = _prog.OffsetY;
                 AnimScaleX = _prog.ScaleX; AnimScaleY = _prog.ScaleY; AnimRotation = _prog.RotationDegrees;
                 AnimFadeOpacity = _prog.FadeStrength;
                 if (_prog.FadeStrength > 0) AnimFadeBrush = new SolidColorBrush(Color.FromRgb(_prog.FadeR, _prog.FadeG, _prog.FadeB));
             }
+
+            // Back (player): the single nature-selected variant, with its own pre-delay.
             if (_progBack != null)
             {
-                if (!_progBack.Finished) _progBack.Step();
+                if (_backDelay > 0) _backDelay--;
+                else if (!_progBack.Finished) _progBack.Step();
                 AnimBackOffsetX = _progBack.OffsetX; AnimBackOffsetY = _progBack.OffsetY;
                 AnimBackScaleX = _progBack.ScaleX; AnimBackScaleY = _progBack.ScaleY; AnimBackRotation = _progBack.RotationDegrees;
                 AnimBackFadeOpacity = _progBack.FadeStrength;
                 if (_progBack.FadeStrength > 0) AnimBackFadeBrush = new SolidColorBrush(Color.FromRgb(_progBack.FadeR, _progBack.FadeG, _progBack.FadeB));
             }
-            bool frontDone = _prog == null || _prog.Finished;
-            bool backDone = _progBack == null || _progBack.Finished;
+
+            bool frontDone = _prog == null || (_frontDelay == 0 && _prog.Finished);
+            bool backDone = _progBack == null || (_backDelay == 0 && _progBack.Finished);
             if (frontDone && backDone) StopProgramAnim();   // one-shot
         }
 
@@ -806,6 +898,9 @@ namespace DSPRE.Avalonia.ViewModels
             _animTimer.Start();
         }
 
+        /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
+        public void Detach() => _animTimer?.Stop();
+
         private int _patIndex = -1, _patCountdown;
         private void RestartAnimPreview() { _patIndex = -1; _patCountdown = 0; }
         private bool _framePaused;
@@ -896,6 +991,15 @@ namespace DSPRE.Avalonia.ViewModels
         public DSPRE.Avalonia.Data.PastOp Op { get => _op; set { if (_op != value) { _op = value; Raise(nameof(Op)); Raise(nameof(ArgHint)); } } }
         private string _argsText = "";
         public string ArgsText { get => _argsText; set { if (_argsText != value) { _argsText = value; Raise(nameof(ArgsText)); } } }
-        public string ArgHint => $"{DSPRE.Avalonia.Data.PokeAnimScript.ArgsFor(Op)} arg(s)";
+        public string ArgHint
+        {
+            get
+            {
+                var names = DSPRE.Avalonia.Data.PokeAnimScript.ArgNames(Op);
+                if (names.Length > 0) return string.Join(", ", names);
+                int n = DSPRE.Avalonia.Data.PokeAnimScript.ArgsFor(Op);
+                return n == 0 ? "(no args)" : $"{n} arg(s)";
+            }
+        }
     }
 }

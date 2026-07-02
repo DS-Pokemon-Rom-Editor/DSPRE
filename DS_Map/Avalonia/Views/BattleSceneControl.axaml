@@ -16,34 +16,44 @@
         <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
         <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
 
-        <!-- Enemy (front) + player (back) sprites; passed in per scene -->
-        <!-- Enemy (front) sprite: carries the live program-animation transform (translate/scale/rotate). -->
-        <Image Source="{Binding #SceneRoot.Enemy}"  Canvas.Left="{Binding EnemyLeft}"  Canvas.Top="{Binding #SceneRoot.EnemyY}"  Stretch="None" RenderOptions.BitmapInterpolationMode="None"
-               RenderTransformOrigin="0.5,0.5">
-          <Image.RenderTransform>
+        <!-- Enemy (front) + player (back) sprites; passed in per scene. Each sprite and its palette-fade tint share
+             one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
+             (palette index 0) pixels are never coloured. -->
+        <Grid Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
+              RenderTransformOrigin="0.5,0.5">
+          <Grid.RenderTransform>
             <TransformGroup>
               <ScaleTransform ScaleX="{Binding AnimScaleX}" ScaleY="{Binding AnimScaleY}"/>
               <RotateTransform Angle="{Binding AnimRotation}"/>
               <TranslateTransform X="{Binding AnimOffsetX}" Y="{Binding AnimOffsetY}"/>
             </TransformGroup>
-          </Image.RenderTransform>
-        </Image>
-        <!-- Palette-fade overlay over the enemy sprite (approximation of PALETTE_FADE). -->
-        <Rectangle Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
-                   Fill="{Binding AnimFadeBrush}" Opacity="{Binding AnimFadeOpacity}" IsHitTestVisible="False"/>
-        <!-- Player (back) sprite: carries the own-mon program-animation transform (prg_anm_b). -->
-        <Image Source="{Binding #SceneRoot.Player}" Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding #SceneRoot.PlayerY}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
-               RenderTransformOrigin="0.5,0.5">
-          <Image.RenderTransform>
+          </Grid.RenderTransform>
+          <Image Source="{Binding #SceneRoot.Enemy}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
+                 HorizontalAlignment="Left" VerticalAlignment="Top"/>
+          <Rectangle Fill="{Binding AnimFadeBrush}" Opacity="{Binding AnimFadeOpacity}" IsHitTestVisible="False">
+            <Rectangle.OpacityMask>
+              <ImageBrush Source="{Binding #SceneRoot.Enemy}" Stretch="None" AlignmentX="Left" AlignmentY="Top"/>
+            </Rectangle.OpacityMask>
+          </Rectangle>
+        </Grid>
+
+        <Grid Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding #SceneRoot.PlayerY}" Width="80" Height="80"
+              RenderTransformOrigin="0.5,0.5">
+          <Grid.RenderTransform>
             <TransformGroup>
               <ScaleTransform ScaleX="{Binding AnimBackScaleX}" ScaleY="{Binding AnimBackScaleY}"/>
               <RotateTransform Angle="{Binding AnimBackRotation}"/>
               <TranslateTransform X="{Binding AnimBackOffsetX}" Y="{Binding AnimBackOffsetY}"/>
             </TransformGroup>
-          </Image.RenderTransform>
-        </Image>
-        <Rectangle Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding #SceneRoot.PlayerY}" Width="80" Height="80"
-                   Fill="{Binding AnimBackFadeBrush}" Opacity="{Binding AnimBackFadeOpacity}" IsHitTestVisible="False"/>
+          </Grid.RenderTransform>
+          <Image Source="{Binding #SceneRoot.Player}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
+                 HorizontalAlignment="Left" VerticalAlignment="Top"/>
+          <Rectangle Fill="{Binding AnimBackFadeBrush}" Opacity="{Binding AnimBackFadeOpacity}" IsHitTestVisible="False">
+            <Rectangle.OpacityMask>
+              <ImageBrush Source="{Binding #SceneRoot.Player}" Stretch="None" AlignmentX="Left" AlignmentY="Top"/>
+            </Rectangle.OpacityMask>
+          </Rectangle>
+        </Grid>
 
         <!-- Battle UI chrome -->
         <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>

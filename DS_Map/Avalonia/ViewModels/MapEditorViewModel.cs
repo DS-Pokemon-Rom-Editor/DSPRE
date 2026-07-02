@@ -65,7 +65,9 @@ namespace DSPRE.Avalonia.ViewModels
         public bool IsMatrixView => _viewModeIndex == 1;
 
         // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
-        // Grid is the default — it matches the DS's logical 32-tile cells, so maps + events share one grid.
+        // Grid is the default — it's the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride
+        // span, so events/buildings map at exactly TileSize per tile and decorative overhang overlaps neighbours as on
+        // hardware. (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
         private bool _stitchGrid = true;
         public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value) && IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview(); } }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;

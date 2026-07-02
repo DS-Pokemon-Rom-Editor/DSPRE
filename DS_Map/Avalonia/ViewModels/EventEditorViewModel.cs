@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
@@ -151,7 +152,9 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
 
         // Matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
-        // Grid is the default — it matches the DS's logical 32-tile cells, so maps + events share one grid.
+        // Grid is the default — the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride span,
+        // so events map at exactly TileSize per tile and decorative overhang overlaps neighbours as on hardware.
+        // (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
         private bool _stitchGrid = true;
         public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value)) DisplayMap(); } }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
@@ -424,6 +427,7 @@ namespace DSPRE.Avalonia.ViewModels
                 AppLogger.Error("Event map render failed: " + ex.Message);
             }
             MapLoaded?.Invoke(this, EventArgs.Empty);
+            _loggedEvt = false;
             RefreshMarkers();
         }
 
@@ -553,11 +557,14 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Event world placement (shared by markers + the move gizmo) ────────────────────
         private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
         {
+            // A tile is a FIXED 16 game units → NsbmdGeometry.TileSize (0.25) in world space, from the map's tile-(0,0)
+            // = the cell corner (CellPlacement.OriginX = OffX). Do NOT scale by the map's footprint / 32 — an interior
+            // that's fewer than 32 tiles would compress the events. This matches how the buildings + map grid are placed.
+            const float ts = NsbmdGeometry.TileSize;
             if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out var p))
-                return (p.OriginX + (e.xMapPosition + 0.5f) / MapTiles * p.Width,
-                        p.OriginZ + (e.yMapPosition + 0.5f) / MapTiles * p.Height);
-            return (m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
-                    m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
+                return (p.OriginX + (e.xMapPosition + 0.5f) * ts, p.OriginZ + (e.yMapPosition + 0.5f) * ts);
+            return (m.CellBaseX + e.xMatrixPosition * m.CellStrideX + (e.xMapPosition + 0.5f) * ts,
+                    m.CellBaseZ + e.yMatrixPosition * m.CellStrideZ + (e.yMapPosition + 0.5f) * ts);
         }
 
         private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)

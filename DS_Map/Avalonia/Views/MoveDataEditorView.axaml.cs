@@ -29,5 +29,9 @@ namespace DSPRE.Avalonia.Views
 
         private async void Import_Click(object sender, RoutedEventArgs e)
             => await ViewModel.ImportCommand(this);
+
+        // Opens the battle-script editor at this move's waza_seq entry (archive 0 = Move scripts).
+        private void EditMoveScript_Click(object sender, RoutedEventArgs e)
+            => DSPRE.Avalonia.AvaloniaEditorLauncher.OpenBattleScriptEditor(0, ViewModel.SelectedMoveIndex);
     }
 }

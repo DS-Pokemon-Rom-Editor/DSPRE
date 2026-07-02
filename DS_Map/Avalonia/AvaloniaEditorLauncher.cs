@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia
 
             int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Count - 1));
             var vm = new PokemonEditorViewModel(fullList.ToArray(), moveNames, initialMon: mon);
-            new PokemonEditorView(vm).Show();
+            new PokemonEditorView(vm).ShowManaged();
         }
 
         public static void OpenMoveDataEditor(int initialIndex = 0)
@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia
             var view = new MoveDataEditorView();
             if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
                 vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
-            view.Show();
+            view.ShowManaged();
         }
 
         public static void OpenTMEditor(int initialIndex = 0)
@@ -64,13 +64,30 @@ namespace DSPRE.Avalonia
             var view = new TMEditorView();
             if (initialIndex > 0 && view.DataContext is TMEditorViewModel vm)
                 vm.SelectedMachineIndex = initialIndex;   // setter loads the machine
-            view.Show();
+            view.ShowManaged();
         }
 
         public static void OpenEggMoveEditor()
         {
             if (!IsRomLoaded) return;
-            new EggMoveEditorView().Show();
+            new EggMoveEditorView().ShowManaged();
+        }
+
+        /// <summary>Opens the battle-script editor (waza_seq / be_seq / sub_seq / WEST move-animation). When opened
+        /// from the Move editor, <paramref name="archive"/>=0 + <paramref name="entryIndex"/>=move number jumps
+        /// straight to that move's script.</summary>
+        public static void OpenBattleScriptEditor(int archive = 0, int entryIndex = 0)
+        {
+            if (!IsRomLoaded) return;
+            var vm = new BattleScriptEditorViewModel();
+            var view = new BattleScriptEditorView { DataContext = vm };
+            if (vm.IsAvailable)
+            {
+                vm.ArchiveIndex = System.Math.Clamp(archive, 0, 3);   // setter rebuilds the entry list
+                if (entryIndex > 0 && vm.FileItems.Count > 0)
+                    vm.SelectedFileIndex = System.Math.Min(entryIndex, vm.FileItems.Count - 1);
+            }
+            new EditorHostWindow("Battle Scripts", view, 1000, 720).ShowManaged();
         }
 
         public static void OpenItemEditor(int initialIndex = 1)
@@ -80,13 +97,13 @@ namespace DSPRE.Avalonia
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
             var vm = new ItemEditorViewModel(GetItemNames());
             if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
-            new ItemEditorView(vm).Show();
+            new ItemEditorView(vm).ShowManaged();
         }
 
         public static void OpenItemTableEditor()
         {
             if (!IsRomLoaded || !IsItemTableEditorAvailable()) return;
-            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames())).Show();
+            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames())).ShowManaged();
         }
 
         public static void OpenTradeEditor(int initialIndex = 0)
@@ -96,56 +113,56 @@ namespace DSPRE.Avalonia
             var view = new TradeEditorView();
             if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
                 _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
-            view.Show();
+            view.ShowManaged();
         }
 
         public static void OpenTextEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
-            new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenLevelScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenTableEditor()
         {
             if (!IsRomLoaded || EditorPanels.headerEditor == null) return;
-            new TableEditorView(new TableEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).Show();
+            new TableEditorView(new TableEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).ShowManaged();
         }
 
         public static void OpenHiddenItemsEditor()
         {
             if (!IsRomLoaded) return;
-            new HiddenItemsEditorView(new HiddenItemsEditorViewModel(true)).Show();
+            new HiddenItemsEditorView(new HiddenItemsEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenPickupTableEditor()
         {
             if (!IsRomLoaded) return;
-            new PickupTableEditorView(new PickupTableEditorViewModel(true)).Show();
+            new PickupTableEditorView(new PickupTableEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenEncountersEditor()
         {
             if (!IsRomLoaded) return;
-            new EncountersEditorView(new EncountersEditorViewModel(true)).Show();
+            new EncountersEditorView(new EncountersEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenHeadbuttEncounterEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).Show();
+            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenWildEditor(int initialIndex = 0)
@@ -156,22 +173,22 @@ namespace DSPRE.Avalonia
             string[] names = GetPokemonNames();
             int headerCount = GetHeaderCount();
             if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
-                new WildEditorDPPtView(new WildEditorDPPtViewModel(path, names, initialIndex, headerCount)).Show();
+                new WildEditorDPPtView(new WildEditorDPPtViewModel(path, names, initialIndex, headerCount)).ShowManaged();
             else
-                new WildEditorHGSSView(new WildEditorHGSSViewModel(path, names, initialIndex, headerCount)).Show();
+                new WildEditorHGSSView(new WildEditorHGSSViewModel(path, names, initialIndex, headerCount)).ShowManaged();
         }
 
         public static void OpenHeaderEditor(int initialIndex = -1)
         {
             if (!IsRomLoaded) return;
             new EditorHostWindow("Header Editor",
-                new HeaderEditorView(new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex })).Show();
+                new HeaderEditorView(new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex })).ShowManaged();
         }
 
         public static void OpenCameraEditor()
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Camera Editor", new CameraEditorView(new CameraEditorViewModel(true))).Show();
+            new EditorHostWindow("Camera Editor", new CameraEditorView(new CameraEditorViewModel(true))).ShowManaged();
         }
 
         public static void OpenTrainerEditor(int initialIndex = 0)
@@ -179,56 +196,56 @@ namespace DSPRE.Avalonia
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics });
-            new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         // ── World / data editors ───────────────────────────────────────────────
         public static void OpenFlyWarpEditor()
         {
             if (!IsRomLoaded || EditorPanels.headerEditor == null) return;
-            new FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).Show();
+            new FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).ShowManaged();
         }
 
         public static void OpenMapEditor()
         {
             if (!IsRomLoaded) return;
-            new MapEditorView(new MapEditorViewModel(true)).Show();
+            new MapEditorView(new MapEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenBuildingEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new BuildingEditorView(new BuildingEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new BuildingEditorView(new BuildingEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenMatrixEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenEventEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenNsbtxEditor()
         {
             if (!IsRomLoaded) return;
-            new NsbtxEditorView(new NsbtxEditorViewModel(true)).Show();
+            new NsbtxEditorView(new NsbtxEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenAreaDataEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }).Show();
+            new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenOverlayEditor()
         {
             if (!IsRomLoaded) return;
-            new OverlayEditorView().Show();
+            new OverlayEditorView().ShowManaged();
         }
 
         public static void OpenOverworldEditor()
@@ -238,51 +255,51 @@ namespace DSPRE.Avalonia
             SetOWtable();
             Set3DOverworldsDict();
             ReadOWTable();
-            new BtxEditorView(new BtxEditorViewModel(true)).Show();
+            new BtxEditorView(new BtxEditorViewModel(true)).ShowManaged();
         }
 
         // ── Tools ──────────────────────────────────────────────────────────────
         public static void OpenAddressHelper()
         {
             if (!IsRomLoaded) return;
-            new AddressHelperView().Show();
+            new AddressHelperView().ShowManaged();
         }
 
         public static void OpenResearchHelper()
         {
             if (!IsRomLoaded) return;
-            new ResearchHelperView(new ResearchHelperViewModel(true)).Show();
+            new ResearchHelperView(new ResearchHelperViewModel(true)).ShowManaged();
         }
 
         public static void OpenCharMapManager()
         {
             if (!IsRomLoaded) return;
-            new CharMapManagerView().Show();
+            new CharMapManagerView().ShowManaged();
         }
 
         public static void OpenSettings()
         {
             // Settings do not require a loaded ROM.
-            new SettingsWindowView().Show();
+            new SettingsWindowView().ShowManaged();
         }
 
         public static void OpenLabelEditor()
         {
             // Needs a ROM for project-scoped overrides (workDir); global scope works regardless.
             if (!IsRomLoaded) return;
-            new LabelEditorView().Show();
+            new LabelEditorView().ShowManaged();
         }
 
         public static void OpenProjectChecks()
         {
             if (!IsRomLoaded) return;
-            new ProjectChecksView().Show();
+            new ProjectChecksView().ShowManaged();
         }
 
         public static void OpenGlTest()
         {
             // No ROM required — verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
-            new GlTestView().Show();
+            new GlTestView().ShowManaged();
         }
 
         // ── Command palette (quick-open) ────────────────────────────────────────
@@ -291,7 +308,7 @@ namespace DSPRE.Avalonia
         {
             var vm = new CommandPaletteViewModel(BuildCommands(), DynamicCommands);
             var view = new CommandPaletteView(vm);
-            if (owner != null) view.ShowDialog(owner); else view.Show();
+            if (owner != null) view.ShowDialog(owner); else view.ShowManaged();
         }
 
         /// <summary>
@@ -346,6 +363,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
+            new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
             new() { Name = "Item Table Editor",     Keywords = "pickup mart", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },

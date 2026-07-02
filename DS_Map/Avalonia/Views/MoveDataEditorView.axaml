@@ -34,6 +34,8 @@
 		<ComboBox ItemsSource="{Binding MoveNames}"
 				  SelectedIndex="{Binding SelectedMoveIndex}"
 				  MinWidth="260"/>
+		<Button Content="✎ Edit move script" Click="EditMoveScript_Click"
+				ToolTip.Tip="Open the battle-script editor at this move's sequence (waza_seq / be_seq / sub_seq / animation). Platinum &amp; HGSS only."/>
 	  </StackPanel>
 	</Border>
 

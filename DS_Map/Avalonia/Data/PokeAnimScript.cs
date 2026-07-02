@@ -53,6 +53,40 @@ namespace DSPRE.Avalonia.Data
             return (i >= 0 && i < ArgCount.Length) ? ArgCount[i] : 0;
         }
 
+        // Friendly argument names per opcode (from the macros in past.h), for the editor's hints.
+        private static readonly System.Collections.Generic.Dictionary<PastOp, string[]> ArgNamesTable = new()
+        {
+            [PastOp.SetIfWorkVal] = new[] { "use1", "v1", "v2", "comp", "use2", "dst", "v4" },
+            [PastOp.SetWorkVal] = new[] { "idx", "val" },
+            [PastOp.CopyWorkVal] = new[] { "dstIdx", "srcIdx" },
+            [PastOp.AddWorkVal] = new[] { "dst", "calc", "v1", "v2" },
+            [PastOp.MulWorkVal] = new[] { "dst", "calc", "v1", "v2" },
+            [PastOp.SubWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PastOp.DivWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PastOp.ModWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PastOp.StartLoop] = new[] { "count" },
+            [PastOp.SetVal] = new[] { "ssParam", "idx" },
+            [PastOp.AddVal] = new[] { "ssParam", "idx" },
+            [PastOp.SetAddVal] = new[] { "ssParam", "use", "v", "ssCalc" },
+            [PastOp.SetWorkValSin] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
+            [PastOp.SetWorkValCos] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
+            [PastOp.SetTrans] = new[] { "idx", "trans" },
+            [PastOp.AddTrans] = new[] { "idx", "trans" },
+            [PastOp.SetAddParam] = new[] { "param", "use", "v", "calc" },
+            [PastOp.SetD] = new[] { "idx", "trans" },
+            [PastOp.SetDyCorrect] = new[] { "flag" },
+            [PastOp.CallMfCurve] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
+            [PastOp.CallMfCurveDivTime] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
+            [PastOp.CallMfLine] = new[] { "apply", "wait", "target", "vel", "accel", "loop" },
+            [PastOp.CallMfLineDivTime] = new[] { "apply", "wait", "target", "move", "loop" },
+            [PastOp.CallMfLineDst] = new[] { "apply", "wait", "target", "vel", "accel", "dst" },
+            [PastOp.SetWait] = new[] { "wait" },
+            [PastOp.PaletteFade] = new[] { "startEvy", "endEvy", "wait", "rgb" },
+        };
+
+        /// <summary>Friendly argument names for an opcode (empty array if it takes no args / has no labels).</summary>
+        public static string[] ArgNames(PastOp op) => ArgNamesTable.TryGetValue(op, out var n) ? n : Array.Empty<string>();
+
         /// <summary>Parses a script blob into commands. Tolerant: stops at End, or when a word isn't a known
         /// opcode / the args would run past the end (returns what parsed so far).</summary>
         public static List<PastCommand> Parse(byte[] data)
