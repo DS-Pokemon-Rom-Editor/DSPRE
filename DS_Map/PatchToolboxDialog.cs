@@ -1187,30 +1187,35 @@ namespace DSPRE
 
         #region Mikelan's custom commands
 
+        private const uint ScrcmdTableDefaultOffset = 0x200;
+        private const int ScrcmdTableLength = 4 * 0x355;
+
         private void applyCustomCommands(object sender, EventArgs e)
         {
             int expTableOffset = GetCommandTableOffset();
 
             if (expTableOffset < 0)
             {
-                DialogResult d;
-                d = MessageBox.Show("Script command table has not been repointed.\n\n" +
-                    "Do you wish to repoint it to the expanded ARM9 file?\n\n" +
-                    "By default it will be written from 0x200 to 0x1700.\n" +
-                    "If you already have something there, you must cancel this window and move these things to a new location, or you can manually repoint the script command table to a different free location in the expanded ARM9 file",
-                    "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                byte[] commandTable = GetOriginalCommandTable();
+                string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
+                using (SyntheticOverlayOffsetDialog offsetDialog = new SyntheticOverlayOffsetDialog(
+                    "Script command table",
+                    expandedPath,
+                    ScrcmdTableDefaultOffset,
+                    commandTable,
+                    synthOverlayLoadAddress))
+                {
+                    if (offsetDialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
 
-                if (d == DialogResult.Yes)
-                {
-                    RepointCommandTable();
-                }
-                else
-                {
-                    return;
+                    RepointCommandTable(offsetDialog.SelectedOffset, commandTable);
+                    expTableOffset = (int)offsetDialog.SelectedOffset;
                 }
             }
 
-            if (ImportCustomCommand())
+            if (ImportCustomCommand(expTableOffset))
             {
                 MessageBox.Show("Script commands succesfully installed in the ROM", "Done", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -1220,8 +1225,7 @@ namespace DSPRE
         { // Checks if command table is repointed IN THE EXPANDED ARM9 FILE, returns pointer inside this file
             try
             {
-                ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-                int pointerOffset = int.Parse(customcmdDB.GetString("pointerOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
+                int pointerOffset = GetCustomScrcmdDBInt("pointerOffset");
                 using (ARM9.Reader r = new ARM9.Reader(pointerOffset))
                 {
                     uint cmdTable = r.ReadUInt32();
@@ -1231,11 +1235,10 @@ namespace DSPRE
                     }
 
                     uint offset = cmdTable - synthOverlayLoadAddress;
-                    long tableLength = 4 * 0x355;
                     if (File.Exists(Filesystem.expArmPath))
                     {
                         long fileLength = new FileInfo(Filesystem.expArmPath).Length;
-                        if ((long)offset + tableLength <= fileLength)
+                        if ((long)offset + ScrcmdTableLength <= fileLength)
                         {
                             return (int)offset; // Table position inside the expanded arm9 file
                         }
@@ -1251,8 +1254,7 @@ namespace DSPRE
         {
             try
             {
-                ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-                int limitOffset = int.Parse(customcmdDB.GetString("limitOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
+                int limitOffset = GetCustomScrcmdDBInt("limitOffset");
                 using (ARM9.Reader r = new ARM9.Reader(limitOffset))
                 {
                     return r.ReadUInt32() == 0x053C;
@@ -1262,35 +1264,44 @@ namespace DSPRE
             }
         }
 
-        private void RepointCommandTable()
+        private static int GetCustomScrcmdDBInt(string keyPrefix)
+        {
+            ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
+            string value = customcmdDB.GetString(keyPrefix + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage);
+            if (value == null)
+            {
+                throw new NotSupportedException();
+            }
+
+            return int.Parse(value);
+        }
+
+        private byte[] GetOriginalCommandTable()
+        {
+            return DSUtils.ReadFromFile(RomInfo.arm9Path, GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdTableLength);
+        }
+
+        private void RepointCommandTable(uint tableOffset, byte[] commandTable)
         {
             string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
-            ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-
-            FileStream arm9FileStream = new FileStream(RomInfo.arm9Path, FileMode.Open); // I make a copy of the stream so the file is free for writing
-            MemoryStream arm9Stream = new MemoryStream();
-            arm9FileStream.CopyTo(arm9Stream);
-            byte[] cmdTbl = arm9Stream.ToArray();
 
             using (BinaryWriter expArmWriter = new BinaryWriter(new FileStream(expandedPath, FileMode.Open)))
             {
-                expArmWriter.BaseStream.Position = 0x200; // Command table default offset
-                expArmWriter.Write(cmdTbl, int.Parse(customcmdDB.GetString("originalTableOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage)), 4 * 0x355);
+                expArmWriter.BaseStream.Position = tableOffset;
+                expArmWriter.Write(commandTable);
             }
-
-            arm9FileStream.Close();
 
             using (ARM9.Writer wr = new ARM9.Writer())
             { // Change both the pointer and the limit
-                wr.BaseStream.Position = int.Parse(customcmdDB.GetString("pointerOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
-                wr.Write((uint)0x023C8200);
+                wr.BaseStream.Position = GetCustomScrcmdDBInt("pointerOffset");
+                wr.Write(synthOverlayLoadAddress + tableOffset);
 
-                wr.BaseStream.Position = int.Parse(customcmdDB.GetString("limitOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
+                wr.BaseStream.Position = GetCustomScrcmdDBInt("limitOffset");
                 wr.Write((uint)0x053C);
             }
         }
 
-        private bool ImportCustomCommand()
+        private bool ImportCustomCommand(int tableOffset)
         {
             string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
             int appliedPatches = 0;
@@ -1326,9 +1337,9 @@ namespace DSPRE
                             int asmOffset = Int32.Parse(node.Element("asmoffset").Value, System.Globalization.NumberStyles.HexNumber);
                             string asmCode = node.Element("asmcode").Value.Replace("\n", "").Replace("\t", "").Replace(" ", "");
 
-                            if (RomInfo.gameVersion.ToString().Equals(targetROM) && RomInfo.gameLanguage.Equals(targetLang))
+                            if (RomInfo.gameVersion.ToString().Equals(targetROM) && RomInfo.gameLanguage.ToString().Equals(targetLang))
                             {
-                                expandedReader.BaseStream.Position = 0x200 + commandID * 4;
+                                expandedReader.BaseStream.Position = tableOffset + commandID * 4;
                                 if (expandedReader.ReadUInt32() != 0)
                                 {
                                     DialogResult d;
@@ -1341,7 +1352,7 @@ namespace DSPRE
                                     }
                                 }
 
-                                expandedWriter.BaseStream.Position = 0x200 + commandID * 4;
+                                expandedWriter.BaseStream.Position = tableOffset + commandID * 4;
                                 expandedWriter.Write((int)(synthOverlayLoadAddress + asmOffset + 1));
 
                                 byte[] asmCodeBytes = DSUtils.StringToByteArray(asmCode);
