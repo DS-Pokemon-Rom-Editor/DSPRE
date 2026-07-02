@@ -11,7 +11,8 @@ namespace DSPRE.Tests
     public class PokeAnimPlayerTests
     {
         // PAST constants (past_def.h)
-        private const int APPLY_SET = 24, CURVE_SIN = 30, TARGET_DY = 36, CORRECT_ON_MINUS = 27;
+        private const int APPLY_SET = 24, CURVE_SIN = 30, CURVE_SIN_MINUS = 32;
+        private const int TARGET_DX = 35, TARGET_DY = 36, TARGET_RY = 38, CORRECT_ON_MINUS = 27;
 
         [Fact]
         public void CurveDivTime_SineBob_MatchesRuntimeMath()
@@ -52,19 +53,39 @@ namespace DSPRE.Tests
             Assert.True(p.Finished);
         }
 
+        // SET_DY_CORRECT keeps a *scaling* sprite anchored: when ry<0 (shrinking) it nudges POS_Y by -ry/8.
+        // It does NOT touch X (the leaked CorrectDy in p_anm_sys.c only calcs POS_Y).
         [Fact]
-        public void DyCorrect_FlipsHorizontalSign()
+        public void DyCorrect_AnchorsScalingSprite_NotX()
         {
             var cmds = new List<PastCommand>
             {
                 new PastCommand(PastOp.SetDyCorrect, new[] { CORRECT_ON_MINUS }),
-                new PastCommand(PastOp.CallMfCurveDivTime, new[] { APPLY_SET, 0, CURVE_SIN, 35 /*TARGET_DX*/, 100, 0x10000, 0, 4 }),
+                // shrink vertically: CURVE_SIN_MINUS on RY, L=80 → at 90° ry = -80
+                new PastCommand(PastOp.CallMfCurveDivTime, new[] { APPLY_SET, 0, CURVE_SIN_MINUS, TARGET_RY, 80, 0x10000, 0, 4 }),
                 new PastCommand(PastOp.HoldCmd, new int[0]),
                 new PastCommand(PastOp.End, new int[0]),
             };
             var p = new PokeAnimPlayer(cmds);
-            p.Step();                       // SET_DY_CORRECT + first DX sample (90° → dx=100)
-            Assert.Equal(-100, p.OffsetX);  // correction flips X
+            p.Step();                       // 90°: ry = -80
+            Assert.Equal(0, p.OffsetX);     // correction never affects X
+            Assert.Equal(10, p.OffsetY);    // POS_Y nudged by -ry/8 = 80/8 = 10 to anchor the shrinking sprite
+        }
+
+        // The PokeReverse flag (set per-sprite by the caller) mirrors the X translation. Battle uses it off, but the
+        // status screen / some species turn it on, so the interpreter must honour it.
+        [Fact]
+        public void Reverse_MirrorsXTranslation()
+        {
+            var cmds = new List<PastCommand>
+            {
+                new PastCommand(PastOp.CallMfCurveDivTime, new[] { APPLY_SET, 0, CURVE_SIN, TARGET_DX, 100, 0x10000, 0, 4 }),
+                new PastCommand(PastOp.HoldCmd, new int[0]),
+                new PastCommand(PastOp.End, new int[0]),
+            };
+            var p = new PokeAnimPlayer(cmds) { Reverse = true };
+            p.Step();                       // 90°: dx = 100
+            Assert.Equal(-100, p.OffsetX);  // PokeReverse negates X
         }
     }
 }

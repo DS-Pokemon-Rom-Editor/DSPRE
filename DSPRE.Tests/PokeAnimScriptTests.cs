@@ -53,6 +53,17 @@ namespace DSPRE.Tests
         }
 
         [Fact]
+        public void ArgNames_MatchArgCounts()
+        {
+            foreach (PastOp op in System.Enum.GetValues(typeof(PastOp)))
+            {
+                var names = PokeAnimScript.ArgNames(op);
+                if (names.Length > 0)   // labelled opcodes must name exactly their argument words
+                    Assert.Equal(PokeAnimScript.ArgsFor(op), names.Length);
+            }
+        }
+
+        [Fact]
         public void Serialize_RoundTripsParse()
         {
             var cmds = new List<PastCommand>
