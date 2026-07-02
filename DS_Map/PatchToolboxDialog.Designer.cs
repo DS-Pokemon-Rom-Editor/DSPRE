@@ -375,8 +375,9 @@ namespace DSPRE
             this.repointScrcmdButton.Name = "repointScrcmdButton";
             this.repointScrcmdButton.Size = new System.Drawing.Size(100, 50);
             this.repointScrcmdButton.TabIndex = 25;
-            this.repointScrcmdButton.Text = "Repoint Table";
+            this.repointScrcmdButton.Text = "Apply Patch";
             this.repointScrcmdButton.UseVisualStyleBackColor = true;
+            this.repointScrcmdButton.Click += new System.EventHandler(this.applyCustomCommands);
             // 
             // scrcmdARM9requiredLBL
             // 
@@ -404,7 +405,7 @@ namespace DSPRE
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(288, 37);
             this.label2.TabIndex = 34;
-            this.label2.Text = "[ B E T A     |    Needs testing]";
+            this.label2.Text = "";
             this.label2.UseMnemonic = false;
             // 
             // dynamicHeadersPatchCB

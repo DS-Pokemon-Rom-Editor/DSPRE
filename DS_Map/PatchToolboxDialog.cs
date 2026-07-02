@@ -124,7 +124,11 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (!OverlayUtils.OverlayTable.IsDefaultCompressed(1))
+                    if (RomInfo.IsDsRomProject)
+                    {
+                        DisableOverlay1patch("Not needed");
+                    }
+                    else if (!OverlayUtils.OverlayTable.IsDefaultCompressed(1))
                     {
                         DisableOverlay1patch("Already applied");
                         overlay1CB.Visible = true;
@@ -574,21 +578,6 @@ namespace DSPRE
 
             BDHCAMPatchData data = new BDHCAMPatchData();
 
-            if (RomInfo.gameFamily == GameFamilies.HGSS)
-            {
-                if (OverlayUtils.OverlayTable.IsDefaultCompressed(data.overlayNumber))
-                {
-                    DialogResult d1 = MessageBox.Show("It is STRONGLY recommended to configure Overlay1 as uncompressed before proceeding.\n\n" +
-                        "More details in the following dialog.\n\n" + "Do you want to know more?",
-                        "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-                    if (d1 == DialogResult.Yes)
-                    {
-                        overlay1uncomprButton_Click(null, null);
-                    }
-                }
-            }
-
             using (var offsetDialog = new SyntheticOverlayOffsetDialog(
                 "Dynamic Cameras",
                 Filesystem.expArmPath,
@@ -672,6 +661,13 @@ namespace DSPRE
 
         public static bool ConfigureOverlay1Uncompressed()
         {
+            if (RomInfo.IsDsRomProject)
+            {
+                MessageBox.Show("ds-rom projects store overlays decompressed on disk and handle overlay compression during ROM build.\n\nNo changes are needed.",
+                    "Operation not needed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
             bool isCompressed = false;
             string stringDecompressOverlay = "";
 
@@ -891,7 +887,7 @@ namespace DSPRE
                     if (RomInfo.gameFamily == GameFamilies.HGSS
                         && (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish))
                     {
-                        repointScrcmdButton.Text = "Repoint Table";
+                        repointScrcmdButton.Text = "Apply Patch";
                         repointScrcmdButton.Enabled = true;
                         repointScrcmdLBL.Enabled = true;
                         repointScrcmdTextLBL.Enabled = true;
