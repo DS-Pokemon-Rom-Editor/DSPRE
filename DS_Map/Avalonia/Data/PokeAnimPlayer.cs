@@ -94,6 +94,8 @@ namespace DSPRE.Avalonia.Data
             }
             if (_mfs.Count == 0 || invalid == _mfs.Count) _hold = false;
 
+            // Palette-fade ramp.
+            if (_fadeFrames > 0) { _fade += (_fadeTarget - _fade) / _fadeFrames; _fadeFrames--; }
             if (_hold) return;
             if (_fadeWaiting) { if (_fadeWaitFrames > 0) { _fadeWaitFrames--; return; } _fadeWaiting = false; }
 

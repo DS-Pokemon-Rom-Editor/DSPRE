@@ -12,6 +12,8 @@
       <StackPanel Orientation="Horizontal" Spacing="4">
         <Button Content="Expand All"   Click="ExpandAll_Click"/>
         <Button Content="Collapse All" Click="CollapseAll_Click"/>
+        <CheckBox Content="Fuzzy" IsChecked="{Binding FuzzySearch}" VerticalAlignment="Center" Margin="6,0,0,0"
+                  ToolTip.Tip="Also match approximate spellings (typo-tolerant)"/>
       </StackPanel>
     </StackPanel>
 

@@ -20,7 +20,7 @@
              one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
              (palette index 0) pixels are never coloured. -->
         <Grid Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
-              RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0.5,0.5">
           <Grid.RenderTransform>
             <TransformGroup>
               <ScaleTransform ScaleX="{Binding AnimScaleX}" ScaleY="{Binding AnimScaleY}"/>
@@ -38,7 +38,7 @@
         </Grid>
 
         <Grid Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding #SceneRoot.PlayerY}" Width="80" Height="80"
-              RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0.5,0.5">
           <Grid.RenderTransform>
             <TransformGroup>
               <ScaleTransform ScaleX="{Binding AnimBackScaleX}" ScaleY="{Binding AnimBackScaleY}"/>

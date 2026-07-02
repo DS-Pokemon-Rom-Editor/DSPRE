@@ -11,6 +11,7 @@ namespace DSPRE.Avalonia.Views
     public partial class EventEditorView : Window
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
+        private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
         private bool _setupDone;
         private Point? _lastPointer;
         private bool _panning;

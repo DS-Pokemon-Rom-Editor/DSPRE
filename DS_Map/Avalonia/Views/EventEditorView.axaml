@@ -49,6 +49,7 @@
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="11"/>
               <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="11"/>
               <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="11"/>
+              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" FontSize="11"/>
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="11"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>

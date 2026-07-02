@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.ROMFiles;
 using System.Drawing;
 using LibNDSFormats.NSBMD;
 
@@ -48,11 +49,27 @@ namespace DSPRE.Avalonia.Gl
         // footprint. Event tile (tx,ty) of cell (cx,cy) sits at OriginX + (tx/32)*Width, etc.
         public struct CellPlacement { public float OriginX, OriginZ, Width, Height; }
         public Dictionary<long, CellPlacement> CellPlacements;
+        public Dictionary<long, BdhcFile> CellBdhc;
+        public Dictionary<long, float> CellAltitudeY;
         public static long CellKey(int cx, int cy) => ((long)cx << 32) | (uint)cy;
         public bool TryCellPlacement(int cx, int cy, out CellPlacement p)
         {
             p = default;
             return CellPlacements != null && CellPlacements.TryGetValue(CellKey(cx, cy), out p);
+        }
+
+        public bool TryBdhcSurfaceY(int cx, int cy, float rawX, float rawZ, float preferredY, out float y)
+        {
+            y = 0f;
+            long key = CellKey(cx, cy);
+            if (CellBdhc == null || !CellBdhc.TryGetValue(key, out var bdhc) || bdhc == null) return false;
+            if (!TryCellPlacement(cx, cy, out var p)) return false;
+            float altitude = CellAltitudeY != null && CellAltitudeY.TryGetValue(key, out var ay) ? ay : 0f;
+            float localX = rawX - p.OriginX;
+            float localZ = rawZ - p.OriginZ;
+            if (!bdhc.TryGetHeight(localX, localZ, preferredY - altitude, out var localY)) return false;
+            y = localY + altitude;
+            return true;
         }
 
         /// <summary>Inverse of cell placement: finds which matrix cell + tile (0..32) a raw-space point
@@ -82,8 +99,10 @@ namespace DSPRE.Avalonia.Gl
         // Per-tile top-surface height of the MAP geometry (raw space), so events can sit on the
         // floor rather than the scene's lowest point. NaN cells fall back to DefaultSurfaceY.
         public float[] HeightGrid;
+        public Dictionary<int, int>[] HeightBuckets;
         public int HCols, HRows;
         public float HOriginX, HOriginZ, HTileX, HTileZ, DefaultSurfaceY;
+        public const float HeightSnap = 4f;
 
         /// <summary>Top-of-floor Y (raw space) under a point, or the fallback when off-grid.</summary>
         public float SurfaceY(float x, float z)
@@ -93,6 +112,42 @@ namespace DSPRE.Avalonia.Gl
             int r = (int)Math.Floor((z - HOriginZ) / HTileZ);
             if (c < 0 || r < 0 || c >= HCols || r >= HRows) return DefaultSurfaceY;
             float v = HeightGrid[r * HCols + c];
+            return float.IsNaN(v) ? DefaultSurfaceY : v;
+        }
+
+        /// <summary>Estimated floor Y, preferring sampled candidates near a current/expected Y.</summary>
+        public float SurfaceY(float x, float z, float preferredY)
+        {
+            if (HeightGrid == null || HTileX <= 0 || HTileZ <= 0) return DefaultSurfaceY;
+            int c = (int)Math.Floor((x - HOriginX) / HTileX);
+            int r = (int)Math.Floor((z - HOriginZ) / HTileZ);
+            if (c < 0 || r < 0 || c >= HCols || r >= HRows) return DefaultSurfaceY;
+            int idx = r * HCols + c;
+            var bucket = HeightBuckets != null && idx < HeightBuckets.Length ? HeightBuckets[idx] : null;
+            if (bucket != null && bucket.Count > 0)
+            {
+                float modal = HeightGrid[idx];
+                int modalKey = (int)Math.Round((float.IsNaN(modal) ? DefaultSurfaceY : modal) * HeightSnap);
+                int preferredKey = (int)Math.Round(preferredY * HeightSnap);
+                int bestKey = modalKey, bestDist = int.MaxValue, bestModalDist = int.MaxValue, bestCount = -1;
+                foreach (var kv in bucket)
+                {
+                    int dist = Math.Abs(kv.Key - preferredKey);
+                    int modalDist = Math.Abs(kv.Key - modalKey);
+                    if (dist < bestDist ||
+                        (dist == bestDist && (kv.Value > bestCount ||
+                        (kv.Value == bestCount && (modalDist < bestModalDist ||
+                        (modalDist == bestModalDist && kv.Key < bestKey))))))
+                    {
+                        bestKey = kv.Key;
+                        bestDist = dist;
+                        bestModalDist = modalDist;
+                        bestCount = kv.Value;
+                    }
+                }
+                return bestKey / HeightSnap;
+            }
+            float v = HeightGrid[idx];
             return float.IsNaN(v) ? DefaultSurfaceY : v;
         }
 
@@ -111,6 +166,15 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public static class NsbmdGeometry
     {
+        // WinForms applied this scale before rendering map models; buildings already include it.
+        private static float[] MapVertexScale(NSBMDModel model)
+        {
+            float ms = model?.modelScale ?? 0f;
+            if (ms == 0f) ms = 1f;
+            float s = ms / 64f;
+            return Mat4.Scale(s, s, s);
+        }
+
         /// <summary>Builds a single model, centred/scaled to fit (for the standalone viewer).</summary>
         public static NsbmdRenderModel BuildModel(NSBMDModel model)
         {
@@ -282,6 +346,8 @@ namespace DSPRE.Avalonia.Gl
             // authored tile-(0,0)) lands exactly on the grid line shared with the previous neighbour.
             var byMat = new Dictionary<int, List<float>>();
             var placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
+            var cellBdhc = new Dictionary<long, BdhcFile>();
+            var cellAltitude = new Dictionary<long, float>();
             foreach (var cb in stored)
             {
                 float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
@@ -311,8 +377,12 @@ namespace DSPRE.Avalonia.Gl
                     Width  = cb.HasBounds ? cb.FpX : cb.ColW,
                     Height = cb.HasBounds ? cb.FpZ : cb.RowH,
                 };
+                if (cb.Bdhc != null) cellBdhc[key] = cb.Bdhc;
+                if (cb.AltitudeY != 0f) cellAltitude[key] = cb.AltitudeY;
             }
             result.CellPlacements = placements;
+            result.CellBdhc = cellBdhc;
+            result.CellAltitudeY = cellAltitude;
 
             if (ComputeRawBounds(byMat, out float wmnx, out float wmxx, out float wmny, out float wmxy, out float wmnz, out float wmxz))
             {
@@ -349,7 +419,10 @@ namespace DSPRE.Avalonia.Gl
             float originX = result.MapMinX, originZ = result.MapMinZ;
             var grid = new float[cols * rows];
             for (int i = 0; i < grid.Length; i++) grid[i] = float.NaN;
+            var buckets = new Dictionary<int, int>[grid.Length];
+            var globalCounts = new Dictionary<int, int>();
 
+            const float snap = NsbmdRenderModel.HeightSnap;
             foreach (var cb in stored)
             {
                 float ox = cb.OffX, oz = cb.OffZ;
@@ -362,8 +435,9 @@ namespace DSPRE.Avalonia.Gl
                         if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
                         int idx = r * cols + c;
                         if (float.IsNaN(grid[idx]) || y > grid[idx]) grid[idx] = y;
-                    }
+                }
             }
+            float def = defaultKey / snap;
 
             // Representative floor (median of sampled tiles) as the fallback — NOT the global max,
             // which would launch events on un-sampled tiles up to the tallest geometry in the scene.

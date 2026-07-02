@@ -334,6 +334,11 @@ namespace DSPRE
 
             // Reset Script Editor
             EditorPanels.scriptEditor.scriptEditorIsReady = false;
+            // Re-attach script tabs in case they were hidden by a previous rotom or HGE project
+            if (!mainTabControl.TabPages.Contains(EditorPanels.scriptEditorTabPage))
+                mainTabControl.TabPages.Add(EditorPanels.scriptEditorTabPage);
+            if (!mainTabControl.TabPages.Contains(EditorPanels.levelScriptEditorTabPage))
+                mainTabControl.TabPages.Add(EditorPanels.levelScriptEditorTabPage);
 
             // Reset Text Editor
             EditorPanels.textEditor.Reset();
@@ -1465,6 +1470,16 @@ namespace DSPRE
                     "\n\n- Certain text files or script files that HGE edits will be overwritten, please make sure you are aware which are the ones you have to manage with hg-engine."+
                     "\n\n- After making edits in DSPRE and want to use as the new base rom for hg-engine make sure to run 'make clean' or otherwise hg-engine will just grab your old rom.nds data.",
                     "HGE Detected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            // TODO: temporary until DSPRE has proper rotom script editor integration.
+            // When a rotom.toml is present, rotom owns all script source files and the
+            // DSPRE script editors are not usable.
+            if (RomInfo.hasRotomProject)
+            {
+                AppLogger.Info("Rotom project detected — disabling DSPRE script editors.");
+                EditorPanels.scriptEditorTabPage.Parent = null;
+                EditorPanels.levelScriptEditorTabPage.Parent = null;
             }
 
             Helpers.statusLabelMessage();

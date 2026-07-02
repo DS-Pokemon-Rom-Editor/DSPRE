@@ -549,6 +549,7 @@ namespace DSPRE.Avalonia.ViewModels
         // Turns the editable rows into a valid command list (args padded/truncated to each opcode's fixed count).
         private List<PastCommand> BuildCommandsFromRows()
         {
+            if (_animDefsNarc == null) return;
             var cmds = new List<PastCommand>();
             foreach (var row in ProgramRows)
             {

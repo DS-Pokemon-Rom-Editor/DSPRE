@@ -190,6 +190,7 @@
 
               <!-- Sprite animation (pokeanm.narc). Pattern steps = the on-field frame wiggle; they drive the preview. -->
               <StackPanel IsVisible="{Binding HasAnimData}" Spacing="4">
+                <Separator/>
                 <TextBlock Text="Sprite Animation (pokeanm)" FontWeight="SemiBold"/>
                 <TextBlock Text="Pattern steps — the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
                            FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
@@ -260,13 +261,13 @@
                   <ComboBox Grid.Column="2" ItemsSource="{Binding ScriptTargetOptions}" SelectedIndex="{Binding ScriptTargetIndex}" HorizontalAlignment="Stretch"
                             ToolTip.Tip="Front (prg_anm_f), or one of the three back variants (prg_anm_b[0..2])."/>
                 </Grid>
-                <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
-                <TextBlock Text="Edits the shared animation script — affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
-                           FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>
-                  <Button Content="💾 Save script" Click="SaveProgramScript_Click" IsEnabled="{Binding ScriptDirty}"/>
-                </StackPanel>
+                    <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
+                    <TextBlock Text="Edits the shared animation script — affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
+                               FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>
+                      <Button Content="💾 Save script" Click="SaveProgramScript_Click" IsEnabled="{Binding ScriptDirty}"/>
+                    </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <Button Content="▶ Play saved animation" Click="PlaySavedScript_Click"
                           ToolTip.Tip="Preview the saved version of the targeted script on its sprite."/>
@@ -274,22 +275,27 @@
                           ToolTip.Tip="Preview the current unsaved edits without saving (enabled when there are changes)."/>
                 </StackPanel>
                 <Border IsVisible="{Binding HasProgramScript}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
-                  <ItemsControl ItemsSource="{Binding ProgramRows}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:ProgramCmdRow">
-                        <Grid ColumnDefinitions="186,*,Auto,Auto,Auto" Margin="2" ColumnSpacing="4">
-                          <ComboBox Grid.Column="0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" HorizontalAlignment="Stretch"/>
+                        <ItemsControl ItemsSource="{Binding ProgramRows}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProgramCmdRow">
+                              <Grid ColumnDefinitions="186,*,Auto,Auto,Auto" Margin="2" ColumnSpacing="4">
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" HorizontalAlignment="Stretch"/>
                           <TextBox Grid.Column="1" Text="{Binding ArgsText, UpdateSourceTrigger=PropertyChanged}" Watermark="{Binding ArgHint}" ToolTip.Tip="{Binding ArgHint}" FontFamily="Consolas,monospace"/>
-                          <Button Grid.Column="2" Content="↑" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
-                          <Button Grid.Column="3" Content="↓" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
-                          <Button Grid.Column="4" Content="🗑" Click="ProgramCmdRemove_Click" ToolTip.Tip="Remove"/>
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </Border>
+                                <Button Grid.Column="2" Content="↑" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
+                                <Button Grid.Column="3" Content="↓" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
+                                <Button Grid.Column="4" Content="🗑" Click="ProgramCmdRemove_Click" ToolTip.Tip="Remove"/>
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </Border>
+                  </StackPanel>
+                </Expander>
               </StackPanel>
             </StackPanel>
+          </StackPanel>
+        </StackPanel>
            </ScrollViewer>
           </TabItem>
         </TabControl>

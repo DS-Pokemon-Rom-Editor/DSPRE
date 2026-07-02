@@ -41,6 +41,7 @@ namespace DSPRE.Avalonia.ViewModels
         private Dictionary<int, (ushort matrixId, byte areaId)> _eventToHeader; // event file → its header's matrix + area
         private GameMatrix _matrix;
         private byte _areaDataId;
+        private readonly Dictionary<long, byte[,]> _collisionCache = new Dictionary<long, byte[,]>();
 
         /// <summary>Raised after the 3D map is (re)loaded so the view can push the new model.</summary>
         public event EventHandler MapLoaded;
@@ -150,6 +151,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowWarps { get => _showWarp; set { if (Set(ref _showWarp, value)) RefreshMarkers(); } }
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
+        public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
 
         // Matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
         // Grid is the default — the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride span,
@@ -376,6 +378,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void ResolveMatrixForFile(int eventIndex)
         {
             _matrix = null; _areaDataId = 0; _matrixId = -1;
+            _collisionCache.Clear();
             try
             {
                 if (_eventToHeader != null && _eventToHeader.TryGetValue(eventIndex, out var hdr))
@@ -514,6 +517,42 @@ namespace DSPRE.Avalonia.ViewModels
                     float half = (sel ? 0.46f : 0.40f);
                     var (rawX, rawZ) = Cell(e);
                     AddMarker(v, m, rawX, EventY(rawX, rawZ, e), rawZ, half * tileX, half * tileZ, c);
+                }
+
+                if (_showGrid && _matrix != null && _matrix.width * _matrix.height <= 4)
+                {
+                    int n = MapFile.mapSize;
+                    float inset = tileX * 0.07f;
+                    for (int gcy = 0; gcy < _matrix.height; gcy++)
+                        for (int gcx = 0; gcx < _matrix.width; gcx++)
+                        {
+                            if (!m.TryCellPlacement(gcx, gcy, out var gp)) continue;
+                            long key = ((long)gcy << 32) | (uint)gcx;
+                            if (!_collisionCache.TryGetValue(key, out var col))
+                            {
+                                col = null;
+                                try
+                                {
+                                    int map = _matrix.maps[gcy, gcx];
+                                    if (map != GameMatrix.EMPTY) col = new MapFile(map, gameFamily, false, false).collisions;
+                                }
+                                catch { }
+                                _collisionCache[key] = col;
+                            }
+                            if (col == null) continue;
+                            byte oob = col[n - 1, n - 1];
+                            for (int ty = 0; ty < n; ty++)
+                                for (int tx = 0; tx < n; tx++)
+                                {
+                                    if (col[ty, tx] != oob) continue;
+                                    float x0 = gp.OriginX + tx * tileX;
+                                    float z0 = gp.OriginZ + ty * tileZ;
+                                    float cx = x0 + tileX * 0.5f, cz = z0 + tileZ * 0.5f;
+                                    if (!m.TryBdhcSurfaceY(gcx, gcy, cx, cz, 0f, out var yc)) yc = m.SurfaceY(cx, cz);
+                                    yc += 0.01f;
+                                    AddFlatQuad(v, m, x0 + inset, z0 + inset, x0 + tileX - inset, z0 + tileZ - inset, yc, (0.20f, 0.55f, 0.95f));
+                                }
+                        }
                 }
 
                 if (_showWarp) foreach (var e in _file.warps) Quad(e, MarkerColor(1));
@@ -707,6 +746,18 @@ namespace DSPRE.Avalonia.ViewModels
             Vtx(a); Vtx(c); Vtx(d);
         }
 
+        private static void AddFlatQuad(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y,
+            (float r, float g, float b) col)
+        {
+            var a = m.ToNormalized(x0, y, z0);
+            var b = m.ToNormalized(x1, y, z0);
+            var c = m.ToNormalized(x1, y, z1);
+            var d = m.ToNormalized(x0, y, z1);
+            void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
+            Vtx(a); Vtx(b); Vtx(c);
+            Vtx(a); Vtx(c); Vtx(d);
+        }
+
         // ── Save / import / export ─────────────────────────────────────────────────────
         public void Save()
         {
@@ -755,6 +806,8 @@ namespace DSPRE.Avalonia.ViewModels
             sb.AppendLine($"Raw bounds  X[{m.RawMinX:F3}, {m.RawMaxX:F3}]  Y[{m.RawMinY:F3}, {m.RawMaxY:F3}]  Z[{m.RawMinZ:F3}, {m.RawMaxZ:F3}]");
             sb.AppendLine($"Map  bounds X[{m.MapMinX:F3}, {m.MapMaxX:F3}]  Z[{m.MapMinZ:F3}, {m.MapMaxZ:F3}]");
             sb.AppendLine($"Representative CellStride X={m.CellStrideX:F3} Z={m.CellStrideZ:F3}");
+            sb.AppendLine($"DefaultSurfaceY (fallback) = {m.DefaultSurfaceY:F3}");
+            sb.AppendLine($"BDHC cells: {m.CellBdhc?.Count ?? 0}");
             sb.AppendLine();
 
             sb.AppendLine("--- Per-cell map placement (raw space) ---");
@@ -794,6 +847,7 @@ namespace DSPRE.Avalonia.ViewModels
                 Dump("trigger", _file.triggers);
                 Dump("spawnable", _file.spawnables);
             }
+
             return sb.ToString();
         }
 

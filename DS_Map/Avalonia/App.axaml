@@ -20,6 +20,7 @@
 			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush"    Color="#A8A8A8"/>
 			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#555555"/>
 			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="#3C3C3C"/>
+			<x:Double x:Key="ControlContentThemeFontSize">14</x:Double>
 
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
@@ -50,11 +51,7 @@
 		<SimpleTheme/>
 		<StyleInclude Source="Themes/Controls.axaml"/>
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
-		<!-- Pair AvaloniaEdit's SIMPLE theme with the app's SimpleTheme. Its Fluent theme aliases Fluent-only keys
-		     (ControlContentThemeFontSize, ContentControlThemeFontFamily, ToolTip*…) that SimpleTheme doesn't define,
-		     so a TextEditor's SearchPanel threw KeyNotFoundException on template apply. The Simple theme references
-		     SimpleTheme keys (FontSizeNormal, Theme*Brush) that ARE present. -->
-		<StyleInclude Source="avares://AvaloniaEdit/Themes/Simple/AvaloniaEdit.xaml"/>
+		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
 
 		<!-- ── Crisp, consistent control sizing across every editor (from feature/avalonia) ── -->
 		<Style Selector="Button">

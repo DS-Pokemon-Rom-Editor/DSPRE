@@ -3,7 +3,8 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
         x:Class="DSPRE.Avalonia.Views.MapsWorkspaceView"
-        x:DataType="vm:HeaderEditorViewModel">
+        x:DataType="vm:HeaderEditorViewModel"
+        x:Name="MapsRoot">
   <!-- Porymap-like Maps workspace over a HeaderEditorViewModel: the shared header sidebar drives a
        context strip + map-bound tabs. Phase 1: Header is embedded; the rest open the standalone editor
        at the selected header's linked file id. -->
@@ -86,13 +87,9 @@
               <Button Content="🔗 Open Map Editor" HorizontalAlignment="Center" Click="OpenMap_Click"/>
             </StackPanel>
           </TabItem>
+          <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
           <TabItem Header="Events">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Event Editor"/>
-              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
-                         Text="Opens in its own window for now. Once embedded, the event file for the selected header loads here and retargets as you pick headers."/>
-              <Button Content="🔗 Open Events" HorizontalAlignment="Center" Click="OpenEvents_Click"/>
-            </StackPanel>
+            <views:EventEditorView DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
           <TabItem Header="Matrix">
             <StackPanel Classes="placeholder">
