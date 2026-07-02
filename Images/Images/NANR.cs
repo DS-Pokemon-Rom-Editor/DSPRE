@@ -64,6 +64,7 @@ namespace Images
                 ani.unknown2 = br.ReadUInt16();
                 ani.unknown3 = br.ReadUInt16();
                 ani.offset_frame = br.ReadUInt32();
+                ani.playMode = (uint)(ani.unknown2 | (ani.unknown3 << 16));   // NNS_G2dAnimPlayMode (u32 at +8)
                 ani.frames = new sNANR.Frame[ani.nFrames];
 
                 // Frame header
@@ -76,9 +77,26 @@ namespace Images
                     frame.unknown1 = br.ReadUInt16();
                     frame.constant = br.ReadUInt16();
 
-                    // Frame data
+                    // Frame data — content layout depends on the sequence's animType (ani.dataType):
+                    //   0 = index only (u16 cell, u16 pad)
+                    //   1 = SRT (u16 cell, u16 rot, fx32 sx, fx32 sy, s16 px, s16 py)
+                    //   2 = index + translate (u16 cell, u16 pad, s16 px, s16 py)
                     br.BaseStream.Position = 0x18 + nanr.abnk.offset2 + frame.offset_data;
                     frame.data.nCell = br.ReadUInt16();
+                    if (ani.dataType == 1)
+                    {
+                        frame.data.rotation = br.ReadUInt16();
+                        frame.data.scaleX = br.ReadInt32();
+                        frame.data.scaleY = br.ReadInt32();
+                        frame.data.xDisplacement = br.ReadInt16();
+                        frame.data.yDisplacement = br.ReadInt16();
+                    }
+                    else if (ani.dataType == 2)
+                    {
+                        br.ReadUInt16();   // pad
+                        frame.data.xDisplacement = br.ReadInt16();
+                        frame.data.yDisplacement = br.ReadInt16();
+                    }
 
                     ani.frames[j] = frame;
                 }
@@ -181,6 +199,8 @@ namespace Images
                 public ushort unknown3;
                 public uint offset_frame;
                 public Frame[] frames;
+                // NNS_G2dAnimPlayMode (u32 at seq-header +8): 1=FORWARD(once), 2=FORWARD_LOOP, 3=REVERSE, 4=REVERSE_LOOP.
+                public uint playMode;
             }
             public struct Frame
             {
@@ -192,8 +212,11 @@ namespace Images
             public struct Frame_Data
             {
                 public ushort nCell;
-                // DataType 1
+                // DataType 1 (SRT): rotation (s16, 0..0xFFFF = 0..360°) + scaleX/scaleY (fx32, 0x1000 = 1.0).
                 public ushort[] transform; // See http://nocash.emubase.de/gbatek.htm#lcdiobgrotationscaling
+                public ushort rotation;
+                public int scaleX;         // fx32 (4096 = 1.0); 0 when not an SRT frame → treat as 1.0
+                public int scaleY;
                 public short xDisplacement;
                 public short yDisplacement;
                 //DataType 2 (the Displacement above)
