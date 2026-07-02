@@ -403,9 +403,9 @@
             this.label26.AutoSize = true;
             this.label26.Location = new System.Drawing.Point(16, 574);
             this.label26.Name = "label26";
-            this.label26.Size = new System.Drawing.Size(84, 13);
+            this.label26.Size = new System.Drawing.Size(151, 13);
             this.label26.TabIndex = 33;
-            this.label26.Text = "Buildings texture";
+            this.label26.Text = "Buildings texture (preview only)";
             // 
             // buildTextureComboBox
             // 
@@ -441,9 +441,9 @@
             this.mapTextureLabel.AutoSize = true;
             this.mapTextureLabel.Location = new System.Drawing.Point(16, 530);
             this.mapTextureLabel.Name = "mapTextureLabel";
-            this.mapTextureLabel.Size = new System.Drawing.Size(63, 13);
+            this.mapTextureLabel.Size = new System.Drawing.Size(130, 13);
             this.mapTextureLabel.TabIndex = 29;
-            this.mapTextureLabel.Text = "Map texture";
+            this.mapTextureLabel.Text = "Map texture (preview only)";
             // 
             // selectMapComboBox
             // 
