@@ -124,6 +124,9 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal byte[] subroutine;
 
+            internal const uint overlayEntryOffset1 = 0x691;
+            internal const uint overlayEntryOffset2 = 0x651;
+
             public static Dictionary<string, string> BDHCamCodeDB = new Dictionary<string, string>() {
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = "B9 F3 E2 F8",
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = "B9 F3 AA F8",
@@ -148,29 +151,46 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             public static uint BDHCamSubroutineOffset = 0x000115B0;
 
+            internal static bool SupportsCurrentRom()
+            {
+                try {
+                    new BDHCAMPatchData();
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+
             internal BDHCAMPatchData() {
                 switch (RomInfo.gameFamily) {
                     case GameFamilies.Plat:
                         overlayNumber = 5;
-                        branchString = BDHCamCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-
-                        branchOffset = BDHCamOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                        overlayOffset1 = BDHCamOffsetsDB[nameof(overlayOffset1) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                        overlayOffset2 = BDHCamOffsetsDB[nameof(overlayOffset2) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
+                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchString)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchOffset)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset1)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset2)) {
+                            throw new NotSupportedException();
+                        }
                         break;
                     case GameFamilies.HGSS:
                         overlayNumber = 1;
-                        branchString = BDHCamCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily];
-
-                        branchOffset = BDHCamOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily];
-                        overlayOffset1 = BDHCamOffsetsDB[nameof(overlayOffset1) + "_" + RomInfo.gameFamily];
-                        overlayOffset2 = BDHCamOffsetsDB[nameof(overlayOffset2) + "_" + RomInfo.gameFamily];
+                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily, out branchString)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily, out branchOffset)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily, out overlayOffset1)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily, out overlayOffset2)) {
+                            throw new NotSupportedException();
+                        }
                         break;
+                    default:
+                        throw new NotSupportedException();
                 }
                 branchOffset -= ARM9.address;
                 overlayString1 = BDHCamCodeDB[nameof(overlayString1)];
                 overlayString2 = BDHCamCodeDB[nameof(overlayString2)];
                 subroutine = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_cam");
+                if (subroutine == null) {
+                    throw new NotSupportedException();
+                }
             }
         }
         internal class DynamicHeadersPatchData {

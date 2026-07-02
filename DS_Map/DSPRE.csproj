@@ -520,6 +520,9 @@
     <Compile Include="ScintillaUtils\SearchManager.cs" />
     <Compile Include="ROMFiles\VariableValueTrigger.cs" />
     <Compile Include="SettingsManager.cs" />
+    <Compile Include="SyntheticOverlayOffsetDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="SettingsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
