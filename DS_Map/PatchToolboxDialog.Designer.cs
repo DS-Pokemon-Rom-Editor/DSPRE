@@ -129,9 +129,8 @@ namespace DSPRE
             this.BDHCamPatchTextLBL.Name = "BDHCamPatchTextLBL";
             this.BDHCamPatchTextLBL.Size = new System.Drawing.Size(293, 67);
             this.BDHCamPatchTextLBL.TabIndex = 8;
-            this.BDHCamPatchTextLBL.Text = "Adds Dynamic BDHC Cameras to current ROM.\r\nWith this patch, you have more control" +
-    " over \r\nthe game camera\'s rotation and position.\r\nYou will need Trifindo\'s PDSMS" +
-    "\r\nin order to make BDHCAM Files.\r\n";
+            this.BDHCamPatchTextLBL.Text = "Adds dynamic BDHC cameras, giving more control over rotation and position of the " +
+    "in-game camera.\r\nTrifindo\'s PDSMS is needed to make BDHCAM files.\r\n";
             this.BDHCamPatchTextLBL.UseMnemonic = false;
             // 
             // BDHCamPatchLBL
@@ -355,8 +354,8 @@ namespace DSPRE
             this.repointScrcmdTextLBL.Name = "repointScrcmdTextLBL";
             this.repointScrcmdTextLBL.Size = new System.Drawing.Size(288, 37);
             this.repointScrcmdTextLBL.TabIndex = 27;
-            this.repointScrcmdTextLBL.Text = "Moves the Script Commands Table to a new location in the Synthetic Overlay and re" +
-    "assigns the pointer accordingly.";
+            this.repointScrcmdTextLBL.Text = "Moves the in-game ScrCommands table and count to the Synthetic Overlay. Does not " +
+    "add commands or edit JSON metadata.";
             this.repointScrcmdTextLBL.UseMnemonic = false;
             // 
             // repointScrcmdLBL

@@ -86,7 +86,7 @@ namespace DSPRE
 
             bool bdhCamPatchSupported = BDHCAMPatchData.SupportsCurrentRom();
 
-            // ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS and Platinum
+            // ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS
             if ((RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat)
                 || (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
             {
@@ -499,7 +499,7 @@ namespace DSPRE
                 return;
             }
 
-            if (GetCommandTableOffset() < 0 || !CheckScrcmdLimitExpanded())
+            if (GetCommandTableOffset() < 0 || !CheckScrcmdCommandCountPointerValid())
             {
                 return;
             }
@@ -1185,40 +1185,57 @@ namespace DSPRE
             }
         }
 
-        #region Mikelan's custom commands
+        #region ScrCommands table repoint patch
 
-        private const uint ScrcmdTableDefaultOffset = 0x200;
-        private const int ScrcmdTableLength = 4 * 0x355;
+        private const uint ScrcmdBlockDefaultOffset = 0x200;
+        private const uint ScrcmdOriginalCommandCount = 0x355;
+        private const int ScrcmdOriginalTableLength = (int)(4 * ScrcmdOriginalCommandCount);
+        private const uint ScrcmdCountOffsetInBlock = 0x04;
+        private const uint ScrcmdTableMarkerOffsetInBlock = 0x08;
+        private const uint ScrcmdTableOffsetInBlock = 0x0C;
+        private const uint ScrcmdCountMarker = 0x4E554F43; // "COUN"
+        private const uint ScrcmdTableMarker = 0x4C424154; // "TABL"
 
         private void applyCustomCommands(object sender, EventArgs e)
         {
             int expTableOffset = GetCommandTableOffset();
 
-            if (expTableOffset < 0)
+            if (expTableOffset >= 0)
             {
-                byte[] commandTable = GetOriginalCommandTable();
-                string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
-                using (SyntheticOverlayOffsetDialog offsetDialog = new SyntheticOverlayOffsetDialog(
-                    "Script command table",
-                    expandedPath,
-                    ScrcmdTableDefaultOffset,
-                    commandTable,
-                    synthOverlayLoadAddress))
+                AlreadyApplied();
+                return;
+            }
+
+            byte[] commandTablePayload = BuildCommandTablePayload();
+            string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
+            uint blockOffset;
+            using (SyntheticOverlayOffsetDialog offsetDialog = new SyntheticOverlayOffsetDialog(
+                "Script command table block",
+                expandedPath,
+                ScrcmdBlockDefaultOffset,
+                commandTablePayload,
+                synthOverlayLoadAddress))
+            {
+                if (offsetDialog.ShowDialog(this) != DialogResult.OK)
                 {
-                    if (offsetDialog.ShowDialog(this) != DialogResult.OK)
-                    {
-                        return;
-                    }
-
-                    RepointCommandTable(offsetDialog.SelectedOffset, commandTable);
-                    expTableOffset = (int)offsetDialog.SelectedOffset;
+                    return;
                 }
+
+                blockOffset = offsetDialog.SelectedOffset;
+                RepointCommandTable(blockOffset, commandTablePayload);
             }
 
-            if (ImportCustomCommand(expTableOffset))
-            {
-                MessageBox.Show("Script commands succesfully installed in the ROM", "Done", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            repointScrcmdCB.Visible = true;
+            DisableScrcmdRepointPatch("Already applied");
+
+            MessageBox.Show(
+                "The existing runtime ScrCommands table has been copied to the synthetic overlay and the ARM9 now points to the moved table.\n\n" +
+                "This does not add new commands or update DSPRE's JSON script-command metadata.\n\n" +
+                "The moved block starts at synthetic overlay offset 0x" + blockOffset.ToString("X") + ". It contains a COUN marker, the ScrCommands count at +0x04, a TABL marker at +0x08, and the table itself at +0x0C.\n\n" +
+                "Advanced users can expand the moved table manually by adding handler pointers after the copied entries, placing the handler code in free synthetic-overlay space, and updating the count. The count must be raised to cover the highest command ID added.",
+                "ScrCommands Table Moved",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private int GetCommandTableOffset()
@@ -1238,7 +1255,9 @@ namespace DSPRE
                     if (File.Exists(Filesystem.expArmPath))
                     {
                         long fileLength = new FileInfo(Filesystem.expArmPath).Length;
-                        if ((long)offset + ScrcmdTableLength <= fileLength)
+                        if (offset >= ScrcmdTableOffsetInBlock &&
+                            (long)offset + ScrcmdOriginalTableLength <= fileLength &&
+                            CheckScrcmdBlockMarkers((int)(offset - ScrcmdTableOffsetInBlock)))
                         {
                             return (int)offset; // Table position inside the expanded arm9 file
                         }
@@ -1250,17 +1269,46 @@ namespace DSPRE
             return -1; // No table in expanded arm9 file
         }
 
-        private bool CheckScrcmdLimitExpanded()
+        private bool CheckScrcmdCommandCountPointerValid()
         {
             try
             {
-                int limitOffset = GetCustomScrcmdDBInt("limitOffset");
-                using (ARM9.Reader r = new ARM9.Reader(limitOffset))
+                int tableOffset = GetCommandTableOffset();
+                if (tableOffset < 0)
                 {
-                    return r.ReadUInt32() == 0x053C;
+                    return false;
+                }
+
+                uint expectedCountPointer = synthOverlayLoadAddress + (uint)tableOffset - ScrcmdTableOffsetInBlock + ScrcmdCountOffsetInBlock;
+                using (ARM9.Reader r = new ARM9.Reader(GetCustomScrcmdDBInt("commandCountPointerOffset")))
+                {
+                    return r.ReadUInt32() == expectedCountPointer;
                 }
             } catch {
                 return false;
+            }
+        }
+
+        private bool CheckScrcmdBlockMarkers(int blockOffset)
+        {
+            string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
+            if (!File.Exists(expandedPath))
+            {
+                return false;
+            }
+
+            using (BinaryReader reader = new BinaryReader(new FileStream(expandedPath, FileMode.Open, FileAccess.Read)))
+            {
+                if (blockOffset < 0 || blockOffset + (long)ScrcmdTableOffsetInBlock > reader.BaseStream.Length)
+                {
+                    return false;
+                }
+
+                reader.BaseStream.Position = blockOffset;
+                uint countMarker = reader.ReadUInt32();
+                reader.BaseStream.Position = blockOffset + (long)ScrcmdTableMarkerOffsetInBlock;
+                uint tableMarker = reader.ReadUInt32();
+                return countMarker == ScrcmdCountMarker && tableMarker == ScrcmdTableMarker;
             }
         }
 
@@ -1276,114 +1324,61 @@ namespace DSPRE
             return int.Parse(value);
         }
 
-        private byte[] GetOriginalCommandTable()
+        private byte[] BuildCommandTablePayload()
         {
-            return DSUtils.ReadFromFile(RomInfo.arm9Path, GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdTableLength);
+            byte[] originalTable = DSUtils.ReadFromFile(RomInfo.arm9Path, GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdOriginalTableLength);
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
+            {
+                writer.Write(ScrcmdCountMarker);
+                writer.Write(ReadScrcmdCommandCount());
+                writer.Write(ScrcmdTableMarker);
+                writer.Write(originalTable);
+                return stream.ToArray();
+            }
         }
 
-        private void RepointCommandTable(uint tableOffset, byte[] commandTable)
+        private uint ReadScrcmdCommandCount()
+        {
+            using (ARM9.Reader reader = new ARM9.Reader(GetCustomScrcmdDBInt("commandCountOffset")))
+            {
+                return reader.ReadUInt32();
+            }
+        }
+
+        private void RepointCommandTable(uint blockOffset, byte[] commandTablePayload)
         {
             string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
 
             using (BinaryWriter expArmWriter = new BinaryWriter(new FileStream(expandedPath, FileMode.Open)))
             {
-                expArmWriter.BaseStream.Position = tableOffset;
-                expArmWriter.Write(commandTable);
+                expArmWriter.BaseStream.Position = blockOffset;
+                expArmWriter.Write(commandTablePayload);
             }
 
+            WriteCommandTablePointer(blockOffset + ScrcmdTableOffsetInBlock);
+            WriteCommandCountPointer(blockOffset + ScrcmdCountOffsetInBlock);
+        }
+
+        private void WriteCommandTablePointer(uint tableOffset)
+        {
             using (ARM9.Writer wr = new ARM9.Writer())
-            { // Change both the pointer and the limit
+            {
                 wr.BaseStream.Position = GetCustomScrcmdDBInt("pointerOffset");
                 wr.Write(synthOverlayLoadAddress + tableOffset);
-
-                wr.BaseStream.Position = GetCustomScrcmdDBInt("limitOffset");
-                wr.Write((uint)0x053C);
             }
         }
 
-        private bool ImportCustomCommand(int tableOffset)
+        private void WriteCommandCountPointer(uint countOffset)
         {
-            string expandedPath = RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + "\\0000";
-            int appliedPatches = 0;
-
-            OpenFileDialog of = new OpenFileDialog();
-            of.Filter = "Custom Script Command File (*.scrcmd)|*.scrcmd";
-            if (of.ShowDialog(this) != DialogResult.OK)
+            using (ARM9.Writer wr = new ARM9.Writer())
             {
-                return false;
+                wr.BaseStream.Position = GetCustomScrcmdDBInt("commandCountPointerOffset");
+                wr.Write(synthOverlayLoadAddress + countOffset);
             }
-
-            FileStream expandedFileStream = new FileStream(expandedPath, FileMode.Open);
-            MemoryStream expandedStream = new MemoryStream();
-            expandedFileStream.CopyTo(expandedStream);
-            expandedFileStream.Close();
-
-            using (DSUtils.EasyWriter expandedWriter = new DSUtils.EasyWriter(expandedPath, fmode: FileMode.Open))
-            {
-                using (BinaryReader expandedReader = new BinaryReader(expandedStream))
-                {
-                    try
-                    {
-                        System.Xml.Linq.XDocument xmldoc = System.Xml.Linq.XDocument.Load(new FileStream(of.FileName, FileMode.Open));
-
-                        foreach (var node in xmldoc.Root.Elements("scriptcommand"))
-                        {
-                            ushort commandID = ushort.Parse(node.Attribute("ID").Value, System.Globalization.NumberStyles.HexNumber);
-                            string targetROM = node.Element("ROM").Value;
-                            string targetLang = node.Element("lang").Value;
-                            string commandName = node.Element("name").Value;
-                            string paramCount = node.Element("paramcount").Value;
-                            string paramCode = node.Element("paramcode").Value;
-                            int asmOffset = Int32.Parse(node.Element("asmoffset").Value, System.Globalization.NumberStyles.HexNumber);
-                            string asmCode = node.Element("asmcode").Value.Replace("\n", "").Replace("\t", "").Replace(" ", "");
-
-                            if (RomInfo.gameVersion.ToString().Equals(targetROM) && RomInfo.gameLanguage.ToString().Equals(targetLang))
-                            {
-                                expandedReader.BaseStream.Position = tableOffset + commandID * 4;
-                                if (expandedReader.ReadUInt32() != 0)
-                                {
-                                    DialogResult d;
-                                    d = MessageBox.Show("Script command " + commandID.ToString("X4") + " is already used.\n\n" +
-                                        "Do you really want to overwrite it?",
-                                        "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                                    if (d == DialogResult.No)
-                                    {
-                                        continue;
-                                    }
-                                }
-
-                                expandedWriter.BaseStream.Position = tableOffset + commandID * 4;
-                                expandedWriter.Write((int)(synthOverlayLoadAddress + asmOffset + 1));
-
-                                byte[] asmCodeBytes = DSUtils.StringToByteArray(asmCode);
-                                expandedWriter.BaseStream.Position = asmOffset;
-                                expandedWriter.Write(asmCodeBytes);
-
-                                appliedPatches++;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        MessageBox.Show("Selected command installation file is corrupted.\n\n" +
-                        "Please, download it again or contact its creator.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                        return false;
-                    }
-                }
-            }
-
-            if (appliedPatches == 0)
-            {
-                MessageBox.Show("No command could be installed from this file.\n\n" +
-                "Make sure the command installation file supports your current ROM.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-
-            return true;
         }
 
-        #endregion Mikelan's custom commands
+        #endregion ScrCommands table repoint patch
 
         #endregion Button Actions
 
