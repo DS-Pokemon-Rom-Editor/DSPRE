@@ -1,3 +1,10 @@
+using DSPRE.Avalonia;
+using DSPRE.Avalonia.Gl;
+using DSPRE.Editors;
+using global::Avalonia.Controls;
+using global::Avalonia.Platform.Storage;
+using global::Avalonia.Threading;
+using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,26 +16,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using global::Avalonia.Controls;
-using global::Avalonia.Platform.Storage;
-using global::Avalonia.Threading;
-using DSPRE.Avalonia;
-using DSPRE.Editors;
-using DSPRE.Resources;
-using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
+using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
 
 namespace DSPRE.Avalonia.ViewModels
 {
-    /// <summary>
-    /// Avalonia port of the WinForms <c>ScriptEditor</c> — core scope. Edits a script
-    /// file as three plain-text sections (Scripts / Functions / Actions), mirroring the
-    /// WinForms layout but replacing the three Scintilla controls with plain monospace
-    /// text editors (no syntax highlighting/autocomplete — AvaloniaEdit could add that
-    /// later). Loads via the existing parser and saves by re-compiling the three texts
-    /// through <c>new ScriptFile(scriptLines, functionLines, actionLines, fileID)</c>.
-    /// Read-only when the file failed to parse (unrecognized commands).
-    /// </summary>
     public class ScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         private const int SearchResultLimit = 1000;
@@ -330,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     text = _currentPath != null && SamePath(path, _currentPath)
                         ? ScriptText ?? ""
-                        : File.ReadAllText(path);
+                        : System.IO.File.ReadAllText(path);
                 }
                 catch
                 {
@@ -720,7 +712,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 var roots = SourceRoots().ToList();
                 string root = roots.FirstOrDefault() ?? Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts");
-                Directory.CreateDirectory(root);
+                System.IO.Directory.CreateDirectory(root);
 
                 int id = NextScriptId();
                 string path;
@@ -728,9 +720,9 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     path = Path.Combine(root, id.ToString("D4") + ".rotom");
                     id++;
-                } while (File.Exists(path));
+                } while (System.IO.File.Exists(path));
 
-                File.WriteAllText(path, "script Main #0:\n\tEnd\n");
+                System.IO.File.WriteAllText(path, "script Main #0:\n\tEnd\n");
                 RefreshScriptList();
                 SelectedScriptIndex = _sourceFiles.FindIndex(p => SamePath(p, path));
                 StatusText = "Added " + DisplayPath(path) + ".";
@@ -751,7 +743,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             try
             {
-                ScriptText = File.ReadAllText(path);
+                ScriptText = System.IO.File.ReadAllText(path);
                 SaveSourceOnly(true);
                 StatusText = "Imported into " + DisplayPath(_currentPath) + ".";
             }
@@ -773,7 +765,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             try
             {
-                File.WriteAllText(path, ScriptText ?? "");
+                System.IO.File.WriteAllText(path, ScriptText ?? "");
                 StatusText = "Exported " + DisplayPath(_currentPath) + ".";
             }
             catch (Exception ex)
@@ -799,21 +791,21 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void EnsureDspreSourceRoot()
         {
-            Directory.CreateDirectory(Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts"));
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts"));
         }
 
         private bool LegacyScriptsExist()
             => SourceRoots().Any(root =>
-                Directory.Exists(root)
-                && Directory.EnumerateFiles(root, "*.script", SearchOption.AllDirectories).Any());
+                System.IO.Directory.Exists(root)
+                && System.IO.Directory.EnumerateFiles(root, "*.script", System.IO.SearchOption.AllDirectories).Any());
 
         // Minimal rotom.toml parsing — avoids a TOML dependency but only handles a flat source_roots = ["..."] array. Replace with Tomlyn if the config schema grows.
         private IEnumerable<string> SourceRoots()
         {
-            string configPath = Path.Combine(RotomTool.ProjectRoot, "rotom.toml");
-            if (File.Exists(configPath))
+            string configPath = System.IO.Path.Combine(RotomTool.ProjectRoot, "rotom.toml");
+            if (System.IO.File.Exists(configPath))
             {
-                string config = File.ReadAllText(configPath);
+                string config = System.IO.File.ReadAllText(configPath);
                 var match = Regex.Match(config, @"source_roots\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
                 if (match.Success)
                 {
@@ -835,7 +827,7 @@ namespace DSPRE.Avalonia.ViewModels
                 Path.Combine(RotomTool.ProjectRoot, ".rotom", "scripts")
             })
             {
-                if (Directory.Exists(path)) yield return path;
+                if (System.IO.Directory.Exists(path)) yield return path;
             }
         }
 
@@ -846,8 +838,8 @@ namespace DSPRE.Avalonia.ViewModels
 
             foreach (string root in SourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (!Directory.Exists(root)) continue;
-                var files = Directory
+                if (!System.IO.Directory.Exists(root)) continue;
+                var files = System.IO.Directory
                     .EnumerateFiles(root, "*", SearchOption.AllDirectories)
                     .Where(path =>
                     {
@@ -893,7 +885,7 @@ namespace DSPRE.Avalonia.ViewModels
             string oldPath = _currentPath;
             _currentPath = _sourceFiles[_selectedIndex];
             _suppress = true;
-            ScriptText = File.ReadAllText(_currentPath);
+            ScriptText = System.IO.File.ReadAllText(_currentPath);
             _suppress = false;
             SetClean();
             if (_diagnosticsAreLive && (string.IsNullOrWhiteSpace(oldPath) || !SamePath(oldPath, _currentPath)))
@@ -913,7 +905,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void SaveSourceOnly(bool showStatus)
         {
             if (_currentPath == null) return;
-            File.WriteAllText(_currentPath, ScriptText ?? "");
+            System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
             SetClean();
             if (showStatus) StatusText = "Saved " + DisplayPath(_currentPath) + ".";
             _ = SendCurrentDocumentSavedToLsp();
@@ -1009,7 +1001,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (string.IsNullOrWhiteSpace(path)) return "";
             if (_currentPath != null && SamePath(path, _currentPath)) return ScriptText ?? "";
-            try { return File.Exists(path) ? File.ReadAllText(path) : ""; }
+            try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : ""; }
             catch { return ""; }
         }
 

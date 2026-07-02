@@ -1,10 +1,12 @@
 ﻿using Newtonsoft.Json;
+using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
 
 namespace DSPRE
 {
@@ -28,6 +30,7 @@ namespace DSPRE
         public bool automaticallyUpdateDBs { get; set; } = true;
         public bool useDecompNames { get; set; } = false;
         public bool convertLegacyText { get; set; } = true;
+        public string rotomEditorTheme { get; set; } = "OneDark";
 
         // 3D-view camera behaviour (mouse). Speeds are multipliers (1.0 = default); invert flags flip an axis.
         public float camPanSpeed { get; set; } = 1.0f;
@@ -49,9 +52,9 @@ namespace DSPRE
         public static void Load()
         {
             AppLogger.Info("Loading app settings");
-            if (File.Exists(SettingsFile))
+            if (System.IO.File.Exists(SettingsFile))
             {
-                string json = File.ReadAllText(SettingsFile);
+                string json = System.IO.File.ReadAllText(SettingsFile);
                 Settings = JsonConvert.DeserializeObject<DspreSettings>(json);
             }
             else
@@ -64,7 +67,7 @@ namespace DSPRE
         public static void Save()
         {
             string json = JsonConvert.SerializeObject(Settings, Formatting.Indented);
-            File.WriteAllText(SettingsFile, json);
+            System.IO.File.WriteAllText(SettingsFile, json);
         }
     }
 }

@@ -30,23 +30,12 @@ namespace DSPRE.Avalonia.Gl
         public float MapMinX, MapMaxX, MapMinY, MapMaxY, MapMinZ, MapMaxZ;
         public bool HasMapBounds;
 
-        // Debug gizmo lines (8 floats/vertex, normalized space): per-cell the expected 32×32 tile-cell
-        // boundary (cyan) and the actual map-geometry extent (yellow), so the user can SEE whether a map
-        // fills its 32×32 cell or is partial/misplaced.
         public float[] GizmoMesh;
         public int GizmoVertexCount;
 
-        // For stitched matrix scenes: the authored footprint of a single map cell, in raw space.
-        // Tile (tx,ty in 0..32) of matrix cell (cx,cy) is at raw
-        //   x = CellBaseX + (cx + tx/32) * CellStrideX,  z = CellBaseZ + (cy + ty/32) * CellStrideZ.
-        // (Kept as a representative average; prefer per-cell CellPlacements for exact placement.)
         public float CellBaseX, CellBaseZ, CellStrideX, CellStrideZ;
         public bool IsMatrix;
 
-        // Per-matrix-cell placement: each map is laid out CONTINUOUSLY (cumulative column widths /
-        // row heights) and min-aligned so its actual geometry box tiles edge-to-edge with neighbours.
-        // OriginX/Z is the map's min-corner (its tile-(0,0)) in raw space; Width/Height is its real
-        // footprint. Event tile (tx,ty) of cell (cx,cy) sits at OriginX + (tx/32)*Width, etc.
         public struct CellPlacement { public float OriginX, OriginZ, Width, Height; }
         public Dictionary<long, CellPlacement> CellPlacements;
         public Dictionary<long, BdhcFile> CellBdhc;
@@ -91,20 +80,18 @@ namespace DSPRE.Avalonia.Gl
             if (!inside && bestD == float.MaxValue) return false;
             var bp = CellPlacements[bestKey];
             matX = (int)(bestKey >> 32); matY = (int)(uint)bestKey;
-            tileFx = (rawX - bp.OriginX) / NsbmdGeometry.TileSize;   // fixed 0.25/tile from the map's tile-(0,0) (its geometry-min)
-            tileFy = (rawZ - bp.OriginZ) / NsbmdGeometry.TileSize;
+            tileFx = bp.Width > 0 ? (rawX - bp.OriginX) / bp.Width * 32f : 0f;
+            tileFy = bp.Height > 0 ? (rawZ - bp.OriginZ) / bp.Height * 32f : 0f;
             return true;
         }
 
-        // Per-tile top-surface height of the MAP geometry (raw space), so events can sit on the
-        // floor rather than the scene's lowest point. NaN cells fall back to DefaultSurfaceY.
         public float[] HeightGrid;
         public Dictionary<int, int>[] HeightBuckets;
         public int HCols, HRows;
         public float HOriginX, HOriginZ, HTileX, HTileZ, DefaultSurfaceY;
         public const float HeightSnap = 4f;
 
-        /// <summary>Top-of-floor Y (raw space) under a point, or the fallback when off-grid.</summary>
+        /// <summary>Estimated floor Y (raw space) at a point, or the fallback when off-grid.</summary>
         public float SurfaceY(float x, float z)
         {
             if (HeightGrid == null || HTileX <= 0 || HTileZ <= 0) return DefaultSurfaceY;
@@ -198,7 +185,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (map != null)
             {
-                Accumulate(map, null, offset, result, byMat);
+                Accumulate(map, MapVertexScale(map), offset, result, byMat);
                 offset += Math.Max(1, map.Materials.Count);
                 // Capture the map-only raw bounds (before buildings are added) for the overlay.
                 if (ComputeRawBounds(byMat, out float mnx, out float mxx, out float mny, out float mxy, out float mnz, out float mxz))
@@ -228,16 +215,13 @@ namespace DSPRE.Avalonia.Gl
             public NSBMDModel Map;
             public IReadOnlyList<(NSBMDModel model, float[] transform)> Buildings;
             public int CellX, CellY;
-            public bool Indoor;   // INDOOR maps are authored offset (tile-0 ≈ geometry-min); min-align them to the cell corner
+            public BdhcFile Bdhc;
+            public float AltitudeY;
         }
 
-        // A map is a 32×32 tile grid. One tile is 256/1024 raw units in the map-model coordinate space
-        // (the same factor the building-placement transform uses: sf*tf = (ms/1024)*(256/ms) = 0.25),
-        // so a full map cell spans exactly MapStride. These are fixed — they do NOT depend on how much
-        // geometry a given map has, which is what lets under-filled maps still sit in the right grid cell.
         public const int MapTiles = 32;
-        public const float TileSize = 256f / 1024f;        // 0.25
-        public const float MapStride = MapTiles * TileSize; // 8.0
+        public const float TileSize = 256f / 1024f;
+        public const float MapStride = MapTiles * TileSize;
 
         private sealed class CellBuild
         {
@@ -245,40 +229,26 @@ namespace DSPRE.Avalonia.Gl
             public Dictionary<int, List<float>> MapMats;
             public Dictionary<int, List<float>> BldMats;
             public float MinX, MinZ, FpX, FpZ; public bool HasBounds;
-            public float OffX, OffZ;        // geometry placement offset (added to raw verts)
-            public float ColW, RowH;        // allotted cell width/height (max in column/row)
-            public bool Indoor;
+            public float OffX, OffY, OffZ;
+            public float ColW, RowH;
+            public BdhcFile Bdhc;
+            public float AltitudeY;
         }
 
-        /// <summary>
-        /// Builds a stitched scene from several matrix cells: every cell's map (and its buildings)
-        /// is translated to its grid position so the whole matrix is visible at once. The per-cell
-        /// stride is the MEDIAN map footprint (robust to maps whose decorative borders overrun the
-        /// 32-tile play area, which otherwise leaves gaps). A per-tile top-surface height grid is
-        /// captured so callers can drop events onto the floor. Centred/scaled once at the end.
-        /// </summary>
         /// <summary>How matrix cells are laid out in the stitched scene.</summary>
         public enum MatrixStitchMode
         {
-            /// <summary>Variable-size: each column/row sized to its widest/tallest map's geometry, maps min-aligned
-            /// so neighbours' actual geometry touches (handles decorative overhang/underfill, but a strict grid
-            /// can't make ALL cells touch when sizes vary within a column/row).</summary>
             Continuous,
-            /// <summary>DS-true fixed 32-tile grid: every cell is exactly MapStride apart; underfilled maps show
-            /// real gaps and overhang overlaps as authored. Tiles always map to the standard 0.25-unit size.</summary>
             Grid,
         }
 
         public static NsbmdRenderModel BuildMatrixScene(IReadOnlyList<MatrixCellGeometry> cells,
             MatrixStitchMode mode = MatrixStitchMode.Continuous)
         {
-            bool grid = mode == MatrixStitchMode.Grid;
             var result = new NsbmdRenderModel { IsMatrix = true };
             int offset = 0;
 
-            // Phase 1 — interpret each cell once into temp buffers; collect map footprints + mins.
             var stored = new List<CellBuild>();
-            var fxList = new List<float>(); var fzList = new List<float>();
             int minCx = int.MaxValue, minCy = int.MaxValue, maxCx = int.MinValue, maxCy = int.MinValue;
 
             foreach (var cell in cells)
@@ -287,12 +257,11 @@ namespace DSPRE.Avalonia.Gl
                 float cMinX = 0, cMinZ = 0, cFpX = 0, cFpZ = 0; bool cHas = false;
                 if (cell.Map != null)
                 {
-                    Accumulate(cell.Map, null, offset, result, mapMats);
+                    Accumulate(cell.Map, MapVertexScale(cell.Map), offset, result, mapMats);
                     offset += Math.Max(1, cell.Map.Materials.Count);
                     if (ComputeRawBounds(mapMats, out float mnx, out float mxx, out float _, out float _, out float mnz, out float mxz))
                     {
                         cFpX = mxx - mnx; cFpZ = mxz - mnz;
-                        fxList.Add(cFpX); fzList.Add(cFpZ);
                         cMinX = mnx; cMinZ = mnz; cHas = true;
                     }
                 }
@@ -304,46 +273,15 @@ namespace DSPRE.Avalonia.Gl
                         Accumulate(b.model, b.transform, offset, result, bldMats);
                         offset += Math.Max(1, b.model.Materials.Count);
                     }
-                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Indoor = cell.Indoor });
+                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Bdhc = cell.Bdhc, AltitudeY = cell.AltitudeY });
                 minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
                 minCy = Math.Min(minCy, cell.CellY); maxCy = Math.Max(maxCy, cell.CellY);
             }
-            // Maps come in DIFFERENT real sizes (decorative overhang, under-filled play areas), so a single
-            // uniform stride leaves them spread apart with gaps. Instead lay them out CONTINUOUSLY: each
-            // matrix column gets the width of its widest map, each row the height of its tallest, and offsets
-            // accumulate so consecutive maps' actual geometry boxes tile edge-to-edge (touch, never overlap).
-            // Grid mode forces every column/row to the fixed 32-tile stride; Continuous sizes by actual geometry.
-            float fallback = grid ? MapStride : Math.Max(Mode(fxList), Mode(fzList));
-            if (fallback <= 0) fallback = MapStride;
-
-            var colW = new Dictionary<int, float>();
-            var rowH = new Dictionary<int, float>();
-            if (!grid)
-                foreach (var cb in stored)
-                {
-                    if (!cb.HasBounds) continue;
-                    if (!colW.TryGetValue(cb.CellX, out float w) || cb.FpX > w) colW[cb.CellX] = cb.FpX;
-                    if (!rowH.TryGetValue(cb.CellY, out float h) || cb.FpZ > h) rowH[cb.CellY] = cb.FpZ;
-                }
-            // (Grid mode leaves colW/rowH empty → the colX/rowZ accumulators below use fallback = MapStride.)
-            // Cumulative column-start X / row-start Z (in matrix order), filling empty cols/rows with fallback.
             var colX = new Dictionary<int, float>();
-            float accX = 0f;
-            for (int cx = minCx; cx <= maxCx; cx++)
-            {
-                colX[cx] = accX;
-                accX += colW.TryGetValue(cx, out float w) ? w : fallback;
-            }
+            for (int cx = minCx; cx <= maxCx; cx++) colX[cx] = (cx - minCx) * MapStride;
             var rowZ = new Dictionary<int, float>();
-            float accZ = 0f;
-            for (int cy = minCy; cy <= maxCy; cy++)
-            {
-                rowZ[cy] = accZ;
-                accZ += rowH.TryGetValue(cy, out float h) ? h : fallback;
-            }
+            for (int cy = minCy; cy <= maxCy; cy++) rowZ[cy] = (cy - minCy) * MapStride;
 
-            // Place each map MIN-ALIGNED to its column/row start so its geometry box's min corner (its
-            // authored tile-(0,0)) lands exactly on the grid line shared with the previous neighbour.
             var byMat = new Dictionary<int, List<float>>();
             var placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
             var cellBdhc = new Dictionary<long, BdhcFile>();
@@ -351,31 +289,17 @@ namespace DSPRE.Avalonia.Gl
             foreach (var cb in stored)
             {
                 float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
-                cb.ColW = colW.TryGetValue(cb.CellX, out float cw) ? cw : fallback;
-                cb.RowH = rowH.TryGetValue(cb.CellY, out float ch) ? ch : fallback;
-                // GRID: place the map's AUTHORED ORIGIN (tile-(0,0) at raw 0) on the cell corner, so every
-                // map's play area lands on the shared grid line and aligns with its events — regardless of
-                // decorative overhang. (Min-aligning here would shove each map right/down by its overhang,
-                // the "greedy" misalignment that grows with overhang size.)
-                // CONTINUOUS: min-align so each map's actual geometry box tiles edge-to-edge with neighbours.
-                // OffX = the cell corner = the map's tile-(0,0) anchor, where buildings + events sit.
-                cb.OffX = grid ? ox : (ox - cb.MinX);
-                cb.OffZ = grid ? oz : (oz - cb.MinZ);
-                // The map model is authored CENTERED on its origin (raw 0), so its play area spans [−MapStride/2, +MapStride/2]
-                // and tile-(0,0) is at the NW corner = raw −MapStride/2 (confirmed: exterior floors log as X[−4,+4]). Placing
-                // it at OffX puts tile-(0,0) at OffX − MapStride/2. Buildings are authored in the same centered space, so
-                // MergeOffset(OffX) already lands them on the floor (exterior confirmed correct).
-                MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffZ);
-                MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffZ);
-                // Event anchor = the map's tile-(0,0) = OffX − MapStride/2 (the centered play area's NW corner, where the
-                // buildings/floor grid start). Events step at the FIXED TileSize (16 units → 0.25) per tile. (The old anchor
-                // at OffX put every event half a block SE — small on big outdoor floors, glaring on interiors.)
-                float t0x = cb.OffX - MapStride * 0.5f, t0z = cb.OffZ - MapStride * 0.5f;
-                placements[NsbmdRenderModel.CellKey(cb.CellX, cb.CellY)] = new NsbmdRenderModel.CellPlacement
+                cb.ColW = MapStride; cb.RowH = MapStride;
+                cb.OffX = ox + MapStride / 2f; cb.OffY = cb.AltitudeY; cb.OffZ = oz + MapStride / 2f;
+                MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
+                MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
+                long key = NsbmdRenderModel.CellKey(cb.CellX, cb.CellY);
+                placements[key] = new NsbmdRenderModel.CellPlacement
                 {
-                    OriginX = t0x, OriginZ = t0z,
-                    Width  = cb.HasBounds ? cb.FpX : cb.ColW,
-                    Height = cb.HasBounds ? cb.FpZ : cb.RowH,
+                    OriginX = ox,
+                    OriginZ = oz,
+                    Width = MapStride,
+                    Height = MapStride,
                 };
                 if (cb.Bdhc != null) cellBdhc[key] = cb.Bdhc;
                 if (cb.AltitudeY != 0f) cellAltitude[key] = cb.AltitudeY;
@@ -390,22 +314,18 @@ namespace DSPRE.Avalonia.Gl
                 result.MapMaxY = wmxy; result.MapMinZ = wmnz; result.MapMaxZ = wmxz;
                 result.HasMapBounds = true;
             }
-            // Representative stride (average column/row size) kept for legacy callers; exact placement uses CellPlacements.
-            float repStride = Math.Max(accX / Math.Max(1, maxCx - minCx + 1), accZ / Math.Max(1, maxCy - minCy + 1));
             result.CellBaseX = 0f; result.CellBaseZ = 0f;
-            result.CellStrideX = repStride; result.CellStrideZ = repStride;
+            result.CellStrideX = MapStride; result.CellStrideZ = MapStride;
 
             BuildHeightGrid(result, stored, minCx, minCy, maxCx, maxCy);
 
             Finalize(result, byMat);
-            NormalizePositions(result);     // sets Cx/Cy/Cz/Scale used by ToNormalized
+            NormalizePositions(result);
             BuildGizmos(result, stored);
             return result;
         }
 
-        /// <summary>Per-tile top-surface (max Y) of the MAP geometry, for dropping events on the floor.
-        /// A spatial hash over the scene's actual world bounds (variable-size maps mean tiles no longer
-        /// align to a uniform stride, but SurfaceY only needs a fine bucket grid to look up max-Y).</summary>
+        /// <summary>Per-tile modal Y of the map geometry, snapped to one tile.</summary>
         private static void BuildHeightGrid(NsbmdRenderModel result, List<CellBuild> stored,
             int minCx, int minCy, int maxCx, int maxCy)
         {
@@ -429,26 +349,51 @@ namespace DSPRE.Avalonia.Gl
                 foreach (var list in cb.MapMats.Values)
                     for (int i = 0; i + 2 < list.Count; i += 8)
                     {
-                        float x = list[i] + ox, y = list[i + 1], z = list[i + 2] + oz;
+                        float x = list[i] + ox, y = list[i + 1] + cb.OffY, z = list[i + 2] + oz;
                         int c = (int)Math.Floor((x - originX) / tileX);
                         int r = (int)Math.Floor((z - originZ) / tileZ);
                         if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
                         int idx = r * cols + c;
-                        if (float.IsNaN(grid[idx]) || y > grid[idx]) grid[idx] = y;
+                        int key = (int)Math.Round(y * snap);
+                        if (buckets[idx] == null) buckets[idx] = new Dictionary<int, int>();
+                        buckets[idx][key] = buckets[idx].TryGetValue(key, out var n) ? n + 1 : 1;
+                        globalCounts[key] = globalCounts.TryGetValue(key, out n) ? n + 1 : 1;
+                    }
+            }
+
+            int defaultKey = (int)Math.Round((result.HasMapBounds ? result.MapMinY : 0f) * snap);
+            int defaultCount = -1;
+            foreach (var kv in globalCounts)
+            {
+                if (kv.Value > defaultCount || (kv.Value == defaultCount && kv.Key < defaultKey))
+                {
+                    defaultKey = kv.Key;
+                    defaultCount = kv.Value;
                 }
             }
             float def = defaultKey / snap;
 
-            // Representative floor (median of sampled tiles) as the fallback — NOT the global max,
-            // which would launch events on un-sampled tiles up to the tallest geometry in the scene.
-            var samples = new List<float>();
-            foreach (var g in grid) if (!float.IsNaN(g)) samples.Add(g);
-            float def = samples.Count > 0 ? Median(samples) : (result.HasMapBounds ? result.MapMinY : 0f);
+            for (int i = 0; i < buckets.Length; i++)
+            {
+                var bucket = buckets[i];
+                if (bucket == null || bucket.Count == 0) continue;
+                int bestKey = defaultKey, bestCount = -1, bestDist = int.MaxValue;
+                foreach (var kv in bucket)
+                {
+                    int dist = Math.Abs(kv.Key - defaultKey);
+                    if (kv.Value > bestCount ||
+                        (kv.Value == bestCount && (dist < bestDist || (dist == bestDist && kv.Key < bestKey))))
+                    {
+                        bestKey = kv.Key;
+                        bestCount = kv.Value;
+                        bestDist = dist;
+                    }
+                }
+                grid[i] = bestKey / snap;
+            }
 
-            // Fill empty tiles (void/edge gaps) by spreading from sampled neighbours so events there
-            // still land near the floor. Skipped for very large grids (the map editor doesn't query it).
             if ((long)cols * rows <= 200000)
-                for (int pass = 0; pass < 24; pass++)
+                for (int pass = 0; pass < 12; pass++)
                 {
                     bool changed = false;
                     var src = (float[])grid.Clone();
@@ -457,24 +402,56 @@ namespace DSPRE.Avalonia.Gl
                         {
                             int idx = r * cols + c;
                             if (!float.IsNaN(src[idx])) continue;
-                            float sum = 0; int n = 0;
-                            if (c > 0 && !float.IsNaN(src[idx - 1])) { sum += src[idx - 1]; n++; }
-                            if (c < cols - 1 && !float.IsNaN(src[idx + 1])) { sum += src[idx + 1]; n++; }
-                            if (r > 0 && !float.IsNaN(src[idx - cols])) { sum += src[idx - cols]; n++; }
-                            if (r < rows - 1 && !float.IsNaN(src[idx + cols])) { sum += src[idx + cols]; n++; }
-                            if (n > 0) { grid[idx] = sum / n; changed = true; }
+                            var seen = new Dictionary<int, int>(4);
+                            if (c > 0 && !float.IsNaN(src[idx - 1]))
+                            {
+                                int key = (int)Math.Round(src[idx - 1] * snap);
+                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                            }
+                            if (c < cols - 1 && !float.IsNaN(src[idx + 1]))
+                            {
+                                int key = (int)Math.Round(src[idx + 1] * snap);
+                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                            }
+                            if (r > 0 && !float.IsNaN(src[idx - cols]))
+                            {
+                                int key = (int)Math.Round(src[idx - cols] * snap);
+                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                            }
+                            if (r < rows - 1 && !float.IsNaN(src[idx + cols]))
+                            {
+                                int key = (int)Math.Round(src[idx + cols] * snap);
+                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                            }
+                            if (seen.Count > 0)
+                            {
+                                int bestKey = defaultKey, bestCount = -1, bestDist = int.MaxValue;
+                                foreach (var kv in seen)
+                                {
+                                    int dist = Math.Abs(kv.Key - defaultKey);
+                                    if (kv.Value > bestCount ||
+                                        (kv.Value == bestCount && (dist < bestDist || (dist == bestDist && kv.Key < bestKey))))
+                                    {
+                                        bestKey = kv.Key;
+                                        bestCount = kv.Value;
+                                        bestDist = dist;
+                                    }
+                                }
+                                grid[idx] = bestKey / snap;
+                                changed = true;
+                            }
                         }
                     if (!changed) break;
                 }
 
-            result.HeightGrid = grid; result.HCols = cols; result.HRows = rows;
+            result.HeightGrid = grid; result.HeightBuckets = buckets; result.HCols = cols; result.HRows = rows;
             result.HOriginX = originX; result.HOriginZ = originZ; result.HTileX = tileX; result.HTileZ = tileZ;
             result.DefaultSurfaceY = def;
         }
 
-        /// <summary>Builds debug gizmo lines: per cell, the allotted cell boundary (cyan) and the actual
-        /// map-geometry extent (yellow). Both share the min corner now that maps are corner-aligned, so a
-        /// smaller yellow inside cyan = a genuinely under-filled map; matching = a full map. Normalized space.</summary>
+        /// <summary>Builds debug gizmo lines: per cell, the 32-tile cell boundary (cyan) and the actual
+        /// map-geometry extent (yellow). Both share the min corner (block corner = model geometry-min),
+        /// so a smaller yellow inside cyan = a genuinely under-filled map; matching = a full map.</summary>
         private static void BuildGizmos(NsbmdRenderModel m, List<CellBuild> stored)
         {
             if (stored.Count == 0) return;
@@ -485,13 +462,15 @@ namespace DSPRE.Avalonia.Gl
 
             foreach (var cb in stored)
             {
-                // The min corner (column/row start) shared by both boxes.
-                float x0 = cb.OffX + cb.MinX, z0 = cb.OffZ + cb.MinZ;
-                // Allotted cell boundary (cyan): the continuous grid slot this map occupies.
-                Rect(v, m, x0, z0, x0 + cb.ColW, z0 + cb.RowH, y, lw, 0.1f, 0.9f, 1.0f);
-                // Actual geometry extent (yellow), if measured.
+                // Cell boundary (cyan): block corner → corner (OffX is the block CENTER).
+                float cx0 = cb.OffX - MapStride / 2f, cz0 = cb.OffZ - MapStride / 2f;
+                Rect(v, m, cx0, cz0, cx0 + cb.ColW, cz0 + cb.RowH, y, lw, 0.1f, 0.9f, 1.0f);
+                // Actual geometry extent (yellow): model-space min/max offset by the block center.
                 if (cb.HasBounds)
-                    Rect(v, m, x0, z0, x0 + cb.FpX, z0 + cb.FpZ, y, lw, 1.0f, 0.85f, 0.1f);
+                {
+                    float gx0 = cb.OffX + cb.MinX, gz0 = cb.OffZ + cb.MinZ;
+                    Rect(v, m, gx0, gz0, gx0 + cb.FpX, gz0 + cb.FpZ, y, lw, 1.0f, 0.85f, 0.1f);
+                }
             }
 
             m.GizmoMesh = v.ToArray();
@@ -519,46 +498,7 @@ namespace DSPRE.Avalonia.Gl
             Vtx(a); Vtx(c); Vtx(d);
         }
 
-        private static float Median(List<float> values)
-        {
-            if (values == null || values.Count == 0) return 0f;
-            var s = new List<float>(values); s.Sort();
-            int n = s.Count;
-            return (n & 1) == 1 ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) * 0.5f;
-        }
-
-        /// <summary>The most common value (within ±2% bins), returned as the average of that cluster.
-        /// Robust to under-/over-sized outliers — the "standard" map footprint wins.</summary>
-        private static float Mode(List<float> values)
-        {
-            if (values == null || values.Count == 0) return 0f;
-            float best = values[0]; int bestCount = -1;
-            foreach (var v in values)
-            {
-                if (v <= 0) continue;
-                float lo = v * 0.98f, hi = v * 1.02f, sum = 0f; int count = 0;
-                foreach (var u in values) if (u >= lo && u <= hi) { sum += u; count++; }
-                if (count > bestCount) { bestCount = count; best = sum / count; }
-            }
-            return best;
-        }
-
-        /// <summary>The geometry min of the cell whose footprint best matches the stride (a standard,
-        /// full map) — i.e. the authored tile-(0,0) origin shared by the maps.</summary>
-        private static float OriginOfStandardCell(List<CellBuild> stored, float stride, bool xAxis)
-        {
-            float bestOrigin = 0f, bestDiff = float.MaxValue; bool found = false;
-            foreach (var cb in stored)
-            {
-                if (!cb.HasBounds) continue;
-                float fp = xAxis ? cb.FpX : cb.FpZ;
-                float diff = Math.Abs(fp - stride);
-                if (diff < bestDiff) { bestDiff = diff; bestOrigin = xAxis ? cb.MinX : cb.MinZ; found = true; }
-            }
-            return found ? bestOrigin : 0f;
-        }
-
-        private static void MergeOffset(Dictionary<int, List<float>> src, Dictionary<int, List<float>> dst, float ox, float oz)
+        private static void MergeOffset(Dictionary<int, List<float>> src, Dictionary<int, List<float>> dst, float ox, float oy, float oz)
         {
             foreach (var kv in src)
             {
@@ -566,7 +506,7 @@ namespace DSPRE.Avalonia.Gl
                 var s = kv.Value;
                 for (int i = 0; i + 7 < s.Count; i += 8)
                 {
-                    list.Add(s[i] + ox); list.Add(s[i + 1]); list.Add(s[i + 2] + oz);
+                    list.Add(s[i] + ox); list.Add(s[i + 1] + oy); list.Add(s[i + 2] + oz);
                     list.Add(s[i + 3]); list.Add(s[i + 4]);
                     list.Add(s[i + 5]); list.Add(s[i + 6]); list.Add(s[i + 7]);
                 }
@@ -695,76 +635,76 @@ namespace DSPRE.Avalonia.Gl
                         case 0x19: LoadOrMult(poly, ref idx, cur, 12, false); break;
                         case 0x1a: LoadOrMult(poly, ref idx, cur, 9, false); break;
                         case 0x1b:
-                        {
-                            float sx = S32(poly, ref idx) / 4096f / modelScale;
-                            float sy = S32(poly, ref idx) / 4096f / modelScale;
-                            float sz = S32(poly, ref idx) / 4096f / modelScale;
-                            cur.Scale(sx, sy, sz); break;
-                        }
+                            {
+                                float sx = S32(poly, ref idx) / 4096f / modelScale;
+                                float sy = S32(poly, ref idx) / 4096f / modelScale;
+                                float sz = S32(poly, ref idx) / 4096f / modelScale;
+                                cur.Scale(sx, sy, sz); break;
+                            }
                         case 0x1c:
-                        {
-                            float tx = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
-                            float ty = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
-                            float tz = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
-                            cur.translate(tx, ty, tz); break;
-                        }
+                            {
+                                float tx = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
+                                float ty = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
+                                float tz = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
+                                cur.translate(tx, ty, tz); break;
+                            }
                         case 0x20: idx += 4; break;   // COLOR (per-vertex colour ignored)
                         case 0x21: idx += 4; break;   // NORMAL (lighting deferred)
                         case 0x22:                    // TEXCOORD
-                        {
-                            int p = S32(poly, ref idx);
-                            int s = NSBMDGlRenderer.Sign(p & 0xffff, 0x10);
-                            int tt = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10);
-                            u = (scaleS / texW) * (s / 16f) / (flipS + 1);
-                            // GL samples textures bottom-up vs the DS top-down convention, so V is flipped.
-                            w = (scaleT / texH) * (tt / 16f) / (flipT + 1);
-                            break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                int s = NSBMDGlRenderer.Sign(p & 0xffff, 0x10);
+                                int tt = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10);
+                                u = (scaleS / texW) * (s / 16f) / (flipS + 1);
+                                // GL samples textures bottom-up vs the DS top-down convention, so V is flipped.
+                                w = (scaleT / texH) * (tt / 16f) / (flipT + 1);
+                                break;
+                            }
                         case 0x23:
-                        {
-                            int p0 = S32(poly, ref idx), p1 = S32(poly, ref idx);
-                            v[0] = NSBMDGlRenderer.Sign(p0 & 0xffff, 0x10) / 4096f;
-                            v[1] = NSBMDGlRenderer.Sign((p0 >> 16) & 0xffff, 0x10) / 4096f;
-                            v[2] = NSBMDGlRenderer.Sign(p1 & 0xffff, 0x10) / 4096f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p0 = S32(poly, ref idx), p1 = S32(poly, ref idx);
+                                v[0] = NSBMDGlRenderer.Sign(p0 & 0xffff, 0x10) / 4096f;
+                                v[1] = NSBMDGlRenderer.Sign((p0 >> 16) & 0xffff, 0x10) / 4096f;
+                                v[2] = NSBMDGlRenderer.Sign(p1 & 0xffff, 0x10) / 4096f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x24:
-                        {
-                            int p = S32(poly, ref idx);
-                            v[0] = NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 64f;
-                            v[1] = NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 64f;
-                            v[2] = NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 64f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                v[0] = NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 64f;
+                                v[1] = NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 64f;
+                                v[2] = NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 64f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x25:
-                        {
-                            int p = S32(poly, ref idx);
-                            v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
-                            v[1] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
+                                v[1] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x26:
-                        {
-                            int p = S32(poly, ref idx);
-                            v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
-                            v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
+                                v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x27:
-                        {
-                            int p = S32(poly, ref idx);
-                            v[1] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
-                            v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                v[1] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
+                                v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x28:
-                        {
-                            int p = S32(poly, ref idx);
-                            v[0] += NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 4096f;
-                            v[1] += NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 4096f;
-                            v[2] += NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 4096f;
-                            Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
-                        }
+                            {
+                                int p = S32(poly, ref idx);
+                                v[0] += NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 4096f;
+                                v[1] += NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 4096f;
+                                v[2] += NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 4096f;
+                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                            }
                         case 0x40: primType = S32(poly, ref idx); prim.Clear(); break;
                         case 0x41: Tessellate(prim, primType, outVerts, cr, cg, cb); prim.Clear(); break;
 

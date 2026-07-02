@@ -1,14 +1,17 @@
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using DSPRE.Avalonia.Data;
+using DSPRE.Avalonia.Gl;
+using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using DSPRE.Avalonia.Data;
-using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
+using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
+using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
 namespace DSPRE.Avalonia.ViewModels
 {
@@ -85,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // Gender-selected (separate display) + explicit per-gender (unified side-by-side display).
-        public Bitmap EnemySprite  => Front(ShowFemale);
+        public Bitmap EnemySprite => Front(ShowFemale);
         public Bitmap PlayerSprite => Back(ShowFemale);
         public Bitmap EnemySpriteM => Front(false);
         public Bitmap PlayerSpriteM => Back(false);
@@ -102,28 +105,28 @@ namespace DSPRE.Avalonia.ViewModels
         private bool HeightsActive => _hasHeights || (_formMode && _hasFormHeights);
         private int ActFrontH(bool f) => (_formMode && _hasFormHeights) ? _formFrontH : (f ? _frontHeightF : _frontHeightM);
         private int ActFrontO(bool f) => (_formMode && _hasFormHeights) ? _oFormFrontH : (f ? _oFrontHeightF : _oFrontHeightM);
-        private int ActBackH(bool f)  => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
-        private int ActBackO(bool f)  => (_formMode && _hasFormHeights) ? _oFormBackH : (f ? _oBackHeightF : _oBackHeightM);
+        private int ActBackH(bool f) => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
+        private int ActBackO(bool f) => (_formMode && _hasFormHeights) ? _oFormBackH : (f ? _oBackHeightF : _oBackHeightM);
 
         // Per the Platinum source (PokeHeightGet → pos_y = appearPos + height), the height is added ×1.
         private double FrontTopFor(int curH, int origH) => 24 - _spriteY + (HeightsActive ? (curH - origH) : 0);
-        private double BackTopFor(int curH, int origH)   => HeightsActive ? 84 + (curH - origH) : 84 - _spriteY;
+        private double BackTopFor(int curH, int origH) => HeightsActive ? 84 + (curH - origH) : 84 - _spriteY;
 
         public double EnemyLeft => 152;
         public double PlayerLeft => 23;
-        public double EnemyTop   => FrontTopFor(ActFrontH(ShowFemale), ActFrontO(ShowFemale));
-        public double PlayerTop  => BackTopFor(ActBackH(ShowFemale), ActBackO(ShowFemale));
-        public double EnemyTopM  => FrontTopFor(ActFrontH(false), ActFrontO(false));
-        public double EnemyTopF  => FrontTopFor(ActFrontH(true),  ActFrontO(true));
+        public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale), ActFrontO(ShowFemale));
+        public double PlayerTop => BackTopFor(ActBackH(ShowFemale), ActBackO(ShowFemale));
+        public double EnemyTopM => FrontTopFor(ActFrontH(false), ActFrontO(false));
+        public double EnemyTopF => FrontTopFor(ActFrontH(true), ActFrontO(true));
         public double PlayerTopM => BackTopFor(ActBackH(false), ActBackO(false));
-        public double PlayerTopF => BackTopFor(ActBackH(true),  ActBackO(true));
+        public double PlayerTopF => BackTopFor(ActBackH(true), ActBackO(true));
 
-        public bool ShadowSmallVisible  => HasSpriteData && _shadowSize == 1;
+        public bool ShadowSmallVisible => HasSpriteData && _shadowSize == 1;
         public bool ShadowMediumVisible => HasSpriteData && _shadowSize == 2;
-        public bool ShadowLargeVisible  => HasSpriteData && _shadowSize == 3;
-        public double ShadowSmallLeft  => 179 + _shadowX;
+        public bool ShadowLargeVisible => HasSpriteData && _shadowSize == 3;
+        public double ShadowSmallLeft => 179 + _shadowX;
         public double ShadowMediumLeft => 174 + _shadowX;
-        public double ShadowLargeLeft  => 167 + _shadowX;
+        public double ShadowLargeLeft => 167 + _shadowX;
 
         private void RaiseLayout()
         {
@@ -182,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     GameFamilies.HGSS => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: false),
                     GameFamilies.Plat => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true),
-                    GameFamilies.DP   => new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow),
+                    GameFamilies.DP => new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow),
                     _ => null,
                 };
             }
@@ -225,15 +228,15 @@ namespace DSPRE.Avalonia.ViewModels
         // Per-gender sprite heights (signed). They drive the preview as a delta from the loaded value (see Top math).
         private int _frontHeightM; public int FrontHeightM { get => _frontHeightM; set { if (Set(ref _frontHeightM, value)) { if (CanEditSprite) SetDirty(); OnPropertyChanged(nameof(FrontHeightUnified)); RaiseLayout(); } } }
         private int _frontHeightF; public int FrontHeightF { get => _frontHeightF; set { if (Set(ref _frontHeightF, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
-        private int _backHeightM;  public int BackHeightM  { get => _backHeightM;  set { if (Set(ref _backHeightM, value)) { if (CanEditSprite) SetDirty(); OnPropertyChanged(nameof(BackHeightUnified)); RaiseLayout(); } } }
-        private int _backHeightF;  public int BackHeightF  { get => _backHeightF;  set { if (Set(ref _backHeightF, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
+        private int _backHeightM; public int BackHeightM { get => _backHeightM; set { if (Set(ref _backHeightM, value)) { if (CanEditSprite) SetDirty(); OnPropertyChanged(nameof(BackHeightUnified)); RaiseLayout(); } } }
+        private int _backHeightF; public int BackHeightF { get => _backHeightF; set { if (Set(ref _backHeightF, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
 
         // Modify mode: "unified" exposes one field per axis that writes BOTH genders at once (for the common
         // case where the two genders share a sprite). "separate" exposes the 4 per-gender fields above.
         private bool _unifiedEdit = true;
         public bool UnifiedEdit { get => _unifiedEdit; set => Set(ref _unifiedEdit, value); }
         public int FrontHeightUnified { get => _frontHeightM; set { FrontHeightM = value; FrontHeightF = value; } }
-        public int BackHeightUnified  { get => _backHeightM;  set { BackHeightM = value; BackHeightF = value; } }
+        public int BackHeightUnified { get => _backHeightM; set { BackHeightM = value; BackHeightF = value; } }
 
         // ── Alternate-form sprite heights (height_o.narc; DP/Plat) — follows the Sprite tab's form selector ──
         // height_o: 2 files/form — (formIndex*2) = back (both genders), (formIndex*2 + 1) = front. Signed. The
@@ -252,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowBaseHeights => _hasHeights && !_formMode;
 
         public int FormFrontHeight { get => _formFrontH; set { if (Set(ref _formFrontH, value)) { if (!_loading) SetDirty(); RaiseLayout(); } } }
-        public int FormBackHeight  { get => _formBackH;  set { if (Set(ref _formBackH, value)) { if (!_loading) SetDirty(); RaiseLayout(); } } }
+        public int FormBackHeight { get => _formBackH; set { if (Set(ref _formBackH, value)) { if (!_loading) SetDirty(); RaiseLayout(); } } }
 
         private void EnsureFormNarc()
         {
@@ -308,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _animNarcTried;
 
         private int _animFrontProg; public int AnimFrontProgNum { get => _animFrontProg; set { if (Set(ref _animFrontProg, value)) { if (!_loading) SetDirty(); if (_scriptTarget == 0) RefreshProgramScript(); else OnPropertyChanged(nameof(ProgramScriptHeader)); } } }
-        private int _animFrontWait; public int AnimFrontWait    { get => _animFrontWait; set { if (Set(ref _animFrontWait, value) && !_loading) SetDirty(); } }
+        private int _animFrontWait; public int AnimFrontWait { get => _animFrontWait; set { if (Set(ref _animFrontWait, value) && !_loading) SetDirty(); } }
 
         /// <summary>The three back program-animation steps ({number, wait}).</summary>
         public ObservableCollection<AnimProgStep> AnimBack { get; } = new ObservableCollection<AnimProgStep>();
@@ -400,8 +403,8 @@ namespace DSPRE.Avalonia.ViewModels
         private double _animOffsetX, _animOffsetY, _animScaleX = 1, _animScaleY = 1, _animRotation, _animFadeOpacity;
         public double AnimOffsetX { get => _animOffsetX; private set => Set(ref _animOffsetX, value); }
         public double AnimOffsetY { get => _animOffsetY; private set => Set(ref _animOffsetY, value); }
-        public double AnimScaleX  { get => _animScaleX;  private set => Set(ref _animScaleX, value); }
-        public double AnimScaleY  { get => _animScaleY;  private set => Set(ref _animScaleY, value); }
+        public double AnimScaleX { get => _animScaleX; private set => Set(ref _animScaleX, value); }
+        public double AnimScaleY { get => _animScaleY; private set => Set(ref _animScaleY, value); }
         public double AnimRotation { get => _animRotation; private set => Set(ref _animRotation, value); }
         public double AnimFadeOpacity { get => _animFadeOpacity; private set => Set(ref _animFadeOpacity, value); }
         private IBrush _animFadeBrush = Brushes.Transparent;
@@ -411,8 +414,8 @@ namespace DSPRE.Avalonia.ViewModels
         private double _animBackOffsetX, _animBackOffsetY, _animBackScaleX = 1, _animBackScaleY = 1, _animBackRotation, _animBackFadeOpacity;
         public double AnimBackOffsetX { get => _animBackOffsetX; private set => Set(ref _animBackOffsetX, value); }
         public double AnimBackOffsetY { get => _animBackOffsetY; private set => Set(ref _animBackOffsetY, value); }
-        public double AnimBackScaleX  { get => _animBackScaleX;  private set => Set(ref _animBackScaleX, value); }
-        public double AnimBackScaleY  { get => _animBackScaleY;  private set => Set(ref _animBackScaleY, value); }
+        public double AnimBackScaleX { get => _animBackScaleX; private set => Set(ref _animBackScaleX, value); }
+        public double AnimBackScaleY { get => _animBackScaleY; private set => Set(ref _animBackScaleY, value); }
         public double AnimBackRotation { get => _animBackRotation; private set => Set(ref _animBackRotation, value); }
         public double AnimBackFadeOpacity { get => _animBackFadeOpacity; private set => Set(ref _animBackFadeOpacity, value); }
         private IBrush _animBackFadeBrush = Brushes.Transparent;
@@ -549,14 +552,18 @@ namespace DSPRE.Avalonia.ViewModels
         // Turns the editable rows into a valid command list (args padded/truncated to each opcode's fixed count).
         private List<PastCommand> BuildCommandsFromRows()
         {
-            if (_animDefsNarc == null) return;
+            if (_animDefsNarc == null)
+                return new List<PastCommand>();   // return empty list
+
             var cmds = new List<PastCommand>();
             foreach (var row in ProgramRows)
             {
                 int n = PokeAnimScript.ArgsFor(row.Op);
                 var parsed = ParseIntList(row.ArgsText);
                 var args = new int[n];
-                for (int i = 0; i < n; i++) args[i] = i < parsed.Count ? parsed[i] : 0;
+                for (int i = 0; i < n; i++)
+                    args[i] = i < parsed.Count ? parsed[i] : 0;
+
                 cmds.Add(new PastCommand(row.Op, args));
             }
             return cmds;
@@ -686,8 +693,16 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _src == null || !_hasSpriteData) return;
             var rec = new BattleRec
             {
-                FrontY = _spriteY, ShadowX = _shadowX, ShadowSize = _shadowSize, Movement = _movementType, HasMovement = _hasMovementType,
-                BackF = _backHeightF, BackM = _backHeightM, FrontF = _frontHeightF, FrontM = _frontHeightM, HasHeights = _hasHeights,
+                FrontY = _spriteY,
+                ShadowX = _shadowX,
+                ShadowSize = _shadowSize,
+                Movement = _movementType,
+                HasMovement = _hasMovementType,
+                BackF = _backHeightF,
+                BackM = _backHeightM,
+                FrontF = _frontHeightF,
+                FrontM = _frontHeightM,
+                HasHeights = _hasHeights,
             };
             _src.Save(_currentId, in rec);
         }
@@ -727,12 +742,12 @@ namespace DSPRE.Avalonia.ViewModels
                 _ready = true;
                 DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
                 _path = gameDirs[_dir].unpackedDir;
-                var files = Directory.Exists(_path) ? Directory.GetFiles(_path) : System.Array.Empty<string>();
+                var files = System.IO.Directory.Exists(_path) ? System.IO.Directory.GetFiles(_path) : System.Array.Empty<string>();
                 _multi = files.Length > 1;
-                _blob = (!_multi && files.Length == 1) ? File.ReadAllBytes(files[0]) : null;
+                _blob = (!_multi && files.Length == 1) ? System.IO.File.ReadAllBytes(files[0]) : null;
             }
 
-            private string FilePath(int id) => Path.Combine(_path, id.ToString("D4"));
+            private string FilePath(int id) => System.IO.Path.Combine(_path, id.ToString("D4"));
 
             public byte[] GetRecord(int id)
             {
@@ -740,7 +755,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (_multi)
                 {
                     string f = FilePath(id);
-                    return File.Exists(f) ? File.ReadAllBytes(f) : null;
+                    return System.IO.File.Exists(f) ? System.IO.File.ReadAllBytes(f) : null;
                 }
                 if (_blob == null) return null;
                 int off = id * _recLen;
@@ -753,12 +768,12 @@ namespace DSPRE.Avalonia.ViewModels
             public void PutRecord(int id, byte[] rec)
             {
                 Ensure();
-                if (_multi) { File.WriteAllBytes(FilePath(id), rec); return; }
+                if (_multi) { System.IO.File.WriteAllBytes(FilePath(id), rec); return; }
                 if (_blob == null) return;
                 int off = id * _recLen;
                 if (off < 0 || off + rec.Length > _blob.Length) return;
                 System.Array.Copy(rec, 0, _blob, off, rec.Length);
-                File.WriteAllBytes(FilePath(0), _blob);   // single-file blob is "0000"
+                System.IO.File.WriteAllBytes(FilePath(0), _blob);   // single-file blob is "0000"
             }
         }
 

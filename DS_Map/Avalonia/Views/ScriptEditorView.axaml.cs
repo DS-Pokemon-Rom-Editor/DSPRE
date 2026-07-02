@@ -1,8 +1,3 @@
-using System;
-using System.ComponentModel;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -13,8 +8,16 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using AvaloniaEdit.Search;
 using AvaloniaEdit.TextMate;
+using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
+using NSMBe4.DSFileSystem;
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using TextMateSharp.Grammars;
+using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
 
 namespace DSPRE.Avalonia.Views
 {
@@ -68,10 +71,6 @@ namespace DSPRE.Avalonia.Views
             };
             AddHandler(InputElement.KeyDownEvent, ScriptEditor_KeyDown, RoutingStrategies.Tunnel, true);
             RotomEditor.AddHandler(InputElement.PointerPressedEvent, RotomEditor_PointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, true);
-
-            ScriptsEditor.TextChanged += (_, _) => { if (!_syncing && VM != null) VM.ScriptsText = ScriptsEditor.Text; };
-            FunctionsEditor.TextChanged += (_, _) => { if (!_syncing && VM != null) VM.FunctionsText = FunctionsEditor.Text; };
-            ActionsEditor.TextChanged += (_, _) => { if (!_syncing && VM != null) VM.ActionsText = ActionsEditor.Text; };
 
             Loaded += OnLoadedSetup;
             Closed += (_, _) =>
@@ -153,9 +152,9 @@ namespace DSPRE.Avalonia.Views
                 }
 
                 string grammarPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Avalonia", "TextMate", "rotom.tmLanguage.json");
-                if (!File.Exists(grammarPath))
+                if (!System.IO.File.Exists(grammarPath))
                     grammarPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rotom.tmLanguage.json");
-                if (File.Exists(grammarPath))
+                if (System.IO.File.Exists(grammarPath))
                     _textMate.SetGrammarFile(grammarPath);
             }
             catch (Exception ex)
@@ -189,8 +188,6 @@ namespace DSPRE.Avalonia.Views
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddScriptFile();
-        private async void Remove_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastScriptFileAsync());
-        private void ViewLevelScript_Click(object sender, RoutedEventArgs e) => VM?.ViewLevelScript();
 
         private void Find_Click(object sender, RoutedEventArgs e)
         {

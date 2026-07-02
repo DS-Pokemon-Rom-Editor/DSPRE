@@ -1,9 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
+using NSMBe4.DSFileSystem;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Gl
@@ -50,10 +51,8 @@ namespace DSPRE.Avalonia.Gl
                         byte areaId = ResolveAreaId(matrix, x, y, fallbackAreaId, mapIndex, areaForMap);
                         if (!areaCache.TryGetValue(areaId, out var area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
 
-                        // Indoor maps (all games) are authored with their floor offset to negative raw coords — flag it so
-                        // the scene builder min-aligns the model to the cell corner. (HGSS also swaps the building set.)
-                        bool indoor = area.areaType == AreaData.TYPE_INDOOR;
-                        bool interior = gameFamily == GameFamilies.HGSS && indoor;
+                        // HGSS indoor areas use the interior building model set.
+                        bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
                         string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
 
                         var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
@@ -65,13 +64,13 @@ namespace DSPRE.Avalonia.Gl
 
                         var buildings = new List<(NSBMDModel, float[])>();
                         string btexPath = bldTexDir + "\\" + area.buildingsTileset.ToString("D4");
-                        byte[] bldTex = File.Exists(btexPath) ? File.ReadAllBytes(btexPath) : null;
+                        byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
 
                         if (map.buildings != null)
                             foreach (var b in map.buildings)
                             {
                                 string mp = bldDir + "\\" + b.modelID.ToString("D4");
-                                if (!File.Exists(mp)) continue;
+                                if (!System.IO.File.Exists(mp)) continue;
                                 using (var fs = new FileStream(mp, FileMode.Open, FileAccess.Read))
                                     b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                                 if (b.NSBMDFile?.models == null || b.NSBMDFile.models.Length == 0) continue;
@@ -93,7 +92,8 @@ namespace DSPRE.Avalonia.Gl
                             Buildings = buildings,
                             CellX = x,
                             CellY = y,
-                            Indoor = indoor,
+                            Bdhc = bdhc,
+                            AltitudeY = altitudeY,
                         });
                     }
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }
@@ -127,8 +127,8 @@ namespace DSPRE.Avalonia.Gl
         {
             try
             {
-                if (!File.Exists(path)) return;
-                container.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)), out container.Textures, out container.Palettes);
+                if (!System.IO.File.Exists(path)) return;
+                container.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(System.IO.File.ReadAllBytes(path)), out container.Textures, out container.Palettes);
                 container.MatchTextures();
             }
             catch (Exception ex) { AppLogger.Error("Matrix tileset bind failed: " + ex.Message); }

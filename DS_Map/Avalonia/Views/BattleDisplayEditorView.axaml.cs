@@ -19,8 +19,6 @@ namespace DSPRE.Avalonia.Views
 
         private void AddProgramCmd_Click(object sender, RoutedEventArgs e) => VM?.AddProgramCmd();
         private void SaveProgramScript_Click(object sender, RoutedEventArgs e) => VM?.SaveProgramScript();
-        private void PlaySavedScript_Click(object sender, RoutedEventArgs e) => VM?.PlayScript(edited: false);
-        private void PlayEditedScript_Click(object sender, RoutedEventArgs e) => VM?.PlayScript(edited: true);
         private void ProgramCmdUp_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, -1); }
         private void ProgramCmdDown_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, 1); }
         private void ProgramCmdRemove_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.RemoveProgramCmd(r); }

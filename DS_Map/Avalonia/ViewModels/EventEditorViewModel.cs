@@ -1,19 +1,19 @@
+using DSPRE.Avalonia;
+using DSPRE.Avalonia.Gl;
+using DSPRE.Editors;
+using DSPRE.ROMFiles;
+using global::Avalonia.Controls;
+using global::Avalonia.Platform.Storage;
+using LibNDSFormats.NSBMD;
+using LibNDSFormats.NSBTX;
+using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using global::Avalonia.Controls;
-using global::Avalonia.Platform.Storage;
-using DSPRE.Avalonia;
-using DSPRE.Avalonia.Gl;
-using DSPRE.Editors;
-using DSPRE.ROMFiles;
-using LibNDSFormats.NSBMD;
-using LibNDSFormats.NSBTX;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
@@ -146,17 +146,13 @@ namespace DSPRE.Avalonia.ViewModels
         public int InitialIndex { get; set; }
 
         // ── 3D marker visibility toggles (per event type) ────────────────────────────────
-        private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true;
+        private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true, _showGrid;
         public bool ShowOverworlds { get => _showOw; set { if (Set(ref _showOw, value)) RefreshMarkers(); } }
         public bool ShowWarps { get => _showWarp; set { if (Set(ref _showWarp, value)) RefreshMarkers(); } }
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
         public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
 
-        // Matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
-        // Grid is the default — the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride span,
-        // so events map at exactly TileSize per tile and decorative overhang overlaps neighbours as on hardware.
-        // (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
         private bool _stitchGrid = true;
         public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value)) DisplayMap(); } }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
@@ -337,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Confirm deletion")) return;
             try
             {
-                File.Delete(gameDirs[DirNames.eventFiles].unpackedDir + "\\" + last.ToString("D4"));
+                System.IO.File.Delete(gameDirs[DirNames.eventFiles].unpackedDir + "\\" + last.ToString("D4"));
                 if (_selectedIndex == last) SelectedEventIndex = last - 1;
                 EventNames.RemoveAt(last);
                 StatusText = $"Removed event file {last}.";
@@ -430,7 +426,6 @@ namespace DSPRE.Avalonia.ViewModels
                 AppLogger.Error("Event map render failed: " + ex.Message);
             }
             MapLoaded?.Invoke(this, EventArgs.Empty);
-            _loggedEvt = false;
             RefreshMarkers();
         }
 
@@ -477,9 +472,6 @@ namespace DSPRE.Avalonia.ViewModels
             _ => (0.20f, 0.85f, 0.95f),   // spawnable  → cyan
         };
 
-        // How far one z-position step raises a marker, in tile units (events that share the
-        // ground sit at z = 0). Tunable — the in-game height step is roughly one tile.
-        private const float ZStepInTiles = 1f / 8f;
         private const int MapTiles = 32;
 
         /// <summary>
@@ -500,7 +492,7 @@ namespace DSPRE.Avalonia.ViewModels
                 (float x, float z) Cell(Event e) => EventCellRaw(m, e);
                 // The map is a 3D model whose top plane is the walkable ground. Place each event on
                 // the sampled surface at its tile (so it sits ON the plane, not at world-Y 0 which is
-                // below it), then lift by its z height (fixed-point /4096; 0 == on the ground).
+                // below it). For overworld/spawnable Y, the field is a height-lookup hint, not an additive lift.
                 float EventY(float rawX, float rawZ, Event e) => EventSurfaceY(m, rawX, rawZ, e);
 
                 (float x, float y, float z) Foot(Event e)
@@ -563,26 +555,31 @@ namespace DSPRE.Avalonia.ViewModels
                 // overworlds also get a white ground ring so the selection is obvious.
                 float spriteH = tileX * m.Scale * 1.6f;
                 if (_showOw)
-                foreach (var ow in _file.overworlds)
-                {
-                    bool sel = ReferenceEquals(ow, _current);
-                    if (sel) Quad(ow, (1f, 1f, 1f));
-
-                    var pix = OverworldSprites.Get(ow.overlayTableEntry, ow.orientation);
-                    var foot = Foot(ow);
-                    if (pix != null && pix.Width > 0 && pix.Height > 0)
+                    foreach (var ow in _file.overworlds)
                     {
-                        float halfH = spriteH * 0.5f;
-                        float halfW = halfH * (pix.Width / (float)pix.Height);
-                        sprites.Add(new NsbmdGlControl.SpriteInstance
+                        bool sel = ReferenceEquals(ow, _current);
+                        if (sel) Quad(ow, (1f, 1f, 1f));
+
+                        var pix = OverworldSprites.Get(ow.overlayTableEntry, ow.orientation);
+                        var foot = Foot(ow);
+                        if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
-                            Cx = foot.x, Cy = foot.y + halfH, Cz = foot.z,
-                            HalfW = halfW, HalfH = halfH,
-                            Rgba = pix.Rgba, Width = pix.Width, Height = pix.Height,
-                        });
+                            float halfH = spriteH * 0.5f;
+                            float halfW = halfH * (pix.Width / (float)pix.Height);
+                            sprites.Add(new NsbmdGlControl.SpriteInstance
+                            {
+                                Cx = foot.x,
+                                Cy = foot.y + halfH,
+                                Cz = foot.z,
+                                HalfW = halfW,
+                                HalfH = halfH,
+                                Rgba = pix.Rgba,
+                                Width = pix.Width,
+                                Height = pix.Height,
+                            });
+                        }
+                        else Quad(ow, MarkerColor(0));   // fall back to a green quad if no sprite
                     }
-                    else Quad(ow, MarkerColor(0));   // fall back to a green quad if no sprite
-                }
 
                 MarkerMesh = v.ToArray();
                 MarkerVertexCount = v.Count / 8;
@@ -596,20 +593,19 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Event world placement (shared by markers + the move gizmo) ────────────────────
         private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
         {
-            // A tile is a FIXED 16 game units → NsbmdGeometry.TileSize (0.25) in world space, from the map's tile-(0,0)
-            // = the cell corner (CellPlacement.OriginX = OffX). Do NOT scale by the map's footprint / 32 — an interior
-            // that's fewer than 32 tiles would compress the events. This matches how the buildings + map grid are placed.
-            const float ts = NsbmdGeometry.TileSize;
             if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out var p))
-                return (p.OriginX + (e.xMapPosition + 0.5f) * ts, p.OriginZ + (e.yMapPosition + 0.5f) * ts);
-            return (m.CellBaseX + e.xMatrixPosition * m.CellStrideX + (e.xMapPosition + 0.5f) * ts,
-                    m.CellBaseZ + e.yMatrixPosition * m.CellStrideZ + (e.yMapPosition + 0.5f) * ts);
+                return (p.OriginX + (e.xMapPosition + 0.5f) / MapTiles * p.Width,
+                        p.OriginZ + (e.yMapPosition + 0.5f) / MapTiles * p.Height);
+            return (m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
+                    m.CellBaseZ + (e.yMatrixPosition + (e.yMapPosition + 0.5f) / MapTiles) * m.CellStrideZ);
         }
 
         private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)
         {
-            float surfEps = (m.CellStrideX / MapTiles + m.CellStrideZ / MapTiles) * 0.04f;
-            return m.SurfaceY(rawX, rawZ) + e.zPosition / 4096f + surfEps;
+            // zPosition is an FX32 height hint. BDHC/mesh lookup chooses the actual floor near it.
+            float yHint = e.zPosition / 262144f;
+            if (m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rawX, rawZ, yHint, out var bdhcY)) return bdhcY;
+            return e.zPosition == 0 ? m.SurfaceY(rawX, rawZ) : m.SurfaceY(rawX, rawZ, yHint);
         }
 
         // ── 3D edit mode (drag the selected event with the translate gizmo) ───────────────
@@ -675,7 +671,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (m == null || _current == null || rawDelta == 0f) return;
             if (axis == 1)
             {
-                long nz = _current.zPosition + (long)Math.Round(rawDelta * 4096f);
+                long nz = _current.zPosition + (long)Math.Round(rawDelta * 262144f);
                 _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
             }
             else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out var p))
@@ -794,7 +790,7 @@ namespace DSPRE.Avalonia.ViewModels
             sb.AppendLine($"Timestamp:   {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine($"Event file:  {_selectedIndex}");
             sb.AppendLine($"Matrix id:   {_matrixId}    Area data: {_areaDataId}");
-            sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid (fixed 32-tile)" : "Continuous (geometry-sized)")}");
+            sb.AppendLine($"Stitch mode: {(_stitchGrid ? "Grid" : "Continuous")} (both now use the DS-true fixed 32-tile grid)");
             if (_matrix != null) sb.AppendLine($"Matrix size: {_matrix.width} x {_matrix.height}");
             sb.AppendLine("Units: 1 matrix cell = 32 tiles; Grid stride = 8.0 raw units (0.25/tile).");
             sb.AppendLine();
@@ -828,7 +824,7 @@ namespace DSPRE.Avalonia.ViewModels
             sb.AppendLine();
 
             sb.AppendLine("--- Events (exact computed world position) ---");
-            sb.AppendLine("type        idx | matrix  map(x,y) | z(fixed)  z(raw) |   rawX    rawZ  surfaceY");
+            sb.AppendLine("type        idx | matrix  map(x,y) | z(fixed) yHint(raw) |   rawX    rawZ  surfaceY source");
             if (_file != null)
             {
                 void Dump(string type, System.Collections.IEnumerable list)
@@ -837,8 +833,10 @@ namespace DSPRE.Avalonia.ViewModels
                     foreach (Event e in list)
                     {
                         var (rx, rz) = EventCellRaw(m, e);
-                        float sy = EventSurfaceY(m, rx, rz, e);
-                        sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {e.zPosition / 4096f,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3}");
+                        float yHint = e.zPosition / 262144f;
+                        bool bdhc = m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rx, rz, yHint, out var sy);
+                        if (!bdhc) sy = EventSurfaceY(m, rx, rz, e);
+                        sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {yHint,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3} {(bdhc ? "bdhc" : "mesh")}");
                         i++;
                     }
                 }
@@ -857,7 +855,7 @@ namespace DSPRE.Avalonia.ViewModels
             var filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev" } };
             string path = await DialogHelper.SaveFile(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _file.ToByteArray()); StatusText = "Exported."; }
+            try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = "Exported."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
     }
