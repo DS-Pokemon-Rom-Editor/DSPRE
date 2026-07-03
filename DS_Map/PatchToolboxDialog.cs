@@ -32,6 +32,7 @@ namespace DSPRE
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
 
         public static readonly int expandedTrainerNameLength = 12;
+        private static readonly uint[] BDHCamInternalPointerOffsets = new uint[] { 0x18C, 0x3DC, 0x3E0, 0x3E4, 0x3E8, 0x684, 0x6F4 };
 
         /// <summary>
         /// Resets all static patch flags to their default values.
@@ -216,6 +217,7 @@ namespace DSPRE
             repointScrcmdButton.Enabled = false;
             repointScrcmdLBL.Enabled = false;
             repointScrcmdTextLBL.Enabled = false;
+            label1.Enabled = false;
             repointScrcmdButton.Text = reason;
         }
 
@@ -286,8 +288,18 @@ namespace DSPRE
                 return false;
             }
 
-            byte[] subroutineRead = DSUtils.ReadFromFile(Filesystem.expArmPath, subroutineOffset, data.subroutine.Length);
-            if (data.subroutine.Length != subroutineRead.Length || !data.subroutine.SequenceEqual(subroutineRead))
+            byte[] expectedSubroutine;
+            try
+            {
+                expectedSubroutine = BuildBDHCamPayload(data, subroutineOffset);
+            }
+            catch
+            {
+                return false;
+            }
+
+            byte[] subroutineRead = DSUtils.ReadFromFile(Filesystem.expArmPath, subroutineOffset, expectedSubroutine.Length);
+            if (expectedSubroutine.Length != subroutineRead.Length || !expectedSubroutine.SequenceEqual(subroutineRead))
                 return false;
 
             return true;
@@ -302,6 +314,33 @@ namespace DSPRE
             trampoline[3] = 0x47;
             Array.Copy(BitConverter.GetBytes(synthOverlayLoadAddress + subroutineOffset + entryOffset), 0, trampoline, 4, 4);
             return trampoline;
+        }
+
+        private static byte[] BuildBDHCamPayload(BDHCAMPatchData data, uint subroutineOffset)
+        {
+            byte[] payload = (byte[])data.subroutine.Clone();
+            uint defaultRuntimeAddress = synthOverlayLoadAddress + BDHCAMPatchData.BDHCamSubroutineOffset;
+            uint selectedRuntimeAddress = synthOverlayLoadAddress + subroutineOffset;
+            uint defaultRuntimeEnd = defaultRuntimeAddress + (uint)payload.Length;
+
+            foreach (uint pointerOffset in BDHCamInternalPointerOffsets)
+            {
+                if (pointerOffset > (uint)(payload.Length - sizeof(uint)))
+                {
+                    throw new InvalidDataException("BDHCAM payload pointer offset is outside the payload.");
+                }
+
+                uint originalPointer = BitConverter.ToUInt32(payload, (int)pointerOffset);
+                if (originalPointer < defaultRuntimeAddress || originalPointer >= defaultRuntimeEnd)
+                {
+                    throw new InvalidDataException("BDHCAM payload has an unexpected internal pointer.");
+                }
+
+                uint relocatedPointer = selectedRuntimeAddress + (originalPointer - defaultRuntimeAddress);
+                Array.Copy(BitConverter.GetBytes(relocatedPointer), 0, payload, (int)pointerOffset, sizeof(uint));
+            }
+
+            return payload;
         }
 
         private static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress)
@@ -723,6 +762,16 @@ namespace DSPRE
                 uint subroutineOffset = offsetDialog.SelectedOffset;
                 byte[] overlayCode1 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset1);
                 byte[] overlayCode2 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset2);
+                byte[] relocatedSubroutine;
+                try
+                {
+                    relocatedSubroutine = BuildBDHCamPayload(data, subroutineOffset);
+                }
+                catch (InvalidDataException ex)
+                {
+                    MessageBox.Show("The Dynamic Cameras payload could not be relocated safely.\n\n" + ex.Message, "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
                 var d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
                 "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
@@ -730,7 +779,7 @@ namespace DSPRE
                 "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
                 "- Replace " + overlayCode1.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + "." + "\n\n" +
                 "- Replace " + overlayCode2.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + "." + "\n\n" +
-                "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + subroutineOffset.ToString("X") + " and 0x" + (subroutineOffset + (uint)data.subroutine.Length - 1).ToString("X") + " will be overwritten)." + "\n\n" +
+                "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + subroutineOffset.ToString("X") + " and 0x" + (subroutineOffset + (uint)relocatedSubroutine.Length - 1).ToString("X") + " will be overwritten)." + "\n\n" +
                 "Do you wish to continue?",
                 "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
@@ -751,7 +800,7 @@ namespace DSPRE
                         DSUtils.WriteToFile(overlayFilePath, overlayCode2, data.overlayOffset2); //Write new overlayCode2
 
                         /*Write Expanded ARM9 File*/
-                        DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, subroutineOffset);
+                        DSUtils.WriteToFile(Filesystem.expArmPath, relocatedSubroutine, subroutineOffset);
                     }
                     catch
                     {
@@ -1052,6 +1101,7 @@ namespace DSPRE
                         repointScrcmdButton.Enabled = true;
                         repointScrcmdLBL.Enabled = true;
                         repointScrcmdTextLBL.Enabled = true;
+                        label1.Enabled = true;
                     }
 
                     MessageBox.Show("The ARM9's usable memory has been expanded.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);

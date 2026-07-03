@@ -124,7 +124,7 @@ namespace DSPRE
             // 
             // BDHCamPatchTextLBL
             // 
-            this.BDHCamPatchTextLBL.Location = new System.Drawing.Point(15, 187);
+            this.BDHCamPatchTextLBL.Location = new System.Drawing.Point(15, 195);
             this.BDHCamPatchTextLBL.Name = "BDHCamPatchTextLBL";
             this.BDHCamPatchTextLBL.Size = new System.Drawing.Size(293, 67);
             this.BDHCamPatchTextLBL.TabIndex = 8;
@@ -136,7 +136,7 @@ namespace DSPRE
             // 
             this.BDHCamPatchLBL.AutoSize = true;
             this.BDHCamPatchLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.BDHCamPatchLBL.Location = new System.Drawing.Point(14, 172);
+            this.BDHCamPatchLBL.Location = new System.Drawing.Point(14, 180);
             this.BDHCamPatchLBL.Name = "BDHCamPatchLBL";
             this.BDHCamPatchLBL.Size = new System.Drawing.Size(275, 13);
             this.BDHCamPatchLBL.TabIndex = 7;
@@ -144,7 +144,7 @@ namespace DSPRE
             // 
             // BDHCamPatchButton
             // 
-            this.BDHCamPatchButton.Location = new System.Drawing.Point(335, 186);
+            this.BDHCamPatchButton.Location = new System.Drawing.Point(335, 194);
             this.BDHCamPatchButton.Name = "BDHCamPatchButton";
             this.BDHCamPatchButton.Size = new System.Drawing.Size(100, 50);
             this.BDHCamPatchButton.TabIndex = 6;
@@ -189,7 +189,7 @@ namespace DSPRE
             this.buildingRotationLBL.Name = "buildingRotationLBL";
             this.buildingRotationLBL.Size = new System.Drawing.Size(303, 13);
             this.buildingRotationLBL.TabIndex = 12;
-            this.buildingRotationLBL.Text = "Enable Building Rotation (Requires ARM9 Expansion)";
+            this.buildingRotationLBL.Text = "Building Rotation (Requires ARM9 Expansion)";
             //
             // buildingRotationBetaLBL
             //
@@ -244,7 +244,7 @@ namespace DSPRE
             // BDHCamCB
             // 
             this.BDHCamCB.Image = ((System.Drawing.Image)(resources.GetObject("BDHCamCB.Image")));
-            this.BDHCamCB.Location = new System.Drawing.Point(309, 202);
+            this.BDHCamCB.Location = new System.Drawing.Point(309, 210);
             this.BDHCamCB.Name = "BDHCamCB";
             this.BDHCamCB.Size = new System.Drawing.Size(20, 20);
             this.BDHCamCB.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
