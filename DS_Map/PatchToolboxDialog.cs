@@ -772,7 +772,12 @@ namespace DSPRE
                     PatchToolboxDialog.flag_BDHCamPatchApplied = true;
                     BDHCamCB.Visible = true;
 
-                    MessageBox.Show("The BDHCAM patch has been applied.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "The Dynamic Cameras patch has been applied.\n\n" +
+                        "Synthetic overlay offset: 0x" + subroutineOffset.ToString("X"),
+                        "Operation successful.",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -849,7 +854,12 @@ namespace DSPRE
                 PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
                 buildingRotationCB.Visible = true;
 
-                MessageBox.Show("The building rotation patch has been applied.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(
+                    "The building rotation patch has been applied.\n\n" +
+                    "Synthetic overlay offset: 0x" + payloadOffset.ToString("X"),
+                    "Operation successful.",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
         }
 
@@ -1382,6 +1392,24 @@ namespace DSPRE
                 }
 
                 blockOffset = offsetDialog.SelectedOffset;
+                DialogResult result = MessageBox.Show(
+                    "This process will apply the following changes:\n\n" +
+                    "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created).\n\n" +
+                    "- Write the moved ScrCommands block to synthetic overlay offset 0x" + blockOffset.ToString("X") + ".\n\n" +
+                    "- Update the ARM9 ScrCommands table pointer.\n\n" +
+                    "- Update the ARM9 ScrCommands count pointer.\n\n" +
+                    "Do you wish to continue?",
+                    "Confirm to proceed",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result != DialogResult.Yes)
+                {
+                    MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + backupSuffix, overwrite: true);
                 RepointCommandTable(blockOffset, commandTablePayload);
             }
 
@@ -1389,10 +1417,11 @@ namespace DSPRE
             DisableScrcmdRepointPatch("Already applied");
 
             MessageBox.Show(
-                "The existing runtime ScrCommands table has been copied to the synthetic overlay and the ARM9 now points to the moved table.\n\n" +
+                "The ScrCommands table patch has been applied.\n\n" +
                 "This does not add new commands or update DSPRE's JSON script-command metadata.\n\n" +
-                "The moved block starts at synthetic overlay offset 0x" + blockOffset.ToString("X") + ". It contains a COUN marker, the ScrCommands count at +0x04, a TABL marker at +0x08, and the table itself at +0x0C.\n\n" +
-                "Advanced users can expand the moved table manually by adding handler pointers after the copied entries, placing the handler code in free synthetic-overlay space, and updating the count. The count must be raised to cover the highest command ID added.",
+                "Synthetic overlay offset: 0x" + blockOffset.ToString("X") +
+                " (count: 0x" + (blockOffset + ScrcmdCountOffsetInBlock).ToString("X") +
+                ", table: 0x" + (blockOffset + ScrcmdTableOffsetInBlock).ToString("X") + ")",
                 "ScrCommands Table Moved",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
