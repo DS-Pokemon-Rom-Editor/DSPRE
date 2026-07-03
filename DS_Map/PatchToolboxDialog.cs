@@ -22,6 +22,7 @@ namespace DSPRE
         public static bool flag_standardizedItems { get; private set; } = false;
         public static bool flag_arm9Expanded { get; private set; } = false;
         public static bool flag_BDHCamPatchApplied { get; private set; } = false;
+        public static bool flag_BuildingRotationPatchApplied { get; private set; } = false;
         public static bool flag_DynamicHeadersPatchApplied { get; private set; } = false;
         public static bool flag_MatrixExpansionApplied { get; private set; } = false;
 
@@ -29,8 +30,6 @@ namespace DSPRE
         public static bool flag_TrainerClassBattleTableRepointed { get; set; } = false;
         public static bool flag_PokemonBattleTableRepointed { get; set; } = false;
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
-
-        public static bool overlay1MustBeRestoredFromBackup { get; private set; } = true;
 
         public static readonly int expandedTrainerNameLength = 12;
 
@@ -43,14 +42,13 @@ namespace DSPRE
             flag_standardizedItems = false;
             flag_arm9Expanded = false;
             flag_BDHCamPatchApplied = false;
+            flag_BuildingRotationPatchApplied = false;
             flag_DynamicHeadersPatchApplied = false;
             flag_MatrixExpansionApplied = false;
             flag_MainComboTableRepointed = false;
             flag_TrainerClassBattleTableRepointed = false;
             flag_PokemonBattleTableRepointed = false;
             flag_TrainerNamesExpanded = false;
-            overlay1MustBeRestoredFromBackup = true;
-
             // Reset expandedARMfileID to null to force re-evaluation on next access
             // Note: This is set in the static field initializer which runs once,
             // so we need to update it when game family changes
@@ -103,7 +101,7 @@ namespace DSPRE
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                    DisableOverlay1patch("Unsupported");
+                    DisableBuildingRotationPatch("Unsupported");
                     DisableDynamicHeadersPatch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
@@ -111,7 +109,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    DisableOverlay1patch("Unsupported");
+                    DisableBuildingRotationPatch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
                     DisableKillTextureAnimationsPatch("Unsupported");
@@ -124,14 +122,12 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (RomInfo.IsDsRomProject)
+                    if (BuildingRotationPatchData.SupportsCurrentRom())
                     {
-                        DisableOverlay1patch("Not needed");
-                    }
-                    else if (!OverlayUtils.OverlayTable.IsDefaultCompressed(1))
+                        CheckBuildingRotationPatchApplied();
+                    } else
                     {
-                        DisableOverlay1patch("Already applied");
-                        overlay1CB.Visible = true;
+                        DisableBuildingRotationPatch("Unsupported\nROM");
                     }
 
                     if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
@@ -156,12 +152,12 @@ namespace DSPRE
 
         #region Patch Disable
 
-        private void DisableOverlay1patch(string reason)
+        private void DisableBuildingRotationPatch(string reason)
         {
-            overlay1uncomprButton.Enabled = false;
-            overlay1uncompressedLBL.Enabled = false;
-            overlay1patchtextLBL.Enabled = false;
-            overlay1uncomprButton.Text = reason;
+            buildingRotationButton.Enabled = false;
+            buildingRotationLBL.Enabled = false;
+            buildingRotationTextLBL.Enabled = false;
+            buildingRotationButton.Text = reason;
         }
 
         private void DisableBDHCamPatch(string reason)
@@ -293,6 +289,44 @@ namespace DSPRE
             trampoline[3] = 0x47;
             Array.Copy(BitConverter.GetBytes(synthOverlayLoadAddress + subroutineOffset + entryOffset), 0, trampoline, 4, 4);
             return trampoline;
+        }
+
+        private static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress)
+        {
+            int offset = unchecked((int)(targetAddress - (sourceAddress + 4)));
+            ushort first = (ushort)(0xF000 | ((offset >> 12) & 0x07FF));
+            ushort second = (ushort)(0xF800 | ((offset >> 1) & 0x07FF));
+            return new byte[] {
+                (byte)(first & 0xFF),
+                (byte)(first >> 8),
+                (byte)(second & 0xFF),
+                (byte)(second >> 8)
+            };
+        }
+
+        private static bool TryGetThumbBlTarget(uint sourceAddress, byte[] branchBytes, out uint targetAddress)
+        {
+            targetAddress = 0;
+            if (branchBytes == null || branchBytes.Length != 4)
+            {
+                return false;
+            }
+
+            ushort first = BitConverter.ToUInt16(branchBytes, 0);
+            ushort second = BitConverter.ToUInt16(branchBytes, 2);
+            if ((first & 0xF800) != 0xF000 || (second & 0xF800) != 0xF800)
+            {
+                return false;
+            }
+
+            int offset = ((first & 0x07FF) << 12) | ((second & 0x07FF) << 1);
+            if ((offset & 0x00400000) != 0)
+            {
+                offset |= unchecked((int)0xFF800000);
+            }
+
+            targetAddress = unchecked((uint)((int)(sourceAddress + 4) + offset));
+            return true;
         }
 
         private static bool TryGetBDHCamSubroutineOffset(BDHCAMPatchData data, out uint subroutineOffset)
@@ -490,6 +524,80 @@ namespace DSPRE
             return true;
         }
 
+        public bool CheckBuildingRotationPatchApplied()
+        {
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                DisableBuildingRotationPatch("Unsupported\nROM");
+                return false;
+            }
+
+            if (!PatchToolboxDialog.flag_arm9Expanded && !PatchToolboxDialog.CheckFilesArm9ExpansionApplied())
+            {
+                DisableBuildingRotationPatch("ARM9 not expanded!");
+                return false;
+            }
+
+            if (!PatchToolboxDialog.flag_BuildingRotationPatchApplied)
+            {
+                if (!PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied())
+                {
+                    return false;
+                }
+            }
+
+            PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
+            buildingRotationCB.Visible = true;
+            DisableBuildingRotationPatch("Already applied");
+            return true;
+        }
+
+        public static bool CheckFilesBuildingRotationPatchApplied()
+        {
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                return false;
+            }
+
+            string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
+            if (OverlayUtils.IsCompressed(BuildingRotationPatchData.overlayNumber))
+            {
+                OverlayUtils.Decompress(BuildingRotationPatchData.overlayNumber);
+            }
+
+            byte[] restoreBytesRead = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.restoreOverlayOffset, BuildingRotationPatchData.restoreBytes.Length);
+            if (!restoreBytesRead.SequenceEqual(BuildingRotationPatchData.restoreBytes))
+            {
+                return false;
+            }
+
+            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.hookOverlayOffset, 4);
+            if (!TryGetThumbBlTarget(BuildingRotationPatchData.hookRuntimeAddress, hookBytes, out uint targetAddress))
+            {
+                return false;
+            }
+
+            if (targetAddress < synthOverlayLoadAddress)
+            {
+                return false;
+            }
+
+            uint payloadOffset = targetAddress - synthOverlayLoadAddress;
+            if (!File.Exists(Filesystem.expArmPath))
+            {
+                return false;
+            }
+
+            long fileLength = new FileInfo(Filesystem.expArmPath).Length;
+            if ((long)payloadOffset + BuildingRotationPatchData.payload.Length > fileLength)
+            {
+                return false;
+            }
+
+            byte[] payloadRead = DSUtils.ReadFromFile(Filesystem.expArmPath, payloadOffset, BuildingRotationPatchData.payload.Length);
+            return payloadRead.SequenceEqual(BuildingRotationPatchData.payload);
+        }
+
         public void CheckScrcmdRepointPatchApplied()
         {
             if (!PatchToolboxDialog.flag_arm9Expanded && !PatchToolboxDialog.CheckFilesArm9ExpansionApplied())
@@ -624,7 +732,6 @@ namespace DSPRE
 
                         DSUtils.WriteToFile(overlayFilePath, overlayCode1, data.overlayOffset1); //Write new overlayCode1
                         DSUtils.WriteToFile(overlayFilePath, overlayCode2, data.overlayOffset2); //Write new overlayCode2
-                        overlay1MustBeRestoredFromBackup = false;
 
                         /*Write Expanded ARM9 File*/
                         DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, subroutineOffset);
@@ -636,7 +743,6 @@ namespace DSPRE
                         return;
                     }
 
-                    overlay1MustBeRestoredFromBackup = false;
                     DisableBDHCamPatch("Already applied");
                     PatchToolboxDialog.flag_BDHCamPatchApplied = true;
                     BDHCamCB.Visible = true;
@@ -650,54 +756,80 @@ namespace DSPRE
             }
         }
 
-        private void overlay1uncomprButton_Click(object sender, EventArgs e)
+        private void BuildingRotationButton_Click(object sender, EventArgs e)
         {
-            if (ConfigureOverlay1Uncompressed())
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
             {
-                DisableOverlay1patch("Already applied");
-                overlay1CB.Visible = true;
-            }
-        }
-
-        public static bool ConfigureOverlay1Uncompressed()
-        {
-            if (RomInfo.IsDsRomProject)
-            {
-                MessageBox.Show("ds-rom projects store overlays decompressed on disk and handle overlay compression during ROM build.\n\nNo changes are needed.",
-                    "Operation not needed", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return false;
+                MessageBox.Show("The building rotation patch is currently only available for HeartGold Version (USA).", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
 
-            bool isCompressed = false;
-            string stringDecompressOverlay = "";
-
-            if (OverlayUtils.IsCompressed(1))
+            if (!CheckARM9ExpansionApplied())
             {
-                isCompressed = true;
-                stringDecompressOverlay = "- Overlay 1 will be decompressed.\n\n";
+                MessageBox.Show("Apply the ARM9 Expansion patch before applying the building rotation patch.", "ARM9 Expansion Required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                DisableBuildingRotationPatch("ARM9 not expanded!");
+                return;
             }
 
-            DialogResult d = MessageBox.Show("This process will apply the following changes:\n\n" +
-            stringDecompressOverlay +
-            "- Overlay 1 will be configured as \"uncompressed\" in the overlay table.\n\n" +
-            "Do you wish to continue?",
-            "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (d == DialogResult.Yes)
+            using (var offsetDialog = new SyntheticOverlayOffsetDialog(
+                "Building rotation routine",
+                Filesystem.expArmPath,
+                BuildingRotationPatchData.defaultPayloadOffset,
+                BuildingRotationPatchData.payload,
+                synthOverlayLoadAddress))
             {
-                OverlayUtils.OverlayTable.SetDefaultCompressed(1, false);
-                if (isCompressed)
+                if (offsetDialog.ShowDialog(this) != DialogResult.OK)
                 {
-                    OverlayUtils.Decompress(1);
+                    MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
-                MessageBox.Show("Overlay1 is now configured as uncompressed.", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return true;
-            }
-            else
-            {
-                MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return false;
+                uint payloadOffset = offsetDialog.SelectedOffset;
+                uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
+                byte[] branchBytes = BuildThumbBl(BuildingRotationPatchData.hookRuntimeAddress, payloadAddress);
+
+                DialogResult result = MessageBox.Show("This process will apply the following changes:\n\n" +
+                    "- Backup Overlay 1 file (overlay1.bin" + backupSuffix + " will be created).\n\n" +
+                    "- Restore 4 bytes at Overlay 1 offset 0x" + BuildingRotationPatchData.restoreOverlayOffset.ToString("X") + " to the expected vanilla instructions.\n\n" +
+                    "- Replace 4 bytes at Overlay 1 offset 0x" + BuildingRotationPatchData.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
+                    "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
+                    "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n\n" +
+                    "This enables the existing building rotation values to be used when drawing buildings.\n\n" +
+                    "Do you wish to continue?",
+                    "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (result != DialogResult.Yes)
+                {
+                    MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
+                File.Copy(overlayFilePath, overlayFilePath + backupSuffix, overwrite: true);
+
+                try
+                {
+                    if (OverlayUtils.IsCompressed(BuildingRotationPatchData.overlayNumber))
+                    {
+                        OverlayUtils.Decompress(BuildingRotationPatchData.overlayNumber);
+                    }
+
+                    DSUtils.WriteToFile(overlayFilePath, BuildingRotationPatchData.restoreBytes, BuildingRotationPatchData.restoreOverlayOffset);
+                    DSUtils.WriteToFile(overlayFilePath, branchBytes, BuildingRotationPatchData.hookOverlayOffset);
+                    DSUtils.WriteToFile(Filesystem.expArmPath, BuildingRotationPatchData.payload, payloadOffset);
+                }
+                catch
+                {
+                    MessageBox.Show("Operation failed. It is strongly advised that you restore the Overlay 1 backup.", "Something went wrong",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                DisableBuildingRotationPatch("Already applied");
+                PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
+                buildingRotationCB.Visible = true;
+
+                MessageBox.Show("The building rotation patch has been applied.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -882,6 +1014,14 @@ namespace DSPRE
                                 BDHCamARM9requiredLBL.Visible = false;
                             }
                             break;
+                    }
+
+                    if (BuildingRotationPatchData.SupportsCurrentRom() && !CheckFilesBuildingRotationPatchApplied())
+                    {
+                        buildingRotationButton.Text = "Apply Patch";
+                        buildingRotationButton.Enabled = true;
+                        buildingRotationLBL.Enabled = true;
+                        buildingRotationTextLBL.Enabled = true;
                     }
 
                     if (RomInfo.gameFamily == GameFamilies.HGSS
