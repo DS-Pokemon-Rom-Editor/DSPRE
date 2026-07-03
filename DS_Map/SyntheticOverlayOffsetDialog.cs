@@ -143,6 +143,12 @@ namespace DSPRE
                 return;
             }
 
+            if (offset % 4 != 0)
+            {
+                SetStatus("Offset must be 4-byte aligned.", Color.Firebrick);
+                return;
+            }
+
             if (currentBytes.SequenceEqual(expectedBytes))
             {
                 SetStatus("This range already contains the expected patch bytes.", Color.DarkGreen);

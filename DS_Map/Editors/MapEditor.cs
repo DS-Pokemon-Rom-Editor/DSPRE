@@ -206,8 +206,7 @@ namespace DSPRE.Editors
                 DirNames.synthOverlay,
             });
 
-            groupBox33.Enabled = PatchToolboxDialog.flag_BuildingRotationPatchApplied
-                || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied();
+            RefreshBuildingRotationPatchState();
 
             if (RomInfo.gameFamily == GameFamilies.HGSS)
             {
@@ -332,6 +331,13 @@ namespace DSPRE.Editors
 
             Helpers.statusLabelMessage();
         }
+
+        public void RefreshBuildingRotationPatchState()
+        {
+            groupBox33.Enabled = PatchToolboxDialog.flag_BuildingRotationPatchApplied
+                || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied();
+        }
+
         private void addMapFileButton_Click(object sender, EventArgs e)
         {
             /* Add new map file to map folder */

@@ -196,12 +196,11 @@ namespace DSPRE.Resources.ROMToolboxDB {
         internal class BuildingRotationPatchData {
             internal const byte overlayNumber = 1;
             internal const uint defaultPayloadOffset = 0x00011CE8;
-            internal const uint restoreOverlayOffset = 0x0000E18E;
             internal const uint hookOverlayOffset = 0x0000E1C6;
             internal const uint hookRuntimeAddress = 0x021F3AC6;
+            internal const uint rotationMatrixFunctionAddress = 0x02020D2C;
+            internal const uint payloadInternalBranchOffset = 0x08;
 
-            internal static readonly byte[] restoreBytes = { 0x28, 0x69, 0x11, 0x1C };
-            internal static readonly byte[] originalHookBytes = { 0x0F, 0xA9, 0x00, 0x28 };
             internal static byte[] payload => LoadPayload();
 
             internal static bool SupportsCurrentRom()

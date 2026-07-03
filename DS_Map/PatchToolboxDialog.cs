@@ -321,6 +321,16 @@ namespace DSPRE
             };
         }
 
+        private static byte[] BuildBuildingRotationPayload(uint payloadAddress)
+        {
+            byte[] payload = (byte[])BuildingRotationPatchData.payload.Clone();
+            byte[] branchBytes = BuildThumbBl(
+                payloadAddress + BuildingRotationPatchData.payloadInternalBranchOffset,
+                BuildingRotationPatchData.rotationMatrixFunctionAddress);
+            Array.Copy(branchBytes, 0, payload, BuildingRotationPatchData.payloadInternalBranchOffset, branchBytes.Length);
+            return payload;
+        }
+
         private static bool TryGetThumbBlTarget(uint sourceAddress, byte[] branchBytes, out uint targetAddress)
         {
             targetAddress = 0;
@@ -594,12 +604,6 @@ namespace DSPRE
 
             string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
 
-            byte[] restoreBytesRead = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.restoreOverlayOffset, BuildingRotationPatchData.restoreBytes.Length);
-            if (!restoreBytesRead.SequenceEqual(BuildingRotationPatchData.restoreBytes))
-            {
-                return false;
-            }
-
             byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.hookOverlayOffset, 4);
             if (!TryGetThumbBlTarget(BuildingRotationPatchData.hookRuntimeAddress, hookBytes, out uint targetAddress))
             {
@@ -624,7 +628,7 @@ namespace DSPRE
             }
 
             byte[] payloadRead = DSUtils.ReadFromFile(Filesystem.expArmPath, payloadOffset, BuildingRotationPatchData.payload.Length);
-            return payloadRead.SequenceEqual(BuildingRotationPatchData.payload);
+            return payloadRead.SequenceEqual(BuildBuildingRotationPayload(targetAddress));
         }
 
         public void CheckScrcmdRepointPatchApplied()
@@ -817,10 +821,10 @@ namespace DSPRE
                 uint payloadOffset = offsetDialog.SelectedOffset;
                 uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
                 byte[] branchBytes = BuildThumbBl(BuildingRotationPatchData.hookRuntimeAddress, payloadAddress);
+                byte[] payloadBytes = BuildBuildingRotationPayload(payloadAddress);
 
                 DialogResult result = MessageBox.Show("This process will apply the following changes:\n\n" +
                     "- Backup Overlay 1 file (overlay1.bin" + backupSuffix + " will be created).\n\n" +
-                    "- Restore 4 bytes at Overlay 1 offset 0x" + BuildingRotationPatchData.restoreOverlayOffset.ToString("X") + " to the expected vanilla instructions.\n\n" +
                     "- Replace 4 bytes at Overlay 1 offset 0x" + BuildingRotationPatchData.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
                     "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
                     "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n\n" +
@@ -839,9 +843,8 @@ namespace DSPRE
 
                 try
                 {
-                    DSUtils.WriteToFile(overlayFilePath, BuildingRotationPatchData.restoreBytes, BuildingRotationPatchData.restoreOverlayOffset);
                     DSUtils.WriteToFile(overlayFilePath, branchBytes, BuildingRotationPatchData.hookOverlayOffset);
-                    DSUtils.WriteToFile(Filesystem.expArmPath, BuildingRotationPatchData.payload, payloadOffset);
+                    DSUtils.WriteToFile(Filesystem.expArmPath, payloadBytes, payloadOffset);
                 }
                 catch
                 {
@@ -853,6 +856,10 @@ namespace DSPRE
                 DisableBuildingRotationPatch("Already applied");
                 PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
                 buildingRotationCB.Visible = true;
+                if (EditorPanels.mapEditor.mapEditorIsReady)
+                {
+                    EditorPanels.mapEditor.RefreshBuildingRotationPatchState();
+                }
 
                 MessageBox.Show(
                     "The building rotation patch has been applied.\n\n" +
