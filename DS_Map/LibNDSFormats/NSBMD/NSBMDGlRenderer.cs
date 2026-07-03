@@ -111,6 +111,10 @@ namespace LibNDSFormats.NSBMD {
 			Translucent,
 			Picking
 		}
+		private static float MaterialAlpha(NSBMDMaterial mat) {
+			return mat.Alpha >= 31 ? 1.0f : mat.Alpha / 31.0f;
+		}
+
 		public static float[] Rotate(float[] a, float x, float y, float z) {
 			float[] b = loadIdentity();
 			float cx = (float)Math.Cos(x);
@@ -346,7 +350,8 @@ namespace LibNDSFormats.NSBMD {
 						}
 						Gl.glEnable(Gl.GL_ALPHA_TEST);
 						Gl.glAlphaFunc(Gl.GL_GREATER, 0f);
-						Gl.glColor4f(0xff, 0xff, 0xff, 0xff);
+						float materialAlpha = MaterialAlpha(mat);
+						Gl.glColor4f(1.0f, 1.0f, 1.0f, materialAlpha);
 
 						if (licht && (((mat.PolyAttrib >> 0) & 0x1) == 0 && ((mat.PolyAttrib >> 1) & 0x1) == 0 && ((mat.PolyAttrib >> 2) & 0x1) == 0 && ((mat.PolyAttrib >> 3) & 0x1) == 0) == false) {
 							//Gl.glLightfv(Gl.GL_LIGHT0, Gl.GL_POSITION, new float[] { 1, 1, 1, 0 });
@@ -395,7 +400,7 @@ namespace LibNDSFormats.NSBMD {
 							}
 
 							if (mat.diffuseColor) {
-								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, (float)mat.DiffuseColor.A / 255f);
+								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, materialAlpha);
 							}
 
 						} else {
@@ -406,7 +411,7 @@ namespace LibNDSFormats.NSBMD {
 							Gl.glDisable(Gl.GL_LIGHT3);
 
 							if (mat.diffuseColor) {
-								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, (float)mat.DiffuseColor.A / 255f);
+								Gl.glColor4f((float)mat.DiffuseColor.R / 255f, (float)mat.DiffuseColor.G / 255f, (float)mat.DiffuseColor.B / 255f, materialAlpha);
 							}
 
 						}
