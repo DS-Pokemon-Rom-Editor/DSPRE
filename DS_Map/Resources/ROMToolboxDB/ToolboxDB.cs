@@ -195,28 +195,36 @@ namespace DSPRE.Resources.ROMToolboxDB {
         }
         internal class BuildingRotationPatchData {
             internal const byte overlayNumber = 1;
-            internal const uint defaultPayloadOffset = 0x00000000;
+            internal const uint defaultPayloadOffset = 0x00011CE8;
             internal const uint restoreOverlayOffset = 0x0000E18E;
             internal const uint hookOverlayOffset = 0x0000E1C6;
             internal const uint hookRuntimeAddress = 0x021F3AC6;
 
             internal static readonly byte[] restoreBytes = { 0x28, 0x69, 0x11, 0x1C };
             internal static readonly byte[] originalHookBytes = { 0x0F, 0xA9, 0x00, 0x28 };
-            internal static readonly byte[] payload = {
-                0x01, 0xB5,
-                0x08, 0xA8,
-                0x29, 0x1C,
-                0x20, 0x31,
-                0x58, 0xF4, 0x90, 0xFE,
-                0x09, 0xBC,
-                0x0F, 0xA9,
-                0x00, 0x28,
-                0x18, 0x47
-            };
+            internal static byte[] payload => LoadPayload();
 
             internal static bool SupportsCurrentRom()
             {
-                return RomInfo.romID == "IPKE";
+                try
+                {
+                    return RomInfo.romID == "IPKE" && payload != null;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            private static byte[] LoadPayload()
+            {
+                byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_rotation");
+                if (payload == null)
+                {
+                    throw new NotSupportedException();
+                }
+
+                return payload;
             }
         }
         internal class DynamicHeadersPatchData {

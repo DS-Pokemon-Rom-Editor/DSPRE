@@ -453,6 +453,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>BDHCAMPatchDB.resx</DependentUpon>
     </Compile>
+    <Compile Include="Resources\ROMToolboxDB\BuildingRotationPatchDB.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>BuildingRotationPatchDB.resx</DependentUpon>
+    </Compile>
     <Compile Include="HeaderSearch.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -765,6 +770,11 @@
       <LastGenOutput>BDHCAMPatchDB.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\ROMToolboxDB\BuildingRotationPatchDB.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>BuildingRotationPatchDB.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="Resources\ROMToolboxDB\CustomScrCmdDB.resx" />
     <EmbeddedResource Include="Resources\CommandsDatabase.resx">
       <DependentUpon>CommandsDatabase.cs</DependentUpon>
@@ -809,6 +819,7 @@
     <None Include="Resources\ROMToolboxDB\IPGS_cam.bin" />
     <None Include="Resources\ROMToolboxDB\IPKE_cam.bin" />
     <None Include="Resources\ROMToolboxDB\IPKS_cam.bin" />
+    <None Include="Resources\ROMToolboxDB\IPKE_rotation.bin" />
     <None Include="Themes\.gitkeep" />
     <None Include="Tools\charmap.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

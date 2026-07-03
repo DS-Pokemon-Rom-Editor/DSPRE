@@ -45,6 +45,13 @@ namespace DSPRE.Editors
             cameraEditorIsReady = true;
 
             RomInfo.PrepareCameraData();
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.cameraTblOverlayNumber == 1)
+            {
+                MessageBox.Show("Convert this project to ds-rom format before using the Camera Editor for this ROM.", "ds-rom project required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                cameraEditorIsReady = false;
+                return;
+            }
+
             cameraEditorDataGridView.Rows.Clear();
 
             uint[] RAMaddresses = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];

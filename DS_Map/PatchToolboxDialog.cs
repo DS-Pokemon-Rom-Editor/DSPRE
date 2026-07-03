@@ -83,6 +83,9 @@ namespace DSPRE
             }
 
             bool bdhCamPatchSupported = BDHCAMPatchData.SupportsCurrentRom();
+            bool buildingRotationPatchSupported = BuildingRotationPatchData.SupportsCurrentRom();
+            bool bdhCamPatchBlockedByProjectFormat = bdhCamPatchSupported && IsHgssLegacyOverlay1BDHCamPatch();
+            bool buildingRotationPatchBlockedByProjectFormat = !RomInfo.IsDsRomProject && buildingRotationPatchSupported;
 
             // ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS
             if ((RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat)
@@ -91,9 +94,18 @@ namespace DSPRE
                 DisableScrcmdRepointPatch("Unsupported\nlanguage");
             }
 
-            if (!bdhCamPatchSupported)
+            if (bdhCamPatchBlockedByProjectFormat)
+            {
+                DisableBDHCamPatch("Convert to\nds-rom");
+            }
+            else if (!bdhCamPatchSupported)
             {
                 DisableBDHCamPatch("Unsupported\nROM");
+            }
+
+            if (buildingRotationPatchBlockedByProjectFormat)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
             }
 
             CheckExpandedTrainerNamesPatchApplied();
@@ -114,7 +126,7 @@ namespace DSPRE
                     DisableScrcmdRepointPatch("Unsupported");
                     DisableKillTextureAnimationsPatch("Unsupported");
 
-                    if (bdhCamPatchSupported)
+                    if (!bdhCamPatchBlockedByProjectFormat && bdhCamPatchSupported)
                     {
                         CheckBDHCamPatchApplied();
                     }
@@ -122,17 +134,18 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (BuildingRotationPatchData.SupportsCurrentRom())
+                    if (!buildingRotationPatchBlockedByProjectFormat && buildingRotationPatchSupported)
                     {
                         CheckBuildingRotationPatchApplied();
-                    } else
+                    }
+                    else if (!buildingRotationPatchBlockedByProjectFormat)
                     {
                         DisableBuildingRotationPatch("Unsupported\nROM");
                     }
 
                     if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
                     {
-                        if (bdhCamPatchSupported)
+                        if (!bdhCamPatchBlockedByProjectFormat && bdhCamPatchSupported)
                         {
                             CheckBDHCamPatchApplied();
                         }
@@ -257,6 +270,11 @@ namespace DSPRE
             }
 
             BDHCAMPatchData data = new BDHCAMPatchData();
+            if (IsHgssLegacyOverlay1Patch(data.overlayNumber))
+            {
+                return false;
+            }
+
             byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
             byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, branchCode.Length);
 
@@ -370,6 +388,16 @@ namespace DSPRE
                 && trampoline[1] == 0x4B
                 && trampoline[2] == 0x18
                 && trampoline[3] == 0x47;
+        }
+
+        private static bool IsHgssLegacyOverlay1Patch(byte overlayNumber)
+        {
+            return RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && overlayNumber == 1;
+        }
+
+        private static bool IsHgssLegacyOverlay1BDHCamPatch()
+        {
+            return IsHgssLegacyOverlay1Patch(new BDHCAMPatchData().overlayNumber);
         }
 
         public static bool CheckFilesMatrixExpansionApplied()
@@ -525,6 +553,12 @@ namespace DSPRE
 
         public bool CheckBuildingRotationPatchApplied()
         {
+            if (!RomInfo.IsDsRomProject)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
+                return false;
+            }
+
             if (!BuildingRotationPatchData.SupportsCurrentRom())
             {
                 DisableBuildingRotationPatch("Unsupported\nROM");
@@ -553,7 +587,7 @@ namespace DSPRE
 
         public static bool CheckFilesBuildingRotationPatchApplied()
         {
-            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            if (!RomInfo.IsDsRomProject || !BuildingRotationPatchData.SupportsCurrentRom())
             {
                 return false;
             }
@@ -991,7 +1025,7 @@ namespace DSPRE
                     {
                         case GameFamilies.Plat:
                         case GameFamilies.HGSS:
-                            if (BDHCAMPatchData.SupportsCurrentRom())
+                            if (BDHCAMPatchData.SupportsCurrentRom() && !IsHgssLegacyOverlay1BDHCamPatch())
                             {
                                 BDHCamPatchButton.Text = "Apply Patch";
                                 BDHCamPatchButton.Enabled = true;
@@ -1002,7 +1036,7 @@ namespace DSPRE
                             break;
                     }
 
-                    if (BuildingRotationPatchData.SupportsCurrentRom() && !CheckFilesBuildingRotationPatchApplied())
+                    if (RomInfo.IsDsRomProject && BuildingRotationPatchData.SupportsCurrentRom() && !CheckFilesBuildingRotationPatchApplied())
                     {
                         buildingRotationButton.Text = "Apply Patch";
                         buildingRotationButton.Enabled = true;
