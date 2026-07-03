@@ -39,6 +39,7 @@ namespace DSPRE
             this.label8 = new System.Windows.Forms.Label();
             this.namesToSentenceCaseButton = new System.Windows.Forms.Button();
             this.buildingRotationLBL = new System.Windows.Forms.Label();
+            this.buildingRotationARM9requiredLBL = new System.Windows.Forms.Label();
             this.buildingRotationTextLBL = new System.Windows.Forms.Label();
             this.buildingRotationButton = new System.Windows.Forms.Button();
             this.BDHCamARM9requiredLBL = new System.Windows.Forms.Label();
@@ -191,15 +192,26 @@ namespace DSPRE
             this.buildingRotationLBL.Size = new System.Drawing.Size(147, 13);
             this.buildingRotationLBL.TabIndex = 12;
             this.buildingRotationLBL.Text = "Enable Building Rotation";
-            // 
+            //
+            // buildingRotationARM9requiredLBL
+            //
+            this.buildingRotationARM9requiredLBL.AutoSize = true;
+            this.buildingRotationARM9requiredLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.buildingRotationARM9requiredLBL.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(64)))), ((int)(((byte)(0)))));
+            this.buildingRotationARM9requiredLBL.Location = new System.Drawing.Point(160, 107);
+            this.buildingRotationARM9requiredLBL.Name = "buildingRotationARM9requiredLBL";
+            this.buildingRotationARM9requiredLBL.Size = new System.Drawing.Size(165, 13);
+            this.buildingRotationARM9requiredLBL.TabIndex = 70;
+            this.buildingRotationARM9requiredLBL.Text = "(Requires ARM9 Expansion)";
+            //
             // buildingRotationTextLBL
-            // 
+            //
             this.buildingRotationTextLBL.Location = new System.Drawing.Point(15, 122);
             this.buildingRotationTextLBL.Name = "buildingRotationTextLBL";
-            this.buildingRotationTextLBL.Size = new System.Drawing.Size(293, 29);
+            this.buildingRotationTextLBL.Size = new System.Drawing.Size(293, 49);
             this.buildingRotationTextLBL.TabIndex = 13;
-            this.buildingRotationTextLBL.Text = "Makes HeartGold use building rotation values from map building data.\r\nCurrently suppo" +
-    "rts HeartGold USA only.";
+            this.buildingRotationTextLBL.Text = "Enables the game to recognise rotation of buildings (Map Editor).\r\n\r\n[ B E T A  " +
+    "   |    Needs testing]";
             this.buildingRotationTextLBL.UseMnemonic = false;
             // 
             // buildingRotationButton
@@ -567,6 +579,7 @@ namespace DSPRE
             this.Controls.Add(this.BDHCamARM9requiredLBL);
             this.Controls.Add(this.buildingRotationButton);
             this.Controls.Add(this.buildingRotationTextLBL);
+            this.Controls.Add(this.buildingRotationARM9requiredLBL);
             this.Controls.Add(this.buildingRotationLBL);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.label8);
@@ -613,6 +626,7 @@ namespace DSPRE
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Button namesToSentenceCaseButton;
         private System.Windows.Forms.Label buildingRotationLBL;
+        private System.Windows.Forms.Label buildingRotationARM9requiredLBL;
         private System.Windows.Forms.Label buildingRotationTextLBL;
         private System.Windows.Forms.Button buildingRotationButton;
         private System.Windows.Forms.Label BDHCamARM9requiredLBL;

@@ -100,12 +100,20 @@ namespace DSPRE
             }
             else if (!bdhCamPatchSupported)
             {
-                DisableBDHCamPatch("Unsupported\nROM");
+                DisableBDHCamPatch("Unsupported");
             }
 
             if (buildingRotationPatchBlockedByProjectFormat)
             {
                 DisableBuildingRotationPatch("Convert to\nds-rom");
+            }
+            else if (buildingRotationPatchSupported)
+            {
+                CheckBuildingRotationPatchApplied();
+            }
+            else
+            {
+                DisableBuildingRotationPatch("Unsupported");
             }
 
             CheckExpandedTrainerNamesPatchApplied();
@@ -113,7 +121,6 @@ namespace DSPRE
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                    DisableBuildingRotationPatch("Unsupported");
                     DisableDynamicHeadersPatch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
@@ -121,7 +128,6 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    DisableBuildingRotationPatch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
                     DisableKillTextureAnimationsPatch("Unsupported");
@@ -134,15 +140,6 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (!buildingRotationPatchBlockedByProjectFormat && buildingRotationPatchSupported)
-                    {
-                        CheckBuildingRotationPatchApplied();
-                    }
-                    else if (!buildingRotationPatchBlockedByProjectFormat)
-                    {
-                        DisableBuildingRotationPatch("Unsupported\nROM");
-                    }
-
                     if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
                     {
                         if (!bdhCamPatchBlockedByProjectFormat && bdhCamPatchSupported)
@@ -169,6 +166,7 @@ namespace DSPRE
         {
             buildingRotationButton.Enabled = false;
             buildingRotationLBL.Enabled = false;
+            buildingRotationARM9requiredLBL.Enabled = false;
             buildingRotationTextLBL.Enabled = false;
             buildingRotationButton.Text = reason;
         }
@@ -571,7 +569,7 @@ namespace DSPRE
 
             if (!BuildingRotationPatchData.SupportsCurrentRom())
             {
-                DisableBuildingRotationPatch("Unsupported\nROM");
+                DisableBuildingRotationPatch("Unsupported");
                 return false;
             }
 
@@ -831,7 +829,7 @@ namespace DSPRE
                     "- Replace 4 bytes at Overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
                     "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
                     "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n\n" +
-                    "This enables the existing building rotation values to be used when drawing buildings.\n\n" +
+                    "This enables the existing building rotation values to be used when placing buildings.\n\n" +
                     "Do you wish to continue?",
                     "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
@@ -1061,6 +1059,7 @@ namespace DSPRE
                         buildingRotationButton.Text = "Apply Patch";
                         buildingRotationButton.Enabled = true;
                         buildingRotationLBL.Enabled = true;
+                        buildingRotationARM9requiredLBL.Enabled = true;
                         buildingRotationTextLBL.Enabled = true;
                     }
 
