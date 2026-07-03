@@ -47,11 +47,6 @@ namespace DSPRE.Editors
             RomInfo.PrepareCameraData();
             cameraEditorDataGridView.Rows.Clear();
 
-            if (OverlayUtils.IsCompressed(RomInfo.cameraTblOverlayNumber)) {
-                OverlayUtils.Decompress(RomInfo.cameraTblOverlayNumber);
-            }
-
-
             uint[] RAMaddresses = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];
             string camOverlayPath = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
             using (DSUtils.EasyReader br = new DSUtils.EasyReader(camOverlayPath)) {

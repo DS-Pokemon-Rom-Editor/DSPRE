@@ -266,7 +266,6 @@ namespace DSPRE
             }
 
             string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-            OverlayUtils.Decompress(data.overlayNumber);
 
             if (!TryGetBDHCamSubroutineOffset(data, out uint subroutineOffset))
             {
@@ -560,10 +559,6 @@ namespace DSPRE
             }
 
             string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
-            if (OverlayUtils.IsCompressed(BuildingRotationPatchData.overlayNumber))
-            {
-                OverlayUtils.Decompress(BuildingRotationPatchData.overlayNumber);
-            }
 
             byte[] restoreBytesRead = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.restoreOverlayOffset, BuildingRotationPatchData.restoreBytes.Length);
             if (!restoreBytesRead.SequenceEqual(BuildingRotationPatchData.restoreBytes))
@@ -725,10 +720,6 @@ namespace DSPRE
 
                         /* Write to overlayfile */
                         string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-                        if (OverlayUtils.IsCompressed(data.overlayNumber))
-                        {
-                            OverlayUtils.Decompress(data.overlayNumber);
-                        }
 
                         DSUtils.WriteToFile(overlayFilePath, overlayCode1, data.overlayOffset1); //Write new overlayCode1
                         DSUtils.WriteToFile(overlayFilePath, overlayCode2, data.overlayOffset2); //Write new overlayCode2
@@ -809,11 +800,6 @@ namespace DSPRE
 
                 try
                 {
-                    if (OverlayUtils.IsCompressed(BuildingRotationPatchData.overlayNumber))
-                    {
-                        OverlayUtils.Decompress(BuildingRotationPatchData.overlayNumber);
-                    }
-
                     DSUtils.WriteToFile(overlayFilePath, BuildingRotationPatchData.restoreBytes, BuildingRotationPatchData.restoreOverlayOffset);
                     DSUtils.WriteToFile(overlayFilePath, branchBytes, BuildingRotationPatchData.hookOverlayOffset);
                     DSUtils.WriteToFile(Filesystem.expArmPath, BuildingRotationPatchData.payload, payloadOffset);
