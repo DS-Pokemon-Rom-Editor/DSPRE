@@ -79,7 +79,7 @@ namespace DSPRE
             }
             else
             {
-                DisableARM9patch("Unsupported\nlanguage");
+                DisableARM9patch("Unsupported");
             }
 
             bool bdhCamPatchSupported = BDHCAMPatchData.SupportsCurrentRom();
@@ -91,7 +91,7 @@ namespace DSPRE
             if ((RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat)
                 || (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
             {
-                DisableScrcmdRepointPatch("Unsupported\nlanguage");
+                DisableScrcmdRepointPatch("Unsupported");
             }
 
             if (bdhCamPatchBlockedByProjectFormat)
@@ -151,8 +151,8 @@ namespace DSPRE
                     }
                     else
                     {
-                        DisableMatrixExpansionPatch("Unsupported\nlanguage");
-                        DisableScrcmdRepointPatch("Unsupported\nlanguage");
+                        DisableMatrixExpansionPatch("Unsupported");
+                        DisableScrcmdRepointPatch("Unsupported");
                     }
 
                     CheckDynamicHeadersPatchApplied();
@@ -710,12 +710,6 @@ namespace DSPRE
 
         private void BDHCAMPatchButton_Click(object sender, EventArgs e)
         {
-            if (!BDHCAMPatchData.SupportsCurrentRom())
-            {
-                MessageBox.Show("The BDHCAM patch is not available for this ROM.", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
             BDHCAMPatchData data = new BDHCAMPatchData();
 
             using (var offsetDialog = new SyntheticOverlayOffsetDialog(
@@ -791,12 +785,6 @@ namespace DSPRE
 
         private void BuildingRotationButton_Click(object sender, EventArgs e)
         {
-            if (!BuildingRotationPatchData.SupportsCurrentRom())
-            {
-                MessageBox.Show("The building rotation patch is not available for this ROM.", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
             if (!CheckARM9ExpansionApplied())
             {
                 MessageBox.Show("Apply the ARM9 Expansion patch before applying the building rotation patch.", "ARM9 Expansion Required", MessageBoxButtons.OK, MessageBoxIcon.Information);
