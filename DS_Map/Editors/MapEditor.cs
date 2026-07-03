@@ -203,7 +203,11 @@ namespace DSPRE.Editors
                 DirNames.buildingTextures,
                 DirNames.mapTextures,
                 DirNames.areaData,
+                DirNames.synthOverlay,
             });
+
+            groupBox33.Enabled = PatchToolboxDialog.flag_BuildingRotationPatchApplied
+                || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied();
 
             if (RomInfo.gameFamily == GameFamilies.HGSS)
             {
