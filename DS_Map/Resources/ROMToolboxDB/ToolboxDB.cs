@@ -194,20 +194,21 @@ namespace DSPRE.Resources.ROMToolboxDB {
             }
         }
         internal class BuildingRotationPatchData {
-            internal const byte overlayNumber = 1;
-            internal const uint defaultPayloadOffset = 0x00011CE8;
-            internal const uint hookOverlayOffset = 0x0000E1C6;
-            internal const uint hookRuntimeAddress = 0x021F3AC6;
-            internal const uint rotationMatrixFunctionAddress = 0x02020D2C;
+            internal byte overlayNumber;
+            internal uint defaultPayloadOffset;
+            internal uint hookOverlayOffset;
+            internal uint hookRuntimeAddress;
+            internal uint rotationMatrixFunctionAddress;
             internal const uint payloadInternalBranchOffset = 0x08;
 
-            internal static byte[] payload => LoadPayload();
+            internal byte[] payload;
 
             internal static bool SupportsCurrentRom()
             {
                 try
                 {
-                    return RomInfo.romID == "IPKE" && payload != null;
+                    new BuildingRotationPatchData();
+                    return true;
                 }
                 catch
                 {
@@ -215,7 +216,38 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 }
             }
 
-            private static byte[] LoadPayload()
+            internal BuildingRotationPatchData()
+            {
+                defaultPayloadOffset = 0x00011CE8;
+
+                switch (RomInfo.romID)
+                {
+                    case "ADAE":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x0001097E;
+                        hookRuntimeAddress = 0x021E7E5E;
+                        rotationMatrixFunctionAddress = 0x0201CAA8;
+                        break;
+                    case "CPUE":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x00010AD2;
+                        hookRuntimeAddress = 0x021E1852;
+                        rotationMatrixFunctionAddress = 0x0201E268;
+                        break;
+                    case "IPKE":
+                        overlayNumber = 1;
+                        hookOverlayOffset = 0x0000E1C6;
+                        hookRuntimeAddress = 0x021F3AC6;
+                        rotationMatrixFunctionAddress = 0x02020D2C;
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                payload = LoadPayload();
+            }
+
+            private byte[] LoadPayload()
             {
                 byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_rotation");
                 if (payload == null)

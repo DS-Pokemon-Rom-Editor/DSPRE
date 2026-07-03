@@ -819,7 +819,9 @@
     <None Include="Resources\ROMToolboxDB\IPGS_cam.bin" />
     <None Include="Resources\ROMToolboxDB\IPKE_cam.bin" />
     <None Include="Resources\ROMToolboxDB\IPKS_cam.bin" />
-    <None Include="Resources\ROMToolboxDB\IPKE_rotation.bin" />
+    <None Include="Resources\ROMToolboxDB\adae_rotation.bin" />
+    <None Include="Resources\ROMToolboxDB\cpue_rotation.bin" />
+    <None Include="Resources\ROMToolboxDB\ipke_rotation.bin" />
     <None Include="Themes\.gitkeep" />
     <None Include="Tools\charmap.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

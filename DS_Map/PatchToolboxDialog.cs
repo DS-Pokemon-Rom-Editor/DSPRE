@@ -321,12 +321,12 @@ namespace DSPRE
             };
         }
 
-        private static byte[] BuildBuildingRotationPayload(uint payloadAddress)
+        private static byte[] BuildBuildingRotationPayload(BuildingRotationPatchData data, uint payloadAddress)
         {
-            byte[] payload = (byte[])BuildingRotationPatchData.payload.Clone();
+            byte[] payload = (byte[])data.payload.Clone();
             byte[] branchBytes = BuildThumbBl(
                 payloadAddress + BuildingRotationPatchData.payloadInternalBranchOffset,
-                BuildingRotationPatchData.rotationMatrixFunctionAddress);
+                data.rotationMatrixFunctionAddress);
             Array.Copy(branchBytes, 0, payload, BuildingRotationPatchData.payloadInternalBranchOffset, branchBytes.Length);
             return payload;
         }
@@ -602,10 +602,11 @@ namespace DSPRE
                 return false;
             }
 
-            string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
+            BuildingRotationPatchData data = new BuildingRotationPatchData();
+            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
 
-            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, BuildingRotationPatchData.hookOverlayOffset, 4);
-            if (!TryGetThumbBlTarget(BuildingRotationPatchData.hookRuntimeAddress, hookBytes, out uint targetAddress))
+            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, data.hookOverlayOffset, 4);
+            if (!TryGetThumbBlTarget(data.hookRuntimeAddress, hookBytes, out uint targetAddress))
             {
                 return false;
             }
@@ -622,13 +623,13 @@ namespace DSPRE
             }
 
             long fileLength = new FileInfo(Filesystem.expArmPath).Length;
-            if ((long)payloadOffset + BuildingRotationPatchData.payload.Length > fileLength)
+            if ((long)payloadOffset + data.payload.Length > fileLength)
             {
                 return false;
             }
 
-            byte[] payloadRead = DSUtils.ReadFromFile(Filesystem.expArmPath, payloadOffset, BuildingRotationPatchData.payload.Length);
-            return payloadRead.SequenceEqual(BuildBuildingRotationPayload(targetAddress));
+            byte[] payloadRead = DSUtils.ReadFromFile(Filesystem.expArmPath, payloadOffset, data.payload.Length);
+            return payloadRead.SequenceEqual(BuildBuildingRotationPayload(data, targetAddress));
         }
 
         public void CheckScrcmdRepointPatchApplied()
@@ -794,7 +795,7 @@ namespace DSPRE
         {
             if (!BuildingRotationPatchData.SupportsCurrentRom())
             {
-                MessageBox.Show("The building rotation patch is currently only available for HeartGold Version (USA).", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("The building rotation patch is not available for this ROM.", "Unsupported ROM", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -805,11 +806,13 @@ namespace DSPRE
                 return;
             }
 
+            BuildingRotationPatchData data = new BuildingRotationPatchData();
+
             using (var offsetDialog = new SyntheticOverlayOffsetDialog(
                 "Building rotation routine",
                 Filesystem.expArmPath,
-                BuildingRotationPatchData.defaultPayloadOffset,
-                BuildingRotationPatchData.payload,
+                data.defaultPayloadOffset,
+                data.payload,
                 synthOverlayLoadAddress))
             {
                 if (offsetDialog.ShowDialog(this) != DialogResult.OK)
@@ -820,12 +823,12 @@ namespace DSPRE
 
                 uint payloadOffset = offsetDialog.SelectedOffset;
                 uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
-                byte[] branchBytes = BuildThumbBl(BuildingRotationPatchData.hookRuntimeAddress, payloadAddress);
-                byte[] payloadBytes = BuildBuildingRotationPayload(payloadAddress);
+                byte[] branchBytes = BuildThumbBl(data.hookRuntimeAddress, payloadAddress);
+                byte[] payloadBytes = BuildBuildingRotationPayload(data, payloadAddress);
 
                 DialogResult result = MessageBox.Show("This process will apply the following changes:\n\n" +
-                    "- Backup Overlay 1 file (overlay1.bin" + backupSuffix + " will be created).\n\n" +
-                    "- Replace 4 bytes at Overlay 1 offset 0x" + BuildingRotationPatchData.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
+                    "- Backup Overlay " + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created).\n\n" +
+                    "- Replace 4 bytes at Overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
                     "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
                     "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n\n" +
                     "This enables the existing building rotation values to be used when drawing buildings.\n\n" +
@@ -838,17 +841,17 @@ namespace DSPRE
                     return;
                 }
 
-                string overlayFilePath = OverlayUtils.GetPath(BuildingRotationPatchData.overlayNumber);
+                string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
                 File.Copy(overlayFilePath, overlayFilePath + backupSuffix, overwrite: true);
 
                 try
                 {
-                    DSUtils.WriteToFile(overlayFilePath, branchBytes, BuildingRotationPatchData.hookOverlayOffset);
+                    DSUtils.WriteToFile(overlayFilePath, branchBytes, data.hookOverlayOffset);
                     DSUtils.WriteToFile(Filesystem.expArmPath, payloadBytes, payloadOffset);
                 }
                 catch
                 {
-                    MessageBox.Show("Operation failed. It is strongly advised that you restore the Overlay 1 backup.", "Something went wrong",
+                    MessageBox.Show("Operation failed. It is strongly advised that you restore the Overlay " + data.overlayNumber + " backup.", "Something went wrong",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
