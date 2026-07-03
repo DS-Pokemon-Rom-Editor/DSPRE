@@ -33,6 +33,7 @@ namespace DSPRE
 
         public static readonly int expandedTrainerNameLength = 12;
         private static readonly uint[] BDHCamInternalPointerOffsets = new uint[] { 0x18C, 0x3DC, 0x3E0, 0x3E4, 0x3E8, 0x684, 0x6F4 };
+        private static readonly uint[] BDHCamExternalBranchOffsets = new uint[] { 0x050, 0x6A6, 0x6B0, 0x6BA, 0x6C6, 0x6D2, 0x6DE, 0x6EA };
 
         /// <summary>
         /// Resets all static patch flags to their default values.
@@ -273,17 +274,15 @@ namespace DSPRE
                 return false;
             }
 
-            byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
-            byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, branchCode.Length);
-
-            if (branchCode.Length != branchCodeRead.Length || !branchCode.SequenceEqual(branchCodeRead))
+            if (!TryGetBDHCamSubroutineOffset(data, out uint subroutineOffset))
             {
                 return false;
             }
 
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+            byte[] branchCode = BuildBDHCamArm9Branch(data, subroutineOffset);
+            byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, branchCode.Length);
 
-            if (!TryGetBDHCamSubroutineOffset(data, out uint subroutineOffset))
+            if (branchCode.Length != branchCodeRead.Length || !branchCode.SequenceEqual(branchCodeRead))
             {
                 return false;
             }
@@ -303,6 +302,13 @@ namespace DSPRE
                 return false;
 
             return true;
+        }
+
+        private static byte[] BuildBDHCamArm9Branch(BDHCAMPatchData data, uint subroutineOffset)
+        {
+            uint sourceAddress = ARM9.address + data.branchOffset;
+            uint targetAddress = synthOverlayLoadAddress + subroutineOffset + BDHCAMPatchData.branchEntryOffset;
+            return BuildThumbBl(sourceAddress, targetAddress);
         }
 
         private static byte[] BuildBDHCamOverlayTrampoline(uint subroutineOffset, uint entryOffset)
@@ -338,6 +344,25 @@ namespace DSPRE
 
                 uint relocatedPointer = selectedRuntimeAddress + (originalPointer - defaultRuntimeAddress);
                 Array.Copy(BitConverter.GetBytes(relocatedPointer), 0, payload, (int)pointerOffset, sizeof(uint));
+            }
+
+            foreach (uint branchOffset in BDHCamExternalBranchOffsets)
+            {
+                if (branchOffset > (uint)(payload.Length - sizeof(uint)))
+                {
+                    throw new InvalidDataException("BDHCAM payload branch offset is outside the payload.");
+                }
+
+                byte[] branchBytes = new byte[sizeof(uint)];
+                Array.Copy(data.subroutine, branchOffset, branchBytes, 0, branchBytes.Length);
+
+                if (!TryGetThumbBlTarget(defaultRuntimeAddress + branchOffset, branchBytes, out uint branchTarget))
+                {
+                    throw new InvalidDataException("BDHCAM payload has an unexpected external branch.");
+                }
+
+                byte[] relocatedBranch = BuildThumbBl(selectedRuntimeAddress + branchOffset, branchTarget);
+                Array.Copy(relocatedBranch, 0, payload, (int)branchOffset, relocatedBranch.Length);
             }
 
             return payload;
@@ -760,6 +785,7 @@ namespace DSPRE
                 }
 
                 uint subroutineOffset = offsetDialog.SelectedOffset;
+                byte[] branchCode = BuildBDHCamArm9Branch(data, subroutineOffset);
                 byte[] overlayCode1 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset1);
                 byte[] overlayCode2 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset2);
                 byte[] relocatedSubroutine;
@@ -776,7 +802,7 @@ namespace DSPRE
                 var d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
                 "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
                 "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Replace " + (data.branchString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
+                "- Replace " + branchCode.Length + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + string.Join(" ", branchCode.Select(b => b.ToString("X2"))) + "\n\n" +
                 "- Replace " + overlayCode1.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + "." + "\n\n" +
                 "- Replace " + overlayCode2.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + "." + "\n\n" +
                 "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + subroutineOffset.ToString("X") + " and 0x" + (subroutineOffset + (uint)relocatedSubroutine.Length - 1).ToString("X") + " will be overwritten)." + "\n\n" +
@@ -791,7 +817,7 @@ namespace DSPRE
 
                     try
                     {
-                        ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
+                        ARM9.WriteBytes(branchCode, data.branchOffset); //Write new branchOffset
 
                         /* Write to overlayfile */
                         string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);

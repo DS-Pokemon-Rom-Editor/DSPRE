@@ -124,6 +124,7 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal byte[] subroutine;
 
+            internal const uint branchEntryOffset = 0x24;
             internal const uint overlayEntryOffset1 = 0x691;
             internal const uint overlayEntryOffset2 = 0x651;
 
