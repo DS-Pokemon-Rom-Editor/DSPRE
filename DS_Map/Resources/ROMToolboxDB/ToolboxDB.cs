@@ -124,10 +124,6 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             internal byte[] subroutine;
 
-            internal const uint branchEntryOffset = 0x24;
-            internal const uint overlayEntryOffset1 = 0x691;
-            internal const uint overlayEntryOffset2 = 0x651;
-
             public static Dictionary<string, string> BDHCamCodeDB = new Dictionary<string, string>() {
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.English] = "B9 F3 E2 F8",
                 ["branchString" + "_" + RomInfo.GameFamilies.Plat + "_" + RomInfo.GameLanguages.Spanish] = "B9 F3 AA F8",

@@ -32,8 +32,6 @@ namespace DSPRE
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
 
         public static readonly int expandedTrainerNameLength = 12;
-        private static readonly uint[] BDHCamInternalPointerOffsets = new uint[] { 0x18C, 0x3DC, 0x3E0, 0x3E4, 0x3E8, 0x684, 0x6F4 };
-        private static readonly uint[] BDHCamExternalBranchOffsets = new uint[] { 0x050, 0x6A6, 0x6B0, 0x6BA, 0x6C6, 0x6D2, 0x6DE, 0x6EA };
 
         /// <summary>
         /// Resets all static patch flags to their default values.
@@ -274,12 +272,7 @@ namespace DSPRE
                 return false;
             }
 
-            if (!TryGetBDHCamSubroutineOffset(data, out uint subroutineOffset))
-            {
-                return false;
-            }
-
-            byte[] branchCode = BuildBDHCamArm9Branch(data, subroutineOffset);
+            byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
             byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, branchCode.Length);
 
             if (branchCode.Length != branchCodeRead.Length || !branchCode.SequenceEqual(branchCodeRead))
@@ -287,85 +280,27 @@ namespace DSPRE
                 return false;
             }
 
-            byte[] expectedSubroutine;
-            try
-            {
-                expectedSubroutine = BuildBDHCamPayload(data, subroutineOffset);
-            }
-            catch
+            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+
+            byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.overlayString1);
+            byte[] overlayCode1Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset1, overlayCode1.Length);
+            if (overlayCode1Read.Length != overlayCode1.Length || !overlayCode1.SequenceEqual(overlayCode1Read))
             {
                 return false;
             }
 
-            byte[] subroutineRead = DSUtils.ReadFromFile(Filesystem.expArmPath, subroutineOffset, expectedSubroutine.Length);
-            if (expectedSubroutine.Length != subroutineRead.Length || !expectedSubroutine.SequenceEqual(subroutineRead))
+            byte[] overlayCode2 = DSUtils.HexStringToByteArray(data.overlayString2);
+            byte[] overlayCode2Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset2, overlayCode2.Length);
+            if (overlayCode2Read.Length != overlayCode2.Length || !overlayCode2.SequenceEqual(overlayCode2Read))
+            {
+                return false;
+            }
+
+            byte[] subroutineRead = DSUtils.ReadFromFile(Filesystem.expArmPath, BDHCAMPatchData.BDHCamSubroutineOffset, data.subroutine.Length);
+            if (data.subroutine.Length != subroutineRead.Length || !data.subroutine.SequenceEqual(subroutineRead))
                 return false;
 
             return true;
-        }
-
-        private static byte[] BuildBDHCamArm9Branch(BDHCAMPatchData data, uint subroutineOffset)
-        {
-            uint sourceAddress = ARM9.address + data.branchOffset;
-            uint targetAddress = synthOverlayLoadAddress + subroutineOffset + BDHCAMPatchData.branchEntryOffset;
-            return BuildThumbBl(sourceAddress, targetAddress);
-        }
-
-        private static byte[] BuildBDHCamOverlayTrampoline(uint subroutineOffset, uint entryOffset)
-        {
-            byte[] trampoline = new byte[8];
-            trampoline[0] = 0x00;
-            trampoline[1] = 0x4B;
-            trampoline[2] = 0x18;
-            trampoline[3] = 0x47;
-            Array.Copy(BitConverter.GetBytes(synthOverlayLoadAddress + subroutineOffset + entryOffset), 0, trampoline, 4, 4);
-            return trampoline;
-        }
-
-        private static byte[] BuildBDHCamPayload(BDHCAMPatchData data, uint subroutineOffset)
-        {
-            byte[] payload = (byte[])data.subroutine.Clone();
-            uint defaultRuntimeAddress = synthOverlayLoadAddress + BDHCAMPatchData.BDHCamSubroutineOffset;
-            uint selectedRuntimeAddress = synthOverlayLoadAddress + subroutineOffset;
-            uint defaultRuntimeEnd = defaultRuntimeAddress + (uint)payload.Length;
-
-            foreach (uint pointerOffset in BDHCamInternalPointerOffsets)
-            {
-                if (pointerOffset > (uint)(payload.Length - sizeof(uint)))
-                {
-                    throw new InvalidDataException("BDHCAM payload pointer offset is outside the payload.");
-                }
-
-                uint originalPointer = BitConverter.ToUInt32(payload, (int)pointerOffset);
-                if (originalPointer < defaultRuntimeAddress || originalPointer >= defaultRuntimeEnd)
-                {
-                    throw new InvalidDataException("BDHCAM payload has an unexpected internal pointer.");
-                }
-
-                uint relocatedPointer = selectedRuntimeAddress + (originalPointer - defaultRuntimeAddress);
-                Array.Copy(BitConverter.GetBytes(relocatedPointer), 0, payload, (int)pointerOffset, sizeof(uint));
-            }
-
-            foreach (uint branchOffset in BDHCamExternalBranchOffsets)
-            {
-                if (branchOffset > (uint)(payload.Length - sizeof(uint)))
-                {
-                    throw new InvalidDataException("BDHCAM payload branch offset is outside the payload.");
-                }
-
-                byte[] branchBytes = new byte[sizeof(uint)];
-                Array.Copy(data.subroutine, branchOffset, branchBytes, 0, branchBytes.Length);
-
-                if (!TryGetThumbBlTarget(defaultRuntimeAddress + branchOffset, branchBytes, out uint branchTarget))
-                {
-                    throw new InvalidDataException("BDHCAM payload has an unexpected external branch.");
-                }
-
-                byte[] relocatedBranch = BuildThumbBl(selectedRuntimeAddress + branchOffset, branchTarget);
-                Array.Copy(relocatedBranch, 0, payload, (int)branchOffset, relocatedBranch.Length);
-            }
-
-            return payload;
         }
 
         private static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress)
@@ -416,53 +351,36 @@ namespace DSPRE
             return true;
         }
 
-        private static bool TryGetBDHCamSubroutineOffset(BDHCAMPatchData data, out uint subroutineOffset)
-        {
-            subroutineOffset = 0;
-
-            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-            byte[] trampoline1 = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset1, 8);
-            byte[] trampoline2 = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset2, 8);
-
-            if (!HasBDHCamTrampolinePrefix(trampoline1) || !HasBDHCamTrampolinePrefix(trampoline2))
-            {
-                return false;
-            }
-
-            uint target1 = BitConverter.ToUInt32(trampoline1, 4);
-            uint target2 = BitConverter.ToUInt32(trampoline2, 4);
-
-            if (target1 < synthOverlayLoadAddress + BDHCAMPatchData.overlayEntryOffset1
-                || target2 < synthOverlayLoadAddress + BDHCAMPatchData.overlayEntryOffset2)
-            {
-                return false;
-            }
-
-            uint offset1 = target1 - synthOverlayLoadAddress - BDHCAMPatchData.overlayEntryOffset1;
-            uint offset2 = target2 - synthOverlayLoadAddress - BDHCAMPatchData.overlayEntryOffset2;
-
-            if (offset1 != offset2)
-            {
-                return false;
-            }
-
-            subroutineOffset = offset1;
-            return true;
-        }
-
-        private static bool HasBDHCamTrampolinePrefix(byte[] trampoline)
-        {
-            return trampoline != null
-                && trampoline.Length == 8
-                && trampoline[0] == 0x00
-                && trampoline[1] == 0x4B
-                && trampoline[2] == 0x18
-                && trampoline[3] == 0x47;
-        }
-
         private static bool IsHgssLegacyOverlay1Patch(byte overlayNumber)
         {
             return RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && overlayNumber == 1;
+        }
+
+        private static string GetSyntheticOverlayRangeStatus(uint offset, byte[] expectedBytes)
+        {
+            if (!File.Exists(Filesystem.expArmPath))
+            {
+                return "Synthetic overlay range status: synthetic overlay file was not found.";
+            }
+
+            long fileLength = new FileInfo(Filesystem.expArmPath).Length;
+            if (offset >= fileLength || (long)offset + expectedBytes.Length > fileLength)
+            {
+                return "Synthetic overlay range status: selected range is outside the synthetic overlay file.";
+            }
+
+            byte[] currentBytes = DSUtils.ReadFromFile(Filesystem.expArmPath, offset, expectedBytes.Length);
+            if (currentBytes.Length != expectedBytes.Length)
+            {
+                return "Synthetic overlay range status: selected range could not be read.";
+            }
+
+            if (currentBytes.All(b => b == 0))
+            {
+                return "Synthetic overlay range status: empty.";
+            }
+
+            return "Synthetic overlay range status: already contains data; continuing will overwrite it.";
         }
 
         private static bool IsHgssLegacyOverlay1BDHCamPatch()
@@ -770,86 +688,65 @@ namespace DSPRE
         private void BDHCAMPatchButton_Click(object sender, EventArgs e)
         {
             BDHCAMPatchData data = new BDHCAMPatchData();
+            byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
+            byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.overlayString1);
+            byte[] overlayCode2 = DSUtils.HexStringToByteArray(data.overlayString2);
+            uint subroutineOffset = BDHCAMPatchData.BDHCamSubroutineOffset;
+            uint subroutineEndOffset = subroutineOffset + (uint)data.subroutine.Length - 1;
+            string rangeStatus = GetSyntheticOverlayRangeStatus(subroutineOffset, data.subroutine);
 
-            using (var offsetDialog = new SyntheticOverlayOffsetDialog(
-                "Dynamic Cameras",
-                Filesystem.expArmPath,
-                BDHCAMPatchData.BDHCamSubroutineOffset,
-                data.subroutine,
-                synthOverlayLoadAddress))
+            var d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
+            "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
+            "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
+            "- Replace " + branchCode.Length + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + data.branchString + "\n\n" +
+            "- Replace " + overlayCode1.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + "." + "\n\n" +
+            "- Replace " + overlayCode2.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + "." + "\n\n" +
+            "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine." + "\n" +
+            "Synthetic overlay offset: 0x" + subroutineOffset.ToString("X") + " - 0x" + subroutineEndOffset.ToString("X") + "\n" +
+            rangeStatus + "\n\n" +
+            "Do you wish to continue?",
+            "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (d2 == DialogResult.Yes)
             {
-                if (offsetDialog.ShowDialog(this) != DialogResult.OK)
-                {
-                    MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
+                File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + backupSuffix, overwrite: true);
+                string overlayBackupPath = OverlayUtils.GetPath(data.overlayNumber);
+                File.Copy(overlayBackupPath, overlayBackupPath + backupSuffix, overwrite: true);
 
-                uint subroutineOffset = offsetDialog.SelectedOffset;
-                byte[] branchCode = BuildBDHCamArm9Branch(data, subroutineOffset);
-                byte[] overlayCode1 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset1);
-                byte[] overlayCode2 = BuildBDHCamOverlayTrampoline(subroutineOffset, BDHCAMPatchData.overlayEntryOffset2);
-                byte[] relocatedSubroutine;
                 try
                 {
-                    relocatedSubroutine = BuildBDHCamPayload(data, subroutineOffset);
+                    ARM9.WriteBytes(branchCode, data.branchOffset); //Write new branchOffset
+
+                    /* Write to overlayfile */
+                    string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+
+                    DSUtils.WriteToFile(overlayFilePath, overlayCode1, data.overlayOffset1); //Write new overlayCode1
+                    DSUtils.WriteToFile(overlayFilePath, overlayCode2, data.overlayOffset2); //Write new overlayCode2
+
+                    /*Write Expanded ARM9 File*/
+                    DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, subroutineOffset);
                 }
-                catch (InvalidDataException ex)
+                catch
                 {
-                    MessageBox.Show("The Dynamic Cameras payload could not be relocated safely.\n\n" + ex.Message, "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Operation failed. It is strongly advised that you restore the arm9 and overlay from their respective backups.", "Something went wrong",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                var d2 = MessageBox.Show("This process will apply the following changes:\n\n" +
-                "- Backup ARM9 file (arm9.bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + backupSuffix + " will be created)." + "\n\n" +
-                "- Replace " + branchCode.Length + " bytes of data at arm9 offset 0x" + data.branchOffset.ToString("X") + " with " + '\n' + string.Join(" ", branchCode.Select(b => b.ToString("X2"))) + "\n\n" +
-                "- Replace " + overlayCode1.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + "." + "\n\n" +
-                "- Replace " + overlayCode2.Length + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + "." + "\n\n" +
-                "- Modify file #" + expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + subroutineOffset.ToString("X") + " and 0x" + (subroutineOffset + (uint)relocatedSubroutine.Length - 1).ToString("X") + " will be overwritten)." + "\n\n" +
-                "Do you wish to continue?",
-                "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                DisableBDHCamPatch("Already applied");
+                PatchToolboxDialog.flag_BDHCamPatchApplied = true;
+                BDHCamCB.Visible = true;
 
-                if (d2 == DialogResult.Yes)
-                {
-                    File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + backupSuffix, overwrite: true);
-                    string overlayBackupPath = OverlayUtils.GetPath(data.overlayNumber);
-                    File.Copy(overlayBackupPath, overlayBackupPath + backupSuffix, overwrite: true);
-
-                    try
-                    {
-                        ARM9.WriteBytes(branchCode, data.branchOffset); //Write new branchOffset
-
-                        /* Write to overlayfile */
-                        string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-
-                        DSUtils.WriteToFile(overlayFilePath, overlayCode1, data.overlayOffset1); //Write new overlayCode1
-                        DSUtils.WriteToFile(overlayFilePath, overlayCode2, data.overlayOffset2); //Write new overlayCode2
-
-                        /*Write Expanded ARM9 File*/
-                        DSUtils.WriteToFile(Filesystem.expArmPath, relocatedSubroutine, subroutineOffset);
-                    }
-                    catch
-                    {
-                        MessageBox.Show("Operation failed. It is strongly advised that you restore the arm9 and overlay from their respective backups.", "Something went wrong",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
-
-                    DisableBDHCamPatch("Already applied");
-                    PatchToolboxDialog.flag_BDHCamPatchApplied = true;
-                    BDHCamCB.Visible = true;
-
-                    MessageBox.Show(
-                        "The Dynamic Cameras patch has been applied.\n\n" +
-                        "Synthetic overlay offset: 0x" + subroutineOffset.ToString("X"),
-                        "Operation successful.",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                }
-                else
-                {
-                    MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                MessageBox.Show(
+                    "The Dynamic Cameras patch has been applied.\n\n" +
+                    "Synthetic overlay offset: 0x" + subroutineOffset.ToString("X") + " - 0x" + subroutineEndOffset.ToString("X"),
+                    "Operation successful.",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
