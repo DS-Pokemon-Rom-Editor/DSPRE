@@ -223,10 +223,17 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 switch (RomInfo.romID)
                 {
                     case "ADAE":
+                    case "APAE":
                         overlayNumber = 5;
                         hookOverlayOffset = 0x0001097E;
                         hookRuntimeAddress = 0x021E7E5E;
                         rotationMatrixFunctionAddress = 0x0201CAA8;
+                        break;
+                    case "APAF":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x0001097E;
+                        hookRuntimeAddress = 0x021E7FDE;
+                        rotationMatrixFunctionAddress = 0x0201CAF4;
                         break;
                     case "CPUE":
                         overlayNumber = 5;
@@ -235,9 +242,16 @@ namespace DSPRE.Resources.ROMToolboxDB {
                         rotationMatrixFunctionAddress = 0x0201E268;
                         break;
                     case "IPKE":
+                    case "IPGE":
                         overlayNumber = 1;
                         hookOverlayOffset = 0x0000E1C6;
                         hookRuntimeAddress = 0x021F3AC6;
+                        rotationMatrixFunctionAddress = 0x02020D2C;
+                        break;
+                    case "IPKI":
+                        overlayNumber = 1;
+                        hookOverlayOffset = 0x0000E1C6;
+                        hookRuntimeAddress = 0x021F3A66;
                         rotationMatrixFunctionAddress = 0x02020D2C;
                         break;
                     default:

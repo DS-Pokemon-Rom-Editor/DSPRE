@@ -53,9 +53,37 @@ namespace DSPRE.Resources.ROMToolboxDB {
             }
         }
 
+        internal static byte[] APAE_rotation {
+            get {
+                object obj = ResourceManager.GetObject("APAE_rotation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+
+        internal static byte[] APAF_rotation {
+            get {
+                object obj = ResourceManager.GetObject("APAF_rotation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+
         internal static byte[] CPUE_rotation {
             get {
                 object obj = ResourceManager.GetObject("CPUE_rotation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+
+        internal static byte[] IPGE_rotation {
+            get {
+                object obj = ResourceManager.GetObject("IPGE_rotation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+
+        internal static byte[] IPKI_rotation {
+            get {
+                object obj = ResourceManager.GetObject("IPKI_rotation", resourceCulture);
                 return ((byte[])(obj));
             }
         }

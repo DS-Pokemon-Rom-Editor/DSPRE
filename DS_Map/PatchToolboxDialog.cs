@@ -166,7 +166,7 @@ namespace DSPRE
         {
             buildingRotationButton.Enabled = false;
             buildingRotationLBL.Enabled = false;
-            buildingRotationARM9requiredLBL.Enabled = false;
+            buildingRotationBetaLBL.Enabled = false;
             buildingRotationTextLBL.Enabled = false;
             buildingRotationButton.Text = reason;
         }
@@ -176,7 +176,6 @@ namespace DSPRE
             BDHCamPatchButton.Enabled = false;
             BDHCamPatchLBL.Enabled = false;
             BDHCamPatchTextLBL.Enabled = false;
-            BDHCamARM9requiredLBL.Enabled = false;
             BDHCamPatchButton.Text = reason;
         }
 
@@ -217,7 +216,6 @@ namespace DSPRE
             repointScrcmdButton.Enabled = false;
             repointScrcmdLBL.Enabled = false;
             repointScrcmdTextLBL.Enabled = false;
-            scrcmdARM9requiredLBL.Enabled = false;
             repointScrcmdButton.Text = reason;
         }
 
@@ -502,7 +500,6 @@ namespace DSPRE
             {
                 case GameFamilies.Plat:
                 case GameFamilies.HGSS:
-                    BDHCamARM9requiredLBL.Visible = false;
                     BDHCamPatchButton.Enabled = true;
                     BDHCamPatchLBL.Enabled = true;
                     BDHCamPatchTextLBL.Enabled = true;
@@ -540,7 +537,6 @@ namespace DSPRE
         {
             if (!CheckARM9ExpansionApplied())
             {
-                BDHCamARM9requiredLBL.Visible = true;
                 DisableBDHCamPatch("ARM9 not expanded!");
                 return false;
             }
@@ -634,7 +630,6 @@ namespace DSPRE
         {
             if (!PatchToolboxDialog.flag_arm9Expanded && !PatchToolboxDialog.CheckFilesArm9ExpansionApplied())
             {
-                scrcmdARM9requiredLBL.Visible = true;
                 DisableScrcmdRepointPatch("ARM9 not expanded!");
                 return;
             }
@@ -1037,7 +1032,6 @@ namespace DSPRE
                                 BDHCamPatchButton.Enabled = true;
                                 BDHCamPatchLBL.Enabled = true;
                                 BDHCamPatchTextLBL.Enabled = true;
-                                BDHCamARM9requiredLBL.Visible = false;
                             }
                             break;
                     }
@@ -1047,7 +1041,7 @@ namespace DSPRE
                         buildingRotationButton.Text = "Apply Patch";
                         buildingRotationButton.Enabled = true;
                         buildingRotationLBL.Enabled = true;
-                        buildingRotationARM9requiredLBL.Enabled = true;
+                        buildingRotationBetaLBL.Enabled = true;
                         buildingRotationTextLBL.Enabled = true;
                     }
 
@@ -1058,7 +1052,6 @@ namespace DSPRE
                         repointScrcmdButton.Enabled = true;
                         repointScrcmdLBL.Enabled = true;
                         repointScrcmdTextLBL.Enabled = true;
-                        scrcmdARM9requiredLBL.Visible = false;
                     }
 
                     MessageBox.Show("The ARM9's usable memory has been expanded.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);
