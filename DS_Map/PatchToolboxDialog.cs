@@ -179,6 +179,27 @@ namespace DSPRE
             BDHCamPatchButton.Text = reason;
         }
 
+        private void EnableBDHCamPatchAfterArm9Expansion()
+        {
+            if (!BDHCAMPatchData.SupportsCurrentRom() || IsHgssLegacyOverlay1BDHCamPatch())
+            {
+                return;
+            }
+
+            if (PatchToolboxDialog.flag_BDHCamPatchApplied || PatchToolboxDialog.CheckFilesBDHCamPatchApplied())
+            {
+                PatchToolboxDialog.flag_BDHCamPatchApplied = true;
+                BDHCamCB.Visible = true;
+                DisableBDHCamPatch("Already applied");
+                return;
+            }
+
+            BDHCamPatchButton.Text = "Apply Patch";
+            BDHCamPatchButton.Enabled = true;
+            BDHCamPatchLBL.Enabled = true;
+            BDHCamPatchTextLBL.Enabled = true;
+        }
+
         private void DisableARM9patch(string reason)
         {
             applyARM9ExpansionButton.Enabled = false;
@@ -482,9 +503,7 @@ namespace DSPRE
             {
                 case GameFamilies.Plat:
                 case GameFamilies.HGSS:
-                    BDHCamPatchButton.Enabled = true;
-                    BDHCamPatchLBL.Enabled = true;
-                    BDHCamPatchTextLBL.Enabled = true;
+                    EnableBDHCamPatchAfterArm9Expansion();
                     break;
             }
 
@@ -998,13 +1017,7 @@ namespace DSPRE
                     {
                         case GameFamilies.Plat:
                         case GameFamilies.HGSS:
-                            if (BDHCAMPatchData.SupportsCurrentRom() && !IsHgssLegacyOverlay1BDHCamPatch())
-                            {
-                                BDHCamPatchButton.Text = "Apply Patch";
-                                BDHCamPatchButton.Enabled = true;
-                                BDHCamPatchLBL.Enabled = true;
-                                BDHCamPatchTextLBL.Enabled = true;
-                            }
+                            EnableBDHCamPatchAfterArm9Expansion();
                             break;
                     }
 
