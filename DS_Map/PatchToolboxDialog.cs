@@ -181,8 +181,15 @@ namespace DSPRE
 
         private void EnableBDHCamPatchAfterArm9Expansion()
         {
-            if (!BDHCAMPatchData.SupportsCurrentRom() || IsHgssLegacyOverlay1BDHCamPatch())
+            if (!BDHCAMPatchData.SupportsCurrentRom())
             {
+                DisableBDHCamPatch("Unsupported");
+                return;
+            }
+
+            if (IsHgssLegacyOverlay1BDHCamPatch())
+            {
+                DisableBDHCamPatch("Convert to\nds-rom");
                 return;
             }
 
