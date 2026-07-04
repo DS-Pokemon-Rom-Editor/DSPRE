@@ -58,7 +58,6 @@ namespace DSPRE
             this.repointScrcmdLBL = new System.Windows.Forms.Label();
             this.repointScrcmdButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
             this.dynamicHeadersPatchCB = new System.Windows.Forms.PictureBox();
             this.dynamicHeadersTextLBL = new System.Windows.Forms.Label();
             this.dynamicHeadersLBL = new System.Windows.Forms.Label();
@@ -384,15 +383,6 @@ namespace DSPRE
             this.label1.Text = "[ B E T A     |    Needs testing]";
             this.label1.UseMnemonic = false;
             // 
-            // label2
-            // 
-            this.label2.Location = new System.Drawing.Point(481, 188);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(288, 37);
-            this.label2.TabIndex = 34;
-            this.label2.Text = "";
-            this.label2.UseMnemonic = false;
-            // 
             // dynamicHeadersPatchCB
             // 
             this.dynamicHeadersPatchCB.Image = ((System.Drawing.Image)(resources.GetObject("dynamicHeadersPatchCB.Image")));
@@ -530,7 +520,6 @@ namespace DSPRE
             this.Controls.Add(this.disableTextureAnimationsLBL);
             this.Controls.Add(this.disableTextureAnimationsButton);
             this.Controls.Add(this.applyDynamicHeadersButton);
-            this.Controls.Add(this.label2);
             this.Controls.Add(this.dynamicHeadersPatchCB);
             this.Controls.Add(this.dynamicHeadersTextLBL);
             this.Controls.Add(this.dynamicHeadersLBL);
@@ -616,7 +605,6 @@ namespace DSPRE
         private System.Windows.Forms.Label repointScrcmdLBL;
         private System.Windows.Forms.Button repointScrcmdButton;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
         private System.Windows.Forms.PictureBox dynamicHeadersPatchCB;
         private System.Windows.Forms.Label dynamicHeadersTextLBL;
         private System.Windows.Forms.Label dynamicHeadersLBL;

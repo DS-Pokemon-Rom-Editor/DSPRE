@@ -149,13 +149,6 @@ namespace DSPRE
                 return;
             }
 
-            if (currentBytes.SequenceEqual(expectedBytes))
-            {
-                SetStatus("This range already contains the expected patch bytes.", Color.DarkGreen);
-                okButton.Enabled = true;
-                return;
-            }
-
             if (currentBytes.All(b => b == 0))
             {
                 SetStatus("This range is empty.", Color.DarkGreen);

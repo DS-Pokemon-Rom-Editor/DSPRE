@@ -84,7 +84,7 @@ namespace DSPRE
 
             bool bdhCamPatchSupported = BDHCAMPatchData.SupportsCurrentRom();
             bool buildingRotationPatchSupported = BuildingRotationPatchData.SupportsCurrentRom();
-            bool bdhCamPatchBlockedByProjectFormat = bdhCamPatchSupported && IsHgssLegacyOverlay1BDHCamPatch();
+            bool bdhCamPatchBlockedByProjectFormat = !RomInfo.IsDsRomProject && bdhCamPatchSupported;
             bool buildingRotationPatchBlockedByProjectFormat = !RomInfo.IsDsRomProject && buildingRotationPatchSupported;
 
             // ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS
@@ -187,7 +187,7 @@ namespace DSPRE
                 return;
             }
 
-            if (IsHgssLegacyOverlay1BDHCamPatch())
+            if (!RomInfo.IsDsRomProject)
             {
                 DisableBDHCamPatch("Convert to\nds-rom");
                 return;
@@ -205,6 +205,58 @@ namespace DSPRE
             BDHCamPatchButton.Enabled = true;
             BDHCamPatchLBL.Enabled = true;
             BDHCamPatchTextLBL.Enabled = true;
+        }
+
+        private void EnableBuildingRotationPatchAfterArm9Expansion()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
+                return;
+            }
+
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                DisableBuildingRotationPatch("Unsupported");
+                return;
+            }
+
+            if (PatchToolboxDialog.flag_BuildingRotationPatchApplied || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied())
+            {
+                PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
+                buildingRotationCB.Visible = true;
+                DisableBuildingRotationPatch("Already applied");
+                return;
+            }
+
+            buildingRotationButton.Text = "Apply Patch";
+            buildingRotationButton.Enabled = true;
+            buildingRotationLBL.Enabled = true;
+            buildingRotationBetaLBL.Enabled = true;
+            buildingRotationTextLBL.Enabled = true;
+        }
+
+        private void EnableScrcmdRepointPatchAfterArm9Expansion()
+        {
+            if (RomInfo.gameFamily != GameFamilies.HGSS
+                || (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
+            {
+                DisableScrcmdRepointPatch("Unsupported");
+                return;
+            }
+
+            if (GetCommandTableOffset() >= 0 && CheckScrcmdCommandCountPointerValid())
+            {
+                repointScrcmdCB.Visible = true;
+                DisableScrcmdRepointPatch("Already applied");
+                return;
+            }
+
+            repointScrcmdButton.Text = "Apply Patch";
+            repointScrcmdButton.Enabled = true;
+            repointScrcmdLBL.Enabled = true;
+            repointScrcmdTextLBL.Enabled = true;
+            label1.Enabled = true;
         }
 
         private void DisableARM9patch(string reason)
@@ -295,7 +347,7 @@ namespace DSPRE
             }
 
             BDHCAMPatchData data = new BDHCAMPatchData();
-            if (IsHgssLegacyOverlay1Patch(data.overlayNumber))
+            if (!RomInfo.IsDsRomProject)
             {
                 return false;
             }
@@ -379,11 +431,6 @@ namespace DSPRE
             return true;
         }
 
-        private static bool IsHgssLegacyOverlay1Patch(byte overlayNumber)
-        {
-            return RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && overlayNumber == 1;
-        }
-
         private static string GetSyntheticOverlayRangeStatus(uint offset, byte[] expectedBytes)
         {
             if (!File.Exists(Filesystem.expArmPath))
@@ -409,11 +456,6 @@ namespace DSPRE
             }
 
             return "Synthetic overlay range status: already contains data; continuing will overwrite it.";
-        }
-
-        private static bool IsHgssLegacyOverlay1BDHCamPatch()
-        {
-            return IsHgssLegacyOverlay1Patch(new BDHCAMPatchData().overlayNumber);
         }
 
         public static bool CheckFilesMatrixExpansionApplied()
@@ -1028,24 +1070,8 @@ namespace DSPRE
                             break;
                     }
 
-                    if (RomInfo.IsDsRomProject && BuildingRotationPatchData.SupportsCurrentRom() && !CheckFilesBuildingRotationPatchApplied())
-                    {
-                        buildingRotationButton.Text = "Apply Patch";
-                        buildingRotationButton.Enabled = true;
-                        buildingRotationLBL.Enabled = true;
-                        buildingRotationBetaLBL.Enabled = true;
-                        buildingRotationTextLBL.Enabled = true;
-                    }
-
-                    if (RomInfo.gameFamily == GameFamilies.HGSS
-                        && (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish))
-                    {
-                        repointScrcmdButton.Text = "Apply Patch";
-                        repointScrcmdButton.Enabled = true;
-                        repointScrcmdLBL.Enabled = true;
-                        repointScrcmdTextLBL.Enabled = true;
-                        label1.Enabled = true;
-                    }
+                    EnableBuildingRotationPatchAfterArm9Expansion();
+                    EnableScrcmdRepointPatchAfterArm9Expansion();
 
                     MessageBox.Show("The ARM9's usable memory has been expanded.", "Operation successful.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
