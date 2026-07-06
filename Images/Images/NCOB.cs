@@ -52,12 +52,12 @@ namespace Images
                                 oam.obj0.yOffset = br.ReadInt16();
                                 ushort unk1 = br.ReadUInt16();
                                 if (unk1 != 0)
-                                    System.Windows.Forms.MessageBox.Show("Unk1 different to 0");
+                                    DSPRE.AppMessages.Warning("Unk1 different to 0");
                                 oam.obj1.flipX = br.ReadByte();
                                 oam.obj1.flipY = br.ReadByte();
                                 uint unk2 = br.ReadUInt32();
                                 if (unk2 != 0)
-                                    System.Windows.Forms.MessageBox.Show("Unk2 different to 0");
+                                    DSPRE.AppMessages.Warning("Unk2 different to 0");
                                 oam.obj0.shape = br.ReadByte();
                                 oam.obj1.size = br.ReadByte();
                                 oam.obj2.priority = br.ReadByte();

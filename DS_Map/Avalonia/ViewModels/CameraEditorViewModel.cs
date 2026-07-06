@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                     if (wantMore)
                     {
-                        PatchToolboxDialog.ConfigureOverlay1Uncompressed();
+                        PatchToolboxLogic.ConfigureOverlay1Uncompressed();
                     }
 
                     if (OverlayUtils.IsCompressed(RomInfo.cameraTblOverlayNumber))

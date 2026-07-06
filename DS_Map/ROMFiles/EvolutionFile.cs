@@ -1,4 +1,4 @@
-﻿using DSPRE.ROMFiles;
+﻿﻿using DSPRE.ROMFiles;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -126,7 +126,7 @@ namespace DSPRE {
             }
         }
 
-        public EvolutionFile(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.evolutions].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public EvolutionFile(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.evolutions].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
         public EvolutionFile() { }
 

@@ -89,7 +89,7 @@
           </TabItem>
           <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
           <TabItem Header="Events">
-            <views:EventEditorView DataContext="{Binding #MapsRoot.EventVM}"/>
+            <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
           <TabItem Header="Matrix">
             <StackPanel Classes="placeholder">

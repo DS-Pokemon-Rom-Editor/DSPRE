@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -172,7 +171,7 @@ namespace DSPRE.ROMFiles {
         public static MapHeader LoadFromByteArray(byte[] headerData, ushort headerNumber, RomInfo.GameFamilies gameFamily = RomInfo.GameFamilies.NULL) {
             /* Encapsulate header data into the class appropriate for the gameVersion */
             if (headerData.Length < MapHeader.length) {
-                MessageBox.Show("File of header " + headerNumber + " is too small and can't store header data.", "Header file too small", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("File of header " + headerNumber + " is too small and can't store header data.", "Header file too small");
                 return null;
             }
 
@@ -210,7 +209,7 @@ namespace DSPRE.ROMFiles {
             }
 
             /* Check if dynamic headers patch has been applied, and load header from arm9 or a/0/5/0 accordingly */
-            if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied) {
+            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
                 string path = Filesystem.GetDynamicHeaderPath(headerNumber);
                 mapHeader = MapHeader.LoadFromFile(path, headerNumber, 0);
             } else {
@@ -222,7 +221,7 @@ namespace DSPRE.ROMFiles {
 
         public static int GetHeaderCount() {
             int headerCount;
-            if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied) {
+            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
                 headerCount = Filesystem.GetDynamicHeadersCount();
             } else {
                 headerCount = RomInfo.GetHeaderCount();
@@ -233,7 +232,7 @@ namespace DSPRE.ROMFiles {
 
         public void SaveFile() {
             /* Check if dynamic headers patch has been applied, and save header to arm9 or a/0/5/0 accordingly */
-            if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied) {
+            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
                 string path = Filesystem.GetDynamicHeaderPath(ID);
                 DSUtils.WriteToFile(path, this.ToByteArray(), 0, 0, fmode: FileMode.Create);
             } else {
@@ -344,7 +343,7 @@ namespace DSPRE.ROMFiles {
                     flags = (byte)(mapSettings >> 12 & 0b_1111);
 
                 } catch (EndOfStreamException) {
-                    MessageBox.Show("Error loading header " + ID + '.', "Unexpected EOF", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Error loading header " + ID + '.', "Unexpected EOF");
                 }
             }
         }
@@ -430,7 +429,7 @@ namespace DSPRE.ROMFiles {
                     flags = (byte)(last32 >> 25 & 0b_1111_111); //get 7 bits after the first 24
 
                 } catch (EndOfStreamException) {
-                    MessageBox.Show("Error loading header " + ID + '.', "Unexpected EOF", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Error loading header " + ID + '.', "Unexpected EOF");
                     ID = ushort.MaxValue;
                 }
             }

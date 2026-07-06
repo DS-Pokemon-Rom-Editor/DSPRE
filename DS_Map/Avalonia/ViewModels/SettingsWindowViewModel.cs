@@ -115,7 +115,7 @@ namespace DSPRE.Avalonia.ViewModels
                 NeverAskForOpening = false;
                 return;
             }
-            VersionLabel = $"DSPRE Version {Helpers.GetDSPREVersion()}";
+            VersionLabel = $"DSPRE Version {AppInfo.GetDSPREVersion()}";
 
             ExportPath       = SettingsManager.Settings.exportPath        ?? string.Empty;
             MapImportPath    = SettingsManager.Settings.mapImportStarterPoint ?? string.Empty;
@@ -203,8 +203,8 @@ namespace DSPRE.Avalonia.ViewModels
         public void ClearMapImportPath()   => MapImportPath  = string.Empty;
         public void ClearOpenDefaultRom()  => OpenDefaultRom = string.Empty;
 
-        public void CheckForUpdates()    => Helpers.CheckForUpdates(false);
-        public void CheckDBUpdates()     => Helpers.CheckForDatabaseUpdates(false);
+        public void CheckForUpdates()    => ShellIntegration.CheckForUpdates(false);
+        public void CheckDBUpdates()     => ScriptDatabaseSetup.CheckForDatabaseUpdates(false);
 
         /// <summary>Returns false if the window close should be cancelled.</summary>
         public async Task<bool> ConfirmCloseAsync()

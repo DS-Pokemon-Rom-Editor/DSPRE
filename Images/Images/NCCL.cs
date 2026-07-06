@@ -60,7 +60,7 @@ namespace Images
 
         public override void Write(string fileOut)
         {
-            System.Windows.Forms.MessageBox.Show("Not supported");
+            DSPRE.AppMessages.Warning("Not supported");
         }
 
         public struct sNCCL

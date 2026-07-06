@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -124,7 +123,7 @@ namespace DSPRE.ROMFiles {
                 fullError += Environment.NewLine + "Fields marked as " + '\'' + msgFixed + '\'' + " have been repaired with a value of 0.";
             }
 
-            MessageBox.Show(fullError, "Encounter File error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            AppMessages.Error(fullError, "Encounter File error");
         }
         #endregion
     }
@@ -340,7 +339,7 @@ namespace DSPRE.ROMFiles {
             }
         }
 
-        public EncounterFileDPPt(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.encounters].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public EncounterFileDPPt(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.encounters].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
         public EncounterFileDPPt() {
             swarmPokemon = new ushort[2];
         }
@@ -713,7 +712,7 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
-        public EncounterFileHGSS(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.encounters].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public EncounterFileHGSS(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.encounters].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
         public EncounterFileHGSS() {
             swarmPokemon = new ushort[4];
         }

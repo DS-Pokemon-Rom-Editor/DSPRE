@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using DSPRE;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
 using System.IO;
 
 namespace MKDS_Course_Editor.NSBTP {
@@ -198,17 +198,17 @@ namespace MKDS_Course_Editor.NSBTP {
                             ns.MPT.names[i] = LibNDSFormats.Utils.ReadNSBMDString(er);
                         }
                     } else {
-                        MessageBox.Show("NSBTP Error");
+                        AppMessages.Error("NSBTP Error");
                         er.Close();
                         return ns;
                     }
                 } else {
-                    MessageBox.Show("NSBTP Error");
+                    AppMessages.Error("NSBTP Error");
                     er.Close();
                     return ns;
                 }
             } else {
-                MessageBox.Show("NSBTP Error");
+                AppMessages.Error("NSBTP Error");
                 er.Close();
                 return ns;
             }

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -63,7 +62,7 @@ namespace DSPRE.ROMFiles
             // If not, extract from the .bin file
             if (!ReadFromBinFile(jsonPath, binPath))
             {
-                MessageBox.Show($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"Failed to read messages from .bin file {ID:D4}. Contents were replaced with empty message!", "Error");
                 messages = new List<string> { "" };
                 return;
             }
@@ -98,8 +97,8 @@ namespace DSPRE.ROMFiles
             {
                 if (!ConvertLegacyText())
                 {
-                    MessageBox.Show("One or more legacy text files could not be converted. " +
-                        "The build will be aborted.", "Legacy Text Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("One or more legacy text files could not be converted. " +
+                        "The build will be aborted.", "Legacy Text Conversion Failed");
                     return false;
                 }
             }
@@ -122,10 +121,10 @@ namespace DSPRE.ROMFiles
             {
                 AppLogger.Info($"Found {txtFiles.Length} legacy text files to convert to JSON format.");
 
-                MessageBox.Show($"Found {txtFiles.Length} legacy text files in the expanded text archive directory.\n" +
+                AppMessages.Info($"Found {txtFiles.Length} legacy text files in the expanded text archive directory.\n" +
                     "These files need to be converted to the new JSON format to ensure compatibility with the current version of the tool.\n" +
                     "DSPRE will now convert the files.",
-                    "Legacy Text Files Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Legacy Text Files Found");
             }
             else
             {
@@ -365,7 +364,7 @@ namespace DSPRE.ROMFiles
 
             if (!File.Exists(binPath))
             {
-                MessageBox.Show($"The .bin file for Text Archive ID {ID:D4} does not exist at the expected path: {binPath}", "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"The .bin file for Text Archive ID {ID:D4} does not exist at the expected path: {binPath}", "File Not Found");
                 return false;
             }
             try
@@ -545,7 +544,7 @@ namespace DSPRE.ROMFiles
 
             if (showSuccessMessage)
             {
-                MessageBox.Show($"Text Archive ID {IDtoReplace:D4} saved to expanded directory:\n{jsonPath}", "Save Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AppMessages.Info($"Text Archive ID {IDtoReplace:D4} saved to expanded directory:\n{jsonPath}", "Save Successful");
             }
 
         }

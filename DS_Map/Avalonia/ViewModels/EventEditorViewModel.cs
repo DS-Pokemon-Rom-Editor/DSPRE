@@ -333,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Confirm deletion")) return;
             try
             {
-                System.IO.File.Delete(gameDirs[DirNames.eventFiles].unpackedDir + "\\" + last.ToString("D4"));
+                System.IO.File.Delete(Path.Combine(gameDirs[DirNames.eventFiles].unpackedDir, last.ToString("D4")));
                 if (_selectedIndex == last) SelectedEventIndex = last - 1;
                 EventNames.RemoveAt(last);
                 StatusText = $"Removed event file {last}.";

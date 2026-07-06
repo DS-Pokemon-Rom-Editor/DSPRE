@@ -1,4 +1,4 @@
-﻿using DSPRE.Resources;
+﻿﻿using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
 using static Images.NCOB.sNCOB;
@@ -886,72 +885,15 @@ namespace DSPRE
         /// <summary>Reads egg move data from the ROM for use by DocTool exports.</summary>
         private static List<EggMoveEntry> ReadEggMoveDataForDocTool()
         {
-            return DSPRE.Avalonia.ViewModels.EggMoveEditorViewModel.ReadFromRom();
+            return EggMoveData.ReadFromRom();
         }
 
+        // Moved to the core EggMoveCsv class; forwarders for existing call sites.
         public static bool ExportEggMoveDataToCSV(List<EggMoveEntry> eggMoveData, string filePath, string[] pokeNames, string[] moveNames)
-        {
-            try
-            {
-                using (StreamWriter writer = new StreamWriter(filePath))
-                {
-                    // Write CSV header
-                    writer.WriteLine("SpeciesID,SpeciesName,MoveID,MoveName");
-
-                    // Write egg move data
-                    foreach (var entry in eggMoveData)
-                    {
-                        string speciesName = (entry.speciesID >= 0 && entry.speciesID < pokeNames.Length) ? pokeNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
-                        foreach (var moveID in entry.moveIDs)
-                        {
-                            string moveName = (moveID >= 0 && moveID < moveNames.Length) ? moveNames[moveID] : $"MOVE_{moveID}";
-                            writer.WriteLine($"{entry.speciesID},{speciesName},{moveID},{moveName}");
-                        }
-                    }
-
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Failed to export egg move data to CSV: {ex.Message}");
-                return false;
-            }
-        }
+            => EggMoveCsv.Export(eggMoveData, filePath, pokeNames, moveNames);
 
         public static bool ImportEggMoveDataFromCSV(ref List<EggMoveEntry> eggMoveData, string filePath)
-        {
-            try
-            {
-                var lines = File.ReadAllLines(filePath);
-                var speciesDict = new Dictionary<int, EggMoveEntry>();
-
-                foreach (var line in lines.Skip(1))
-                {
-                    var values = line.Split(',');
-                    if (values.Length < 4) continue;
-
-                    int speciesID = int.Parse(values[0].Trim());
-                    int moveID = int.Parse(values[2].Trim());
-
-                    if (!speciesDict.ContainsKey(speciesID))
-                    {
-                        speciesDict[speciesID] = new EggMoveEntry(speciesID, new List<ushort>());
-                    }
-
-                    speciesDict[speciesID].moveIDs.Add((ushort)moveID);
-                }
-
-                eggMoveData = speciesDict.Values.ToList();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Failed to import egg move data from CSV: {ex.Message}");
-                return false;
-            }
-        }
+            => EggMoveCsv.Import(ref eggMoveData, filePath);
 
         private static void ExportTrainersToText(string trainerDataPath, string[] trainerNames, string[] trainerClassNames, string[] pokeNames, string[] itemNames, string[] moveNames, string[] abilityNames)
         {
@@ -965,7 +907,7 @@ namespace DSPRE
 
             for (int i = 1; i < trainerCount; i++)
             {
-                string suffix = "\\" + i.ToString("D4");
+                string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
                 curTrainerProperties = new TrainerProperties((ushort)i,
                     new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open));

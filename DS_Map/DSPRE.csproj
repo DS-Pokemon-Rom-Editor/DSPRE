@@ -51,21 +51,30 @@
     <PackageReference Include="YamlDotNet" Version="16.2.0" />
   </ItemGroup>
 
-  <!-- Avalonia image assets (embedded resources, referenced via avares://DSPRE/Avalonia/Assets/...) -->
+  <!-- The Avalonia UI layer (code, axaml, avares assets, TextMate grammar) compiles into the
+       cross-platform DSPRE.Avalonia project (see AvaloniaFiles.props); this exe hosts it via the
+       project reference below and only keeps the WinForms shell + editors. -->
+  <Import Project="..\AvaloniaFiles.props" />
   <ItemGroup>
-    <AvaloniaResource Include="Avalonia\Assets\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Avalonia\TextMate\rotom.tmLanguage.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Compile Remove="@(AvaloniaLayerCompile)" />
+    <AvaloniaXaml Remove="@(AvaloniaLayerXaml)" />
+    <AvaloniaResource Remove="@(AvaloniaLayerAsset)" />
   </ItemGroup>
 
   <!-- ============================================================
-       Project references — Ekona image library and Images plugin
+       Project references — cross-platform ROM core + Ekona/Images
+       image libraries. The core source files still live under this
+       folder but compile into DSPRE.Core (see CoreFiles.props) —
+       they are removed from this project's compile set below.
        ============================================================ -->
+  <Import Project="..\CoreFiles.props" />
   <ItemGroup>
+    <Compile Remove="@(CoreCompile)" />
+    <EmbeddedResource Remove="@(CoreEmbeddedResource)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DSPRE.Core\DSPRE.Core.csproj" />
+    <ProjectReference Include="..\DSPRE.Avalonia\DSPRE.Avalonia.csproj" />
     <ProjectReference Include="..\Ekona\Ekona.csproj" />
     <ProjectReference Include="..\Images\Images\Images.csproj" />
   </ItemGroup>

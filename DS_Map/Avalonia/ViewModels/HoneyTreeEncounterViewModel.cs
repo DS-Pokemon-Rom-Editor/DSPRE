@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 if (species <= 0) { PokemonIcon = null; return; }
-                using var gdi = DSUtils.GetPokePic(species, 64, 64);
+                var gdi = DSUtils.GetPokePicRaw(species, 64, 64);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             string path = Filesystem.encounterExtended;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-                Helpers.ExplorerSelect(path);
+                SystemShell.RevealInFileManager(path);
         }
     }
 }

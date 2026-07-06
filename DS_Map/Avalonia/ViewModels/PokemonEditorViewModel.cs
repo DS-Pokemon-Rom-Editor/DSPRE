@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels
             // Update icon
             try
             {
-                var gdiImg = id > 0 ? DSPRE.DSUtils.GetPokePic(id, 40, 40) : null;
+                var gdiImg = id > 0 ? DSPRE.DSUtils.GetPokePicRaw(id, 40, 40) : null;
                 MonIconBitmap = gdiImg != null ? ImageConverter.ToAvaloniaBitmap(gdiImg) : null;
             }
             catch { MonIconBitmap = null; }

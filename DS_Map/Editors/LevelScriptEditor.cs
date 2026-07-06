@@ -537,7 +537,7 @@ namespace DSPRE.Editors
         private void buttonOpenHeaderScript_Click(object sender, EventArgs e)
         {
             HashSet<string> result;
-            result = HeaderSearch.AdvancedSearch(0, (ushort)EditorPanels.headerEditor.internalNames.Count, EditorPanels.headerEditor.internalNames, (int)MapHeader.SearchableFields.LevelScriptID, (int)HeaderSearch.NumOperators.Equal, EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex.ToString());
+            result = HeaderSearch.AdvancedSearch(0, (ushort)EditorPanels.headerEditor.internalNames.Count, EditorPanels.headerEditor.internalNames, (int)MapHeader.SearchableFields.LevelScriptID, (int)HeaderSearchEngine.NumOperators.Equal, EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex.ToString());
             AppLogger.Debug($"Found {result.Count} headers with script ID {EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex}");
             AppLogger.Debug($"Searching for script file {EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex} in headers: {string.Join(", ", result)}");
             if (result.Count == 0)

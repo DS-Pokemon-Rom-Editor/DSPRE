@@ -103,12 +103,103 @@ jobs:
         run: |
             dotnet tool install -g vpk
             vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
-            
+
             # First, check if we need to delete existing Velopack release for same base version
             echo "Checking for existing Velopack releases with same base version..."
-            
+
             # Use the correct syntax for vpk pack
             vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
-            
+
             # Upload to GitHub releases
             vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --token ${{ secrets.GH_TOKEN }}
+
+  deploy_linux_to_github_releases:
+    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    name: Deploy Linux to GitHub Releases
+    # Runs after the Windows deploy so vpk upload attaches the linux-channel assets
+    # (AppImage + releases.linux.json + nupkgs) to the release that job created.
+    needs: [get_latest_tag, deploy_to_github_releases]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Get Version from Project File
+        id: get_version
+        shell: bash
+        run: |
+          dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+
+          if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
+              major=$(echo "$dotnet_version" | sed -E 's/^([0-9]+)\..*$/\1/')
+              minor=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.([0-9]+)\..*$/\1/')
+              patch=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.([0-9]+)\..*$/\1/')
+              revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
+
+              if [ "$revision" -eq "0" ]; then
+                  semver_version="${major}.${minor}.${patch}"
+              else
+                  incremented_patch=$((patch + 1))
+                  semver_version="${major}.${minor}.${incremented_patch}-rev${revision}"
+              fi
+          else
+              semver_version="$dotnet_version"
+          fi
+
+          echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
+          echo "dotnet_version=v$dotnet_version" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+
+      - name: Install AppImage build dependency
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
+
+      - name: Clone Database Repository
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+      - name: Clone ds-rom Repository
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
+
+      - name: Publish DSPRE.Avalonia (linux-x64)
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -c Release -r linux-x64 --self-contained true -o publish-linux
+
+      - name: Build dsrom (Linux)
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: |
+          cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+          mkdir -p publish-linux/Tools
+          cp ds-rom/target/release/dsrom publish-linux/Tools/dsrom
+          chmod +x publish-linux/Tools/dsrom
+
+      # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
+      # names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
+
+      - name: Bundle Databases
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: |
+          mkdir -p publish-linux/databases
+          rsync -a --exclude='.git/objects/pack' databases/ publish-linux/databases/
+
+      - name: Create Velopack Release (Linux)
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        run: |
+            dotnet tool install -g vpk
+            # Fetch previous linux-channel packages for delta generation (absent on the first Linux release).
+            vpk download github --repoUrl https://github.com/${{ github.repository }} --channel linux --token ${{ secrets.GH_TOKEN }} || true
+
+            vpk pack --packDir publish-linux --mainExe DSPRE.Avalonia -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel linux
+
+            # Attaches the AppImage + linux update feed to the same release the Windows job created.
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --channel linux --token ${{ secrets.GH_TOKEN }}

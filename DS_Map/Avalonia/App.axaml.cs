@@ -2,18 +2,28 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using WinForms = System.Windows.Forms;
 
 namespace DSPRE
 {
     /// <summary>
-    /// Avalonia Application entry point.
-    /// On startup it shows the existing WinForms MainProgram as the main window.
-    /// Both Avalonia (Win32 backend) and WinForms share the same Win32 message pump,
-    /// so they co-exist on the same STA thread without conflicts.
+    /// Avalonia Application entry point (UI-toolkit layer — no WinForms dependency).
+    ///
+    /// The Windows DSPRE exe installs <see cref="WinFormsHostHook"/> so that, by default, startup
+    /// shows the legacy WinForms MainProgram (both toolkits share the Win32 message pump). Without
+    /// the hook — or with DSPRE_AVALONIA_SHELL=1 — the pure-Avalonia shell runs instead.
     /// </summary>
     public class AvaloniaApp : Application
     {
+        /// <summary>
+        /// Installed by the Windows host exe: shows the WinForms main form and wires its lifetime to
+        /// the Avalonia application lifetime. Null (e.g. in the cross-platform exe) = pure shell.
+        /// </summary>
+        public static System.Action<IClassicDesktopStyleApplicationLifetime> WinFormsHostHook;
+
+        // Force the pure-Avalonia shell even when a WinForms host is available.
+        private static bool ForceAvaloniaShell =>
+            string.Equals(System.Environment.GetEnvironmentVariable("DSPRE_AVALONIA_SHELL"), "1", System.StringComparison.Ordinal);
+
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -23,43 +33,48 @@ namespace DSPRE
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                // Prevent Avalonia from shutting down when an editor window closes.
-                // The process lifetime is controlled exclusively by the WinForms main form.
+                // Prevent Avalonia from shutting down when an editor window closes; the shell
+                // (Avalonia main window or hosted WinForms form) controls the process lifetime.
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
                 // Catch exceptions from async-void UI handlers (Save/Import/close, …) so one editor
                 // throwing doesn't kill the process and every other editor's unsaved work with it.
                 DSPRE.Avalonia.AvaloniaErrorHandler.Install();
 
-                // Build and show the WinForms main form.
-                // Velopack and directory setup were already run before Avalonia started.
-                var mainProgram = new MainProgram();
-                CrashReporter.Initialize(mainProgram);
-
-                // Show the WinForms form independently — it owns its own Win32 HWND.
-                // Avalonia's Win32 backend pumps the same message loop so both stay alive.
-                mainProgram.Show();
-
-                // Before the app quits, warn if any open Avalonia editor still holds unsaved changes —
-                // quitting force-closes every editor window, bypassing their individual close guards.
-                mainProgram.FormClosing += (_, e) =>
+                if (WinFormsHostHook == null || ForceAvaloniaShell)
                 {
-                    if (e.Cancel) return;   // already cancelled by other WinForms logic
-                    var unsaved = DSPRE.Avalonia.OpenEditors.UnsavedDescriptions();
-                    if (unsaved.Count == 0) return;
-                    var result = WinForms.MessageBox.Show(
-                        "The following editor(s) have unsaved changes that will be lost if you quit now:\n\n" +
-                        "  • " + string.Join("\n  • ", unsaved) +
-                        "\n\nQuit anyway and discard them?",
-                        "Unsaved Changes",
-                        WinForms.MessageBoxButtons.YesNo,
-                        WinForms.MessageBoxIcon.Warning,
-                        WinForms.MessageBoxDefaultButton.Button2);
-                    if (result != WinForms.DialogResult.Yes) e.Cancel = true;
-                };
+                    CrashReporter.Initialize();   // global crash handlers + report file
 
-                // Hook WinForms FormClosed → shut down Avalonia lifetime so the process exits cleanly.
-                mainProgram.FormClosed += (_, _) => desktop.Shutdown();
+                    // The WinForms shell does these in the MainProgram ctor; the pure-Avalonia shell must
+                    // do them itself (ROM loads read Settings, and the logger needs its file path).
+                    SettingsManager.Load();
+                    AppLogger.Initialize();
+                    DatabaseSetup.CopyBundledDatabases();
+
+                    // RomInfo warnings → an Avalonia dialog (marshalled to the UI thread; loads run off-thread).
+                    DSPRE.RomInfo.ShowWarning = (msg, title) =>
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DSPRE.Avalonia.DialogHelper.ShowError(msg, title));
+
+                    // Core (WinForms-free ROMFiles/DSUtils) user messages + save picker → native Avalonia dialogs.
+                    DSPRE.Avalonia.CoreDialogs.Install();
+
+                    // Velopack update check (cross-platform), unless the host already provided one.
+                    if (DSPRE.Avalonia.ShellIntegration.CheckForUpdatesHook == null)
+                        DSPRE.Avalonia.ShellIntegration.CheckForUpdatesHook = DSPRE.Avalonia.AppUpdater.CheckForUpdates;
+                    if (SettingsManager.Settings?.automaticallyCheckForUpdates == true)
+                        DSPRE.Avalonia.ShellIntegration.CheckForUpdates(silent: true);
+
+                    var main = new DSPRE.Avalonia.Views.MainWindowView(new DSPRE.Avalonia.ViewModels.MainWindowViewModel(true));
+                    desktop.MainWindow = main;
+                    desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;   // closing the shell exits the app
+                    main.Show();
+                    base.OnFrameworkInitializationCompleted();
+                    return;
+                }
+
+                // Legacy Windows shell: the host exe shows the WinForms main form and ties its
+                // FormClosed to desktop.Shutdown().
+                WinFormsHostHook(desktop);
             }
 
             base.OnFrameworkInitializationCompleted();

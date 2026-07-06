@@ -1,0 +1,52 @@
+<Project>
+
+  <!-- Single source of truth for which sources belong to the cross-platform DSPRE.Core:
+       DSPRE.Core.csproj COMPILES @(CoreCompile); DS_Map\DSPRE.csproj REMOVES the same set.
+       The files physically stay under DS_Map\ for now — move them under DSPRE.Core\ over time.
+       A file belongs here only if it compiles with no WinForms/Avalonia dependency. -->
+
+  <PropertyGroup>
+    <DsMapDir>$(MSBuildThisFileDirectory)DS_Map\</DsMapDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CoreCompile Include="$(DsMapDir)ROMFiles\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)DSUtils\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)LibNDSFormats\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)Script\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)Resources\CharMaps\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)Resources\ROMToolboxDB\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)Resources\PokeDatabase.cs" />
+    <CoreCompile Include="$(DsMapDir)Resources\ScriptDatabase.cs" />
+    <CoreCompile Include="$(DsMapDir)Resources\ScriptCommandInfo.cs" />
+    <CoreCompile Include="$(DsMapDir)Editors\Utils\UniqueList.cs" />
+    <CoreCompile Include="$(DsMapDir)Narc.cs" />
+    <CoreCompile Include="$(DsMapDir)RomInfo.cs" />
+    <CoreCompile Include="$(DsMapDir)Filesystem.cs" />
+    <CoreCompile Include="$(DsMapDir)SettingsManager.cs" />
+    <CoreCompile Include="$(DsMapDir)ScriptDatabaseSetup.cs" />
+    <CoreCompile Include="$(DsMapDir)RomPatchState.cs" />
+    <CoreCompile Include="$(DsMapDir)PatchToolboxLogic.cs" />
+    <CoreCompile Include="$(DsMapDir)SystemShell.cs" />
+    <CoreCompile Include="$(DsMapDir)HeaderLists.cs" />
+    <CoreCompile Include="$(DsMapDir)CrashReporter.cs" />
+    <CoreCompile Include="$(DsMapDir)DatabaseSetup.cs" />
+    <CoreCompile Include="$(DsMapDir)GameCamera.cs" />
+    <CoreCompile Include="$(DsMapDir)RotomTool.cs" />
+    <CoreCompile Include="$(DsMapDir)Editors\IEditorWithUnsavedChanges.cs" />
+    <CoreCompile Include="$(DsMapDir)Editors\TrainerEditor\DVCalculator\DVCalculator.cs" />
+    <CoreCompile Include="$(DsMapDir)Editors\Utils\NarcReader.cs" />
+    <CoreCompile Include="$(DsMapDir)Editors\TMEditor.cs" />
+    <CoreCompile Include="$(DsMapDir)DocTool.cs" />
+    <CoreCompile Include="$(DsMapDir)TrainerUsageReport.cs" />
+    <CoreCompile Include="$(DsMapDir)HeaderSearchEngine.cs" />
+  </ItemGroup>
+
+  <!-- Embedded databases read by core code via ResourceManager (assembly-relative lookups):
+       they must live in whichever assembly compiles the code above. -->
+  <ItemGroup>
+    <CoreEmbeddedResource Include="$(DsMapDir)Resources\ROMToolboxDB\CustomScrCmdDB.resx" Link="Resources\ROMToolboxDB\CustomScrCmdDB.resx" />
+    <CoreEmbeddedResource Include="$(DsMapDir)Resources\ROMToolboxDB\BDHCAMPatchDB.resx" Link="Resources\ROMToolboxDB\BDHCAMPatchDB.resx" />
+  </ItemGroup>
+
+</Project>

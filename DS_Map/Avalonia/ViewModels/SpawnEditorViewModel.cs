@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -219,10 +220,10 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 ushort headerNumber = (ushort)headerIndex;
                 MapHeader currentHeader;
-                if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied ||
-                    PatchToolboxDialog.CheckFilesDynamicHeadersPatchApplied())
+                if (RomPatchState.flag_DynamicHeadersPatchApplied ||
+                    PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied())
                     currentHeader = MapHeader.LoadFromFile(
-                        RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + headerNumber.ToString("D4"),
+                        Path.Combine(RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir, headerNumber.ToString("D4")),
                         headerNumber, 0);
                 else
                     currentHeader = MapHeader.LoadFromARM9(headerNumber);

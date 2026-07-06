@@ -1,0 +1,20 @@
+<Project>
+
+  <!-- Single source of truth for the Avalonia UI layer: DSPRE.Avalonia.csproj COMPILES these
+       items; DS_Map\DSPRE.csproj REMOVES the same set (it gets the UI from the project reference).
+       Files physically stay under DS_Map\Avalonia\ for now — move them under DSPRE.Avalonia\
+       over time. Nothing in this set may reference WinForms. -->
+
+  <PropertyGroup>
+    <DsMapDirAv>$(MSBuildThisFileDirectory)DS_Map\</DsMapDirAv>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaLayerCompile Include="$(DsMapDirAv)Avalonia\**\*.cs" />
+    <AvaloniaLayerXaml Include="$(DsMapDirAv)Avalonia\**\*.axaml" />
+    <!-- Embedded UI assets. Link keeps the avares:// paths identical to the on-disk layout. -->
+    <AvaloniaLayerAsset Include="$(DsMapDirAv)Avalonia\Assets\**" LinkBase="Avalonia\Assets" />
+    <AvaloniaLayerAsset Include="$(DsMapDirAv)Resources\Graphics\**" LinkBase="Resources\Graphics" />
+  </ItemGroup>
+
+</Project>

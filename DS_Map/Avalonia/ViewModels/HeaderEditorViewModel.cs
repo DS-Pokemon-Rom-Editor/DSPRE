@@ -311,17 +311,24 @@ namespace DSPRE.Avalonia.ViewModels
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
+            if (!AvaloniaEditorLauncher.IsRomLoaded)
+            {
+                // The Maps workspace initializes with the main window; without a ROM there is
+                // nothing to load (and the setup below would throw on null gameDirs paths).
+                StatusText = "No ROM loaded.";
+                return;
+            }
             StatusText = "Loading headers…";
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives, DirNames.dynamicHeaders });
 
-                _dynamicHeaders = PatchToolboxDialog.flag_DynamicHeadersPatchApplied || PatchToolboxDialog.CheckFilesDynamicHeadersPatchApplied();
+                _dynamicHeaders = RomPatchState.flag_DynamicHeadersPatchApplied || PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied();
                 CanAddRemove = _dynamicHeaders;
                 OnPropertyChanged(nameof(CanAddRemove));
 
-                _headerListNames = Helpers.getHeaderListBoxNames();
-                _internalNames = Helpers.getInternalNames();
+                _headerListNames = HeaderLists.GetHeaderListBoxNames();
+                _internalNames = HeaderLists.GetInternalNames();
 
                 BuildFamilyCombos();
                 LoadLocationNames();
@@ -460,7 +467,7 @@ namespace DSPRE.Avalonia.ViewModels
             int threshold = Math.Max(1, query.Length / 4);   // ~one typo per four characters
             query = query.ToLowerInvariant();
             foreach (var word in text.Split(new[] { ' ', '_', '-', '.', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                if (Helpers.Levenshtein(query, word.ToLowerInvariant()) <= threshold)
+                if (CoreExtensions.Levenshtein(query, word.ToLowerInvariant()) <= threshold)
                     return true;
             return false;
         }
@@ -585,7 +592,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (headerId >= _headerListNames.Count) return;
 
             _header = _dynamicHeaders
-                ? MapHeader.LoadFromFile(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + headerId.ToString("D4"), headerId, 0)
+                ? MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, headerId.ToString("D4")), headerId, 0)
                 : MapHeader.LoadFromARM9(headerId);
             if (_header == null) return;
 
@@ -782,15 +789,7 @@ namespace DSPRE.Avalonia.ViewModels
             AreaIconImage = name != null ? ResImage(name) : null;
         }
 
-        private static Bitmap ResImage(string name)
-        {
-            try
-            {
-                var img = global::DSPRE.Properties.Resources.ResourceManager.GetObject(name) as System.Drawing.Image;
-                return ImageConverter.ToAvaloniaBitmap(img);
-            }
-            catch { return null; }
-        }
+        private static Bitmap ResImage(string name) => ResourceImages.GetBitmap(name);
 
         // ── Internal name feedback ───────────────────────────────────────────────────
         private void UpdateInternalNameFeedback()
@@ -805,7 +804,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_header == null) return;
             if (_dynamicHeaders)
-                DSUtils.WriteToFile(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + _header.ID.ToString("D4"),
+                DSUtils.WriteToFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, _header.ID.ToString("D4")),
                     _header.ToByteArray(), 0, 0, fmode: FileMode.Create);
             else
                 ARM9.WriteBytes(_header.ToByteArray(), (uint)(headerTableOffset + MapHeader.length * _header.ID));
@@ -916,7 +915,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!_dynamicHeaders) return;
             string dir = gameDirs[DirNames.dynamicHeaders].unpackedDir;
             int newId = GetHeaderCount();
-            File.Copy(dir + "\\0000", dir + "\\" + newId.ToString("D4"));
+            File.Copy(Path.Combine(dir, "0000"), Path.Combine(dir, newId.ToString("D4")));
 
             const string newmap = "NEWMAP";
             DSUtils.WriteToFile(internalNamesPath, StringToInternalName(newmap), (uint)newId * internalNameLength);
@@ -942,7 +941,7 @@ namespace DSPRE.Avalonia.ViewModels
                 return;
             }
 
-            File.Delete(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + lastIndex.ToString("D4"));
+            File.Delete(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, lastIndex.ToString("D4")));
             using (var ew = new DSUtils.EasyWriter(internalNamesPath)) ew.EditSize(-internalNameLength);
 
             _internalNames.RemoveAt(lastIndex);

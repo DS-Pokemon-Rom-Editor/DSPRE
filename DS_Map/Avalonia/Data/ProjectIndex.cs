@@ -172,7 +172,7 @@ namespace DSPRE.Avalonia.Data
 
                 for (int id = 0; id < count; id++)
                 {
-                    string suffix = "\\" + id.ToString("D4");
+                    string suffix = Path.DirectorySeparatorChar + id.ToString("D4");
                     TrainerFile tf;
                     try
                     {

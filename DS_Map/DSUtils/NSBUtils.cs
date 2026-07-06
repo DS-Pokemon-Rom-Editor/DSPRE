@@ -1,8 +1,7 @@
-﻿using LibNDSFormats.NSBMD;
+using LibNDSFormats.NSBMD;
 using System;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
 
 namespace DSPRE {
     public static class NSBUtils {
@@ -63,7 +62,7 @@ namespace DSPRE {
         public static int CheckNSBMDHeader(byte[] modelFile) {
             using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile))) {
                 if (byteArrReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
-                    MessageBox.Show("Please select an NSBMD file.", "Invalid File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Please select an NSBMD file.", "Invalid File");
                     return -1;
                 }
 

@@ -203,19 +203,11 @@ namespace DSPRE.ROMFiles {
                 File.WriteAllBytes(path, data);
 
                 if (showSuccessMessage) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Bug Contest encounters saved successfully!",
-                        "Success",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    AppMessages.Info("Bug Contest encounters saved successfully!", "Success");
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error saving Bug Contest encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error saving Bug Contest encounters: {ex.Message}", "Error");
                 return false;
             }
         }

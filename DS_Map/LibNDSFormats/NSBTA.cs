@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using DSPRE;
 using System.Linq;
 using System.Text;
 using System.IO;
-using System.Windows.Forms;
-
 namespace MKDS_Course_Editor.NSBTA {
     public class NSBTA {
         public struct NSBTA_File {
@@ -256,17 +255,17 @@ namespace MKDS_Course_Editor.NSBTA {
                             }
                         }
                     } else {
-                        MessageBox.Show("Error");
+                        AppMessages.Error("Error");
                         er.Close();
                         return ns;
                     }
                 } else {
-                    MessageBox.Show("Error");
+                    AppMessages.Error("Error");
                     er.Close();
                     return ns;
                 }
             } else {
-                MessageBox.Show("Error");
+                AppMessages.Error("Error");
                 er.Close();
                 return ns;
             }

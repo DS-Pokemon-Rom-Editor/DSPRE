@@ -14,8 +14,59 @@ env:
   BUILD_CONFIGURATION: Release
 
 jobs:
+  build-linux:
+    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Clone Database Repository
+      run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+    - name: Clone ds-rom Repository
+      run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
+
+    - name: Publish DSPRE.Avalonia (linux-x64)
+      run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -c Release -r linux-x64 --self-contained true -o publish-linux
+
+    - name: Build dsrom (Linux)
+      run: |
+        cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+        mkdir -p publish-linux/Tools
+        cp ds-rom/target/release/dsrom publish-linux/Tools/dsrom
+        chmod +x publish-linux/Tools/dsrom
+
+    # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
+    # names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
+    # ndstool + blz build from source (devkitPro / CUE tools); apicula has Linux releases;
+    # rotom / rotom-lsp build like dsrom above.
+
+    - name: Bundle Databases
+      run: |
+        mkdir -p publish-linux/databases
+        rsync -a --exclude='.git/objects/pack' databases/ publish-linux/databases/
+
+    - name: Archive Linux build
+      run: tar -C publish-linux -czf DSPRE-linux-x64-canary.tar.gz .
+
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dspre-linux-x64
+        path: DSPRE-linux-x64-canary.tar.gz
+
   build:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    needs: build-linux
     runs-on: windows-latest
 
     steps:
@@ -58,6 +109,11 @@ jobs:
     - name: Zip Release Files
       run: Compress-Archive -Path "${{ github.workspace }}\DS_Map\bin\Release\*" -DestinationPath DSPRE-canary-${{ github.sha }}.zip
 
+    - name: Download Linux artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: dspre-linux-x64
+
     - name: Fetch tags
       run: git fetch --prune --unshallow --tags
 
@@ -83,7 +139,9 @@ jobs:
       with:
         tag_name: canary
         name: DSPRE Canary Build ${{ steps.date.outputs.date }} (${{ github.sha }})
-        files: DSPRE-canary-${{ github.sha }}.zip
+        files: |
+          DSPRE-canary-${{ github.sha }}.zip
+          DSPRE-linux-x64-canary.tar.gz
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
           ##  ⚠️ Canary Build Notice ⚠️

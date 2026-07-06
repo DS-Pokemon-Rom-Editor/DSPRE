@@ -119,8 +119,8 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 BTX0.PaletteIndex = _isShiny ? 1u : 0u;
-                var gdi = BTX0.Read(_btxData);
-                CurrentImage = gdi != null ? ImageConverter.ToAvaloniaBitmap(gdi) : null;
+                var raw = BTX0.ReadRaw(_btxData);
+                CurrentImage = raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
                 StatusText = CurrentImage != null
                     ? $"{CurrentImage.PixelSize.Width}×{CurrentImage.PixelSize.Height}, {BTX0.ColorCount} colors"
                     : "Unsupported format";
@@ -139,8 +139,11 @@ namespace DSPRE.Avalonia.ViewModels
             if (_btxData == null || _selectedIndex < 0) return "No entry selected.";
             try
             {
-                var import = new System.Drawing.Bitmap(filePath);
-                var current = BTX0.Read(_btxData);
+                RawImage import;
+                using (var fs = File.OpenRead(filePath))
+                    import = ImageConverter.DecodeRawImage(fs);
+                if (import == null) return "Image could not be decoded.";
+                var current = BTX0.ReadRaw(_btxData);
                 if (current == null) return "Current BTX file is unreadable.";
                 if (import.Width != current.Width || import.Height != current.Height)
                     return $"Size mismatch — BTX: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
@@ -172,9 +175,9 @@ namespace DSPRE.Avalonia.ViewModels
             if (_btxData == null) return false;
             try
             {
-                var bm = BTX0.Read(_btxData);
-                if (bm == null) return false;
-                bm.Save(filePath);
+                var raw = BTX0.ReadRaw(_btxData);
+                if (raw == null) return false;
+                ImageConverter.ToAvaloniaBitmap(raw).Save(filePath);
                 return true;
             }
             catch { return false; }
@@ -222,12 +225,11 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
-        private static uint CountColors(System.Drawing.Bitmap bmp)
+        private static uint CountColors(RawImage img)
         {
-            var seen = new HashSet<int>();
-            for (int y = 0; y < bmp.Height; y++)
-                for (int x = 0; x < bmp.Width; x++)
-                    seen.Add(bmp.GetPixel(x, y).ToArgb());
+            var seen = new HashSet<uint>();
+            for (int i = 0; i < img.Bgra.Length; i += 4)
+                seen.Add(BitConverter.ToUInt32(img.Bgra, i));
             return (uint)seen.Count;
         }
     }

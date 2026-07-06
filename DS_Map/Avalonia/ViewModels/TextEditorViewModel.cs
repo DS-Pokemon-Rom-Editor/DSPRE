@@ -538,17 +538,8 @@ namespace DSPRE.Avalonia.ViewModels
                 SelectedLineIndex = result.Line;
         }
 
-        // ── Header editor location list refresh (WinForms bridge) ─────────────────
+        // ── Header editor location list refresh (WinForms bridge; the host installs the hook) ─────
         private static void ReloadHeaderEditorLocations(IEnumerable<string> contents)
-        {
-            var headerEditor = EditorPanels.headerEditor;
-            if (headerEditor == null) return;
-            var combo = headerEditor.locationNameComboBox;
-            int selection = combo.SelectedIndex;
-            combo.Items.Clear();
-            combo.Items.AddRange(contents.ToArray());
-            if (selection >= 0 && selection < combo.Items.Count)
-                combo.SelectedIndex = selection;
-        }
+            => ShellIntegration.ReloadWinFormsHeaderLocations(contents);
     }
 }

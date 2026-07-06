@@ -58,7 +58,7 @@ namespace Images
 
             ColorFormat depth = (dsig.unk1 == 0 ? ColorFormat.colors16 : ColorFormat.colors256);
             if (dsig.unk1 != 0)
-                System.Windows.Forms.MessageBox.Show("Found different depth!");
+                DSPRE.AppMessages.Warning("Found different depth!");
             TileForm form = (dsig.unk4 == 0x10 ? TileForm.Horizontal : TileForm.Lineal);
 
             Color[] colors = Actions.BGR555ToColor(br.ReadBytes(dsig.num_colors * 2));

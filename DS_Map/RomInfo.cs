@@ -7,8 +7,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
-using System.Xaml;
 using static DSPRE.RomInfo;
 using Path = System.IO.Path;
 
@@ -26,6 +24,10 @@ namespace DSPRE
 
         public static bool IsDsRomProject { get; internal set; }
         public static bool isHGE { get; private set; }
+
+        // UI-agnostic warning surface. The host sets this (WinForms → MessageBox, Avalonia → dialog); the default
+        // just logs. Keeps RomInfo free of a direct System.Windows.Forms dependency so Avalonia can own ROM loading.
+        public static Action<string, string> ShowWarning = (msg, title) => AppLogger.Error(title + ": " + msg);
         public static bool hasRotomProject { get; private set; }
         public static void RefreshRotomProjectState() => hasRotomProject =
             !string.IsNullOrWhiteSpace(workDir) && File.Exists(Path.Combine(workDir, "rotom.toml"));
@@ -179,8 +181,9 @@ namespace DSPRE
             wazaEffectCell,         // effect cell graphics: NCER cells — wazaeffect/effectclact/wecell.narc (HGSS a/0/2/4)
             wazaEffectCellAnm,      // effect cell graphics: NANR anims — wazaeffect/effectclact/wecellanm.narc (HGSS a/0/2/5)
             wazaParticle,           // effect SPA particle systems — wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
-            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — battle/graphic/pl_batt_bg.narc
-            battleObj,              // battle OBJ cells incl. the terrain ground platforms — battle/graphic/pl_batt_obj.narc
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX) — a/0/0/9 = ARC_BATT_BG_PLANM
 
             synthOverlay,
             dynamicHeaders,
@@ -249,15 +252,15 @@ namespace DSPRE
                 customNarcFolderName = "data/zcustom";
             }
 
-            workDir = path + "\\"; // This is required still. Ideally all paths should be combined with Path.Combine and not by string concatenation
+            workDir = path + Path.DirectorySeparatorChar; // Trailing separator is load-bearing: callers concatenate onto workDir directly
             RefreshRotomProjectState();
             
             if (IsDsRomProject)
             {
-                arm9Path = Path.Combine(workDir, @"arm9\arm9.bin");
-                arm7Path = Path.Combine(workDir, @"arm7\arm7.bin");
-                overlayTablePath = Path.Combine(workDir, @"arm9_overlays\overlays.yaml");
-                y7Path = Path.Combine(workDir, @"arm7_overlays\overlays.yaml");
+                arm9Path = Path.Combine(workDir, "arm9", "arm9.bin");
+                arm7Path = Path.Combine(workDir, "arm7", "arm7.bin");
+                overlayTablePath = Path.Combine(workDir, "arm9_overlays", "overlays.yaml");
+                y7Path = Path.Combine(workDir, "arm7_overlays", "overlays.yaml");
                 dataPath = Path.Combine(workDir, @"files");
                 overlayPath = Path.Combine(workDir, @"arm9_overlays");
                 bannerPath = Path.Combine(workDir, @"banner");
@@ -275,7 +278,7 @@ namespace DSPRE
                 headerPath = Path.Combine(workDir, @"header.bin");
             }
             unpackedPath = Path.Combine(workDir, @"unpacked");
-            internalNamesPath = Path.Combine(dataPath, @"fielddata\maptable\mapname.bin");
+            internalNamesPath = Path.Combine(dataPath, "fielddata", "maptable", "mapname.bin");
 
             try
             {
@@ -283,8 +286,7 @@ namespace DSPRE
             }
             catch (KeyNotFoundException)
             {
-                MessageBox.Show("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowWarning?.Invoke("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM");
                 return;
             }
 
@@ -366,7 +368,7 @@ namespace DSPRE
 
         public static void InitScriptDBs()
         {
-            Helpers.InitializeScriptDatabase(projectName, gameFamily, gameVersion);
+            ScriptDatabaseSetup.InitializeScriptDatabase(projectName, gameFamily, gameVersion);
         }
 
         public static void ReloadScriptCommandDictionaries()
@@ -989,8 +991,8 @@ namespace DSPRE
                         {
                             if (OverlayUtils.Decompress(1) < 0)
                             {
-                                MessageBox.Show("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event Editor will be " +
-                                "displayed incorrectly or not displayed at all.", "Decompression error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                ShowWarning?.Invoke("Overlay 1 couldn't be decompressed.\nOverworld sprites in the Event Editor will be " +
+                                "displayed incorrectly or not displayed at all.", "Decompression error");
                             }
                         }
                     }
@@ -1028,8 +1030,8 @@ namespace DSPRE
                         uint ramAddressOfTable = bReader.ReadUInt32();
                         if ((ramAddressOfTable >> 0x18) != 0x02)
                         {
-                            MessageBox.Show("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event Editor will be " +
-                                "displayed incorrectly or not displayed at all.", "Decompression error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            ShowWarning?.Invoke("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event Editor will be " +
+                                "displayed incorrectly or not displayed at all.", "Decompression error");
                             return;
                         }
 
@@ -2147,6 +2149,9 @@ namespace DSPRE
                         [DirNames.wazaEffectCell] = $@"{dataFolderName}\a\0\2\4",   // wecell (NCER)
                         [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\a\0\2\5",   // wecellanm (NANR)
                         [DirNames.wazaParticle] = $@"{dataFolderName}\a\0\2\9",   // waza_particle (SPA)
+                        [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",   // ARC_BATT_BG (battle backgrounds + HAIKEI scroll BGs)
+                        [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",   // ARC_BATT_OBJ (battle OBJ / terrain ground platforms)
+                        [DirNames.battleBgPlanm] = $@"{dataFolderName}\a\0\0\9",   // ARC_BATT_BG_PLANM (HGSS-only WEST_HAIKEI_CHG_EX anim data)
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
@@ -2198,7 +2203,8 @@ namespace DSPRE
             gameDirs = new Dictionary<DirNames, (string packedDir, string unpackedDir)>();
             foreach (KeyValuePair<DirNames, string> kvp in packedDirsDict)
             {
-                string packedDir = Path.Combine(workDir, kvp.Value);
+                // The NARC path literals use '\' — normalize so they resolve on non-Windows too.
+                string packedDir = Path.Combine(workDir, kvp.Value.Replace('\\', Path.DirectorySeparatorChar));
                 string unpackedDir = Path.Combine(workDir, "unpacked", kvp.Key.ToString());
                 gameDirs.Add(kvp.Key, (packedDir, unpackedDir));
             }

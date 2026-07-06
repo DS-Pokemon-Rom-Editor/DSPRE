@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Ekona.Images;
 using Images;
@@ -37,18 +38,18 @@ namespace DSPRE.Avalonia
 
                 int paletteFileID = trClassID * 5 + 1;
                 string paletteFilename = paletteFileID.ToString("D4");
-                _pal = new NCLR(dir + "\\" + paletteFilename, paletteFileID, paletteFilename);
+                _pal = new NCLR(Path.Combine(dir, paletteFilename), paletteFileID, paletteFilename);
 
                 int tilesFileID = trClassID * 5;
                 string tilesFilename = tilesFileID.ToString("D4");
-                _tile = new NCGR(dir + "\\" + tilesFilename, tilesFileID, tilesFilename);
+                _tile = new NCGR(Path.Combine(dir, tilesFilename), tilesFileID, tilesFilename);
 
                 if (gameFamily == GameFamilies.DP)
                     return 0; // DP has no NCER animation for trainer classes.
 
                 int spriteFileID = trClassID * 5 + 2;
                 string spriteFilename = spriteFileID.ToString("D4");
-                _sprite = new NCER(dir + "\\" + spriteFilename, spriteFileID, spriteFilename);
+                _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
                 FrameCount = _sprite.Banks.Length;
                 return FrameCount - 1;
             }
@@ -70,9 +71,9 @@ namespace DSPRE.Avalonia
                 int[] oamEnabled = Enumerable.Range(0, bank0OAMcount).ToArray();
                 frame = Math.Max(0, Math.Min(_sprite.Banks.Length, frame));
 
-                var gdi = _sprite.Get_Image(_tile, _pal, frame, width, height,
-                    false, false, false, true, true, -1, oamEnabled);
-                return ImageConverter.ToAvaloniaBitmap(gdi);
+                // GDI-free render path: compose the OAM cells straight into a RawImage (no System.Drawing).
+                var raw = _sprite.Get_RawImage(_tile, _pal, frame, width, height, trans: true, currOAM: -1, draw_index: oamEnabled);
+                return ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch (Exception ex)
             {

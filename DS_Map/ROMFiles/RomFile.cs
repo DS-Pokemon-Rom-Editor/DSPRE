@@ -1,6 +1,5 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -17,31 +16,26 @@ namespace DSPRE.ROMFiles {
             File.WriteAllBytes(path, romFileToByteArray);
 
             if (showSuccessMessage) {
-                MessageBox.Show(GetType().Name + " saved successfully!", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AppMessages.Info(GetType().Name + " saved successfully!");
             }
 
             return true;
         }
         protected internal bool SaveToFileDefaultDir(DirNames dir, int IDtoReplace, bool showSuccessMessage = true) {
-            string path = RomInfo.gameDirs[dir].unpackedDir + "\\" + IDtoReplace.ToString("D4");
+            string path = Path.Combine(RomInfo.gameDirs[dir].unpackedDir, IDtoReplace.ToString("D4"));
             return this.SaveToFile(path, showSuccessMessage);
         }
         protected internal void SaveToFileExplorePath(string fileType, string fileExtension, string suggestedFileName, bool showSuccessMessage = true) {
             fileExtension = "*." + fileExtension;
 
-            SaveFileDialog sf = new SaveFileDialog {
-                Filter = $"{fileType} ({fileExtension})|{fileExtension}"
-            };
+            string chosen = AppMessages.PickSaveFile($"Export {fileType}",
+                $"{fileType} ({fileExtension})|{fileExtension}", suggestedFileName);
 
-            if (!string.IsNullOrWhiteSpace(suggestedFileName)) {
-                sf.FileName = suggestedFileName;
-            }
-
-            if (sf.ShowDialog() != DialogResult.OK) {
+            if (string.IsNullOrEmpty(chosen)) {
                 return;
             }
 
-            this.SaveToFile(sf.FileName, showSuccessMessage);
+            this.SaveToFile(chosen, showSuccessMessage);
         }
     }
 }

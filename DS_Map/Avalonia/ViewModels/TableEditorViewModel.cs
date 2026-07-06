@@ -293,8 +293,8 @@ namespace DSPRE.Avalonia.ViewModels
 
             _effectsComboTable = new List<(ushort, ushort)>();
             _effectsComboStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0);
-            PatchToolboxDialog.flag_MainComboTableRepointed = _effectsComboStartAddr >= synthOverlayLoadAddress;
-            _effectsComboStartAddr -= PatchToolboxDialog.flag_MainComboTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+            RomPatchState.flag_MainComboTableRepointed = _effectsComboStartAddr >= synthOverlayLoadAddress;
+            _effectsComboStartAddr -= RomPatchState.flag_MainComboTableRepointed ? synthOverlayLoadAddress : ARM9.address;
 
             byte comboCount;
             string expArmPath = Filesystem.expArmPath;
@@ -307,12 +307,12 @@ namespace DSPRE.Avalonia.ViewModels
                 _vsTrainerList = new List<(int, int)>();
 
                 _vsPokemonStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(vsPokemonEntryTableOffsetToRAMAddress, 4), 0);
-                PatchToolboxDialog.flag_PokemonBattleTableRepointed = _vsPokemonStartAddr >= synthOverlayLoadAddress;
-                _vsPokemonStartAddr -= PatchToolboxDialog.flag_PokemonBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+                RomPatchState.flag_PokemonBattleTableRepointed = _vsPokemonStartAddr >= synthOverlayLoadAddress;
+                _vsPokemonStartAddr -= RomPatchState.flag_PokemonBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
 
                 _vsTrainerStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(vsTrainerEntryTableOffsetToRAMAddress, 4), 0);
-                PatchToolboxDialog.flag_TrainerClassBattleTableRepointed = _vsTrainerStartAddr >= synthOverlayLoadAddress;
-                _vsTrainerStartAddr -= PatchToolboxDialog.flag_TrainerClassBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+                RomPatchState.flag_TrainerClassBattleTableRepointed = _vsTrainerStartAddr >= synthOverlayLoadAddress;
+                _vsTrainerStartAddr -= RomPatchState.flag_TrainerClassBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
 
                 _pokeNames = GetPokemonNames();
                 PokemonNames.Clear();
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Main combo table.
             ComboItems.Clear();
-            using (var ar = new DSUtils.EasyReader(PatchToolboxDialog.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr))
+            using (var ar = new DSUtils.EasyReader(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr))
             {
                 for (int i = 0; i < comboCount; i++)
                 {
@@ -346,7 +346,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (gameFamily == GameFamilies.HGSS)
             {
                 // VS Trainer table.
-                using (var ar = new DSUtils.EasyReader(PatchToolboxDialog.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr))
+                using (var ar = new DSUtils.EasyReader(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr))
                 {
                     byte trainerCount = ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter);
                     for (int i = 0; i < trainerCount; i++)
@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 // VS Pokémon table.
-                using (var ar = new DSUtils.EasyReader(PatchToolboxDialog.flag_PokemonBattleTableRepointed ? expArmPath : arm9Path, _vsPokemonStartAddr))
+                using (var ar = new DSUtils.EasyReader(RomPatchState.flag_PokemonBattleTableRepointed ? expArmPath : arm9Path, _vsPokemonStartAddr))
                 {
                     byte pokeCount = ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter);
                     for (int i = 0; i < pokeCount; i++)
@@ -474,7 +474,7 @@ namespace DSPRE.Avalonia.ViewModels
             _effectsComboTable[index] = (effect, music);
 
             string expArmPath = Filesystem.expArmPath;
-            using (var wr = new DSUtils.EasyWriter(PatchToolboxDialog.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr + 4 * (uint)index))
+            using (var wr = new DSUtils.EasyWriter(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr + 4 * (uint)index))
             {
                 wr.Write(effect);
                 wr.Write(music);
@@ -516,7 +516,7 @@ namespace DSPRE.Avalonia.ViewModels
             _vsTrainerList[index] = (trainerClass, comboID);
 
             string expArmPath = Filesystem.expArmPath;
-            using (var wr = new DSUtils.EasyWriter(PatchToolboxDialog.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr + 2 * (uint)index))
+            using (var wr = new DSUtils.EasyWriter(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr + 2 * (uint)index))
             {
                 wr.Write((ushort)((trainerClass & 1023) + (comboID << 10)));
             }

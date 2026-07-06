@@ -83,11 +83,17 @@ namespace DSPRE.Avalonia.Views
 
         public EventEditorView(EventEditorViewModel vm) : this() { DataContext = vm; }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
+
+        /// <summary>
+        /// One-time VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is
+        /// created at app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after a load.
+        /// </summary>
+        public async Task EnsureSetupAsync()
         {
             if (_setupDone || Design.IsDesignMode) return;
             var vm = VM;
-            if (vm == null) return;
+            if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             _setupDone = true;
 
             DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);

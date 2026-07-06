@@ -19,8 +19,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
-using System.Windows.Forms;
-
 namespace NSMBe4 {
     /**
      * This is the core of all the image importing.

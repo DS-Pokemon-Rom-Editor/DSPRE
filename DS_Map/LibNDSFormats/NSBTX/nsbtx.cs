@@ -16,11 +16,11 @@
 */
 
 using System;
+using DSPRE;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Drawing;
-using System.Windows.Forms;
 using System.Linq;
 using NSMBe4.DSFileSystem;
 using static NSMBe4.NSBMD.NSBTX_File.PalInfo_Master.Info;
@@ -350,13 +350,13 @@ namespace NSMBe4.NSBMD
         public NSBTX_File(FileStream f) {
             using (EndianBinaryReader er = new EndianBinaryReader(f, Endianness.LittleEndian)) {
                 if (f.Length <= 4) {
-                    MessageBox.Show("Error: Texture file is too small.", null, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    AppMessages.Error("Error: Texture file is too small.");
                     er.Close();
                     return;
                 }
 
                 if (er.ReadString(Encoding.ASCII, 4) != "BTX0") {
-                    MessageBox.Show("Error: BTX header is wrong.", null, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    AppMessages.Error("Error: BTX header is wrong.");
                     er.Close();
                     return;
                 } else {
@@ -377,7 +377,7 @@ namespace NSMBe4.NSBMD
                     long backup = f.Position;
                     string ID = er.ReadString(Encoding.ASCII, 4);
                     if (ID != "TEX0") {
-                        MessageBox.Show("Error: TEX0 header is wrong.", null, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                        AppMessages.Error("Error: TEX0 header is wrong.");
                         er.Close();
                         return;
                     }
@@ -662,6 +662,89 @@ namespace NSMBe4.NSBMD
 
             return (b_, ctrlCode);
         }
+
+        /// <summary>
+        /// GDI-free twin of <see cref="GetBitmap"/>: decodes the texture straight into a <see cref="DSPRE.RawImage"/>
+        /// (BGRA), keeping the <see cref="Color"/>-based palette math (System.Drawing.Primitives is cross-platform).
+        /// </summary>
+        public (DSPRE.RawImage bmp, int ctrlCode) GetRawImage(int imageIndex, int palIndex) {
+            var tinfo = this.texInfo.infoBlock.tInfoArr[imageIndex];
+
+            if (tinfo.format == TextureFormat.TEXEL_4X4) {
+                var raw4 = new DSPRE.RawImage(tinfo.width, tinfo.height);
+                Convert4x4TexelRaw(tinfo.Image, tinfo.width, tinfo.height, tinfo.spData, this.palInfo.infoBlock.pInfoArr[palIndex].pal, raw4);
+                return (raw4, 0);
+            }
+
+            int ctrlCode = 0;
+            int W = tinfo.width, H = tinfo.height;
+            var raw = new DSPRE.RawImage(W, H);
+            int pixelnum = W * H;
+            PalInfo[] pinfoArr = this.palInfo.infoBlock.pInfoArr;
+
+            void Put(int j, Color c) => raw.SetPixel(j % W, j / W, c.R, c.G, c.B, c.A);
+
+            switch (tinfo.format) {
+                case TextureFormat.A3I5:
+                    for (int j = 0; j < pixelnum; j++) {
+                        int index = tinfo.Image[j] & 0x1f;
+                        int alpha = tinfo.Image[j] >> 5;
+                        alpha = alpha == 0 ? 0 : (alpha + 1) * 32 - 1;
+                        Put(j, Color.FromArgb(alpha, pinfoArr[palIndex].pal[index]));
+                    }
+                    break;
+                case TextureFormat.COLOR_4:
+                    for (int j = 0; j < pixelnum; j++) {
+                        uint index = tinfo.Image[j / 4];
+                        index = (index >> ((j % 4) << 1)) & 3;
+                        Color c;
+                        if (index == 0 && tinfo.color0 == 1) c = Color.Transparent;
+                        else if (index >= pinfoArr[palIndex].pal.Length) { c = Color.Black; ctrlCode = 4; }
+                        else c = pinfoArr[palIndex].pal[index];
+                        Put(j, c);
+                    }
+                    break;
+                case TextureFormat.COLOR_16:
+                    for (int j = 0; j < pixelnum; j++) {
+                        uint index = tinfo.Image[j / 2];
+                        index = (index >> ((j % 2) << 2)) & 0x0f;
+                        Color c;
+                        if (index == 0 && tinfo.color0 == 1) c = Color.Transparent;
+                        else if (index >= pinfoArr[palIndex].pal.Length) { ctrlCode = 16; c = Color.Black; }
+                        else c = pinfoArr[palIndex].pal[index];
+                        Put(j, c);
+                    }
+                    break;
+                case TextureFormat.COLOR_256:
+                    for (int j = 0; j < pixelnum; j++) {
+                        byte index = tinfo.Image[j];
+                        Color c;
+                        if (index == 0 && tinfo.color0 == 1) c = Color.Transparent;
+                        else if (index >= pinfoArr[palIndex].pal.Length) { ctrlCode = 256; c = Color.Black; }
+                        else c = pinfoArr[palIndex].pal[index];
+                        Put(j, c);
+                    }
+                    break;
+                case TextureFormat.A5I3:
+                    for (int j = 0; j < pixelnum; j++) {
+                        int index = tinfo.Image[j] & 0x7;
+                        int alpha = tinfo.Image[j] >> 3;
+                        alpha = alpha == 0 ? 0 : (alpha + 1) * 8 - 1;
+                        Put(j, Color.FromArgb(alpha, pinfoArr[palIndex].pal[index]));
+                    }
+                    break;
+                case TextureFormat.DIRECT:
+                    for (int j = 0; j < pixelnum; j++) {
+                        ushort p = (ushort)(tinfo.Image[j * 2] + (tinfo.Image[j * 2 + 1] << 8));
+                        Put(j, Color.FromArgb(((p & 0x8000) != 0) ? 0xff : 0,
+                            ((p >> 0) & 0x1f) << 3, ((p >> 5) & 0x1f) << 3, ((p >> 10) & 0x1f) << 3));
+                    }
+                    break;
+            }
+
+            return (raw, ctrlCode);
+        }
+
         public byte[] ToByteArray() {
             MemoryStream newData = new MemoryStream();
             using (BinaryWriter writer = new BinaryWriter(newData)) {
@@ -800,6 +883,65 @@ namespace NSMBe4.NSBMD
 
             return newData.ToArray();
         }
+        /// <summary>
+        /// GDI-free TEXEL_4X4 decode used by <see cref="GetRawImage"/>. Same algorithm as
+        /// <see cref="convert_4x4texel"/> but with bounds guards instead of exceptions. (The GDI
+        /// <see cref="GetBitmap"/> TEXEL_4X4 case dereferences a null <c>overworldFrames</c> local
+        /// and was never actually usable.)
+        /// </summary>
+        private static void Convert4x4TexelRaw(byte[] tex, int width, int height, byte[] spData, Color[] pal, DSPRE.RawImage outImg)
+        {
+            if (tex == null || spData == null || pal == null) return;
+            int w = width / 4, h = height / 4;
+            Color PalAt(int i) => (i >= 0 && i < pal.Length) ? pal[i] : Color.Black;
+            Color Mix(Color a, Color b, int wa, int wb) => Color.FromArgb(255,
+                (a.R * wa + b.R * wb) / (wa + wb),
+                (a.G * wa + b.G * wb) / (wa + wb),
+                (a.B * wa + b.B * wb) / (wa + wb));
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int blockIndex = y * w + x;
+                    if (blockIndex * 4 + 3 >= tex.Length || blockIndex * 2 + 1 >= spData.Length) continue;
+                    uint t = LibNDSFormats.Utils.Read4BytesAsUInt32(tex, blockIndex * 4);
+                    ushort d = LibNDSFormats.Utils.Read2BytesAsushort(spData, blockIndex * 2);
+                    int p0 = (d & 0x3fff) << 1;
+                    int mode = (d >> 14) & 3;
+
+                    for (int r = 0; r < 4; r++)
+                    {
+                        for (int c = 0; c < 4; c++)
+                        {
+                            int texel = (int)((t >> ((r * 4 + c) * 2)) & 3);
+                            Color px;
+                            switch (mode)
+                            {
+                                case 0:
+                                    px = texel == 3 ? Color.Transparent : PalAt(p0 + texel);
+                                    break;
+                                case 2:
+                                    px = PalAt(p0 + texel);
+                                    break;
+                                case 1:
+                                    px = texel < 2 ? PalAt(p0 + texel)
+                                       : texel == 2 ? Mix(PalAt(p0), PalAt(p0 + 1), 1, 1)
+                                       : Color.Transparent;
+                                    break;
+                                default: // 3
+                                    px = texel < 2 ? PalAt(p0 + texel)
+                                       : texel == 2 ? Mix(PalAt(p0), PalAt(p0 + 1), 5, 3)
+                                       : Mix(PalAt(p0), PalAt(p0 + 1), 3, 5);
+                                    break;
+                            }
+                            outImg.SetPixel(x * 4 + c, y * 4 + r, px.R, px.G, px.B, px.A);
+                        }
+                    }
+                }
+            }
+        }
+
         public bool convert_4x4texel(uint[] tex, int width, int height, ushort[] data, Color[] pal, ImageTexeler.LockBitmap rgbaOut)
         {
             int w = width / 4;

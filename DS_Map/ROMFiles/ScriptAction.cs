@@ -1,9 +1,8 @@
-﻿using DSPRE.Resources;
+using DSPRE.Resources;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Forms;
 
 namespace DSPRE.ROMFiles {
     public class ActionContainer {
@@ -55,18 +54,18 @@ namespace DSPRE.ROMFiles {
                     } else {
                         details = "Are you sure it's a proper Action Command?";
                     }
-                    MessageBox.Show("This Script file could not be saved." +
+                    AppMessages.Error("This Script file could not be saved." +
                         Environment.NewLine + "Parser failed to interpret line " + lineNumber + ": \"" + wholeLine + "\"." +
-                        Environment.NewLine + "\n" + details, "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Environment.NewLine + "\n" + details, "Parser error");
                     id = null;
                     return;
                 }
             }
 
             if (id == 0x00FE && nameParts.Length != 1 || id != 0x00FE && nameParts.Length != 2) { //E.g.: End 0x2 0x40    OR     LookUp
-                MessageBox.Show("Wrong number of parameters for action " + nameParts[0] + " at line " + lineNumber + "." + Environment.NewLine +
+                AppMessages.Error("Wrong number of parameters for action " + nameParts[0] + " at line " + lineNumber + "." + Environment.NewLine +
                     "Received: " + (nameParts.Length - 1) + Environment.NewLine + "Expected: 1"
-                    + Environment.NewLine + "\nThis Script File can not be saved.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    + Environment.NewLine + "\nThis Script File can not be saved.", "Error");
                 id = null;
             } else {
                 if (id == 0x00FE) {

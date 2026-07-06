@@ -67,6 +67,8 @@
                                 ItemsSource="{Binding $parent[ItemsControl].((vm:BattleScriptEditorViewModel)DataContext).OpcodeDisplayNames}"
                                 SelectedIndex="{Binding OpId}"/>
                     </Grid>
+                    <TextBlock Text="{Binding OpDoc}" IsVisible="{Binding HasDoc}" TextWrapping="Wrap" FontSize="11"
+                               FontStyle="Italic" Margin="92,0,0,2" Foreground="{DynamicResource Editor.Subtle}"/>
                     <ItemsControl ItemsSource="{Binding Params}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ParamVM">
@@ -114,7 +116,7 @@
 
       <!-- WEST side panel: cell-animation preview (Phase 2) + readable storyboard timeline -->
       <Grid Grid.Column="1" IsVisible="{Binding ShowStoryboard}" MinWidth="320" Margin="10,0,0,0" RowDefinitions="Auto,Auto,Auto,Auto,*">
-        <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4">
+        <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4" IsVisible="{Binding HasPreview}">
           <TextBlock Text="Animation preview" FontWeight="SemiBold"/>
           <TextBlock Text="Reproduces the vanilla-game routines (particles, Pokémon move/rotate/scale/flash, shake, fade). Effects redefined in custom C code may differ."
                      FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
@@ -149,8 +151,8 @@
                      IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
               <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
                      IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+              <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+              <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
               <!-- gauge readout overlay (name / level / HP bar) from the gauge config popup. Positioned inside the real
                    gauge boxes: enemy ≈ x[-6..122] y[4..68] (center 58,36); player ≈ x[128..256] y[84..148] (center 192,116).
                    Values from gauge.c's gage_parts tile layout; pixel coords are TUNABLE. -->
@@ -172,7 +174,7 @@
                 <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game -->
                 <TextBlock Canvas.Left="200" Canvas.Top="123" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="#F8F8F8"/>
               </Canvas>
-              <Image Source="avares://DSPRE/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
+              <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
             </Canvas>
           </Viewbox>
         </Border>
@@ -214,7 +216,7 @@
                      FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
         </WrapPanel>
 
-        <TextBlock Grid.Row="3" Text="Animation storyboard" FontWeight="SemiBold" Margin="0,6,0,4"/>
+        <TextBlock Grid.Row="3" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
         <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
           <ScrollViewer>
             <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"

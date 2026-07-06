@@ -54,7 +54,7 @@ namespace Ekona.Images.Formats
             ushort version = br.ReadUInt16();
             if (version != 0x00)
             {
-                System.Windows.Forms.MessageBox.Show("Version not supported. Only 0");
+                DSPRE.AppMessages.Error("Version not supported. Only 0");
                 throw new FormatException("Version not supported. Only 0");
             }
             ushort num_colors = br.ReadUInt16();
@@ -65,7 +65,7 @@ namespace Ekona.Images.Formats
                 ushort spec = br.ReadUInt16();
                 if (spec != 0x00)
                 {
-                    System.Windows.Forms.MessageBox.Show("Color spec not supported. Only 0");
+                    DSPRE.AppMessages.Error("Color spec not supported. Only 0");
                     throw new FormatException("Color spec not supported. Only 0");
                 }
                 pal[i] = Color.FromArgb(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());

@@ -9,10 +9,9 @@ namespace DSPRE
 {
     static class Program
     {
-        public static string DspreDataPath { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DSPRE");
-        public static string DatabasePath = Path.Combine(Program.DspreDataPath, "databases");
+        // Canonical definitions live in the core AppPaths class; these forward for legacy call sites.
+        public static string DspreDataPath => AppPaths.DspreDataPath;
+        public static string DatabasePath => AppPaths.DatabasePath;
 
         /// <summary>
         /// Application entry point.
@@ -33,6 +32,10 @@ namespace DSPRE
             WinFormsApp.EnableVisualStyles();
             WinFormsApp.SetCompatibleTextRenderingDefault(false);
 
+            // This exe hosts the legacy WinForms shell (unless DSPRE_AVALONIA_SHELL=1 forces the
+            // pure-Avalonia one); the cross-platform DSPRE.Avalonia exe never installs these hooks.
+            WinFormsShellHost.InstallHooks();
+
 #if DEBUG
             ScreenshotTool.EnableGlobally();
 #endif
@@ -49,34 +52,6 @@ namespace DSPRE
                 .WithInterFont()
                 .LogToTrace();
 
-        public static void SetupDatabase()
-        {
-            // needs to be this verbose (copy instead of move) so this works across drives
-            try
-            {
-                string sourceDbPath = Path.Combine(WinFormsApp.StartupPath, "databases");
-                if (Directory.Exists(sourceDbPath) && !SettingsManager.Settings.databasesPulled) {
-                    if (!Directory.Exists(DatabasePath)) {
-                        Directory.CreateDirectory(DatabasePath);
-                    }
-                    foreach (string dirPath in Directory.GetDirectories(sourceDbPath, "*", SearchOption.AllDirectories)) {
-                        Directory.CreateDirectory(dirPath.Replace(sourceDbPath, DatabasePath));
-                    }
-                    foreach (string filePath in Directory.GetFiles(sourceDbPath, "*.*", SearchOption.AllDirectories)) {
-                        File.Copy(filePath, filePath.Replace(sourceDbPath, DatabasePath), true);
-                    }
-                    // After successful copy, delete source and update settings
-                    Directory.Delete(sourceDbPath, true);
-                    SettingsManager.Settings.databasesPulled = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to copy databases: {ex.Message}",
-                              "Database Setup Error",
-                              MessageBoxButtons.OK,
-                              MessageBoxIcon.Error);
-            }
-        }
+        public static void SetupDatabase() => DatabaseSetup.CopyBundledDatabases();
     }
 }

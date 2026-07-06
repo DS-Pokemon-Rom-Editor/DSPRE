@@ -17,6 +17,12 @@
     <!-- ── Menu bar ───────────────────────────────────────────────────────── -->
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
+        <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
+        <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
+        <Separator/>
+        <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <Separator/>
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>
 
@@ -58,6 +64,8 @@
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
         <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
         <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click"/>
+        <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click"/>
+        <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click"/>
         <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click"/>
         <MenuItem Header="Headbutt Editor… (HGSS)" Click="HeadbuttEditor_Click"/>
       </MenuItem>
@@ -73,6 +81,25 @@
                   ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
         <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods) — per project or global"/>
+        <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
+        <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
+        <Separator/>
+        <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON"/>
+        <MenuItem Header="Generate Trainer Usage CSV…" Click="TrainerUsageCsv_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Which Pokémon each trainer class uses, with counts"/>
+        <Separator/>
+        <MenuItem Header="NARC Utility">
+          <MenuItem Header="Unpack NARC to Folder…" Click="NarcUnpack_Click"/>
+          <MenuItem Header="Pack Folder to NARC…" Click="NarcPack_Click"/>
+        </MenuItem>
+        <MenuItem Header="NSBMD Utility">
+          <MenuItem Header="Add/Replace NSBMD textures…" Click="NsbmdAddTex_Click"/>
+          <MenuItem Header="Remove textures from NSBMD…" Click="NsbmdRemoveTex_Click"/>
+          <MenuItem Header="Save textures from NSBMD…" Click="NsbmdSaveTex_Click"/>
+        </MenuItem>
         <Separator/>
         <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"/>
         <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
@@ -88,7 +115,7 @@
     </Border>
 
     <!-- ── Main editing surface: the Maps workspace (other editors open from the menu) ── -->
-    <views:MapsWorkspaceView DataContext="{Binding HeaderVM}"/>
+    <views:MapsWorkspaceView x:Name="Maps" DataContext="{Binding HeaderVM}"/>
 
   </DockPanel>
 </Window>

@@ -137,8 +137,8 @@ namespace DSPRE.Avalonia
 
         public static void OpenTableEditor()
         {
-            if (!IsRomLoaded || EditorPanels.headerEditor == null) return;
-            new TableEditorView(new TableEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).ShowManaged();
+            if (!IsRomLoaded) return;
+            new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
         public static void OpenHiddenItemsEditor()
@@ -202,8 +202,20 @@ namespace DSPRE.Avalonia
         // ── World / data editors ───────────────────────────────────────────────
         public static void OpenFlyWarpEditor()
         {
-            if (!IsRomLoaded || EditorPanels.headerEditor == null) return;
-            new FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).ShowManaged();
+            if (!IsRomLoaded) return;
+            new FlyEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
+        }
+
+        public static void OpenSpawnEditor()
+        {
+            if (!IsRomLoaded) return;
+            new SpawnEditorView(new SpawnEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
+        }
+
+        public static void OpenHeaderSearch()
+        {
+            if (!IsRomLoaded) return;
+            new HeaderSearchView(new HeaderSearchViewModel(true)).ShowManaged();
         }
 
         public static void OpenMapEditor()
@@ -296,6 +308,22 @@ namespace DSPRE.Avalonia
             new ProjectChecksView().ShowManaged();
         }
 
+        public static void OpenPatchToolbox()
+        {
+            // Writes to the ROM binary (ARM9 / overlays / NARCs). Native Avalonia UI over the shared
+            // PatchToolboxDialog apply-logic, so it runs identical code to the WinForms dialog.
+            if (!IsRomLoaded) return;
+            new PatchToolboxView().ShowManaged();
+        }
+
+        public static void OpenCustomCommandManager()
+        {
+            // Manages the custom script-command databases. Still a WinForms tool (self-contained, file-based);
+            // reused directly over the shared Win32 pump until a native port exists.
+            if (!IsRomLoaded) return;
+            new CustomScrcmdManagerView(new CustomScrcmdManagerViewModel(true)).ShowManaged();
+        }
+
         public static void OpenGlTest()
         {
             // No ROM required — verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
@@ -381,6 +409,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Matrix Editor",         Keywords = "world grid", Run = () => OpenMatrixEditor() },
             new() { Name = "Event Editor",          Keywords = "overworld warp trigger spawn", Run = () => OpenEventEditor() },
             new() { Name = "Fly / Warp Editor",     Run = OpenFlyWarpEditor },
+            new() { Name = "Spawn Point Editor",    Keywords = "start position new game", Run = OpenSpawnEditor },
+            new() { Name = "Advanced Header Search", Keywords = "find filter query field", Run = OpenHeaderSearch },
             new() { Name = "Overlay Editor",        Run = OpenOverlayEditor },
             new() { Name = "Overworld Sprites (BTX)", Run = OpenOverworldEditor },
             new() { Name = "NSBTX Texture Editor",  Keywords = "texture", Run = OpenNsbtxEditor },

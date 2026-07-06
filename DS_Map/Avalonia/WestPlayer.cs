@@ -133,6 +133,7 @@ namespace DSPRE.Avalonia
             public double Dx, Dy, ScaleX = 1, ScaleY = 1, Alpha = 1, RotDeg, Mosaic;
             public byte TintR, TintG, TintB; public double TintA;
             public bool Visible = true;
+            public int Priority = 2;           // OAM view priority (POKE_OAM_VIEW); lower value = drawn in front.
         }
         private readonly Dictionary<int, DroppedCap> _caps = new Dictionary<int, DroppedCap>();
         public IReadOnlyCollection<DroppedCap> Caps => _caps.Values;
@@ -490,6 +491,26 @@ namespace DSPRE.Avalonia
                         break;
                     case "WEST_HAIKEI_HALF_WAIT":
                         if (!BgHalf) { _bgWait = 2; return; }
+                        break;
+
+                    // ── HGSS-only opcodes (appended after WEST_KEY_WAIT in HG's west.h) ──────────────
+                    // WEST_FLASH time (we_sys.c) — a full-screen WHITE flash that fades out over `time` frames.
+                    case "WEST_FLASH":
+                        _fadeStart = 1.0; _fadeEnd = 0; _fadeCur = 1.0;
+                        _fadeFrames = _fadeFramesLeft = c.Args.Length >= 1 && c.Args[0] > 0 ? c.Args[0] : 8;
+                        FadeR = FadeG = FadeB = 255;
+                        break;
+                    // WEST_HAIKEI_CHG_EX map_id, ch_mode, ex_bit (we_sys.c) — extended backdrop change driven by HG's
+                    // animated batt_bg_planm data. We approximate it as a plain HAIKEI_CHG to map_id (the per-frame
+                    // palette animation frames aren't loaded); ch_mode/ex_bit select the plane-anim variant.
+                    case "WEST_HAIKEI_CHG_EX":
+                        if (c.Args.Length >= 1) StartBackground(c.Args[0], overlay: false, posX: 0, posY: 0,
+                            spdX: _work[0], spdY: -_work[1], peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
+                        break;
+                    // WEST_BATONTATTI_JP adrs (we_sys.c) — Baton Pass touch: jumps by `adrs` ONLY when the attacker has
+                    // a client pair (double battle). In a single-target preview at_client_pair is false, so it just
+                    // skips the offset — a no-op here (the arg is already consumed by the parser).
+                    case "WEST_BATONTATTI_JP":
                         break;
 
                     case "WEST_FUNC_CALL":
@@ -1027,6 +1048,22 @@ namespace DSPRE.Avalonia
                 case 79:   // WSP_166: defender translucent (SS_PARA_ALPHA 8 = 0.5) for the W166_Tcb window-reveal loop —
                     // (YOFS_MAX 38 + 1) cycles × 4 frames ≈ 156, then alpha restored.
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 16, Frames = 156, Keys = new double[] { 8, 8 } });
+                    break;
+                case 56:   // WestSp_WE_T08 (Superpower aura, wsp_tool.c): CATS_ObjectScaleSetCap(cap0,1.2) in OBJWND window
+                    // mode → an aura silhouette behind the mon. The TCB is vestigial (sets up then tears down), so it's a
+                    // brief static aura — scale the dropped cap-0 copy 1.2× with a soft white glow.
+                    if (_caps.TryGetValue(0, out var t08cap))
+                    { t08cap.ScaleX = t08cap.ScaleY = 1.2; t08cap.TintR = t08cap.TintG = t08cap.TintB = 255; t08cap.TintA = 0.4; }
+                    break;
+                case 75:   // WestSp_WE_POKE_OAM_VIEW: set a dropped cap's OAM view PRIORITY (z-order) so it draws in front
+                    // of / behind the mons. GPWork [0]cap_id [1]priority(81/80/31/30) [2]3DFRAME [3]0 [4]drop. (NDS OAM:
+                    // lower priority value = drawn in front; the arg is the priority, NOT a screen-Y.)
+                    if (a.Length > 3 && _caps.TryGetValue(a[2], out var pvCap)) pvCap.Priority = a[3];
+                    break;
+                case 78:   // WestSp_WE_ALL_DROP (move 425): drop EVERY mon into an OAM cap so a following effect can move
+                    // them all at once. In the 1v1 preview that's the attacker + defender.
+                    _caps[0] = new DroppedCap { SrcMon = _atVis };
+                    _caps[1] = new DroppedCap { SrcMon = _dfVis };
                     break;
                 case 70:   // WSP_272 (Role Play): attacker's white image appears at the defender (cap[0] at cap[1]−32px),
                     // fading in over the PaletteSoftFade (num 16 → 0→15 evy).

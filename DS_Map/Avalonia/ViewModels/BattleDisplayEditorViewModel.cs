@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _currentId <= 0) { IconPreview = null; return; }
             try
             {
-                var gdi = DSPRE.DSUtils.GetPokePic(_currentId, 64, 64, paletteIdOverride: _partyPaletteIndex);
+                var gdi = DSPRE.DSUtils.GetPokePicRaw(_currentId, 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
             catch { IconPreview = null; }

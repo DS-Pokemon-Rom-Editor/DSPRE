@@ -1,7 +1,6 @@
-﻿using System.IO;
+using System.IO;
 using DSPRE.ROMFiles;
 using System;
-using System.Windows.Forms;
 using System.Text;
 using System.Collections.Generic;
 using static DSPRE.RomInfo;
@@ -118,7 +117,7 @@ namespace DSPRE {
             }
         }
 
-        public MoveData(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.moveData].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public MoveData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.moveData].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
         public override byte[] ToByteArray() {
             using (MemoryStream memoryStream = new MemoryStream()) {
@@ -159,7 +158,7 @@ namespace DSPRE {
                 return;
             } else {
                 if (!Enum.TryParse(split[target], true, out m.movetype)) {
-                    MessageBox.Show($"Malformed entry: \"{string.Join(" ", split)}\".\nMove type is unreadable: \"{split[target]}\"", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove type is unreadable: \"{split[target]}\"", "Parser error");
                     return;
                 }
                 target++;
@@ -168,7 +167,7 @@ namespace DSPRE {
                     return;
                 } else {
                     if (!Enum.TryParse(split[target], true, out m.split)) {
-                        MessageBox.Show($"Malformed entry: \"{string.Join(" ", split)}\".\nMove split is unreadable: \"{split[target]}\"", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove split is unreadable: \"{split[target]}\"", "Parser error");
                         return;
                     }
                     target++;
@@ -180,7 +179,7 @@ namespace DSPRE {
                             if (split[target].StartsWith("-") || split[target].StartsWith("—")) {
                                 m.damage = 0;
                             } else {
-                                MessageBox.Show($"Malformed entry: \"{string.Join(" ", split)}\".\nMove power is unreadable: \"{split[target]}\"", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove power is unreadable: \"{split[target]}\"", "Parser error");
                                 return;
                             }
 
@@ -194,7 +193,7 @@ namespace DSPRE {
                                 if (split[target].StartsWith("-") || split[target].StartsWith("—")) {
                                     m.accuracy = 0;
                                 } else {
-                                    MessageBox.Show($"Malformed entry: \"{string.Join(" ", split)}\".\nMove accuracy is unreadable: \"{split[target]}\"", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove accuracy is unreadable: \"{split[target]}\"", "Parser error");
                                     return;
                                 }
                             }
@@ -204,7 +203,7 @@ namespace DSPRE {
                                 return;
                             } else {
                                 if (!byte.TryParse(split[target].Replace('%', ' '), out m.pp)) {
-                                    MessageBox.Show($"Malformed entry: \"{string.Join(" ", split)}\".\nMove PP count is unreadable: \"{split[target]}\"", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    AppMessages.Error($"Malformed entry: \"{string.Join(" ", split)}\".\nMove PP count is unreadable: \"{split[target]}\"", "Parser error");
                                     return;
                                 }
                             }

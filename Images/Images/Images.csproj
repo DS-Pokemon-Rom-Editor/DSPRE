@@ -1,15 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>Images</AssemblyName>
     <RootNamespace>Images</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <!-- GDI (System.Drawing.Common) image paths are WinForms-shell-only; cross-platform callers use the RawImage twins. -->
+    <NoWarn>$(NoWarn);CA1416;CS0169</NoWarn>
   </PropertyGroup>
+
+  <!-- Tinke-era WinForms UI: unused by DSPRE, excluded so this project stays a cross-platform
+       net8.0 library. Delete the files once confirmed dead for good. -->
+  <ItemGroup>
+    <Compile Remove="AnimationControl.cs" />
+    <Compile Remove="AnimationControl.designer.cs" />
+    <Compile Remove="Main.cs" />
+    <Compile Remove="Properties\Resources.Designer.cs" />
+    <EmbeddedResource Remove="**\*.resx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Images.xml">

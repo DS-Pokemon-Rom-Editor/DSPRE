@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DSPRE.LibNDSFormats
 {
-    internal class BTX0
+    public class BTX0
     {
         public static uint PaletteIndex;
 
@@ -24,7 +24,12 @@ namespace DSPRE.LibNDSFormats
         public static uint ImageWidth;
 
         public static uint ImageHeight;
-        public static Bitmap Read(byte[] BTXFile)
+        /// <summary>
+        /// GDI-free twin of <see cref="Read"/>: decodes the BTX0 into a <see cref="RawImage"/>.
+        /// Sets the same static header fields (<see cref="ImageOffset"/>, <see cref="PaletteOffset"/>,
+        /// <see cref="ColorCount"/>, …) that <see cref="Write"/> relies on.
+        /// </summary>
+        public static RawImage ReadRaw(byte[] BTXFile)
         {
             if (BitConverter.ToUInt32(BTXFile, 0) != 811095106)
             {
@@ -48,23 +53,25 @@ namespace DSPRE.LibNDSFormats
             PaletteSize = num4;
             if (num10 == 3)
             {
-                Color[] array = new Color[num4 / num11 / 2];
+                int paletteLength = (int)(num4 / num11 / 2);
                 if (num4 < 64 && num11 >= 2)
                 {
-                    array = new Color[(BTXFile.Length - num6) / 2];
+                    paletteLength = (int)((BTXFile.Length - num6) / 2);
                 }
-                ColorCount = (uint)array.Length;
-                for (int i = 0; i < array.Length; i++)
+                ColorCount = (uint)paletteLength;
+                byte[] palR = new byte[paletteLength];
+                byte[] palG = new byte[paletteLength];
+                byte[] palB = new byte[paletteLength];
+                for (int i = 0; i < paletteLength; i++)
                 {
                     ushort num12 = BitConverter.ToUInt16(BTXFile, (int)(num6 + PaletteIndex * (ColorCount * 2)) + i * 2);
-                    uint red = (uint)((num12 & 0x1F) << 3);
-                    uint green = (uint)(num12 & 0x3E0) >> 2;
-                    uint blue = (uint)(num12 & 0x7C00) >> 7;
-                    array[i] = Color.FromArgb(255, (int)red, (int)green, (int)blue);
+                    palR[i] = (byte)((num12 & 0x1F) << 3);
+                    palG[i] = (byte)((uint)(num12 & 0x3E0) >> 2);
+                    palB[i] = (byte)((uint)(num12 & 0x7C00) >> 7);
                 }
                 ImageWidth = num9;
                 ImageHeight = (num6 - num3) * 2 / num9;
-                Bitmap bitmap = new Bitmap((int)ImageWidth, (int)ImageHeight);
+                RawImage raw = new RawImage((int)ImageWidth, (int)ImageHeight);
                 uint num13 = 0u;
                 uint num14 = 0u;
                 for (int j = (int)num3; j < num6; j++)
@@ -77,7 +84,8 @@ namespace DSPRE.LibNDSFormats
                     };
                     for (int k = 0; k < array2.Length; k++)
                     {
-                        bitmap.SetPixel((int)num13, (int)num14, array[array2[k]]);
+                        uint idx = array2[k];
+                        raw.SetPixel((int)num13, (int)num14, palR[idx], palG[idx], palB[idx], 255);
                         num13++;
                     }
                     if (num13 >= num9)
@@ -86,9 +94,93 @@ namespace DSPRE.LibNDSFormats
                         num14++;
                     }
                 }
-                return bitmap;
+                return raw;
             }
             return null;
+        }
+
+        public static Bitmap Read(byte[] BTXFile)
+        {
+            RawImage raw = ReadRaw(BTXFile);
+            if (raw == null)
+            {
+                return null;
+            }
+            Bitmap bitmap = new Bitmap(raw.Width, raw.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            System.Drawing.Imaging.BitmapData data = bitmap.LockBits(
+                new Rectangle(0, 0, raw.Width, raw.Height),
+                System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                // Format32bppArgb memory layout is B,G,R,A little-endian — same as RawImage.Bgra.
+                for (int y = 0; y < raw.Height; y++)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(
+                        raw.Bgra, y * raw.Stride, data.Scan0 + y * data.Stride, raw.Stride);
+                }
+            }
+            finally
+            {
+                bitmap.UnlockBits(data);
+            }
+            return bitmap;
+        }
+
+        /// <summary>
+        /// GDI-free twin of <see cref="Write(byte[], Bitmap)"/>: rebuilds the 4bpp image data and the
+        /// selected palette from a <see cref="RawImage"/>. Relies on the statics set by the last
+        /// <see cref="ReadRaw"/>/<see cref="Read"/> of the same file. Palette entries are assigned in
+        /// first-seen scan order (the GDI overload's HashSet order was effectively the same).
+        /// </summary>
+        public static byte[] Write(byte[] BTXFile, RawImage bm)
+        {
+            byte[] px = bm.Bgra;
+            List<uint> palette = new List<uint>();
+            Dictionary<uint, uint> palIndex = new Dictionary<uint, uint>();
+            for (int i = 0; i < bm.Width * bm.Height; i++)
+            {
+                uint c = BitConverter.ToUInt32(px, i * 4);
+                if (palIndex.TryAdd(c, (uint)palette.Count))
+                {
+                    palette.Add(c);
+                }
+            }
+            int p = 0;
+            for (int j = (int)ImageOffset; j < PaletteOffset; j++)
+            {
+                uint lo = palIndex[BitConverter.ToUInt32(px, p * 4)];
+                p++;
+                uint hi = palIndex[BitConverter.ToUInt32(px, p * 4)];
+                p++;
+                BTXFile[j] = (byte)(lo | (hi << 4));
+            }
+            for (int m = 0; m < palette.Count; m++)
+            {
+                uint c = palette[m];
+                byte blue = (byte)c;
+                byte green = (byte)(c >> 8);
+                byte red = (byte)(c >> 16);
+                uint r5 = (uint)Math.Round(red / 8.0);
+                uint g5 = (uint)Math.Round(green / 8.0);
+                uint b5 = (uint)Math.Round(blue / 8.0);
+                if (r5 > 31)
+                {
+                    r5 = 31u;
+                }
+                if (g5 > 31)
+                {
+                    g5 = 31u;
+                }
+                if (b5 > 31)
+                {
+                    b5 = 31u;
+                }
+                uint bgr555 = r5 + (g5 << 5) + (b5 << 10);
+                BTXFile[PaletteOffset + PaletteIndex * (ColorCount * 2) + m * 2] = (byte)bgr555;
+                BTXFile[PaletteOffset + PaletteIndex * (ColorCount * 2) + m * 2 + 1] = (byte)(bgr555 >> 8);
+            }
+            return BTXFile;
         }
 
         public static byte[] Write(byte[] BTXFile, Bitmap bm)

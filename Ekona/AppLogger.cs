@@ -25,17 +25,15 @@ namespace DSPRE
         private static readonly object _fileLock = new object();
         private static readonly ConcurrentQueue<string> _recentLogBuffer = new ConcurrentQueue<string>();
         private static string _logFilePath;
-        private static MainProgram _mainProgram;
         private const int MaxLogFileLines = 2000;
         private static int _writesSinceLastTrim = 0;
         private const int TrimInterval = 10; 
         public static LogLevel MinimumLevel { get; set; } = LogLevel.Debug;
 
 
-        public static void Initialize(MainProgram program, string logFileName = "application.log", LogLevel minLevel = LogLevel.Debug)
+        public static void Initialize(string logFileName = "application.log", LogLevel minLevel = LogLevel.Debug)
         {
-            _mainProgram = program;
-            string logDir = Path.Combine(Program.DspreDataPath, "Logs");
+            string logDir = Path.Combine(AppPaths.DspreDataPath, "Logs");
             Directory.CreateDirectory(logDir);
             _logFilePath = Path.Combine(logDir, logFileName);
             MinimumLevel = minLevel;
@@ -49,15 +47,18 @@ namespace DSPRE
 
             string timestamped = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level.ToString().ToUpper()}] {message}";
 
-            lock (_fileLock)
+            if (_logFilePath != null)   // not Initialize()d yet → in-memory buffer only
             {
-                File.AppendAllText(_logFilePath, timestamped + Environment.NewLine);
-        
-                _writesSinceLastTrim++;
-                if (_writesSinceLastTrim >= TrimInterval)
+                lock (_fileLock)
                 {
-                    TrimLogFile();
-                    _writesSinceLastTrim = 0;
+                    File.AppendAllText(_logFilePath, timestamped + Environment.NewLine);
+
+                    _writesSinceLastTrim++;
+                    if (_writesSinceLastTrim >= TrimInterval)
+                    {
+                        TrimLogFile();
+                        _writesSinceLastTrim = 0;
+                    }
                 }
             }
 

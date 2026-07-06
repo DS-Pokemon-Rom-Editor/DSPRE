@@ -192,7 +192,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             try
             {
-                string path = gameDirs[DirNames.trainerProperties].unpackedDir + "\\" + trainerId.ToString("D4");
+                string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
                 using var s = File.OpenRead(path);
                 return new TrainerProperties((ushort)trainerId, s).trainerClass;
             }
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.ViewModels
             _currentTrainerId = trainerId;
             try
             {
-                string path = gameDirs[DirNames.trainerProperties].unpackedDir + "\\" + trainerId.ToString("D4");
+                string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
                 using var s = File.OpenRead(path);
                 var trp = new TrainerProperties((ushort)trainerId, s);
                 _currentIsDouble = trp.doubleBattle;

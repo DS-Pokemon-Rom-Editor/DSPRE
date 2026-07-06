@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Diagnostics;
 using System.IO;
 using static DSPRE.RomInfo;
@@ -33,7 +33,7 @@ namespace DSPRE {
 
         public static bool Compress(string path) {
             Process compress = new Process();
-            compress.StartInfo.FileName = @"Tools\blz.exe";
+            compress.StartInfo.FileName = DSUtils.ToolPath("blz");
             compress.StartInfo.Arguments = @" -en9 " + '"' + path + '"';
             compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             compress.StartInfo.CreateNoWindow = true;

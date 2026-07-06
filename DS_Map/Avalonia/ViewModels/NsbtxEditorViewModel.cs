@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private string TexDir => gameDirs[_mapTextures ? DirNames.mapTextures : DirNames.buildingTextures].unpackedDir;
         private int TexCount => _mapTextures ? Filesystem.GetMapTexturesCount() : Filesystem.GetBuildingTexturesCount();
-        private string PackPath(int i) => TexDir + "\\" + i.ToString("D4");
+        private string PackPath(int i) => Path.Combine(TexDir, i.ToString("D4"));
 
         public async Task SetupAsync(Window owner)
         {
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
                 {
                     string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir;
-                    if (File.Exists(cfg + "\\0000")) File.Copy(cfg + "\\0000", cfg + "\\" + newId.ToString("D4"));
+                    if (File.Exists(Path.Combine(cfg, "0000"))) File.Copy(Path.Combine(cfg, "0000"), Path.Combine(cfg, newId.ToString("D4")));
                 }
                 PackNames.Add("Texture Pack " + newId);
                 PackIndex = newId;
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels
                 File.Delete(PackPath(last));
                 if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
                 {
-                    string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir + "\\" + last.ToString("D4");
+                    string cfg = Path.Combine(gameDirs[DirNames.buildingConfigFiles].unpackedDir, last.ToString("D4"));
                     if (File.Exists(cfg)) File.Delete(cfg);
                 }
                 if (_packIndex == last) PackIndex = last - 1;

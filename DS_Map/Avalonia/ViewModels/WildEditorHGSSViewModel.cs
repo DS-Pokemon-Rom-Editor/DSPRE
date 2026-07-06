@@ -236,9 +236,9 @@ namespace DSPRE.Avalonia.ViewModels
             for (ushort i = 0; i < totalHeaders; i++)
             {
                 MapHeader h;
-                if (PatchToolboxDialog.flag_DynamicHeadersPatchApplied ||
-                    PatchToolboxDialog.CheckFilesDynamicHeadersPatchApplied())
-                    h = MapHeader.LoadFromFile(gameDirs[DirNames.dynamicHeaders].unpackedDir + "\\" + i.ToString("D4"), i, 0);
+                if (RomPatchState.flag_DynamicHeadersPatchApplied ||
+                    PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied())
+                    h = MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, i.ToString("D4")), i, 0);
                 else
                     h = MapHeader.LoadFromARM9(i);
 

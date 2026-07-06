@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia.ViewModels
                 iconId = PokeDatabase.PersonalData.personalExtraFiles[excess].iconId;
             try
             {
-                var drawingImg = DSUtils.GetPokePic(iconId, 64, 64);
+                var drawingImg = DSUtils.GetPokePicRaw(iconId, 64, 64);
                 MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
             }
             catch { MonIconBitmap = null; }

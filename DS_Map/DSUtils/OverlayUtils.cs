@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Windows.Forms;
 using YamlDotNet.Serialization;
 using static DSPRE.DSUtils;
 using static DSPRE.RomInfo;
@@ -197,7 +196,7 @@ namespace DSPRE
 
                 if (eventEditorIsReady)
                 {
-                    MessageBox.Show(msg, "Can't restore overlay from backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error(msg, "Can't restore overlay from backup");
                 }
             }
         }
@@ -214,15 +213,15 @@ namespace DSPRE
 
             if (!File.Exists(overlayFilePath))
             {
-                MessageBox.Show("Overlay to decompress #" + overlayNumber + " doesn't exist",
-                    "Overlay not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Overlay to decompress #" + overlayNumber + " doesn't exist",
+                    "Overlay not found");
                 return ERR_OVERLAY_NOTFOUND;
             }
 
             Process compress = new Process();
-            compress.StartInfo.FileName = @"Tools\blz.exe";
+            compress.StartInfo.FileName = DSUtils.ToolPath("blz");
             compress.StartInfo.Arguments = "-en " + '"' + overlayFilePath + '"';
-            Application.DoEvents();
+            AppMessages.PumpEvents();
             compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             compress.StartInfo.CreateNoWindow = true;
             compress.Start();
@@ -241,8 +240,8 @@ namespace DSPRE
 
             if (!File.Exists(overlayFilePath))
             {
-                MessageBox.Show($"File to decompress \"{overlayFilePath}\" doesn't exist",
-                    "Overlay not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"File to decompress \"{overlayFilePath}\" doesn't exist",
+                    "Overlay not found");
                 return ERR_OVERLAY_NOTFOUND;
             }
 

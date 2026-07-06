@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.IO;
 
 namespace MKDS_Course_Editor {
-    public partial class nclr_e : Form {
+    // Historically a WinForms Form (Tinke/MKDS Course Editor palette editor), but DSPRE only ever
+    // used its static color-format helpers (encodeColor/CColorFormat via convertir.cs) — now a
+    // plain class so the color math is core/cross-platform.
+    public class nclr_e {
         int r = 255;
         int g = 255;
         int b = 255;

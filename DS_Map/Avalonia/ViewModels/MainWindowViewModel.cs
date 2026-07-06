@@ -32,6 +32,13 @@ namespace DSPRE.Avalonia.ViewModels
                 ? $"DSPRE — {GetGameDisplayName()} (Avalonia preview)"
                 : "DSPRE (Avalonia preview)";
 
+        /// <summary>Re-evaluate ROM-dependent state after a ROM is loaded/closed (enables the editor menus + title).</summary>
+        public void RefreshRomState()
+        {
+            OnPropertyChanged(nameof(IsRomLoaded));
+            OnPropertyChanged(nameof(Title));
+        }
+
         // ── Design-time constructor ────────────────────────────────────────────
         public MainWindowViewModel()
         {

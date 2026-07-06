@@ -266,148 +266,11 @@ namespace DSPRE
             return "Changelog not available.";
         }
 
-        public static void CheckForDatabaseUpdates(bool silent = true)
-        {
-            AppLogger.Info("Checking for script database updates...");
-            string pathToDbRepo = Program.DatabasePath;
-
-            try
-            {
-                if (!Repository.IsValid(pathToDbRepo))
-                {
-                    Repository.Init(pathToDbRepo);
-                    using (var repo = new Repository(pathToDbRepo))
-                    {
-                        Remote remote = repo.Network.Remotes.Add("origin", "https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git");
-                        Commands.Fetch(repo, remote.Name, new string[] { "refs/heads/main:refs/heads/main" }, null, null);
-
-                        // Check if main branch exists
-                        Branch main = repo.Branches["main"] ?? repo.CreateBranch("main", repo.Branches["refs/heads/main"].Tip);
-                        repo.Branches.Update(main, b => b.TrackedBranch = "refs/remotes/origin/main");
-                        Commands.Checkout(repo, main);
-                    }
-                }
-
-                using (var repo = new Repository(pathToDbRepo))
-                {
-                    var remote = repo.Network.Remotes["origin"];
-                    try
-                    {
-                        // Reset any changes
-                        if (repo.Head.Tip != null)
-                        {
-                            repo.Reset(ResetMode.Hard);
-                        }
-
-                        // Clean up untracked files
-                        foreach (var item in repo.RetrieveStatus().Untracked)
-                        {
-                            string fullPath = Path.Combine(pathToDbRepo, item.FilePath);
-                            if (File.Exists(fullPath))
-                                File.Delete(fullPath);
-                            else if (Directory.Exists(fullPath))
-                                Directory.Delete(fullPath, true);
-                        }
-
-                        Commands.Fetch(repo, remote.Name, remote.FetchRefSpecs.Select(x => x.Specification), null, null);
-
-                        // Get the remote main branch and force checkout
-                        var remoteBranch = repo.Branches["origin/main"];
-                        var options = new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force };
-                        Commands.Checkout(repo, repo.Branches["main"], options);
-                        repo.Reset(ResetMode.Hard, remoteBranch.Tip);
-
-                        AppLogger.Info("Script databases updated successfully");
-                        if (!silent)
-                        {
-                            MessageBox.Show("Script database updated successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Warn($"Could not fetch updates: {ex.Message}");
-                        if (!silent)
-                        {
-                            MessageBox.Show("Could not fetch database updates. Using local database files.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn($"Could not access git repository: {ex.Message}");
-                if (!silent)
-                {
-                    MessageBox.Show("Could not access database repository. Using local database files.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
-        }
+        // Moved to the core ScriptDatabaseSetup class; kept as forwarders for existing UI call sites.
+        public static void CheckForDatabaseUpdates(bool silent = true) => ScriptDatabaseSetup.CheckForDatabaseUpdates(silent);
 
         public static void InitializeScriptDatabase(string romFileName, GameFamilies gameFamily, GameVersions gameVersion)
-        {
-            string baseFileName = Path.GetFileNameWithoutExtension(romFileName);
-            string romFileNameClean = baseFileName.EndsWith("_DSPRE_contents")
-                ? baseFileName.Substring(0, baseFileName.Length - "_DSPRE_contents".Length)
-                : baseFileName;
-
-            if (SettingsManager.Settings.automaticallyUpdateDBs)
-            {
-                CheckForDatabaseUpdates();
-            }
-
-            string editedDatabasesDir = Path.Combine(Program.DatabasePath, "edited_databases");
-            Directory.CreateDirectory(editedDatabasesDir);
-
-            // Create ROM-specific folder
-            string romDatabaseFolder = Path.Combine(editedDatabasesDir, romFileNameClean);
-            Directory.CreateDirectory(romDatabaseFolder);
-
-            string targetJsonPath = Path.Combine(romDatabaseFolder, "scrcmd_database.json");
-            string databaseJsonPath;
-
-            switch (gameFamily)
-            {
-                case GameFamilies.DP:
-                    databaseJsonPath = Path.Combine(Program.DatabasePath, "diamond_pearl_scrcmd_database.json");
-                    break;
-                case GameFamilies.HGSS:
-                    databaseJsonPath = Path.Combine(Program.DatabasePath, "hgss_scrcmd_database.json");
-                    break;
-                case GameFamilies.Plat:
-                    databaseJsonPath = Path.Combine(Program.DatabasePath, "platinum_scrcmd_database.json");
-                    break;
-                default:
-                    throw new Exception("Unknown game family");
-            }
-
-            if (!File.Exists(targetJsonPath))
-            {
-                File.Copy(databaseJsonPath, targetJsonPath);
-            }
-
-            try
-            {
-                ScriptDatabaseJsonLoader.InitializeFromJson(targetJsonPath, gameVersion);
-
-                // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.textArchives });
-
-                // Initialize enum dictionaries from ROM data (Pokemon, Items, Moves, Trainers)
-                Resources.ScriptDatabase.InitializePokemonNames();
-                Resources.ScriptDatabase.InitializeItemNames();
-                Resources.ScriptDatabase.InitializeMoveNames();
-                Resources.ScriptDatabase.InitializeTrainerNames();
-
-                // Export the enum JSONs for external tools (like Rotom) to use
-                // Always regenerate to ensure they match current ROM data
-                Resources.ScriptDatabase.ExportEnumJsons(romDatabaseFolder);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Failed to load script database: {ex.Message}");
-                MessageBox.Show("Failed to load script database. Script editing features may be limited.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+            => ScriptDatabaseSetup.InitializeScriptDatabase(romFileName, gameFamily, gameVersion);
 
         static bool disableHandlersOld;
         static bool disableHandlers;
@@ -435,11 +298,7 @@ namespace DSPRE
             disableHandlers = false;
         }
 
-        public static string GetDSPREVersion()
-        {
-            return "" + Assembly.GetExecutingAssembly().GetName().Version.Major + "." + Assembly.GetExecutingAssembly().GetName().Version.Minor +
-                "." + Assembly.GetExecutingAssembly().GetName().Version.Build + "." + Assembly.GetExecutingAssembly().GetName().Version.Revision;
-        }
+        public static string GetDSPREVersion() => AppInfo.GetDSPREVersion();
 
         public static void statusLabelMessage(string msg = "Ready")
         {
@@ -459,64 +318,12 @@ namespace DSPRE
             statusLabel.Invalidate();
         }
 
-        //Locate File - buttons
-        public static void ExplorerSelect(string path)
-        {
-            if (File.Exists(path))
-            {
-                Process.Start("explorer.exe", "/select" + "," + "\"" + path + "\"");
-            }
-        }
+        // Moved to the core SystemShell class (cross-platform); forwarders for existing call sites.
+        public static void ExplorerSelect(string path) => SystemShell.RevealInFileManager(path);
+        public static void OpenFileWithDefaultApp(string path) => SystemShell.OpenWithDefaultApp(path);
 
-        public static void OpenFileWithDefaultApp(string path)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    MessageBox.Show("Path is empty.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Use the system default app to open the file
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\""));
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"Failed to open '{path}' with default app: {ex.Message}");
-                MessageBox.Show($"Unable to open file with the default application:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        public static string[] GetTrainerNames()
-        {
-            List<string> trainerList = new List<string>();
-
-            /* Store all trainer names and classes */
-            TextArchive trainerClasses = new TextArchive(RomInfo.trainerClassMessageNumber);
-            TextArchive trainerNames = new TextArchive(RomInfo.trainerNamesMessageNumber);
-
-            int trainerCount = Filesystem.GetTrainerPropertiesCount();
-            for (int i = 0; i < trainerCount; i++)
-            {
-                string path = Filesystem.GetTrainerPropertiesPath(i);
-                int classMessageID = BitConverter.ToUInt16(DSUtils.ReadFromFile(path, startOffset: 1, 2), 0);
-                string currentTrainerName;
-
-                if (i < trainerNames.GetSimpleTrainerNames().Count)
-                {
-                    currentTrainerName = trainerNames.GetSimpleTrainerNames()[i];
-                }
-                else
-                {
-                    currentTrainerName = TrainerFile.NAME_NOT_FOUND;
-                }
-
-                trainerList.Add("[" + i.ToString("D2") + "] " + trainerClasses.messages[classMessageID] + " " + currentTrainerName);
-            }
-
-            return trainerList.ToArray();
-        }
+        // Moved to the core TrainerNames class; forwarder for existing call sites.
+        public static string[] GetTrainerNames() => TrainerNames.GetAll();
 
         public static void MW_LoadModelTextures(NSBMD model, string textureFolder, int fileID)
         {
@@ -728,62 +535,12 @@ namespace DSPRE
         }
 
         /// <summary>Classic Levenshtein edit distance between two strings (fuzzy search / matching).</summary>
-        public static int Levenshtein(string s1, string s2)
-        {
-            s1 ??= "";
-            s2 ??= "";
-            int[,] d = new int[s1.Length + 1, s2.Length + 1];
-            for (int i = 0; i <= s1.Length; i++) d[i, 0] = i;
-            for (int j = 0; j <= s2.Length; j++) d[0, j] = j;
-            for (int i = 1; i <= s1.Length; i++)
-                for (int j = 1; j <= s2.Length; j++)
-                {
-                    int cost = s2[j - 1] == s1[i - 1] ? 0 : 1;
-                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
-                }
-            return d[s1.Length, s2.Length];
-        }
+        // Moved to CoreExtensions (core, cross-platform); forwarder kept for existing UI call sites.
+        public static int Levenshtein(string s1, string s2) => CoreExtensions.Levenshtein(s1, s2);
 
-        public static List<string> getHeaderListBoxNames()
-        {
-            if (string.IsNullOrWhiteSpace(RomInfo.internalNamesPath))
-            {
-                return null;
-            }
-
-            List<string> headerListBoxNames = new List<string>();
-
-            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.internalNamesPath))
-            {
-                int headerCount = RomInfo.GetHeaderCount();
-                for (int i = 0; i < headerCount; i++)
-                {
-                    byte[] row = reader.ReadBytes(RomInfo.internalNameLength);
-                    string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
-                    headerListBoxNames.Add(MapHeader.BuildName(i, internalName));
-                }
-            }
-
-            return headerListBoxNames;
-        }
-
-        public static List<string> getInternalNames()
-        {
-            List<string> internalNames = new List<string>();
-
-            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(RomInfo.internalNamesPath))
-            {
-                int headerCount = RomInfo.GetHeaderCount();
-                for (int i = 0; i < headerCount; i++)
-                {
-                    byte[] row = reader.ReadBytes(RomInfo.internalNameLength);
-                    string internalName = Encoding.ASCII.GetString(row); //.TrimEnd();
-                    internalNames.Add(internalName.TrimEnd('\0'));
-                }
-            }
-
-            return internalNames;
-        }
+        // Moved to the core HeaderLists class; forwarders for existing call sites.
+        public static List<string> getHeaderListBoxNames() => HeaderLists.GetHeaderListBoxNames();
+        public static List<string> getInternalNames() => HeaderLists.GetInternalNames();
 
         public static int CalculateTimeDifferenceInSeconds(int startHour, int startMinute, int startSecond, int endHour, int endMinute, int endSecond)
         {
@@ -1127,38 +884,9 @@ namespace DSPRE
             return fileName;
         }
 
+        // Moved to the core TrainerUsageReport class; forwarder for existing call sites.
         public static void ExportTrainerUsageToCSV(Dictionary<string, Dictionary<string, int>> trainerUsage, string csvFilePath)
-        {
-            // Create the StreamWriter to write data to the CSV file
-            var sortedTrainerClasses = trainerUsage.Keys.OrderBy(className => className);
-
-            using (StreamWriter sw = new StreamWriter(csvFilePath))
-            {
-                // Write the header row
-                sw.WriteLine("Trainer Class;Pokemon Name;Occurrences");
-
-                // Iterate over the sorted trainer class names
-                foreach (string className in sortedTrainerClasses)
-                {
-                    Dictionary<string, int> innerDict = trainerUsage[className];
-
-                    // Sort the Pokemon names alphabetically
-                    var sortedPokemonNames = innerDict.Keys.OrderByDescending(pokeName => innerDict[pokeName]);
-
-                    // Iterate over the sorted mon names
-                    foreach (string pokeName in sortedPokemonNames)
-                    {
-                        int occurrences = innerDict[pokeName];
-
-                        // Write the data row
-                        sw.WriteLine($"{className};{pokeName};{occurrences}");
-                    }
-                    sw.WriteLine($"-;-;-");
-                }
-            }
-
-            AppLogger.Info("CSV file exported successfully.");
-        }
+            => TrainerUsageReport.WriteCsv(trainerUsage, csvFilePath);
 
     }
 }

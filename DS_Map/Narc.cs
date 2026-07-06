@@ -2,8 +2,6 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-
 namespace NarcAPI {
     public class Narc { //Nitro Archive
         public String Name { get; set; }
@@ -144,7 +142,7 @@ namespace NarcAPI {
 
         public void ExtractToFolder(String dirPath, string extension = null) {
             if ( string.IsNullOrWhiteSpace(dirPath) ) {
-                MessageBox.Show("Dir path + \"" + dirPath + "\" is invalid.", "Can't create directory", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Dir path + \"" + dirPath + "\" is invalid.", "Can't create directory");
                 return;
             }
 
@@ -155,15 +153,14 @@ namespace NarcAPI {
                             Directory.Delete(dirPath, true);
                             AppLogger.Debug("Deleted DSPRE-related folder \"" + dirPath + "\" without user confirmation.");
                         } else {
-                            DialogResult d = MessageBox.Show("Directory \"" + dirPath + "\" already exists and is not empty.\n" +
-                                "Do you want to delete its contents?", "Directory not empty", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                            if (d.Equals(DialogResult.Yes)) {
+                            if (AppMessages.Confirm("Directory \"" + dirPath + "\" already exists and is not empty.\n" +
+                                "Do you want to delete its contents?", "Directory not empty")) {
                                 Directory.Delete(dirPath, true);
                                 AppLogger.Debug("Deleted non-DSPRE-related folder \"" + dirPath + "\" after user confirmation.");
                             }
                         }
                     } catch (IOException) {
-                        MessageBox.Show("NARC has not been extracted.\nCan't delete directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Delete Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error("NARC has not been extracted.\nCan't delete directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Delete Error");
                         return;
                     }
                 }
@@ -174,7 +171,7 @@ namespace NarcAPI {
                     Directory.CreateDirectory(dirPath);
                     AppLogger.Debug("Created NARC folder \"" + dirPath + "\".");
                 } catch (IOException) {
-                    MessageBox.Show("NARC has not been extracted.\nCan't create directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Creation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("NARC has not been extracted.\nCan't create directory: \n" + dirPath + "\nThis might be a temporary issue.\nMake sure no other process is using it and try again.", "Creation Error");
                     return;
                 }
             }

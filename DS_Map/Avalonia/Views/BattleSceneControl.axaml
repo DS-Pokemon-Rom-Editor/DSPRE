@@ -7,14 +7,14 @@
   <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Background="Black">
     <Viewbox Stretch="Uniform">
       <Canvas Width="256" Height="192" ClipToBounds="True">
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/background.png" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_opponent.png" Canvas.Left="129" Canvas.Top="72"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/platform_you.png" Canvas.Left="-42" Canvas.Top="122"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/background.png" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/platform_opponent.png" Canvas.Left="129" Canvas.Top="72"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/platform_you.png" Canvas.Left="-42" Canvas.Top="122"/>
 
         <!-- Enemy shadow (one visible per size) -->
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_small.png"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_small.png"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
 
         <!-- Enemy (front) + player (back) sprites; passed in per scene. Each sprite and its palette-fade tint share
              one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
@@ -56,9 +56,9 @@
         </Grid>
 
         <!-- Battle UI chrome -->
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"/>
-        <Image Source="avares://DSPRE/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"/>
+        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
       </Canvas>
     </Viewbox>
   </Border>

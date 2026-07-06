@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE
@@ -239,8 +238,8 @@ namespace DSPRE
                 uint length = GetTableLength();
                 if (offset == 0 || length == 0)
                 {
-                    MessageBox.Show("Couldn't load trainer class gender table from arm9." +
-                        "\nTrainers will default to male when calculating natures.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Couldn't load trainer class gender table from arm9." +
+                        "\nTrainers will default to male when calculating natures.", "Error");
                     tableLoaded = true;
                     return;
                 }

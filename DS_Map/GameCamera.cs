@@ -1,7 +1,6 @@
 ﻿using DSPRE;
 using System;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 public class GameCamera {
@@ -96,9 +95,9 @@ public class GameCamera {
                         break;
                 }
             } catch (OverflowException e) {
-                MessageBox.Show("The value you selected is invalid.\n\n" + '"' + e.Message + '"', "Overflow", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("The value you selected is invalid.\n\n" + '"' + e.Message + '"', "Overflow");
             } catch (FormatException) {
-                MessageBox.Show("Only numeric values are allowed.", "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Only numeric values are allowed.", "Invalid input");
             }
         }
     }
@@ -128,7 +127,7 @@ public class GameCamera {
 
     public GameCamera(byte[] camData) {
         if (camData.Length != 36 && camData.Length != 24) {
-            MessageBox.Show("This is not a camera file.\nMake sure the file is 36 or 24 bytes long and try again.", "Wrong file!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            AppMessages.Error("This is not a camera file.\nMake sure the file is 36 or 24 bytes long and try again.", "Wrong file!");
             return;
         }
         try {
@@ -153,7 +152,7 @@ public class GameCamera {
                 }
             }
         } catch (EndOfStreamException) {
-            MessageBox.Show("You might have to manually fill in the last three camera fields, since DPPt cameras don't have them.", "DPPt Cam detected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            AppMessages.Info("You might have to manually fill in the last three camera fields, since DPPt cameras don't have them.", "DPPt Cam detected");
         }
     }
     public byte[] ToByteArray() {
@@ -188,38 +187,6 @@ public class GameCamera {
         return newData.ToArray();
     }
 
-    public void ShowInGridView(DataGridView dgv, int rowIndex) {
-        if (rowIndex > dgv.Rows.Count - 1) {
-            dgv.Rows.Add();
-        }
-
-        int colIndex = 0;
-
-        dgv.Rows[rowIndex].HeaderCell.Value = String.Format("{0}", dgv.Rows[rowIndex].Index);
-
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = distance;
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = vertRot;
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = horiRot;
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = zRot;
-
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = perspMode == ORTHO;
-
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = fov;
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = nearClip;
-        dgv.Rows[rowIndex].Cells[colIndex++].Value = farClip;
-
-        if (colIndex < dgv.Columns.Count-3) {
-            if (xOffset != null) {
-                dgv.Rows[rowIndex].Cells[colIndex++].Value = xOffset;
-            }
-
-            if (yOffset != null) {
-                dgv.Rows[rowIndex].Cells[colIndex++].Value = yOffset;
-            }
-
-            if (zOffset != null) {
-                dgv.Rows[rowIndex].Cells[colIndex++].Value = zOffset;
-            }
-        }
-    }
+    // NOTE: the WinForms grid helper ShowInGridView(DataGridView, int) moved to
+    // GameCameraGridExtensions (DSPRE WinForms project) so this class stays core/cross-platform.
 }

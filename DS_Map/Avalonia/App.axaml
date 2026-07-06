@@ -66,14 +66,21 @@
 		</Style>
 		<Style Selector="ComboBox">
 			<Setter Property="MinHeight" Value="28"/>
+			<!-- WinForms parity: typing in a focused/open combo jumps to the matching item.
+			     Avalonia ships this (TextSearch) but leaves it off by default. -->
+			<Setter Property="IsTextSearchEnabled" Value="True"/>
 		</Style>
 		<Style Selector="TextBox">
 			<Setter Property="MinHeight" Value="28"/>
 		</Style>
-		<!-- Numeric spinners: wide enough to read, tall enough to match buttons -->
+		<!-- Numeric spinners: wide enough to read, tall enough to match buttons.
+		     Default to integer display (FormatString="0") — most spinners are IDs/counts; the few
+		     genuinely decimal ones (map building coords, camera speeds) set their own FormatString,
+		     and a locally-set value overrides this style setter. Fixes ID fields showing as "0.00". -->
 		<Style Selector="NumericUpDown">
 			<Setter Property="MinWidth" Value="84"/>
 			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="FormatString" Value="0"/>
 		</Style>
 
 		<!-- ── Wrapping toolbars: a WrapPanel marked Classes="toolbar" reflows its controls onto a new

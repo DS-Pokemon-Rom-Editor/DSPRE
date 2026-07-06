@@ -153,6 +153,14 @@ namespace Ekona.Images
                                      grid, cell, number, trans, img, currOAM, 1, draw_index);
         }
 
+        /// <summary>GDI-free twin of the animated-sprite render — returns a <see cref="DSPRE.RawImage"/>.</summary>
+        public DSPRE.RawImage Get_RawImage(ImageBase image, PaletteBase pal, int index, int width, int height,
+               bool trans, int currOAM, int[] draw_index)
+        {
+            return Actions.Get_RawImage(banks[index], block_size, image, pal, width, height,
+                                        trans, currOAM, 1, draw_index);
+        }
+
     }
 
     public struct Bank

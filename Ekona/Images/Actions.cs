@@ -286,6 +286,41 @@ namespace Ekona.Images
             return image;
         }
 
+        /// <summary>
+        /// GDI-free twin of the tile renderer above: produces a <see cref="DSPRE.RawImage"/> (BGRA) instead
+        /// of a <see cref="Bitmap"/>. Palette math stays on <see cref="Color"/> (System.Drawing.Primitives,
+        /// cross-platform). Part of the System.Drawing → cross-platform migration.
+        /// </summary>
+        public static DSPRE.RawImage Get_RawImage(Byte[] tiles, Byte[] tile_pal, Color[][] palette, ColorFormat format,
+            int width, int height, int start = 0)
+        {
+            if (tiles.Length == 0)
+                return new DSPRE.RawImage(1, 1);
+
+            DSPRE.RawImage image = new DSPRE.RawImage(width, height);
+
+            int pos = start;
+            for (int h = 0; h < height; h++)
+            {
+                for (int w = 0; w < width; w++)
+                {
+                    int num_pal = 0;
+                    if (tile_pal.Length <= w + h * width)
+                        num_pal = 0;
+                    else
+                        num_pal = tile_pal[w + h * width];
+
+                    if (num_pal >= palette.Length)
+                        num_pal = 0;
+
+                    Color color = Get_Color(tiles, palette[num_pal], format, ref pos);
+
+                    image.SetPixel(w, h, color.R, color.G, color.B, color.A);
+                }
+            }
+            return image;
+        }
+
         public static Color Get_Color(Byte[] data, Color[] palette, ColorFormat format, ref int pos)
         {
             Color color = Color.Transparent;
@@ -1172,6 +1207,141 @@ namespace Ekona.Images
             }
 
             return bank_img;
+        }
+
+        /// <summary>
+        /// GDI-free twin of the OAM sprite composer above (image-render path only — the editor-only grid /
+        /// cell-box / number overlays, which need <see cref="Graphics"/> text/line drawing, are not drawn;
+        /// the Avalonia callers never request them). Composes each OAM cell into a <see cref="DSPRE.RawImage"/>
+        /// with the same flip + colour-key transparency + source-over blit as <c>DrawImageUnscaled</c>.
+        /// </summary>
+        public static DSPRE.RawImage Get_RawImage(Bank bank, uint blockSize, ImageBase img, PaletteBase pal,
+            int max_width, int max_height, bool trans, int currOAM = -1, int zoom = 1, int[] index = null)
+        {
+            int W = max_width * zoom, H = max_height * zoom;
+            DSPRE.RawImage bank_img = new DSPRE.RawImage(W, H);   // zero-filled == fully transparent
+
+            if (bank.oams == null || bank.oams.Length == 0)
+                return bank_img;
+
+            for (int i = 0; i < bank.oams.Length; i++)
+            {
+                bool draw = index == null;
+                if (!draw)
+                    for (int k = 0; k < index.Length; k++)
+                        if (index[k] == i) { draw = true; break; }
+                if (!draw)
+                    continue;
+
+                if (bank.oams[i].width == 0x00 || bank.oams[i].height == 0x00)
+                    continue;
+
+                uint tileOffset = bank.oams[i].obj2.tileOffset;
+                tileOffset = (uint)(tileOffset << (byte)blockSize);
+
+                ImageBase cell_img = new TestImage();
+                cell_img.Set_Tiles((byte[])img.Tiles.Clone(), bank.oams[i].width, bank.oams[i].height, img.FormatColor,
+                                   img.FormTile, false);
+                cell_img.StartByte = (int)(tileOffset * 0x20 + bank.data_offset);
+
+                byte num_pal = bank.oams[i].obj2.index_palette;
+                if (num_pal >= pal.NumberOfPalettes)
+                    num_pal = 0;
+                for (int j = 0; j < cell_img.TilesPalette.Length; j++)
+                    cell_img.TilesPalette[j] = num_pal;
+
+                DSPRE.RawImage cell = cell_img.Get_RawImage(pal);
+
+                bool flipX = bank.oams[i].obj1.flipX == 1;
+                bool flipY = bank.oams[i].obj1.flipY == 1;
+                if (flipX || flipY)
+                    cell = FlipRaw(cell, flipX, flipY);
+
+                if (trans && pal.Palette != null && pal.Palette.Length > num_pal && pal.Palette[num_pal].Length > 0)
+                {
+                    Color key = pal.Palette[num_pal][0];
+                    ApplyColorKey(cell, key.R, key.G, key.B);
+                }
+
+                int dstX = W / 2 + bank.oams[i].obj1.xOffset * zoom;
+                int dstY = H / 2 + bank.oams[i].obj0.yOffset * zoom;
+                BlitRaw(bank_img, cell, dstX, dstY);
+            }
+
+            return bank_img;
+        }
+
+        private static DSPRE.RawImage FlipRaw(DSPRE.RawImage src, bool flipX, bool flipY)
+        {
+            int w = src.Width, h = src.Height;
+            var dst = new DSPRE.RawImage(w, h);
+            for (int y = 0; y < h; y++)
+            {
+                int sy = flipY ? (h - 1 - y) : y;
+                for (int x = 0; x < w; x++)
+                {
+                    int sx = flipX ? (w - 1 - x) : x;
+                    int si = (sy * w + sx) * 4;
+                    int di = (y * w + x) * 4;
+                    dst.Bgra[di] = src.Bgra[si];
+                    dst.Bgra[di + 1] = src.Bgra[si + 1];
+                    dst.Bgra[di + 2] = src.Bgra[si + 2];
+                    dst.Bgra[di + 3] = src.Bgra[si + 3];
+                }
+            }
+            return dst;
+        }
+
+        // Mirrors Bitmap.MakeTransparent(color): matching-RGB pixels become fully transparent.
+        private static void ApplyColorKey(DSPRE.RawImage img, byte kr, byte kg, byte kb)
+        {
+            for (int i = 0; i < img.Bgra.Length; i += 4)
+                if (img.Bgra[i] == kb && img.Bgra[i + 1] == kg && img.Bgra[i + 2] == kr)
+                    img.Bgra[i + 3] = 0;
+        }
+
+        // Source-over alpha composite of src onto dst at (dx,dy) — matches Graphics.DrawImageUnscaled.
+        private static void BlitRaw(DSPRE.RawImage dst, DSPRE.RawImage src, int dx, int dy)
+        {
+            for (int y = 0; y < src.Height; y++)
+            {
+                int ty = dy + y;
+                if (ty < 0 || ty >= dst.Height) continue;
+                for (int x = 0; x < src.Width; x++)
+                {
+                    int tx = dx + x;
+                    if (tx < 0 || tx >= dst.Width) continue;
+
+                    int si = (y * src.Width + x) * 4;
+                    int sa = src.Bgra[si + 3];
+                    if (sa == 0) continue;
+
+                    int di = (ty * dst.Width + tx) * 4;
+                    if (sa == 255)
+                    {
+                        dst.Bgra[di] = src.Bgra[si];
+                        dst.Bgra[di + 1] = src.Bgra[si + 1];
+                        dst.Bgra[di + 2] = src.Bgra[si + 2];
+                        dst.Bgra[di + 3] = 255;
+                        continue;
+                    }
+
+                    int da = dst.Bgra[di + 3];
+                    int outA = sa + da * (255 - sa) / 255;
+                    if (outA == 0)
+                    {
+                        dst.Bgra[di] = dst.Bgra[di + 1] = dst.Bgra[di + 2] = dst.Bgra[di + 3] = 0;
+                        continue;
+                    }
+                    for (int c = 0; c < 3; c++)
+                    {
+                        int sc = src.Bgra[si + c];
+                        int dc = dst.Bgra[di + c];
+                        dst.Bgra[di + c] = (byte)((sc * sa + dc * da * (255 - sa) / 255) / outA);
+                    }
+                    dst.Bgra[di + 3] = (byte)outA;
+                }
+            }
         }
 
         public static Byte[] Get_OAMdata(OAM oam, byte[] image, ColorFormat format)

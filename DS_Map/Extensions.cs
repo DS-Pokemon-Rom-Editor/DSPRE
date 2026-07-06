@@ -6,8 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace DSPRE {
     public static class Extensions {
@@ -16,32 +16,9 @@ namespace DSPRE {
                 clb.SetItemChecked(i, status);
             }
         }
-        public static int IndexOfFirstNumber(this string str) {
-            return str.IndexOfAny("0123456789".ToCharArray());
-        }
-        public static bool ContainsNumber(this string str) {
-            return str.IndexOfFirstNumber() > 0;
-        }
-        public static T[] SubArray<T>(this T[] array, int offset, int length) {
-            T[] result = new T[length];
-            Array.Copy(array, offset, result, 0, length);
-            return result;
-        }
-        public static void Move<T>(this IList<T> l, int currentIndex, int newIndex) {
-            T item = l[currentIndex];
-            l.RemoveAt(currentIndex);
-            l.Insert(newIndex, item);
-        }
-        public static Dictionary<string, ushort> Reverse (this Dictionary<ushort, string> source) {
-            var dictionary = new Dictionary<string, ushort>(StringComparer.InvariantCultureIgnoreCase);
-            foreach (var entry in source) {
-                string newKey = entry.Value;
-                if (!dictionary.ContainsKey(newKey)) {
-                    dictionary.Add(newKey, entry.Key);
-                }
-            }
-            return dictionary;
-        }
+        // NOTE: the UI-free extensions (SubArray, ContainsNumber, IgnoreCaseEquals, Move, Reverse,
+        // ToByteArrayChooseSize, PurgeSpecial, GetNumberStyle, IndexOfFirstNumber) moved to the core
+        // CoreExtensions class (Ekona project, same namespace) — this class keeps only WinForms helpers.
         public static void FadeIn(this Form o, int framelength = 16, int frames = 10) {
             //Object is not fully invisible. Fade it in
             while (o != null && !o.IsDisposed && o.Opacity < 1.0) {
@@ -61,49 +38,6 @@ namespace DSPRE {
             AppLogger.Debug("Fadeout done");
         }
 
-        public static byte[] ToByteArrayChooseSize(this int num, byte size) {
-            switch (size) {
-                case 1:
-                    return new byte[] { checked((byte)num) };
-                case 2:
-                    return BitConverter.GetBytes(checked((ushort)num));
-                case 4:
-                    return BitConverter.GetBytes(num);
-                default:
-                    MessageBox.Show("Invalid size for number conversion!", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    throw new InvalidOperationException();
-            }
-        }
-        public static string PurgeSpecial(this string str, char[] special) {
-            foreach (char c in special) {
-                int pos = str.IndexOf(c);
-                if (pos >= 0) {
-                    return str.Substring(pos + 1);
-                }
-            }
-            return str;
-        }
-        public static NumberStyles GetNumberStyle(this string s) {
-            int posOfPrefix = s.IndexOf("0x", StringComparison.InvariantCultureIgnoreCase);
-            if (posOfPrefix >= 0) {
-                foreach (char c in s.Substring(posOfPrefix + 2)) {
-                    if (!char.IsDigit(c) && char.ToUpper(c) > 'F') {
-                        return NumberStyles.None;
-                    }
-                }
-                return NumberStyles.HexNumber;
-            } else {
-                foreach (char c in s) {
-                    if (!char.IsDigit(c)) {
-                        return NumberStyles.None;
-                    }
-                }
-                return NumberStyles.Integer;
-            }
-        }
-        public static bool IgnoreCaseEquals(this string str, string other) {
-            return str.Equals(other, StringComparison.InvariantCultureIgnoreCase);
-        }
         public static List<string> ToStringsList (this ScintillaNET.LineCollection lc, bool allowEmpty = true, bool trim = false) {
             IEnumerable<string> temp = lc.Select(x => x.Text);
             

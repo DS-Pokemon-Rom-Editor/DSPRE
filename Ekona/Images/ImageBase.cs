@@ -103,6 +103,25 @@ namespace Ekona.Images
             return Actions.Get_Image(img_tiles, tilePal, pal_colors, format, width, height);
         }
 
+        /// <summary>GDI-free twin of <see cref="Get_Image(PaletteBase)"/> — returns a <see cref="DSPRE.RawImage"/>.</summary>
+        public DSPRE.RawImage Get_RawImage(PaletteBase palette)
+        {
+            palette.Depth = format;
+            Color[][] pal_colors = palette.Palette;
+
+            Byte[] img_tiles;
+            if (tileForm == Images.TileForm.Horizontal)
+            {
+                if (height < tile_size){ height = tile_size; }
+                img_tiles = Actions.LinealToHorizontal(tiles, width, height, bpp, tile_size);
+                tilePal = Actions.LinealToHorizontal(tilePal, width, height, 8, tile_size);
+            }
+            else
+                img_tiles = tiles;
+
+            return Actions.Get_RawImage(img_tiles, tilePal, pal_colors, format, width, height);
+        }
+
         public abstract void Read(string fileIn);
         public abstract void Write(string fileOut, PaletteBase palette);
 

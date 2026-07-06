@@ -1,7 +1,6 @@
 using Ekona.Images;
 using Images;
 using LibNDSFormats.NSBMD;
-using Microsoft.WindowsAPICodePack.Dialogs;
 using NarcAPI;
 using System;
 using System.Collections.Generic;
@@ -12,7 +11,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE {
@@ -105,9 +103,16 @@ namespace DSPRE {
             }
             return buffer;
         }
+        /// <summary>
+        /// Absolute path of a bundled native tool: Tools\&lt;name&gt;.exe on Windows, Tools/&lt;name&gt;
+        /// elsewhere (CI drops the per-OS binaries into the Tools folder next to the exe).
+        /// </summary>
+        public static string ToolPath(string name) =>
+            Path.Combine(System.AppContext.BaseDirectory, "Tools", OperatingSystem.IsWindows() ? name + ".exe" : name);
+
         public static Process CreateDecompressProcess(string path) {
             Process decompress = new Process();
-            decompress.StartInfo.FileName = @"Tools\blz.exe";
+            decompress.StartInfo.FileName = ToolPath("blz");
             decompress.StartInfo.Arguments = @" -d " + '"' + path + '"';
             decompress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             decompress.StartInfo.CreateNoWindow = true;
@@ -140,7 +145,7 @@ namespace DSPRE {
             string headerPath = Path.Combine(workDir, "header.bin");
 
             Process unpack = new Process();
-            unpack.StartInfo.FileName = @"Tools\ndstool.exe";
+            unpack.StartInfo.FileName = DSUtils.ToolPath("ndstool");
             unpack.StartInfo.Arguments = "-x " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + arm9Path + '"'
                 + " -7 " + '"' + arm7Path + '"'
@@ -151,7 +156,7 @@ namespace DSPRE {
                 + " -t " + '"' + bannerPath + '"'
                 + " -h " + '"' + headerPath + '"';
 
-            Application.DoEvents();
+            AppMessages.PumpEvents();
 
             unpack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             unpack.StartInfo.CreateNoWindow = true;
@@ -172,16 +177,16 @@ namespace DSPRE {
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                MessageBox.Show("Failed to call ndstool.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
-                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Failed to call ndstool.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                    "Couldn't unpack ROM");
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(errors))
             {
                 AppLogger.Error("ndstool returned the following error(s):" + errors);
-                MessageBox.Show("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
-                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't unpack ROM");
                 return false;
             }
 
@@ -193,7 +198,7 @@ namespace DSPRE {
             Directory.CreateDirectory(workDir);
 
             Process unpack = new Process();
-            unpack.StartInfo.FileName = @"Tools\dsrom.exe";
+            unpack.StartInfo.FileName = DSUtils.ToolPath("dsrom");
             unpack.StartInfo.Arguments = $"extract -r \"{ndsFileName}\" -o \"{workDir}\"";
             unpack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             unpack.StartInfo.CreateNoWindow = true;
@@ -208,7 +213,7 @@ namespace DSPRE {
 
             try
             {
-                Application.DoEvents();
+                AppMessages.PumpEvents();
                 unpack.Start();
                 var outputTask = unpack.StandardOutput.ReadToEndAsync();
                 var errorTask = unpack.StandardError.ReadToEndAsync();
@@ -223,16 +228,16 @@ namespace DSPRE {
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                MessageBox.Show("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
-                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                    "Couldn't unpack ROM");
                 return false;
             }
 
             if (unpack.ExitCode != 0)
             {
                 AppLogger.Error("dsrom returned the following error(s): " + errors);
-                MessageBox.Show("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
-                    "Couldn't unpack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("An error occurred while unpacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't unpack ROM");
                 return false;
             }
 
@@ -244,24 +249,24 @@ namespace DSPRE {
             if (!File.Exists(Path.Combine(workDir, "config.yaml")))
             {
                 AppLogger.Error("Validation failed: config.yaml not found after extraction");
-                MessageBox.Show("ROM extraction failed: config.yaml not found in output directory.",
-                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("ROM extraction failed: config.yaml not found in output directory.",
+                    "Extraction Validation Failed");
                 return false;
             }
 
             if (!File.Exists(Path.Combine(workDir, "arm9", "arm9.bin")))
             {
                 AppLogger.Error("Validation failed: arm9/arm9.bin not found after extraction");
-                MessageBox.Show("ROM extraction failed: arm9/arm9.bin not found in output directory.",
-                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("ROM extraction failed: arm9/arm9.bin not found in output directory.",
+                    "Extraction Validation Failed");
                 return false;
             }
 
             if (!Directory.Exists(Path.Combine(workDir, "files")))
             {
                 AppLogger.Error("Validation failed: files/ directory not found after extraction");
-                MessageBox.Show("ROM extraction failed: files/ directory not found in output directory.",
-                    "Extraction Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("ROM extraction failed: files/ directory not found in output directory.",
+                    "Extraction Validation Failed");
                 return false;
             }
 
@@ -275,13 +280,13 @@ namespace DSPRE {
             if (!File.Exists(configPath))
             {
                 AppLogger.Error("config.yaml not found, cannot build with ds-rom");
-                MessageBox.Show("Cannot build ROM: config.yaml not found in the working directory.",
-                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Cannot build ROM: config.yaml not found in the working directory.",
+                    "Couldn't repack ROM");
                 return false;
             }
 
             Process repack = new Process();
-            repack.StartInfo.FileName = @"Tools\dsrom.exe";
+            repack.StartInfo.FileName = DSUtils.ToolPath("dsrom");
             repack.StartInfo.Arguments = $"build -c \"{configPath}\" -o \"{ndsFileName}\"";
             repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             repack.StartInfo.CreateNoWindow = true;
@@ -296,7 +301,7 @@ namespace DSPRE {
 
             try
             {
-                Application.DoEvents();
+                AppMessages.PumpEvents();
                 repack.Start();
                 var outputTask = repack.StandardOutput.ReadToEndAsync();
                 var errorTask = repack.StandardError.ReadToEndAsync();
@@ -311,16 +316,16 @@ namespace DSPRE {
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                MessageBox.Show("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
-                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                    "Couldn't repack ROM");
                 return false;
             }
 
             if (repack.ExitCode != 0)
             {
                 AppLogger.Error("dsrom returned the following error(s): " + errors);
-                MessageBox.Show("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
-                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't repack ROM");
                 return false;
             }
 
@@ -349,7 +354,7 @@ namespace DSPRE {
             string headerPath = Path.Combine(workDir, "header.bin");
 
             Process repack = new Process();
-            repack.StartInfo.FileName = @"Tools\ndstool.exe";
+            repack.StartInfo.FileName = DSUtils.ToolPath("ndstool");
             repack.StartInfo.Arguments = "-c " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + arm9Path + '"'
                 + " -7 " + '"' + arm7Path + '"'
@@ -360,7 +365,7 @@ namespace DSPRE {
                 + " -t " + '"' + bannerPath + '"'
                 + " -h " + '"' + headerPath + '"';
 
-            Application.DoEvents();
+            AppMessages.PumpEvents();
             repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             repack.StartInfo.CreateNoWindow = true;
             repack.StartInfo.RedirectStandardError = true;
@@ -377,8 +382,8 @@ namespace DSPRE {
             if (!string.IsNullOrWhiteSpace(errors))
             {
                 AppLogger.Error("ndstool returned the following error(s): " + errors);
-                MessageBox.Show("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
-                    "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("An error occurred while repacking the ROM:" + Environment.NewLine + errors + Environment.NewLine,
+                    "Couldn't repack ROM");
                 return false;
             }
 
@@ -433,7 +438,7 @@ namespace DSPRE {
             // 1. Verify project is ndstool format
             if (GetFolderType(workDir) != 1)
             {
-                MessageBox.Show("This project is not in ndstool format.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AppMessages.Warning("This project is not in ndstool format.", "Conversion Failed");
                 return 0;
             }
 
@@ -448,7 +453,7 @@ namespace DSPRE {
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to create backup: {ex.Message}", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"Failed to create backup: {ex.Message}", "Conversion Failed");
                 return 0;
             }
 
@@ -460,7 +465,7 @@ namespace DSPRE {
             {
                 // Use ndstool directly to build temp ROM
                 Process buildTemp = new Process();
-                buildTemp.StartInfo.FileName = @"Tools\ndstool.exe";
+                buildTemp.StartInfo.FileName = DSUtils.ToolPath("ndstool");
                 buildTemp.StartInfo.Arguments = "-c \"" + tempRomPath + "\""
                     + " -9 \"" + Path.Combine(workDir, "arm9.bin") + "\""
                     + " -7 \"" + Path.Combine(workDir, "arm7.bin") + "\""
@@ -476,7 +481,7 @@ namespace DSPRE {
                 buildTemp.StartInfo.RedirectStandardError = true;
 
                 AppLogger.Info("Building temp ROM: " + buildTemp.StartInfo.Arguments);
-                Application.DoEvents();
+                AppMessages.PumpEvents();
                 buildTemp.Start();
                 var errorTask = buildTemp.StandardError.ReadToEndAsync();
                 buildTemp.WaitForExit();
@@ -485,7 +490,7 @@ namespace DSPRE {
                 if (buildTemp.ExitCode != 0)
                 {
                     AppLogger.Error("ndstool build failed: " + errors);
-                    MessageBox.Show("Failed to build temporary ROM: " + errors, "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Failed to build temporary ROM: " + errors, "Conversion Failed");
                     return 0;
                 }
 
@@ -494,28 +499,26 @@ namespace DSPRE {
                 {
                     AppLogger.Error("ds-rom extraction failed during conversion. This may indicate overlay compression issues.");
                     
-                    var result = MessageBox.Show(
+                    var result = AppMessages.ConfirmYesNoCancel(
                         "Conversion to ds-rom format failed during ROM extraction.\n\n" +
                         "This is usually caused by corrupted or incompatible overlay compression in the ndstool project.\n\n" +
                         "Would you like to:\n" +
                         "• Yes: Continue loading with ndstool format (no conversion)\n" +
                         "• No: Cancel and restore from backup\n" +
                         "• Cancel: Abort loading",
-                        "Conversion Failed",
-                        MessageBoxButtons.YesNoCancel,
-                        MessageBoxIcon.Warning);
-                    
+                        "Conversion Failed");
+
                     if (Directory.Exists(tempDsRomDir))
                         Directory.Delete(tempDsRomDir, true);
                     if (File.Exists(tempRomPath))
                         File.Delete(tempRomPath);
-                    
-                    if (result == DialogResult.Yes)
+
+                    if (result == AppMessages.ConfirmResult.Yes)
                     {
                         AppLogger.Info("User chose to continue with ndstool format.");
                         return 2;
                     }
-                    else if (result == DialogResult.No)
+                    else if (result == AppMessages.ConfirmResult.No)
                     {
                         AppLogger.Info("User chose to restore from backup.");
                         RestoreFromNdstoolBackup(workDir);
@@ -524,8 +527,8 @@ namespace DSPRE {
                     else
                     {
 
-                        MessageBox.Show("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath,
-                            "Conversion Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        AppMessages.Info("Conversion cancelled. Your ndstool project remains unchanged.\n\nBackup available at:\n" + backupPath,
+                            "Conversion Cancelled");
                         return 0;
                     }
                 }
@@ -533,7 +536,7 @@ namespace DSPRE {
                 // 5. Validate temp output
                 if (!File.Exists(Path.Combine(tempDsRomDir, "config.yaml")))
                 {
-                    MessageBox.Show("Conversion validation failed: config.yaml not found.", "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Conversion validation failed: config.yaml not found.", "Conversion Failed");
                     Directory.Delete(tempDsRomDir, true);
                     File.Delete(tempRomPath);
                     return 0;
@@ -575,15 +578,15 @@ namespace DSPRE {
                 File.Delete(tempRomPath);
 
                 AppLogger.Info("Successfully converted project to ds-rom format.");
-                MessageBox.Show("Project converted to ds-rom format successfully.\n\nBackup saved at:\n" + backupPath,
-                    "Conversion Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AppMessages.Info("Project converted to ds-rom format successfully.\n\nBackup saved at:\n" + backupPath,
+                    "Conversion Complete");
                 return 1;
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Conversion failed: " + ex.Message);
-                MessageBox.Show($"Conversion failed: {ex.Message}\n\nYour backup is at:\n{backupPath}",
-                    "Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"Conversion failed: {ex.Message}\n\nYour backup is at:\n{backupPath}",
+                    "Conversion Failed");
 
                 // Cleanup temp files on failure
                 if (Directory.Exists(tempDsRomDir))
@@ -601,8 +604,8 @@ namespace DSPRE {
         
         if (!File.Exists(backupPath))
         {
-            MessageBox.Show("Backup file not found:\n" + backupPath, 
-                "Restore Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            AppMessages.Error("Backup file not found:\n" + backupPath, 
+                "Restore Failed");
             return false;
         }
         
@@ -622,15 +625,15 @@ namespace DSPRE {
             ZipFile.ExtractToDirectory(backupPath, workDir);
             
             AppLogger.Info("Successfully restored from backup: " + backupPath);
-            MessageBox.Show("Project restored from backup successfully.", 
-                "Restore Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            AppMessages.Info("Project restored from backup successfully.", 
+                "Restore Complete");
             return true;
         }
         catch (Exception ex)
         {
             AppLogger.Error("Restore failed: " + ex.Message);
-            MessageBox.Show($"Restore failed: {ex.Message}", 
-                "Restore Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            AppMessages.Error($"Restore failed: {ex.Message}", 
+                "Restore Failed");
             return false;
         }
     }
@@ -708,18 +711,49 @@ namespace DSPRE {
             });
         }
 
+        /// <summary>GDI twin of <see cref="MonIconFallbackHook"/> for the WinForms-only <see cref="GetPokePic"/>
+        /// path — installed by the WinForms shell (resx Pokéball); never runs off-Windows.</summary>
+        public static Func<Image> MonIconFallbackGdiHook = null;
+
         /// <param name="paletteIdOverride">When &gt;= 0, render with this icon-palette id (0/1/2) instead of
         /// the one stored in the ARM9 table — used to PREVIEW a palette change before it is saved.</param>
         public static Image GetPokePic(int species, int w, int h, int paletteIdOverride = -1) {
-            PaletteBase paletteBase;
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
+            try {
+                return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
+            } catch (FormatException) {
+                return MonIconFallbackGdiHook?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Placeholder mon icon returned by <see cref="GetPokePicRaw"/> when the real icon can't be
+        /// decoded. Installed by each shell (WinForms → resx Pokéball via the GDI bridge, Avalonia →
+        /// avares asset) so this core code stays free of System.Drawing and WinForms resources.
+        /// </summary>
+        public static Func<RawImage> MonIconFallbackHook = null;
+
+        /// <summary>GDI-free twin of <see cref="GetPokePic"/> — composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
+        public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
+            try {
+                return spriteBase.Get_RawImage(imageBase, paletteBase, 0, w, h, trans: true, currOAM: -1, draw_index: OAMenabled);
+            } catch (FormatException) {
+                return MonIconFallbackHook?.Invoke();
+            }
+        }
+
+        // Loads the mon-icon NCLR/NCGR/NCER + enabled-OAM list. Shared by GetPokePic (GDI) and GetPokePicRaw.
+        private static void LoadMonIconParts(int species, int paletteIdOverride,
+            out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled) {
             bool fiveDigits = false; // some extreme future proofing
             string filename = "0000";
 
             try {
-                paletteBase = new NCLR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + filename, 0, filename);
+                paletteBase = new NCLR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, filename), 0, filename);
             } catch (FileNotFoundException) {
                 filename += '0';
-                paletteBase = new NCLR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + filename, 0, filename);
+                paletteBase = new NCLR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, filename), 0, filename);
                 fiveDigits = true;
             }
 
@@ -756,25 +790,18 @@ namespace DSPRE {
             // grab tiles
             int spriteFileID = species + 7;
             string spriteFilename = spriteFileID.ToString("D" + (fiveDigits ? "5" : "4"));
-            ImageBase imageBase = new NCGR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + spriteFilename, spriteFileID, spriteFilename);
+            imageBase = new NCGR(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, spriteFilename), spriteFileID, spriteFilename);
 
             // grab sprite
             int ncerFileId = 2;
             string ncerFileName = ncerFileId.ToString("D" + (fiveDigits ? "5" : "4"));
-            SpriteBase spriteBase = new NCER(gameDirs[DirNames.monIcons].unpackedDir + "\\" + ncerFileName, 2, ncerFileName);
+            spriteBase = new NCER(Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, ncerFileName), 2, ncerFileName);
 
             // copy this from the trainer
             int bank0OAMcount = spriteBase.Banks[0].oams.Length;
-            int[] OAMenabled = new int[bank0OAMcount];
+            OAMenabled = new int[bank0OAMcount];
             for (int i = 0; i < OAMenabled.Length; i++) {
                 OAMenabled[i] = i;
-            }
-
-            // finally compose image
-            try {
-                return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
-            } catch (FormatException) {
-                return Properties.Resources.IconPokeball;
             }
         }
     }

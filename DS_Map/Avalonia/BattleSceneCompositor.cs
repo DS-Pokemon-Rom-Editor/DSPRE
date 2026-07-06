@@ -121,12 +121,18 @@ namespace DSPRE.Avalonia
             // 3a2. POKEOAM_DROP caps — clones of a mon sprite dropped into OAM (Disable's gray shadow, Substitute, …),
             //      scaled/recoloured/mosaic'd by the CAP_* routines. Drawn over the mons (OAM layer).
             if (west != null)
-                foreach (var cap in west.Caps)
+            {
+                // Draw in OAM-priority order so POKE_OAM_VIEW's z-order holds: higher priority value = further back,
+                // lower = nearer the front (drawn last).
+                var caps = new List<WestPlayer.DroppedCap>(west.Caps);
+                caps.Sort((x, y) => y.Priority.CompareTo(x.Priority));
+                foreach (var cap in caps)
                 {
                     if (!cap.Visible) continue;
                     var cs = cap.SrcMon == 0 ? _back : _front;
                     BlitMon(cs, true, cap.Dx, cap.Dy, cap.ScaleX, cap.ScaleY, cap.RotDeg, cap.TintA, cap.TintR, cap.TintG, cap.TintB, cap.Alpha, (int)cap.Mosaic);
                 }
+            }
 
             // 3b. CATS cell actors (OAM cell animations) — drawn over the mons. The Surf (WE_057) wave is now a
             //     normal driven actor here too (no legacy view overlay).

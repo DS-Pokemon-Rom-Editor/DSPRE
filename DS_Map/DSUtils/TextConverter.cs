@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
 using DSPRE.CharMaps;
 
 namespace DSPRE
@@ -71,13 +70,13 @@ namespace DSPRE
             binaryPath = Path.GetFullPath(binaryPath);
             charMapPath = Path.GetFullPath(charMapPath);
 
-            string chatotPath = Path.Combine(Application.StartupPath, "Tools", "chatot.exe");
+            string chatotPath = Path.Combine(System.AppContext.BaseDirectory, "Tools", "chatot.exe");
             string plainTextArg = "";
             string binaryArg = "";
 
             if (!File.Exists(chatotPath))
             {
-                MessageBox.Show("chatot.exe not found in Tools folder.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("chatot.exe not found in Tools folder.", "Error");
                 return;
             }
 
@@ -141,7 +140,7 @@ namespace DSPRE
             }
             catch (Exception e)
             {
-                MessageBox.Show("An error occurred while converting JSON/TXT to BIN:\n" + e.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("An error occurred while converting JSON/TXT to BIN:\n" + e.Message, "Error");
             }
 
             if (errorOutput.Length > 0)

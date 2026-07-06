@@ -199,11 +199,7 @@ namespace DSPRE.ROMFiles {
             try {
                 string narcDir = Filesystem.encounterExtended;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Great Marsh encounter directory not found.",
-                        "Error",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Error);
+                    AppMessages.Error("Great Marsh encounter directory not found.", "Error");
                     return false;
                 }
 
@@ -216,19 +212,11 @@ namespace DSPRE.ROMFiles {
                 }
 
                 if (showSuccessMessage) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Great Marsh encounters saved successfully!",
-                        "Success",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    AppMessages.Info("Great Marsh encounters saved successfully!", "Success");
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error saving Great Marsh encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error saving Great Marsh encounters: {ex.Message}", "Error");
                 return false;
             }
         }
@@ -242,19 +230,11 @@ namespace DSPRE.ROMFiles {
                 File.WriteAllBytes(path, data);
 
                 if (showSuccessMessage) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Great Marsh encounters exported successfully!",
-                        "Success",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    AppMessages.Info("Great Marsh encounters exported successfully!", "Success");
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error exporting Great Marsh encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error exporting Great Marsh encounters: {ex.Message}", "Error");
                 return false;
             }
         }
@@ -279,11 +259,7 @@ namespace DSPRE.ROMFiles {
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error importing Great Marsh encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error importing Great Marsh encounters: {ex.Message}", "Error");
                 return false;
             }
         }

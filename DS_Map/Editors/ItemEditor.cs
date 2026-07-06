@@ -18,14 +18,6 @@ using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace DSPRE.Editors
 {
-    struct ItemNarcTableEntry
-    {
-        public uint itemData;
-        public uint itemIcon;
-        public uint itemPalette;
-        public uint itemAGB;
-    };
-
     public partial class ItemEditor : Form, IEditorWithUnsavedChanges
     {
 

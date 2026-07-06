@@ -1,8 +1,6 @@
-﻿using ScintillaNET;
 using System;
 using System.Collections;
 using System.IO;
-using System.Windows.Forms;
 using static DSPRE.ROMFiles.PartyPokemon;
 
 namespace DSPRE.ROMFiles {
@@ -259,7 +257,7 @@ namespace DSPRE.ROMFiles {
                         content[i] = new PartyPokemon();
                     };
                 } catch (EndOfStreamException) {
-                    MessageBox.Show("There was a problem reading the party data of this " + this.GetType().Name + ".", "Read Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("There was a problem reading the party data of this " + this.GetType().Name + ".", "Read Error");
                 }
             }
         }

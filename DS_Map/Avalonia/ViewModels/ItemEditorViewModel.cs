@@ -14,7 +14,6 @@ using System.Text;
 using static DSPRE.ROMFiles.ItemData;
 using static DSPRE.RomInfo;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
-using GdiBitmap = System.Drawing.Bitmap;
 
 namespace DSPRE.Avalonia.ViewModels
 {
@@ -635,8 +634,8 @@ namespace DSPRE.Avalonia.ViewModels
                 var palette = new NCLR(Path.Combine(dir, palFile), (int)_currentEntry.itemPalette, palFile);
                 var image   = new NCGR(Path.Combine(dir, imgFile), (int)_currentEntry.itemIcon,    imgFile);
                 var sprite  = new NCER(Path.Combine(dir, "0001"),  2, "0001");
-                var bmp     = sprite.Get_Image(image, palette, 0, image.Width, image.Height, false, false, false, true, true, -1);
-                ItemIcon = ImageConverter.ToAvaloniaBitmap((GdiBitmap)bmp);
+                var raw     = sprite.Get_RawImage(image, palette, 0, image.Width, image.Height, trans: true, currOAM: -1, draw_index: null);
+                ItemIcon = ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch { ItemIcon = null; }
         }

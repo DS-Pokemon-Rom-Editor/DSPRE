@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyCollection<LabelCategory> Categories { get { Ensure(); return _cats.Values; } }
         public static LabelCategory GetCategory(string key) { Ensure(); return _cats.TryGetValue(key, out var c) ? c : null; }
 
-        private static string GlobalPath => Path.Combine(Program.DatabasePath, "labels.global.json");
+        private static string GlobalPath => Path.Combine(AppPaths.DatabasePath, "labels.global.json");
         private static string ProjectPath => string.IsNullOrEmpty(workDir) ? null : Path.Combine(workDir, "dspre_labels.json");
 
         /// <summary>Lazily registers built-ins, loads the global file once, and (re)loads the project file

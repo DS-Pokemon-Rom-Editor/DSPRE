@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -72,7 +72,7 @@ namespace DSPRE {
         }
 
 
-        public LearnsetData(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.learnsets].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public LearnsetData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.learnsets].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
         public override byte[] ToByteArray() {
             using (MemoryStream memoryStream = new MemoryStream()) {

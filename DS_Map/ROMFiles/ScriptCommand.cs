@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
 
 namespace DSPRE.ROMFiles
 {
@@ -86,8 +85,8 @@ namespace DSPRE.ROMFiles
                         details = "Are you sure it's a proper Script Command?";
                     }
 
-                    MessageBox.Show("This Script file could not be saved." +
-                                    $"\nParser failed to interpret line {lineNumber}: \"{wholeLine}\".\n\n{details}", "Parser error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("This Script file could not be saved." +
+                                    $"\nParser failed to interpret line {lineNumber}: \"{wholeLine}\".\n\n{details}", "Parser error");
                     return;
                 }
             }
@@ -151,9 +150,9 @@ namespace DSPRE.ROMFiles
 
                 if (!found)
                 {
-                    MessageBox.Show($"Command {nameParts[0]} is a special Script Command.\n" +
+                    AppMessages.Error($"Command {nameParts[0]} is a special Script Command.\n" +
                                     $"The value of the first parameter must be a number in the range [0 - {optionsCount}].\n\n" +
-                                    $"Line {lineNumber}: {wholeLine}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    $"Line {lineNumber}: {wholeLine}", "Error");
                     id = null;
                     return;
                 }
@@ -250,8 +249,8 @@ namespace DSPRE.ROMFiles
                                                         }
                                                         else
                                                         {
-                                                            MessageBox.Show($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Script, Function or Action number.\n\n" +
-                                                                $"Line {lineNumber}: {wholeLine}", "Invalid identifier", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Script, Function or Action number.\n\n" +
+                                                                $"Line {lineNumber}: {wholeLine}", "Invalid identifier");
                                                             id = null;
                                                             return;
                                                         }
@@ -264,8 +263,8 @@ namespace DSPRE.ROMFiles
                             }
                             catch (ArgumentException ex)
                             {
-                                MessageBox.Show($"{ex.Message}\n\nLine {lineNumber}: {wholeLine}",
-                                    "Invalid syntax", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                AppMessages.Error($"{ex.Message}\n\nLine {lineNumber}: {wholeLine}",
+                                    "Invalid syntax");
                                 id = null;
                                 return;
                             }
@@ -279,7 +278,7 @@ namespace DSPRE.ROMFiles
                         {
                             string errorMsg = $"Argument {nameParts[i + 1]} at line {lineNumber} is not in the range [0, {Math.Pow(2, 8 * parametersSizeArr[i]) - 1}].";
                             AppLogger.Error($"ScriptCommand parse error: {errorMsg} | Command: {nameParts[0]} (ID: 0x{id:X3}) | Full line: {wholeLine} | Expected param size: {parametersSizeArr[i]} bytes | This may indicate a database error for conditional commands.");
-                            MessageBox.Show(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{id:X3})\nFull line: {wholeLine}\n\nNote: If this is a conditional command like UnionGroup, check your script command database for parameter size errors.", "Argument error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            AppMessages.Error(errorMsg + $"\n\nCommand: {nameParts[0]} (ID: 0x{id:X3})\nFull line: {wholeLine}\n\nNote: If this is a conditional command like UnionGroup, check your script command database for parameter size errors.", "Argument error");
                             id = null;
                         }
                     }
@@ -287,9 +286,9 @@ namespace DSPRE.ROMFiles
             }
             else
             {
-                MessageBox.Show($"Wrong number of parameters for command {nameParts[0]} at line {lineNumber}.\n" +
+                AppMessages.Error($"Wrong number of parameters for command {nameParts[0]} at line {lineNumber}.\n" +
                                 $"Received: {nameParts.Length - 1}\n" +
-                                $"Expected: {paramLength}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                $"Expected: {paramLength}", "Error");
                 id = null;
             }
 
@@ -368,7 +367,7 @@ namespace DSPRE.ROMFiles
                 .Select(x => new
                 {
                     Name = x,
-                    Distance = Helpers.Levenshtein(
+                    Distance = CoreExtensions.Levenshtein(
                         input,
                         x.Replace(" ", "").ToLower()
                     )

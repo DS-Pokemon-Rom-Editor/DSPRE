@@ -47,7 +47,7 @@ namespace DSPRE
     {
         public static DspreSettings Settings { get; private set; }
 
-        private static readonly string SettingsFile = Path.Combine(Program.DspreDataPath, "userSettings.json");
+        private static readonly string SettingsFile = Path.Combine(AppPaths.DspreDataPath, "userSettings.json");
 
         public static void Load()
         {

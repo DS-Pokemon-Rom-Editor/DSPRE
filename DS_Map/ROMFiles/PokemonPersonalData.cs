@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -161,7 +161,7 @@ namespace DSPRE.ROMFiles {
             }
         }
 
-        public PokemonPersonalData(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.personalPokeData].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) { }
+        public PokemonPersonalData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.personalPokeData].unpackedDir, ID.ToString("D4")), FileMode.Open)) { }
 
         public override byte[] ToByteArray() {
             using (MemoryStream stream = new MemoryStream()) {

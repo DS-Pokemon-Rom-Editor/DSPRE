@@ -205,11 +205,7 @@ namespace DSPRE.ROMFiles {
             try {
                 string narcDir = Filesystem.encounterExtended;
                 if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir)) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Honey Tree encounter directory not found.",
-                        "Error",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Error);
+                    AppMessages.Error("Honey Tree encounter directory not found.", "Error");
                     return false;
                 }
 
@@ -222,19 +218,11 @@ namespace DSPRE.ROMFiles {
                 }
 
                 if (showSuccessMessage) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Honey Tree encounters saved successfully!",
-                        "Success",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    AppMessages.Info("Honey Tree encounters saved successfully!", "Success");
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error saving Honey Tree encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error saving Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
         }
@@ -248,19 +236,11 @@ namespace DSPRE.ROMFiles {
                 File.WriteAllBytes(path, data);
 
                 if (showSuccessMessage) {
-                    System.Windows.Forms.MessageBox.Show(
-                        "Honey Tree encounters exported successfully!",
-                        "Success",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Information);
+                    AppMessages.Info("Honey Tree encounters exported successfully!", "Success");
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error exporting Honey Tree encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error exporting Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
         }
@@ -285,11 +265,7 @@ namespace DSPRE.ROMFiles {
                 }
                 return true;
             } catch (Exception ex) {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Error importing Honey Tree encounters: {ex.Message}",
-                    "Error",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Error);
+                AppMessages.Error($"Error importing Honey Tree encounters: {ex.Message}", "Error");
                 return false;
             }
         }

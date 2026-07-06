@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using LibNDSFormats.NSBMD;
 using System.Linq;
-using System.Windows.Forms;
-
 namespace LibNDSFormats.NSBTX
 {
     /// <summary>

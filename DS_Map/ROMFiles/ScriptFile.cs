@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -114,7 +113,7 @@ namespace DSPRE.ROMFiles
                 {
                     if (!isLevelScript)
                     {
-                        MessageBox.Show("Script File couldn't be read correctly.", "Unexpected EOF", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error("Script File couldn't be read correctly.", "Unexpected EOF");
                     }
                 }
 
@@ -777,7 +776,7 @@ namespace DSPRE.ROMFiles
             string romFileNameClean = baseFileName.EndsWith("_DSPRE_contents")
                 ? baseFileName.Substring(0, baseFileName.Length - "_DSPRE_contents".Length)
                 : baseFileName;
-            string romDatabaseFolder = Path.Combine(Program.DatabasePath, "edited_databases", romFileNameClean);
+            string romDatabaseFolder = Path.Combine(AppPaths.DatabasePath, "edited_databases", romFileNameClean);
             string databasePath = Path.Combine(romDatabaseFolder, "scrcmd_database.json");
 
             if (!File.Exists(databasePath))
@@ -1344,8 +1343,8 @@ namespace DSPRE.ROMFiles
 
                 if (!suppressInvalidCommandErrors)
                 {
-                    MessageBox.Show("Script command " + id + "can't be handled for now." +
-                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Script command " + id + "can't be handled for now." +
+                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Error");
                 }
                 parameterList = null;
                 return;
@@ -1357,8 +1356,8 @@ namespace DSPRE.ROMFiles
 
                 if (!suppressInvalidCommandErrors)
                 {
-                    MessageBox.Show("Error: ID Read - " + id +
-                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Unrecognized script command", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppMessages.Error("Error: ID Read - " + id +
+                                    Environment.NewLine + "Reference offset 0x" + offset.ToString("X"), "Unrecognized script command");
                 }
                 parameterList = null;
                 return;
@@ -1456,7 +1455,7 @@ namespace DSPRE.ROMFiles
 
                         if (positionOfScriptKeyword > 0)
                         {
-                            MessageBox.Show("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            AppMessages.Error("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error");
                             return null;
                         }
                         else if (positionOfScriptKeyword < 0)
@@ -1468,7 +1467,7 @@ namespace DSPRE.ROMFiles
                         {
                             if ((positionOfScriptNumber = lineSource[i].text.IndexOfFirstNumber()) < positionOfScriptKeyword)
                             {
-                                MessageBox.Show("Unspecified Script/Function label.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                AppMessages.Error("Unspecified Script/Function label.", "Error");
                                 return null;
                             }
                         }
@@ -1508,9 +1507,9 @@ namespace DSPRE.ROMFiles
             }
             catch (ArgumentOutOfRangeException)
             {
-                MessageBox.Show($"Unexpectedly reached end of lines.\n\n" +
+                AppMessages.Error($"Unexpectedly reached end of lines.\n\n" +
                                 $"Last line index: {lineSource[i].linenum}.\n" +
-                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error");
                 return null;
             }
 
@@ -1546,7 +1545,7 @@ namespace DSPRE.ROMFiles
 
                         if (positionOfActionKeyword > 0)
                         {
-                            MessageBox.Show("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            AppMessages.Error("Unrecognized container keyword: \"" + lineSource[i] + '"', "Error");
                             return null;
                         }
                         else if (positionOfActionKeyword < 0)
@@ -1558,7 +1557,7 @@ namespace DSPRE.ROMFiles
                         {
                             if ((positionOfActionNumber = lineSource[i].text.IndexOfFirstNumber()) < positionOfActionKeyword)
                             {
-                                MessageBox.Show("Unspecified Action label.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                AppMessages.Error("Unspecified Action label.", "Error");
                                 return null;
                             }
                         }
@@ -1587,9 +1586,9 @@ namespace DSPRE.ROMFiles
             }
             catch (ArgumentOutOfRangeException)
             {
-                MessageBox.Show($"Unexpectedly reached end of lines.\n\n" +
+                AppMessages.Error($"Unexpectedly reached end of lines.\n\n" +
                                 $"Last line index: {i}.\n" +
-                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                $"Managed to parse {ls.Count} Command Containers.", "Fatal Error");
                 return null;
             }
 
@@ -1700,8 +1699,8 @@ namespace DSPRE.ROMFiles
                             int functionUsescript = currentFunction.usedScriptID - 1;
                             if (functionUsescript >= scriptOffsets.Count)
                             {
-                                MessageBox.Show($"Function #{currentFunction.manualUserID} refers to Script {currentFunction.usedScriptID}, which does not exist.\n" +
-                                                $"This Script File can't be saved.", "Can't resolve UseScript reference", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                AppMessages.Error($"Function #{currentFunction.manualUserID} refers to Script {currentFunction.usedScriptID}, which does not exist.\n" +
+                                                $"This Script File can't be saved.", "Can't resolve UseScript reference");
                                 return null;
                             }
 
@@ -1817,7 +1816,7 @@ namespace DSPRE.ROMFiles
 
                     if (!string.IsNullOrEmpty(errorMsg))
                     {
-                        MessageBox.Show(errorMsg + Environment.NewLine + "This Script File has not been overwritten since it can not be saved.", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error(errorMsg + Environment.NewLine + "This Script File has not been overwritten since it can not be saved.", "Error!");
                         errorMsg = "";
                         return null;
                     }
@@ -1844,7 +1843,7 @@ namespace DSPRE.ROMFiles
 
                     if (!string.IsNullOrEmpty(errorMsg))
                     {
-                        MessageBox.Show(errorMsg + Environment.NewLine + "Remember that every unused Function or Action is always lost upon reloading the Script File.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        AppMessages.Info(errorMsg + Environment.NewLine + "Remember that every unused Function or Action is always lost upon reloading the Script File.", "Warning!");
                         errorMsg = "";
                     }
                 }
@@ -1862,9 +1861,9 @@ namespace DSPRE.ROMFiles
         {
             if (callCount >= 30)
             {
-                MessageBox.Show("Something went very wrong saving this Script File!" +
+                AppMessages.Error("Something went very wrong saving this Script File!" +
                                 "\nIt is recommended that you backup its code somewhere, to avoid losing progress.",
-                  "Fatal error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                  "Fatal error");
                 return false;
             }
 
@@ -1924,17 +1923,10 @@ namespace DSPRE.ROMFiles
 
         public void SaveToFileExplorePath(string suggestedFileName, bool blindmode)
         {
-            SaveFileDialog sf = new SaveFileDialog
-            {
-                Filter = "Gen IV Script File (*.scr)|*.scr"
-            };
+            string chosenPath = AppMessages.PickSaveFile("Export Script File",
+                "Gen IV Script File (*.scr)|*.scr", suggestedFileName);
 
-            if (!string.IsNullOrEmpty(suggestedFileName))
-            {
-                sf.FileName = suggestedFileName;
-            }
-
-            if (sf.ShowDialog() != DialogResult.OK)
+            if (string.IsNullOrEmpty(chosenPath))
             {
                 return;
             }
@@ -1942,7 +1934,7 @@ namespace DSPRE.ROMFiles
             if (blindmode)
             {
                 string path = Filesystem.GetScriptPath(fileID);
-                File.Copy(path, sf.FileName, overwrite: true);
+                File.Copy(path, chosenPath, overwrite: true);
 
                 string msg = "";
                 if (!isLevelScript)
@@ -1950,11 +1942,11 @@ namespace DSPRE.ROMFiles
                     msg += "The last saved version of this ";
                 }
 
-                MessageBox.Show(msg + GetType().Name + " has been exported successfully.", "", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                AppMessages.Info(msg + GetType().Name + " has been exported successfully.", "");
             }
             else
             {
-                this.SaveToFile(sf.FileName, showSuccessMessage: true);
+                this.SaveToFile(chosenPath, showSuccessMessage: true);
             }
         }
     }

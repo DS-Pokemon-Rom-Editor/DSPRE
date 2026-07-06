@@ -705,7 +705,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                 // Bind the map tileset textures (if a pack is selected and textures are on).
                 if (_showTextures && _mapTilesetIndex >= 0 && _map.mapModel?.models != null && _map.mapModel.models.Length > 0)
-                    BindNsbtx(_map.mapModel, gameDirs[DirNames.mapTextures].unpackedDir + "\\" + _mapTilesetIndex.ToString("D4"));
+                    BindNsbtx(_map.mapModel, Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, _mapTilesetIndex.ToString("D4")));
 
                 // Load building models + (optionally) bind building tileset, then collect transforms.
                 var buildings = new List<(NSBMDModel model, float[] transform)>();
@@ -714,7 +714,7 @@ namespace DSPRE.Avalonia.ViewModels
                 byte[] bldTex = null;
                 if (_showTextures && _buildingTilesetIndex > 0)
                 {
-                    string tp = gameDirs[DirNames.buildingTextures].unpackedDir + "\\" + (_buildingTilesetIndex - 1).ToString("D4");
+                    string tp = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, (_buildingTilesetIndex - 1).ToString("D4"));
                     if (File.Exists(tp)) bldTex = File.ReadAllBytes(tp);
                 }
 
@@ -723,7 +723,7 @@ namespace DSPRE.Avalonia.ViewModels
                     {
                         if (b.NSBMDFile == null)
                         {
-                            string mp = bdir + "\\" + b.modelID.ToString("D4");
+                            string mp = Path.Combine(bdir, b.modelID.ToString("D4"));
                             if (!File.Exists(mp)) continue;
                             using var fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
                             b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
@@ -837,7 +837,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!await DialogHelper.AskYesNo($"Delete the last map file ({last})?", "Confirm deletion")) return;
             try
             {
-                File.Delete(gameDirs[DirNames.maps].unpackedDir + "\\" + last.ToString("D4"));
+                File.Delete(Path.Combine(gameDirs[DirNames.maps].unpackedDir, last.ToString("D4")));
                 if (_selectedMapIndex == last) SelectedMapIndex = last - 1;
                 MapNames.RemoveAt(last);
                 StatusText = $"Removed map file {last}.";
@@ -848,7 +848,7 @@ namespace DSPRE.Avalonia.ViewModels
         private byte[] MapTextureData()
         {
             if (_mapTilesetIndex < 0) return null;
-            string tp = gameDirs[DirNames.mapTextures].unpackedDir + "\\" + _mapTilesetIndex.ToString("D4");
+            string tp = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, _mapTilesetIndex.ToString("D4"));
             return File.Exists(tp) ? File.ReadAllBytes(tp) : null;
         }
         private string ModelName() => $"map_{_selectedMapIndex:D4}";

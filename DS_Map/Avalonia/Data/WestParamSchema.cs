@@ -96,9 +96,13 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>Friendly title for an opcode; falls back to a Title-Cased form of the raw identifier.</summary>
+        /// <summary>One-line description of what the opcode does, or "" if none. (Effect-script WS_* opcodes only.)</summary>
+        public static string OpcodeDoc(string opName) => WazaSeqSchema.Handles(opName) ? WazaSeqSchema.Doc(opName) : "";
+
         public static string OpcodeDisplay(string opName)
         {
             if (opName == null) return "";
+            if (WazaSeqSchema.Handles(opName) && WazaSeqSchema.Display(opName) is string ws) return ws;
             if (Opcodes.TryGetValue(opName, out var s)) return s;
             // Generic fallback: strip a known prefix and title-case the remaining words.
             string t = opName;
@@ -184,7 +188,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Friendly label for argument <paramref name="index"/> of <paramref name="opName"/>, or
         /// <c>Param N+1</c> when no name is known (unknown opcode or a variable-payload argument past the fixed set).</summary>
         public static string ParamName(string opName, int index)
-            => opName != null && Names.TryGetValue(opName, out var a) && index >= 0 && index < a.Length ? a[index] : "Param " + (index + 1);
+        {
+            if (WazaSeqSchema.Handles(opName) && WazaSeqSchema.Params(opName) is string[] wp && index >= 0 && index < wp.Length) return wp[index];
+            return opName != null && Names.TryGetValue(opName, out var a) && index >= 0 && index < a.Length ? a[index] : "Param " + (index + 1);
+        }
 
         // ── Operator enums (engine values kept; labels are friendly) — for a FIELD_OPERATOR's settings ──
         public readonly record struct EnumOption(string Label, int Value);

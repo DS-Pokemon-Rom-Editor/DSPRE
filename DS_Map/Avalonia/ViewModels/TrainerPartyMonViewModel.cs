@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 if (_speciesIndex <= 0) { PokemonIcon = null; return; }
-                using var gdi = DSUtils.GetPokePic(_speciesIndex, 56, 56);
+                var gdi = DSUtils.GetPokePicRaw(_speciesIndex, 56, 56);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }

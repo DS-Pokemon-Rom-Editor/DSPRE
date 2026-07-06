@@ -18,8 +18,8 @@ namespace DSPRE
         }
 
         public static string ProjectRoot => RomInfo.workDir?.TrimEnd('\\', '/') ?? "";
-        public static string ExePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "rotom.exe");
-        public static string LspPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "rotom-lsp.exe");
+        public static string ExePath => DSUtils.ToolPath("rotom");
+        public static string LspPath => DSUtils.ToolPath("rotom-lsp");
         public static bool IsAvailable => File.Exists(ExePath);
         public static bool IsLspAvailable => File.Exists(LspPath);
 

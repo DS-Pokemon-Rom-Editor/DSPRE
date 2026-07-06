@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Cross-platform Avalonia shell: the entire Avalonia UI layer + a thin Main. Runs on any
+       desktop OS. The Windows DSPRE exe references this project and hosts the same UI alongside
+       the legacy WinForms shell during the transition. -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <!-- The -Linux configurations (IDE dropdown) build this exe against the linux-x64 runtime.
+         For distributable output use `dotnet publish` with the profiles in Properties\PublishProfiles. -->
+    <Configurations>Debug;Release;Debug-Linux;Release-Linux</Configurations>
+    <AssemblyName>DSPRE.Avalonia</AssemblyName>
+    <RootNamespace>DSPRE</RootNamespace>
+    <ApplicationIcon>..\DS_Map\app.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Keep in sync with DS_Map\Properties\AssemblyInfo.cs (AppInfo.GetDSPREVersion shows this). -->
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <!-- Avalonia views intentionally have no parameterless constructor (require ViewModel) -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    <!-- Pre-existing code warnings in legacy files (same set DS_Map suppresses) -->
+    <NoWarn>$(NoWarn);CS0649;CS0414;CS0169;CS0168;CS0197;CS0109;CS8981;CA2200</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Configuration.EndsWith('-Linux'))">
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release-Linux'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <Import Project="..\AvaloniaFiles.props" />
+
+  <ItemGroup>
+    <Compile Include="@(AvaloniaLayerCompile)" LinkBase="Avalonia" />
+    <AvaloniaXaml Include="@(AvaloniaLayerXaml)" LinkBase="Avalonia" />
+    <AvaloniaResource Include="@(AvaloniaLayerAsset)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Windows DSPRE exe (and tests) still reach into UI-layer internals from the one-project era. -->
+    <InternalsVisibleTo Include="DSPRE" />
+    <InternalsVisibleTo Include="DSPRE.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DSPRE.Core\DSPRE.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.4" />
+    <PackageReference Include="AvaloniaEdit.TextMate" Version="12.0.0" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Script editor grammar; flows to referencing projects' output too. -->
+    <Content Include="..\DS_Map\Avalonia\TextMate\rotom.tmLanguage.json" Link="Avalonia\TextMate\rotom.tmLanguage.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- Native tools (Windows builds; swap per-OS binaries in later). -->
+    <Content Include="..\DS_Map\Tools\**" LinkBase="Tools">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

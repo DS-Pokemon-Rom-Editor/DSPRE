@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -20,7 +19,7 @@ namespace DSPRE.ROMFiles {
    -------------------------------------------------------------------------------------- */
 
     /// <summary>
-    /// Class to store map matrix data from Pokémon NDS games
+    /// Class to store map matrix data from Pokï¿½mon NDS games
     /// </summary>
     public class GameMatrix: RomFile {
         #region Fields (8)
@@ -89,7 +88,7 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
-        public GameMatrix(int ID) : this (new FileStream(RomInfo.gameDirs[DirNames.matrices].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) {
+        public GameMatrix(int ID) : this (new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.matrices].unpackedDir, ID.ToString("D4")), FileMode.Open)) {
             this.id = ID;
         }
 

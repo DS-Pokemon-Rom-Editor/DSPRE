@@ -1,8 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>Ekona</AssemblyName>
     <RootNamespace>Ekona</RootNamespace>
@@ -10,7 +9,30 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <!-- GDI (System.Drawing.Common) image paths are WinForms-shell-only; cross-platform callers use the RawImage twins. -->
+    <NoWarn>$(NoWarn);CA1416;CS0169;CS0675</NoWarn>
   </PropertyGroup>
+
+  <!-- Tinke-era WinForms editor controls: unused by DSPRE, excluded so this project stays a
+       cross-platform net8.0 library. Delete the files once confirmed dead for good. -->
+  <ItemGroup>
+    <Compile Remove="Images\Dialogs\**\*.cs" />
+    <Compile Remove="Images\ImageControl.cs" />
+    <Compile Remove="Images\ImageControl.designer.cs" />
+    <Compile Remove="Images\PaletteControl.cs" />
+    <Compile Remove="Images\PaletteControl.designer.cs" />
+    <Compile Remove="Images\SpriteControl.cs" />
+    <Compile Remove="Images\SpriteControl.designer.cs" />
+    <Compile Remove="Helper\Translation.cs" />
+    <Compile Remove="IPlugin.cs" />
+    <Compile Remove="IGamePlugin.cs" />
+    <Compile Remove="Properties\Resources.Designer.cs" />
+    <EmbeddedResource Remove="**\*.resx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="EkonaLang.xml">

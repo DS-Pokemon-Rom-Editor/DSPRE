@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿﻿using System.IO;
 
 namespace DSPRE {
     public static class Filesystem {
@@ -56,7 +56,7 @@ namespace DSPRE {
             }
         }
 
-        public static string expArmPath => Path.Combine(synthOverlay, PatchToolboxDialog.expandedARMfileID.ToString("D4"));
+        public static string expArmPath => Path.Combine(synthOverlay, RomPatchState.expandedARMfileID.ToString("D4"));
 
         public static string GetPath(string path, int id, string format = "D4") {
             return Path.Combine(path, id.ToString(format));

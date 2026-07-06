@@ -252,7 +252,7 @@ namespace DSPRE.Avalonia.ViewModels
                 await DialogHelper.ShowInfo("No custom charmap file exists to open.", "File Not Found");
                 return;
             }
-            Helpers.OpenFileWithDefaultApp(CharMapManager.customCharmapFilePath);
+            SystemShell.OpenWithDefaultApp(CharMapManager.customCharmapFilePath);
         }
 
         public async Task RebaseCommand()

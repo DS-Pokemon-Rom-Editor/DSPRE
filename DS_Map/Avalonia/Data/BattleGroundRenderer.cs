@@ -85,9 +85,9 @@ namespace DSPRE.Avalonia.Data
                 var nclr = new NCLR(pal, nclrIdx, Path.GetFileName(pal));
                 var ncgr = new NCGR(chr, ncgrIdx, Path.GetFileName(chr));
                 var ncer = new NCER(cel, ncerIdx, Path.GetFileName(cel));
-                using var gdi = ncer.Get_Image(ncgr, nclr, 0, Canvas, Canvas, false, false, false, true, true) as System.Drawing.Bitmap;
-                if (gdi == null) return null;
-                return new GroundImage { Rgba = ToRgba(gdi, Canvas), Width = Canvas, Height = Canvas, Left = posX - Canvas / 2, Top = posY - Canvas / 2 };
+                var raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, trans: true, currOAM: -1, draw_index: null);
+                if (raw == null || raw.IsEmpty) return null;
+                return new GroundImage { Rgba = ToRgba(raw, Canvas), Width = Canvas, Height = Canvas, Left = posX - Canvas / 2, Top = posY - Canvas / 2 };
             }
             catch (Exception ex) { AppLogger.Error("BattleGroundRenderer.Render failed: " + ex.Message); return null; }
             finally { foreach (var t in temps) { try { File.Delete(t); } catch { } } }
@@ -104,28 +104,21 @@ namespace DSPRE.Avalonia.Data
             return tmp;
         }
 
-        // GDI 32bppArgb (BGRA) → straight RGBA byte[s*s*4].
-        private static byte[] ToRgba(System.Drawing.Bitmap bmp, int s)
+        // RawImage BGRA → straight RGBA byte[s*s*4].
+        private static byte[] ToRgba(DSPRE.RawImage raw, int s)
         {
-            var rect = new System.Drawing.Rectangle(0, 0, Math.Min(s, bmp.Width), Math.Min(s, bmp.Height));
-            var data = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             byte[] outp = new byte[s * s * 4];
-            try
+            if (raw == null || raw.IsEmpty) return outp;
+            int bw = Math.Min(s, raw.Width), bh = Math.Min(s, raw.Height);
+            for (int y = 0; y < bh; y++)
             {
-                int bw = rect.Width, bh = rect.Height, stride = data.Stride;
-                byte[] row = new byte[stride];
-                for (int y = 0; y < bh; y++)
+                for (int x = 0; x < bw; x++)
                 {
-                    System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * stride, row, 0, stride);
-                    for (int x = 0; x < bw; x++)
-                    {
-                        int si = x * 4, di = (y * s + x) * 4;   // BGRA → RGBA
-                        outp[di + 0] = row[si + 2]; outp[di + 1] = row[si + 1];
-                        outp[di + 2] = row[si + 0]; outp[di + 3] = row[si + 3];
-                    }
+                    int si = (y * raw.Width + x) * 4, di = (y * s + x) * 4;   // BGRA → RGBA
+                    outp[di + 0] = raw.Bgra[si + 2]; outp[di + 1] = raw.Bgra[si + 1];
+                    outp[di + 2] = raw.Bgra[si + 0]; outp[di + 3] = raw.Bgra[si + 3];
                 }
             }
-            finally { bmp.UnlockBits(data); }
             return outp;
         }
     }

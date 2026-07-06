@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -56,7 +55,7 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
-        public EventFile(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open)) {
+        public EventFile(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.eventFiles].unpackedDir, ID.ToString("D4")), FileMode.Open)) {
                     this.ID = ID;
                 }
         public EventFile() { }

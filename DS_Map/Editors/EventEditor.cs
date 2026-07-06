@@ -1,4 +1,4 @@
-﻿using DSPRE.Resources;
+﻿﻿using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using Ekona.Images.Formats;
 using LibNDSFormats.NSBMD;
@@ -173,7 +173,7 @@ namespace DSPRE.Editors
 
                     if (main.Equals(DialogResult.Yes))
                     {
-                        ushort[] result = HeaderSearch.AdvancedSearch(0, (ushort)EditorPanels.headerEditor.internalNames.Count, EditorPanels.headerEditor.internalNames, (int)MapHeader.SearchableFields.EventFileID, (int)HeaderSearch.NumOperators.Equal, selectEventComboBox.SelectedIndex.ToString())
+                        ushort[] result = HeaderSearch.AdvancedSearch(0, (ushort)EditorPanels.headerEditor.internalNames.Count, EditorPanels.headerEditor.internalNames, (int)MapHeader.SearchableFields.EventFileID, (int)HeaderSearchEngine.NumOperators.Equal, selectEventComboBox.SelectedIndex.ToString())
                             .Select(x => ushort.Parse(x.Split()[0]))
                             .ToArray();
 

@@ -28,7 +28,6 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Drawing;
-using System.Windows.Forms;
 
 namespace Ekona.Images
 {
@@ -218,7 +217,7 @@ namespace Ekona.Images
             // MetLob edition 25/12/2015
             int dataSize = (post_data.Length == 0) ? Tiles.Length : Math.Min(Tiles.Length, ori_data.Length - StartByte);
             if (dataSize < Tiles.Length)
-                MessageBox.Show(
+                DSPRE.AppMessages.Warning(
                     "Tiles data size exceeds the allowable length and will be trimmed.",
                     "Image import processing");
 

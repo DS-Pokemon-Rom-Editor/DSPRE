@@ -29,9 +29,9 @@ namespace DSPRE
 
 
 #if DEBUG
-            AppLogger.Initialize(this, minLevel: LogLevel.Debug);
+            AppLogger.Initialize(minLevel: LogLevel.Debug);
 #else
-            AppLogger.Initialize(this, minLevel: LogLevel.Info);
+            AppLogger.Initialize(minLevel: LogLevel.Info);
 #endif
 
             AppLogger.Info("=== Application started. === ");
@@ -56,6 +56,38 @@ namespace DSPRE
 #endif
             InitializeComponent();
             Program.SetupDatabase();
+
+            // Route RomInfo's UI-agnostic warnings to a WinForms popup (Avalonia sets its own dialog when it owns the shell).
+            RomInfo.ShowWarning = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+            // Route the WinForms-free core (ROMFiles/DSUtils) user messages back to WinForms dialogs.
+            AppMessages.ErrorHook = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            AppMessages.InfoHook = (msg, title) => MessageBox.Show(msg, string.IsNullOrEmpty(title) ? "" : title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            AppMessages.WarningHook = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            AppMessages.SaveFileHook = (title, filter, suggested) =>
+            {
+                using (SaveFileDialog sf = new SaveFileDialog { Filter = filter, Title = title ?? "" })
+                {
+                    if (!string.IsNullOrWhiteSpace(suggested)) sf.FileName = suggested;
+                    return sf.ShowDialog() == DialogResult.OK ? sf.FileName : null;
+                }
+            };
+            AppMessages.ConfirmHook = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+            AppMessages.ConfirmYesNoCancelHook = (msg, title) =>
+            {
+                var r = MessageBox.Show(msg, title, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                return r == DialogResult.Yes ? AppMessages.ConfirmResult.Yes
+                     : r == DialogResult.No ? AppMessages.ConfirmResult.No
+                     : AppMessages.ConfirmResult.Cancel;
+            };
+            AppMessages.PickFolderHook = title =>
+            {
+                var cofd = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog { IsFolderPicker = true, Title = title ?? "" };
+                return cofd.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok ? cofd.FileName : null;
+            };
+            AppMessages.PumpEventsHook = () => Application.DoEvents();
+            DSUtils.MonIconFallbackHook = () => GdiRawBridge.FromGdi(Properties.Resources.IconPokeball);
+            DSUtils.MonIconFallbackGdiHook = () => Properties.Resources.IconPokeball;
 
             EditorPanels.Initialize(this);
             Helpers.Initialize(this);
@@ -2322,67 +2354,8 @@ namespace DSPRE
 
         private void trainerEditorStatButton_Click(object sender, EventArgs e)
         {
-            string[] trcNames = RomInfo.GetTrainerClassNames();
-            string[] pokeNames = RomInfo.GetPokemonNames();
-            string[] trainerNames = GetSimpleTrainerNames();
-            for (int i = 0; i < trcNames.Length; i++)
-            {
-                trcNames[i] = trcNames[i].Replace("♂", " M").Replace("♀", " F");
-            }
-
-            Dictionary<string, Dictionary<string, int>> trainerUsage = new Dictionary<string, Dictionary<string, int>>();
-
-            for (int i = 0; i < trainerNames.Length; i++)
-            {
-                if (trainerNames[i].Equals("Angelica") || trainerNames[i].Equals("Mickey"))
-                {
-                    continue;
-                }
-                string suffix = "\\" + i.ToString("D4");
-
-                TrainerFile f = new TrainerFile(
-                    new TrainerProperties(
-                        (ushort)trainerComboBox.SelectedIndex,
-                        new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open)
-                    ),
-                    new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open),
-                    trainerNames[i]
-                );
-
-                if (f.party.CountNonEmptyMons() == 0)
-                {
-                    continue;
-                }
-
-                string className = trcNames[f.trp.trainerClass];
-
-
-                if (trainerUsage.TryGetValue(className, out Dictionary<string, int> innerDict) == false)
-                {
-                    innerDict = trainerUsage[className] = new Dictionary<string, int>();
-                }
-
-                for (int p = 0; p < f.trp.partyCount; p++)
-                {
-                    PartyPokemon pp = f.party[p];
-                    if (pp.CheckEmpty())
-                    {
-                        continue;
-                    }
-                    string pokeName = pokeNames[(int)pp.pokeID];
-
-                    if (innerDict.TryGetValue(pokeName, out int occurrences))
-                    {
-                        innerDict[pokeName]++;
-                    }
-                    else
-                    {
-                        innerDict[pokeName] = 1;
-                    }
-                }
-            }
-
-            Helpers.ExportTrainerUsageToCSV(trainerUsage, "Report.csv");
+            // Moved to the core TrainerUsageReport so both shells share it.
+            TrainerUsageReport.Generate("Report.csv");
         }
 
         #region Poppout Buttons

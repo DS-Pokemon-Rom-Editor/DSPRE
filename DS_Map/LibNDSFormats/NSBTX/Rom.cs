@@ -16,6 +16,7 @@
 */
 
 using System;
+using DSPRE;
 using System.Collections.Generic;
 using System.Text;
 using NSMBe4.DSFileSystem;
@@ -81,13 +82,13 @@ namespace NSMBe4
                 else
                 {
                     Region = Origin.US;
-                    System.Windows.Forms.MessageBox.Show(LanguageManager.Get("General", "UnknownRegion"), LanguageManager.Get("General", "Warning"), System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                    AppMessages.Warning(LanguageManager.Get("General", "UnknownRegion"), LanguageManager.Get("General", "Warning"));
                 }
             }
             else
             {
                 Region = Origin.US;
-                System.Windows.Forms.MessageBox.Show(LanguageManager.Get("General", "UnknownRegion"), LanguageManager.Get("General", "Warning"), System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                AppMessages.Warning(LanguageManager.Get("General", "UnknownRegion"), LanguageManager.Get("General", "Warning"));
             }
 
             //            SaveOverlay0();
@@ -151,7 +152,7 @@ namespace NSMBe4
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show("An error occurred while reading tileset descriptions on line " + lineNum.ToString() + ".\n\nThe original error message was:\n" + ex.Message);
+                AppMessages.Error("An error occurred while reading tileset descriptions on line " + lineNum.ToString() + ".\n\nThe original error message was:\n" + ex.Message);
             }
         }
 

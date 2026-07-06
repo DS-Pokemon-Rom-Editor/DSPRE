@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using NSMBe4.NSBMD;
 using static DSPRE.RomInfo;
@@ -27,8 +25,8 @@ namespace DSPRE.Avalonia
             SpritePixels result = null;
             try
             {
-                using var bmp = LoadBitmap(eventEntryID, orientation);
-                if (bmp != null) result = ToRgba(bmp);
+                var raw = LoadRaw(eventEntryID, orientation);
+                if (raw != null) result = ToRgba(raw);
             }
             catch (Exception ex) { AppLogger.Error("OW sprite load failed: " + ex.Message); }
             _cache[key] = result;
@@ -37,70 +35,54 @@ namespace DSPRE.Avalonia
 
         public static void ClearCache() => _cache.Clear();
 
-        // Mirrors EventEditor.GetOverworldImage.
-        private static Bitmap LoadBitmap(ushort eventEntryID, ushort orientation)
+        // Mirrors EventEditor.GetOverworldImage. NSBTX (ROM) frames decode GDI-free via GetRawImage;
+        // the fixed fallback images come from the avares assets (see ResourceImages) — no GDI anywhere.
+        private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
             if (ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch { }
             if (OverworldTable == null) try { SetOWtable(); ReadOWTable(); } catch { }
 
             if (ow3DSpriteDict != null && ow3DSpriteDict.TryGetValue(eventEntryID, out string imageName))
-                return (Bitmap)DSPRE.Properties.Resources.ResourceManager.GetObject(imageName);
+                return ResourceImages.GetRaw(imageName);
 
             if (OverworldTable == null || !OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
-                return (Bitmap)DSPRE.Properties.Resources.ResourceManager.GetObject("overworld");
+                return ResourceImages.GetRaw("overworld");
 
             try
             {
-                using var stream = new FileStream(gameDirs[DirNames.OWSprites].unpackedDir + "\\" + result.spriteID.ToString("D4"), FileMode.Open, FileAccess.Read);
+                using var stream = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
                 var nsbtx = new NSBTX_File(stream);
                 int n = nsbtx.texInfo.num_objs;
-                if (n <= 1) return nsbtx.GetBitmap(0, 0).bmp;
-                if (n <= 4) return nsbtx.GetBitmap(orientation switch { 0 => 0, 1 => 1, 2 => 2, _ => 3 }, 0).bmp;
-                if (n <= 8) return nsbtx.GetBitmap(orientation switch { 0 => 0, 1 => 2, 2 => 4, _ => 6 }, 0).bmp;
-                if (n <= 16) return nsbtx.GetBitmap(orientation switch { 0 => 0, 1 => 11, 2 => 2, _ => 4 }, 0).bmp;
-                return nsbtx.GetBitmap(orientation switch { 0 => 0, 1 => 27, 2 => 2, _ => 4 }, 0).bmp;
+                if (n <= 1) return nsbtx.GetRawImage(0, 0).bmp;
+                if (n <= 4) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 1, 2 => 2, _ => 3 }, 0).bmp;
+                if (n <= 8) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 2, 2 => 4, _ => 6 }, 0).bmp;
+                if (n <= 16) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 11, 2 => 2, _ => 4 }, 0).bmp;
+                return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 27, 2 => 2, _ => 4 }, 0).bmp;
             }
             catch
             {
-                return (Bitmap)DSPRE.Properties.Resources.ResourceManager.GetObject("overworldUnreadable");
+                return ResourceImages.GetRaw("overworldUnreadable");
             }
         }
 
         // Convert to RGBA (top row first), treating the top-left pixel's colour as transparent
         // (matching WinForms Bitmap.MakeTransparent()).
-        private static SpritePixels ToRgba(Bitmap src)
+        private static SpritePixels ToRgba(DSPRE.RawImage src)
         {
+            if (src == null || src.IsEmpty) return null;
             int w = src.Width, h = src.Height;
-            Color keyColor = src.GetPixel(0, 0);
-            byte kr = keyColor.R, kg = keyColor.G, kb = keyColor.B;
+            byte kb = src.Bgra[0], kg = src.Bgra[1], kr = src.Bgra[2];   // top-left pixel = colour key
 
-            var bmp = src.PixelFormat == PixelFormat.Format32bppArgb ? src : new Bitmap(src);
-            var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
             var rgba = new byte[w * h * 4];
-            var rowBuf = new byte[Math.Abs(data.Stride)];
-            try
+            for (int i = 0; i < w * h; i++)
             {
-                for (int y = 0; y < h; y++)
-                {
-                    System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * data.Stride, rowBuf, 0, w * 4);
-                    int o = y * w * 4;
-                    for (int x = 0; x < w; x++)
-                    {
-                        // Source is BGRA in memory (Format32bppArgb, little-endian).
-                        byte b = rowBuf[x * 4 + 0], g = rowBuf[x * 4 + 1], r = rowBuf[x * 4 + 2], a = rowBuf[x * 4 + 3];
-                        if (a != 0 && r == kr && g == kg && b == kb) a = 0;   // colour-key transparency
-                        rgba[o + x * 4 + 0] = r;
-                        rgba[o + x * 4 + 1] = g;
-                        rgba[o + x * 4 + 2] = b;
-                        rgba[o + x * 4 + 3] = a;
-                    }
-                }
-            }
-            finally
-            {
-                bmp.UnlockBits(data);
-                if (!ReferenceEquals(bmp, src)) bmp.Dispose();
+                byte b = src.Bgra[i * 4 + 0], g = src.Bgra[i * 4 + 1], r = src.Bgra[i * 4 + 2], a = src.Bgra[i * 4 + 3];
+                if (a != 0 && r == kr && g == kg && b == kb) a = 0;   // colour-key transparency
+                rgba[i * 4 + 0] = r;
+                rgba[i * 4 + 1] = g;
+                rgba[i * 4 + 2] = b;
+                rgba[i * 4 + 3] = a;
             }
             return new SpritePixels { Rgba = rgba, Width = w, Height = h };
         }

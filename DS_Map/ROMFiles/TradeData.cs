@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -75,10 +75,10 @@ namespace DSPRE.ROMFiles
         private static Stream GetStream(int id)
         {
 
-            if (!File.Exists(RomInfo.gameDirs[DirNames.tradeData].unpackedDir + "\\" + id.ToString("D4")))
+            if (!File.Exists(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4"))))
             {
                 // If the file does not exist, create it with default values
-                FileStream fileStream = new FileStream(RomInfo.gameDirs[DirNames.tradeData].unpackedDir + "\\" + id.ToString("D4"), FileMode.Create);
+                FileStream fileStream = new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4")), FileMode.Create);
                 fileStream.Write(new byte[0x50], 0, 0x50); // create an empty file
                 if (RomInfo.gameFamily == GameFamilies.HGSS)
                 {
@@ -88,7 +88,7 @@ namespace DSPRE.ROMFiles
                 return fileStream;
             }
             
-            return new FileStream(RomInfo.gameDirs[DirNames.tradeData].unpackedDir + "\\" + id.ToString("D4"), FileMode.Open);
+            return new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, id.ToString("D4")), FileMode.Open);
             
         }
 

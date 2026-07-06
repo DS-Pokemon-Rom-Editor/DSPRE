@@ -324,7 +324,7 @@ namespace DSPRE.CharMaps
     internal static class CharMapManager
     {
         public static readonly string charmapFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "charmap.json");
-        public static readonly string customCharmapFilePath = Path.Combine(Program.DspreDataPath, "charmap.json");
+        public static readonly string customCharmapFilePath = Path.Combine(AppPaths.DspreDataPath, "charmap.json");
         private static string loadedCharmapPath = null;
         
         // Cache the loaded charmap for quick access

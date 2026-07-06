@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Windows.Forms;
 
 namespace DSPRE.ROMFiles
 {
@@ -61,7 +60,7 @@ namespace DSPRE.ROMFiles
                 {
                     if (!isLevelScript)
                     {
-                        MessageBox.Show("Script File couldn't be read correctly.", "Unexpected EOF", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error("Script File couldn't be read correctly.", "Unexpected EOF");
                     }
                 }
 

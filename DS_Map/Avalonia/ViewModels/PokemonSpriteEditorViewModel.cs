@@ -5,13 +5,10 @@ using DSPRE.Editors.Utils;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
-using GdiBitmap = System.Drawing.Bitmap;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
@@ -70,12 +67,18 @@ namespace DSPRE.Avalonia.ViewModels
 
         // --- Internal state ----------------------------------------------------------
         private int _currentId = -1;
-        // Raw GDI bitmaps indexed 0-3 (FemBack, MBack, FFront, MFront), kept for save
-        private GdiBitmap[] _rawSprites = new GdiBitmap[4];
-        private System.Drawing.Imaging.ColorPalette _normalPal;
-        private System.Drawing.Imaging.ColorPalette _shinyPal;
-        // Replacement bitmaps loaded from PNG by the user (index 0-3)
-        private readonly GdiBitmap[] _replacementSprites = new GdiBitmap[4];
+        // Decrypted 4bpp palette indices per slot 0-3 (FemBack, MBack, FFront, MFront),
+        // 160×80 row-major (one byte per pixel), kept for save
+        private byte[][] _rawSprites = new byte[4][];
+        // 16 colors as packed BGRA (byte order b,g,r,a little-endian), always opaque
+        private uint[] _normalPal;
+        private uint[] _shinyPal;
+        // Replacement images loaded from PNG by the user (index 0-3). Rendered as-is — palettes
+        // don't apply to true-color imports (matches the previous GDI behavior).
+        private readonly RawImage[] _replacementSprites = new RawImage[4];
+
+        private const int SpriteWidth = 160;
+        private const int SpriteHeight = 80;
 
         private static readonly string[] SpriteLabels = { "Female Back", "Male Back", "Female Front", "Male Front" };
 
@@ -174,7 +177,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                 var narc = new NarcReader(packedPath);
                 var form = _currentFormData[formIndex];
-                var rawBmps = new GdiBitmap[4];
+                var rawBmps = new byte[4][];
 
                 // Load back sprite
                 if (form.BackSpriteIndex >= 0 && form.BackSpriteIndex < narc.fe.Length
@@ -199,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 // Load palettes
-                System.Drawing.Imaging.ColorPalette normalPal = null, shinyPal = null;
+                uint[] normalPal = null, shinyPal = null;
                 if (form.NormalPaletteIndex >= 0 && form.NormalPaletteIndex < narc.fe.Length
                     && narc.fe[form.NormalPaletteIndex].Size == 72)
                 {
@@ -480,7 +483,7 @@ namespace DSPRE.Avalonia.ViewModels
                 int baseOffset = id * 6;
 
                 // Load 4 sprites
-                var rawBmps = new GdiBitmap[4];
+                var rawBmps = new byte[4][];
                 for (int i = 0; i < 4; i++)
                 {
                     int idx = baseOffset + i;
@@ -493,7 +496,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 // Load palettes
-                System.Drawing.Imaging.ColorPalette normalPal = null, shinyPal = null;
+                uint[] normalPal = null, shinyPal = null;
                 int palIdx = baseOffset + 4;
                 int shinyIdx = baseOffset + 5;
                 if (palIdx < narc.fe.Length && narc.fe[palIdx].Size == 72)
@@ -540,14 +543,20 @@ namespace DSPRE.Avalonia.ViewModels
 
             try
             {
-                var imported = new GdiBitmap(path);
-                if (imported.Width != 160 || imported.Height != 80)
+                RawImage imported;
+                using (var fs = File.OpenRead(path))
+                    imported = ImageConverter.DecodeRawImage(fs);
+                if (imported == null)
                 {
-                    StatusText = $"Sprite must be 160×80 pixels (got {imported.Width}×{imported.Height}).";
+                    StatusText = "Image could not be decoded.";
+                    return;
+                }
+                if (imported.Width != SpriteWidth || imported.Height != SpriteHeight)
+                {
+                    StatusText = $"Sprite must be {SpriteWidth}×{SpriteHeight} pixels (got {imported.Width}×{imported.Height}).";
                     return;
                 }
                 _replacementSprites[slot] = imported;
-                _rawSprites[slot] = imported;
                 ApplyPalettesAndPublish();
                 _dirty = true;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -562,7 +571,7 @@ namespace DSPRE.Avalonia.ViewModels
         // --- Export PNG for one sprite slot -----------------------------------------
         public async Task ExportSprite(int slot, Window owner)
         {
-            if (slot < 0 || slot > 3 || _rawSprites[slot] == null) return;
+            if (slot < 0 || slot > 3 || !HasSlot(slot)) return;
             string path = await DialogHelper.SaveFile(owner,
                 $"Export {SpriteLabels[slot]} as PNG",
                 new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
@@ -570,8 +579,9 @@ namespace DSPRE.Avalonia.ViewModels
             if (string.IsNullOrEmpty(path)) return;
             try
             {
-                _rawSprites[slot].Palette = _normalPal;
-                _rawSprites[slot].Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                var raw = ComposeSprite(slot, _normalPal, transparentIndex0: false, frame: -1);
+                if (raw == null) { StatusText = "Export failed: nothing to export."; return; }
+                ImageConverter.ToAvaloniaBitmap(raw).Save(path);
                 StatusText = $"Exported {SpriteLabels[slot]}.";
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
@@ -596,58 +606,125 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Battle-mock sprites per gender: a LIST of N 80×80 frames (N = sheet width / 80). The pattern
             // animation (pokeanm) picks which frame to show; the count drives the editor's Frame limit.
-            var frontRaw = _rawSprites[3] ?? _rawSprites[2];
-            BattleFrameCount = frontRaw != null ? Math.Max(1, frontRaw.Width / 80) : 2;
+            int frontW = SlotWidth(3) != 0 ? SlotWidth(3) : SlotWidth(2);
+            BattleFrameCount = frontW != 0 ? Math.Max(1, frontW / 80) : 2;
             BattleFrontM = RenderFrames(3, _normalPal, BattleFrameCount);
             BattleFrontF = RenderFrames(2, _normalPal, BattleFrameCount);
             BattleBackM  = RenderFrames(1, _normalPal, BattleFrameCount);
             BattleBackF  = RenderFrames(0, _normalPal, BattleFrameCount);
         }
 
+        private bool HasSlot(int slot) => _replacementSprites[slot] != null || _rawSprites[slot] != null;
+        private int SlotWidth(int slot) =>
+            _replacementSprites[slot]?.Width ?? (_rawSprites[slot] != null ? SpriteWidth : 0);
+
         // Renders all `count` 80×80 frames of a sprite slot (null list if the slot is empty).
-        private System.Collections.Generic.IReadOnlyList<AvaBitmap> RenderFrames(int slot, System.Drawing.Imaging.ColorPalette palette, int count)
+        private System.Collections.Generic.IReadOnlyList<AvaBitmap> RenderFrames(int slot, uint[] palette, int count)
         {
-            if (_rawSprites[slot] == null) return null;
+            if (!HasSlot(slot)) return null;
             var frames = new AvaBitmap[count];
             for (int i = 0; i < count; i++) frames[i] = RenderBattleSprite(slot, palette, i);
             return frames;
         }
 
-        private AvaBitmap RenderSprite(int slot, System.Drawing.Imaging.ColorPalette palette)
+        private AvaBitmap RenderSprite(int slot, uint[] palette)
         {
-            if (_rawSprites[slot] == null) return null;
             try
             {
-                var bmp = (GdiBitmap)_rawSprites[slot].Clone();
-                bmp.Palette = palette;
+                var raw = ComposeSprite(slot, palette, transparentIndex0: false, frame: -1);
                 // Scale up 2× so sprites are legible (160×80 → 320×160)
-                var scaled = new GdiBitmap(bmp, 320, 160);
-                return ImageConverter.ToAvaloniaBitmap(scaled);
+                return raw != null ? ImageConverter.ToAvaloniaBitmap(Scale2x(raw)) : null;
             }
             catch { return null; }
         }
 
-        // Crops the 80×80 cell at frame index `frame` (cell at x = frame*80) out of the sheet, into a 32bpp
-        // ARGB surface with palette index 0 made transparent (in-game colour 0). Out-of-range → null.
-        private AvaBitmap RenderBattleSprite(int slot, System.Drawing.Imaging.ColorPalette palette, int frame)
+        // Crops the 80×80 cell at frame index `frame` (cell at x = frame*80) out of the sheet,
+        // with palette index 0 made transparent (in-game colour 0). Out-of-range → null.
+        private AvaBitmap RenderBattleSprite(int slot, uint[] palette, int frame)
         {
-            if (_rawSprites[slot] == null) return null;
             try
             {
-                var src = (GdiBitmap)_rawSprites[slot].Clone();
-                src.Palette = palette;
-                const int fw = 80;
-                if ((frame + 1) * fw > src.Width) return null;
-                var argb = new GdiBitmap(fw, src.Height, PixelFormat.Format32bppArgb);
-                using (var g = System.Drawing.Graphics.FromImage(argb))
-                    g.DrawImage(src,
-                        new System.Drawing.Rectangle(0, 0, fw, src.Height),
-                        new System.Drawing.Rectangle(frame * fw, 0, fw, src.Height),
-                        System.Drawing.GraphicsUnit.Pixel);
-                argb.MakeTransparent(palette.Entries[0]);
-                return ImageConverter.ToAvaloniaBitmap(argb);
+                var raw = ComposeSprite(slot, palette, transparentIndex0: true, frame: frame);
+                return raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Renders a sprite slot to BGRA. <paramref name="frame"/> ≥ 0 crops the 80-wide cell at
+        /// x = frame*80. With <paramref name="transparentIndex0"/>, palette index 0 becomes fully
+        /// transparent (for PNG replacements, pixels matching palette entry 0's colour — the old
+        /// GDI MakeTransparent semantics). PNG replacements render as-is otherwise.
+        /// </summary>
+        private RawImage ComposeSprite(int slot, uint[] palette, bool transparentIndex0, int frame)
+        {
+            RawImage replacement = _replacementSprites[slot];
+            byte[] indices = _rawSprites[slot];
+            if (replacement == null && indices == null) return null;
+            if (palette == null) return null;
+
+            int srcW = replacement?.Width ?? SpriteWidth;
+            int srcH = replacement?.Height ?? SpriteHeight;
+            int x0 = 0, w = srcW;
+            if (frame >= 0)
+            {
+                const int fw = 80;
+                x0 = frame * fw; w = fw;
+                if (x0 + fw > srcW) return null;
+            }
+
+            var outImg = new RawImage(w, srcH);
+            byte key0B = (byte)palette[0], key0G = (byte)(palette[0] >> 8), key0R = (byte)(palette[0] >> 16);
+            for (int y = 0; y < srcH; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int o = (y * w + x) * 4;
+                    if (replacement != null)
+                    {
+                        int s = (y * srcW + x0 + x) * 4;
+                        byte b = replacement.Bgra[s], g = replacement.Bgra[s + 1], r = replacement.Bgra[s + 2], a = replacement.Bgra[s + 3];
+                        if (transparentIndex0 && r == key0R && g == key0G && b == key0B) a = 0;
+                        outImg.Bgra[o] = b; outImg.Bgra[o + 1] = g; outImg.Bgra[o + 2] = r; outImg.Bgra[o + 3] = a;
+                    }
+                    else
+                    {
+                        byte pi = indices[y * SpriteWidth + x0 + x];
+                        if (transparentIndex0 && pi == 0) continue;   // stays 0,0,0,0
+                        uint c = palette[pi & 0xF];
+                        outImg.Bgra[o] = (byte)c;
+                        outImg.Bgra[o + 1] = (byte)(c >> 8);
+                        outImg.Bgra[o + 2] = (byte)(c >> 16);
+                        outImg.Bgra[o + 3] = (byte)(c >> 24);
+                    }
+                }
+            }
+            return outImg;
+        }
+
+        // Nearest-neighbor 2× upscale (pixel art — keeps edges crisp).
+        private static RawImage Scale2x(RawImage src)
+        {
+            var dst = new RawImage(src.Width * 2, src.Height * 2);
+            for (int y = 0; y < src.Height; y++)
+            {
+                for (int x = 0; x < src.Width; x++)
+                {
+                    int s = (y * src.Width + x) * 4;
+                    for (int dy = 0; dy < 2; dy++)
+                    {
+                        for (int dx = 0; dx < 2; dx++)
+                        {
+                            int d = ((y * 2 + dy) * dst.Width + x * 2 + dx) * 4;
+                            dst.Bgra[d] = src.Bgra[s];
+                            dst.Bgra[d + 1] = src.Bgra[s + 1];
+                            dst.Bgra[d + 2] = src.Bgra[s + 2];
+                            dst.Bgra[d + 3] = src.Bgra[s + 3];
+                        }
+                    }
+                }
+            }
+            return dst;
         }
 
         private void ClearBitmaps()
@@ -655,13 +732,15 @@ namespace DSPRE.Avalonia.ViewModels
             FemaleBackNormal = MaleBackNormal = FemaleFrontNormal = MaleFrontNormal = null;
             FemaleBackShiny  = MaleBackShiny  = FemaleFrontShiny  = MaleFrontShiny  = null;
             BattleFrontM = BattleFrontF = BattleBackM = BattleBackF = null;
-            _rawSprites = new GdiBitmap[4];
+            _rawSprites = new byte[4][];
+            for (int i = 0; i < _replacementSprites.Length; i++) _replacementSprites[i] = null;
             _normalPal = null; _shinyPal = null;
         }
 
-        // --- Ported from PokemonSpriteEditor: MakeImage / SetPal --------------------
+        // --- Ported from PokemonSpriteEditor: MakeImage / ReadPalette ----------------
 
-        private static GdiBitmap MakeImage(FileStream fs)
+        /// <summary>Decrypts one 6448-byte battle sprite entry to 160×80 4bpp palette indices.</summary>
+        private static byte[] MakeImage(FileStream fs)
         {
             fs.Seek(48L, SeekOrigin.Current);
             using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
@@ -686,8 +765,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
             }
 
-            var bmp = new GdiBitmap(160, 80, PixelFormat.Format8bppIndexed);
-            byte[] pixels = new byte[12800];
+            byte[] pixels = new byte[SpriteWidth * SpriteHeight];
             for (int k = 0; k < 3200; k++)
             {
                 pixels[k * 4]     = (byte)(arr[k] & 0xF);
@@ -695,32 +773,22 @@ namespace DSPRE.Avalonia.ViewModels
                 pixels[k * 4 + 2] = (byte)((arr[k] >> 8) & 0xF);
                 pixels[k * 4 + 3] = (byte)((arr[k] >> 12) & 0xF);
             }
-            var bd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, 160, 80), ImageLockMode.WriteOnly, bmp.PixelFormat);
-            Marshal.Copy(pixels, 0, bd.Scan0, 12800);
-            bmp.UnlockBits(bd);
-
-            // Apply greyscale placeholder palette (replaced when palette is applied in RenderSprite)
-            var tmp = new GdiBitmap(1, 1, PixelFormat.Format4bppIndexed);
-            var pal = tmp.Palette;
-            for (int l = 0; l < 16; l++) pal.Entries[l] = System.Drawing.Color.FromArgb(l << 4, l << 4, l << 4);
-            bmp.Palette = pal;
-            return bmp;
+            return pixels;
         }
 
-        private static System.Drawing.Imaging.ColorPalette ReadPalette(FileStream fs)
+        /// <summary>Reads one 72-byte palette entry as 16 packed-BGRA colors (opaque).</summary>
+        private static uint[] ReadPalette(FileStream fs)
         {
             fs.Seek(40L, SeekOrigin.Current);
             using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
-            ushort[] arr = new ushort[16];
-            for (int i = 0; i < 16; i++) arr[i] = reader.ReadUInt16();
-            var tmp = new GdiBitmap(1, 1, PixelFormat.Format4bppIndexed);
-            var pal = tmp.Palette;
+            var pal = new uint[16];
             for (int j = 0; j < 16; j++)
             {
-                pal.Entries[j] = System.Drawing.Color.FromArgb(
-                    (arr[j] & 0x1F) << 3,
-                    ((arr[j] >> 5) & 0x1F) << 3,
-                    ((arr[j] >> 10) & 0x1F) << 3);
+                ushort v = reader.ReadUInt16();
+                uint r = (uint)((v & 0x1F) << 3);
+                uint g = (uint)(((v >> 5) & 0x1F) << 3);
+                uint b = (uint)(((v >> 10) & 0x1F) << 3);
+                pal[j] = 0xFF000000u | (r << 16) | (g << 8) | b;
             }
             return pal;
         }

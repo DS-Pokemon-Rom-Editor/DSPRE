@@ -42,7 +42,12 @@ namespace DSPRE.Avalonia.ViewModels
         public BattleScriptEditorViewModel()
         {
             IsAvailable = gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
-            _version = gameFamily == GameFamilies.Plat ? WazaSeqVersion.Plat : WazaSeqVersion.HGSS;
+            _version = gameFamily switch
+            {
+                GameFamilies.DP => WazaSeqVersion.DP,
+                GameFamilies.Plat => WazaSeqVersion.Plat,
+                _ => WazaSeqVersion.HGSS,
+            };
             _moveNames = SafeMoveNames();
 
             _narcs[(int)Archive.MoveScripts]  = new ScriptNarc(DirNames.wazaSeq);
@@ -393,13 +398,16 @@ namespace DSPRE.Avalonia.ViewModels
         // ── WEST storyboard (readable timeline) ─────────────────────────────────────
         private string _storyboard = "";
         public string Storyboard { get => _storyboard; private set => Set(ref _storyboard, value); }
-        public bool ShowStoryboard => IsWest;
+        public bool ShowStoryboard => IsAvailable && HasRows;
+        public string StoryboardTitle => IsWest ? "Animation storyboard" : "Effect summary";
 
         private void RefreshStoryboard()
         {
             OnPropertyChanged(nameof(ShowStoryboard));
-            if (!IsWest) { Storyboard = ""; return; }
-            Storyboard = WestStoryboard.Build(BuildCommands(), _version);
+            OnPropertyChanged(nameof(StoryboardTitle));
+            if (!HasRows) { Storyboard = ""; return; }
+            var cmds = BuildCommands();
+            Storyboard = IsWest ? WestStoryboard.Build(cmds, _version) : WazaSeqStoryboard.Build(cmds, _version);
         }
 
         // ── Animation preview: cell-anim (CATS, ~32 moves) + particles (SPA, ~425 moves) ──
@@ -751,7 +759,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private static Bitmap LoadAsset(string name)
         {
-            try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE/Avalonia/Assets/Battle/{name}"))); }
+            try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }
             catch { return null; }
         }
 
@@ -984,8 +992,10 @@ namespace DSPRE.Avalonia.ViewModels
         private void PadArgs() { int need = FixedArgCountOf?.Invoke(_opId) ?? 0; while (Args.Count < need) Args.Add(0); }
         public string OpName => OpNameOf?.Invoke(_opId) ?? ("op" + _opId);
         public string OpDisplay => DSPRE.Avalonia.Data.WestParamSchema.OpcodeDisplay(OpName);
+        public string OpDoc => DSPRE.Avalonia.Data.WestParamSchema.OpcodeDoc(OpName);
+        public bool HasDoc => !string.IsNullOrEmpty(OpDoc);
         // Set the opcode during load without rebuilding/raising an edit (the caller rebuilds + keeps the loaded args).
-        internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); }
+        internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(OpDoc)); Raise(nameof(HasDoc)); }
 
         private bool _expanded;
         public bool IsExpanded { get => _expanded; set { if (_expanded != value) { _expanded = value; Raise(nameof(IsExpanded)); } } }

@@ -24,11 +24,17 @@ namespace DSPRE.Avalonia.Views
             Loaded += OnLoadedSetup;
         }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
+
+        /// <summary>
+        /// One-time workspace setup. No-ops until a ROM is loaded — the workspace is created at app
+        /// boot, before any ROM; <see cref="MainWindowView"/> re-invokes this after a successful load.
+        /// </summary>
+        public async System.Threading.Tasks.Task EnsureSetupAsync()
         {
             if (_setupDone || Design.IsDesignMode) return;
             var vm = VM;
-            if (vm == null) return;
+            if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             var owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             _setupDone = true;
@@ -41,6 +47,8 @@ namespace DSPRE.Avalonia.Views
             {
                 if (e.PropertyName == nameof(HeaderEditorViewModel.EventFileId)) RetargetEvents();
             };
+            // The embedded Events tab latched its no-ROM state at boot too — let it set up now.
+            await EventsEmbed.EnsureSetupAsync();
         }
 
         /// <summary>Point the embedded Event editor at the current header's event file (live if it's already loaded).</summary>

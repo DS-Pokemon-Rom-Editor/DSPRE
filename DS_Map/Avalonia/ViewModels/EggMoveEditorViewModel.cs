@@ -392,7 +392,7 @@ namespace DSPRE.Avalonia.ViewModels
             string path = await DialogHelper.SaveFile(owner, "Export Egg Move Data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "egg_moves.csv");
             if (path == null) return;
-            bool ok = DocTool.ExportEggMoveDataToCSV(_eggMoveData, path, _monNames, _moveNames);
+            bool ok = EggMoveCsv.Export(_eggMoveData, path, _monNames, _moveNames);
             if (ok) await DialogHelper.ShowInfo("Egg move data exported successfully.", "Export Complete");
             else    await DialogHelper.ShowError("Failed to export egg move data. Check the logs.", "Export Failed");
         }
@@ -402,7 +402,7 @@ namespace DSPRE.Avalonia.ViewModels
             string path = await DialogHelper.OpenFile(owner, "Import Egg Move Data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return;
-            bool ok = DocTool.ImportEggMoveDataFromCSV(ref _eggMoveData, path);
+            bool ok = EggMoveCsv.Import(ref _eggMoveData, path);
             if (ok)
             {
                 RefreshMonList();
@@ -692,80 +692,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// Reads egg move data directly from the ROM without creating a full ViewModel instance.
         /// Safe to call from any non-UI context once a ROM is loaded.
         /// </summary>
-        public static List<EggMoveEntry> ReadFromRom()
-        {
-            const int overlayNum = EGG_MOVE_OVERLAY_NUMBER;
-            var result = new List<EggMoveEntry>();
-            bool useSpecial = false;
-
-            EndianBinaryReader reader = null;
-            try
-            {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
-                {
-                    DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
-                    var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                    reader = new EndianBinaryReader(File.OpenRead(path), Endianness.LittleEndian);
-                }
-                else
-                {
-                    int offset = RomInfo.GetEggMoveTableOffset();
-                    reader = new EndianBinaryReader(File.OpenRead(OverlayUtils.GetPath(overlayNum)), Endianness.LittleEndian);
-                    reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    int magic    = reader.ReadInt32();
-                    int maxMoves = reader.ReadInt32();
-                    reader.BaseStream.Seek(-8, SeekOrigin.Current);
-                    if (magic == 4671301) useSpecial = true;
-                }
-
-                if (useSpecial)
-                {
-                    reader?.Close();
-                    DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
-                    string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
-                    foreach (var file in Directory.GetFiles(folder))
-                    {
-                        if (!int.TryParse(Path.GetFileName(file), out int speciesID)) continue;
-                        var moves = new List<ushort>();
-                        using var r = new EndianBinaryReader(File.OpenRead(file), Endianness.LittleEndian);
-                        while (r.BaseStream.Position < r.BaseStream.Length)
-                        {
-                            ushort id = r.ReadUInt16();
-                            if (id == 0xFFFF) break;
-                            moves.Add(id);
-                        }
-                        result.Add(new EggMoveEntry(speciesID, moves));
-                    }
-                }
-                else
-                {
-                    int idx = -1;
-                    while (reader.BaseStream.Position < reader.BaseStream.Length)
-                    {
-                        ushort read = reader.ReadUInt16();
-                        if (read == 0xFFFF) break;
-                        if (read > EGG_MOVES_SPECIES_CONSTANT)
-                        {
-                            result.Add(new EggMoveEntry(read - EGG_MOVES_SPECIES_CONSTANT, new List<ushort>()));
-                            idx++;
-                        }
-                        else if (idx >= 0)
-                        {
-                            var e = result[idx]; e.moveIDs.Add(read); result[idx] = e;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"EggMoveEditorViewModel.ReadFromRom failed: {ex.Message}");
-            }
-            finally
-            {
-                reader?.Close();
-            }
-
-            return result;
-        }
+        // Moved to the core EggMoveData class (DocTool needs it too); kept as a forwarder.
+        public static List<EggMoveEntry> ReadFromRom() => EggMoveData.ReadFromRom();
     }
 }

@@ -60,16 +60,16 @@ namespace DSPRE.Avalonia.Gl
                         float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
 
                         if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
-                            BindNsbtx(map.mapModel, mapTexDir + "\\" + area.mapTileset.ToString("D4"));
+                            BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
 
                         var buildings = new List<(NSBMDModel, float[])>();
-                        string btexPath = bldTexDir + "\\" + area.buildingsTileset.ToString("D4");
+                        string btexPath = Path.Combine(bldTexDir, area.buildingsTileset.ToString("D4"));
                         byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
 
                         if (map.buildings != null)
                             foreach (var b in map.buildings)
                             {
-                                string mp = bldDir + "\\" + b.modelID.ToString("D4");
+                                string mp = Path.Combine(bldDir, b.modelID.ToString("D4"));
                                 if (!System.IO.File.Exists(mp)) continue;
                                 using (var fs = new FileStream(mp, FileMode.Open, FileAccess.Read))
                                     b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);

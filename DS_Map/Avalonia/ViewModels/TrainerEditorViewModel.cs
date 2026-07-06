@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels
             DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, new System.Collections.Generic.List<string>(Helpers.GetTrainerNames()));
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, new System.Collections.Generic.List<string>(DSPRE.TrainerNames.GetAll()));
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels
                 _abilityNames = GetAbilityNames();
                 LoadAbilities();
 
-                foreach (var n in Helpers.GetTrainerNames()) TrainerNames.Add(n);
+                foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
                 AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
 
                 string[] classNames = GetTrainerClassNames();
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 try
                 {
-                    string path = dir + "\\" + i.ToString("D4");
+                    string path = Path.Combine(dir, i.ToString("D4"));
                     if (!File.Exists(path)) { _abilities[i] = (0, 0); continue; }
                     using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
                     var sp = new SpeciesFile(fs);
@@ -272,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             try
             {
-                string suffix = "\\" + index.ToString("D4");
+                string suffix = Path.DirectorySeparatorChar + index.ToString("D4");
                 string[] trNames = GetSimpleTrainerNames();
                 bool error = index >= trNames.Length;
 
@@ -424,7 +424,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (_trainer == null || _selectedTrainerIndex < 0) return;
             SyncToTrainer();
 
-            string indexStr = "\\" + _selectedTrainerIndex.ToString("D4");
+            string indexStr = Path.DirectorySeparatorChar + _selectedTrainerIndex.ToString("D4");
             File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, _trainer.trp.ToByteArray());
             File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + indexStr, _trainer.party.ToByteArray());
 

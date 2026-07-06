@@ -1,7 +1,6 @@
 using System.IO;
 using System.Collections.Generic;
 using LibNDSFormats.NSBMD;
-using System.Windows.Forms;
 using static DSPRE.RomInfo;
 using System;
 using System.Drawing;
@@ -77,7 +76,7 @@ namespace DSPRE.ROMFiles {
 
         #region Constructors (1)
         public MapFile(string path, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this (new FileStream(path, FileMode.Open), gFamily, discardMoveperms, showMessages) {}
-        public MapFile(int mapNumber, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this(RomInfo.gameDirs[DirNames.maps].unpackedDir + "\\" + mapNumber.ToString("D4"), gFamily, discardMoveperms, showMessages) { }
+        public MapFile(int mapNumber, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) : this(Path.Combine(RomInfo.gameDirs[DirNames.maps].unpackedDir, mapNumber.ToString("D4")), gFamily, discardMoveperms, showMessages) { }
         public MapFile(Stream data, GameFamilies gFamily, bool discardMoveperms = false, bool showMessages = true) {
             using (BinaryReader reader = new BinaryReader(data)) {
                 /* Read sections lengths */
@@ -97,8 +96,8 @@ namespace DSPRE.ROMFiles {
                     } else {
                         correctnessFlag = false;
                         if (showMessages) {
-                            MessageBox.Show("The header section of this map's BackGround Sound data is corrupted.",
-                            "BGS Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            AppMessages.Error("The header section of this map's BackGround Sound data is corrupted.",
+                            "BGS Error");
                         }
                     }
                 }
@@ -178,7 +177,7 @@ namespace DSPRE.ROMFiles {
 
                 if (modelReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
                     if (showMessages) {
-                        MessageBox.Show("Please select an NSBMD file.", "Invalid File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AppMessages.Error("Please select an NSBMD file.", "Invalid File");
                     }
                     return false;
                 }
@@ -359,7 +358,7 @@ namespace DSPRE.ROMFiles {
             string modelPath = Filesystem.GetBuildingModelPath(interior, (int)modelID);
 
             if (string.IsNullOrWhiteSpace(modelPath) || !File.Exists(modelPath)) {
-                MessageBox.Show("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
                 return;
             }
 
@@ -368,12 +367,12 @@ namespace DSPRE.ROMFiles {
                     this.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                 }
             } catch (FileNotFoundException) {
-                MessageBox.Show("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error("Building " + modelID + " could not be found in\n" + '"' + Path.GetDirectoryName(modelPath) + '"', "Building not found");
             }
         }
 
         public void LoadModelDataFromID(int modelID, string bmDir) {
-            string modelPath = bmDir + "\\" + modelID.ToString("D4");
+            string modelPath = Path.Combine(bmDir, modelID.ToString("D4"));
 
             try {
                 using (Stream fs = new FileStream(modelPath, FileMode.Open)) {
@@ -381,8 +380,8 @@ namespace DSPRE.ROMFiles {
                 }
             } catch (Exception ex) {
                 AppLogger.Error($"Error loading building model ID {modelID} from path \"{modelPath}\": {ex.Message}");
-                MessageBox.Show($"Building \"{modelID}\" could not be found at path \"{modelPath}\".\n" +
-                    $"Map may not display correctly.", "Building not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppMessages.Error($"Building \"{modelID}\" could not be found at path \"{modelPath}\".\n" +
+                    $"Map may not display correctly.", "Building not found");
             }
         }
     }

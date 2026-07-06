@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Views
         private void SetSpawn_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || !VM.InBounds) return;
-            var names = Helpers.getHeaderListBoxNames();
+            var names = HeaderLists.GetHeaderListBoxNames();
             new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).Show();
         }
 

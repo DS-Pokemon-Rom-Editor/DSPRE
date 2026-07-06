@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Cross-platform ROM core: file formats, ROM data, script system, databases. No WinForms,
+       no Avalonia. Sources are linked from DS_Map\ via CoreFiles.props during the transition.
+       System.Drawing.Common compiles on net8.0 but throws at runtime off-Windows — the GDI
+       code paths in here are only reachable from the WinForms shell. -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>DSPRE.Core</AssemblyName>
+    <RootNamespace>DSPRE</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <!-- GDI (System.Drawing.Common) paths are WinForms-shell-only; the cross-platform shells use the RawImage twins. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <!-- Pre-existing code warnings in legacy files (same set DS_Map suppresses) -->
+    <NoWarn>$(NoWarn);CS0649;CS0414;CS0169;CS0168;CS0197;CS0109;CS8981;CA2200;CS0675</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- BDHCAMPatchDB.resx embeds byte[] file refs (non-string resources). -->
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+
+  <Import Project="..\CoreFiles.props" />
+
+  <ItemGroup>
+    <Compile Include="@(CoreCompile)" />
+    <EmbeddedResource Include="@(CoreEmbeddedResource)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UI code in DSPRE and the tests still touch internal core types from the one-project era. -->
+    <InternalsVisibleTo Include="DSPRE" />
+    <InternalsVisibleTo Include="DSPRE.Avalonia" />
+    <InternalsVisibleTo Include="DSPRE.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ekona\Ekona.csproj" />
+    <ProjectReference Include="..\Images\Images\Images.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Text.Json" Version="9.0.7" />
+    <PackageReference Include="YamlDotNet" Version="16.2.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

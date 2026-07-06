@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels
             Model3D = null;
             try
             {
-                string path = BuildingDir() + "\\" + index.ToString("D4");
+                string path = Path.Combine(BuildingDir(), index.ToString("D4"));
                 if (!File.Exists(path)) { ModelLoaded?.Invoke(this, EventArgs.Empty); return; }
                 _currentData = File.ReadAllBytes(path);
                 var nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(_currentData));
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 else
                 {
-                    string tp = gameDirs[DirNames.buildingTextures].unpackedDir + "\\" + (texIndex - 1).ToString("D4");
+                    string tp = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, (texIndex - 1).ToString("D4"));
                     if (!File.Exists(tp)) return;
                     tex = File.ReadAllBytes(tp);
                 }
@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (path == null) return;
             try
             {
-                File.Copy(path, BuildingDir() + "\\" + _selBuilding.ToString("D4"), true);
+                File.Copy(path, Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), true);
                 LoadModel(_selBuilding);
                 StatusText = "Imported building model.";
             }
@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels
             var filter = new FilePickerFileType("NSBMD model") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export building model (NSBMD)", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
             if (path == null) return;
-            try { File.Copy(BuildingDir() + "\\" + _selBuilding.ToString("D4"), path, true); StatusText = "Exported."; }
+            try { File.Copy(Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), path, true); StatusText = "Exported."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
     }

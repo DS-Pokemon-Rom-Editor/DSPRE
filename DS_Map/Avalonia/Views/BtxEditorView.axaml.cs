@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Views
         private void ShowFile_Click(object sender, RoutedEventArgs e)
         {
             string path = VM?.GetCurrentFilePath();
-            if (path != null) Helpers.ExplorerSelect(path);
+            if (path != null) SystemShell.RevealInFileManager(path);
         }
     }
 }

@@ -1,8 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Net.Sockets;
 using static DSPRE.RomInfo;
-using static Microsoft.WindowsAPICodePack.Shell.PropertySystem.SystemProperties.System;
 
 namespace DSPRE.ROMFiles
 {
@@ -377,7 +376,7 @@ namespace DSPRE.ROMFiles
         }
 
 
-        public ItemData(int ID) : this(new FileStream(RomInfo.gameDirs[DirNames.itemData].unpackedDir + "\\" + ID.ToString("D4"), FileMode.Open), ID) { }
+        public ItemData(int ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, ID.ToString("D4")), FileMode.Open), ID) { }
 
         public override byte[] ToByteArray()
         {
