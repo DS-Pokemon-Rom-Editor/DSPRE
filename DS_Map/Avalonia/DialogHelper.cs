@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 
@@ -28,6 +29,13 @@ namespace DSPRE.Avalonia
 
         public static Task ShowError(string message, string title = "Error")
             => ShowMsg(message, title, MsgButtons.Ok);
+
+        /// <summary>
+        /// Error box with a "Copy details" button: <paramref name="details"/> (e.g. the full
+        /// exception text) goes to the clipboard so users can paste it into a bug report.
+        /// </summary>
+        public static Task ShowError(string message, string title, string details)
+            => ShowMsg(message, title, MsgButtons.Ok, details);
 
         /// <returns>true = Yes, false = No</returns>
         public static async Task<bool> AskYesNo(string message, string title = "Confirm")
@@ -111,7 +119,7 @@ namespace DSPRE.Avalonia
 
         private enum MsgButtons { Ok, YesNo, YesNoCancel }
 
-        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons)
+        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null)
         {
             var tcs = new TaskCompletionSource<MsgResult>();
 
@@ -166,7 +174,26 @@ namespace DSPRE.Avalonia
             win.Closed += (_, _) => tcs.TrySetResult(MsgResult.Cancel);
 
             var root = new StackPanel();
-            root.Children.Add(msgText);
+            root.Children.Add(new ScrollViewer { Content = msgText, MaxHeight = 380 });
+            if (!string.IsNullOrEmpty(details))
+            {
+                var copyBtn = new Button
+                {
+                    Content = "Copy details",
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Margin = new global::Avalonia.Thickness(16, 0, 0, 8),
+                };
+                copyBtn.Click += async (_, _) =>
+                {
+                    var clipboard = win.Clipboard;
+                    if (clipboard != null)
+                    {
+                        await clipboard.SetTextAsync(message + "\n\n" + details);
+                        copyBtn.Content = "Copied!";
+                    }
+                };
+                root.Children.Add(copyBtn);
+            }
             root.Children.Add(btnRow);
             win.Content = root;
 

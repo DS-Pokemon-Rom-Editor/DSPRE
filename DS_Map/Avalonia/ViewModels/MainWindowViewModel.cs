@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Controls;
 using DSPRE.Avalonia;
@@ -27,9 +28,40 @@ namespace DSPRE.Avalonia.ViewModels
         // ── ROM state ──────────────────────────────────────────────────────────
         public bool IsRomLoaded => AvaloniaEditorLauncher.IsRomLoaded;
 
+        // ── Busy state while a ROM is being opened/unpacked or saved/repacked ──
+        private bool _isLoadingRom;
+        public bool IsLoadingRom
+        {
+            get => _isLoadingRom;
+            set { if (_isLoadingRom != value) { _isLoadingRom = value; OnPropertyChanged(); } }
+        }
+
+        private string _busyText = "Opening ROM…";
+        public string BusyText
+        {
+            get => _busyText;
+            set { if (_busyText != value) { _busyText = value; OnPropertyChanged(); } }
+        }
+
+        private string _busyHint = "First-time opens unpack the ROM and can take a little while.";
+        public string BusyHint
+        {
+            get => _busyHint;
+            set { if (_busyHint != value) { _busyHint = value; OnPropertyChanged(); } }
+        }
+
+        // ── Live status-bar line ───────────────────────────────────────────────
+        public const string IdleStatus = "Editors open from the menus, or press Ctrl+P and type an editor's name.";
+        private string _statusText = IdleStatus;
+        public string StatusText
+        {
+            get => _statusText;
+            set { if (_statusText != value) { _statusText = value; OnPropertyChanged(); } }
+        }
+
         public string Title =>
             IsRomLoaded
-                ? $"DSPRE — {GetGameDisplayName()} (Avalonia preview)"
+                ? $"DSPRE - {GetGameDisplayName()} (Avalonia preview)"
                 : "DSPRE (Avalonia preview)";
 
         /// <summary>Re-evaluate ROM-dependent state after a ROM is loaded/closed (enables the editor menus + title).</summary>
@@ -37,6 +69,20 @@ namespace DSPRE.Avalonia.ViewModels
         {
             OnPropertyChanged(nameof(IsRomLoaded));
             OnPropertyChanged(nameof(Title));
+            RefreshRecents();
+        }
+
+        // ── Recent projects for the pre-ROM empty state ────────────────────────
+        public System.Collections.ObjectModel.ObservableCollection<string> RecentProjects { get; } = new();
+        public bool HasRecents => RecentProjects.Count > 0;
+
+        public void RefreshRecents()
+        {
+            RecentProjects.Clear();
+            var recents = SettingsManager.Settings?.recentProjects;
+            if (recents != null)
+                foreach (var r in recents.Take(5)) RecentProjects.Add(r);
+            OnPropertyChanged(nameof(HasRecents));
         }
 
         // ── Design-time constructor ────────────────────────────────────────────
@@ -49,6 +95,7 @@ namespace DSPRE.Avalonia.ViewModels
         public MainWindowViewModel(bool runtime)
         {
             HeaderVM = new HeaderEditorViewModel(runtime);
+            RefreshRecents();
         }
     }
 }

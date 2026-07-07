@@ -403,7 +403,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 if (_matrix == null)
                 {
-                    MapInfo = "No header references this event file — can't pick a matrix to render.";
+                    MapInfo = "No header references this event file, so there is no matrix to render.";
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
@@ -786,7 +786,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             var sb = new System.Text.StringBuilder();
             var m = Model3D;
-            sb.AppendLine("=== DSPRE Event Editor — 3D Debug Dump ===");
+            sb.AppendLine("=== DSPRE Event Editor 3D Debug Dump ===");
             sb.AppendLine($"Timestamp:   {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine($"Event file:  {_selectedIndex}");
             sb.AppendLine($"Matrix id:   {_matrixId}    Area data: {_areaDataId}");

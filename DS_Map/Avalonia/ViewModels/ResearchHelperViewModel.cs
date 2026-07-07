@@ -566,7 +566,7 @@ namespace DSPRE.Avalonia.ViewModels
                     }
                 }
 
-                StatusText = $"Header {id} — {IncomingWarps.Count} incoming, {OutgoingWarps.Count} outgoing warps";
+                StatusText = $"Header {id}: {IncomingWarps.Count} incoming, {OutgoingWarps.Count} outgoing warps";
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -176,6 +177,102 @@ namespace DSPRE.Avalonia.ViewModels
         public void Refresh() { OnPC(nameof(Display)); }
     }
 
+    /// <summary>One Rock Smash NARC entry (data/a/2/5/3): a header's item-drop odds and which of the
+    /// three hardcoded tables it rolls from. <see cref="Missing"/> flags headers whose file didn't
+    /// exist on disk (a modified ROM, or a header added after the NARC was last touched) — Save
+    /// materializes it with whatever's currently shown (defaults to Odds=0/Default if left alone).</summary>
+    public class RockSmashHeaderRow : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPC([CallerMemberName] string n = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        public RockSmashData Data { get; }
+        private readonly Action _dirty;
+
+        public string HeaderLabel { get; }
+        public bool Missing => !Data.Existed;
+        public string MissingLabel => Missing ? "Will be created on save" : "";
+
+        public RockSmashHeaderRow(RockSmashData data, string headerName, Action dirty)
+        {
+            Data = data;
+            _dirty = dirty;
+            HeaderLabel = $"{data.ID:D4}: {headerName}";
+        }
+
+        public int Odds
+        {
+            get => Data.Odds;
+            set
+            {
+                int clamped = Math.Max(0, Math.Min(100, value));
+                if (Data.Odds == clamped) return;
+                Data.Odds = (ushort)clamped;
+                OnPC();
+                _dirty();
+            }
+        }
+
+        // 0 = Default, 1 = Ruins of Alph, 2 = Cliff Cave — matches RockSmashData.TableType.
+        public int TypeIndex
+        {
+            get => (int)Data.Type;
+            set
+            {
+                var t = (RockSmashData.TableType)value;
+                if (Data.Type == t) return;
+                Data.Type = t;
+                OnPC();
+                _dirty();
+            }
+        }
+
+        public void RefreshMissing() { OnPC(nameof(Missing)); OnPC(nameof(MissingLabel)); }
+    }
+
+    /// <summary>One of Rock Smash's three fixed 8-slot item tables, hardcoded in HGSS's ov001.bin
+    /// (English offsets only — see <see cref="RomInfo.IsRockSmashItemTableAvailable"/>).</summary>
+    public class RockSmashItemSlotsRow : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPC([CallerMemberName] string n = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        public string Label { get; }
+        public readonly ushort[] ItemIDs;
+        private readonly string[] _names;
+        private readonly Action _dirty;
+
+        public RockSmashItemSlotsRow(string label, ushort[] itemIDs, string[] names, Action dirty)
+        {
+            Label = label; ItemIDs = itemIDs; _names = names; _dirty = dirty;
+        }
+
+        private string Get(int slot) =>
+            ItemIDs[slot] < _names.Length ? $"{ItemIDs[slot]}: {_names[ItemIDs[slot]]}" : $"{ItemIDs[slot]}: ???";
+
+        private void Set(int slot, string val)
+        {
+            if (val == null) return;
+            int colon = val.IndexOf(':');
+            if (colon > 0 && ushort.TryParse(val.Substring(0, colon).Trim(), out ushort id))
+            {
+                ItemIDs[slot] = id;
+                _dirty();
+            }
+        }
+
+        public string Item0 { get => Get(0); set => Set(0, value); }
+        public string Item1 { get => Get(1); set => Set(1, value); }
+        public string Item2 { get => Get(2); set => Set(2, value); }
+        public string Item3 { get => Get(3); set => Set(3, value); }
+        public string Item4 { get => Get(4); set => Set(4, value); }
+        public string Item5 { get => Get(5); set => Set(5, value); }
+        public string Item6 { get => Get(6); set => Set(6, value); }
+        public string Item7 { get => Get(7); set => Set(7, value); }
+    }
+
     // ─── Main ViewModel ───────────────────────────────────────────────────────
     public class ItemTableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -190,6 +287,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Item names for combo boxes ────────────────────────────────────────
         public ObservableCollection<string> ItemNames { get; } = new();
         private string[] _rawItemNames = Array.Empty<string>();
+        private string[] _headerNames = Array.Empty<string>();
 
         // ── Pickup Table ──────────────────────────────────────────────────────
         public bool ShowPickupTab { get; }
@@ -292,27 +390,50 @@ namespace DSPRE.Avalonia.ViewModels
 
         public string HiddenEntryCount => $"Entries: {HiddenItems.Count} / {_hiddenMaxCapacity}";
 
+        // ── Rock Smash (HGSS) ────────────────────────────────────────────────────
+        // Per-header odds/table (data/a/2/5/3): available for any HGSS ROM, any language.
+        // The 3 hardcoded item-slot tables live in ov001.bin at English-only-confirmed offsets.
+        private const int ROCKSMASH_OVERLAY = 1;
+        private const uint ROCKSMASH_RUINS_OF_ALPH_OFFSET = 0x23D04;
+        private const uint ROCKSMASH_DEFAULT_OFFSET = 0x23D14;
+        private const uint ROCKSMASH_CLIFF_CAVE_OFFSET = 0x23D24;
+        private const int ROCKSMASH_SLOTS = 8;
+
+        public bool ShowRockSmashTab { get; }
+        public bool ShowRockSmashItemTables { get; }
+        public ObservableCollection<RockSmashHeaderRow> RockSmashRows { get; } = new();
+        public RockSmashItemSlotsRow RockSmashDefaultTable { get; private set; }
+        public RockSmashItemSlotsRow RockSmashRuinsOfAlphTable { get; private set; }
+        public RockSmashItemSlotsRow RockSmashCliffCaveTable { get; private set; }
+
+        public string RockSmashCount => $"Headers: {RockSmashRows.Count}";
+
         // ── Dirty ─────────────────────────────────────────────────────────────
         private bool _pickupDirty;
         private bool _hiddenDirty;
-        public bool HasUnsavedChanges => _pickupDirty || _hiddenDirty;
+        private bool _rockSmashDirty;
+        public bool HasUnsavedChanges => _pickupDirty || _hiddenDirty || _rockSmashDirty;
         public string UnsavedChangesDescription =>
             string.Join(", ", new[]
             {
                 _pickupDirty ? "Pickup Table" : null,
-                _hiddenDirty ? "Hidden Items" : null
+                _hiddenDirty ? "Hidden Items" : null,
+                _rockSmashDirty ? "Rock Smash" : null
             }.Where(s => s != null).DefaultIfEmpty("Item Table Editor"));
 
         private void SetPickupDirty() { _pickupDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetHiddenDirty() { _hiddenDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetRockSmashDirty() { _rockSmashDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Design-time constructor ───────────────────────────────────────────
         public ItemTableEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
 
-            ShowPickupTab       = true;
-            ShowHiddenItemsTab  = true;
+            ShowPickupTab           = true;
+            ShowHiddenItemsTab      = true;
+            ShowRockSmashTab        = true;
+            ShowRockSmashItemTables = true;
 
             _rawItemNames = Enumerable.Range(0, 30).Select(i => $"Item {i}").ToArray();
             for (int i = 0; i < 30; i++) ItemNames.Add($"{i}: {_rawItemNames[i]}");
@@ -324,16 +445,20 @@ namespace DSPRE.Avalonia.ViewModels
             BuildPickupRows();
             BuildActivationRows();
             BuildHiddenDummyRows();
+            BuildRockSmashDummyRows();
         }
 
         // ── Runtime constructor ───────────────────────────────────────────────
-        public ItemTableEditorViewModel(string[] itemNames)
+        public ItemTableEditorViewModel(string[] itemNames, IEnumerable<string> headerNames = null)
         {
             _rawItemNames = itemNames;
             for (int i = 0; i < itemNames.Length; i++) ItemNames.Add($"{i}: {itemNames[i]}");
+            _headerNames = headerNames?.ToArray() ?? Array.Empty<string>();
 
-            ShowPickupTab      = RomInfo.pickupTableOverlayNumber != -1;
-            ShowHiddenItemsTab = RomInfo.IsHiddenItemsEditorAvailable();
+            ShowPickupTab           = RomInfo.pickupTableOverlayNumber != -1;
+            ShowHiddenItemsTab      = RomInfo.IsHiddenItemsEditorAvailable();
+            ShowRockSmashTab        = RomInfo.IsRockSmashEditorAvailable();
+            ShowRockSmashItemTables = RomInfo.IsRockSmashItemTableAvailable();
 
             if (ShowPickupTab)
             {
@@ -345,6 +470,11 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 if (ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
                 LoadHiddenItems();
+            }
+            if (ShowRockSmashTab)
+            {
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.rockSmash });
+                LoadRockSmash();
             }
         }
 
@@ -527,11 +657,62 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(HiddenEntryCount));
         }
 
+        // ── Rock Smash load ──────────────────────────────────────────────────────
+        private void LoadRockSmash()
+        {
+            RockSmashRows.Clear();
+            int headerCount = RomInfo.GetHeaderCount();
+            for (int i = 0; i < headerCount; i++)
+            {
+                var data = new RockSmashData((ushort)i);
+                string name = i < _headerNames.Length ? _headerNames[i] : $"Header {i}";
+                RockSmashRows.Add(new RockSmashHeaderRow(data, name, SetRockSmashDirty));
+            }
+            OnPropertyChanged(nameof(RockSmashCount));
+
+            if (ShowRockSmashItemTables)
+            {
+                if (OverlayUtils.IsCompressed(ROCKSMASH_OVERLAY)) OverlayUtils.Decompress(ROCKSMASH_OVERLAY);
+                string path = OverlayUtils.GetPath(ROCKSMASH_OVERLAY);
+
+                RockSmashDefaultTable = new RockSmashItemSlotsRow("Default",
+                    ReadSlots(path, ROCKSMASH_DEFAULT_OFFSET), _rawItemNames, SetRockSmashDirty);
+                RockSmashRuinsOfAlphTable = new RockSmashItemSlotsRow("Ruins of Alph",
+                    ReadSlots(path, ROCKSMASH_RUINS_OF_ALPH_OFFSET), _rawItemNames, SetRockSmashDirty);
+                RockSmashCliffCaveTable = new RockSmashItemSlotsRow("Cliff Cave",
+                    ReadSlots(path, ROCKSMASH_CLIFF_CAVE_OFFSET), _rawItemNames, SetRockSmashDirty);
+
+                OnPropertyChanged(nameof(RockSmashDefaultTable));
+                OnPropertyChanged(nameof(RockSmashRuinsOfAlphTable));
+                OnPropertyChanged(nameof(RockSmashCliffCaveTable));
+            }
+        }
+
+        private static ushort[] ReadSlots(string overlayPath, uint offset)
+        {
+            byte[] raw = DSUtils.ReadFromFile(overlayPath, offset, ROCKSMASH_SLOTS * 2);
+            var slots = new ushort[ROCKSMASH_SLOTS];
+            for (int i = 0; i < ROCKSMASH_SLOTS; i++) slots[i] = BitConverter.ToUInt16(raw, i * 2);
+            return slots;
+        }
+
+        private void BuildRockSmashDummyRows()
+        {
+            for (int i = 0; i < 6; i++)
+                RockSmashRows.Add(new RockSmashHeaderRow(new RockSmashData((ushort)i, ""), $"Route {i}", SetRockSmashDirty));
+
+            ushort[] Dummy() => new ushort[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            RockSmashDefaultTable      = new RockSmashItemSlotsRow("Default", Dummy(), _rawItemNames, SetRockSmashDirty);
+            RockSmashRuinsOfAlphTable  = new RockSmashItemSlotsRow("Ruins of Alph", Dummy(), _rawItemNames, SetRockSmashDirty);
+            RockSmashCliffCaveTable    = new RockSmashItemSlotsRow("Cliff Cave", Dummy(), _rawItemNames, SetRockSmashDirty);
+        }
+
         // ── Save ──────────────────────────────────────────────────────────────
         public void SaveChanges()
         {
             if (_pickupDirty && ShowPickupTab) SavePickupTable();
             if (_hiddenDirty && ShowHiddenItemsTab) SaveHiddenItems();
+            if (_rockSmashDirty && ShowRockSmashTab) SaveRockSmash();
         }
 
         private void SavePickupTable()
@@ -576,10 +757,41 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
+        private void SaveRockSmash()
+        {
+            // Whole-file overwrite per header (matches Headbutt's per-header-NARC convention);
+            // File.WriteAllBytes creates the file if it didn't exist, so headers that were "missing"
+            // from a/2/5/3 (modified ROM, or a header added since) get materialized here.
+            foreach (var row in RockSmashRows)
+            {
+                row.Data.SaveToFile();
+                row.RefreshMissing();
+            }
+
+            if (ShowRockSmashItemTables)
+            {
+                string path = OverlayUtils.GetPath(ROCKSMASH_OVERLAY);
+                WriteSlots(path, ROCKSMASH_DEFAULT_OFFSET, RockSmashDefaultTable.ItemIDs);
+                WriteSlots(path, ROCKSMASH_RUINS_OF_ALPH_OFFSET, RockSmashRuinsOfAlphTable.ItemIDs);
+                WriteSlots(path, ROCKSMASH_CLIFF_CAVE_OFFSET, RockSmashCliffCaveTable.ItemIDs);
+            }
+
+            _rockSmashDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private static void WriteSlots(string overlayPath, uint offset, ushort[] slots)
+        {
+            byte[] raw = new byte[ROCKSMASH_SLOTS * 2];
+            for (int i = 0; i < ROCKSMASH_SLOTS; i++) BitConverter.GetBytes(slots[i]).CopyTo(raw, i * 2);
+            DSUtils.WriteToFile(overlayPath, raw, offset);
+        }
+
         public void DiscardChanges()
         {
             _pickupDirty = false;
             _hiddenDirty = false;
+            _rockSmashDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }

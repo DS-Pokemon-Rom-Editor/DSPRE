@@ -41,6 +41,21 @@ namespace DSPRE
         public bool camInvertOrbitX { get; set; } = false;
         public bool camInvertOrbitY { get; set; } = false;
         public bool camInvertZoom { get; set; } = false;
+
+        /// <summary>Show the Welcome &amp; Tutorial window when the Avalonia shell starts.</summary>
+        public bool showWelcomeOnStartup { get; set; } = true;
+
+        /// <summary>Whether the first-time guided tour has already run (or been skipped). While false,
+        /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
+        public bool guidedTourShown { get; set; } = false;
+
+        /// <summary>Main-window placement, saved on close and restored at startup (0 = unset).</summary>
+        public double mainWindowWidth { get; set; } = 0;
+        public double mainWindowHeight { get; set; } = 0;
+        public bool mainWindowMaximized { get; set; } = false;
+
+        /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
+        public List<string> recentProjects { get; set; } = new List<string>();
     }
 
     public static class SettingsManager
@@ -68,6 +83,30 @@ namespace DSPRE
         {
             string json = JsonConvert.SerializeObject(Settings, Formatting.Indented);
             System.IO.File.WriteAllText(SettingsFile, json);
+        }
+
+        public const int MaxRecentProjects = 10;
+
+        /// <summary>Puts <paramref name="path"/> (a .nds file or extracted project folder) at the top of the recent list.</summary>
+        public static void RecordRecentProject(string path)
+        {
+            if (Settings == null || string.IsNullOrWhiteSpace(path)) return;
+            var list = Settings.recentProjects ?? (Settings.recentProjects = new List<string>());
+            list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            list.Insert(0, path);
+            if (list.Count > MaxRecentProjects)
+            {
+                list.RemoveRange(MaxRecentProjects, list.Count - MaxRecentProjects);
+            }
+            Save();
+        }
+
+        /// <summary>Removes a stale entry (deleted/moved project) from the recent list.</summary>
+        public static void RemoveRecentProject(string path)
+        {
+            if (Settings?.recentProjects == null) return;
+            Settings.recentProjects.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            Save();
         }
     }
 }

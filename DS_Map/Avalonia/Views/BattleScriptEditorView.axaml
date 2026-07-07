@@ -87,7 +87,7 @@
                     <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
                       <TextBlock Grid.Column="0" Text="Raw args" VerticalAlignment="Center" FontSize="11"
                                  Foreground="{DynamicResource Editor.Subtle}"
-                                 ToolTip.Tip="The raw argument words (read-only) — edit values above."/>
+                                 ToolTip.Tip="The raw argument words (read-only). Edit values above."/>
                       <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
                                FontFamily="Consolas,monospace" FontSize="11" Background="Transparent"/>
                     </Grid>
@@ -182,11 +182,11 @@
           <Button Content="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="Preview the move cast from the enemy (top) side — flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
+                    ToolTip.Tip="Preview the move cast from the enemy (top) side: flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
           <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc — not a move effect."/>
+                    ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc, not a move effect."/>
           <Button Content="HP gauges…" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                   ToolTip.Tip="Configure the gauge readout (species, level, HP %).">
             <Button.Flyout>
@@ -211,7 +211,7 @@
           <TextBlock Text="Terrain:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="130" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on — the tray some move animations interact with."/>
+                    ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on: the tray some move animations interact with."/>
           <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
                      FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
         </WrapPanel>

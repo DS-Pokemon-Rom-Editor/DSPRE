@@ -60,6 +60,14 @@
 	  <CheckBox Content="Update Databases Automatically"  IsChecked="{Binding AutoUpdateDBs}"/>
 	</StackPanel>
 
+	<!-- Onboarding -->
+	<StackPanel Orientation="Horizontal" Spacing="24">
+	  <CheckBox Content="Show Welcome at startup"       IsChecked="{Binding ShowWelcomeOnStartup}"/>
+	  <CheckBox Content="Show guided tour after the next ROM load" IsChecked="{Binding ShowGuidedTourNextLoad}"
+	            ToolTip.Tip="The tour can also be replayed anytime from Tools > Guided Tour"/>
+	  <Button Content="Open Welcome &amp; Tutorial…" Click="ShowWelcome_Click"/>
+	</StackPanel>
+
 	<!-- 3D View camera (mouse) -->
 	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 	  <StackPanel Spacing="6">

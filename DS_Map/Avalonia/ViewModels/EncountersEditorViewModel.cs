@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels
                 SafariZoneVM.PropertyChanged += OnChildChanged;
                 ShowSafariZone = true;
 
-                PendingNote = "Headbutt encounter editor: not yet ported (needs the 3D map view — tracked with the Map/Matrix/NSBTX editors).";
+                PendingNote = "Headbutt encounter editor: not yet ported (needs the 3D map view; tracked with the Map/Matrix/NSBTX editors).";
             }
             else
             {

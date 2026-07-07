@@ -70,13 +70,13 @@ namespace DSPRE
             binaryPath = Path.GetFullPath(binaryPath);
             charMapPath = Path.GetFullPath(charMapPath);
 
-            string chatotPath = Path.Combine(System.AppContext.BaseDirectory, "Tools", "chatot.exe");
+            string chatotPath = DSUtils.ToolPath("chatot");
             string plainTextArg = "";
             string binaryArg = "";
 
             if (!File.Exists(chatotPath))
             {
-                AppMessages.Error("chatot.exe not found in Tools folder.", "Error");
+                AppMessages.Error($"{Path.GetFileName(chatotPath)} not found in Tools folder.", "Error");
                 return;
             }
 

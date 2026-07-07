@@ -318,7 +318,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
             if (result.ValidCount == 0)
             {
-                await DialogHelper.ShowError(sb.ToString(), "Import — No Valid Entries");
+                await DialogHelper.ShowError(sb.ToString(), "Import: No Valid Entries");
                 return;
             }
 

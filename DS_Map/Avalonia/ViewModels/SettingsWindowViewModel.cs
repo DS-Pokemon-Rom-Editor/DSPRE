@@ -68,6 +68,21 @@ namespace DSPRE.Avalonia.ViewModels
             set => Set(ref _autoCheckUpdates, value);
         }
 
+        private bool _showWelcomeOnStartup = true;
+        public bool ShowWelcomeOnStartup
+        {
+            get => _showWelcomeOnStartup;
+            set => Set(ref _showWelcomeOnStartup, value);
+        }
+
+        // Inverse of DspreSettings.guidedTourShown: checked = tour runs after the next ROM load.
+        private bool _showGuidedTourNextLoad;
+        public bool ShowGuidedTourNextLoad
+        {
+            get => _showGuidedTourNextLoad;
+            set => Set(ref _showGuidedTourNextLoad, value);
+        }
+
         private bool _autoUpdateDBs;
         public bool AutoUpdateDBs
         {
@@ -123,6 +138,8 @@ namespace DSPRE.Avalonia.ViewModels
             NeverAskForOpening = SettingsManager.Settings.neverAskForOpening;
             AutoCheckUpdates = SettingsManager.Settings.automaticallyCheckForUpdates;
             AutoUpdateDBs    = SettingsManager.Settings.automaticallyUpdateDBs;
+            ShowWelcomeOnStartup = SettingsManager.Settings.showWelcomeOnStartup;
+            ShowGuidedTourNextLoad = !SettingsManager.Settings.guidedTourShown;
 
             CamPanSpeed      = (decimal)SettingsManager.Settings.camPanSpeed;
             CamOrbitSpeed    = (decimal)SettingsManager.Settings.camOrbitSpeed;
@@ -151,6 +168,8 @@ namespace DSPRE.Avalonia.ViewModels
             SettingsManager.Settings.neverAskForOpening     = NeverAskForOpening;
             SettingsManager.Settings.automaticallyCheckForUpdates = AutoCheckUpdates;
             SettingsManager.Settings.automaticallyUpdateDBs = AutoUpdateDBs;
+            SettingsManager.Settings.showWelcomeOnStartup   = ShowWelcomeOnStartup;
+            SettingsManager.Settings.guidedTourShown        = !ShowGuidedTourNextLoad;
 
             SettingsManager.Settings.camPanSpeed     = (float)CamPanSpeed;
             SettingsManager.Settings.camOrbitSpeed   = (float)CamOrbitSpeed;

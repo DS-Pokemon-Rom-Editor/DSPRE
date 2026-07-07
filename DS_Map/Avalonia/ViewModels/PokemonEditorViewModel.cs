@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Update title
             string name = (id >= 0 && id < PokemonNames.Count) ? PokemonNames[id] : $"#{id}";
-            SetBaseTitle($"Pokémon Editor — #{id} {name}");
+            SetBaseTitle($"Pokémon Editor - #{id} {name}");
 
             // Sync all child VMs
             PersonalVM.LoadMon(id);

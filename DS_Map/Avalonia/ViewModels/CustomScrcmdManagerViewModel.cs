@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels
                     Folders.Add(Path.GetFileName(dir));
             }
             StatusText = Folders.Count == 0
-                ? "No per-ROM databases yet — they are created when a ROM is opened."
+                ? "No per-ROM databases yet. They are created when a ROM is opened."
                 : $"{Folders.Count} per-ROM database folder(s).";
         }
 
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded)
             {
-                await DialogHelper.ShowInfo("No ROM is loaded — the new database will be used on the next ROM load.", "Reload skipped");
+                await DialogHelper.ShowInfo("No ROM is loaded. The new database will be used on the next ROM load.", "Reload skipped");
                 return;
             }
 

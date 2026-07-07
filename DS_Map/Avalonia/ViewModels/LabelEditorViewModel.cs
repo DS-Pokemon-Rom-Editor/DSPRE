@@ -75,8 +75,8 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _globalScope, value)) { OnPropertyChanged(nameof(ScopeText)); ReloadEntries(); } }
         }
         public string ScopeText => _globalScope
-            ? "Global — applies to every ROM you open on this machine."
-            : "This project — saved with the current ROM (workDir/dspre_labels.json).";
+            ? "Global: applies to every ROM you open on this machine."
+            : "This project: saved with the current ROM (workDir/dspre_labels.json).";
 
         private bool _dirty;
         public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }

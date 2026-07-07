@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia
         public static void OpenItemTableEditor()
         {
             if (!IsRomLoaded || !IsItemTableEditorAvailable()) return;
-            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames())).ShowManaged();
+            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
         public static void OpenTradeEditor(int initialIndex = 0)
@@ -393,7 +393,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
-            new() { Name = "Item Table Editor",     Keywords = "pickup mart", Run = OpenItemTableEditor },
+            new() { Name = "Item Table Editor",     Keywords = "pickup mart rock smash hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },

@@ -44,7 +44,7 @@
     </Border>
 
     <Grid ColumnDefinitions="280,*">
-      <views:HeaderSidebarView Grid.Column="0" Margin="4"/>
+      <views:HeaderSidebarView Grid.Column="0" Margin="4" x:Name="Sidebar"/>
 
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
         <!-- Context strip: selected header identity + Save/Reset + linked-file id chips -->
@@ -53,7 +53,7 @@
                 Padding="10,7" Margin="0,0,0,4">
           <StackPanel Spacing="7">
             <DockPanel>
-              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" x:Name="SaveResetPanel">
                 <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="↺ Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
               </StackPanel>
@@ -64,22 +64,22 @@
               </StackPanel>
             </DockPanel>
             <WrapPanel>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId}"/></StackPanel></Border>
-              <Border Classes="chip"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Terrain and building set used by this area (textures, models, tile behaviors)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Text archive with the dialogue and signs shown in this area."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Wild Pokémon table for this area (255 means no wild encounters)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon}"/></StackPanel></Border>
             </WrapPanel>
           </StackPanel>
         </Border>
 
-        <TabControl>
-          <TabItem Header="Header">
+        <TabControl x:Name="MapTabs">
+          <TabItem Header="Header" ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses.">
             <views:HeaderFieldsView/>
           </TabItem>
-          <TabItem Header="Map">
+          <TabItem Header="Map" ToolTip.Tip="The 3D terrain and buildings of the selected map.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Map Editor"/>
               <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
@@ -88,40 +88,40 @@
             </StackPanel>
           </TabItem>
           <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
-          <TabItem Header="Events">
+          <TabItem Header="Events" ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map.">
             <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
-          <TabItem Header="Matrix">
+          <TabItem Header="Matrix" ToolTip.Tip="The grid that stitches individual maps into the seamless world.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Matrix Editor"/>
               <Button Content="🔗 Open Matrix" HorizontalAlignment="Center" Click="OpenMatrix_Click"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Area Data">
+          <TabItem Header="Area Data" ToolTip.Tip="Which texture and building set this area uses.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Area Data Editor"/>
               <Button Content="🔗 Open Area Data" HorizontalAlignment="Center" Click="OpenAreaData_Click"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Encounters">
+          <TabItem Header="Encounters" ToolTip.Tip="Wild Pokémon that appear in this area.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Wild Encounters"/>
               <Button Content="🔗 Open Encounters" HorizontalAlignment="Center" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Scripts">
+          <TabItem Header="Scripts" ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Script Editor"/>
               <Button Content="🔗 Open Scripts" HorizontalAlignment="Center" Click="OpenScripts_Click"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Level Scripts">
+          <TabItem Header="Level Scripts" ToolTip.Tip="Scripts that run automatically when the map loads.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Level Script Editor"/>
               <Button Content="🔗 Open Level Scripts" HorizontalAlignment="Center" Click="OpenLevelScripts_Click"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Text">
+          <TabItem Header="Text" ToolTip.Tip="Dialogue and signs used by this area.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Text Editor"/>
               <Button Content="🔗 Open Text" HorizontalAlignment="Center" Click="OpenTexts_Click"/>

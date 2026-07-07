@@ -49,6 +49,13 @@ namespace DSPRE.Avalonia.Views
         private void CheckForUpdates_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.CheckForUpdates();
 
+        private void ShowWelcome_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var main = (global::Avalonia.Application.Current?.ApplicationLifetime
+                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindowView;
+            WelcomeView.ShowWelcome(main);
+        }
+
         private void CheckDBUpdates_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.CheckDBUpdates();
     }

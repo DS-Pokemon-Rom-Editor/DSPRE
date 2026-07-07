@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Views
         private void UpdateStatus()
         {
             StatusLabel.Text = string.IsNullOrEmpty(GlView.LastError)
-                ? "GL ready — rendering."
+                ? "GL ready, rendering."
                 : "GL error: " + GlView.LastError;
         }
 
@@ -116,8 +116,8 @@ namespace DSPRE.Avalonia.Views
             GlView.SetModel(renderModel);
             int vc = renderModel.TotalVertices;
             StatusLabel.Text = vc > 0
-                ? $"{prefix} — {vc} verts ({vc / 3} tris), {renderModel.Parts.Count} parts, {renderModel.Textures.Count} textures."
-                : $"{prefix} — parsed but produced no geometry.";
+                ? $"{prefix}: {vc} verts ({vc / 3} tris), {renderModel.Parts.Count} parts, {renderModel.Textures.Count} textures."
+                : $"{prefix}: parsed but produced no geometry.";
         }
 
         private void ResetCube_Click(object sender, RoutedEventArgs e)

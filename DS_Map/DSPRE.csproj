@@ -14,6 +14,9 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Windows-only app — suppress platform-compatibility warnings -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <!-- Allow restoring/compiling this Windows-only project on Linux/macOS dev machines
+         (it can be BUILT there, just not run) so `dotnet build DS_Map.sln` works everywhere. -->
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
     <!-- Avalonia views intentionally have no parameterless constructor (require ViewModel) -->
     <NoWarn>$(NoWarn);AVLN3001</NoWarn>
     <!-- Pre-existing transitional NuGet packages (WinForms bridge phase) -->

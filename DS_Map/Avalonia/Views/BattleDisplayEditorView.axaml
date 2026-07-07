@@ -57,7 +57,7 @@
             </StackPanel>
           </StackPanel>
 
-          <TextBlock Text="Live — reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
+          <TextBlock Text="Live: reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
                      FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
         </StackPanel>
 
@@ -175,7 +175,7 @@
               <StackPanel IsVisible="{Binding HasAnimData}" Spacing="4">
                 <Separator/>
                 <TextBlock Text="Sprite Animation (pokeanm)" FontWeight="SemiBold"/>
-                <TextBlock Text="Pattern steps — the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
+                <TextBlock Text="Pattern steps: the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
                            FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
                 <ItemsControl ItemsSource="{Binding AnimSteps}">
@@ -195,7 +195,7 @@
 
                 <Expander Header="Program animation (advanced)" Margin="0,4,0,0">
                   <StackPanel Spacing="6">
-                    <TextBlock Text="Program-animation numbers reference scripts in the pokeanime NARC (the actual motion). Front plays on the enemy sprite, the first back step on the player sprite — press ▶ Play to see them."
+                    <TextBlock Text="Program-animation numbers reference scripts in the pokeanime NARC (the actual motion). Front plays on the enemy sprite, the first back step on the player sprite. Press ▶ Play to see them."
                                FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                     <Grid ColumnDefinitions="160,10,150">
                       <TextBlock Grid.Column="0" Text="Front program #" VerticalAlignment="Center"/>
@@ -222,7 +222,7 @@
                     <!-- Script editor: editable PAST command list for the front program animation. -->
                     <Separator/>
                     <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
-                    <TextBlock Text="Edits the shared animation script — affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
+                    <TextBlock Text="Edits the shared animation script, which affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
                                FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>

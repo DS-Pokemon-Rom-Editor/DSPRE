@@ -393,12 +393,13 @@ namespace DSPRE.Avalonia.ViewModels
         private void LoadLocationNames()
         {
             LocationNames.Clear();
-            try
-            {
-                var ta = new TextArchive(locationNamesTextNumber);
-                foreach (var m in ta.messages) LocationNames.Add(m);
-            }
-            catch { /* leave empty */ }
+            foreach (var m in ReadLocationNames()) LocationNames.Add(m);
+        }
+
+        private List<string> ReadLocationNames()
+        {
+            try { return new TextArchive(locationNamesTextNumber).messages.ToList(); }
+            catch { return new List<string>(); }
         }
 
         // ── Sidebar tree: grouping, search, selection ───────────────────────────────
@@ -576,14 +577,19 @@ namespace DSPRE.Avalonia.ViewModels
         public void ReloadLocationNames()
         {
             if (_headerListNames.Count == 0) return;   // not set up yet
-            var old = LocationNames.ToList();
-            _suppress = true;
-            LoadLocationNames();
+            var fresh = ReadLocationNames();
+            if (fresh.SequenceEqual(LocationNames)) return;   // archive untouched: leave the combo alone
+
+            // Capture before touching the collection: clearing the ItemsSource makes the ComboBox
+            // write SelectedIndex=-1 back through the binding, zapping _locationNameIndex.
             int keepLoc = _locationNameIndex;
+            _suppress = true;
+            LocationNames.Clear();
+            foreach (var m in fresh) LocationNames.Add(m);
             _locationNameIndex = -1;
-            LocationNameIndex = keepLoc;   // suppressed: restores the combo without re-applying
+            LocationNameIndex = keepLoc < LocationNames.Count ? keepLoc : -1;   // suppressed: restores the combo without re-applying
             _suppress = false;
-            if (!old.SequenceEqual(LocationNames)) RebuildTree();
+            RebuildTree();
         }
 
         // ── Load a header into the fields ───────────────────────────────────────────
@@ -860,7 +866,7 @@ namespace DSPRE.Avalonia.ViewModels
                 SetDirty();
                 StatusText = "Imported header (unsaved).";
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed — malformed or not a header file.\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed: malformed or not a header file.\n{ex.Message}", "Import Error"); }
         }
 
         public async Task ExportAsync()
@@ -927,7 +933,7 @@ namespace DSPRE.Avalonia.ViewModels
             SelectHeader((ushort)newId);
 
             await DialogHelper.ShowInfo(
-                "New header added. (Creating associated Text/Script/Level-Script/Event files is not yet available in the Avalonia editor — add them from the respective editors.)",
+                "New header added. (Creating associated Text/Script/Level-Script/Event files is not yet available in the Avalonia editor; add them from the respective editors.)",
                 "Header added");
         }
 

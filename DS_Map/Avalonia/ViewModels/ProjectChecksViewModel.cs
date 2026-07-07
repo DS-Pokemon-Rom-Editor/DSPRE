@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.ViewModels
                 var found = await Task.Run(() => ProjectIndex.Validate());
                 foreach (var i in found) Issues.Add(i);
                 ValidationStatus = found.Count == 0
-                    ? "No problems found — every reference points at something that exists. ✓"
+                    ? "No problems found. Every reference points at something that exists. ✓"
                     : $"{found.Count} issue(s) found.";
             }
             catch (Exception ex) { ValidationStatus = "Validation failed: " + ex.Message; }

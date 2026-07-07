@@ -34,7 +34,18 @@
           </StackPanel>
         </TreeDataTemplate>
         <DataTemplate DataType="models:HeaderTreeLeaf">
-          <TextBlock Text="{Binding DisplayName}"/>
+          <TextBlock Text="{Binding DisplayName}" Background="Transparent">
+            <TextBlock.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Open Map Editor"      Click="CtxOpenMap_Click"/>
+                <MenuItem Header="Open Events"          Click="CtxOpenEvents_Click"/>
+                <MenuItem Header="Open Scripts"         Click="CtxOpenScripts_Click"/>
+                <MenuItem Header="Open Text"            Click="CtxOpenTexts_Click"/>
+                <MenuItem Header="Open Wild Encounters" Click="CtxOpenEncounters_Click"/>
+                <MenuItem Header="Open Matrix"          Click="CtxOpenMatrix_Click"/>
+              </ContextMenu>
+            </TextBlock.ContextMenu>
+          </TextBlock>
         </DataTemplate>
       </TreeView.DataTemplates>
     </TreeView>

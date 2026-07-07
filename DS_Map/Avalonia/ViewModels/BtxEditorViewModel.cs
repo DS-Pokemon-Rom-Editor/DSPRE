@@ -146,11 +146,11 @@ namespace DSPRE.Avalonia.ViewModels
                 var current = BTX0.ReadRaw(_btxData);
                 if (current == null) return "Current BTX file is unreadable.";
                 if (import.Width != current.Width || import.Height != current.Height)
-                    return $"Size mismatch — BTX: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+                    return $"Size mismatch. BTX: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
 
                 uint colors = CountColors(import);
                 if (colors > BTX0.ColorCount)
-                    return $"Too many colors — BTX limit: {BTX0.ColorCount}, PNG: {colors}";
+                    return $"Too many colors. BTX limit: {BTX0.ColorCount}, PNG: {colors}";
 
                 byte[] newData = BTX0.Write(_btxData, import);
                 _btxData = newData;

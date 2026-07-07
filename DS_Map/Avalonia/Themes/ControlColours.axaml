@@ -3,6 +3,147 @@
 
     <!-- This file contains shared colours and brushes -->
 
+    <!-- Hand-picked literal colours (not derived from the AColour ramp) that differ between
+         Light and Dark: button/field faces, tab and scrollbar-thumb gradients. Everything else
+         below already points at AColour.* via DynamicResource, so it re-themes automatically
+         once SoftDark.axaml's ThemeDictionaries switch. -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <!-- DSPRE: faces/edges as subtle vertical gradients (Fusion-style "volume") instead of flat
+                 fills. Top lighter + bottom darker = raised; pressed states invert it. Hand-tuned hex
+                 (not palette-linked) — retune here if the SoftDark ramp changes. -->
+            <!-- Qt Fusion button (faithful port of qfusionstyle.cpp PE_PanelButtonCommand):
+                 gradient face (≈ buttonColor.lighter(124)→lighter(102)), a DARK outer outline
+                 (≈ window.darker(140)), and a bright inner contrast line (white @30 alpha) drawn one
+                 pixel inside the outline. Pressed = flat darker fill, contrast line removed. 2px corners. -->
+            <LinearGradientBrush x:Key="Button.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#4E4E4E"/>
+                <GradientStop Offset="1" Color="#424242"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="Button.Static.Border" Color="#242424"/>
+            <LinearGradientBrush x:Key="Button.MouseOver.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#565656"/>
+                <GradientStop Offset="1" Color="#4A4A4A"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#242424"/>
+            <SolidColorBrush x:Key="Button.Pressed.Background" Color="#3C3C3C"/>
+            <SolidColorBrush x:Key="Button.Pressed.Border" Color="#242424"/>
+            <!-- Fusion innerContrastLine() = QColor(255,255,255,30) -->
+            <SolidColorBrush x:Key="Button.InnerContrast" Color="#1EFFFFFF"/>
+
+            <!-- Static (non-editable) ComboBox = ONE contiguous raised button (Fusion CC_ComboBox draws the
+                 whole combo as a button), not a sunken field. Same face/outline as Button; the arrow blends in. -->
+            <LinearGradientBrush x:Key="ComboBox.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#4E4E4E"/>
+                <GradientStop Offset="1" Color="#424242"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#242424"/>
+
+            <!-- DSPRE: Fusion line edit (PE_FrameLineEdit) — sunken: fill sits a tone below the panel,
+                 DARK outline (≈ window.darker(140)), and a topShadow() line along the inner top edge.
+                 No bright inner ring — that's buttons only. -->
+            <SolidColorBrush x:Key="TextBox.Static.Background" Color="#191919"/>
+            <SolidColorBrush x:Key="TextBox.Static.Border" Color="#242424"/>
+            <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#242424"/>
+
+            <SolidColorBrush x:Key="OptionMark.Static.Background" Color="#191919"/>
+            <SolidColorBrush x:Key="OptionMark.Static.Border" Color="#2A2A2A"/>
+
+            <SolidColorBrush x:Key="RadioButton.Static.Background" Color="#191919"/>
+            <SolidColorBrush x:Key="RadioButton.Static.Border" Color="#232323"/>
+
+            <!-- Selected tab = the content-frame colour (Tone4 #3C) so it "connects" seamlessly to the panel
+                 below it (Fusion tabFrameColor). Top a touch lighter (lighter(104)). -->
+            <LinearGradientBrush x:Key="TabItem.Selected.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#414141"/>
+                <GradientStop Offset="1" Color="#3C3C3C"/>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="TabItem.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#373737"/>
+                <GradientStop Offset="1" Color="#333333"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="TabItem.MouseOver.Background" Color="#4A4A4A"/>
+
+            <LinearGradientBrush x:Key="GroupBox.Header.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#444444"/>
+                <GradientStop Offset="1" Color="#3D3D3D"/>
+            </LinearGradientBrush>
+
+            <!-- Hover feedback: perpendicular gradient (bright left -> dark right), unlike the vertical
+                 button face. Only applied on :pointerover (not while dragging) — "you found the bar". -->
+            <LinearGradientBrush x:Key="ScrollBar.MouseOver.Thumb" StartPoint="0%,0%" EndPoint="100%,0%">
+                <GradientStop Offset="0" Color="#5C5C5C"/>
+                <GradientStop Offset="1" Color="#444444"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#525252"/>
+            <LinearGradientBrush x:Key="ScrollBar.Static.Thumb" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#4D4D4D"/>
+                <GradientStop Offset="1" Color="#474747"/>
+            </LinearGradientBrush>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+            <!-- Light-theme mirror of the Fusion button: light gray gradient face, mid-gray outline
+                 (dark theme used a near-black outline for contrast against a dark face; light theme
+                 needs a lighter one so the button doesn't look outlined in ink). No inner-contrast
+                 ring: a bright highlight is invisible on an already-light face. -->
+            <LinearGradientBrush x:Key="Button.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#FDFDFD"/>
+                <GradientStop Offset="1" Color="#EFEFEF"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="Button.Static.Border" Color="#B5B5B5"/>
+            <LinearGradientBrush x:Key="Button.MouseOver.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#FFFFFF"/>
+                <GradientStop Offset="1" Color="#F5F5F5"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#9E9E9E"/>
+            <SolidColorBrush x:Key="Button.Pressed.Background" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="Button.Pressed.Border" Color="#9E9E9E"/>
+            <SolidColorBrush x:Key="Button.InnerContrast" Color="Transparent"/>
+
+            <LinearGradientBrush x:Key="ComboBox.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#FDFDFD"/>
+                <GradientStop Offset="1" Color="#EFEFEF"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#B5B5B5"/>
+
+            <SolidColorBrush x:Key="TextBox.Static.Background" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextBox.Static.Border" Color="#B8B8B8"/>
+            <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#9E9E9E"/>
+
+            <SolidColorBrush x:Key="OptionMark.Static.Background" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="OptionMark.Static.Border" Color="#9E9E9E"/>
+
+            <SolidColorBrush x:Key="RadioButton.Static.Background" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="RadioButton.Static.Border" Color="#9E9E9E"/>
+
+            <LinearGradientBrush x:Key="TabItem.Selected.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#FCFCFC"/>
+                <GradientStop Offset="1" Color="#F5F5F5"/>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="TabItem.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#E8E8E8"/>
+                <GradientStop Offset="1" Color="#E0E0E0"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="TabItem.MouseOver.Background" Color="#EFEFEF"/>
+
+            <LinearGradientBrush x:Key="GroupBox.Header.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#F2F2F2"/>
+                <GradientStop Offset="1" Color="#E8E8E8"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="ScrollBar.MouseOver.Thumb" StartPoint="0%,0%" EndPoint="100%,0%">
+                <GradientStop Offset="0" Color="#B8B8B8"/>
+                <GradientStop Offset="1" Color="#A0A0A0"/>
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#909090"/>
+            <LinearGradientBrush x:Key="ScrollBar.Static.Thumb" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0" Color="#C4C4C4"/>
+                <GradientStop Offset="1" Color="#BABABA"/>
+            </LinearGradientBrush>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
     <!-- If you fancy going the JetBrains GUI way, where the main UI is just crammed with a single 1px border, then you can use these -->
     <SolidColorBrush x:Key="PanelBorderBrush" Color="{DynamicResource AColour.Tone1.Border.Static}"/>
     <SolidColorBrush x:Key="PanelBackground0" Color="{DynamicResource AColour.Tone0.Background.Static}"/>
@@ -10,34 +151,13 @@
     <SolidColorBrush x:Key="PanelBackground2" Color="{DynamicResource AColour.Tone2.Background.Static}"/>
     <SolidColorBrush x:Key="PanelBackground3" Color="{DynamicResource AColour.Tone3.Background.Static}"/>
 
-    <!-- DSPRE: faces/edges as subtle vertical gradients (Fusion-style "volume") instead of flat
-         fills. Top lighter + bottom darker = raised; pressed states invert it. Hand-tuned hex
-         (not palette-linked) — retune here if the SoftDark ramp changes. -->
-    <!-- Qt Fusion button (faithful port of qfusionstyle.cpp PE_PanelButtonCommand):
-         gradient face (≈ buttonColor.lighter(124)→lighter(102)), a DARK outer outline
-         (≈ window.darker(140)), and a bright inner contrast line (white @30 alpha) drawn one
-         pixel inside the outline. Pressed = flat darker fill, contrast line removed. 2px corners. -->
-    <LinearGradientBrush x:Key="Button.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#4E4E4E"/>
-        <GradientStop Offset="1" Color="#424242"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="Button.Static.Border" Color="#242424"/>
-    <LinearGradientBrush x:Key="Button.MouseOver.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#565656"/>
-        <GradientStop Offset="1" Color="#4A4A4A"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#242424"/>
-    <SolidColorBrush x:Key="Button.Pressed.Background" Color="#3C3C3C"/>
-    <SolidColorBrush x:Key="Button.Pressed.Border" Color="#242424"/>
-    <!-- Fusion innerContrastLine() = QColor(255,255,255,30) -->
-    <SolidColorBrush x:Key="Button.InnerContrast" Color="#1EFFFFFF"/>
+    <SolidColorBrush x:Key="ButtonSpinner.Error.Border" Color="Red"/>
     <SolidColorBrush x:Key="Button.Disabled.Background" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>
     <SolidColorBrush x:Key="Button.Disabled.Border" Color="{DynamicResource AColour.Tone5.Border.Disabled}"/>
     <SolidColorBrush x:Key="Button.Static.Foreground" Color="{DynamicResource AColour.Foreground.Static}"/>
     <SolidColorBrush x:Key="Button.Disabled.Foreground" Color="{DynamicResource AColour.Foreground.Disabled}"/>
     <SolidColorBrush x:Key="Button.Defaulted.Background" Color="{DynamicResource AColour.ColourfulGlyph.Static}"/>
     <SolidColorBrush x:Key="Button.Defaulted.Border" Color="{DynamicResource AColour.ColourfulGlyph.Disabled}"/>
-    <SolidColorBrush x:Key="ButtonSpinner.Error.Border" Color="Red"/>
     <SolidColorBrush x:Key="ToggleButton.IsChecked.Background" Color="{DynamicResource AColour.AccentTone2.Background.Static}"/>
     <SolidColorBrush x:Key="ToggleButton.IsChecked.Border" Color="{DynamicResource AColour.AccentTone2.Border.Static}"/>
     <SolidColorBrush x:Key="ToggleButton.Pressed.IsChecked.Background" Color="{DynamicResource AColour.Tone6.Border.Selected}"/>
@@ -45,13 +165,6 @@
     <SolidColorBrush x:Key="ToggleButton.MouseOver.IsChecked.Background" Color="{DynamicResource AColour.AccentTone1.Background.Static}"/>
     <SolidColorBrush x:Key="ToggleButton.MouseOver.IsChecked.Border" Color="{DynamicResource AColour.AccentTone1.Border.Static}"/>
 
-    <!-- Static (non-editable) ComboBox = ONE contiguous raised button (Fusion CC_ComboBox draws the
-         whole combo as a button), not a sunken field. Same face/outline as Button; the arrow blends in. -->
-    <LinearGradientBrush x:Key="ComboBox.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#4E4E4E"/>
-        <GradientStop Offset="1" Color="#424242"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#242424"/>
     <SolidColorBrush x:Key="ComboBox.Static.Foreground" Color="{DynamicResource AColour.Foreground.Static}"/>
     <SolidColorBrush x:Key="ComboBox.Static.Editable.Background" Color="{DynamicResource AColour.Tone4.Background.Static}"/>
     <SolidColorBrush x:Key="ComboBox.Static.Editable.Border" Color="{DynamicResource AColour.Tone4.Border.Static}"/>
@@ -95,17 +208,12 @@
     <SolidColorBrush x:Key="ComboBoxItem.ItemView.HoverFocus.Background" Color="{DynamicResource AColour.Tone5.Background.MouseOver}"/>
     <SolidColorBrush x:Key="ComboBoxItem.ItemView.HoverFocus.Border" Color="{DynamicResource AColour.Tone5.Border.MouseOver}"/>
 
-    <!-- DSPRE: Fusion line edit (PE_FrameLineEdit) — sunken: fill sits a tone below the panel,
-         DARK outline (≈ window.darker(140)), and a topShadow() line along the inner top edge.
-         No bright inner ring — that's buttons only. -->
-    <SolidColorBrush x:Key="TextBox.Static.Background" Color="#191919"/>
-    <SolidColorBrush x:Key="TextBox.Static.Border" Color="#242424"/>
-    <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#242424"/>
     <SolidColorBrush x:Key="TextBox.Focus.Border" Color="{DynamicResource AColour.ColourfulGlyph.Static}"/>
     <SolidColorBrush x:Key="TextBox.Selection.Inactive" Color="{DynamicResource AColour.ColourfulGlyph.Selected.Inactive}"/>
     <SolidColorBrush x:Key="TextBox.Selection" Color="{DynamicResource AColour.ColourfulGlyph.Selected}"/>
     <SolidColorBrush x:Key="TextBox.Error.Border" Color="Red"/>
-    <!-- Fusion topShadow() = QColor(0,0,0,18) -->
+    <!-- Fusion topShadow() = QColor(0,0,0,18); a faint dark inset line reads fine on both a near-black
+         and a white field, so this one doesn't need a Light/Dark split. -->
     <SolidColorBrush x:Key="TextBox.TopShadow" Color="#12000000"/>
 
     <SolidColorBrush x:Key="ListBox.Static.Background" Color="{DynamicResource AColour.Tone4.Background.Static}"/>
@@ -132,8 +240,6 @@
     <SolidColorBrush x:Key="ListView.GridView.Grip.Background" Color="{DynamicResource AColour.Tone4.Border.Static}"/>
     <SolidColorBrush x:Key="ListView.GridView.HeaderItem.Background" Color="{DynamicResource AColour.Tone5.Background.Static}"/>
 
-    <SolidColorBrush x:Key="OptionMark.Static.Background" Color="#191919"/>
-    <SolidColorBrush x:Key="OptionMark.Static.Border" Color="#2A2A2A"/>
     <SolidColorBrush x:Key="OptionMark.MouseOver.Background" Color="{DynamicResource AColour.Tone5.Background.MouseOver}"/>
     <SolidColorBrush x:Key="OptionMark.MouseOver.Border" Color="{DynamicResource AColour.Tone5.Border.MouseOver}"/>
     <SolidColorBrush x:Key="OptionMark.Disabled.Background" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>
@@ -160,20 +266,7 @@
     <SolidColorBrush x:Key="ScrollBar.Pressed.Border" Color="{DynamicResource AColour.Tone5.Border.MouseDown}"/>
     <SolidColorBrush x:Key="ScrollBar.Disabled.Background" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>
     <SolidColorBrush x:Key="ScrollBar.Disabled.Border" Color="{DynamicResource AColour.Tone5.Border.Disabled}"/>
-    <!-- Hover feedback: perpendicular gradient (bright left -> dark right), unlike the vertical
-         button face. Only applied on :pointerover (not while dragging) — "you found the bar". -->
-    <LinearGradientBrush x:Key="ScrollBar.MouseOver.Thumb" StartPoint="0%,0%" EndPoint="100%,0%">
-        <GradientStop Offset="0" Color="#5C5C5C"/>
-        <GradientStop Offset="1" Color="#444444"/>
-    </LinearGradientBrush>
-    <SolidColorBrush x:Key="ScrollBar.Pressed.Thumb" Color="#525252"/>
-    <LinearGradientBrush x:Key="ScrollBar.Static.Thumb" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#4D4D4D"/>
-        <GradientStop Offset="1" Color="#474747"/>
-    </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="RadioButton.Static.Background" Color="#191919"/>
-    <SolidColorBrush x:Key="RadioButton.Static.Border" Color="#232323"/>
     <SolidColorBrush x:Key="RadioButton.MouseOver.Background" Color="{DynamicResource AColour.Tone5.Background.MouseOver}"/>
     <SolidColorBrush x:Key="RadioButton.MouseOver.Border" Color="{DynamicResource AColour.Tone5.Border.MouseOver}"/>
     <SolidColorBrush x:Key="RadioButton.Pressed.Background" Color="{DynamicResource AColour.Tone5.Background.MouseDown}"/>
@@ -185,20 +278,10 @@
     <SolidColorBrush x:Key="RadioButton.Pressed.Glyph" Color="{DynamicResource AColour.Glyph.MouseDown}"/>
     <SolidColorBrush x:Key="RadioButton.Disabled.Glyph" Color="{DynamicResource AColour.Glyph.Disabled}"/>
 
-    <!-- Selected tab = the content-frame colour (Tone4 #3C) so it "connects" seamlessly to the panel
-         below it (Fusion tabFrameColor). Top a touch lighter (lighter(104)). -->
-    <LinearGradientBrush x:Key="TabItem.Selected.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#414141"/>
-        <GradientStop Offset="1" Color="#3C3C3C"/>
-    </LinearGradientBrush>
+    <!-- Selected tab = the content-frame colour so it "connects" seamlessly to the panel below it
+         (Fusion tabFrameColor). Top a touch lighter (lighter(104)). -->
     <SolidColorBrush x:Key="TabItem.Selected.Border" Color="{DynamicResource AColour.Tone5.Border.Selected}"/>
-    <LinearGradientBrush x:Key="TabItem.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#373737"/>
-        <GradientStop Offset="1" Color="#333333"/>
-    </LinearGradientBrush>
     <SolidColorBrush x:Key="TabItem.Static.Border" Color="{DynamicResource AColour.Tone5.Border.Static}"/>
-    <SolidColorBrush x:Key="TabItem.MouseOver.Background" Color="#4A4A4A"/>
-    <SolidColorBrush x:Key="TabItem.MouseOver.Border" Color="{DynamicResource AColour.Tone5.Border.MouseOver}"/>
     <SolidColorBrush x:Key="TabItem.Disabled.Background" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>
     <SolidColorBrush x:Key="TabItem.Disabled.Border" Color="{DynamicResource AColour.Tone5.Border.Disabled}"/>
 
@@ -219,10 +302,6 @@
 
     <SolidColorBrush x:Key="GroupBox.Static.Background" Color="Transparent"/>
     <SolidColorBrush x:Key="GroupBox.Static.Border" Color="{DynamicResource AColour.Tone6.Border.Static}"/>
-    <LinearGradientBrush x:Key="GroupBox.Header.Static.Background" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#444444"/>
-        <GradientStop Offset="1" Color="#3D3D3D"/>
-    </LinearGradientBrush>
     <SolidColorBrush x:Key="GroupBox.Header.Static.Border" Color="{DynamicResource AColour.Tone6.Border.Static}"/>
     <SolidColorBrush x:Key="GroupBox.Header.Foreground" Color="{DynamicResource AColour.Foreground.Static}"/>
     <SolidColorBrush x:Key="GroupBox.Header.Background.Disabled" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>

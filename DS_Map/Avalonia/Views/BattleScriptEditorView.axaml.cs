@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views
             {
                 Dispatcher.UIThread.Post(() => EditorTabs.SelectedIndex = 1);
                 await DSPRE.Avalonia.DialogHelper.ShowInfo(
-                    "Can't view the commands as cards while the text has errors — fix the red-underlined line(s) first.",
+                    "Can't view the commands as cards while the text has errors. Fix the red-underlined line(s) first.",
                     "Fix errors first");
             }
         }

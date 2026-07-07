@@ -129,11 +129,11 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 case Archive.MoveScripts:
                 case Archive.MoveAnimation:
-                    return i < _moveNames.Length ? $"{i:D3} — {_moveNames[i]}" : $"{i:D3} — Move {i}";
+                    return i < _moveNames.Length ? $"{i:D3} - {_moveNames[i]}" : $"{i:D3} - Move {i}";
                 case Archive.EffectScripts:
-                    return $"{i:D3} — Effect {i}";
+                    return $"{i:D3} - Effect {i}";
                 default:
-                    return $"{i:D3} — Subroutine {i}";
+                    return $"{i:D3} - Subroutine {i}";
             }
         }
 
@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public string EntryHeader =>
             _fileIndex < 0 ? "(no entry selected)"
-                           : $"{ArchiveOptions[_archiveIndex]}  —  #{_fileIndex}  ({Rows.Count} commands)";
+                           : $"{ArchiveOptions[_archiveIndex]}  -  #{_fileIndex}  ({Rows.Count} commands)";
 
         // ── Command list ───────────────────────────────────────────────────────────
         public ObservableCollection<ScriptCmdRow> Rows { get; } = new ObservableCollection<ScriptCmdRow>();
@@ -237,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
             if (HasTextErrors)   // the cards are stale while the text is invalid — don't persist the wrong thing
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The command text has errors — fix the red-underlined line(s) before saving.", "Fix errors first");
+                _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The command text has errors. Fix the red-underlined line(s) before saving.", "Fix errors first");
                 return;
             }
             var cmds = BuildCommands();
@@ -840,9 +840,9 @@ namespace DSPRE.Avalonia.ViewModels
 
                 CellAnimNote =
                     HasCellAnimation && HasParticleAnimation ? "Cell + particle effect. ▶ to play."
-                  : HasCellAnimation ? $"Cell animation — {_cellFrames.Count} frame(s). ▶ to play."
-                  : HasParticleAnimation ? $"Particle effect — {emitters} emitter(s). ▶ to play."
-                  : "Pokémon-motion effect (no particles) — ▶ to play the lunge / shake.";
+                  : HasCellAnimation ? $"Cell animation: {_cellFrames.Count} frame(s). ▶ to play."
+                  : HasParticleAnimation ? $"Particle effect: {emitters} emitter(s). ▶ to play."
+                  : "Pokémon-motion effect (no particles). Press ▶ to play the lunge / shake.";
             }
             RaisePreviewProps();
         }

@@ -24,6 +24,9 @@ namespace DSPRE {
         public static string headbutt => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.headbutt)
             ? RomInfo.gameDirs[RomInfo.DirNames.headbutt].unpackedDir
             : null;
+        public static string rockSmash => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.rockSmash)
+            ? RomInfo.gameDirs[RomInfo.DirNames.rockSmash].unpackedDir
+            : null;
         public static string safariZone => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.safariZone)
             ? RomInfo.gameDirs[RomInfo.DirNames.safariZone].unpackedDir
             : null;
@@ -240,6 +243,19 @@ namespace DSPRE {
 
         public static int GetHeadbuttCount() {
             var files = GetHeadbuttFiles();
+            return files?.Length ?? 0;
+        }
+
+        static string[] GetRockSmashFiles() {
+            return string.IsNullOrWhiteSpace(Filesystem.rockSmash) ? null : Directory.GetFiles(Filesystem.rockSmash);
+        }
+
+        public static string GetRockSmashPath(int id) {
+            return GetPath(Filesystem.rockSmash, id);
+        }
+
+        public static int GetRockSmashCount() {
+            var files = GetRockSmashFiles();
             return files?.Length ?? 0;
         }
 

@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Gl
         public int MaterialIndex;     // -1 = no material
         public float[] Vertices;      // interleaved pos.xyz, uv.st, col.rgb (8 floats/vertex)
         public int VertexCount;
+        public float Alpha = 1f;      // material alpha (0-1); < 1 needs GL_BLEND when drawn
     }
 
     /// <summary>A model ready for GL: per-material triangle parts + decoded textures.</summary>
@@ -19,6 +20,7 @@ namespace DSPRE.Avalonia.Gl
     {
         public List<NsbmdMeshPart> Parts = new List<NsbmdMeshPart>();
         public Dictionary<int, NsbmdTextureData> Textures = new Dictionary<int, NsbmdTextureData>();
+        public Dictionary<int, float> MaterialAlphaByKey = new Dictionary<int, float>();
         public int TotalVertices;
 
         // Normalization applied to fit the camera: normalized = (raw - Center) * Scale.
@@ -534,9 +536,6 @@ namespace DSPRE.Avalonia.Gl
                 NSBMDMaterial mat = (matId >= 0 && matId < model.Materials.Count) ? model.Materials[matId] : null;
                 int key = matOffset + matId;
 
-                // The "h_kage" material is a building drop-shadow plane — render it transparent (skip).
-                if (mat != null && IsHiddenMaterial(mat)) continue;
-
                 Color c = mat?.DiffuseColor ?? Color.LightGray;
                 float r = c.R / 255f, g = c.G / 255f, b = c.B / 255f;
                 if (r + g + b < 0.05f) { r = g = b = 0.85f; }
@@ -544,23 +543,27 @@ namespace DSPRE.Avalonia.Gl
                 if (!byMat.TryGetValue(key, out var list)) { list = new List<float>(); byMat[key] = list; }
                 InterpretPolyData(poly.PolyData, poly.StackID, stack, model.modelScale, mat, sceneTransform, list, r, g, b);
 
-                if (mat != null && !target.Textures.ContainsKey(key))
+                if (mat != null)
                 {
-                    var tex = NsbmdTextureDecoder.Decode(mat);
-                    if (tex != null) target.Textures[key] = tex;
+                    // Real per-material translucency (ported from WinForms PR #209) instead of hiding
+                    // materials outright: "h_kage" (影 = shadow) drop-shadow planes and puddle/window
+                    // overlays now render with their actual NSBMD alpha via GL_BLEND (NsbmdGlControl),
+                    // rather than being skipped and not drawn at all.
+                    if (!target.MaterialAlphaByKey.ContainsKey(key))
+                        target.MaterialAlphaByKey[key] = MaterialAlpha(mat);
+
+                    if (!target.Textures.ContainsKey(key))
+                    {
+                        var tex = NsbmdTextureDecoder.Decode(mat);
+                        if (tex != null) target.Textures[key] = tex;
+                    }
                 }
             }
         }
 
-        /// <summary>Materials that should not be drawn (rendered transparent). "h_kage" (影 = shadow)
-        /// is the building drop-shadow plane.</summary>
-        private static bool IsHiddenMaterial(NSBMDMaterial mat)
-        {
-            string n = mat.MaterialName;
-            if (!string.IsNullOrEmpty(n) && n.IndexOf("h_kage", StringComparison.OrdinalIgnoreCase) >= 0) return true;
-            string t = mat.texname;
-            return !string.IsNullOrEmpty(t) && t.IndexOf("h_kage", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
+        /// <summary>Converts the NSBMD 0-31 material alpha into a 0-1 GL alpha (31 = fully opaque).
+        /// Mirrors the WinForms fix in PR #209 (NSBMDGlRenderer.MaterialAlpha).</summary>
+        private static float MaterialAlpha(NSBMDMaterial mat) => mat.Alpha >= 31 ? 1f : mat.Alpha / 31f;
 
         private static bool ComputeRawBounds(Dictionary<int, List<float>> byMat,
             out float minX, out float maxX, out float minY, out float maxY, out float minZ, out float maxZ)
@@ -583,7 +586,8 @@ namespace DSPRE.Avalonia.Gl
             foreach (var kv in byMat)
             {
                 if (kv.Value.Count == 0) continue;
-                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8 });
+                float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out var a) ? a : 1f;
+                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha });
                 result.TotalVertices += kv.Value.Count / 8;
             }
         }

@@ -440,7 +440,7 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _backVariant, Math.Clamp(value, 0, 2)) && _progPlaying) { StopProgramAnim(); ToggleProgramAnim(); } }
         }
         public string[] BackVariantOptions { get; } =
-            { "Slot 0 — lively natures", "Slot 1 — neutral natures", "Slot 2 — reserved natures" };
+            { "Slot 0: lively natures", "Slot 1: neutral natures", "Slot 2: reserved natures" };
 
         /// <summary>Toggles one-shot playback: the front program animation (prg_anm_f) on the enemy sprite, and the
         /// own mon's selected back variant (prg_anm_b[BackVariant]) on the player sprite, each honouring its wait.</summary>
@@ -495,7 +495,7 @@ namespace DSPRE.Avalonia.ViewModels
             get
             {
                 string which = _scriptTarget == 0 ? "Front" : $"Back slot {_scriptTarget - 1}";
-                return $"{which} program animation #{CurrentScriptFile()} — script ({ProgramRows.Count} cmds)";
+                return $"{which} program animation #{CurrentScriptFile()}: script ({ProgramRows.Count} cmds)";
             }
         }
         private bool _scriptDirty;

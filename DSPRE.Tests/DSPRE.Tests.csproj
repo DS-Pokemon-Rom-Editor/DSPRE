@@ -7,6 +7,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- Allow restoring/compiling on Linux/macOS (GDI-dependent tests still need Windows to RUN). -->
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>

@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; }
 
         private GlFunctions _f;
         private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc;
@@ -427,7 +427,7 @@ namespace DSPRE.Avalonia.Gl
                 if (_model.Textures != null && _model.Textures.TryGetValue(part.MaterialIndex, out var tex) && tex?.Rgba != null)
                     texId = UploadTexture(tex);
 
-                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId });
+                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId, Alpha = part.Alpha });
             }
             _uploadPending = false;
         }
@@ -519,8 +519,22 @@ namespace DSPRE.Avalonia.Gl
                 }
                 else _f.Uniform1i(_hasTexLoc, 0);
 
+                // Real per-material translucency (ported from WinForms PR #209): materials like the
+                // "h_kage" building drop-shadow plane or puddle overlays carry their own NSBMD alpha
+                // instead of always being fully opaque (or, previously, skipped and not drawn at all).
+                bool blend = part.Alpha < 0.999f;
+                if (blend)
+                {
+                    _f.Enable(GlFunctions.GL_BLEND);
+                    _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+                }
+                _f.Uniform1f(_alphaLoc, part.Alpha);
+
                 _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, part.VertexCount);
+
+                if (blend) _f.Disable(GlFunctions.GL_BLEND);
             }
+            _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
             RenderOverlay(stride);

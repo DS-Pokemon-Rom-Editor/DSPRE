@@ -12,13 +12,17 @@
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
+  <Panel>
   <DockPanel>
 
     <!-- ── Menu bar ───────────────────────────────────────────────────────── -->
     <Menu DockPanel.Dock="Top">
-      <MenuItem Header="_File">
+      <MenuItem Header="_File" x:Name="FileMenu">
         <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
         <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
+        <MenuItem Header="Open _Recent" x:Name="RecentMenu">
+          <MenuItem Header="(no recent projects)" IsEnabled="False"/>
+        </MenuItem>
         <Separator/>
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
@@ -26,7 +30,7 @@
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>
 
-      <MenuItem Header="_Pokémon" IsEnabled="{Binding IsRomLoaded}">
+      <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click"/>
         <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click"/>
         <MenuItem Header="TM Editor…"        Click="TMEditor_Click"/>
@@ -39,7 +43,7 @@
         <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click"/>
       </MenuItem>
 
-      <MenuItem Header="Te_xt" IsEnabled="{Binding IsRomLoaded}">
+      <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
         <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
         <MenuItem Header="Level Script Editor…" Click="LevelScriptEditor_Click"/>
@@ -51,7 +55,7 @@
         <MenuItem Header="Pickup Table Editor…" Click="PickupTableEditor_Click"/>
       </MenuItem>
 
-      <MenuItem Header="_World" IsEnabled="{Binding IsRomLoaded}">
+      <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
         <MenuItem Header="Camera Editor…"          Click="CameraEditor_Click"/>
         <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
@@ -70,7 +74,7 @@
         <MenuItem Header="Headbutt Editor… (HGSS)" Click="HeadbuttEditor_Click"/>
       </MenuItem>
 
-      <MenuItem Header="_Tools">
+      <MenuItem Header="_Tools" x:Name="ToolsMenu">
         <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P"
                   ToolTip.Tip="Quick-open: jump to any editor by name"/>
         <Separator/>
@@ -80,7 +84,7 @@
         <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
         <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
-                  ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods) — per project or global"/>
+                  ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods), per project or global"/>
         <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
         <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding IsRomLoaded}"
@@ -103,6 +107,9 @@
         <Separator/>
         <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"/>
         <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
+        <MenuItem Header="Welcome &amp; Tutorial…" Click="Welcome_Click"/>
+        <MenuItem Header="Guided Tour" Click="GuidedTour_Click"
+                  ToolTip.Tip="Replay the walkthrough of the main window and editor menus"/>
         <MenuItem Header="Settings…" Click="Settings_Click"/>
       </MenuItem>
     </Menu>
@@ -111,11 +118,60 @@
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"
-                 Text="Avalonia preview — the Maps workspace is below; other editors open from the menu."/>
+                 Text="{Binding StatusText}"/>
     </Border>
 
-    <!-- ── Main editing surface: the Maps workspace (other editors open from the menu) ── -->
-    <views:MapsWorkspaceView x:Name="Maps" DataContext="{Binding HeaderVM}"/>
+    <!-- ── Main editing surface: the Maps workspace (other editors open from the menu),
+         with a busy overlay while a ROM is being opened/unpacked. ── -->
+    <Panel>
+      <views:MapsWorkspaceView x:Name="Maps" DataContext="{Binding HeaderVM}"/>
+
+      <!-- Pre-ROM empty state: quick actions instead of a dead grey workspace
+           (matters when the Welcome window is disabled). -->
+      <Border IsVisible="{Binding !IsRomLoaded}" Background="{DynamicResource Editor.PanelBg}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="440">
+          <TextBlock Text="No ROM loaded" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+          <TextBlock Text="Open a game to start editing. Your edits go to a project folder next to the ROM; the original file is never touched."
+                     TextWrapping="Wrap" TextAlignment="Center" Opacity="0.75"/>
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Button Content="Open ROM (.nds)…" Click="OpenRom_Click"/>
+            <Button Content="Open extracted folder…" Click="OpenFolder_Click"/>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding HasRecents}" Spacing="2">
+            <TextBlock Text="Recent projects" FontWeight="SemiBold" Margin="0,10,0,2"/>
+            <ItemsControl ItemsSource="{Binding RecentProjects}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <!-- TextBlock content so "_" in paths isn't eaten as an access-key marker -->
+                  <Button Click="RecentQuick_Click" Margin="0,2,0,0"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                          ToolTip.Tip="{Binding}">
+                    <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <TextBlock Text="Tip: press Ctrl+P anytime to jump to any editor by name."
+                     FontSize="12" Opacity="0.6" TextAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <Border IsVisible="{Binding IsLoadingRom}"
+              Background="#A0000000" ZIndex="100">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="320">
+          <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center"/>
+          <ProgressBar IsIndeterminate="True"/>
+          <TextBlock Text="{Binding BusyHint}"
+                     FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Panel>
 
   </DockPanel>
+
+  <!-- ── Guided-tour layer: covers the whole window (menu bar included) so the tour can
+       spotlight any control. Populated and shown by GuidedTour; empty and hidden otherwise. ── -->
+  <Canvas x:Name="TourLayer" IsVisible="False" ZIndex="200" Background="{x:Null}"/>
+  </Panel>
 </Window>

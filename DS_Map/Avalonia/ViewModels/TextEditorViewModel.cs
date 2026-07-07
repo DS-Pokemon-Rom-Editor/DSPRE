@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         public string Title => _current != null
-            ? $"{(_dirty ? "● " : "")}Text Editor — Archive {_current.ID}"
+            ? $"{(_dirty ? "● " : "")}Text Editor - Archive {_current.ID}"
             : "Text Editor";
 
         // ── Design-time constructor ──────────────────────────────────────────────
@@ -524,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Reload the currently displayed archive so edits are visible.
             if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
-            StatusText = $"Replace complete — {edited} archive(s) edited.";
+            StatusText = $"Replace complete: {edited} archive(s) edited.";
             await DialogHelper.ShowInfo("Operation completed.", "Replace All Text");
         }
 

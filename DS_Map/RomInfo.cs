@@ -206,6 +206,7 @@ namespace DSPRE
             encounters,
             encounterExtended,
             headbutt,
+            rockSmash,
             safariZone,
 
             trainerProperties,
@@ -2188,6 +2189,7 @@ namespace DSPRE
 
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
+                        [DirNames.rockSmash] = $@"{dataFolderName}\a\2\5\3", //odds+table-type per header; both versions use the same folder with different data
 
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",
@@ -2292,12 +2294,12 @@ namespace DSPRE
 
         /// <summary>
         /// Checks if the Item Table Editor is available for the current ROM version.
-        /// Item Table Editor requires at least pickup table support.
+        /// Item Table Editor requires at least pickup table support, or (HGSS) the Rock Smash tab.
         /// </summary>
         /// <returns>True if the editor is available, false otherwise</returns>
         public static bool IsItemTableEditorAvailable()
         {
-            return pickupTableOverlayNumber >= 0;
+            return pickupTableOverlayNumber >= 0 || gameFamily == GameFamilies.HGSS;
         }
 
         /// <summary>
@@ -2309,6 +2311,26 @@ namespace DSPRE
         {
             // Hidden items is only available for HeartGold US
             return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
+        }
+
+        /// <summary>
+        /// Checks if the Rock Smash per-header odds/table editor is available. This is plain NARC data
+        /// (data/a/2/5/3), so it works for HGSS regardless of language.
+        /// </summary>
+        public static bool IsRockSmashEditorAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS;
+        }
+
+        /// <summary>
+        /// Checks if the Rock Smash item-drop tables (the 3 hardcoded 8-slot tables in ov001.bin,
+        /// offsets 0x23D04/0x23D14/0x23D24 per https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/hgss-rock_smash/)
+        /// are safe to edit. Only the English build's offsets are confirmed; gate to that until other
+        /// languages are verified, same convention as <see cref="IsHiddenItemsEditorAvailable"/>.
+        /// </summary>
+        public static bool IsRockSmashItemTableAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
         }
 
         /// <summary>

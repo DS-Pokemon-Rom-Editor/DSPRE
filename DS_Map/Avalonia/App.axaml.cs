@@ -68,6 +68,38 @@ namespace DSPRE
                     desktop.MainWindow = main;
                     desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;   // closing the shell exits the app
                     main.Show();
+
+                    // "Open Default ROM" setting: auto-open it at boot (asking first unless
+                    // "Open without asking" is also set). The welcome window is skipped when the
+                    // default ROM opens, and shown as usual when it doesn't.
+                    string defaultRom = SettingsManager.Settings?.openDefaultRom;
+                    bool haveDefaultRom = !string.IsNullOrWhiteSpace(defaultRom) &&
+                        (System.IO.File.Exists(defaultRom) || System.IO.Directory.Exists(defaultRom));
+
+                    // First-run / returning-user onboarding (recent projects + tutorial); user-toggleable,
+                    // relaunchable from Tools → Welcome & Tutorial and from Settings.
+                    void ShowWelcomeIfEnabled()
+                    {
+                        if (SettingsManager.Settings?.showWelcomeOnStartup != false)
+                            DSPRE.Avalonia.Views.WelcomeView.ShowWelcome(main);
+                    }
+
+                    if (haveDefaultRom)
+                    {
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+                        {
+                            bool open = SettingsManager.Settings.neverAskForOpening ||
+                                await DSPRE.Avalonia.DialogHelper.AskYesNo(
+                                    $"Open the default ROM?\n\n{defaultRom}", "DSPRE");
+                            if (open) await main.OpenRecentAsync(defaultRom);
+                            else ShowWelcomeIfEnabled();
+                        });
+                    }
+                    else
+                    {
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(ShowWelcomeIfEnabled);
+                    }
+
                     base.OnFrameworkInitializationCompleted();
                     return;
                 }

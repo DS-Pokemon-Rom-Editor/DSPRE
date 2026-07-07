@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia
 
                 if (!mgr.IsInstalled)
                 {
-                    AppLogger.Info("Not a Velopack-installed build — skipping update check.");
+                    AppLogger.Info("Not a Velopack-installed build; skipping update check.");
                     if (!silent)
                         await DialogHelper.ShowInfo("Update checks are only available in installed builds (not portable/dev runs).", "Check for updates");
                     return;

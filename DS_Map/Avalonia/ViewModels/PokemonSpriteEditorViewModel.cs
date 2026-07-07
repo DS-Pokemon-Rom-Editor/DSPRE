@@ -451,7 +451,7 @@ namespace DSPRE.Avalonia.ViewModels
         public PokemonSpriteEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            StatusText = "Design preview — no sprites loaded";
+            StatusText = "Design preview (no sprites loaded)";
         }
 
         // --- Runtime constructor -----------------------------------------------------

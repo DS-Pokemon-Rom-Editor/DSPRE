@@ -25,7 +25,7 @@
         <Button Content="📤 Export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="🐞 Export 3D debug" Click="ExportDebug_Click"
-                ToolTip.Tip="Dumps the matrix layout, exact per-cell map placements (origins/sizes/gaps), every event's computed world position, AND a PNG of the current render — for diagnosing stitching/placement issues."/>
+                ToolTip.Tip="Dumps the matrix layout, exact per-cell map placements (origins/sizes/gaps), every event's computed world position, AND a PNG of the current render, for diagnosing stitching/placement issues."/>
       </WrapPanel>
     </Border>
 
@@ -41,7 +41,7 @@
           <StackPanel Spacing="3">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <TextBlock Text="— drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="left-drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
             <WrapPanel Classes="toolbar">
               <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>

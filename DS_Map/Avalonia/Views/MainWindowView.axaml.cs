@@ -26,6 +26,63 @@ namespace DSPRE.Avalonia.Views
                     e.Handled = true;
                 }
             };
+
+            RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
+
+            RestoreWindowPlacement();
+            Closing += (_, _) => SaveWindowPlacement();
+        }
+
+        // ── Window placement persistence (size + maximized; centered by the OS otherwise) ──
+        private void RestoreWindowPlacement()
+        {
+            var s = SettingsManager.Settings;
+            if (s == null) return;
+            if (s.mainWindowWidth >= MinWidth && s.mainWindowHeight >= MinHeight)
+            {
+                Width = s.mainWindowWidth;
+                Height = s.mainWindowHeight;
+            }
+            if (s.mainWindowMaximized) WindowState = WindowState.Maximized;
+        }
+
+        private void SaveWindowPlacement()
+        {
+            var s = SettingsManager.Settings;
+            if (s == null) return;
+            s.mainWindowMaximized = WindowState == WindowState.Maximized;
+            if (WindowState == WindowState.Normal)
+            {
+                s.mainWindowWidth = Width;
+                s.mainWindowHeight = Height;
+            }
+            SettingsManager.Save();
+        }
+
+        // ── Recent projects submenu (rebuilt each time it opens) ─────────────
+        private void RebuildRecentMenu()
+        {
+            RecentMenu.Items.Clear();
+            var recents = SettingsManager.Settings?.recentProjects;
+            if (recents == null || recents.Count == 0)
+            {
+                RecentMenu.Items.Add(new MenuItem { Header = "(no recent projects)", IsEnabled = false });
+                return;
+            }
+            foreach (var path in recents)
+            {
+                var item = new MenuItem { Header = CompactPath(path), Tag = path };
+                global::Avalonia.Controls.ToolTip.SetTip(item, path);
+                item.Click += async (_, _) => await OpenRecentAsync((string)item.Tag);
+                RecentMenu.Items.Add(item);
+            }
+        }
+
+        private static string CompactPath(string path)
+        {
+            string name = System.IO.Path.GetFileName(path.TrimEnd('\\', '/'));
+            string parent = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/')) ?? "");
+            return string.IsNullOrEmpty(parent) ? name : parent + System.IO.Path.DirectorySeparatorChar + name;
         }
 
         private void CommandPalette_Click(object sender, RoutedEventArgs e)
@@ -39,7 +96,12 @@ namespace DSPRE.Avalonia.Views
         // ── File ────────────────────────────────────────────────────────────
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
-        private async void OpenRom_Click(object sender, RoutedEventArgs e)
+        private async void OpenRom_Click(object sender, RoutedEventArgs e) => await OpenRomInteractiveAsync();
+
+        private async void OpenFolder_Click(object sender, RoutedEventArgs e) => await OpenFolderInteractiveAsync();
+
+        /// <summary>Pick and open a .nds ROM (also used by the Welcome window).</summary>
+        public async System.Threading.Tasks.Task OpenRomInteractiveAsync()
         {
             var files = await StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
             {
@@ -48,11 +110,37 @@ namespace DSPRE.Avalonia.Views
                 FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("NDS ROM") { Patterns = new[] { "*.nds" } } }
             });
             string path = files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
-            if (!string.IsNullOrEmpty(path))
-                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er); err0(er); return ok; });
+            if (string.IsNullOrEmpty(path)) return;
+
+            bool? reExtract = await CheckExtractedDataChoiceAsync(path);
+            if (reExtract == null) return;   // user aborted
+            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
         }
 
-        private async void OpenFolder_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// If existing extracted data is found for this .nds, asks whether to reuse it or re-extract (matching
+        /// the WinForms "Extracted data detected" flow). Returns false = reuse, true = re-extract, null = abort.
+        /// </summary>
+        private async System.Threading.Tasks.Task<bool?> CheckExtractedDataChoiceAsync(string ndsPath)
+        {
+            int folderType = AvaloniaRomLoader.PeekFolderType(ndsPath);
+            if (folderType == -1) return false;   // nothing extracted yet, nothing to ask
+
+            string message = folderType == 0
+                ? "Extracted data of this ROM has been found.\nDo you want to load it?"
+                : "Extracted data of this ROM has been found, but it is of legacy type (extracted with a version of DSPRE prior to 1.15.0).\nDo you want to load it?";
+
+            var choice = await DialogHelper.AskYesNoCancel(message, "Extracted Data Detected");
+            if (choice == DialogHelper.MsgResult.Cancel) return null;
+            if (choice == DialogHelper.MsgResult.Yes) return false;
+
+            bool confirmReExtract = await DialogHelper.AskYesNo(
+                "All data of this ROM will be re-extracted. Proceed?", "Existing Data Will Be Deleted");
+            return confirmReExtract ? (bool?)true : null;
+        }
+
+        /// <summary>Pick and open an extracted project folder (also used by the Welcome window).</summary>
+        public async System.Threading.Tasks.Task OpenFolderInteractiveAsync()
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
             {
@@ -63,15 +151,60 @@ namespace DSPRE.Avalonia.Views
                 await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
         }
 
+        /// <summary>Open a recent-projects entry: a .nds file or an extracted folder.</summary>
+        public async System.Threading.Tasks.Task OpenRecentAsync(string path)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                bool? reExtract = await CheckExtractedDataChoiceAsync(path);
+                if (reExtract == null) return;   // user aborted
+                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
+            }
+            else if (System.IO.Directory.Exists(path))
+            {
+                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
+            }
+            else
+            {
+                SettingsManager.RemoveRecentProject(path);
+                (DataContext as MainWindowViewModel)?.RefreshRecents();
+                await DialogHelper.ShowError("This project no longer exists and was removed from the recent list:\n" + path, "Open Recent");
+            }
+        }
+
         // Runs a ROM load off the UI thread (unpacking blocks), then refreshes the menus/title and reports errors.
         private async System.Threading.Tasks.Task LoadRom(System.Func<System.Action<string>, bool> load)
         {
+            var vm = DataContext as MainWindowViewModel;
+            if (vm != null)
+            {
+                vm.BusyText = "Opening ROM…";
+                vm.BusyHint = "First-time opens unpack the ROM and can take a little while.";
+                vm.IsLoadingRom = true;
+            }
             string error = null;
-            bool ok = await System.Threading.Tasks.Task.Run(() => load(e => error = e));
-            if (DataContext is MainWindowViewModel vm) vm.RefreshRomState();
-            if (!ok) { await DialogHelper.ShowError(error ?? "Failed to load the ROM.", "Open ROM"); return; }
+            bool ok;
+            try
+            {
+                ok = await System.Threading.Tasks.Task.Run(() => load(e => error = e));
+            }
+            finally
+            {
+                if (vm != null) vm.IsLoadingRom = false;
+            }
+            vm?.RefreshRomState();
+            if (!ok)
+            {
+                if (vm != null) vm.StatusText = "ROM load failed.";
+                await DialogHelper.ShowError(error ?? "Failed to load the ROM.", "Open ROM");
+                return;
+            }
+            if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
             // The Maps workspace skipped its setup at boot (no ROM yet) — run it now.
             await Maps.EnsureSetupAsync();
+            // First successful ROM load ever: walk the user through the UI once.
+            if (SettingsManager.Settings?.guidedTourShown == false)
+                GuidedTour.Start(this);
         }
 
         private async void SaveRom_Click(object sender, RoutedEventArgs e)
@@ -87,12 +220,28 @@ namespace DSPRE.Avalonia.Views
             string path = file?.TryGetLocalPath();
             if (string.IsNullOrEmpty(path)) return;
 
-            string error = null;
-            bool ok = await System.Threading.Tasks.Task.Run(() =>
+            var vm = DataContext as MainWindowViewModel;
+            if (vm != null)
             {
-                try { return DSUtils.RepackROM(path); }        // builds the .nds from RomInfo.workDir
-                catch (System.Exception ex) { error = ex.Message; return false; }
-            });
+                vm.BusyText = "Saving ROM…";
+                vm.BusyHint = "Repacking the project into a playable .nds file.";
+                vm.IsLoadingRom = true;
+            }
+            string error = null;
+            bool ok;
+            try
+            {
+                ok = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { return DSUtils.RepackROM(path); }        // builds the .nds from RomInfo.workDir
+                    catch (System.Exception ex) { error = ex.Message; return false; }
+                });
+            }
+            finally
+            {
+                if (vm != null) vm.IsLoadingRom = false;
+            }
+            if (vm != null) vm.StatusText = ok ? "ROM built: " + path : "ROM build failed.";
             if (ok) await DialogHelper.ShowInfo("ROM built successfully:\n" + path, "Save ROM");
             else await DialogHelper.ShowError(error ?? "Building the ROM failed. See the log for details.", "Save ROM");
         }
@@ -211,6 +360,19 @@ namespace DSPRE.Avalonia.Views
 
         private void HeaderSearch_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHeaderSearch();
+
+        private void Welcome_Click(object sender, RoutedEventArgs e)
+            => WelcomeView.ShowWelcome(this);
+
+        private void GuidedTour_Click(object sender, RoutedEventArgs e)
+            => GuidedTour.Start(this);
+
+        // Quick-open buttons in the pre-ROM empty state (item DataContext = the full path).
+        private async void RecentQuick_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is string path)
+                await OpenRecentAsync(path);
+        }
 
         private async void ExportDocs_Click(object sender, RoutedEventArgs e)
         {

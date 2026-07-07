@@ -56,7 +56,7 @@
             </DataGrid>
 
             <!-- Common items header -->
-            <TextBlock Grid.Row="4" Text="Common Items (Sliding Window — 10 brackets × 9 slots)"
+            <TextBlock Grid.Row="4" Text="Common Items (Sliding Window: 10 brackets × 9 slots)"
                        FontWeight="SemiBold" FontSize="12"/>
 
             <!-- Common items DataGrid -->
@@ -150,7 +150,7 @@
       <TabItem Header="Rare Pickup Items" IsVisible="{Binding ShowPickupTab}">
         <DockPanel Margin="4">
           <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6"
-                     Text="Rare Items (Sliding Window — 10 brackets × 2 slots)"
+                     Text="Rare Items (Sliding Window: 10 brackets × 2 slots)"
                      FontWeight="SemiBold" FontSize="12"/>
           <DataGrid x:Name="RareGrid"
                     ItemsSource="{Binding RareRows}"
@@ -228,6 +228,94 @@
             </StackPanel>
           </Border>
         </Grid>
+      </TabItem>
+
+      <!-- ── Rock Smash tab (HGSS) ────────────────────────────────────────── -->
+      <TabItem Header="Rock Smash" IsVisible="{Binding ShowRockSmashTab}">
+        <DockPanel Margin="4">
+          <!-- Item-drop tables: hardcoded in ov001.bin, only confirmed for English builds -->
+          <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8"
+                  BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
+                  IsVisible="{Binding ShowRockSmashItemTables}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Item Drop Tables" FontWeight="SemiBold" FontSize="12"/>
+              <TextBlock Text="8 slots each; a Rock Smash item roll picks a table by header, then a slot with fixed odds (25/20/10/10/10/10/10/5%)."
+                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+
+              <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+
+              <TextBlock Text="Ruins of Alph" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+
+              <TextBlock Text="Cliff Cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="11"
+                     Foreground="{DynamicResource Editor.Subtle}"
+                     IsVisible="{Binding !ShowRockSmashItemTables}"
+                     Text="The item drop tables live at a fixed, hand-verified offset that is currently only confirmed for English HeartGold/SoulSilver, so editing them is disabled for this ROM's language. The per-header odds and table below are plain NARC data and work regardless of language."/>
+
+          <TextBlock DockPanel.Dock="Top" Text="{Binding RockSmashCount}" FontSize="11" Margin="0,0,0,4"/>
+
+          <DataGrid x:Name="RockSmashGrid"
+                    ItemsSource="{Binding RockSmashRows}"
+                    CanUserReorderColumns="False"
+                    IsReadOnly="False"
+                    HorizontalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Header" Binding="{Binding HeaderLabel}" Width="240" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Odds (0-100)" Width="130">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RockSmashHeaderRow">
+                    <NumericUpDown Value="{Binding Odds}" Minimum="0" Maximum="100" FormatString="0" FontSize="11"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Table" Width="160">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RockSmashHeaderRow">
+                    <ComboBox SelectedIndex="{Binding TypeIndex}" HorizontalAlignment="Stretch" FontSize="11">
+                      <ComboBoxItem Content="Default"/>
+                      <ComboBoxItem Content="Ruins of Alph"/>
+                      <ComboBoxItem Content="Cliff Cave"/>
+                    </ComboBox>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="" Binding="{Binding MissingLabel}" Width="*" IsReadOnly="True"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
       </TabItem>
     </TabControl>
   </DockPanel>

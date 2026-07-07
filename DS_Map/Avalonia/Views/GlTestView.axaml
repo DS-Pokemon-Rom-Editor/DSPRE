@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
         x:Class="DSPRE.Avalonia.Views.GlTestView"
-        Title="Avalonia 3D — GL test"
+        Title="Avalonia 3D - GL test"
         Width="640" Height="520"
         WindowStartupLocation="CenterScreen">
   <DockPanel>
