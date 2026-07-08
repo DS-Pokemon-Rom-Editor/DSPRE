@@ -38,12 +38,12 @@ namespace DSPRE
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.namesToSentenceCaseButton = new System.Windows.Forms.Button();
-            this.overlay1uncompressedLBL = new System.Windows.Forms.Label();
-            this.overlay1patchtextLBL = new System.Windows.Forms.Label();
-            this.overlay1uncomprButton = new System.Windows.Forms.Button();
-            this.BDHCamARM9requiredLBL = new System.Windows.Forms.Label();
+            this.buildingRotationLBL = new System.Windows.Forms.Label();
+            this.buildingRotationBetaLBL = new System.Windows.Forms.Label();
+            this.buildingRotationTextLBL = new System.Windows.Forms.Label();
+            this.buildingRotationButton = new System.Windows.Forms.Button();
             this.arm9patchCB = new System.Windows.Forms.PictureBox();
-            this.overlay1CB = new System.Windows.Forms.PictureBox();
+            this.buildingRotationCB = new System.Windows.Forms.PictureBox();
             this.BDHCamCB = new System.Windows.Forms.PictureBox();
             this.sentenceCaseCB = new System.Windows.Forms.PictureBox();
             this.itemNumbersCB = new System.Windows.Forms.PictureBox();
@@ -57,9 +57,7 @@ namespace DSPRE
             this.repointScrcmdTextLBL = new System.Windows.Forms.Label();
             this.repointScrcmdLBL = new System.Windows.Forms.Label();
             this.repointScrcmdButton = new System.Windows.Forms.Button();
-            this.scrcmdARM9requiredLBL = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
             this.dynamicHeadersPatchCB = new System.Windows.Forms.PictureBox();
             this.dynamicHeadersTextLBL = new System.Windows.Forms.Label();
             this.dynamicHeadersLBL = new System.Windows.Forms.Label();
@@ -73,7 +71,7 @@ namespace DSPRE
             this.expandTrainerNamesLBL = new System.Windows.Forms.Label();
             this.expandTrainerNamesButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.arm9patchCB)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.overlay1CB)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.buildingRotationCB)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.BDHCamCB)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.sentenceCaseCB)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.itemNumbersCB)).BeginInit();
@@ -125,28 +123,27 @@ namespace DSPRE
             // 
             // BDHCamPatchTextLBL
             // 
-            this.BDHCamPatchTextLBL.Location = new System.Drawing.Point(15, 187);
+            this.BDHCamPatchTextLBL.Location = new System.Drawing.Point(15, 195);
             this.BDHCamPatchTextLBL.Name = "BDHCamPatchTextLBL";
             this.BDHCamPatchTextLBL.Size = new System.Drawing.Size(293, 67);
             this.BDHCamPatchTextLBL.TabIndex = 8;
-            this.BDHCamPatchTextLBL.Text = "Adds Dynamic BDHC Cameras to current ROM.\r\nWith this patch, you have more control" +
-    " over \r\nthe game camera\'s rotation and position.\r\nYou will need Trifindo\'s PDSMS" +
-    "\r\nin order to make BDHCAM Files.\r\n";
+            this.BDHCamPatchTextLBL.Text = "Adds dynamic BDHC cameras, giving more control over rotation and position of the " +
+    "in-game camera.\r\nTrifindo\'s PDSMS is needed to make BDHCAM files.\r\n";
             this.BDHCamPatchTextLBL.UseMnemonic = false;
             // 
             // BDHCamPatchLBL
             // 
             this.BDHCamPatchLBL.AutoSize = true;
             this.BDHCamPatchLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.BDHCamPatchLBL.Location = new System.Drawing.Point(14, 172);
+            this.BDHCamPatchLBL.Location = new System.Drawing.Point(14, 180);
             this.BDHCamPatchLBL.Name = "BDHCamPatchLBL";
-            this.BDHCamPatchLBL.Size = new System.Drawing.Size(107, 13);
+            this.BDHCamPatchLBL.Size = new System.Drawing.Size(275, 13);
             this.BDHCamPatchLBL.TabIndex = 7;
-            this.BDHCamPatchLBL.Text = "Dynamic Cameras";
+            this.BDHCamPatchLBL.Text = "Dynamic Cameras (Requires ARM9 Expansion)";
             // 
             // BDHCamPatchButton
             // 
-            this.BDHCamPatchButton.Location = new System.Drawing.Point(335, 186);
+            this.BDHCamPatchButton.Location = new System.Drawing.Point(335, 194);
             this.BDHCamPatchButton.Name = "BDHCamPatchButton";
             this.BDHCamPatchButton.Size = new System.Drawing.Size(100, 50);
             this.BDHCamPatchButton.TabIndex = 6;
@@ -183,45 +180,43 @@ namespace DSPRE
             this.namesToSentenceCaseButton.UseVisualStyleBackColor = true;
             this.namesToSentenceCaseButton.Click += new System.EventHandler(this.SentenceCasePatchButton_Click);
             // 
-            // overlay1uncompressedLBL
+            // buildingRotationLBL
             // 
-            this.overlay1uncompressedLBL.AutoSize = true;
-            this.overlay1uncompressedLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.overlay1uncompressedLBL.Location = new System.Drawing.Point(15, 107);
-            this.overlay1uncompressedLBL.Name = "overlay1uncompressedLBL";
-            this.overlay1uncompressedLBL.Size = new System.Drawing.Size(217, 13);
-            this.overlay1uncompressedLBL.TabIndex = 12;
-            this.overlay1uncompressedLBL.Text = "Configure Overlay1 as uncompressed";
+            this.buildingRotationLBL.AutoSize = true;
+            this.buildingRotationLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.buildingRotationLBL.Location = new System.Drawing.Point(15, 107);
+            this.buildingRotationLBL.Name = "buildingRotationLBL";
+            this.buildingRotationLBL.Size = new System.Drawing.Size(303, 13);
+            this.buildingRotationLBL.TabIndex = 12;
+            this.buildingRotationLBL.Text = "Building Rotation (Requires ARM9 Expansion)";
+            //
+            // buildingRotationBetaLBL
+            //
+            this.buildingRotationBetaLBL.Location = new System.Drawing.Point(15, 155);
+            this.buildingRotationBetaLBL.Name = "buildingRotationBetaLBL";
+            this.buildingRotationBetaLBL.Size = new System.Drawing.Size(293, 13);
+            this.buildingRotationBetaLBL.TabIndex = 70;
+            this.buildingRotationBetaLBL.Text = "[ B E T A     |    Needs testing]";
+            this.buildingRotationBetaLBL.UseMnemonic = false;
+            //
+            // buildingRotationTextLBL
+            //
+            this.buildingRotationTextLBL.Location = new System.Drawing.Point(15, 122);
+            this.buildingRotationTextLBL.Name = "buildingRotationTextLBL";
+            this.buildingRotationTextLBL.Size = new System.Drawing.Size(293, 31);
+            this.buildingRotationTextLBL.TabIndex = 13;
+            this.buildingRotationTextLBL.Text = "Enables the game to recognise rotation of buildings (Map Editor).";
+            this.buildingRotationTextLBL.UseMnemonic = false;
             // 
-            // overlay1patchtextLBL
+            // buildingRotationButton
             // 
-            this.overlay1patchtextLBL.Location = new System.Drawing.Point(15, 122);
-            this.overlay1patchtextLBL.Name = "overlay1patchtextLBL";
-            this.overlay1patchtextLBL.Size = new System.Drawing.Size(293, 29);
-            this.overlay1patchtextLBL.TabIndex = 13;
-            this.overlay1patchtextLBL.Text = "Overlay1 won\'t have to be compressed again.\r\nThe operation is reversible.\r\n";
-            this.overlay1patchtextLBL.UseMnemonic = false;
-            // 
-            // overlay1uncomprButton
-            // 
-            this.overlay1uncomprButton.Location = new System.Drawing.Point(335, 104);
-            this.overlay1uncomprButton.Name = "overlay1uncomprButton";
-            this.overlay1uncomprButton.Size = new System.Drawing.Size(100, 50);
-            this.overlay1uncomprButton.TabIndex = 14;
-            this.overlay1uncomprButton.Text = "Apply Patch";
-            this.overlay1uncomprButton.UseVisualStyleBackColor = true;
-            this.overlay1uncomprButton.Click += new System.EventHandler(this.overlay1uncomprButton_Click);
-            // 
-            // BDHCamARM9requiredLBL
-            // 
-            this.BDHCamARM9requiredLBL.AutoSize = true;
-            this.BDHCamARM9requiredLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.BDHCamARM9requiredLBL.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(64)))), ((int)(((byte)(0)))));
-            this.BDHCamARM9requiredLBL.Location = new System.Drawing.Point(118, 171);
-            this.BDHCamARM9requiredLBL.Name = "BDHCamARM9requiredLBL";
-            this.BDHCamARM9requiredLBL.Size = new System.Drawing.Size(165, 13);
-            this.BDHCamARM9requiredLBL.TabIndex = 15;
-            this.BDHCamARM9requiredLBL.Text = "(Requires ARM9 Expansion)";
+            this.buildingRotationButton.Location = new System.Drawing.Point(335, 104);
+            this.buildingRotationButton.Name = "buildingRotationButton";
+            this.buildingRotationButton.Size = new System.Drawing.Size(100, 50);
+            this.buildingRotationButton.TabIndex = 14;
+            this.buildingRotationButton.Text = "Apply Patch";
+            this.buildingRotationButton.UseVisualStyleBackColor = true;
+            this.buildingRotationButton.Click += new System.EventHandler(this.BuildingRotationButton_Click);
             // 
             // arm9patchCB
             // 
@@ -234,21 +229,21 @@ namespace DSPRE
             this.arm9patchCB.TabStop = false;
             this.arm9patchCB.Visible = false;
             // 
-            // overlay1CB
+            // buildingRotationCB
             // 
-            this.overlay1CB.Image = global::DSPRE.Properties.Resources.checkmark;
-            this.overlay1CB.Location = new System.Drawing.Point(309, 119);
-            this.overlay1CB.Name = "overlay1CB";
-            this.overlay1CB.Size = new System.Drawing.Size(20, 20);
-            this.overlay1CB.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.overlay1CB.TabIndex = 17;
-            this.overlay1CB.TabStop = false;
-            this.overlay1CB.Visible = false;
+            this.buildingRotationCB.Image = global::DSPRE.Properties.Resources.checkmark;
+            this.buildingRotationCB.Location = new System.Drawing.Point(309, 119);
+            this.buildingRotationCB.Name = "buildingRotationCB";
+            this.buildingRotationCB.Size = new System.Drawing.Size(20, 20);
+            this.buildingRotationCB.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.buildingRotationCB.TabIndex = 17;
+            this.buildingRotationCB.TabStop = false;
+            this.buildingRotationCB.Visible = false;
             // 
             // BDHCamCB
             // 
             this.BDHCamCB.Image = ((System.Drawing.Image)(resources.GetObject("BDHCamCB.Image")));
-            this.BDHCamCB.Location = new System.Drawing.Point(309, 202);
+            this.BDHCamCB.Location = new System.Drawing.Point(309, 210);
             this.BDHCamCB.Name = "BDHCamCB";
             this.BDHCamCB.Size = new System.Drawing.Size(20, 20);
             this.BDHCamCB.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -355,8 +350,8 @@ namespace DSPRE
             this.repointScrcmdTextLBL.Name = "repointScrcmdTextLBL";
             this.repointScrcmdTextLBL.Size = new System.Drawing.Size(288, 37);
             this.repointScrcmdTextLBL.TabIndex = 27;
-            this.repointScrcmdTextLBL.Text = "Moves the Script Commands Table to a new location in the Synthetic Overlay and re" +
-    "assigns the pointer accordingly.";
+            this.repointScrcmdTextLBL.Text = "Moves the in-game ScrCommands table and count to the Synthetic Overlay. Does not " +
+    "add commands or edit JSON metadata.";
             this.repointScrcmdTextLBL.UseMnemonic = false;
             // 
             // repointScrcmdLBL
@@ -365,9 +360,9 @@ namespace DSPRE
             this.repointScrcmdLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.repointScrcmdLBL.Location = new System.Drawing.Point(481, 30);
             this.repointScrcmdLBL.Name = "repointScrcmdLBL";
-            this.repointScrcmdLBL.Size = new System.Drawing.Size(157, 13);
+            this.repointScrcmdLBL.Size = new System.Drawing.Size(319, 13);
             this.repointScrcmdLBL.TabIndex = 26;
-            this.repointScrcmdLBL.Text = "Move ScrCommands Table";
+            this.repointScrcmdLBL.Text = "Move ScrCommands Table (Requires ARM9 Expansion)";
             // 
             // repointScrcmdButton
             // 
@@ -375,19 +370,9 @@ namespace DSPRE
             this.repointScrcmdButton.Name = "repointScrcmdButton";
             this.repointScrcmdButton.Size = new System.Drawing.Size(100, 50);
             this.repointScrcmdButton.TabIndex = 25;
-            this.repointScrcmdButton.Text = "Repoint Table";
+            this.repointScrcmdButton.Text = "Apply Patch";
             this.repointScrcmdButton.UseVisualStyleBackColor = true;
-            // 
-            // scrcmdARM9requiredLBL
-            // 
-            this.scrcmdARM9requiredLBL.AutoSize = true;
-            this.scrcmdARM9requiredLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.scrcmdARM9requiredLBL.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(64)))), ((int)(((byte)(0)))));
-            this.scrcmdARM9requiredLBL.Location = new System.Drawing.Point(635, 30);
-            this.scrcmdARM9requiredLBL.Name = "scrcmdARM9requiredLBL";
-            this.scrcmdARM9requiredLBL.Size = new System.Drawing.Size(165, 13);
-            this.scrcmdARM9requiredLBL.TabIndex = 29;
-            this.scrcmdARM9requiredLBL.Text = "(Requires ARM9 Expansion)";
+            this.repointScrcmdButton.Click += new System.EventHandler(this.applyCustomCommands);
             // 
             // label1
             // 
@@ -397,15 +382,6 @@ namespace DSPRE
             this.label1.TabIndex = 30;
             this.label1.Text = "[ B E T A     |    Needs testing]";
             this.label1.UseMnemonic = false;
-            // 
-            // label2
-            // 
-            this.label2.Location = new System.Drawing.Point(481, 188);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(288, 37);
-            this.label2.TabIndex = 34;
-            this.label2.Text = "[ B E T A     |    Needs testing]";
-            this.label2.UseMnemonic = false;
             // 
             // dynamicHeadersPatchCB
             // 
@@ -544,12 +520,10 @@ namespace DSPRE
             this.Controls.Add(this.disableTextureAnimationsLBL);
             this.Controls.Add(this.disableTextureAnimationsButton);
             this.Controls.Add(this.applyDynamicHeadersButton);
-            this.Controls.Add(this.label2);
             this.Controls.Add(this.dynamicHeadersPatchCB);
             this.Controls.Add(this.dynamicHeadersTextLBL);
             this.Controls.Add(this.dynamicHeadersLBL);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.scrcmdARM9requiredLBL);
             this.Controls.Add(this.repointScrcmdCB);
             this.Controls.Add(this.repointScrcmdTextLBL);
             this.Controls.Add(this.repointScrcmdLBL);
@@ -561,12 +535,12 @@ namespace DSPRE
             this.Controls.Add(this.itemNumbersCB);
             this.Controls.Add(this.sentenceCaseCB);
             this.Controls.Add(this.BDHCamCB);
-            this.Controls.Add(this.overlay1CB);
+            this.Controls.Add(this.buildingRotationCB);
             this.Controls.Add(this.arm9patchCB);
-            this.Controls.Add(this.BDHCamARM9requiredLBL);
-            this.Controls.Add(this.overlay1uncomprButton);
-            this.Controls.Add(this.overlay1patchtextLBL);
-            this.Controls.Add(this.overlay1uncompressedLBL);
+            this.Controls.Add(this.buildingRotationButton);
+            this.Controls.Add(this.buildingRotationTextLBL);
+            this.Controls.Add(this.buildingRotationBetaLBL);
+            this.Controls.Add(this.buildingRotationLBL);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.namesToSentenceCaseButton);
@@ -585,7 +559,7 @@ namespace DSPRE
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Patch Toolbox";
             ((System.ComponentModel.ISupportInitialize)(this.arm9patchCB)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.overlay1CB)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.buildingRotationCB)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.BDHCamCB)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.sentenceCaseCB)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.itemNumbersCB)).EndInit();
@@ -611,12 +585,12 @@ namespace DSPRE
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Button namesToSentenceCaseButton;
-        private System.Windows.Forms.Label overlay1uncompressedLBL;
-        private System.Windows.Forms.Label overlay1patchtextLBL;
-        private System.Windows.Forms.Button overlay1uncomprButton;
-        private System.Windows.Forms.Label BDHCamARM9requiredLBL;
+        private System.Windows.Forms.Label buildingRotationLBL;
+        private System.Windows.Forms.Label buildingRotationBetaLBL;
+        private System.Windows.Forms.Label buildingRotationTextLBL;
+        private System.Windows.Forms.Button buildingRotationButton;
         private System.Windows.Forms.PictureBox arm9patchCB;
-        private System.Windows.Forms.PictureBox overlay1CB;
+        private System.Windows.Forms.PictureBox buildingRotationCB;
         private System.Windows.Forms.PictureBox BDHCamCB;
         private System.Windows.Forms.PictureBox sentenceCaseCB;
         private System.Windows.Forms.PictureBox itemNumbersCB;
@@ -630,9 +604,7 @@ namespace DSPRE
         private System.Windows.Forms.Label repointScrcmdTextLBL;
         private System.Windows.Forms.Label repointScrcmdLBL;
         private System.Windows.Forms.Button repointScrcmdButton;
-        private System.Windows.Forms.Label scrcmdARM9requiredLBL;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
         private System.Windows.Forms.PictureBox dynamicHeadersPatchCB;
         private System.Windows.Forms.Label dynamicHeadersTextLBL;
         private System.Windows.Forms.Label dynamicHeadersLBL;

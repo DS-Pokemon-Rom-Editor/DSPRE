@@ -1,12 +1,13 @@
 using System;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 namespace DSPRE.Avalonia
@@ -27,7 +28,7 @@ namespace DSPRE.Avalonia
             DSPRE.PatchToolboxLogic.ConfirmYesNo = (msg, title) => ShowSync(msg, title, yesNo: true) == 1;
             DSPRE.PatchToolboxLogic.ShowInfo = (msg, title) => ShowSync(msg, title, yesNo: false);
             DSPRE.PatchToolboxLogic.ShowError = (msg, title) => ShowSync(msg, title, yesNo: false, error: true);
-            DSPRE.PatchToolboxLogic.PickCustomCommandFile = PickScrcmdFile;
+            DSPRE.PatchToolboxLogic.PickSyntheticOverlayOffset = PickSyntheticOverlayOffsetSync;
         }
 
         private static Window ActiveOwner(Window exclude = null)
@@ -118,37 +119,155 @@ namespace DSPRE.Avalonia
             return result;
         }
 
-        private static string PickScrcmdFile()
+        // Same synchronous-pump approach as ShowSync, with a hex-offset TextBox plus live range/status
+        // feedback — mirrors the WinForms SyntheticOverlayOffsetDialog so both shells behave identically.
+        private static uint? PickSyntheticOverlayOffsetSync(string patchName, string filePath, uint defaultOffset, byte[] expectedBytes, uint loadAddress)
         {
-            var owner = ActiveOwner();
-            if (owner == null) return null;
+            uint? result = null;
+            bool closed = false;
+            bool rangeOccupied = false;
+            uint parsedOffset = defaultOffset;
 
-            // Continue on the UI thread so writes are safe to read after the pump loop sees 'done'.
-            var uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
-            string path = null;
-            bool done = false;
-
-            owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            var win = new Window
             {
-                Title = "Select custom script command file",
-                AllowMultiple = false,
-                FileTypeFilter = new[]
-                {
-                    new FilePickerFileType("Custom Script Command File") { Patterns = new[] { "*.scrcmd" } }
-                }
-            }).ContinueWith(t =>
-            {
-                try
-                {
-                    var files = t.Result;
-                    path = files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
-                }
-                catch { path = null; }
-                finally { done = true; }
-            }, uiScheduler);
+                Title = "Choose synthetic overlay offset",
+                Width = 460,
+                MinHeight = 220,
+                CanResize = false,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false,
+            };
 
-            PumpUntil(() => done);
-            return path;
+            var messageText = new TextBlock
+            {
+                Text = patchName + " will be written to the synthetic overlay. Enter the file offset to use.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(16, 16, 16, 8),
+            };
+
+            var offsetBox = new TextBox { Text = defaultOffset.ToString("X"), Margin = new Thickness(16, 0, 16, 8) };
+            var rangeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
+            var runtimeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
+            var statusText = new TextBlock { Margin = new Thickness(16, 0, 16, 8), TextWrapping = TextWrapping.Wrap };
+
+            var okBtn = new Button { Content = "OK", MinWidth = 80, IsDefault = true, IsEnabled = false };
+            var cancelBtn = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            var btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(8, 0, 12, 12),
+                Spacing = 6,
+            };
+            btnRow.Children.Add(cancelBtn);
+            btnRow.Children.Add(okBtn);
+
+            var errorBrush = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
+            var okBrush = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+
+            void Evaluate()
+            {
+                okBtn.IsEnabled = false;
+                rangeOccupied = false;
+
+                string value = (offsetBox.Text ?? "").Trim();
+                if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) value = value.Substring(2);
+
+                if (!uint.TryParse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint offset))
+                {
+                    rangeText.Text = "";
+                    runtimeText.Text = "";
+                    statusText.Text = "Enter a valid hexadecimal offset.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                parsedOffset = offset;
+                uint endOffset = offset + (uint)expectedBytes.Length - 1;
+                rangeText.Text = "File range: 0x" + offset.ToString("X") + " - 0x" + endOffset.ToString("X");
+                runtimeText.Text = "Runtime address: 0x" + (loadAddress + offset).ToString("X8");
+
+                if (!File.Exists(filePath))
+                {
+                    statusText.Text = "Synthetic overlay file was not found.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                long fileLength = new FileInfo(filePath).Length;
+                if (offset >= fileLength || (long)offset + expectedBytes.Length > fileLength)
+                {
+                    statusText.Text = "Selected range is outside the synthetic overlay file.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                if (offset % 4 != 0)
+                {
+                    statusText.Text = "Offset must be 4-byte aligned.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                byte[] currentBytes = DSUtils.ReadFromFile(filePath, offset, expectedBytes.Length);
+                if (currentBytes.Length != expectedBytes.Length)
+                {
+                    statusText.Text = "Could not read the selected range.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                if (currentBytes.All(b => b == 0))
+                {
+                    statusText.Text = "This range is empty.";
+                    statusText.Foreground = okBrush;
+                    okBtn.IsEnabled = true;
+                    return;
+                }
+
+                rangeOccupied = true;
+                statusText.Text = "This range already contains data. Continuing will overwrite it.";
+                statusText.Foreground = errorBrush;
+                okBtn.IsEnabled = true;
+            }
+
+            offsetBox.TextChanged += (_, _) => Evaluate();
+            okBtn.Click += (_, _) =>
+            {
+                if (rangeOccupied && ShowSync(
+                    "The selected synthetic overlay range already contains data.\n\n" +
+                    "Overwriting it can break another patch or custom code.\n\n" +
+                    "Do you want to overwrite this range anyway?",
+                    "Overwrite occupied synthetic overlay range?", yesNo: true) != 1)
+                {
+                    return;
+                }
+                result = parsedOffset;
+                win.Close();
+            };
+            cancelBtn.Click += (_, _) => { result = null; win.Close(); };
+            win.Closed += (_, _) => closed = true;
+
+            var root = new StackPanel();
+            root.Children.Add(messageText);
+            root.Children.Add(offsetBox);
+            root.Children.Add(rangeText);
+            root.Children.Add(runtimeText);
+            root.Children.Add(statusText);
+            root.Children.Add(btnRow);
+            win.Content = root;
+
+            Evaluate();
+
+            var owner = ActiveOwner(win);
+            if (owner != null)
+                _ = win.ShowDialog(owner);
+            else
+                win.Show();
+
+            PumpUntil(() => closed);
+            return result;
         }
     }
 }

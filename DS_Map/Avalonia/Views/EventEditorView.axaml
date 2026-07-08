@@ -90,22 +90,66 @@
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}" SelectedIndex="{Binding SelectedOverworldIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasOw}">
-                  <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
-                  <TextBlock Text="OW ID / Sprite / Movement / Type" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Position" FontWeight="Bold"/>
+                  <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Map X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  </Grid>
+                  <TextBlock Text="OW ID" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwId}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSprite}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwMovement}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwType}"/>
-                  <TextBlock Text="Flag / Script / Orientation / Sight" FontWeight="Bold" Margin="0,4,0,0"/>
+
+                  <TextBlock Text="Sprite" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <ComboBox Grid.Column="0" ItemsSource="{Binding OwSpriteEntries}" SelectedIndex="{Binding OwSpriteIndex}" HorizontalAlignment="Stretch"/>
+                    <Border Grid.Column="1" Width="40" Height="40" Margin="6,0,0,0" Background="{DynamicResource Editor.PanelBg}"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                      <Image Source="{Binding OwSpritePreview}" IsVisible="{Binding HasOwSpritePreview}" Stretch="Uniform" Margin="2"/>
+                    </Border>
+                  </Grid>
+
+                  <TextBlock Text="Movement" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <ComboBox ItemsSource="{Binding OwMovementNames}" SelectedIndex="{Binding OwMovementIndex}" HorizontalAlignment="Stretch"/>
+
+                  <TextBlock Text="Orientation" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <ComboBox ItemsSource="{Binding OwOrientationNames}" SelectedIndex="{Binding OwOrientationIndex}" HorizontalAlignment="Stretch"/>
+
+                  <TextBlock Text="Type" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <RadioButton GroupName="OwKind" Content="Standard" IsChecked="{Binding OwIsNormal}"/>
+                    <RadioButton GroupName="OwKind" Content="Item" IsChecked="{Binding OwIsItem}"/>
+                    <RadioButton GroupName="OwKind" Content="Trainer" IsChecked="{Binding OwIsTrainer}"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisible}" Margin="0,4,0,0">
+                    <TextBlock Text="Item" FontWeight="Bold"/>
+                    <ComboBox ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Script number doesn't match a known item (edit Script below directly)"
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwItemIndexOutOfRange}"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="3" IsVisible="{Binding OwTrainerFieldsVisible}" Margin="0,4,0,0">
+                    <TextBlock Text="Trainer" FontWeight="Bold"/>
+                    <ComboBox ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
+                    <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
+                    <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
+                  </StackPanel>
+
+                  <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
+
+                  <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwOrientation}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                   <TextBlock Text="X range / Y range" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwYRange}"/>
@@ -131,12 +175,19 @@
               <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasWarp}">
-                  <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  <TextBlock Text="Position" FontWeight="Bold"/>
+                  <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Map X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  </Grid>
                   <TextBlock Text="Destination header / anchor / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpAnchor}"/>
@@ -160,12 +211,19 @@
               <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasTrig}">
-                  <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  <TextBlock Text="Position" FontWeight="Bold"/>
+                  <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Map X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  </Grid>
                   <TextBlock Text="Script / width / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrWidth}"/>
@@ -192,12 +250,19 @@
               <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasSpawn}">
-                  <TextBlock Text="Position (map X / Y / Z, matrix X / Y)" FontWeight="Bold"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
-                  <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                  <NumericUpDown Minimum="-2147483648" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  <TextBlock Text="Position" FontWeight="Bold"/>
+                  <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Map X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                  </Grid>
                   <TextBlock Text="Script / type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpType}"/>

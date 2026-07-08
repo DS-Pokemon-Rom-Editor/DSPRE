@@ -1,17 +1,12 @@
 using System;
 using System.IO;
-using System.Reflection;
-using System.Resources;
 using System.Windows.Forms;
-using System.Linq;
 using DSPRE.ROMFiles;
 using System.Collections.Generic;
 using DSPRE.Resources.ROMToolboxDB;
 using DSPRE.Resources;
 using static DSPRE.RomInfo;
-using System.Threading.Tasks;
 using static DSPRE.Resources.ROMToolboxDB.ToolboxDB;
-using static NSMBe4.ROM;
 
 namespace DSPRE
 {
@@ -23,6 +18,7 @@ namespace DSPRE
         public static bool flag_standardizedItems { get => RomPatchState.flag_standardizedItems; private set => RomPatchState.flag_standardizedItems = value; }
         public static bool flag_arm9Expanded { get => RomPatchState.flag_arm9Expanded; private set => RomPatchState.flag_arm9Expanded = value; }
         public static bool flag_BDHCamPatchApplied { get => RomPatchState.flag_BDHCamPatchApplied; private set => RomPatchState.flag_BDHCamPatchApplied = value; }
+        public static bool flag_BuildingRotationPatchApplied { get => RomPatchState.flag_BuildingRotationPatchApplied; private set => RomPatchState.flag_BuildingRotationPatchApplied = value; }
         public static bool flag_DynamicHeadersPatchApplied { get => RomPatchState.flag_DynamicHeadersPatchApplied; private set => RomPatchState.flag_DynamicHeadersPatchApplied = value; }
         public static bool flag_MatrixExpansionApplied { get => RomPatchState.flag_MatrixExpansionApplied; private set => RomPatchState.flag_MatrixExpansionApplied = value; }
 
@@ -30,8 +26,6 @@ namespace DSPRE
         public static bool flag_TrainerClassBattleTableRepointed { get => RomPatchState.flag_TrainerClassBattleTableRepointed; set => RomPatchState.flag_TrainerClassBattleTableRepointed = value; }
         public static bool flag_PokemonBattleTableRepointed { get => RomPatchState.flag_PokemonBattleTableRepointed; set => RomPatchState.flag_PokemonBattleTableRepointed = value; }
         public static bool flag_TrainerNamesExpanded { get => RomPatchState.flag_TrainerNamesExpanded; set => RomPatchState.flag_TrainerNamesExpanded = value; }
-
-        public static bool overlay1MustBeRestoredFromBackup { get => RomPatchState.overlay1MustBeRestoredFromBackup; private set => RomPatchState.overlay1MustBeRestoredFromBackup = value; }
 
         public static readonly int expandedTrainerNameLength = RomPatchState.expandedTrainerNameLength;
 
@@ -51,9 +45,6 @@ namespace DSPRE
             // (the Avalonia toolbox swaps in native dialogs; the hooks are process-global statics).
             UseWinFormsPrompts();
 
-            // The "Repoint Table" button had no handler in the designer — wire it to the shared patch.
-            repointScrcmdButton.Click += RepointScrcmdButton_Click;
-
             CheckStandardizedItems();
 
             if (ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
@@ -62,23 +53,44 @@ namespace DSPRE
             }
             else
             {
-                DisableARM9patch("Unsupported\nlanguage");
+                DisableARM9patch("Unsupported");
             }
 
-            // BDHCam routine and ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS and Platinum
-            if ( (RomInfo.gameFamily != GameFamilies.HGSS && RomInfo.gameFamily != GameFamilies.Plat) 
-                || ( RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
+            bool bdhCamPatchSupported = BDHCAMPatchData.SupportsCurrentRom();
+            bool buildingRotationPatchSupported = BuildingRotationPatchData.SupportsCurrentRom();
+            bool bdhCamPatchBlockedByProjectFormat = RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && bdhCamPatchSupported;
+            bool buildingRotationPatchBlockedByProjectFormat = !RomInfo.IsDsRomProject && buildingRotationPatchSupported;
+
+            // ScriptCommand repoint patches are only compatible with English and Spanish versions of HGSS
+            if (RomInfo.gameFamily != GameFamilies.HGSS
+                || (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
             {
-                DisableBDHCamPatch("Unsupported\nlanguage");
-                DisableScrcmdRepointPatch("Unsupported\nlanguage");
-            }            
+                DisableScrcmdRepointPatch("Unsupported");
+            }
+
+            if (bdhCamPatchBlockedByProjectFormat)
+            {
+                DisableBDHCamPatch("Convert to\nds-rom");
+            }
+            else if (!bdhCamPatchSupported)
+            {
+                DisableBDHCamPatch("Unsupported");
+            }
+
+            if (buildingRotationPatchBlockedByProjectFormat)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
+            }
+            else if (!buildingRotationPatchSupported)
+            {
+                DisableBuildingRotationPatch("Unsupported");
+            }
 
             CheckExpandedTrainerNamesPatchApplied();
 
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
-                    DisableOverlay1patch("Unsupported");
                     DisableDynamicHeadersPatch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
@@ -86,35 +98,40 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    DisableOverlay1patch("Unsupported");
                     DisableMatrixExpansionPatch("Unsupported");
                     DisableScrcmdRepointPatch("Unsupported");
                     DisableKillTextureAnimationsPatch("Unsupported");
 
-                    if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
+                    if (!bdhCamPatchBlockedByProjectFormat && bdhCamPatchSupported)
                     {
                         CheckBDHCamPatchApplied();
+                    }
+                    if (!buildingRotationPatchBlockedByProjectFormat && buildingRotationPatchSupported)
+                    {
+                        CheckBuildingRotationPatchApplied();
                     }
                     CheckDynamicHeadersPatchApplied();
                     break;
 
                 case GameFamilies.HGSS:
-                    if (!OverlayUtils.OverlayTable.IsDefaultCompressed(1))
-                    {
-                        DisableOverlay1patch("Already applied");
-                        overlay1CB.Visible = true;
-                    }
-
                     if (RomInfo.gameLanguage == GameLanguages.English || RomInfo.gameLanguage == GameLanguages.Spanish)
                     {
-                        CheckBDHCamPatchApplied();
+                        if (!bdhCamPatchBlockedByProjectFormat && bdhCamPatchSupported)
+                        {
+                            CheckBDHCamPatchApplied();
+                        }
                         CheckMatrixExpansionApplied();
                         CheckScrcmdRepointPatchApplied();
                     }
                     else
                     {
-                        DisableMatrixExpansionPatch("Unsupported\nlanguage");
-                        DisableScrcmdRepointPatch("Unsupported\nlanguage");
+                        DisableMatrixExpansionPatch("Unsupported");
+                        DisableScrcmdRepointPatch("Unsupported");
+                    }
+
+                    if (!buildingRotationPatchBlockedByProjectFormat && buildingRotationPatchSupported)
+                    {
+                        CheckBuildingRotationPatchApplied();
                     }
 
                     CheckDynamicHeadersPatchApplied();
@@ -124,12 +141,13 @@ namespace DSPRE
 
         #region Patch Disable
 
-        private void DisableOverlay1patch(string reason)
+        private void DisableBuildingRotationPatch(string reason)
         {
-            overlay1uncomprButton.Enabled = false;
-            overlay1uncompressedLBL.Enabled = false;
-            overlay1patchtextLBL.Enabled = false;
-            overlay1uncomprButton.Text = reason;
+            buildingRotationButton.Enabled = false;
+            buildingRotationLBL.Enabled = false;
+            buildingRotationBetaLBL.Enabled = false;
+            buildingRotationTextLBL.Enabled = false;
+            buildingRotationButton.Text = reason;
         }
 
         private void DisableBDHCamPatch(string reason)
@@ -137,8 +155,87 @@ namespace DSPRE
             BDHCamPatchButton.Enabled = false;
             BDHCamPatchLBL.Enabled = false;
             BDHCamPatchTextLBL.Enabled = false;
-            BDHCamARM9requiredLBL.Enabled = false;
             BDHCamPatchButton.Text = reason;
+        }
+
+        private void EnableBDHCamPatchAfterArm9Expansion()
+        {
+            if (!BDHCAMPatchData.SupportsCurrentRom())
+            {
+                DisableBDHCamPatch("Unsupported");
+                return;
+            }
+
+            if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
+            {
+                DisableBDHCamPatch("Convert to\nds-rom");
+                return;
+            }
+
+            if (PatchToolboxDialog.flag_BDHCamPatchApplied || PatchToolboxDialog.CheckFilesBDHCamPatchApplied())
+            {
+                PatchToolboxDialog.flag_BDHCamPatchApplied = true;
+                BDHCamCB.Visible = true;
+                DisableBDHCamPatch("Already applied");
+                return;
+            }
+
+            BDHCamPatchButton.Text = "Apply Patch";
+            BDHCamPatchButton.Enabled = true;
+            BDHCamPatchLBL.Enabled = true;
+            BDHCamPatchTextLBL.Enabled = true;
+        }
+
+        private void EnableBuildingRotationPatchAfterArm9Expansion()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
+                return;
+            }
+
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                DisableBuildingRotationPatch("Unsupported");
+                return;
+            }
+
+            if (PatchToolboxDialog.flag_BuildingRotationPatchApplied || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied())
+            {
+                PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
+                buildingRotationCB.Visible = true;
+                DisableBuildingRotationPatch("Already applied");
+                return;
+            }
+
+            buildingRotationButton.Text = "Apply Patch";
+            buildingRotationButton.Enabled = true;
+            buildingRotationLBL.Enabled = true;
+            buildingRotationBetaLBL.Enabled = true;
+            buildingRotationTextLBL.Enabled = true;
+        }
+
+        private void EnableScrcmdRepointPatchAfterArm9Expansion()
+        {
+            if (RomInfo.gameFamily != GameFamilies.HGSS
+                || (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish))
+            {
+                DisableScrcmdRepointPatch("Unsupported");
+                return;
+            }
+
+            if (PatchToolboxLogic.IsScrcmdRepointApplied())
+            {
+                repointScrcmdCB.Visible = true;
+                DisableScrcmdRepointPatch("Already applied");
+                return;
+            }
+
+            repointScrcmdButton.Text = "Apply Patch";
+            repointScrcmdButton.Enabled = true;
+            repointScrcmdLBL.Enabled = true;
+            repointScrcmdTextLBL.Enabled = true;
+            label1.Enabled = true;
         }
 
         private void DisableARM9patch(string reason)
@@ -178,7 +275,7 @@ namespace DSPRE
             repointScrcmdButton.Enabled = false;
             repointScrcmdLBL.Enabled = false;
             repointScrcmdTextLBL.Enabled = false;
-            scrcmdARM9requiredLBL.Enabled = false;
+            label1.Enabled = false;
             repointScrcmdButton.Text = reason;
         }
 
@@ -207,6 +304,7 @@ namespace DSPRE
         // File-state checks live in the core PatchToolboxLogic; these forward for existing call sites.
         private static bool CheckFilesArm9ExpansionApplied() => PatchToolboxLogic.CheckFilesArm9ExpansionApplied();
         public static bool CheckFilesBDHCamPatchApplied() => PatchToolboxLogic.CheckFilesBDHCamPatchApplied();
+        public static bool CheckFilesBuildingRotationPatchApplied() => PatchToolboxLogic.CheckFilesBuildingRotationPatchApplied();
         public static bool CheckFilesMatrixExpansionApplied() => PatchToolboxLogic.CheckFilesMatrixExpansionApplied();
         public static bool CheckScriptsStandardizedItemNumbers() => PatchToolboxLogic.CheckScriptsStandardizedItemNumbers();
 
@@ -216,10 +314,10 @@ namespace DSPRE
             PatchToolboxLogic.ConfirmYesNo = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
             PatchToolboxLogic.ShowInfo = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
             PatchToolboxLogic.ShowError = (msg, title) => MessageBox.Show(msg, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            PatchToolboxLogic.PickCustomCommandFile = () =>
+            PatchToolboxLogic.PickSyntheticOverlayOffset = (patchName, filePath, defaultOffset, expectedBytes, loadAddress) =>
             {
-                using (OpenFileDialog of = new OpenFileDialog { Filter = "Custom Script Command File (*.scrcmd)|*.scrcmd" })
-                    return of.ShowDialog() == DialogResult.OK ? of.FileName : null;
+                using (var dlg = new SyntheticOverlayOffsetDialog(patchName, filePath, defaultOffset, expectedBytes, loadAddress))
+                    return dlg.ShowDialog() == DialogResult.OK ? dlg.SelectedOffset : (uint?)null;
             };
         }
 
@@ -278,12 +376,12 @@ namespace DSPRE
             {
                 case GameFamilies.Plat:
                 case GameFamilies.HGSS:
-                    BDHCamARM9requiredLBL.Visible = false;
-                    BDHCamPatchButton.Enabled = true;
-                    BDHCamPatchLBL.Enabled = true;
-                    BDHCamPatchTextLBL.Enabled = true;
+                    EnableBDHCamPatchAfterArm9Expansion();
                     break;
             }
+
+            EnableBuildingRotationPatchAfterArm9Expansion();
+            EnableScrcmdRepointPatchAfterArm9Expansion();
 
             return true;
         }
@@ -311,7 +409,6 @@ namespace DSPRE
         {
             if (!CheckARM9ExpansionApplied())
             {
-                BDHCamARM9requiredLBL.Visible = true;
                 DisableBDHCamPatch("ARM9 not expanded!");
                 return false;
             }
@@ -330,9 +427,61 @@ namespace DSPRE
             return true;
         }
 
+        public bool CheckBuildingRotationPatchApplied()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                DisableBuildingRotationPatch("Convert to\nds-rom");
+                return false;
+            }
+
+            if (!BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                DisableBuildingRotationPatch("Unsupported");
+                return false;
+            }
+
+            if (!CheckARM9ExpansionApplied())
+            {
+                DisableBuildingRotationPatch("ARM9 not expanded!");
+                return false;
+            }
+
+            if (!PatchToolboxDialog.flag_BuildingRotationPatchApplied)
+            {
+                if (!PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied())
+                {
+                    return false;
+                }
+            }
+
+            PatchToolboxDialog.flag_BuildingRotationPatchApplied = true;
+            buildingRotationCB.Visible = true;
+            DisableBuildingRotationPatch("Already applied");
+
+            if (EditorPanels.mapEditor != null && EditorPanels.mapEditor.mapEditorIsReady)
+            {
+                EditorPanels.mapEditor.RefreshBuildingRotationPatchState();
+            }
+
+            return true;
+        }
+
         public void CheckScrcmdRepointPatchApplied()
         {
-            //throw new NotImplementedException();
+            if (!PatchToolboxDialog.flag_arm9Expanded && !PatchToolboxDialog.CheckFilesArm9ExpansionApplied())
+            {
+                DisableScrcmdRepointPatch("ARM9 not expanded!");
+                return;
+            }
+
+            if (!PatchToolboxLogic.IsScrcmdRepointApplied())
+            {
+                return;
+            }
+
+            repointScrcmdCB.Visible = true;
+            DisableScrcmdRepointPatch("Already applied");
         }
 
         public void CheckExpandedTrainerNamesPatchApplied()
@@ -370,25 +519,26 @@ namespace DSPRE
 
         private void BDHCAMPatchButton_Click(object sender, EventArgs e)
         {
-            // If the user accepts the "configure Overlay1 uncompressed first" recommendation and it
-            // succeeds, refresh the Overlay1 patch UI here (same as the old inline handler call).
-            if (PatchToolboxLogic.ApplyBDHCamPatch(() => { DisableOverlay1patch("Already applied"); overlay1CB.Visible = true; }))
+            if (PatchToolboxLogic.ApplyBDHCamPatch())
             {
                 DisableBDHCamPatch("Already applied");
                 BDHCamCB.Visible = true;
             }
         }
 
-        private void overlay1uncomprButton_Click(object sender, EventArgs e)
+        private void BuildingRotationButton_Click(object sender, EventArgs e)
         {
-            if (ConfigureOverlay1Uncompressed())
+            if (PatchToolboxLogic.ApplyBuildingRotationPatch())
             {
-                DisableOverlay1patch("Already applied");
-                overlay1CB.Visible = true;
+                DisableBuildingRotationPatch("Already applied");
+                buildingRotationCB.Visible = true;
+
+                if (EditorPanels.mapEditor != null && EditorPanels.mapEditor.mapEditorIsReady)
+                {
+                    EditorPanels.mapEditor.RefreshBuildingRotationPatchState();
+                }
             }
         }
-
-        public static bool ConfigureOverlay1Uncompressed() => PatchToolboxLogic.ConfigureOverlay1Uncompressed();
 
         private void ApplyItemStandardizeButton_Click(object sender, EventArgs e)
         {
@@ -410,13 +560,12 @@ namespace DSPRE
                 {
                     case GameFamilies.Plat:
                     case GameFamilies.HGSS:
-                        BDHCamPatchButton.Text = "Apply Patch";
-                        BDHCamPatchButton.Enabled = true;
-                        BDHCamPatchLBL.Enabled = true;
-                        BDHCamPatchTextLBL.Enabled = true;
-                        BDHCamARM9requiredLBL.Visible = false;
+                        EnableBDHCamPatchAfterArm9Expansion();
                         break;
                 }
+
+                EnableBuildingRotationPatchAfterArm9Expansion();
+                EnableScrcmdRepointPatchAfterArm9Expansion();
             }
         }
 
@@ -456,21 +605,17 @@ namespace DSPRE
             }
         }
 
-        #region Mikelan's custom commands
-
-        // Repoint the script command table into the expanded ARM9 file. Wired in the constructor
-        // (the "Repoint Table" button had no handler before). The apply-logic + custom-command
-        // install now live in the shared PatchToolboxLogic (see ApplyScrcmdRepointPatch /
-        // InstallCustomScriptCommand), so WinForms and Avalonia run identical code.
-        private void RepointScrcmdButton_Click(object sender, EventArgs e)
+        // Moves the in-game ScrCommands table + count into the synthetic overlay. Apply-logic lives in
+        // the shared PatchToolboxLogic (see ApplyScrcmdRepointPatch), so WinForms and Avalonia run
+        // identical code — including the synthetic-overlay offset picker.
+        private void applyCustomCommands(object sender, EventArgs e)
         {
             if (PatchToolboxLogic.ApplyScrcmdRepointPatch())
             {
+                repointScrcmdCB.Visible = true;
                 DisableScrcmdRepointPatch("Already applied");
             }
         }
-
-        #endregion Mikelan's custom commands
 
         #endregion Button Actions
 

@@ -29,6 +29,7 @@ namespace DSPRE
         public static bool flag_standardizedItems { get; set; } = false;
         public static bool flag_arm9Expanded { get; set; } = false;
         public static bool flag_BDHCamPatchApplied { get; set; } = false;
+        public static bool flag_BuildingRotationPatchApplied { get; set; } = false;
         public static bool flag_DynamicHeadersPatchApplied { get; set; } = false;
         public static bool flag_MatrixExpansionApplied { get; set; } = false;
 
@@ -36,8 +37,6 @@ namespace DSPRE
         public static bool flag_TrainerClassBattleTableRepointed { get; set; } = false;
         public static bool flag_PokemonBattleTableRepointed { get; set; } = false;
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
-
-        public static bool overlay1MustBeRestoredFromBackup { get; set; } = true;
 
         public static readonly int expandedTrainerNameLength = 12;
 
@@ -50,13 +49,13 @@ namespace DSPRE
             flag_standardizedItems = false;
             flag_arm9Expanded = false;
             flag_BDHCamPatchApplied = false;
+            flag_BuildingRotationPatchApplied = false;
             flag_DynamicHeadersPatchApplied = false;
             flag_MatrixExpansionApplied = false;
             flag_MainComboTableRepointed = false;
             flag_TrainerClassBattleTableRepointed = false;
             flag_PokemonBattleTableRepointed = false;
             flag_TrainerNamesExpanded = false;
-            overlay1MustBeRestoredFromBackup = true;
 
             // The static field initializer only runs once, so re-evaluate when the game family changes.
             try

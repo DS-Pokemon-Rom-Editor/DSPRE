@@ -140,21 +140,14 @@ namespace DSPRE.Avalonia.ViewModels
                 RomInfo.PrepareCameraData();
                 IsHgss = RomInfo.gameFamily == GameFamilies.HGSS;
 
-                // Overlay compression check (warn but don't block)
-                if (OverlayUtils.OverlayTable.IsDefaultCompressed(RomInfo.cameraTblOverlayNumber))
+                // A legacy ndstool project can't reliably track overlay compression state (see
+                // RomInfo.IsDsRomProject); ds-rom handles it automatically during unpack/build.
+                if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject && RomInfo.cameraTblOverlayNumber == 1)
                 {
-                    bool wantMore = await DialogHelper.AskYesNo(
-                        "It is STRONGLY recommended to configure Overlay1 as uncompressed before proceeding.\n\n" +
-                        "Do you want to know more?",
-                        "Overlay Compression Warning");
-
-                    if (wantMore)
-                    {
-                        PatchToolboxLogic.ConfigureOverlay1Uncompressed();
-                    }
-
-                    if (OverlayUtils.IsCompressed(RomInfo.cameraTblOverlayNumber))
-                        OverlayUtils.Decompress(RomInfo.cameraTblOverlayNumber);
+                    StatusText = "Convert this project to ds-rom format before using the Camera Editor for this ROM.";
+                    await DialogHelper.ShowInfo(StatusText, "ds-rom project required");
+                    IsReady = false;
+                    return;
                 }
 
                 // Read RAM addresses from overlay to find camera table offset

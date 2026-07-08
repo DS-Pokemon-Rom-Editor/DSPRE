@@ -133,9 +133,10 @@
                 <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BY}"/>
                 <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BZ}"/>
                 <TextBlock Text="Rotation X / Y / Z (°)" FontSize="10"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}"/>
+                <TextBlock Text="Requires the Building Rotation patch (Patch Toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}" IsEnabled="{Binding BuildingRotationEnabled}"/>
               </StackPanel>
             </Grid>
           </DockPanel>

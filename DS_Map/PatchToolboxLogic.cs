@@ -19,7 +19,7 @@ namespace DSPRE
     /// identical patch code (no ROM-writing divergence). Core — no UI-toolkit dependency.
     ///
     /// All user prompts go through the pluggable <see cref="ConfirmYesNo"/> / <see cref="ShowInfo"/> /
-    /// <see cref="ShowError"/> / <see cref="PickCustomCommandFile"/> hooks (defaults route through
+    /// <see cref="ShowError"/> / <see cref="PickSyntheticOverlayOffset"/> hooks (defaults route through
     /// <see cref="AppMessages"/>; each shell installs its own dialogs — WinForms via
     /// <c>PatchToolboxDialog.UseWinFormsPrompts()</c>, Avalonia via <c>PatchDialogs.Install()</c>).
     /// The methods set the shared <see cref="RomPatchState"/> flags and return whether the patch was
@@ -36,8 +36,96 @@ namespace DSPRE
         public static Action<string, string> ShowInfo = (msg, title) => AppMessages.Info(msg, title);
         /// <summary>Error message. Default = <see cref="AppMessages"/>.</summary>
         public static Action<string, string> ShowError = (msg, title) => AppMessages.Error(msg, title);
-        /// <summary>Pick a <c>.scrcmd</c> custom-command file. Returns null if cancelled (or headless).</summary>
-        public static Func<string> PickCustomCommandFile = () => null;
+        /// <summary>
+        /// Ask the user for the synthetic-overlay file offset a payload (<paramref name="expectedBytes"/>
+        /// long) should be written to, showing the affected file range / runtime address / whether the
+        /// range already contains data. Returns null if cancelled (or headless — default is a no-op so a
+        /// synthetic-overlay patch never silently overwrites data without a real UI to confirm it).
+        /// Args: patchName, synthetic-overlay file path, default offset, expected payload bytes, load address.
+        /// </summary>
+        public static Func<string, string, uint, byte[], uint, uint?> PickSyntheticOverlayOffset =
+            (patchName, filePath, defaultOffset, expectedBytes, loadAddress) => null;
+
+        // ── Synthetic-overlay ARM9 helpers (Thumb BL encode/decode, payload/range status) ──────────
+
+        /// <summary>Encodes a Thumb BL instruction (4 bytes) from <paramref name="sourceAddress"/> to <paramref name="targetAddress"/>.</summary>
+        public static byte[] BuildThumbBl(uint sourceAddress, uint targetAddress)
+        {
+            int offset = unchecked((int)(targetAddress - (sourceAddress + 4)));
+            ushort first = (ushort)(0xF000 | ((offset >> 12) & 0x07FF));
+            ushort second = (ushort)(0xF800 | ((offset >> 1) & 0x07FF));
+            return new byte[] {
+                (byte)(first & 0xFF),
+                (byte)(first >> 8),
+                (byte)(second & 0xFF),
+                (byte)(second >> 8)
+            };
+        }
+
+        /// <summary>Decodes a Thumb BL's target address, or false if <paramref name="branchBytes"/> isn't one.</summary>
+        public static bool TryGetThumbBlTarget(uint sourceAddress, byte[] branchBytes, out uint targetAddress)
+        {
+            targetAddress = 0;
+            if (branchBytes == null || branchBytes.Length != 4)
+            {
+                return false;
+            }
+
+            ushort first = BitConverter.ToUInt16(branchBytes, 0);
+            ushort second = BitConverter.ToUInt16(branchBytes, 2);
+            if ((first & 0xF800) != 0xF000 || (second & 0xF800) != 0xF800)
+            {
+                return false;
+            }
+
+            int offset = ((first & 0x07FF) << 12) | ((second & 0x07FF) << 1);
+            if ((offset & 0x00400000) != 0)
+            {
+                offset |= unchecked((int)0xFF800000);
+            }
+
+            targetAddress = unchecked((uint)((int)(sourceAddress + 4) + offset));
+            return true;
+        }
+
+        private static byte[] BuildBuildingRotationPayload(BuildingRotationPatchData data, uint payloadAddress)
+        {
+            byte[] payload = (byte[])data.payload.Clone();
+            byte[] branchBytes = BuildThumbBl(
+                payloadAddress + BuildingRotationPatchData.payloadInternalBranchOffset,
+                data.rotationMatrixFunctionAddress);
+            Array.Copy(branchBytes, 0, payload, (int)BuildingRotationPatchData.payloadInternalBranchOffset, branchBytes.Length);
+            return payload;
+        }
+
+        /// <summary>Human-readable status of a synthetic-overlay byte range, for confirmation prompts.</summary>
+        public static string GetSyntheticOverlayRangeStatus(uint offset, byte[] expectedBytes)
+        {
+            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (!File.Exists(expandedPath))
+            {
+                return "Synthetic overlay range status: synthetic overlay file was not found.";
+            }
+
+            long fileLength = new FileInfo(expandedPath).Length;
+            if (offset >= fileLength || (long)offset + expectedBytes.Length > fileLength)
+            {
+                return "Synthetic overlay range status: selected range is outside the synthetic overlay file.";
+            }
+
+            byte[] currentBytes = DSUtils.ReadFromFile(expandedPath, offset, expectedBytes.Length);
+            if (currentBytes.Length != expectedBytes.Length)
+            {
+                return "Synthetic overlay range status: selected range could not be read.";
+            }
+
+            if (currentBytes.All(b => b == 0))
+            {
+                return "Synthetic overlay range status: empty.";
+            }
+
+            return "Synthetic overlay range status: already contains data; continuing will overwrite it.";
+        }
 
         // ── File-state checks (do the ROM bytes say the patch is applied?) ─────────────────────────
 
@@ -60,6 +148,18 @@ namespace DSPRE
 
         public static bool CheckFilesBDHCamPatchApplied()
         {
+            if (!BDHCAMPatchData.SupportsCurrentRom())
+            {
+                return false;
+            }
+
+            // HGSS ties this patch to overlay 1, whose compression state a legacy ndstool project
+            // can't reliably track (see RomInfo.IsDsRomProject) — require ds-rom format there.
+            if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
+            {
+                return false;
+            }
+
             BDHCAMPatchData data = new BDHCAMPatchData();
 
             byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
@@ -71,7 +171,6 @@ namespace DSPRE
             }
 
             string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
-            OverlayUtils.Decompress(data.overlayNumber);
 
             byte[] overlayCode1 = DSUtils.HexStringToByteArray(data.overlayString1);
             byte[] overlayCode1Read = DSUtils.ReadFromFile(overlayFilePath, data.overlayOffset1, overlayCode1.Length);
@@ -137,38 +236,6 @@ namespace DSPRE
             return initValue == 0xB500;
         }
 
-        public static bool ConfigureOverlay1Uncompressed()
-        {
-            bool isCompressed = false;
-            string stringDecompressOverlay = "";
-
-            if (OverlayUtils.IsCompressed(1))
-            {
-                isCompressed = true;
-                stringDecompressOverlay = "- Overlay 1 will be decompressed.\n\n";
-            }
-
-            if (ConfirmYesNo("This process will apply the following changes:\n\n" +
-                stringDecompressOverlay +
-                "- Overlay 1 will be configured as \"uncompressed\" in the overlay table.\n\n" +
-                "Do you wish to continue?", "Confirm to proceed"))
-            {
-                OverlayUtils.OverlayTable.SetDefaultCompressed(1, false);
-                if (isCompressed)
-                {
-                    OverlayUtils.Decompress(1);
-                }
-
-                ShowInfo("Overlay1 is now configured as uncompressed.", "Operation successful");
-                return true;
-            }
-            else
-            {
-                ShowInfo("No changes have been made.", "Operation canceled");
-                return false;
-            }
-        }
-
         // ── Patch apply-methods ──────────────────────────────────────────────────────────────────
 
         /// <summary>Convert every Pokémon name to Sentence Case. Always supported.</summary>
@@ -200,29 +267,16 @@ namespace DSPRE
             return true;
         }
 
-        /// <summary>
-        /// Apply the BDHCam routine (Plat/HGSS EN/ES). <paramref name="onOverlay1Configured"/> is
-        /// invoked if the user accepts the "configure Overlay1 uncompressed first" recommendation and
-        /// it succeeds, so the caller can refresh the Overlay1 patch UI (mirrors the old WinForms flow).
-        /// </summary>
-        public static bool ApplyBDHCamPatch(Action onOverlay1Configured)
+        /// <summary>Apply the BDHCam / Dynamic Cameras routine (Plat/HGSS EN/ES). Requires a ds-rom-format project on HGSS.</summary>
+        public static bool ApplyBDHCamPatch()
         {
-            BDHCAMPatchData data = new BDHCAMPatchData();
-
-            if (RomInfo.gameFamily == GameFamilies.HGSS)
+            if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
             {
-                if (OverlayUtils.OverlayTable.IsDefaultCompressed(data.overlayNumber))
-                {
-                    if (ConfirmYesNo("It is STRONGLY recommended to configure Overlay1 as uncompressed before proceeding.\n\n" +
-                        "More details in the following dialog.\n\n" + "Do you want to know more?", "Confirm to proceed"))
-                    {
-                        if (ConfigureOverlay1Uncompressed())
-                        {
-                            onOverlay1Configured?.Invoke();
-                        }
-                    }
-                }
+                ShowError("Convert this project to ds-rom format before applying the Dynamic Cameras patch.", "ds-rom project required");
+                return false;
             }
+
+            BDHCAMPatchData data = new BDHCAMPatchData();
 
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
             "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
@@ -238,8 +292,8 @@ namespace DSPRE
             }
 
             File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            string ov5path = OverlayUtils.GetPath(5);
-            File.Copy(ov5path, ov5path + BackupSuffix, overwrite: true);
+            string overlayBackupPath = OverlayUtils.GetPath(data.overlayNumber);
+            File.Copy(overlayBackupPath, overlayBackupPath + BackupSuffix, overwrite: true);
 
             try
             {
@@ -254,7 +308,6 @@ namespace DSPRE
 
                 DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString1), data.overlayOffset1); //Write new overlayCode1
                 DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString2), data.overlayOffset2); //Write new overlayCode2
-                RomPatchState.overlay1MustBeRestoredFromBackup = false;
 
                 /*Write Expanded ARM9 File*/
                 DSUtils.WriteToFile(Filesystem.expArmPath, data.subroutine, BDHCAMPatchData.BDHCamSubroutineOffset);
@@ -265,10 +318,128 @@ namespace DSPRE
                 return false;
             }
 
-            RomPatchState.overlay1MustBeRestoredFromBackup = false;
             RomPatchState.flag_BDHCamPatchApplied = true;
 
             ShowInfo("The BDHCAM patch has been applied.", "Operation successful.");
+            return true;
+        }
+
+        /// <summary>Checks whether the Building Rotation routine hook + payload are already present on the ROM.</summary>
+        public static bool CheckFilesBuildingRotationPatchApplied()
+        {
+            if (!RomInfo.IsDsRomProject || !BuildingRotationPatchData.SupportsCurrentRom())
+            {
+                return false;
+            }
+
+            BuildingRotationPatchData data = new BuildingRotationPatchData();
+            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+
+            byte[] hookBytes = DSUtils.ReadFromFile(overlayFilePath, data.hookOverlayOffset, 4);
+            if (!TryGetThumbBlTarget(data.hookRuntimeAddress, hookBytes, out uint targetAddress))
+            {
+                return false;
+            }
+
+            if (targetAddress < synthOverlayLoadAddress)
+            {
+                return false;
+            }
+
+            uint payloadOffset = targetAddress - synthOverlayLoadAddress;
+            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (!File.Exists(expandedPath))
+            {
+                return false;
+            }
+
+            long fileLength = new FileInfo(expandedPath).Length;
+            if ((long)payloadOffset + data.payload.Length > fileLength)
+            {
+                return false;
+            }
+
+            byte[] payloadRead = DSUtils.ReadFromFile(expandedPath, payloadOffset, data.payload.Length);
+            return payloadRead.SequenceEqual(BuildBuildingRotationPayload(data, targetAddress));
+        }
+
+        /// <summary>
+        /// Apply the Building Rotation routine (Diamond/Pearl/Platinum/HeartGold/SoulSilver EN, Plat FR,
+        /// HG IT). Requires the ARM9 expansion patch and a ds-rom-format project (the hook writes into
+        /// an overlay whose compression state ds-rom tracks automatically; a legacy ndstool project can't
+        /// reliably guarantee the overlay is uncompressed here). Lets the user choose where in the
+        /// synthetic overlay the payload lands via <see cref="PickSyntheticOverlayOffset"/>.
+        /// </summary>
+        public static bool ApplyBuildingRotationPatch()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                ShowError("Convert this project to ds-rom format before applying the Building Rotation patch.", "ds-rom project required");
+                return false;
+            }
+
+            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            {
+                ShowError("Apply the ARM9 Expansion patch before applying the Building Rotation patch.", "ARM9 Expansion Required");
+                return false;
+            }
+
+            BuildingRotationPatchData data;
+            try
+            {
+                data = new BuildingRotationPatchData();
+            }
+            catch
+            {
+                ShowError("This ROM version is not supported by the Building Rotation patch.", "Unsupported");
+                return false;
+            }
+
+            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            uint? pickedOffset = PickSyntheticOverlayOffset("Building rotation routine", expandedPath, data.defaultPayloadOffset, data.payload, synthOverlayLoadAddress);
+            if (pickedOffset == null)
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            uint payloadOffset = pickedOffset.Value;
+            uint payloadAddress = synthOverlayLoadAddress + payloadOffset;
+            byte[] branchBytes = BuildThumbBl(data.hookRuntimeAddress, payloadAddress);
+            byte[] payloadBytes = BuildBuildingRotationPayload(data, payloadAddress);
+            string rangeStatus = GetSyntheticOverlayRangeStatus(payloadOffset, data.payload);
+
+            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
+                "- Backup Overlay " + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + BackupSuffix + " will be created).\n\n" +
+                "- Replace 4 bytes at Overlay " + data.overlayNumber + " offset 0x" + data.hookOverlayOffset.ToString("X") + " with a branch to the building rotation routine.\n\n" +
+                "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' +
+                "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n" +
+                rangeStatus + "\n\n" +
+                "This enables the existing building rotation values to be used when placing buildings.\n\n" +
+                "Do you wish to continue?", "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
+            File.Copy(overlayFilePath, overlayFilePath + BackupSuffix, overwrite: true);
+
+            try
+            {
+                DSUtils.WriteToFile(overlayFilePath, branchBytes, data.hookOverlayOffset);
+                DSUtils.WriteToFile(expandedPath, payloadBytes, payloadOffset);
+            }
+            catch
+            {
+                ShowError("Operation failed. It is strongly advised that you restore the Overlay " + data.overlayNumber + " backup.", "Something went wrong");
+                return false;
+            }
+
+            RomPatchState.flag_BuildingRotationPatchApplied = true;
+
+            ShowInfo("The Building Rotation patch has been applied.\n\n" +
+                "Synthetic overlay offset: 0x" + payloadOffset.ToString("X"), "Operation successful.");
             return true;
         }
 
@@ -632,9 +803,19 @@ namespace DSPRE
             }
         }
 
-        // ── Script-command table (Mikelan's custom commands) ─────────────────────────────────────
+        // ── Script-command table (moves the in-game ScrCommands table + count into the synthetic
+        // overlay; does not add commands or edit the JSON script-command metadata) ─────────────────
 
-        /// <summary>Repoint the script command table into the expanded ARM9 file (HGSS EN/ES).</summary>
+        private const uint ScrcmdOriginalCommandCount = 0x355;
+        private const int ScrcmdOriginalTableLength = (int)(4 * ScrcmdOriginalCommandCount);
+        private const uint ScrcmdCountOffsetInBlock = 0x04;
+        private const uint ScrcmdTableMarkerOffsetInBlock = 0x08;
+        private const uint ScrcmdTableOffsetInBlock = 0x0C;
+        private const uint ScrcmdCountMarker = 0x4E554F43; // "COUN"
+        private const uint ScrcmdTableMarker = 0x4C424154; // "TABL"
+        private const uint ScrcmdBlockDefaultOffset = 0x200;
+
+        /// <summary>Move the ScrCommands table + count into the expanded ARM9 file (HGSS EN/ES).</summary>
         public static bool ApplyScrcmdRepointPatch()
         {
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
@@ -650,11 +831,34 @@ namespace DSPRE
                 return true;
             }
 
-            if (!ConfirmYesNo("Script command table has not been repointed.\n\n" +
-                "Do you wish to repoint it to the expanded ARM9 file?\n\n" +
-                "By default it will be written from 0x200 to 0x1700.\n" +
-                "If you already have something there, you must cancel this window and move these things to a new location, or you can manually repoint the script command table to a different free location in the expanded ARM9 file",
-                "Confirm to proceed"))
+            byte[] commandTablePayload;
+            try
+            {
+                commandTablePayload = BuildCommandTablePayload();
+            }
+            catch
+            {
+                ShowError("This ROM version is not supported by the ScrCommands table patch.", "Unsupported");
+                return false;
+            }
+
+            uint? pickedOffset = PickSyntheticOverlayOffset("Script command table block", expandedPath, ScrcmdBlockDefaultOffset, commandTablePayload, synthOverlayLoadAddress);
+            if (pickedOffset == null)
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            uint blockOffset = pickedOffset.Value;
+            string rangeStatus = GetSyntheticOverlayRangeStatus(blockOffset, commandTablePayload);
+
+            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
+                "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created).\n\n" +
+                "- Write the moved ScrCommands block to synthetic overlay offset 0x" + blockOffset.ToString("X") + ".\n\n" +
+                "- Update the ARM9 ScrCommands table pointer.\n\n" +
+                "- Update the ARM9 ScrCommands count pointer.\n" +
+                rangeStatus + "\n\n" +
+                "Do you wish to continue?", "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -662,176 +866,156 @@ namespace DSPRE
 
             try
             {
-                RepointCommandTable();
+                File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+                RepointCommandTable(blockOffset, commandTablePayload);
             }
             catch
             {
-                ShowError("Repointing the script command table failed.", "Something went wrong");
+                ShowError("Repointing the script command table failed. It is strongly advised that you restore the arm9 backup (arm9.bin" + BackupSuffix + ").", "Something went wrong");
                 return false;
             }
 
-            ShowInfo("The script command table has been repointed to the expanded ARM9 file.", "Operation successful.");
+            ShowInfo("The ScrCommands table patch has been applied.\n\n" +
+                "This does not add new commands or update DSPRE's JSON script-command metadata.\n\n" +
+                "Synthetic overlay offset: 0x" + blockOffset.ToString("X") +
+                " (count: 0x" + (blockOffset + ScrcmdCountOffsetInBlock).ToString("X") +
+                ", table: 0x" + (blockOffset + ScrcmdTableOffsetInBlock).ToString("X") + ")",
+                "ScrCommands Table Moved");
             return true;
         }
 
-        /// <summary>Install a custom script command from a <c>.scrcmd</c> file (repointing the table first if needed).</summary>
-        public static bool InstallCustomScriptCommand()
-        {
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
-            if (!File.Exists(expandedPath))
-            {
-                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing.", "ARM9 not expanded");
-                return false;
-            }
-
-            int expTableOffset = GetCommandTableOffset();
-
-            if (expTableOffset < 0)
-            {
-                if (ConfirmYesNo("Script command table has not been repointed.\n\n" +
-                    "Do you wish to repoint it to the expanded ARM9 file?\n\n" +
-                    "By default it will be written from 0x200 to 0x1700.\n" +
-                    "If you already have something there, you must cancel this window and move these things to a new location, or you can manually repoint the script command table to a different free location in the expanded ARM9 file",
-                    "Confirm to proceed"))
-                {
-                    RepointCommandTable();
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (ImportCustomCommand())
-            {
-                ShowInfo("Script commands succesfully installed in the ROM", "Done");
-                return true;
-            }
-
-            return false;
-        }
+        /// <summary>Checks if the command table is repointed IN THE EXPANDED ARM9 FILE, returns its pointer inside that file (or -1).</summary>
+        /// <summary>Whether the ScrCommands table has been moved into the synthetic overlay (table + count pointer both valid).</summary>
+        public static bool IsScrcmdRepointApplied() => GetCommandTableOffset() >= 0 && CheckScrcmdCommandCountPointerValid();
 
         private static int GetCommandTableOffset()
-        { // Checks if command table is repointed IN THE EXPANDED ARM9 FILE, returns pointer inside this file
-            ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-            int pointerOffset = int.Parse(customcmdDB.GetString("pointerOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
-            using (ARM9.Reader r = new ARM9.Reader(pointerOffset))
+        {
+            try
             {
-                uint cmdTable = r.ReadUInt32();
-                uint offset = cmdTable - synthOverlayLoadAddress;
-
-                if ((offset >= 0) && (offset <= 0x12B00))
+                int pointerOffset = GetCustomScrcmdDBInt("pointerOffset");
+                using (ARM9.Reader r = new ARM9.Reader(pointerOffset))
                 {
-                    return (int)offset; // Table position inside the expanded arm9 file
+                    uint cmdTable = r.ReadUInt32();
+                    if (cmdTable < synthOverlayLoadAddress)
+                    {
+                        return -1;
+                    }
+
+                    uint offset = cmdTable - synthOverlayLoadAddress;
+                    string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+                    if (File.Exists(expandedPath))
+                    {
+                        long fileLength = new FileInfo(expandedPath).Length;
+                        if (offset >= ScrcmdTableOffsetInBlock &&
+                            (long)offset + ScrcmdOriginalTableLength <= fileLength &&
+                            CheckScrcmdBlockMarkers((int)(offset - ScrcmdTableOffsetInBlock)))
+                        {
+                            return (int)offset; // Table position inside the expanded arm9 file
+                        }
+                    }
                 }
+            }
+            catch
+            {
+                return -1;
             }
             return -1; // No table in expanded arm9 file
         }
 
-        private static void RepointCommandTable()
+        /// <summary>Whether the ARM9 command-count pointer already points at the moved block's count field.</summary>
+        private static bool CheckScrcmdCommandCountPointerValid()
         {
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
-            ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
-
-            FileStream arm9FileStream = new FileStream(RomInfo.arm9Path, FileMode.Open); // I make a copy of the stream so the file is free for writing
-            MemoryStream arm9Stream = new MemoryStream();
-            arm9FileStream.CopyTo(arm9Stream);
-            byte[] cmdTbl = arm9Stream.ToArray();
-
-            using (BinaryWriter expArmWriter = new BinaryWriter(new FileStream(expandedPath, FileMode.Open)))
+            try
             {
-                expArmWriter.BaseStream.Position = 0x200; // Command table default offset
-                expArmWriter.Write(cmdTbl, int.Parse(customcmdDB.GetString("originalTableOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage)), 4 * 0x355);
+                int tableOffset = GetCommandTableOffset();
+                if (tableOffset < 0)
+                {
+                    return false;
+                }
+
+                uint expectedCountPointer = synthOverlayLoadAddress + (uint)tableOffset - ScrcmdTableOffsetInBlock + ScrcmdCountOffsetInBlock;
+                using (ARM9.Reader r = new ARM9.Reader(GetCustomScrcmdDBInt("commandCountPointerOffset")))
+                {
+                    return r.ReadUInt32() == expectedCountPointer;
+                }
             }
-
-            arm9FileStream.Close();
-
-            using (ARM9.Writer wr = new ARM9.Writer())
-            { // Change both the pointer and the limit
-                wr.BaseStream.Position = int.Parse(customcmdDB.GetString("pointerOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
-                wr.Write((uint)0x023C8200);
-
-                wr.BaseStream.Position = int.Parse(customcmdDB.GetString("limitOffset" + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage));
-                wr.Write((uint)0x053C);
+            catch
+            {
+                return false;
             }
         }
 
-        private static bool ImportCustomCommand()
+        private static bool CheckScrcmdBlockMarkers(int blockOffset)
         {
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
-            int appliedPatches = 0;
-
-            string chosenFile = PickCustomCommandFile();
-            if (string.IsNullOrEmpty(chosenFile))
+            if (!File.Exists(expandedPath))
             {
                 return false;
             }
 
-            FileStream expandedFileStream = new FileStream(expandedPath, FileMode.Open);
-            MemoryStream expandedStream = new MemoryStream();
-            expandedFileStream.CopyTo(expandedStream);
-            expandedFileStream.Close();
-
-            using (DSUtils.EasyWriter expandedWriter = new DSUtils.EasyWriter(expandedPath, fmode: FileMode.Open))
+            using (BinaryReader reader = new BinaryReader(new FileStream(expandedPath, FileMode.Open, FileAccess.Read)))
             {
-                using (BinaryReader expandedReader = new BinaryReader(expandedStream))
+                if (blockOffset < 0 || blockOffset + (long)ScrcmdTableOffsetInBlock > reader.BaseStream.Length)
                 {
-                    try
-                    {
-                        System.Xml.Linq.XDocument xmldoc = System.Xml.Linq.XDocument.Load(new FileStream(chosenFile, FileMode.Open));
-
-                        foreach (var node in xmldoc.Root.Elements("scriptcommand"))
-                        {
-                            ushort commandID = ushort.Parse(node.Attribute("ID").Value, System.Globalization.NumberStyles.HexNumber);
-                            string targetROM = node.Element("ROM").Value;
-                            string targetLang = node.Element("lang").Value;
-                            string commandName = node.Element("name").Value;
-                            string paramCount = node.Element("paramcount").Value;
-                            string paramCode = node.Element("paramcode").Value;
-                            int asmOffset = Int32.Parse(node.Element("asmoffset").Value, System.Globalization.NumberStyles.HexNumber);
-                            string asmCode = node.Element("asmcode").Value.Replace("\n", "").Replace("\t", "").Replace(" ", "");
-
-                            if (RomInfo.gameVersion.ToString().Equals(targetROM) && RomInfo.gameLanguage.Equals(targetLang))
-                            {
-                                expandedReader.BaseStream.Position = 0x200 + commandID * 4;
-                                if (expandedReader.ReadUInt32() != 0)
-                                {
-                                    if (!ConfirmYesNo("Script command " + commandID.ToString("X4") + " is already used.\n\n" +
-                                        "Do you really want to overwrite it?", "Confirm to proceed"))
-                                    {
-                                        continue;
-                                    }
-                                }
-
-                                expandedWriter.BaseStream.Position = 0x200 + commandID * 4;
-                                expandedWriter.Write((int)(synthOverlayLoadAddress + asmOffset + 1));
-
-                                byte[] asmCodeBytes = DSUtils.StringToByteArray(asmCode);
-                                expandedWriter.BaseStream.Position = asmOffset;
-                                expandedWriter.Write(asmCodeBytes);
-
-                                appliedPatches++;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        ShowError("Selected command installation file is corrupted.\n\n" +
-                        "Please, download it again or contact its creator.", "Error");
-
-                        return false;
-                    }
+                    return false;
                 }
-            }
 
-            if (appliedPatches == 0)
+                reader.BaseStream.Position = blockOffset;
+                uint countMarker = reader.ReadUInt32();
+                reader.BaseStream.Position = blockOffset + (long)ScrcmdTableMarkerOffsetInBlock;
+                uint tableMarker = reader.ReadUInt32();
+                return countMarker == ScrcmdCountMarker && tableMarker == ScrcmdTableMarker;
+            }
+        }
+
+        private static int GetCustomScrcmdDBInt(string keyPrefix)
+        {
+            ResourceManager customcmdDB = new ResourceManager("DSPRE.Resources.ROMToolboxDB.CustomScrCmdDB", Assembly.GetExecutingAssembly());
+            string value = customcmdDB.GetString(keyPrefix + "_" + RomInfo.gameVersion + "_" + RomInfo.gameLanguage);
+            if (value == null)
             {
-                ShowInfo("No command could be installed from this file.\n\n" +
-                "Make sure the command installation file supports your current ROM.", "Warning");
-                return false;
+                throw new NotSupportedException();
             }
 
-            return true;
+            return int.Parse(value);
+        }
+
+        /// <summary>Builds the moved block: COUN marker + command count + TABL marker + the vanilla command table.</summary>
+        private static byte[] BuildCommandTablePayload()
+        {
+            byte[] originalTable = DSUtils.ReadFromFile(RomInfo.arm9Path, (uint)GetCustomScrcmdDBInt("originalTableOffset"), ScrcmdOriginalTableLength);
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
+            {
+                writer.Write(ScrcmdCountMarker);
+                writer.Write(ReadScrcmdCommandCount());
+                writer.Write(ScrcmdTableMarker);
+                writer.Write(originalTable);
+                return stream.ToArray();
+            }
+        }
+
+        private static uint ReadScrcmdCommandCount()
+        {
+            using (ARM9.Reader reader = new ARM9.Reader(GetCustomScrcmdDBInt("commandCountOffset")))
+            {
+                return reader.ReadUInt32();
+            }
+        }
+
+        private static void RepointCommandTable(uint blockOffset, byte[] commandTablePayload)
+        {
+            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            DSUtils.WriteToFile(expandedPath, commandTablePayload, blockOffset);
+
+            using (ARM9.Writer wr = new ARM9.Writer())
+            {
+                wr.BaseStream.Position = GetCustomScrcmdDBInt("pointerOffset");
+                wr.Write(synthOverlayLoadAddress + blockOffset + ScrcmdTableOffsetInBlock);
+
+                wr.BaseStream.Position = GetCustomScrcmdDBInt("commandCountPointerOffset");
+                wr.Write(synthOverlayLoadAddress + blockOffset + ScrcmdCountOffsetInBlock);
+            }
         }
 
         // ── Patch catalogue / status (read-only, UI-agnostic) ────────────────────────────────────
@@ -882,21 +1066,25 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("overlay1", "Configure Overlay 1 uncompressed",
-                "Decompress Overlay 1 and mark it uncompressed in the overlay table (HGSS). Recommended before BDHCam.",
-                () =>
-                {
-                    if (RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("HGSS only");
-                    return OverlayUtils.OverlayTable.IsDefaultCompressed(1) ? PatchState.Available : PatchState.Applied;
-                }));
-
-            list.Add(Status("bdhcam", "BDHCam camera routine",
+            list.Add(Status("bdhcam", "Dynamic Cameras (BDHCam)",
                 "Install the BDHCam camera subroutine (Platinum / HGSS, EN or ES). Requires the ARM9 expansion patch first.",
                 () =>
                 {
                     if (!ScrcmdLikeLangOk()) return Unsupported("Unsupported version/language");
+                    if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     bool applied = RomPatchState.flag_BDHCamPatchApplied || CheckFilesBDHCamPatchApplied();
+                    return applied ? PatchState.Applied : PatchState.Available;
+                }));
+
+            list.Add(Status("buildingRotation", "Building Rotation",
+                "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
+                () =>
+                {
+                    if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
+                    if (!BuildingRotationPatchData.SupportsCurrentRom()) return Unsupported("Unsupported version");
+                    if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
+                    bool applied = RomPatchState.flag_BuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
@@ -926,17 +1114,8 @@ namespace DSPRE
                 {
                     if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("Unsupported version/language");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-                    return GetCommandTableOffset() >= 0 ? PatchState.Applied : PatchState.Available;
+                    return IsScrcmdRepointApplied() ? PatchState.Applied : PatchState.Available;
                 }));
-
-            list.Add(Status("installCustomCommand", "Install custom script command (.scrcmd)",
-                "Install one or more custom script commands from a .scrcmd file (repointing the table first if needed). Repeatable.",
-                () =>
-                {
-                    if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("Unsupported version/language");
-                    if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
-                    return PatchState.Available;   // repeatable action — never latches to "Applied"
-                }, actionLabel: "Install…"));
 
             list.Add(Status("disableTextures", "Disable dynamic textures",
                 "Set the Dynamic Textures field of every AreaData to 0xFFFF, disabling texture animations (HGSS).",
@@ -996,12 +1175,11 @@ namespace DSPRE
                 case "sentenceCase": return ApplySentenceCasePatch();
                 case "itemStandardize": return ApplyItemStandardizePatch();
                 case "arm9": return ApplyARM9ExpansionPatch();
-                case "overlay1": return ConfigureOverlay1Uncompressed();
-                case "bdhcam": return ApplyBDHCamPatch(null);   // caller re-queries statuses afterwards
+                case "bdhcam": return ApplyBDHCamPatch();   // caller re-queries statuses afterwards
+                case "buildingRotation": return ApplyBuildingRotationPatch();
                 case "dynamicHeaders": return ApplyDynamicHeadersPatch();
                 case "matrix": return ApplyMatrixExpansionPatch();
                 case "scrcmdRepoint": return ApplyScrcmdRepointPatch();
-                case "installCustomCommand": return InstallCustomScriptCommand();
                 case "disableTextures": return ApplyDisableDynamicTexturesPatch();
                 case "trainerNames": return ApplyExpandTrainerNamesPatch();
                 default: return false;

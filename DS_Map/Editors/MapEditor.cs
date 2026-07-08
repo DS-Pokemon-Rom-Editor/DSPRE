@@ -159,7 +159,10 @@ namespace DSPRE.Editors
                 DirNames.buildingTextures,
                 DirNames.mapTextures,
                 DirNames.areaData,
+                DirNames.synthOverlay,
             });
+
+            RefreshBuildingRotationPatchState();
 
             if (RomInfo.gameFamily == GameFamilies.HGSS)
             {
@@ -284,6 +287,13 @@ namespace DSPRE.Editors
 
             Helpers.statusLabelMessage();
         }
+
+        public void RefreshBuildingRotationPatchState()
+        {
+            groupBox33.Enabled = PatchToolboxDialog.flag_BuildingRotationPatchApplied
+                || PatchToolboxDialog.CheckFilesBuildingRotationPatchApplied();
+        }
+
         private void addMapFileButton_Click(object sender, EventArgs e)
         {
             /* Add new map file to map folder */

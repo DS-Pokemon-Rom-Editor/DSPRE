@@ -246,6 +246,25 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal BRotY { get => _bRotY; set { if (Set(ref _bRotY, value) && !_suppress) ApplyBuilding(); } }
         public decimal BRotZ { get => _bRotZ; set { if (Set(ref _bRotZ, value) && !_suppress) ApplyBuilding(); } }
 
+        // The stored rotation values are always readable/writable, but the GAME only reads them once
+        // the Building Rotation patch (Patch Toolbox) has been applied — gate the controls so it's not
+        // implied that rotating a building here does anything in an unpatched ROM.
+        private bool _buildingRotationEnabled = true;
+        public bool BuildingRotationEnabled { get => _buildingRotationEnabled; private set => Set(ref _buildingRotationEnabled, value); }
+
+        /// <summary>Re-check whether the Building Rotation patch is applied. Call after (re)opening the editor or applying the patch.</summary>
+        public void RefreshBuildingRotationPatchState()
+        {
+            try
+            {
+                BuildingRotationEnabled = RomPatchState.flag_BuildingRotationPatchApplied || PatchToolboxLogic.CheckFilesBuildingRotationPatchApplied();
+            }
+            catch
+            {
+                BuildingRotationEnabled = false;
+            }
+        }
+
         private void LoadBuildingDetail()
         {
             OnPropertyChanged(nameof(HasBuildingSelected));
@@ -496,10 +515,11 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
                     DirNames.maps, DirNames.exteriorBuildingModels, DirNames.buildingTextures, DirNames.mapTextures,
-                    DirNames.matrices, DirNames.areaData, DirNames.dynamicHeaders });
+                    DirNames.matrices, DirNames.areaData, DirNames.dynamicHeaders, DirNames.synthOverlay });
                 if (gameFamily == GameFamilies.HGSS)
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
                 _mapToArea = BuildMapAreaLookup();
+                RefreshBuildingRotationPatchState();
 
                 foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
                 foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));

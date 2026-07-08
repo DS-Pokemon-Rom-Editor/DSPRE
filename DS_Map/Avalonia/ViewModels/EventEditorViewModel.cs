@@ -65,6 +65,147 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> Warps { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> Triggers { get; } = new ObservableCollection<string>();
 
+        // ── Overworld sprite/movement/orientation dropdowns (mirrors WinForms EventEditor) ──
+        public ObservableCollection<string> OwSpriteEntries { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> OwMovementNames { get; } = new ObservableCollection<string>(DSPRE.Resources.PokeDatabase.EventEditor.Overworlds.movementTypesArray);
+        public ObservableCollection<string> OwOrientationNames { get; } = new ObservableCollection<string> { "Up", "Down", "Left", "Right" };
+
+        private global::Avalonia.Media.Imaging.Bitmap _owSpritePreview;
+        public global::Avalonia.Media.Imaging.Bitmap OwSpritePreview { get => _owSpritePreview; private set => Set(ref _owSpritePreview, value); }
+        public bool HasOwSpritePreview => _owSpritePreview != null;
+
+        // ── Overworld "kind" radio group (Standard / Trainer / Item) — mirrors WinForms'
+        // normalRadioButton/isTrainerRadioButton/isItemRadioButton: selecting a kind sets ow.type and
+        // locks ow.scriptNumber to a value computed from the Trainer/Item dropdown (Script is only
+        // free-form for Standard). ──────────────────────────────────────────────────────────────────
+        private enum OwKind { Normal, Trainer, Item }
+        private OwKind _owKind;
+
+        public bool OwIsNormal { get => _owKind == OwKind.Normal; set { if (value) SetOwKind(OwKind.Normal); } }
+        public bool OwIsTrainer { get => _owKind == OwKind.Trainer; set { if (value) SetOwKind(OwKind.Trainer); } }
+        public bool OwIsItem { get => _owKind == OwKind.Item; set { if (value) SetOwKind(OwKind.Item); } }
+
+        // Script is normally locked when Trainer/Item drives it — but if the current script number
+        // doesn't resolve to any entry in that list (out-of-range/hand-edited data), unlock it so the
+        // user isn't stuck looking at a value they can't change from either the dropdown or the field.
+        public bool OwScriptEnabled => _owKind == OwKind.Normal || OwTrainerIndexOutOfRange || OwItemIndexOutOfRange;
+        public bool OwTrainerFieldsVisible => _owKind == OwKind.Trainer;
+        public bool OwItemFieldsVisible => _owKind == OwKind.Item;
+
+        public ObservableCollection<string> OwTrainerEntries { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> OwItemEntries { get; } = new ObservableCollection<string>();
+
+        private int _owTrainerIndex = -1;
+        public int OwTrainerIndex
+        {
+            get => _owTrainerIndex;
+            set { if (Set(ref _owTrainerIndex, value) && !_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript(); }
+        }
+
+        // The Script field's raw value can point past the end of the current trainer roster (a script
+        // number that doesn't correspond to any known trainer, e.g. hand-edited data or a ROM-specific
+        // reserved value) — show that clearly instead of a silently-blank dropdown.
+        public bool OwTrainerIndexOutOfRange => _owKind == OwKind.Trainer && (_owTrainerIndex < 0 || _owTrainerIndex >= OwTrainerEntries.Count);
+
+        private bool _owPartnerTrainer;
+        public bool OwPartnerTrainer
+        {
+            get => _owPartnerTrainer;
+            set { if (Set(ref _owPartnerTrainer, value) && !_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript(); }
+        }
+
+        private int _owItemIndex = -1;
+        public int OwItemIndex
+        {
+            get => _owItemIndex;
+            set { if (Set(ref _owItemIndex, value) && !_suppress && _ow != null && _owKind == OwKind.Item && value >= 0) ForceOwScript((ushort)(7000 + value)); }
+        }
+
+        public bool OwItemIndexOutOfRange => _owKind == OwKind.Item && (_owItemIndex < 0 || _owItemIndex >= OwItemEntries.Count);
+
+        private void RaiseOwKindChanged()
+        {
+            OnPropertyChanged(nameof(OwIsNormal)); OnPropertyChanged(nameof(OwIsTrainer)); OnPropertyChanged(nameof(OwIsItem));
+            OnPropertyChanged(nameof(OwTrainerFieldsVisible)); OnPropertyChanged(nameof(OwItemFieldsVisible));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
+            OnPropertyChanged(nameof(OwScriptEnabled));
+        }
+
+        /// <summary>Sets OwScript's model value + observable field directly, bypassing the property's equality guard
+        /// (WinForms always forces the script number when the type/trainer/item selection changes).</summary>
+        private void ForceOwScript(ushort value)
+        {
+            if (_ow != null) _ow.scriptNumber = value;
+            _owScript = value;
+            OnPropertyChanged(nameof(OwScript));
+            Dirty();
+        }
+
+        private void RecomputeTrainerScript()
+        {
+            if (_owTrainerIndex < 0) return;
+            int idx = _owTrainerIndex;
+            ushort scriptNum = (ushort)(idx + (_owPartnerTrainer ? 4999 : 2999));
+            if (idx > RomInfo.trainerFunnyScriptNumber - 1) scriptNum++;
+            ForceOwScript(scriptNum);
+        }
+
+        private void SetOwKind(OwKind kind)
+        {
+            bool changed = _owKind != kind;
+            _owKind = kind;
+            RaiseOwKindChanged();
+            if (!changed || _suppress || _ow == null) return;
+
+            switch (kind)
+            {
+                case OwKind.Normal:
+                    _ow.type = (ushort)Overworld.OwType.NORMAL;
+                    ForceOwScript(0);
+                    break;
+                case OwKind.Item:
+                    _ow.type = (ushort)Overworld.OwType.ITEM;
+                    if (_owItemIndex < 0 && OwItemEntries.Count > 0) OwItemIndex = 0;
+                    else ForceOwScript((ushort)(7000 + Math.Max(_owItemIndex, 0)));
+                    break;
+                case OwKind.Trainer:
+                    _ow.type = (ushort)Overworld.OwType.TRAINER;
+                    if (_owTrainerIndex < 0 && OwTrainerEntries.Count > 0) OwTrainerIndex = 0;
+                    else RecomputeTrainerScript();
+                    break;
+            }
+        }
+
+        private void PopulateOwTrainerAndItemEntries()
+        {
+            OwTrainerEntries.Clear();
+            try { foreach (string name in TrainerNames.GetAll()) OwTrainerEntries.Add(name); }
+            catch (Exception ex) { AppLogger.Error("PopulateOwTrainerEntries: " + ex.Message); }
+
+            OwItemEntries.Clear();
+            try
+            {
+                string[] itemNames = RomInfo.GetItemNames();
+                if (PatchToolboxLogic.CheckScriptsStandardizedItemNumbers())
+                {
+                    foreach (string name in itemNames) OwItemEntries.Add(name);
+                }
+                else
+                {
+                    var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+                    foreach (var cont in itemScript.allScripts)
+                    {
+                        if (cont.commands.Count > 4) continue;
+                        ushort qty = BitConverter.ToUInt16(cont.commands[1].cmdParams[1], 0);
+                        ushort itemId = BitConverter.ToUInt16(cont.commands[0].cmdParams[1], 0);
+                        string name = itemId < itemNames.Length ? itemNames[itemId] : ("Item " + itemId);
+                        OwItemEntries.Add(qty + "x " + name);
+                    }
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("PopulateOwItemEntries: " + ex.Message); }
+        }
+
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
@@ -90,7 +231,9 @@ namespace DSPRE.Avalonia.ViewModels
         private decimal _xMap, _yMap, _zPos, _xMat, _yMat;
         public decimal XMap { get => _xMap; set { if (Set(ref _xMap, value) && !_suppress && _current != null) { _current.xMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
         public decimal YMap { get => _yMap; set { if (Set(ref _yMap, value) && !_suppress && _current != null) { _current.yMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
-        public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)value; Dirty(); RefreshMarkers(); } } }
+        // zPosition is a 16.16 fixed-point value (1 tile = 65536 units) — WinForms' owZPositionUpDown shows/edits
+        // the whole-tile part only (-32768..32768, no sub-tile Z control from this field).
+        public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)(value * 65536m); Dirty(); RefreshMarkers(); } } }
         public decimal XMatrix { get => _xMat; set { if (Set(ref _xMat, value) && !_suppress && _current != null) { _current.xMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
         public decimal YMatrix { get => _yMat; set { if (Set(ref _yMat, value) && !_suppress && _current != null) { _current.yMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
 
@@ -103,15 +246,64 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Overworld fields ────────────────────────────────────────────────────────
         private decimal _owId, _owSprite, _owMove, _owType, _owFlag, _owScript, _owOrient, _owSight, _owXr, _owYr;
         public decimal OwId { get => _owId; set { if (Set(ref _owId, value) && !_suppress && _ow != null) { _ow.owID = (ushort)value; Dirty(); } } }
-        public decimal OwSprite { get => _owSprite; set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.overlayTableEntry = (ushort)value; Dirty(); } } }
+        public decimal OwSprite
+        {
+            get => _owSprite;
+            set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.overlayTableEntry = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
+        }
         public decimal OwMovement { get => _owMove; set { if (Set(ref _owMove, value) && !_suppress && _ow != null) { _ow.movement = (ushort)value; Dirty(); } } }
         public decimal OwType { get => _owType; set { if (Set(ref _owType, value) && !_suppress && _ow != null) { _ow.type = (ushort)value; Dirty(); } } }
         public decimal OwFlag { get => _owFlag; set { if (Set(ref _owFlag, value) && !_suppress && _ow != null) { _ow.flag = (ushort)value; Dirty(); } } }
         public decimal OwScript { get => _owScript; set { if (Set(ref _owScript, value) && !_suppress && _ow != null) { _ow.scriptNumber = (ushort)value; Dirty(); } } }
-        public decimal OwOrientation { get => _owOrient; set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.orientation = (ushort)value; Dirty(); } } }
+        public decimal OwOrientation
+        {
+            get => _owOrient;
+            set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.orientation = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
+        }
         public decimal OwSight { get => _owSight; set { if (Set(ref _owSight, value) && !_suppress && _ow != null) { _ow.sightRange = (ushort)value; Dirty(); } } }
         public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.xRange = (ushort)value; Dirty(); } } }
         public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.yRange = (ushort)value; Dirty(); } } }
+
+        // Dropdown-friendly wrappers: the sprite entry list is the sparse set of valid overlay-table
+        // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value —
+        // movement/orientation are plain 0..N index=value lists so they pass straight through.
+        public int OwSpriteIndex
+        {
+            get => overworldTableKeys == null ? -1 : Array.IndexOf(overworldTableKeys, (uint)_owSprite);
+            set
+            {
+                if (overworldTableKeys == null || value < 0 || value >= overworldTableKeys.Length) return;
+                OwSprite = overworldTableKeys[value];
+                OnPropertyChanged();
+            }
+        }
+        public int OwMovementIndex { get => (int)_owMove; set => OwMovement = value; }
+        public int OwOrientationIndex { get => (int)_owOrient; set => OwOrientation = value; }
+
+        private void UpdateOwSpritePreview()
+        {
+            global::Avalonia.Media.Imaging.Bitmap bmp = null;
+            if (_ow != null)
+            {
+                try
+                {
+                    var pix = OverworldSprites.Get(_ow.overlayTableEntry, _ow.orientation);
+                    if (pix != null && pix.Width > 0 && pix.Height > 0)
+                    {
+                        var bgra = new byte[pix.Rgba.Length];
+                        for (int i = 0; i < bgra.Length; i += 4)
+                        {
+                            bgra[i] = pix.Rgba[i + 2]; bgra[i + 1] = pix.Rgba[i + 1];
+                            bgra[i + 2] = pix.Rgba[i]; bgra[i + 3] = pix.Rgba[i + 3];
+                        }
+                        bmp = ImageConverter.ToAvaloniaBitmap(new DSPRE.RawImage(pix.Width, pix.Height, bgra));
+                    }
+                }
+                catch (Exception ex) { AppLogger.Error("UpdateOwSpritePreview: " + ex.Message); }
+            }
+            OwSpritePreview = bmp;
+            OnPropertyChanged(nameof(HasOwSpritePreview));
+        }
 
         // ── Warp fields ───────────────────────────────────────────────────────────────
         private decimal _warpHeader, _warpAnchor, _warpHeight;
@@ -176,6 +368,10 @@ namespace DSPRE.Avalonia.ViewModels
                 // ensure they exist for the 3D sprite billboards here (SetOWtable must run first).
                 try { if (ow3DSpriteDict == null) Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Error("Set3DOverworldsDict: " + ex.Message); }
                 try { if (OverworldTable == null) { SetOWtable(); ReadOWTable(); } } catch (Exception ex) { AppLogger.Error("ReadOWTable: " + ex.Message); }
+                OwSpriteEntries.Clear();
+                if (overworldTableKeys != null)
+                    foreach (uint key in overworldTableKeys) OwSpriteEntries.Add("OW Entry " + key);
+                PopulateOwTrainerAndItemEntries();
                 int count = Filesystem.GetEventFileCount();
                 for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
                 StatusText = $"{count} event files.";
@@ -220,7 +416,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _current = e;
             if (e == null) return;
-            XMap = e.xMapPosition; YMap = e.yMapPosition; ZPos = e.zPosition;
+            XMap = e.xMapPosition; YMap = e.yMapPosition; ZPos = e.zPosition / 65536m;
             XMatrix = e.xMatrixPosition; YMatrix = e.yMatrixPosition;
         }
 
@@ -240,14 +436,47 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _ow = (_file != null && i >= 0 && i < _file.overworlds.Count) ? _file.overworlds[i] : null;
             OnPropertyChanged(nameof(HasOw));
-            if (_ow == null) return;
+            if (_ow == null) { UpdateOwSpritePreview(); return; }
             _suppress = true;
             LoadPosition(_ow);
             OwId = _ow.owID; OwSprite = _ow.overlayTableEntry; OwMovement = _ow.movement; OwType = _ow.type;
             OwFlag = _ow.flag; OwScript = _ow.scriptNumber; OwOrientation = _ow.orientation; OwSight = _ow.sightRange;
             OwXRange = _ow.xRange; OwYRange = _ow.yRange;
+            OnPropertyChanged(nameof(OwSpriteIndex)); OnPropertyChanged(nameof(OwMovementIndex)); OnPropertyChanged(nameof(OwOrientationIndex));
+
+            // Derive the Standard/Trainer/Item radio selection + locked-script dropdown index from the
+            // raw type/scriptNumber (mirrors WinForms' overworldsListBox_SelectedIndexChanged, but uses
+            // the trainerFunnyScriptNumber-aware inverse — see NavigateToOverworldTarget in the WinForms
+            // EventEditor — instead of WinForms' own display-only reverse mapping, which is off by one
+            // past that threshold).
+            if (_ow.type == (ushort)Overworld.OwType.TRAINER)
+            {
+                _owKind = OwKind.Trainer;
+                bool partner = _ow.scriptNumber >= 4999;
+                int idx = partner ? _ow.scriptNumber - 4999 : _ow.scriptNumber - 2999;
+                if (idx > RomInfo.trainerFunnyScriptNumber - 1) idx--;
+                // Out of range (past the end of the current trainer roster) → leave unselected (-1) rather
+                // than clamping into a wrong trainer; OwTrainerIndexOutOfRange surfaces this in the UI.
+                _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;
+                _owPartnerTrainer = partner;
+            }
+            else if (_ow.type == (ushort)Overworld.OwType.ITEM || (_ow.scriptNumber >= 7000 && _ow.scriptNumber <= 8000))
+            {
+                _owKind = OwKind.Item;
+                int itemIdx = _ow.scriptNumber - 7000;
+                _owItemIndex = (itemIdx >= 0 && itemIdx < OwItemEntries.Count) ? itemIdx : -1;
+            }
+            else
+            {
+                _owKind = OwKind.Normal;
+            }
+            RaiseOwKindChanged();
+            OnPropertyChanged(nameof(OwTrainerIndex)); OnPropertyChanged(nameof(OwPartnerTrainer)); OnPropertyChanged(nameof(OwItemIndex));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange)); OnPropertyChanged(nameof(OwScriptEnabled));
+
             _suppress = false;
             RefreshMarkers();
+            UpdateOwSpritePreview();
         }
 
         private void LoadWarp(int i)
