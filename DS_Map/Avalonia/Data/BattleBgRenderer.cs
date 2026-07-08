@@ -36,10 +36,14 @@ namespace DSPRE.Avalonia.Data
         public static int BgCount => Table.Length;
 
         // The REAL battle-scene backdrops (the scenery behind the platforms), distinct from the move-effect BGs above.
-        // client_tool.c: chr = BATTLE_BG00_NCGR_BIN(3) + bg_id, pal = BATT_BG00_D_NCLR(172) + bg_id*3 + timeZone, and a
-        // SINGLE shared tilemap BATTLE_BG00_NSCR_BIN(2) for every bg_id. 23 backdrops (BG00..BG22) on Platinum.
+        // client_tool.c: chr = BATTLE_BG00_NCGR_BIN(3) + bg_id, and a SINGLE shared tilemap BATTLE_BG00_NSCR_BIN(2)
+        // for every bg_id. 23 backdrops (BG00..BG22). The palette base differs from the leaked Platinum constant
+        // (172) on this ROM's battleBg.narc layout — verified by scanning the archive: NARC idx 172 is actually
+        // another NSCR (not a palette; magic "RCSN"), while the real 23×3 (day/eve/night) 256-colour NCLR block
+        // runs idx 176..244 (magic "RLCN", each with a genuine TTLP chunk). Using 172 silently fed non-palette
+        // bytes into the colour table, rendering as (worse for some bg_ids than others) speckled noise.
         public const int BackdropCount = 23;
-        private const int BackdropChr0 = 3, BackdropScr = 2, BackdropPal0 = 172;
+        private const int BackdropChr0 = 3, BackdropScr = 2, BackdropPal0 = 176;
 
         /// <summary>Builds the real battle-scene backdrop for bg_id 0..22 (timeZone 0=day,1=eve,2=night), or null.</summary>
         public BgImage BuildBackdrop(int bgId, int timeZone = 0)
@@ -49,7 +53,9 @@ namespace DSPRE.Avalonia.Data
             byte[] chr = Inflate(_narc.Get(BackdropChr0 + bgId));
             byte[] pal = Inflate(_narc.Get(BackdropPal0 + bgId * 3 + tz));
             byte[] scr = Inflate(_narc.Get(BackdropScr));
-            if (chr == null || pal == null || scr == null) return null;
+            // Guard against a wrong palette index quietly reading non-palette bytes (e.g. another NSCR) as
+            // colours, which renders as garbled noise instead of failing — fall back to placeholder art instead.
+            if (chr == null || pal == null || scr == null || Find(pal, "TTLP", 0) < 0) return null;
             try { return Composite(chr, pal, scr); } catch { return null; }
         }
 

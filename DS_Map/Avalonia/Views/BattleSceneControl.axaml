@@ -1,20 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+             xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
              x:Class="DSPRE.Avalonia.Views.BattleSceneControl"
              x:DataType="vm:BattleDisplayEditorViewModel"
              Name="SceneRoot">
   <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Background="Black">
     <Viewbox Stretch="Uniform">
       <Canvas Width="256" Height="192" ClipToBounds="True">
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/background.png" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/platform_opponent.png" Canvas.Left="129" Canvas.Top="72"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/platform_you.png" Canvas.Left="-42" Canvas.Top="122"/>
+        <!-- Real battle-scene backdrop + terrain platforms (Arena Type selector: DSUtils.BattleGroundRenderer /
+             BattleBgRenderer, same real-ROM-data renderers the Battle Script Editor uses), falling back to the
+             bundled placeholder art if the ROM/NARC is unavailable or decoding fails. -->
+        <Image Source="{Binding ArenaBackdrop}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.BackgroundAsset}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding !HasArenaGraphics}"/>
+
+        <Image Source="{Binding ArenaGroundEnemy}" Canvas.Left="{Binding ArenaGroundEnemyLeft}" Canvas.Top="{Binding ArenaGroundEnemyTop}" IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaGroundMine}"  Canvas.Left="{Binding ArenaGroundMineLeft}"  Canvas.Top="{Binding ArenaGroundMineTop}"  IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.PlatformOpponentAsset}" Canvas.Left="129" Canvas.Top="72" IsVisible="{Binding !HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.PlatformYouAsset}" Canvas.Left="-42" Canvas.Top="122" IsVisible="{Binding !HasArenaGraphics}"/>
 
         <!-- Enemy shadow (one visible per size) -->
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_small.png"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_medium.png" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/shadow_large.png"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
+        <Image Source="{x:Static views:BattleSceneControl.ShadowSmallAsset}"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
+        <Image Source="{x:Static views:BattleSceneControl.ShadowMediumAsset}" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
+        <Image Source="{x:Static views:BattleSceneControl.ShadowLargeAsset}"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
 
         <!-- Enemy (front) + player (back) sprites; passed in per scene. Each sprite and its palette-fade tint share
              one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
@@ -56,9 +64,9 @@
         </Grid>
 
         <!-- Battle UI chrome -->
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_opponent.png" Canvas.Left="0"   Canvas.Top="18"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/health_you.png"      Canvas.Left="129" Canvas.Top="95"/>
-        <Image Source="avares://DSPRE.Avalonia/Avalonia/Assets/Battle/text_bar.png"        Canvas.Left="0"   Canvas.Top="144"/>
+        <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"/>
+        <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"/>
+        <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
       </Canvas>
     </Viewbox>
   </Border>

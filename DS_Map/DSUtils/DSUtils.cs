@@ -743,6 +743,142 @@ namespace DSPRE {
             }
         }
 
+        // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so ImageBase.Read falls
+        // back to Actions.Get_Size's generic square/0x100-wide guess — which produces a nonsensical shape
+        // (e.g. 256×8 for a real 32×64 icon) totally unrelated to how the game actually reads this data.
+        // The OAM-based renderer used everywhere else (SpriteBase.Get_RawImage, via GetPokePicRaw) never
+        // hits this bug because it addresses tiles directly by index and ignores ImageBase.Width/Height
+        // entirely. So icon-graphic editing must do the same: read/write raw 8×8 tile blocks directly,
+        // fixed at the real, universal Gen4 icon width (32px = 4 tiles); height comes from the tile count
+        // (normally 64px = 2 stacked 32×32 animation frames, frame 0 on top).
+        private const int MonIconTileSize = 8;
+        private const int MonIconTilesWide = 4;
+        private const int MonIconWidth = MonIconTilesWide * MonIconTileSize;   // 32
+
+        /// <summary>
+        /// The icon's raw graphic, decoded directly from tile data at its real dimensions (32px wide;
+        /// height from tile count) — the exact bitmap an icon-graphic editor should export/reimport.
+        /// Rendered with the currently-assigned (or overridden) palette bank.
+        /// </summary>
+        public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
+            return DecodeMonIconTiles(imageBase, paletteBase.Palette[0]);
+        }
+
+        private static RawImage DecodeMonIconTiles(ImageBase imageBase, Color[] palette) {
+            byte[] tiles = imageBase.Tiles;
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;   // 32 bytes/tile @ 4bpp
+            int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            int h = tilesTall * MonIconTileSize;
+
+            var raw = new RawImage(MonIconWidth, h);
+            int pos = 0;   // increments once per pixel, tile-sequential order (matches how bytes are laid out)
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            int byteIndex = pos / 2;
+                            int idx = 0;
+                            if (byteIndex < tiles.Length)
+                            {
+                                byte packed = tiles[byteIndex];
+                                idx = (pos % 2 == 0) ? (packed & 0x0F) : ((packed & 0xF0) >> 4);
+                            }
+                            pos++;
+                            Color c = idx < palette.Length ? palette[idx] : Color.Black;
+                            raw.SetPixel(tx * MonIconTileSize + x, ty * MonIconTileSize + y, c.R, c.G, c.B, idx == 0 ? (byte)0 : (byte)255);
+                        }
+            return raw;
+        }
+
+        private static string ValidateMonIconGraphicCore(ImageBase imageBase, RawImage newImage) {
+            if (newImage == null || newImage.IsEmpty) return "The image is empty.";
+            if (imageBase.FormatColor != Ekona.Images.ColorFormat.colors16)
+                return "This icon isn't a 16-color image; graphic editing isn't supported for this format.";
+
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
+            int totalTiles = tileBytes > 0 ? imageBase.Tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            int expectedH = tilesTall * MonIconTileSize;
+            if (newImage.Width != MonIconWidth || newImage.Height != expectedH)
+                return $"Size mismatch: this icon is {MonIconWidth}×{expectedH}, the image is {newImage.Width}×{newImage.Height}.";
+            return null;
+        }
+
+        /// <summary>Checks whether <paramref name="newImage"/> could replace a species' icon graphic
+        /// (right pixel dimensions, 16-color format) without writing anything. Returns null if OK, else
+        /// a user-facing error string.</summary>
+        public static string ValidateMonIconGraphic(int species, RawImage newImage) {
+            LoadMonIconParts(species, -1, out ImageBase imageBase, out _, out _, out _);
+            return ValidateMonIconGraphicCore(imageBase, newImage);
+        }
+
+        /// <summary>
+        /// Replaces a species' icon graphic (NCGR tile data) with <paramref name="newImage"/>, which must
+        /// be the exact pixel dimensions the icon already is (see <see cref="ValidateMonIconGraphic"/>).
+        /// Quantizes onto the icon's currently-assigned (or overridden) 16-color palette bank via
+        /// nearest-RGB match; pixels with alpha &lt; 128 map to palette index 0 (the conventional
+        /// transparent slot). Writes the NCGR back to disk immediately. Returns null on success, or a
+        /// user-facing error string.
+        /// </summary>
+        public static string SetMonIconGraphic(int species, int paletteIdOverride, RawImage newImage) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
+
+            string error = ValidateMonIconGraphicCore(imageBase, newImage);
+            if (error != null) return error;
+
+            // LoadMonIconParts already swapped the selected bank into slot 0 for rendering.
+            Color[] palette = paletteBase.Palette[0];
+            byte[] newTiles = EncodeMonIconTiles(imageBase, palette, newImage);
+
+            // The no-side-effect overload: swaps the tile bytes only, leaving the (already-wrong, but
+            // irrelevant here — nothing downstream uses them) auto-detected Width/Height/FormTile alone.
+            imageBase.Set_Tiles(newTiles);
+
+            string path = Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, imageBase.FileName);
+            imageBase.Write(path, paletteBase);
+            return null;
+        }
+
+        private static byte[] EncodeMonIconTiles(ImageBase imageBase, Color[] palette, RawImage newImage) {
+            byte[] newTiles = new byte[imageBase.Tiles.Length];
+            int w = newImage.Width;
+            int tilesTall = newImage.Height / MonIconTileSize;
+
+            int pos = 0;   // exact inverse traversal of DecodeMonIconTiles
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            int px = tx * MonIconTileSize + x, py = ty * MonIconTileSize + y;
+                            int i = (py * w + px) * 4;
+                            byte b = newImage.Bgra[i], g = newImage.Bgra[i + 1], r = newImage.Bgra[i + 2], a = newImage.Bgra[i + 3];
+                            byte idx = a < 128 ? (byte)0 : NearestPaletteIndex(palette, r, g, b);
+
+                            int byteIndex = pos / 2;
+                            if (byteIndex < newTiles.Length)
+                            {
+                                if (pos % 2 == 0) newTiles[byteIndex] = (byte)((newTiles[byteIndex] & 0xF0) | (idx & 0x0F));
+                                else newTiles[byteIndex] = (byte)((newTiles[byteIndex] & 0x0F) | ((idx & 0x0F) << 4));
+                            }
+                            pos++;
+                        }
+            return newTiles;
+        }
+
+        private static byte NearestPaletteIndex(Color[] palette, byte r, byte g, byte b) {
+            int best = 0, bestDist = int.MaxValue;
+            for (int i = 0; i < palette.Length; i++) {
+                int dr = palette[i].R - r, dg = palette[i].G - g, db = palette[i].B - b;
+                int dist = dr * dr + dg * dg + db * db;
+                if (dist < bestDist) { bestDist = dist; best = i; }
+            }
+            return (byte)best;
+        }
+
         // Loads the mon-icon NCLR/NCGR/NCER + enabled-OAM list. Shared by GetPokePic (GDI) and GetPokePicRaw.
         private static void LoadMonIconParts(int species, int paletteIdOverride,
             out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled) {

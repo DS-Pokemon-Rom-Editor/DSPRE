@@ -46,6 +46,98 @@ namespace DSPRE.Avalonia.ViewModels
         private int _currentId = -1;
         private bool _loading;
 
+        // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
+        // One dropdown picks a GROUND_ID terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
+        // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
+        // already uses for its (separate, more granular) Background/Terrain selectors — see
+        // DS_Map/Avalonia/Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
+        // placeholder art (HasArenaGraphics=false) if the ROM/NARC is unavailable or decoding fails, so
+        // the scene always has a floor. Not saved anywhere — purely how the preview looks.
+        private BattleGroundRenderer _groundRenderer;
+        private BattleBgRenderer _bgRenderer;
+
+        public IReadOnlyList<string> ArenaTypeNames { get; } = BattleGroundRenderer.TerrainNames;
+
+        private int _arenaTypeIndex = 2;   // "Lawn" — a reasonably common default
+        public int ArenaTypeIndex
+        {
+            get => _arenaTypeIndex;
+            set { if (Set(ref _arenaTypeIndex, value)) ApplyArena(); }
+        }
+
+        private Bitmap _arenaBackdrop, _arenaGroundMine, _arenaGroundEnemy;
+        public Bitmap ArenaBackdrop     { get => _arenaBackdrop;     private set => Set(ref _arenaBackdrop, value); }
+        public Bitmap ArenaGroundMine   { get => _arenaGroundMine;   private set => Set(ref _arenaGroundMine, value); }
+        public Bitmap ArenaGroundEnemy  { get => _arenaGroundEnemy;  private set => Set(ref _arenaGroundEnemy, value); }
+
+        private double _arenaGroundMineLeft, _arenaGroundMineTop, _arenaGroundEnemyLeft, _arenaGroundEnemyTop;
+        public double ArenaGroundMineLeft   { get => _arenaGroundMineLeft;   private set => Set(ref _arenaGroundMineLeft, value); }
+        public double ArenaGroundMineTop    { get => _arenaGroundMineTop;    private set => Set(ref _arenaGroundMineTop, value); }
+        public double ArenaGroundEnemyLeft  { get => _arenaGroundEnemyLeft;  private set => Set(ref _arenaGroundEnemyLeft, value); }
+        public double ArenaGroundEnemyTop   { get => _arenaGroundEnemyTop;   private set => Set(ref _arenaGroundEnemyTop, value); }
+
+        private bool _hasArenaGraphics;
+        public bool HasArenaGraphics { get => _hasArenaGraphics; private set => Set(ref _hasArenaGraphics, value); }
+
+        private void ApplyArena()
+        {
+            try
+            {
+                var ground = _groundRenderer ??= new BattleGroundRenderer();
+                var (mine, enemy) = ground.Build(_arenaTypeIndex);
+                int bg = BattleGroundRenderer.BackdropForTerrain(_arenaTypeIndex);
+                var backdropImg = bg >= 0 ? (_bgRenderer ??= new BattleBgRenderer()).BuildBackdrop(bg) : null;
+
+                bool ok = mine?.Rgba != null && enemy?.Rgba != null && backdropImg?.Rgba != null;
+                if (ok)
+                {
+                    ArenaGroundMine = RgbaToBitmap(mine.Rgba, mine.Width, mine.Height);
+                    ArenaGroundMineLeft = mine.Left; ArenaGroundMineTop = mine.Top;
+                    ArenaGroundEnemy = RgbaToBitmap(enemy.Rgba, enemy.Width, enemy.Height);
+                    ArenaGroundEnemyLeft = enemy.Left; ArenaGroundEnemyTop = enemy.Top;
+                    // The shared backdrop tilemap can be taller than the 256×192 scene (some are a stacked
+                    // multi-band scrolling texture) — crop to the top-left 256×192 instead of stretching the
+                    // whole thing to fit, or a taller source visibly squishes into repeated horizontal bands
+                    // (mirrors BattleScriptEditorViewModel.BgToBackdrop, same underlying data).
+                    ArenaBackdrop = RgbaToBitmap(CropBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height), 256, 192);
+                }
+                HasArenaGraphics = ok;
+            }
+            catch { HasArenaGraphics = false; }
+        }
+
+        // RGBA w×h (battle BG, usually 256×256 or taller) -> exactly 256×192 (top-left crop, black-padded
+        // if the source is smaller). Mirrors BattleScriptEditorViewModel.BgToBackdrop.
+        private static byte[] CropBackdropRgba(byte[] rgba, int w, int h)
+        {
+            var outp = new byte[256 * 192 * 4];
+            for (int y = 0; y < 192 && y < h; y++)
+                for (int x = 0; x < 256 && x < w; x++)
+                {
+                    int si = (y * w + x) * 4, di = (y * 256 + x) * 4;
+                    outp[di] = rgba[si]; outp[di + 1] = rgba[si + 1]; outp[di + 2] = rgba[si + 2]; outp[di + 3] = 255;
+                }
+            return outp;
+        }
+
+        // Straight RGBA byte[] -> an unpremultiplied BGRA Avalonia bitmap (mirrors
+        // BattleScriptEditorViewModel.GaugeToBitmap — same conversion, different scene).
+        private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
+        {
+            if (rgba == null || w <= 0 || h <= 0) return null;
+            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
+                                         global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
+            var bgra = new byte[w * h * 4];
+            for (int i = 0; i < w * h * 4; i += 4) { bgra[i] = rgba[i + 2]; bgra[i + 1] = rgba[i + 1]; bgra[i + 2] = rgba[i]; bgra[i + 3] = rgba[i + 3]; }
+            using (var fb = wb.Lock())
+            {
+                int rb = fb.RowBytes;
+                if (rb == w * 4) System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
+                else for (int y = 0; y < h; y++) System.Runtime.InteropServices.Marshal.Copy(bgra, y * w * 4, fb.Address + y * rb, w * 4);
+            }
+            return wb;
+        }
+
         // ── Battle mock (shows the mon vs itself: enemy = front sprite, player = back sprite) ──────
         // Layout/coords mirror PokEditor's battle scene (256×192): front sprite at (152, 10 − spriteY),
         // back sprite at (23, 72), enemy shadow at size-specific X (179/174/167 + shadowX), Y 83/83/82.
@@ -153,15 +245,49 @@ namespace DSPRE.Avalonia.ViewModels
         private Bitmap _iconPreview;
         public Bitmap IconPreview { get => _iconPreview; private set => Set(ref _iconPreview, value); }
 
+        // A just-imported icon graphic, staged in memory until Save() (same convention as every other
+        // field on this tab). Quantized against whatever palette was selected at import time — changing
+        // PartyPaletteIndex afterward does not automatically re-quantize a pending import.
+        private RawImage _pendingIconGraphic;
+
         private void RefreshPreview()
         {
             if (!IsAvailable || _currentId <= 0) { IconPreview = null; return; }
             try
             {
+                if (_pendingIconGraphic != null)
+                {
+                    IconPreview = DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(_pendingIconGraphic);
+                    return;
+                }
                 var gdi = DSPRE.DSUtils.GetPokePicRaw(_currentId, 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
             catch { IconPreview = null; }
+        }
+
+        /// <summary>Exports the icon's current raw graphic (on-disk, or the pending import if one hasn't
+        /// been saved yet) at native resolution — no OAM padding, suitable for round-tripping.</summary>
+        public RawImage ExportIconGraphic()
+        {
+            if (!IsAvailable || _currentId < 0) return null;
+            if (_pendingIconGraphic != null) return _pendingIconGraphic;
+            try { return DSPRE.DSUtils.GetMonIconGraphicRaw(_currentId, _partyPaletteIndex); }
+            catch { return null; }
+        }
+
+        /// <summary>Validates and stages a replacement icon graphic; written to disk on Save(). Returns
+        /// null on success, or a user-facing error string (size/format mismatch).</summary>
+        public string ImportIconGraphic(RawImage newImage)
+        {
+            if (!IsAvailable || _currentId < 0) return "No Pokémon selected.";
+            string error = DSPRE.DSUtils.ValidateMonIconGraphic(_currentId, newImage);
+            if (error != null) return error;
+
+            _pendingIconGraphic = newImage;
+            SetDirty();
+            RefreshPreview();
+            return null;
         }
 
         // ── Battle sprite / shadow data (family-specific NARC layout) ─────────────────────────
@@ -912,6 +1038,8 @@ namespace DSPRE.Avalonia.ViewModels
             };
             _animTimer.Tick += (_, _) => AnimTick();
             _animTimer.Start();
+
+            if (IsAvailable) ApplyArena();
         }
 
         /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
@@ -944,6 +1072,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _loading = true;
             _currentId = id;
+            _pendingIconGraphic = null;   // drop any unsaved icon-graphic import from the previous mon
             try
             {
                 int pal = (IsAvailable && id >= 0) ? DSPRE.DSUtils.GetMonIconPaletteId(id) : 0;
@@ -968,7 +1097,17 @@ namespace DSPRE.Avalonia.ViewModels
         public void Save()
         {
             if (!IsAvailable || _currentId < 0) return;
-            try { DSPRE.DSUtils.SetMonIconPaletteId(_currentId, (byte)_partyPaletteIndex); SaveSpriteData(); SaveFormHeights(); SaveAnim(); SetClean(); }
+            try
+            {
+                DSPRE.DSUtils.SetMonIconPaletteId(_currentId, (byte)_partyPaletteIndex);
+                if (_pendingIconGraphic != null)
+                {
+                    DSPRE.DSUtils.SetMonIconGraphic(_currentId, _partyPaletteIndex, _pendingIconGraphic);
+                    _pendingIconGraphic = null;
+                }
+                SaveSpriteData(); SaveFormHeights(); SaveAnim(); SetClean();
+                RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
+            }
             catch { /* surfaced by the global error net */ }
         }
     }

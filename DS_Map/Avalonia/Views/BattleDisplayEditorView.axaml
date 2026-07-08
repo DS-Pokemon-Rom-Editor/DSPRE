@@ -37,6 +37,12 @@
                       ToolTip.Tip="Freeze the sprite-frame (pattern) animation to inspect a single frame."/>
           </StackPanel>
 
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="Arena type" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding ArenaTypeNames}" SelectedIndex="{Binding ArenaTypeIndex}" Width="110"
+                      ToolTip.Tip="Swaps the preview's backdrop and ground platforms for the real in-game terrain (falls back to placeholder art if unavailable)."/>
+          </StackPanel>
+
           <!-- Separate display: one scene of the selected gender. -->
           <views:BattleSceneControl Width="512" Height="384" HorizontalAlignment="Left"
                                     IsVisible="{Binding !UnifiedDisplay}"
@@ -64,10 +70,10 @@
         <!-- RIGHT COLUMN: the editable fields. -->
         <StackPanel Grid.Column="2" Spacing="14" VerticalAlignment="Top" MinWidth="320">
 
-          <!-- Party icon palette -->
+          <!-- Party icon palette + graphic -->
           <StackPanel Spacing="4">
-            <TextBlock Text="Party Icon Palette" FontWeight="SemiBold"/>
-            <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses (icons live in NARC /a/0/2/0)."
+            <TextBlock Text="Party Icon" FontWeight="SemiBold"/>
+            <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses, and the icon graphic itself (icons live in NARC /a/0/2/0)."
                        TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
@@ -75,6 +81,11 @@
                       ToolTip.Tip="Live preview with the selected palette (before saving)">
                 <Image Source="{Binding IconPreview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
               </Border>
+              <StackPanel Spacing="6" VerticalAlignment="Center">
+                <Button Content="Import PNG…" Click="ImportIcon_Click" Width="110"
+                        ToolTip.Tip="Replace the icon graphic. Must match the icon's exact pixel size; colors are matched to the palette selected above (pixels below 50% alpha become transparent)."/>
+                <Button Content="Export PNG…" Click="ExportIcon_Click" Width="110"/>
+              </StackPanel>
             </StackPanel>
           </StackPanel>
 

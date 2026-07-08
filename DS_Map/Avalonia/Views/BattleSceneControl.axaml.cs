@@ -26,6 +26,28 @@ namespace DSPRE.Avalonia.Views
         public double EnemyY  { get => GetValue(EnemyYProperty);  set => SetValue(EnemyYProperty, value); }
         public double PlayerY { get => GetValue(PlayerYProperty); set => SetValue(PlayerYProperty, value); }
 
+        // Static battle-scene chrome (background/platforms/shadows/health bars), loaded once via
+        // code-behind instead of a literal XAML "avares://" Image.Source. The declarative binding form
+        // throws (and crashes the whole editor — no try/catch anywhere above XAML-populate) if the
+        // asset can't be resolved; BattleScriptEditorViewModel.LoadAsset already uses this exact
+        // try/catch-protected pattern for the same assets, so a missing/unresolvable file just leaves
+        // that one image blank instead of taking down the Pokémon Editor.
+        private static Bitmap LoadAsset(string name)
+        {
+            try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }
+            catch { return null; }
+        }
+
+        public static Bitmap BackgroundAsset       { get; } = LoadAsset("background.png");
+        public static Bitmap PlatformOpponentAsset { get; } = LoadAsset("platform_opponent.png");
+        public static Bitmap PlatformYouAsset      { get; } = LoadAsset("platform_you.png");
+        public static Bitmap ShadowSmallAsset      { get; } = LoadAsset("shadow_small.png");
+        public static Bitmap ShadowMediumAsset     { get; } = LoadAsset("shadow_medium.png");
+        public static Bitmap ShadowLargeAsset      { get; } = LoadAsset("shadow_large.png");
+        public static Bitmap HealthOpponentAsset   { get; } = LoadAsset("health_opponent.png");
+        public static Bitmap HealthYouAsset        { get; } = LoadAsset("health_you.png");
+        public static Bitmap TextBarAsset          { get; } = LoadAsset("text_bar.png");
+
         public BattleSceneControl() => InitializeComponent();
     }
 }
