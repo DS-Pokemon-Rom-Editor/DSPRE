@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
 
 namespace DSPRE
 {
@@ -81,8 +83,13 @@ namespace DSPRE
 
         public static void Save()
         {
+            var directory = Path.GetDirectoryName(SettingsFile);
+
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
             string json = JsonConvert.SerializeObject(Settings, Formatting.Indented);
-            System.IO.File.WriteAllText(SettingsFile, json);
+            File.WriteAllText(SettingsFile, json);
         }
 
         public const int MaxRecentProjects = 10;
