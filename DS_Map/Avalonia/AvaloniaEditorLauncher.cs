@@ -241,7 +241,10 @@ namespace DSPRE.Avalonia
         public static void OpenMapEditor()
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Map Editor", new MapEditorView(new MapEditorViewModel(true)), 1200, 720).ShowManaged();
+            var vm = new MapEditorViewModel(true);
+            var window = new EditorHostWindow("Map Editor", new MapEditorView(vm), 1200, 720);
+            window.Closed += (_, _) => vm.Detach();
+            window.ShowManaged();
         }
 
         public static void OpenBuildingEditor(int initialIndex = 0)

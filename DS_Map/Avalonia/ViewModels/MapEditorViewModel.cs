@@ -399,6 +399,12 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        private void OnRomPatchStateChanged(object sender, EventArgs e) => RefreshBuildingRotationPatchState();
+
+        /// <summary>Unsubscribe from app-wide events. Only for a standalone popup instance closing —
+        /// the single long-lived Maps-workspace instance never calls this.</summary>
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+
         private void LoadBuildingDetail()
         {
             OnPropertyChanged(nameof(HasBuildingSelected));
@@ -790,6 +796,7 @@ namespace DSPRE.Avalonia.ViewModels
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
                 _mapToArea = BuildMapAreaLookup();
                 RefreshBuildingRotationPatchState();
+                AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
 
                 foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
                 foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));

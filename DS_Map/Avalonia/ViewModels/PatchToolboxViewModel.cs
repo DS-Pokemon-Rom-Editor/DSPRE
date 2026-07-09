@@ -51,6 +51,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (row == null || !row.CanApply) return;
             DSPRE.PatchToolboxLogic.ApplyByKey(row.Key);   // shows its own confirm/result prompts
+            AppEvents.RaiseRomPatchStateChanged();         // any open editor gating on a patch flag re-checks
             Refresh();
         }
     }

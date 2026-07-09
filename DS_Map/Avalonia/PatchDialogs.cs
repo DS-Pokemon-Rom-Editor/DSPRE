@@ -81,8 +81,11 @@ namespace DSPRE.Avalonia
                 Text = message,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(16, 16, 16, 12),
-                Foreground = error ? new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28)) : null,
             };
+            // Only override the foreground for errors — leaving it unset for Info/Confirm lets the
+            // theme's implicit TextBlock style apply; explicitly assigning null here (even via a
+            // ternary) used to win over the theme at Local priority and rendered the text invisible.
+            if (error) msgText.Foreground = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
 
             var btnRow = new StackPanel
             {
