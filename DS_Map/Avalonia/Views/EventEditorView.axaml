@@ -1,12 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
         x:Class="DSPRE.Avalonia.Views.EventEditorView"
-        x:DataType="vm:EventEditorViewModel"
-        Title="Event Editor"
-        Width="1200" Height="720" MinWidth="980" MinHeight="560"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:EventEditorViewModel">
 
   <Design.DataContext>
     <vm:EventEditorViewModel/>
@@ -276,4 +273,4 @@
       </TabControl>
     </Grid>
   </DockPanel>
-</Window>
+</UserControl>

@@ -1782,13 +1782,19 @@ namespace DSPRE
                     var vmDppt = new DSPRE.Avalonia.ViewModels.WildEditorDPPtViewModel(
                         wildPokeUnpackedPath, RomInfo.GetPokemonNames(),
                         encToOpen, EditorPanels.headerEditor.internalNames.Count);
-                    new DSPRE.Avalonia.Views.WildEditorDPPtView(vmDppt).Show();
+                    var windowDppt = new DSPRE.Avalonia.Views.EditorHostWindow(
+                        "Wild Pokémon Editor (DPPt)", new DSPRE.Avalonia.Views.WildEditorDPPtView(vmDppt), 900, 680);
+                    windowDppt.Closed += (_, _) => vmDppt.Detach();
+                    DSPRE.Avalonia.WindowPlacement.ShowManaged(windowDppt);
                     break;
                 default:
                     var vmHgss = new DSPRE.Avalonia.ViewModels.WildEditorHGSSViewModel(
                         wildPokeUnpackedPath, RomInfo.GetPokemonNames(),
                         encToOpen, EditorPanels.headerEditor.internalNames.Count);
-                    new DSPRE.Avalonia.Views.WildEditorHGSSView(vmHgss).Show();
+                    var windowHgss = new DSPRE.Avalonia.Views.EditorHostWindow(
+                        "Wild Pokémon Editor (HGSS)", new DSPRE.Avalonia.Views.WildEditorHGSSView(vmHgss), 900, 680);
+                    windowHgss.Closed += (_, _) => vmHgss.Detach();
+                    DSPRE.Avalonia.WindowPlacement.ShowManaged(windowHgss);
                     break;
             }
             Helpers.statusLabelMessage();

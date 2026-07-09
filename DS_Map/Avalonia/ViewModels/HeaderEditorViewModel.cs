@@ -95,6 +95,10 @@ namespace DSPRE.Avalonia.ViewModels
                 : (_header != null ? _internalName : "—");
         public string SelectedHeaderSubtitle => _header != null ? $"header {_header.ID:D3}" : "";
 
+        /// <summary>The currently loaded header's own ID, or -1 if none is loaded. Fed to the Maps
+        /// workspace's embedded Map tab so its "This header" view can follow the sidebar selection.</summary>
+        public int CurrentHeaderId => _header?.ID ?? -1;
+
         // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
         public ObservableCollection<HeaderTreeFolder> TreeFolders { get; } = new ObservableCollection<HeaderTreeFolder>();
         private List<int> _locationIndexByHeader = new List<int>();
@@ -609,6 +613,7 @@ namespace DSPRE.Avalonia.ViewModels
             RaiseUndoState();
             StatusText = $"Header {_header.ID} loaded.";
             OnPropertyChanged(nameof(UnsavedChangesDescription));
+            OnPropertyChanged(nameof(CurrentHeaderId));
             UpdateHeaderLocationInTree(headerId, CurrentHeaderLocationIndex());   // correct folder after reset/paste/import
         }
 

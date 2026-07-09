@@ -1,11 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.TextEditorView"
-        x:DataType="vm:TextEditorViewModel"
-        Title="{Binding Title}"
-        Width="980" Height="640"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:TextEditorViewModel">
 
   <Design.DataContext>
     <vm:TextEditorViewModel/>
@@ -91,4 +88,4 @@
     </DockPanel>
 
   </DockPanel>
-</Window>
+</UserControl>

@@ -1,11 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.AreaDataEditorView"
-        x:DataType="vm:AreaDataEditorViewModel"
-        Title="Area Data Editor"
-        Width="520" Height="380"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:AreaDataEditorViewModel">
 
   <Design.DataContext>
     <vm:AreaDataEditorViewModel/>
@@ -43,4 +40,4 @@
       </Grid>
     </StackPanel>
   </DockPanel>
-</Window>
+</UserControl>

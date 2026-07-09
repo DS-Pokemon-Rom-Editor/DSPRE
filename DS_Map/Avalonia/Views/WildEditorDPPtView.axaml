@@ -1,17 +1,13 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.WildEditorDPPtView"
-        x:DataType="vm:WildEditorDPPtViewModel"
-        Title="{Binding Title}"
-        Width="900" Height="680"
-        MinWidth="750" MinHeight="560"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:WildEditorDPPtViewModel">
   <Design.DataContext>
     <vm:WildEditorDPPtViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
+  <UserControl.Styles>
     <Style Selector="TextBlock.lbl">
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Margin" Value="0,0,6,0"/>
@@ -24,7 +20,7 @@
     <Style Selector="ComboBox">
       <Setter Property="MinWidth" Value="160"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
   <DockPanel LastChildFill="True" Margin="10">
     <Border DockPanel.Dock="Top" Margin="0,0,0,8">
       <StackPanel Orientation="Horizontal" Spacing="6">
@@ -70,7 +66,7 @@
               <DataGridTemplateColumn Header="Pokemon" Width="*">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                    <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                    <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                               SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
@@ -97,7 +93,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -112,7 +108,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -127,7 +123,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -142,7 +138,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -164,7 +160,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -179,7 +175,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -194,7 +190,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -209,7 +205,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -224,7 +220,7 @@
                   <DataGridTemplateColumn Header="Pokemon" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate>
-                        <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                        <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                   SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -257,7 +253,7 @@
                     <DataGridTemplateColumn Header="Pokemon" Width="*">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                          <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                     SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -282,7 +278,7 @@
                     <DataGridTemplateColumn Header="Pokemon" Width="*">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                          <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                     SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -307,7 +303,7 @@
                     <DataGridTemplateColumn Header="Pokemon" Width="*">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                          <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                     SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -332,7 +328,7 @@
                     <DataGridTemplateColumn Header="Pokemon" Width="*">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                          <ComboBox ItemsSource="{Binding $parent[Window].DataContext.PokemonNames}"
+                          <ComboBox ItemsSource="{Binding $parent[UserControl].DataContext.PokemonNames}"
                                     SelectedIndex="{Binding PokemonIndex}" HorizontalAlignment="Stretch"/>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -356,4 +352,4 @@
       </TabItem>
     </TabControl>
   </DockPanel>
-</Window>
+</UserControl>

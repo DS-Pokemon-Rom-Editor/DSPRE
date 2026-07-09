@@ -120,19 +120,25 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
-            new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Text Editor",
+                new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }),
+                980, 640).ShowManaged();
         }
 
         public static void OpenScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Rotom Script Editor",
+                new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }),
+                980, 760).ShowManaged();
         }
 
         public static void OpenLevelScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Level Script Editor",
+                new LevelScriptEditorView(new LevelScriptEditorViewModel(true) { InitialIndex = initialIndex }),
+                720, 560).ShowManaged();
         }
 
         public static void OpenTableEditor()
@@ -172,10 +178,24 @@ namespace DSPRE.Avalonia
             string path = gameDirs[DirNames.encounters].unpackedDir;
             string[] names = GetPokemonNames();
             int headerCount = GetHeaderCount();
+            // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
+            // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
+            // no generic post-close hook for this — the embedded tab's single long-lived instance never
+            // needs Detach at all, matching every other embedded-editor VM's lifetime).
             if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
-                new WildEditorDPPtView(new WildEditorDPPtViewModel(path, names, initialIndex, headerCount)).ShowManaged();
+            {
+                var vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
+                var window = new EditorHostWindow("Wild Pokémon Editor (DPPt)", new WildEditorDPPtView(vm), 900, 680);
+                window.Closed += (_, _) => vm.Detach();
+                window.ShowManaged();
+            }
             else
-                new WildEditorHGSSView(new WildEditorHGSSViewModel(path, names, initialIndex, headerCount)).ShowManaged();
+            {
+                var vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
+                var window = new EditorHostWindow("Wild Pokémon Editor (HGSS)", new WildEditorHGSSView(vm), 900, 680);
+                window.Closed += (_, _) => vm.Detach();
+                window.ShowManaged();
+            }
         }
 
         public static void OpenHeaderEditor(int initialIndex = -1)
@@ -221,7 +241,7 @@ namespace DSPRE.Avalonia
         public static void OpenMapEditor()
         {
             if (!IsRomLoaded) return;
-            new MapEditorView(new MapEditorViewModel(true)).ShowManaged();
+            new EditorHostWindow("Map Editor", new MapEditorView(new MapEditorViewModel(true)), 1200, 720).ShowManaged();
         }
 
         public static void OpenBuildingEditor(int initialIndex = 0)
@@ -233,13 +253,17 @@ namespace DSPRE.Avalonia
         public static void OpenMatrixEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Matrix Editor",
+                new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }),
+                860, 640).ShowManaged();
         }
 
         public static void OpenEventEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Event Editor",
+                new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }),
+                1200, 720).ShowManaged();
         }
 
         public static void OpenNsbtxEditor()
@@ -251,7 +275,9 @@ namespace DSPRE.Avalonia
         public static void OpenAreaDataEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            new EditorHostWindow("Area Data Editor",
+                new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }),
+                520, 380).ShowManaged();
         }
 
         public static void OpenOverlayEditor()

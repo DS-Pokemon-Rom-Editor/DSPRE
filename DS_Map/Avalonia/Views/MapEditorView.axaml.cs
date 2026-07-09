@@ -10,7 +10,9 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
 {
-    public partial class MapEditorView : Window
+    /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Map tab in the Maps
+    /// workspace; standalone launches host it in an <see cref="EditorHostWindow"/>.</summary>
+    public partial class MapEditorView : UserControl
     {
         private MapEditorViewModel VM => DataContext as MapEditorViewModel;
         private bool _setupDone;
@@ -110,14 +112,21 @@ namespace DSPRE.Avalonia.Views
             DataContext = vm;
         }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
+
+        /// <summary>
+        /// One-time VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is
+        /// created at app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after a load.
+        /// </summary>
+        public async Task EnsureSetupAsync()
         {
             if (_setupDone || Design.IsDesignMode) return;
             var vm = VM;
-            if (vm == null) return;
+            if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
+            var owner = TopLevel.GetTopLevel(this) as Window;
+            if (owner == null) return;
             _setupDone = true;
 
-            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
             vm.MapLoaded += OnMapLoaded;
             vm.OverlayChanged += (_, _) =>
             {
@@ -129,7 +138,7 @@ namespace DSPRE.Avalonia.Views
             vm.PropertyChanged += OnVmPropertyChanged;
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
-            await vm.SetupAsync(this);
+            await vm.SetupAsync(owner);
         }
 
         private void OnMapLoaded(object sender, EventArgs e)
@@ -174,8 +183,8 @@ namespace DSPRE.Avalonia.Views
             if (VM == null) return;
             if (VM.TryTileAtScreen((float)pos.X, (float)pos.Y,
                     (x, y, z) => { bool k = GlView.WorldToScreen(x, y, z, out float sx, out float sy); return (k, sx, sy); },
-                    out int col, out int row))
-                VM.PaintTile(col, row);
+                    out int cellIndex, out int col, out int row))
+                VM.PaintTile(cellIndex, col, row);
         }
 
         private void OnVmPropertyChanged(object sender, PropertyChangedEventArgs e)

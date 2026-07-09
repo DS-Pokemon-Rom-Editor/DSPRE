@@ -360,7 +360,9 @@ namespace DSPRE.Avalonia.ViewModels
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
                     DirNames.eventFiles, DirNames.maps, DirNames.exteriorBuildingModels,
                     DirNames.buildingTextures, DirNames.mapTextures, DirNames.matrices,
-                    DirNames.areaData, DirNames.dynamicHeaders, DirNames.OWSprites });
+                    DirNames.areaData, DirNames.dynamicHeaders, DirNames.OWSprites,
+                    // Needed by PopulateOwTrainerAndItemEntries below (Trainer/Item dropdowns).
+                    DirNames.trainerProperties, DirNames.scripts, DirNames.textArchives });
                 if (gameFamily == GameFamilies.HGSS)
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
                 _eventToHeader = BuildEventHeaderLookup();

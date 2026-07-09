@@ -49,57 +49,104 @@ namespace DSPRE.Avalonia.Gl
                     try
                     {
                         byte areaId = ResolveAreaId(matrix, x, y, fallbackAreaId, mapIndex, areaForMap);
-                        if (!areaCache.TryGetValue(areaId, out var area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
-
-                        // HGSS indoor areas use the interior building model set.
-                        bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
-                        string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
-
-                        var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
-                        BdhcFile.TryParse(map.bdhc, out var bdhc);
                         float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
-
-                        if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
-                            BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
-
-                        var buildings = new List<(NSBMDModel, float[])>();
-                        string btexPath = Path.Combine(bldTexDir, area.buildingsTileset.ToString("D4"));
-                        byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
-
-                        if (map.buildings != null)
-                            foreach (var b in map.buildings)
-                            {
-                                string mp = Path.Combine(bldDir, b.modelID.ToString("D4"));
-                                if (!System.IO.File.Exists(mp)) continue;
-                                using (var fs = new FileStream(mp, FileMode.Open, FileAccess.Read))
-                                    b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
-                                if (b.NSBMDFile?.models == null || b.NSBMDFile.models.Length == 0) continue;
-                                if (bldTex != null)
-                                {
-                                    try
-                                    {
-                                        b.NSBMDFile.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
-                                        b.NSBMDFile.MatchTextures();
-                                    }
-                                    catch { /* pack mismatch — leave untextured */ }
-                                }
-                                buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));
-                            }
-
-                        cells.Add(new NsbmdGeometry.MatrixCellGeometry
-                        {
-                            Map = map.mapModel?.models?.Length > 0 ? map.mapModel.models[0] : null,
-                            Buildings = buildings,
-                            CellX = x,
-                            CellY = y,
-                            Bdhc = bdhc,
-                            AltitudeY = altitudeY,
-                        });
+                        var map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
+                        var geo = BuildCellGeometry(map, areaId, gameFamily, x, y, altitudeY,
+                            mapTexDir, extBldDir, intBldDir, bldTexDir, areaCache);
+                        if (geo != null) cells.Add(geo);
                     }
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }
                 }
 
             return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells, mode) : null;
+        }
+
+        /// <summary>
+        /// Like <see cref="Build"/>, but stitches ALREADY-LOADED <see cref="MapFile"/> instances instead
+        /// of reading fresh copies from disk — used to re-render a scene that has in-memory, not-yet-saved
+        /// edits (e.g. the Map editor's "This header" view after painting or moving a building).
+        /// </summary>
+        public static NsbmdRenderModel BuildFromLoaded(
+            GameFamilies gameFamily,
+            IEnumerable<(int cellX, int cellY, MapFile map, byte areaId, float altitudeY)> loadedCells,
+            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Grid)
+        {
+            var cells = new List<NsbmdGeometry.MatrixCellGeometry>();
+            string mapTexDir = gameDirs[DirNames.mapTextures].unpackedDir;
+            string extBldDir = gameDirs[DirNames.exteriorBuildingModels].unpackedDir;
+            string intBldDir = gameDirs.ContainsKey(DirNames.interiorBuildingModels) ? gameDirs[DirNames.interiorBuildingModels].unpackedDir : null;
+            string bldTexDir = gameDirs[DirNames.buildingTextures].unpackedDir;
+            var areaCache = new Dictionary<byte, AreaData>();
+
+            foreach (var (cellX, cellY, map, areaId, altitudeY) in loadedCells)
+            {
+                try
+                {
+                    var geo = BuildCellGeometry(map, areaId, gameFamily, cellX, cellY, altitudeY,
+                        mapTexDir, extBldDir, intBldDir, bldTexDir, areaCache);
+                    if (geo != null) cells.Add(geo);
+                }
+                catch (Exception ex) { AppLogger.Error($"Loaded cell ({cellX},{cellY}) failed: {ex.Message}"); }
+            }
+            return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells, mode) : null;
+        }
+
+        /// <summary>Binds textures + building models for one already-loaded map and packs it into
+        /// stitchable cell geometry. Mutates the map's building NSBMD/material bindings in place
+        /// (same as the rest of this class), so callers that keep the <see cref="MapFile"/> around for
+        /// editing (rather than throwing it away after one render) see it come back textured too.</summary>
+        private static NsbmdGeometry.MatrixCellGeometry BuildCellGeometry(MapFile map, byte areaId,
+            GameFamilies gameFamily, int cellX, int cellY, float altitudeY,
+            string mapTexDir, string extBldDir, string intBldDir, string bldTexDir,
+            Dictionary<byte, AreaData> areaCache)
+        {
+            if (!areaCache.TryGetValue(areaId, out var area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
+
+            // HGSS indoor areas use the interior building model set.
+            bool interior = gameFamily == GameFamilies.HGSS && area.areaType == AreaData.TYPE_INDOOR;
+            string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
+
+            BdhcFile.TryParse(map.bdhc, out var bdhc);
+
+            if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
+                BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
+
+            var buildings = new List<(NSBMDModel, float[])>();
+            string btexPath = Path.Combine(bldTexDir, area.buildingsTileset.ToString("D4"));
+            byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
+
+            if (map.buildings != null)
+                foreach (var b in map.buildings)
+                {
+                    if (b.NSBMDFile == null)
+                    {
+                        string mp = Path.Combine(bldDir, b.modelID.ToString("D4"));
+                        if (!System.IO.File.Exists(mp)) continue;
+                        using var fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
+                        b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
+                    }
+                    if (b.NSBMDFile?.models == null || b.NSBMDFile.models.Length == 0) continue;
+                    if (bldTex != null)
+                    {
+                        try
+                        {
+                            b.NSBMDFile.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
+                            b.NSBMDFile.MatchTextures();
+                        }
+                        catch { /* pack mismatch — leave untextured */ }
+                    }
+                    buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));
+                }
+
+            return new NsbmdGeometry.MatrixCellGeometry
+            {
+                Map = map.mapModel?.models?.Length > 0 ? map.mapModel.models[0] : null,
+                Buildings = buildings,
+                CellX = cellX,
+                CellY = cellY,
+                Bdhc = bdhc,
+                AltitudeY = altitudeY,
+            };
         }
 
         private static byte ResolveAreaId(GameMatrix matrix, int x, int y, byte fallbackAreaId,

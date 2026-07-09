@@ -1,12 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
         x:Class="DSPRE.Avalonia.Views.MapEditorView"
-        x:DataType="vm:MapEditorViewModel"
-        Title="Map Editor"
-        Width="1200" Height="720" MinWidth="940" MinHeight="560"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:MapEditorViewModel">
 
   <Design.DataContext>
     <vm:MapEditorViewModel/>
@@ -24,10 +21,13 @@
           <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
           <ComboBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
           <TextBlock Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
+          <TextBlock Text="Header:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
+          <ComboBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
+                    ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="📥 Import"   Click="Import_Click"/>
-          <Button Content="📤 Export"   Click="Export_Click"/>
+          <Button Content="📥 Import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
+          <Button Content="📤 Export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="＋ Add map"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="🗑 Rem last" Click="RemMap_Click" IsVisible="{Binding IsSingleMap}"/>
         </WrapPanel>
@@ -48,18 +48,18 @@
                   ToolTip.Tip="Lift the flat permission plane off the map surface (in tiles)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"/>
-          <CheckBox Content="Interior buildings" IsChecked="{Binding InteriorBuildings}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
+          <CheckBox Content="Interior buildings" IsChecked="{Binding InteriorBuildings}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
                     ToolTip.Tip="Load buildings from the interior model set (HGSS)"/>
           <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center"
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
-          <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsMatrixView}" VerticalAlignment="Center"
-                    ToolTip.Tip="Full-matrix stitch: ON = DS-true fixed 32-tile grid (underfilled maps gap, overhang overlaps); OFF = continuous geometry-sized layout"/>
+          <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsStitchedView}" VerticalAlignment="Center"
+                    ToolTip.Tip="Full-matrix / this-header stitch: ON = DS-true fixed 32-tile grid (underfilled maps gap, overhang overlaps); OFF = continuous geometry-sized layout"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
-                        ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile."/>
-          <ToggleButton Content="🖌 Paint" IsChecked="{Binding PaintMode}" IsEnabled="{Binding IsSingleMap}" VerticalAlignment="Center"
-                        ToolTip.Tip="Paint mode: locks the camera to Top; left-click/drag on the map to paint the selected collision (or type, if the Type overlay is shown) onto tiles."/>
+          <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
+                        ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile. In 'This header' view this works across every map shown."/>
+          <ToggleButton Content="🖌 Paint" IsChecked="{Binding PaintMode}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
+                        ToolTip.Tip="Paint mode: locks the camera to Top; left-click/drag on the map to paint the selected collision (or type, if the Type overlay is shown) onto tiles. In 'This header' view this paints whichever of the header's maps is under the cursor."/>
           <CheckBox Content="Snap to tile" IsChecked="{Binding SnapToTile}" VerticalAlignment="Center"
                     ToolTip.Tip="Snap building dragging to whole tiles (arrow keys always snap; the input boxes still do fine sub-tile adjustment)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
@@ -83,8 +83,8 @@
         <gl:NsbmdGlControl x:Name="GlView"/>
       </Border>
 
-      <!-- Editing panels (single-map only; matrix view is render-only) -->
-      <TabControl Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding IsSingleMap}">
+      <!-- Editing panels (single map + "This header" view; Full matrix is render-only) -->
+      <TabControl Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
         <TabItem Header="Permissions">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Spacing="4">
@@ -101,11 +101,12 @@
                 <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,4">
-                <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+                <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
+                <TextBlock Text="Use 🖌 Paint in the 3D view — click any of the header's maps." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
                 <Button Content="🔎 Scan used types" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
-            <Grid RowDefinitions="Auto,*,Auto,*">
+            <Grid RowDefinitions="Auto,*,Auto,*" IsVisible="{Binding IsSingleMap}">
               <TextBlock Grid.Row="0" Text="Collision" FontWeight="Bold" Margin="0,2"/>
               <gl:PermissionGridControl Grid.Row="1" x:Name="CollisionGrid" MinHeight="180"/>
               <TextBlock Grid.Row="2" Text="Type" FontWeight="Bold" Margin="0,4,0,2"/>
@@ -120,29 +121,46 @@
               <Button Content="Remove" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Button Content="Duplicate" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="📥 Import" Click="ImportBuildings_Click"/>
-              <Button Content="📤 Export" Click="ExportBuildings_Click"/>
+              <Button Content="📥 Import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
+                      ToolTip.Tip="Replaces one map's whole building list — single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
+              <Button Content="📤 Export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
             </StackPanel>
-            <Grid ColumnDefinitions="*,170">
+            <Grid ColumnDefinitions="*,200">
               <ListBox Grid.Column="0" ItemsSource="{Binding Buildings}" SelectedIndex="{Binding SelectedBuildingIndex}"/>
-              <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="3" IsVisible="{Binding HasBuildingSelected}">
-                <TextBlock Text="Model ID" FontSize="10"/>
-                <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
-                <TextBlock Text="X / Y / Z (tiles · fine)" FontSize="10"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BX}"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BY}"/>
-                <NumericUpDown Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BZ}"/>
-                <TextBlock Text="Rotation X / Y / Z (°)" FontSize="10"/>
-                <TextBlock Text="Requires the Building Rotation patch (Patch Toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}" IsEnabled="{Binding BuildingRotationEnabled}"/>
-                <NumericUpDown Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+              <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6" IsVisible="{Binding HasBuildingSelected}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Model ID" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Position (tiles · fine)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,0">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BX}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BY}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Minimum="-32768" Maximum="32767" Increment="0.0625" FormatString="0.####" Value="{Binding BZ}"/>
+                  </Grid>
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Rotation (°)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="Requires the Building Rotation patch (Patch Toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
+                  <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                  </Grid>
+                </StackPanel>
               </StackPanel>
             </Grid>
           </DockPanel>
         </TabItem>
 
-        <TabItem Header="Files / I/O">
+        <TabItem Header="Files / I/O" IsEnabled="{Binding IsSingleMap}">
           <ScrollViewer>
             <StackPanel Margin="8" Spacing="10">
               <HeaderedContentControl Header="3D model">
@@ -177,4 +195,4 @@
       </TabControl>
     </Grid>
   </DockPanel>
-</Window>
+</UserControl>

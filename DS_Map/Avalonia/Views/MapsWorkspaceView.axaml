@@ -6,8 +6,8 @@
         x:DataType="vm:HeaderEditorViewModel"
         x:Name="MapsRoot">
   <!-- Porymap-like Maps workspace over a HeaderEditorViewModel: the shared header sidebar drives a
-       context strip + map-bound tabs. Phase 1: Header is embedded; the rest open the standalone editor
-       at the selected header's linked file id. -->
+       context strip + map-bound tabs. Every tab is embedded and follows the selected header's linked
+       file id (see code-behind's RetargetXxx methods). -->
   <Design.DataContext>
     <vm:HeaderEditorViewModel/>
   </Design.DataContext>
@@ -80,52 +80,33 @@
             <views:HeaderFieldsView/>
           </TabItem>
           <TabItem Header="Map" ToolTip.Tip="The 3D terrain and buildings of the selected map.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Map Editor"/>
-              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
-                         Text="Opens in its own window for now."/>
-              <Button Content="🔗 Open Map Editor" HorizontalAlignment="Center" Click="OpenMap_Click"/>
-            </StackPanel>
+            <views:MapEditorView x:Name="MapEmbed" DataContext="{Binding #MapsRoot.MapVM}"/>
           </TabItem>
           <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
           <TabItem Header="Events" ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map.">
             <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
           <TabItem Header="Matrix" ToolTip.Tip="The grid that stitches individual maps into the seamless world.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Matrix Editor"/>
-              <Button Content="🔗 Open Matrix" HorizontalAlignment="Center" Click="OpenMatrix_Click"/>
-            </StackPanel>
+            <views:MatrixEditorView x:Name="MatrixEmbed" DataContext="{Binding #MapsRoot.MatrixVM}"/>
           </TabItem>
           <TabItem Header="Area Data" ToolTip.Tip="Which texture and building set this area uses.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Area Data Editor"/>
-              <Button Content="🔗 Open Area Data" HorizontalAlignment="Center" Click="OpenAreaData_Click"/>
-            </StackPanel>
+            <views:AreaDataEditorView x:Name="AreaDataEmbed" DataContext="{Binding #MapsRoot.AreaDataVM}"/>
           </TabItem>
-          <TabItem Header="Encounters" ToolTip.Tip="Wild Pokémon that appear in this area.">
+          <TabItem x:Name="EncountersTab" Header="Encounters" ToolTip.Tip="Wild Pokémon that appear in this area.">
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Wild Encounters"/>
-              <Button Content="🔗 Open Encounters" HorizontalAlignment="Center" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}"/>
+              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
+                         Text="This header has no wild encounters (255)." IsVisible="{Binding !CanOpenEncounters}"/>
             </StackPanel>
           </TabItem>
           <TabItem Header="Scripts" ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Script Editor"/>
-              <Button Content="🔗 Open Scripts" HorizontalAlignment="Center" Click="OpenScripts_Click"/>
-            </StackPanel>
+            <views:ScriptEditorView x:Name="ScriptsEmbed" DataContext="{Binding #MapsRoot.ScriptsVM}"/>
           </TabItem>
           <TabItem Header="Level Scripts" ToolTip.Tip="Scripts that run automatically when the map loads.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Level Script Editor"/>
-              <Button Content="🔗 Open Level Scripts" HorizontalAlignment="Center" Click="OpenLevelScripts_Click"/>
-            </StackPanel>
+            <views:LevelScriptEditorView x:Name="LevelScriptsEmbed" DataContext="{Binding #MapsRoot.LevelScriptsVM}"/>
           </TabItem>
           <TabItem Header="Text" ToolTip.Tip="Dialogue and signs used by this area.">
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Text Editor"/>
-              <Button Content="🔗 Open Text" HorizontalAlignment="Center" Click="OpenTexts_Click"/>
-            </StackPanel>
+            <views:TextEditorView x:Name="TextEmbed" DataContext="{Binding #MapsRoot.TextVM}"/>
           </TabItem>
         </TabControl>
       </DockPanel>

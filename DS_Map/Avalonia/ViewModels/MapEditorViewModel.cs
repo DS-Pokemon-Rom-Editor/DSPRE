@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
@@ -26,6 +27,17 @@ namespace DSPRE.Avalonia.ViewModels
         public override string ToString() => Name;
     }
 
+    /// <summary>One map belonging to the currently viewed header, kept loaded (not discarded after
+    /// render) so painting/building edits can target it and it can be saved individually.</summary>
+    internal sealed class HeaderMapCell
+    {
+        public int CellX, CellY, MapIndex;
+        public byte AreaId;
+        public float AltitudeY;
+        public MapFile Map;
+        public bool Dirty;
+    }
+
     /// <summary>
     /// Avalonia port of the WinForms <c>MapEditor</c> — core scope: map-file selection,
     /// a textured-geometry 3D preview (via <see cref="NsbmdGlControl"/>), the two 32×32
@@ -47,6 +59,11 @@ namespace DSPRE.Avalonia.ViewModels
         private MapFile _map;
         private Dictionary<int, byte> _mapToArea;   // map index → areaDataID (for the correct tileset)
 
+        // ── "This header" view: every map belonging to the currently viewed header ──────
+        private readonly List<HeaderMapCell> _headerCells = new List<HeaderMapCell>();
+        // Flat Buildings-list index → (cell index in _headerCells, building index within that map).
+        private readonly List<(int CellIndex, int BuildingIndex)> _headerBuildingIndex = new List<(int, int)>();
+
         /// <summary>Raised after a map is (re)loaded so the view can refresh the GL control + grids.</summary>
         public event EventHandler MapLoaded;
 
@@ -55,14 +72,59 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> MapTilesets { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> BuildingTilesets { get; } = new ObservableCollection<string>();
 
-        // ── View mode: single map vs. full matrix (fly-around) ──────────────────────────
-        public ObservableCollection<string> ViewModes { get; } = new ObservableCollection<string> { "Single map", "Full matrix" };
+        // ── View mode: single map vs. full matrix (fly-around) vs. this header's maps ───
+        public ObservableCollection<string> ViewModes { get; } = new ObservableCollection<string> { "Single map", "Full matrix", "This header" };
         public ObservableCollection<string> Matrices { get; } = new ObservableCollection<string>();
 
         private int _viewModeIndex;
-        public int ViewModeIndex { get => _viewModeIndex; set { if (Set(ref _viewModeIndex, value)) { OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView)); RefreshView(); } } }
+        public int ViewModeIndex
+        {
+            get => _viewModeIndex;
+            set
+            {
+                if (Set(ref _viewModeIndex, value))
+                {
+                    OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView));
+                    OnPropertyChanged(nameof(IsHeaderView)); OnPropertyChanged(nameof(CanEdit));
+                    OnPropertyChanged(nameof(IsStitchedView));
+                    RefreshView();
+                }
+            }
+        }
         public bool IsSingleMap => _viewModeIndex == 0;
         public bool IsMatrixView => _viewModeIndex == 1;
+        public bool IsHeaderView => _viewModeIndex == 2;
+        /// <summary>Whether the Permissions/Buildings editing panel should be usable: single-map always
+        /// was; the "This header" view stitches multiple maps but keeps each one individually editable
+        /// (paint + move buildings). Full-matrix stays render-only — it can span the whole world.</summary>
+        public bool CanEdit => IsSingleMap || IsHeaderView;
+        public bool IsStitchedView => IsMatrixView || IsHeaderView;
+
+        /// <summary>Header list for the "This header" view's own picker — lets a standalone popup
+        /// (opened from the menu, with no sidebar to follow) choose a header directly. Populated in
+        /// <see cref="SetupAsync"/>; index == header ID.</summary>
+        public ObservableCollection<string> HeaderNames { get; } = new ObservableCollection<string>();
+
+        /// <summary>The header the "This header" view should show maps for. Fed by the Maps workspace
+        /// from the currently selected header when embedded (only triggers a rebuild while that view is
+        /// active); settable directly via <see cref="SelectedHeaderIndex"/> when opened standalone.</summary>
+        private int _headerId = -1;
+        public int HeaderId
+        {
+            get => _headerId;
+            set
+            {
+                if (_headerId == value) return;
+                _headerId = value;
+                OnPropertyChanged(nameof(SelectedHeaderIndex));
+                if (IsHeaderView) BuildHeaderPreview();
+            }
+        }
+
+        /// <summary>ComboBox-friendly alias for <see cref="HeaderId"/> — same backing value, so the
+        /// embedded Maps-workspace instance (driven externally by the sidebar) and a standalone popup
+        /// (driven by this combo, since it has no sidebar) share one code path.</summary>
+        public int SelectedHeaderIndex { get => _headerId; set => HeaderId = value; }
 
         // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
         // Grid is the default — it's the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride
@@ -106,7 +168,7 @@ namespace DSPRE.Avalonia.ViewModels
         public byte CollisionPaintValue => _useRawCollision ? (byte)_rawCollision :
             (_collisionPainterIndex >= 0 && _collisionPainterIndex < CollisionPainters.Count ? CollisionPainters[_collisionPainterIndex].Value : (byte)0);
 
-        private int _typePainterIndex;
+        private int _typePainterIndex = -1;
         public int TypePainterIndex
         {
             get => _typePainterIndex;
@@ -166,12 +228,33 @@ namespace DSPRE.Avalonia.ViewModels
         {
             OverlayMesh = null; OverlayVertexCount = 0;
             TintOn = false;
+            bool collision = _overlayModeIndex == 1;
+
+            if (IsHeaderView && Model3D != null && _overlayModeIndex > 0)
+            {
+                // Several maps at once can't share the single mesh-tint texture (it's keyed to one
+                // map's tile grid), so header view always renders the PLANE overlay, one flat 32×32
+                // tile grid per cell, each raised off the WHOLE scene's tallest point.
+                var m = Model3D;
+                float planeY = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + (float)_overlayHeight * NsbmdGeometry.TileSize;
+                var v = new List<float>();
+                foreach (var cellData in _headerCells)
+                {
+                    if (!Model3D.TryCellPlacement(cellData.CellX, cellData.CellY, out var cp)) continue;
+                    byte[,] grid = collision ? cellData.Map.collisions : cellData.Map.types;
+                    AppendPlaneOverlay(v, cp, grid, collision, m, planeY + cp.Width * 0.0006f);
+                }
+                OverlayMesh = v.ToArray();
+                OverlayVertexCount = v.Count / 8;
+                OverlayChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+
             // The single map is built as a 1×1 cell, so it carries a real tile grid (CellPlacement 0,0): a FIXED
             // 32 tiles regardless of how much geometry the map has — that's what makes the tiles the right size on
             // smaller maps.
             if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out var cell))
             {
-                bool collision = _overlayModeIndex == 1;
                 byte[,] grid = collision ? _map.collisions : _map.types;
                 int n = grid.GetLength(0);     // 32
                 var m = Model3D;
@@ -216,6 +299,24 @@ namespace DSPRE.Avalonia.ViewModels
             OverlayChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>Appends one cell's flat 32×32 collision/type quad grid (PLANE overlay style) at a
+        /// given world height — the multi-cell building block shared by "This header" view.</summary>
+        private static void AppendPlaneOverlay(List<float> v, NsbmdRenderModel.CellPlacement cp, byte[,] grid,
+            bool collision, NsbmdRenderModel m, float planeY)
+        {
+            int n = grid.GetLength(0);
+            float tsx = cp.Width / n, tsz = cp.Height / n;
+            float ox = cp.OriginX, oz = cp.OriginZ;
+            for (int row = 0; row < n; row++)
+                for (int col = 0; col < n; col++)
+                {
+                    var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                    float x0 = ox + col * tsx, x1 = x0 + tsx, z0 = oz + row * tsz, z1 = z0 + tsz;
+                    AddQuad(v, m.ToNormalized(x0, planeY, z0), m.ToNormalized(x1, planeY, z0),
+                               m.ToNormalized(x1, planeY, z1), m.ToNormalized(x0, planeY, z1), cr, cg, cb);
+                }
+        }
+
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
         // One flat-coloured quad (a→b→c→d) as two triangles.
@@ -228,6 +329,39 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Building detail / add / remove ──────────────────────────────────────────────
+        // In "This header" view, buildings from every one of the header's maps are listed together;
+        // these helpers resolve a flat Buildings-list index to the (map, cell) that actually owns it,
+        // so the rest of the building-editing code (gizmo drag, detail panel, add/remove) doesn't need
+        // to know which view mode is active.
+        private (MapFile map, int cellX, int cellY, Building building)? ResolveBuildingAt(int flatIndex)
+        {
+            if (IsHeaderView)
+            {
+                if (flatIndex < 0 || flatIndex >= _headerBuildingIndex.Count) return null;
+                var (ci, bi) = _headerBuildingIndex[flatIndex];
+                if (ci < 0 || ci >= _headerCells.Count) return null;
+                var cell = _headerCells[ci];
+                if (cell.Map?.buildings == null || bi < 0 || bi >= cell.Map.buildings.Count) return null;
+                return (cell.Map, cell.CellX, cell.CellY, cell.Map.buildings[bi]);
+            }
+            if (flatIndex < 0 || _map?.buildings == null || flatIndex >= _map.buildings.Count) return null;
+            return (_map, 0, 0, _map.buildings[flatIndex]);
+        }
+
+        private (MapFile map, int cellX, int cellY, Building building)? ResolveSelectedBuilding() => ResolveBuildingAt(_selectedBuildingIndex);
+
+        /// <summary>Marks the map that owns the currently selected building dirty (its own per-cell
+        /// flag in header view, so only that map gets saved) as well as the editor overall.</summary>
+        private void MarkSelectedBuildingDirty()
+        {
+            if (IsHeaderView && _selectedBuildingIndex >= 0 && _selectedBuildingIndex < _headerBuildingIndex.Count)
+            {
+                var (ci, _) = _headerBuildingIndex[_selectedBuildingIndex];
+                if (ci >= 0 && ci < _headerCells.Count) _headerCells[ci].Dirty = true;
+            }
+            MarkDirty();
+        }
+
         private int _selectedBuildingIndex = -1;
         public int SelectedBuildingIndex
         {
@@ -235,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _selectedBuildingIndex, value)) LoadBuildingDetail(); }
         }
 
-        public bool HasBuildingSelected => _selectedBuildingIndex >= 0 && _map?.buildings != null && _selectedBuildingIndex < _map.buildings.Count;
+        public bool HasBuildingSelected => ResolveSelectedBuilding() != null;
 
         private decimal _bModelId, _bx, _by, _bz, _bRotX, _bRotY, _bRotZ;
         public decimal BModelId { get => _bModelId; set { if (Set(ref _bModelId, value) && !_suppress) ApplyBuilding(reloadModel: true); } }
@@ -268,8 +402,9 @@ namespace DSPRE.Avalonia.ViewModels
         private void LoadBuildingDetail()
         {
             OnPropertyChanged(nameof(HasBuildingSelected));
-            if (!HasBuildingSelected) { GizmoTargetChanged?.Invoke(this, EventArgs.Empty); return; }
-            var b = _map.buildings[_selectedBuildingIndex];
+            var resolved = ResolveSelectedBuilding();
+            if (resolved == null) { GizmoTargetChanged?.Invoke(this, EventArgs.Empty); return; }
+            var b = resolved.Value.building;
             _suppress = true;
             // Positions are shown as the FULL fractional tile coordinate (whole tile + fraction/65536), so
             // the input boxes can fine-tune sub-tile placement after a coarse snap-drag.
@@ -294,22 +429,97 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void ApplyBuilding(bool reloadModel = false)
         {
-            if (!HasBuildingSelected) return;
-            var b = _map.buildings[_selectedBuildingIndex];
+            var resolved = ResolveSelectedBuilding();
+            if (resolved == null) return;
+            var b = resolved.Value.building;
             b.modelID = (uint)_bModelId;
             var (px, fx) = SplitCoord(_bx); var (py, fy) = SplitCoord(_by); var (pz, fz) = SplitCoord(_bz);
             b.xPosition = px; b.xFraction = fx; b.yPosition = py; b.yFraction = fy; b.zPosition = pz; b.zFraction = fz;
             b.xRotation = DegToU16(_bRotX); b.yRotation = DegToU16(_bRotY); b.zRotation = DegToU16(_bRotZ);
             if (reloadModel) b.NSBMDFile = null;   // force reload of the (new) model in BuildPreview
-            MarkDirty();
+            MaybeTransferBuildingAcrossCells();
+            MarkSelectedBuildingDirty();
             // NOTE: deliberately do not touch the Buildings list here — replacing the selected
             // item would drop the ListBox selection. The model ID lives in the detail panel.
             RebuildPreview();
             GizmoTargetChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// In "This header" view, each map only renders (and the game only reads) its OWN buildings
+        /// list — a building dragged/typed past its own map's 0..32 tile bounds into a neighbouring
+        /// cell's visual space would silently do nothing in-game unless it's actually moved into that
+        /// neighbour's building list, in that neighbour's LOCAL coordinates. Detects an out-of-bounds
+        /// position (any whole-tile overflow, so a big jump from typing a coordinate works too) and,
+        /// if a header cell actually exists there, re-homes the building: removes it from the source
+        /// map, rewrites xPosition/zPosition into the destination map's local space, adds it there,
+        /// marks both maps dirty, and re-selects it in its new home. No-ops (leaves the building where
+        /// it is) if no header cell exists at the target location — nothing to move it into.
+        /// </summary>
+        private void MaybeTransferBuildingAcrossCells()
+        {
+            if (!IsHeaderView || _selectedBuildingIndex < 0 || _selectedBuildingIndex >= _headerBuildingIndex.Count) return;
+            var (ci, bi) = _headerBuildingIndex[_selectedBuildingIndex];
+            if (ci < 0 || ci >= _headerCells.Count) return;
+            var srcCell = _headerCells[ci];
+            if (srcCell.Map?.buildings == null || bi < 0 || bi >= srcCell.Map.buildings.Count) return;
+            var b = srcCell.Map.buildings[bi];
+
+            int dCellX = (int)Math.Floor(b.xPosition / 32.0);
+            int dCellZ = (int)Math.Floor(b.zPosition / 32.0);
+            if (dCellX == 0 && dCellZ == 0) return;   // still within its own map's tile bounds
+
+            // Buildings can legitimately sit a little outside their own map's 0..32 tile bounds on
+            // one axis (a decorative overhang/eave a couple of units before the edge) without that
+            // meaning anything about which map owns them — e.g. Z = -5 forever computes dCellZ = -1
+            // even though the building never moved in Z. So resolve X and Z independently and only
+            // rebase whichever axis actually found a real neighbouring map there; a combined-axis
+            // lookup is a last resort for a genuine diagonal crossing.
+            int? Find(int x, int y) { int idx = _headerCells.FindIndex(c => c.CellX == x && c.CellY == y); return idx >= 0 && idx != ci && _headerCells[idx].Map?.buildings != null ? idx : (int?)null; }
+
+            int targetIndex; int usedDCellX, usedDCellZ;
+            if (dCellX != 0 && Find(srcCell.CellX + dCellX, srcCell.CellY) is int xi) { targetIndex = xi; usedDCellX = dCellX; usedDCellZ = 0; }
+            else if (dCellZ != 0 && Find(srcCell.CellX, srcCell.CellY + dCellZ) is int zi) { targetIndex = zi; usedDCellX = 0; usedDCellZ = dCellZ; }
+            else if (dCellX != 0 && dCellZ != 0 && Find(srcCell.CellX + dCellX, srcCell.CellY + dCellZ) is int di) { targetIndex = di; usedDCellX = dCellX; usedDCellZ = dCellZ; }
+            else return;   // no map exists in a direction that actually matches how this building moved
+
+            var targetCell = _headerCells[targetIndex];
+            srcCell.Map.buildings.RemoveAt(bi);
+            b.xPosition = (short)(b.xPosition - usedDCellX * 32);
+            b.zPosition = (short)(b.zPosition - usedDCellZ * 32);
+            targetCell.Map.buildings.Add(b);
+            srcCell.Dirty = true; targetCell.Dirty = true;
+
+            RefreshBuildings();
+            SelectedBuildingIndex = _headerBuildingIndex.FindLastIndex(t => t.CellIndex == targetIndex);
+            StatusText = $"Building moved from map {srcCell.MapIndex} to map {targetCell.MapIndex}.";
+        }
+
+        /// <summary>Which header-view map a new/duplicated building should join: the currently
+        /// selected building's map, else the first one — there's no other "current map" concept
+        /// once several maps are shown stitched together.</summary>
+        private int TargetHeaderCellIndex()
+        {
+            if (_selectedBuildingIndex >= 0 && _selectedBuildingIndex < _headerBuildingIndex.Count)
+                return _headerBuildingIndex[_selectedBuildingIndex].CellIndex;
+            return 0;
+        }
+
         public void AddBuilding()
         {
+            if (IsHeaderView)
+            {
+                if (_headerCells.Count == 0) return;
+                var cell = _headerCells[TargetHeaderCellIndex()];
+                if (cell.Map.buildings == null) return;
+                cell.Map.buildings.Add(new Building());
+                cell.Dirty = true;
+                RefreshBuildings();
+                MarkDirty();
+                SelectedBuildingIndex = _headerBuildingIndex.FindLastIndex(t => t.CellIndex == _headerCells.IndexOf(cell));
+                RebuildPreview();
+                return;
+            }
             if (_map?.buildings == null) return;
             _map.buildings.Add(new Building());
             RefreshBuildings();
@@ -321,6 +531,18 @@ namespace DSPRE.Avalonia.ViewModels
         public void RemoveBuilding()
         {
             if (!HasBuildingSelected) return;
+            if (IsHeaderView)
+            {
+                var (ci, bi) = _headerBuildingIndex[_selectedBuildingIndex];
+                var cell = _headerCells[ci];
+                cell.Map.buildings.RemoveAt(bi);
+                cell.Dirty = true;
+                RefreshBuildings();
+                MarkDirty();
+                SelectedBuildingIndex = Buildings.Count > 0 ? Math.Min(_selectedBuildingIndex, Buildings.Count - 1) : -1;
+                RebuildPreview();
+                return;
+            }
             _map.buildings.RemoveAt(_selectedBuildingIndex);
             RefreshBuildings();
             MarkDirty();
@@ -361,56 +583,93 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Raised after a tile is painted, so the view can refresh the 2D permission grids.</summary>
         public event EventHandler PaintedTile;
 
-        /// <summary>Finds the tile whose centre projects nearest to a screen point (for paint picking).
-        /// <paramref name="project"/> maps a normalized-space point to (ok, screenX, screenY).</summary>
-        public bool TryTileAtScreen(float px, float py, Func<float, float, float, (bool ok, float sx, float sy)> project, out int col, out int row)
+        /// <summary>The map cells eligible for paint picking: just cell (0,0) for the single loaded map,
+        /// or every one of the header's maps in "This header" view.</summary>
+        private IEnumerable<(int cellIndex, int cellX, int cellY)> PaintableCells()
         {
-            col = row = -1;
-            if (Model3D == null || !Model3D.TryCellPlacement(0, 0, out var cp)) return false;
+            if (IsHeaderView)
+            {
+                for (int i = 0; i < _headerCells.Count; i++)
+                    yield return (i, _headerCells[i].CellX, _headerCells[i].CellY);
+            }
+            else if (_map != null) yield return (0, 0, 0);
+        }
+
+        /// <summary>Finds the tile whose centre projects nearest to a screen point (for paint picking),
+        /// searching every paintable cell so header view can paint any of the header's maps.
+        /// <paramref name="project"/> maps a normalized-space point to (ok, screenX, screenY).</summary>
+        public bool TryTileAtScreen(float px, float py, Func<float, float, float, (bool ok, float sx, float sy)> project,
+            out int cellIndex, out int col, out int row)
+        {
+            cellIndex = -1; col = row = -1;
+            if (Model3D == null) return false;
             const int n = 32;
-            float tsx = cp.Width / n, tsz = cp.Height / n;
             float best = float.MaxValue;
-            for (int r = 0; r < n; r++)
-                for (int c = 0; c < n; c++)
-                {
-                    float rx = cp.OriginX + (c + 0.5f) * tsx, rz = cp.OriginZ + (r + 0.5f) * tsz;
-                    var (nx, ny, nz) = Model3D.ToNormalized(rx, Model3D.SurfaceY(rx, rz), rz);
-                    var (ok, sx, sy) = project(nx, ny, nz);
-                    if (!ok) continue;
-                    float d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
-                    if (d < best) { best = d; col = c; row = r; }
-                }
+            foreach (var (ci, cx, cy) in PaintableCells())
+            {
+                if (!Model3D.TryCellPlacement(cx, cy, out var cp)) continue;
+                float tsx = cp.Width / n, tsz = cp.Height / n;
+                for (int r = 0; r < n; r++)
+                    for (int c = 0; c < n; c++)
+                    {
+                        float rx = cp.OriginX + (c + 0.5f) * tsx, rz = cp.OriginZ + (r + 0.5f) * tsz;
+                        var (nx, ny, nz) = Model3D.ToNormalized(rx, Model3D.SurfaceY(rx, rz), rz);
+                        var (ok, sx, sy) = project(nx, ny, nz);
+                        if (!ok) continue;
+                        float d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
+                        if (d < best) { best = d; cellIndex = ci; col = c; row = r; }
+                    }
+            }
             return col >= 0;
         }
 
-        /// <summary>Paints the current collision or type value (matching the visible overlay) onto one tile.</summary>
-        public void PaintTile(int col, int row)
+        /// <summary>Paints the current collision or type value (matching the visible overlay) onto one
+        /// tile of the given cell (0 = the single loaded map; a header-view cell index otherwise).</summary>
+        public void PaintTile(int cellIndex, int col, int row)
         {
-            if (_map == null || _overlayModeIndex <= 0) return;
+            if (Model3D == null || _overlayModeIndex <= 0) return;
             if (col < 0 || col >= 32 || row < 0 || row >= 32) return;
             bool collision = _overlayModeIndex == 1;
-            var grid = collision ? _map.collisions : _map.types;
+
+            byte[,] grid;
+            Action markDirty;
+            if (IsHeaderView)
+            {
+                if (cellIndex < 0 || cellIndex >= _headerCells.Count) return;
+                var cell = _headerCells[cellIndex];
+                grid = collision ? cell.Map.collisions : cell.Map.types;
+                markDirty = () => { cell.Dirty = true; MarkDirty(); };
+            }
+            else
+            {
+                if (_map == null) return;
+                grid = collision ? _map.collisions : _map.types;
+                markDirty = MarkDirty;
+            }
+
             byte val = collision ? CollisionPaintValue : TypePaintValue;
             if (grid[row, col] == val) return;
             grid[row, col] = val;
-            MarkDirty();
+            markDirty();
             RebuildOverlay();
             PaintedTile?.Invoke(this, EventArgs.Empty);
         }
 
-        public int BuildingCount => _map?.buildings?.Count ?? 0;
+        public int BuildingCount => IsHeaderView ? _headerBuildingIndex.Count : (_map?.buildings?.Count ?? 0);
 
         /// <summary>A building's anchor in normalized render space (raw world = 0.25 × position;
-        /// ToNormalized then applies the scene's centre/scale).</summary>
+        /// ToNormalized then applies the scene's centre/scale). Works for any flat Buildings-list
+        /// index in either single-map (always cell 0,0) or "This header" (per-building cell) view.</summary>
         public bool TryBuildingAnchorNorm(int index, out float nx, out float ny, out float nz)
         {
             nx = ny = nz = 0f;
-            if (Model3D == null || _map?.buildings == null || index < 0 || index >= _map.buildings.Count) return false;
-            var b = _map.buildings[index];
-            // The single map is placed as cell (0,0): its origin (and its buildings) sit at OriginX + MapStride/2 in
-            // scene space. The gizmo anchor must include that same offset, or it lands NW of the actual building.
+            var resolved = ResolveBuildingAt(index);
+            if (Model3D == null || resolved == null) return false;
+            var (_, cellX, cellY, b) = resolved.Value;
+            // Each cell's origin (and its buildings) sit at OriginX + MapStride/2 in scene space. The
+            // gizmo anchor must include that same offset, or it lands NW of the actual building.
             float offX = 0f, offZ = 0f;
-            if (Model3D.TryCellPlacement(0, 0, out var cp))
+            if (Model3D.TryCellPlacement(cellX, cellY, out var cp))
             {
                 offX = cp.OriginX + NsbmdGeometry.MapStride * 0.5f;
                 offZ = cp.OriginZ + NsbmdGeometry.MapStride * 0.5f;
@@ -434,8 +693,9 @@ namespace DSPRE.Avalonia.ViewModels
         /// (0=X,1=Y,2=Z), with sub-tile (fraction) precision, and refreshes the live preview.</summary>
         public void NudgeSelectedBuildingRaw(int axis, float rawDelta)
         {
-            if (!HasBuildingSelected || rawDelta == 0f) return;
-            var b = _map.buildings[_selectedBuildingIndex];
+            var resolved = ResolveSelectedBuilding();
+            if (resolved == null || rawDelta == 0f) return;
+            var b = resolved.Value.building;
             double tileDelta = rawDelta / 0.25;   // 1 position unit = 0.25 raw units
             switch (axis)
             {
@@ -455,8 +715,9 @@ namespace DSPRE.Avalonia.ViewModels
         /// tile-aligned: clears the sub-tile fraction so it snaps onto the grid.</summary>
         public void NudgeSelectedBuildingTiles(int dx, int dz)
         {
-            if (!HasBuildingSelected) return;
-            var b = _map.buildings[_selectedBuildingIndex];
+            var resolved = ResolveSelectedBuilding();
+            if (resolved == null) return;
+            var b = resolved.Value.building;
             if (dx != 0) { b.xPosition = (short)(b.xPosition + dx); b.xFraction = 0; }
             if (dz != 0) { b.zPosition = (short)(b.zPosition + dz); b.zFraction = 0; }
             AfterBuildingMoved(b);
@@ -477,7 +738,11 @@ namespace DSPRE.Avalonia.ViewModels
             _suppress = true;
             BX = Coord(b.xPosition, b.xFraction); BY = Coord(b.yPosition, b.yFraction); BZ = Coord(b.zPosition, b.zFraction);
             _suppress = false;
-            MarkDirty();
+            // If this pushed the building past its own map's edge, re-home it into the neighbouring
+            // header cell (see MaybeTransferBuildingAcrossCells) — this also refreshes BX/BZ to the
+            // new local-space values via the SelectedBuildingIndex reassignment inside it.
+            MaybeTransferBuildingAcrossCells();
+            MarkSelectedBuildingDirty();
             RebuildPreview();
             GizmoTargetChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -497,9 +762,14 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Map {_selectedMapIndex}";
+        public string UnsavedChangesDescription => IsHeaderView ? $"Header {_headerId} maps" : $"Map {_selectedMapIndex}";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex); }
+        public void DiscardChanges()
+        {
+            _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (IsHeaderView) BuildHeaderPreview();               // reloads every cell's map fresh from disk
+            else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
+        }
         public void MarkDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -524,7 +794,7 @@ namespace DSPRE.Avalonia.ViewModels
                 foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
                 foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));
                 if (CollisionPainters.Count > 1) CollisionPainterIndex = 1;
-                if (TypePainters.Count > 0) { _typePainterIndex = 0; OnPropertyChanged(nameof(TypePainterIndex)); OnPropertyChanged(nameof(TypePaintValue)); }
+                if (TypePainters.Count > 0) TypePainterIndex = 0;
 
                 _suppress = true;
                 int mapTexCount = Filesystem.GetMapTexturesCount();
@@ -544,6 +814,12 @@ namespace DSPRE.Avalonia.ViewModels
                 int matrixCount = Filesystem.GetMatrixCount();
                 for (int i = 0; i < matrixCount; i++) Matrices.Add("Matrix " + i);
                 _suppress = true; if (matrixCount > 0) { _selectedMatrix = 0; OnPropertyChanged(nameof(SelectedMatrixIndex)); } _suppress = false;
+
+                var headerNames = HeaderLists.GetHeaderListBoxNames();
+                if (headerNames != null) foreach (var n in headerNames) HeaderNames.Add(n);
+                // Only defaults when nobody has set HeaderId yet (a standalone popup has no sidebar to
+                // follow); the embedded Maps-workspace instance already has it set by this point.
+                if (_headerId < 0 && HeaderNames.Count > 0) HeaderId = 0;
 
                 StatusText = $"{count} maps.";
                 if (count > 0) SelectedMapIndex = 0;
@@ -583,16 +859,93 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Rebuild the 3D preview (+ overlay, which depends on the new normalization).</summary>
         private void RebuildPreview()
         {
-            BuildPreview();
+            if (IsHeaderView) RebuildHeaderPreview();
+            else BuildPreview();
             RebuildOverlay();
             MapLoaded?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>Switch between single-map and full-matrix renders.</summary>
+        /// <summary>Switch between single-map, full-matrix, and this-header renders.</summary>
         private void RefreshView()
         {
             if (IsMatrixView) BuildMatrixPreview();
+            else if (IsHeaderView) BuildHeaderPreview();
             else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
+        }
+
+        /// <summary>
+        /// Loads every map belonging to the current header (the matrix cells where
+        /// <c>headers[y,x] == HeaderId</c>, or every non-empty cell if the matrix has no headers
+        /// section) — same ownership rule as the Headbutt editor's per-header map set — and stitches
+        /// them into one scene. Unlike Full Matrix, each map stays loaded with real (not discarded)
+        /// move-permission data so it can be painted and its buildings edited, individually saved.
+        /// </summary>
+        private void BuildHeaderPreview()
+        {
+            Model3D = null;
+            _headerCells.Clear();
+            SelectedBuildingIndex = -1;
+            try
+            {
+                if (_headerId < 0) { StatusText = "No header selected."; RefreshBuildings(); MapLoaded?.Invoke(this, EventArgs.Empty); return; }
+                MapHeader hdr;
+                try { hdr = MapHeader.GetMapHeader((ushort)_headerId); } catch { hdr = null; }
+                if (hdr == null) { StatusText = $"Header {_headerId}: not found."; RefreshBuildings(); MapLoaded?.Invoke(this, EventArgs.Empty); return; }
+
+                var matrix = new GameMatrix(hdr.matrixID);
+                for (int y = 0; y < matrix.height; y++)
+                    for (int x = 0; x < matrix.width; x++)
+                    {
+                        if (matrix.maps[y, x] == GameMatrix.EMPTY) continue;
+                        if (matrix.hasHeadersSection && matrix.headers[y, x] != _headerId) continue;
+                        int mapIndex = matrix.maps[y, x];
+
+                        byte areaId = hdr.areaDataID;
+                        if (matrix.hasHeadersSection)
+                        {
+                            try { var hh = MapHeader.GetMapHeader(matrix.headers[y, x]); if (hh != null) areaId = hh.areaDataID; } catch { /* keep hdr's area */ }
+                        }
+                        else if (AreaForMap(mapIndex) is byte a) areaId = a;
+
+                        float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
+                        var map = new MapFile(mapIndex, gameFamily, discardMoveperms: false);
+                        _headerCells.Add(new HeaderMapCell { CellX = x, CellY = y, MapIndex = mapIndex, AreaId = areaId, AltitudeY = altitudeY, Map = map });
+                    }
+
+                if (_headerCells.Count == 0)
+                {
+                    StatusText = $"Header {_headerId}: no maps found in its matrix.";
+                    RefreshBuildings(); MapLoaded?.Invoke(this, EventArgs.Empty); return;
+                }
+
+                Model3D = MatrixSceneBuilder.BuildFromLoaded(gameFamily,
+                    _headerCells.Select(c => (c.CellX, c.CellY, c.Map, c.AreaId, c.AltitudeY)), StitchMode);
+                RefreshBuildings();
+                SetClean();
+                StatusText = Model3D != null
+                    ? $"Header {_headerId}: {_headerCells.Count} map(s) stitched."
+                    : $"Header {_headerId}: no renderable maps.";
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Header map preview failed: " + ex.Message);
+                StatusText = "Header map render failed: " + ex.Message;
+            }
+            RebuildOverlay();
+            MapLoaded?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Re-stitches the header's maps from their CURRENT in-memory state (no disk reload),
+        /// so painting/building edits show up immediately without discarding unsaved work.</summary>
+        private void RebuildHeaderPreview()
+        {
+            if (_headerCells.Count == 0) { Model3D = null; return; }
+            try
+            {
+                Model3D = MatrixSceneBuilder.BuildFromLoaded(gameFamily,
+                    _headerCells.Select(c => (c.CellX, c.CellY, c.Map, c.AreaId, c.AltitudeY)), StitchMode);
+            }
+            catch (Exception ex) { AppLogger.Error("Header preview rebuild failed: " + ex.Message); }
         }
 
         /// <summary>map index → area-data id via the reverse header/matrix lookup (or null).</summary>
@@ -782,6 +1135,21 @@ namespace DSPRE.Avalonia.ViewModels
         private void RefreshBuildings()
         {
             Buildings.Clear();
+            _headerBuildingIndex.Clear();
+            if (IsHeaderView)
+            {
+                for (int ci = 0; ci < _headerCells.Count; ci++)
+                {
+                    var cell = _headerCells[ci];
+                    if (cell.Map?.buildings == null) continue;
+                    for (int bi = 0; bi < cell.Map.buildings.Count; bi++)
+                    {
+                        Buildings.Add($"Map {cell.MapIndex} · Building {bi:D2}");
+                        _headerBuildingIndex.Add((ci, bi));
+                    }
+                }
+                return;
+            }
             if (_map?.buildings == null) return;
             for (int i = 0; i < _map.buildings.Count; i++)
                 Buildings.Add($"Building {i:D2}");
@@ -790,6 +1158,20 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Save / import / export ─────────────────────────────────────────────────────
         public void Save()
         {
+            if (IsHeaderView)
+            {
+                int saved = 0;
+                foreach (var cell in _headerCells)
+                {
+                    if (!cell.Dirty) continue;
+                    cell.Map.SaveToFileDefaultDir(cell.MapIndex, showSuccessMessage: false);
+                    cell.Dirty = false;
+                    saved++;
+                }
+                SetClean();
+                StatusText = saved > 0 ? $"Saved {saved} map(s) for header {_headerId}." : "Nothing to save.";
+                return;
+            }
             if (_map == null || _selectedMapIndex < 0) return;
             _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
             SetClean();
@@ -973,8 +1355,19 @@ namespace DSPRE.Avalonia.ViewModels
         }
         public void DuplicateBuilding()
         {
-            if (!HasBuildingSelected) return;
-            _map.buildings.Add(new Building(_map.buildings[_selectedBuildingIndex]));
+            var resolved = ResolveSelectedBuilding();
+            if (resolved == null) return;
+            var (map, _, _, building) = resolved.Value;
+            map.buildings.Add(new Building(building));
+            if (IsHeaderView)
+            {
+                var (ci, _) = _headerBuildingIndex[_selectedBuildingIndex];
+                _headerCells[ci].Dirty = true;
+                RefreshBuildings(); MarkDirty();
+                SelectedBuildingIndex = _headerBuildingIndex.FindLastIndex(t => t.CellIndex == ci);
+                RebuildPreview();
+                return;
+            }
             RefreshBuildings(); MarkDirty();
             SelectedBuildingIndex = _map.buildings.Count - 1;
             RebuildPreview();

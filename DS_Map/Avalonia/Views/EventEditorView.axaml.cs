@@ -8,10 +8,16 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
 {
-    public partial class EventEditorView : Window
+    /// <summary>
+    /// Authored as a <see cref="UserControl"/> so it can be embedded as the Events tab in the Maps
+    /// workspace; standalone launches (<see cref="AvaloniaEditorLauncher.OpenEventEditor"/>) host it
+    /// in an <see cref="EditorHostWindow"/>. Do not change the base type back to Window — Avalonia
+    /// windows cannot be re-parented as a child control (embedding one throws "already has a visual
+    /// parent TopLevelHost").
+    /// </summary>
+    public partial class EventEditorView : UserControl
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
-        private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
         private bool _setupDone;
         private Point? _lastPointer;
         private bool _panning;
@@ -94,15 +100,20 @@ namespace DSPRE.Avalonia.Views
             if (_setupDone || Design.IsDesignMode) return;
             var vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
+            var owner = TopLevel.GetTopLevel(this) as Window;
+            if (owner == null) return;
             _setupDone = true;
 
-            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
+            // No EditorWindowChrome here (it requires a Window): the toolbar's own Save button covers
+            // saving, and — when hosted standalone — EditorHostWindow already guards unsaved changes on
+            // close via this VM's IEditorWithUnsavedChanges. When embedded in the Maps workspace tab,
+            // the workspace's own Save/Reset handles it instead.
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
             vm.MarkersChanged += (_, _) => GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
             vm.SpritesChanged += (_, _) => GlView.SetSprites(VM.Sprites);
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
-            await vm.SetupAsync(this);
+            await vm.SetupAsync(owner);
         }
 
         /// <summary>Syncs the GL control's translate gizmo with the VM's edit mode + selected event.</summary>
@@ -150,7 +161,7 @@ namespace DSPRE.Avalonia.Views
             if (VM == null) return;
             try
             {
-                string dir = await DialogHelper.OpenFolder(this, "Choose a folder for the 3D debug dump");
+                string dir = await DialogHelper.OpenFolder(TopLevel.GetTopLevel(this) as Window, "Choose a folder for the 3D debug dump");
                 if (dir == null) return;
 
                 string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");

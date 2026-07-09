@@ -1,11 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.LevelScriptEditorView"
-        x:DataType="vm:LevelScriptEditorViewModel"
-        Title="Level Script Editor"
-        Width="720" Height="560"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:LevelScriptEditorViewModel">
 
   <Design.DataContext>
     <vm:LevelScriptEditorViewModel/>
@@ -55,4 +52,4 @@
       </Border>
     </Grid>
   </DockPanel>
-</Window>
+</UserControl>

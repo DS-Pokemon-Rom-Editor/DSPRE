@@ -1,12 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
         x:Class="DSPRE.Avalonia.Views.MatrixEditorView"
-        x:DataType="vm:MatrixEditorViewModel"
-        Title="Matrix Editor"
-        Width="860" Height="640"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:MatrixEditorViewModel">
 
   <Design.DataContext>
     <vm:MatrixEditorViewModel/>
@@ -81,4 +78,4 @@
       </TabItem>
     </TabControl>
   </DockPanel>
-</Window>
+</UserControl>

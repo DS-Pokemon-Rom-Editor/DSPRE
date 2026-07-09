@@ -1,12 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
         x:Class="DSPRE.Avalonia.Views.ScriptEditorView"
-        x:DataType="vm:ScriptEditorViewModel"
-        Title="Rotom Script Editor"
-        Width="980" Height="760"
-        WindowStartupLocation="CenterScreen">
+        x:DataType="vm:ScriptEditorViewModel">
 
   <Design.DataContext>
     <vm:ScriptEditorViewModel/>
@@ -108,4 +105,4 @@
                    HorizontalScrollBarVisibility="Auto"
                    VerticalScrollBarVisibility="Auto"/>
   </DockPanel>
-</Window>
+</UserControl>
