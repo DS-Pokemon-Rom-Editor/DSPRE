@@ -350,6 +350,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
             catch (Exception ex)
             {
+                AppLogger.Error("HeaderEditorViewModel.SetupAsync: " + ex);
                 await DialogHelper.ShowError($"Failed to load headers:\n{ex.Message}", "Header Editor Error");
             }
         }

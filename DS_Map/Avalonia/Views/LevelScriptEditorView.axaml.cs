@@ -23,15 +23,19 @@ namespace DSPRE.Avalonia.Views
         private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
 
         /// <summary>
-        /// One-time VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is
-        /// created at app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after a load.
+        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
+        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
+        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always re-runs.
         /// </summary>
-        public async Task EnsureSetupAsync()
+        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
+        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
+        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
-            if (_setupDone || Design.IsDesignMode) return;
+            if (Design.IsDesignMode) return;
             var vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             _setupDone = true;
             await vm.SetupAsync(owner);

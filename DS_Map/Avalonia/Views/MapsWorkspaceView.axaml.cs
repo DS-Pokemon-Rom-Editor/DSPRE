@@ -17,7 +17,10 @@ namespace DSPRE.Avalonia.Views
     public partial class MapsWorkspaceView : UserControl
     {
         private HeaderEditorViewModel VM => DataContext as HeaderEditorViewModel;
-        private bool _setupDone;
+        // Only gates one-time event-subscription wiring (below) — NOT the actual data setup, which must
+        // re-run every time a ROM is loaded (including switching to a DIFFERENT rom mid-session), or the
+        // header sidebar and every tab stay frozen on whatever ROM was loaded first in the app's lifetime.
+        private bool _wiringDone;
 
         public EventEditorViewModel EventVM { get; } = new EventEditorViewModel(true);
         public MapEditorViewModel MapVM { get; } = new MapEditorViewModel(true);
@@ -42,51 +45,71 @@ namespace DSPRE.Avalonia.Views
         private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
 
         /// <summary>
-        /// One-time workspace setup. No-ops until a ROM is loaded — the workspace is created at app
-        /// boot, before any ROM; <see cref="MainWindowView"/> re-invokes this after a successful load.
+        /// Workspace setup. No-ops until a ROM is loaded — the workspace is created at app boot,
+        /// before any ROM; <see cref="MainWindowView"/> re-invokes this after EVERY successful load,
+        /// including switching to a different ROM mid-session, so the data-refresh portion below
+        /// always re-runs (only the event-subscription wiring is one-time, guarded by
+        /// <see cref="_wiringDone"/>).
         /// </summary>
         public async System.Threading.Tasks.Task EnsureSetupAsync()
         {
-            if (_setupDone || Design.IsDesignMode) return;
+            if (Design.IsDesignMode) return;
             var vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             var owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
-            _setupDone = true;
             await vm.SetupAsync(owner);
-            owner.Activated += (_, _) => vm.ReloadLocationNames();
 
-            // Every tab follows the selected header's linked file id.
+            if (!_wiringDone)
+            {
+                _wiringDone = true;
+                owner.Activated += (_, _) => vm.ReloadLocationNames();
+                vm.PropertyChanged += (_, e) =>
+                {
+                    switch (e.PropertyName)
+                    {
+                        case nameof(HeaderEditorViewModel.EventFileId): RetargetEvents(); break;
+                        case nameof(HeaderEditorViewModel.MatrixId): RetargetMatrix(); break;
+                        case nameof(HeaderEditorViewModel.AreaDataId): RetargetAreaData(); break;
+                        case nameof(HeaderEditorViewModel.ScriptFileId): RetargetScripts(); break;
+                        case nameof(HeaderEditorViewModel.LevelScriptId): RetargetLevelScripts(); break;
+                        case nameof(HeaderEditorViewModel.TextArchiveId): RetargetText(); break;
+                        case nameof(HeaderEditorViewModel.WildPokemon): RetargetEncounters(); break;
+                        case nameof(HeaderEditorViewModel.CurrentHeaderId): MapVM.HeaderId = vm.CurrentHeaderId; break;
+                    }
+                };
+            }
+
+            // Every tab follows the selected header's linked file id — refresh every ROM load (a
+            // coincidental same numeric id across two different ROMs must still force a real reload,
+            // so reset first rather than relying on the property setters' equality-skip).
             EventVM.InitialIndex = (int)vm.EventFileId;
             MatrixVM.InitialIndex = (int)vm.MatrixId;
             AreaDataVM.InitialIndex = (int)vm.AreaDataId;
             ScriptsVM.InitialIndex = (int)vm.ScriptFileId;
             LevelScriptsVM.InitialIndex = (int)vm.LevelScriptId;
             TextVM.InitialIndex = (int)vm.TextArchiveId;
+            MapVM.HeaderId = -1;
             MapVM.HeaderId = vm.CurrentHeaderId;
-            vm.PropertyChanged += (_, e) =>
-            {
-                switch (e.PropertyName)
-                {
-                    case nameof(HeaderEditorViewModel.EventFileId): RetargetEvents(); break;
-                    case nameof(HeaderEditorViewModel.MatrixId): RetargetMatrix(); break;
-                    case nameof(HeaderEditorViewModel.AreaDataId): RetargetAreaData(); break;
-                    case nameof(HeaderEditorViewModel.ScriptFileId): RetargetScripts(); break;
-                    case nameof(HeaderEditorViewModel.LevelScriptId): RetargetLevelScripts(); break;
-                    case nameof(HeaderEditorViewModel.TextArchiveId): RetargetText(); break;
-                    case nameof(HeaderEditorViewModel.WildPokemon): RetargetEncounters(); break;
-                    case nameof(HeaderEditorViewModel.CurrentHeaderId): MapVM.HeaderId = vm.CurrentHeaderId; break;
-                }
-            };
 
-            // Tabs that latched their no-ROM state at boot get to set up now.
-            await EventsEmbed.EnsureSetupAsync();
-            await MapEmbed.EnsureSetupAsync();
-            await MatrixEmbed.EnsureSetupAsync();
-            await AreaDataEmbed.EnsureSetupAsync();
-            await ScriptsEmbed.EnsureSetupAsync();
-            await LevelScriptsEmbed.EnsureSetupAsync();
-            await TextEmbed.EnsureSetupAsync();
+            // Tabs that latched their no-ROM state at boot get to set up now. Pass our own resolved
+            // owner through explicitly: these controls live in non-selected TabItems (Header is the
+            // default), so TopLevel.GetTopLevel(this) on them returns null this early — their own
+            // EnsureSetupAsync used to silently no-op until the tab was manually visited once, which
+            // for Map meant BuildHeaderPreview() built a real stitched model with zero MapLoaded
+            // subscribers (GlView never got it — stuck showing its placeholder cube).
+            await EventsEmbed.EnsureSetupAsync(owner);
+            await MapEmbed.EnsureSetupAsync(owner);
+            // Default the embedded Map tab to "This header" (rather than an arbitrary single map) now
+            // that SetupAsync has unpacked everything BuildHeaderPreview needs. Reset first so this
+            // always forces a rebuild even if it was already 2 from a previous ROM in this session.
+            MapVM.ViewModeIndex = 0;
+            MapVM.ViewModeIndex = 2;
+            await MatrixEmbed.EnsureSetupAsync(owner);
+            await AreaDataEmbed.EnsureSetupAsync(owner);
+            await ScriptsEmbed.EnsureSetupAsync(owner);
+            await LevelScriptsEmbed.EnsureSetupAsync(owner);
+            await TextEmbed.EnsureSetupAsync(owner);
             EnsureEncountersEmbedded();
         }
 
@@ -140,12 +163,13 @@ namespace DSPRE.Avalonia.Views
             if (TextVM.ArchiveNames.Count > 0) TextVM.SelectedArchiveIndex = id;
         }
 
-        /// <summary>Builds the Wild Encounters tab's editor the first time a ROM is loaded (it needs
-        /// gameFamily/NARC paths that don't exist yet at app boot), then keeps it retargeted after.</summary>
+        /// <summary>Builds the Wild Encounters tab's editor. Rebuilds from scratch on EVERY ROM load
+        /// (not just the first) — the pokemon names, NARC path and header count are all ROM-specific,
+        /// and the VM type itself (DPPt vs HGSS) depends on gameFamily, so a ROM switch that changes
+        /// game family needs a genuinely different VM/View, not just a retarget.</summary>
         private void EnsureEncountersEmbedded()
         {
-            if (_encountersEmbedded || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            _encountersEmbedded = true;
+            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
@@ -166,6 +190,7 @@ namespace DSPRE.Avalonia.Views
                     _encountersVm = evm;
                     EncountersTab.Content = new WildEditorHGSSView(evm);
                 }
+                _encountersEmbedded = true;
             }
             catch (System.Exception ex)
             {
@@ -190,5 +215,13 @@ namespace DSPRE.Avalonia.Views
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
+
+        /// <summary>Builds a playable .nds — same flow as the File menu's "Save ROM…", just reachable
+        /// without leaving the Maps workspace (this used to be the only visible Save button here, easily
+        /// mistaken for "save the whole ROM" when it only ever saved the current header's own fields).</summary>
+        private async void SaveRom_Click(object sender, RoutedEventArgs e)
+        {
+            if (TopLevel.GetTopLevel(this) is MainWindowView main) await main.SaveRomAsync();
+        }
     }
 }

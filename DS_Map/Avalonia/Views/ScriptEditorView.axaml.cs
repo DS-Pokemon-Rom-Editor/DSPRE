@@ -31,6 +31,12 @@ namespace DSPRE.Avalonia.Views
         private SearchPanel _fileSearchPanel;
         private CtrlHoverUnderlineColorizer _ctrlHoverUnderline;
         private bool _setupDone;
+        // SetGrammarFile() re-registers "source.rotom" into the underlying TextMateSharp registry every
+        // call — fine the first time, but throws ("An item with the same key has already been added")
+        // if called again, which now happens on every ROM load since ApplyGrammar() must re-run to pick
+        // up the newly loaded ROM's script text. Once loaded, switch grammars via the cheap scope-name
+        // overload instead of re-registering the file.
+        private bool _rotomGrammarLoaded;
         private bool _syncing;
         private int _hoverRequestId;
         private bool _hasLastPointerTextPosition;
@@ -85,29 +91,37 @@ namespace DSPRE.Avalonia.Views
         private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
 
         /// <summary>
-        /// One-time VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is
-        /// created at app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after a load.
+        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
+        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
+        /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
+        /// re-runs — only the event-subscription wiring is one-time.
         /// </summary>
-        public async Task EnsureSetupAsync()
+        /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
+        /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
+        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
-            if (_setupDone || Design.IsDesignMode) return;
+            if (Design.IsDesignMode) return;
             var vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
 
-            _setupDone = true;
-            // Hook the owning Window's Closed (not this UserControl's DetachedFromVisualTree — that
-            // fires on every tab switch when embedded in the Maps workspace, which would tear down the
-            // LSP mid-session). For the embedded case the owner is the main window, whose Closed only
-            // fires at app exit — exactly when this cleanup should happen there too.
-            owner.Closed += (_, _) =>
+            if (!_setupDone)
             {
-                RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);
-                VM?.ShutdownLsp();
-                _textMate?.Dispose();
-            };
-            vm.PropertyChanged += OnVmPropertyChanged;
+                _setupDone = true;
+                // Hook the owning Window's Closed (not this UserControl's DetachedFromVisualTree — that
+                // fires on every tab switch when embedded in the Maps workspace, which would tear down the
+                // LSP mid-session). For the embedded case the owner is the main window, whose Closed only
+                // fires at app exit — exactly when this cleanup should happen there too.
+                owner.Closed += (_, _) =>
+                {
+                    RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);
+                    VM?.ShutdownLsp();
+                    _textMate?.Dispose();
+                };
+                vm.PropertyChanged += OnVmPropertyChanged;
+            }
             await vm.SetupAsync(owner);
             PushToEditor(vm.ScriptText);
             UpdateReadOnly();
@@ -164,11 +178,19 @@ namespace DSPRE.Avalonia.Views
                     return;
                 }
 
+                if (_rotomGrammarLoaded)
+                {
+                    _textMate.SetGrammar("source.rotom");
+                    return;
+                }
                 string grammarPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Avalonia", "TextMate", "rotom.tmLanguage.json");
                 if (!System.IO.File.Exists(grammarPath))
                     grammarPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rotom.tmLanguage.json");
                 if (System.IO.File.Exists(grammarPath))
+                {
                     _textMate.SetGrammarFile(grammarPath);
+                    _rotomGrammarLoaded = true;
+                }
             }
             catch (Exception ex)
             {
