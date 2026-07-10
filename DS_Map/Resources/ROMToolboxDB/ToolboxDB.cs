@@ -148,29 +148,125 @@ namespace DSPRE.Resources.ROMToolboxDB {
 
             public static uint BDHCamSubroutineOffset = 0x000115B0;
 
+            internal static bool SupportsCurrentRom()
+            {
+                try {
+                    new BDHCAMPatchData();
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+
             internal BDHCAMPatchData() {
                 switch (RomInfo.gameFamily) {
                     case GameFamilies.Plat:
                         overlayNumber = 5;
-                        branchString = BDHCamCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-
-                        branchOffset = BDHCamOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                        overlayOffset1 = BDHCamOffsetsDB[nameof(overlayOffset1) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
-                        overlayOffset2 = BDHCamOffsetsDB[nameof(overlayOffset2) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
+                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchString)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out branchOffset)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset1)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage, out overlayOffset2)) {
+                            throw new NotSupportedException();
+                        }
                         break;
                     case GameFamilies.HGSS:
                         overlayNumber = 1;
-                        branchString = BDHCamCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily];
-
-                        branchOffset = BDHCamOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily];
-                        overlayOffset1 = BDHCamOffsetsDB[nameof(overlayOffset1) + "_" + RomInfo.gameFamily];
-                        overlayOffset2 = BDHCamOffsetsDB[nameof(overlayOffset2) + "_" + RomInfo.gameFamily];
+                        if (!BDHCamCodeDB.TryGetValue(nameof(branchString) + "_" + RomInfo.gameFamily, out branchString)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(branchOffset) + "_" + RomInfo.gameFamily, out branchOffset)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset1) + "_" + RomInfo.gameFamily, out overlayOffset1)
+                            || !BDHCamOffsetsDB.TryGetValue(nameof(overlayOffset2) + "_" + RomInfo.gameFamily, out overlayOffset2)) {
+                            throw new NotSupportedException();
+                        }
                         break;
+                    default:
+                        throw new NotSupportedException();
                 }
                 branchOffset -= ARM9.address;
                 overlayString1 = BDHCamCodeDB[nameof(overlayString1)];
                 overlayString2 = BDHCamCodeDB[nameof(overlayString2)];
                 subroutine = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BDHCAMPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_cam");
+                if (subroutine == null) {
+                    throw new NotSupportedException();
+                }
+            }
+        }
+        internal class BuildingRotationPatchData {
+            internal byte overlayNumber;
+            internal uint defaultPayloadOffset;
+            internal uint hookOverlayOffset;
+            internal uint hookRuntimeAddress;
+            internal uint rotationMatrixFunctionAddress;
+            internal const uint payloadInternalBranchOffset = 0x08;
+
+            internal byte[] payload;
+
+            internal static bool SupportsCurrentRom()
+            {
+                try
+                {
+                    new BuildingRotationPatchData();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            internal BuildingRotationPatchData()
+            {
+                defaultPayloadOffset = 0x00011CE8;
+
+                switch (RomInfo.romID)
+                {
+                    case "ADAE":
+                    case "APAE":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x0001097E;
+                        hookRuntimeAddress = 0x021E7E5E;
+                        rotationMatrixFunctionAddress = 0x0201CAA8;
+                        break;
+                    case "APAF":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x0001097E;
+                        hookRuntimeAddress = 0x021E7FDE;
+                        rotationMatrixFunctionAddress = 0x0201CAF4;
+                        break;
+                    case "CPUE":
+                        overlayNumber = 5;
+                        hookOverlayOffset = 0x00010AD2;
+                        hookRuntimeAddress = 0x021E1852;
+                        rotationMatrixFunctionAddress = 0x0201E268;
+                        break;
+                    case "IPKE":
+                    case "IPGE":
+                        overlayNumber = 1;
+                        hookOverlayOffset = 0x0000E1C6;
+                        hookRuntimeAddress = 0x021F3AC6;
+                        rotationMatrixFunctionAddress = 0x02020D2C;
+                        break;
+                    case "IPKI":
+                        overlayNumber = 1;
+                        hookOverlayOffset = 0x0000E1C6;
+                        hookRuntimeAddress = 0x021F3A66;
+                        rotationMatrixFunctionAddress = 0x02020D2C;
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                payload = LoadPayload();
+            }
+
+            private byte[] LoadPayload()
+            {
+                byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_rotation");
+                if (payload == null)
+                {
+                    throw new NotSupportedException();
+                }
+
+                return payload;
             }
         }
         internal class DynamicHeadersPatchData {
