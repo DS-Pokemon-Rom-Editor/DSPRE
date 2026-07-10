@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia
         private Task _readLoop;
         private int _nextRequestId;
         private bool _initialized;
+        private volatile bool _disposed;
 
         private const int RequestTimeoutSeconds = 5;
 
@@ -193,7 +194,7 @@ namespace DSPRE.Avalonia
 
         private async Task SendPayloadAsync(object payload)
         {
-            if (_process == null || _process.HasExited) return;
+            if (_disposed || _process == null || _process.HasExited) return;
 
             string json = JsonSerializer.Serialize(payload);
             byte[] body = Encoding.UTF8.GetBytes(json);
@@ -202,6 +203,10 @@ namespace DSPRE.Avalonia
             await _writeLock.WaitAsync(_cts.Token);
             try
             {
+                // A caller (e.g. a fire-and-forget document-open notification) can still be mid-write
+                // when Dispose() runs from elsewhere (a ROM switch restarting the LSP) — bail before
+                // touching the now-torn-down process/stream rather than throwing into the caller.
+                if (_disposed) return;
                 Stream stream = _process.StandardInput.BaseStream;
                 await stream.WriteAsync(header, 0, header.Length, _cts.Token);
                 await stream.WriteAsync(body, 0, body.Length, _cts.Token);
@@ -209,7 +214,13 @@ namespace DSPRE.Avalonia
             }
             finally
             {
-                _writeLock.Release();
+                // Dispose() may have torn down _writeLock while this write was in flight (see above) —
+                // Release() on an already-disposed SemaphoreSlim throws ObjectDisposedException, which
+                // would otherwise surface as a confusing "rotom-lsp open failed" warning on every ROM switch.
+                if (!_disposed)
+                {
+                    try { _writeLock.Release(); } catch (ObjectDisposedException) { }
+                }
             }
         }
 
@@ -430,6 +441,7 @@ namespace DSPRE.Avalonia
 
         public void Dispose()
         {
+            _disposed = true;
             _cts.Cancel();
 
             lock (_pendingLock)
