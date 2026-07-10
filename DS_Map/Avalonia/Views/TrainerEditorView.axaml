@@ -19,10 +19,19 @@
         <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="+ Add Trainer" Click="AddTrainer_Click" ToolTip.Tip="Append a new, blank trainer after the last one"/>
         <Button Content="Search…"        Click="Search_Click"/>
         <Button Content="Reorder party…" Click="Reorder_Click"/>
         <Button Content="DV Calc…"       Click="DVCalc_Click"/>
         <Button Content="Battle messages…" Click="BattleMessages_Click"/>
+        <Button Content="Trainer classes…" Click="TrainerClasses_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="Export trainer…" Click="ExportTrainer_Click" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
+        <Button Content="Import trainer…" Click="ImportTrainer_Click" ToolTip.Tip="Load a .trf file into this trainer slot"/>
+        <Button Content="Export properties…" Click="ExportProperties_Click" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
+        <Button Content="Import properties…" Click="ImportProperties_Click" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
+        <Button Content="Export party…" Click="ExportParty_Click" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
+        <Button Content="Import party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
       </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"

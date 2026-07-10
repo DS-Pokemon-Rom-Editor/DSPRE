@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
@@ -35,10 +36,31 @@ namespace DSPRE.Avalonia.Views
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
 
+        private void AddTrainer_Click(object sender, RoutedEventArgs e) => VM?.AddTrainer();
+
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
             int trainerId = VM?.SelectedTrainerIndex ?? 0;
             new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).Show();
+        }
+
+        private void TrainerClasses_Click(object sender, RoutedEventArgs e)
+        {
+            int classId = VM?.TrainerClassIndex ?? 0;
+            new TrainerClassesView(new TrainerClassesViewModel(classId)).Show();
+        }
+
+        private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTrainerAsync());
+        private async void ImportTrainer_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportTrainerAsync());
+        private async void ExportProperties_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportPropertiesAsync());
+        private async void ImportProperties_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ReplacePropertiesAsync());
+        private async void ExportParty_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportPartyAsync());
+        private async void ImportParty_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportPartyAsync());
+
+        private static async Task Safe(Task task)
+        {
+            if (task == null) return;
+            try { await task; } catch { /* handled in VM */ }
         }
 
         private async void Search_Click(object sender, RoutedEventArgs e)

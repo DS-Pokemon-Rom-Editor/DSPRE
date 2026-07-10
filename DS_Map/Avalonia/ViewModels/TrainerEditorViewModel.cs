@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
 using global::Avalonia.Media.Imaging;
+using global::Avalonia.Platform.Storage;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
@@ -182,6 +183,11 @@ namespace DSPRE.Avalonia.ViewModels
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
             DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, new System.Collections.Generic.List<string>(DSPRE.TrainerNames.GetAll()));
+
+            string[] classNames = GetTrainerClassNames();
+            var formatted = new System.Collections.Generic.List<string>(classNames.Length);
+            for (int i = 0; i < classNames.Length; i++) formatted.Add($"[{i:D3}] {classNames[i]}");
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassItems, formatted);
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
@@ -434,6 +440,149 @@ namespace DSPRE.Avalonia.ViewModels
             _history.MarkSaved();
             RaiseUndoState();
             StatusText = $"Trainer {_selectedTrainerIndex} saved.";
+        }
+
+        // ── Add / Export / Import ─────────────────────────────────────────────────────
+        /// <summary>Appends a brand-new trainer (blank properties + one empty party slot) after the
+        /// last existing one and selects it — mirrors the WinForms "Add Trainer" button.</summary>
+        public void AddTrainer()
+        {
+            try
+            {
+                int newIndex = TrainerNames.Count;
+                string suffix = Path.DirectorySeparatorChar + newIndex.ToString("D4");
+                File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + suffix,
+                    new TrainerProperties((ushort)newIndex).ToByteArray());
+                File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + suffix,
+                    new PartyPokemon().ToByteArray());
+
+                var ta = new TextArchive(trainerNamesMessageNumber);
+                ta.SetSimpleTrainerName(newIndex, "New Trainer");
+                ta.SaveToExpandedDir(trainerNamesMessageNumber, showSuccessMessage: false);
+
+                string[] classNames = GetTrainerClassNames();
+                string className = classNames.Length > 0 ? classNames[0] : "";
+                TrainerNames.Add($"[{newIndex:D2}] {className} New Trainer");
+                SelectedTrainerIndex = newIndex;
+                StatusText = $"Added trainer {newIndex}.";
+            }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add trainer:\n{ex.Message}", "Trainer Editor"); }
+        }
+
+        public async Task ExportTrainerAsync()
+        {
+            if (_trainer == null) return;
+            SyncToTrainer();
+            var filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export trainer", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trf");
+            if (path == null) return;
+            try
+            {
+                File.WriteAllBytes(path, _trainer.ToByteArray());
+                StatusText = "Trainer exported.";
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+        }
+
+        /// <summary>Loads a combined .trf (name + properties + party) into the CURRENTLY SELECTED
+        /// trainer slot's in-memory state — like Replace Properties/Import Party below, this stages the
+        /// change (marks dirty) rather than writing to disk immediately, so Undo and the Save button work.</summary>
+        public async Task ImportTrainerAsync()
+        {
+            if (_trainer == null || _selectedTrainerIndex < 0) return;
+            var filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import trainer", new[] { filter });
+            if (path == null) return;
+            try
+            {
+                using var reader = new BinaryReader(File.OpenRead(path));
+                string trName = reader.ReadString();
+                byte datSize = reader.ReadByte();
+                byte[] trDat = reader.ReadBytes(datSize);
+                byte partySize = reader.ReadByte();
+                byte[] pDat = reader.ReadBytes(partySize);
+
+                _trainer = new TrainerFile(
+                    new TrainerProperties((ushort)_selectedTrainerIndex, new MemoryStream(trDat)),
+                    new MemoryStream(pDat), trName);
+
+                _suppress = true;
+                try { PopulateFromTrainer(); } finally { _suppress = false; }
+                SetDirty();
+                StatusText = "Trainer imported. Remember to save.";
+                await DialogHelper.ShowInfo("Trainer imported successfully!\nRemember to save the current trainer.", "Import");
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+        }
+
+        public async Task ExportPropertiesAsync()
+        {
+            if (_trainer == null) return;
+            SyncToTrainer();
+            var filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export trainer properties", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trp");
+            if (path == null) return;
+            try
+            {
+                File.WriteAllBytes(path, _trainer.trp.ToByteArray());
+                StatusText = "Properties exported.";
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+        }
+
+        public async Task ReplacePropertiesAsync()
+        {
+            if (_trainer == null || _selectedTrainerIndex < 0) return;
+            var filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import trainer properties", new[] { filter });
+            if (path == null) return;
+            try
+            {
+                using var fs = File.OpenRead(path);
+                _trainer.trp = new TrainerProperties((ushort)_selectedTrainerIndex, fs);
+                _suppress = true;
+                try { PopulateFromTrainer(); } finally { _suppress = false; }
+                SetDirty();
+                StatusText = "Properties imported. Remember to save.";
+                await DialogHelper.ShowInfo("Trainer properties imported successfully!\nRemember to save the current trainer.", "Import");
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+        }
+
+        public async Task ExportPartyAsync()
+        {
+            if (_trainer == null) return;
+            SyncToTrainer();
+            var filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export trainer party", new[] { filter }, $"party_{_selectedTrainerIndex:D4}.pdat");
+            if (path == null) return;
+            try
+            {
+                _trainer.party.exportCondensedData = true;
+                File.WriteAllBytes(path, _trainer.party.ToByteArray());
+                _trainer.party.exportCondensedData = false;
+                StatusText = "Party exported.";
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+        }
+
+        public async Task ImportPartyAsync()
+        {
+            if (_trainer == null) return;
+            var filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import trainer party", new[] { filter });
+            if (path == null) return;
+            try
+            {
+                using var fs = File.OpenRead(path);
+                _trainer.party = new Party(readFirstByte: true, TrainerFile.POKE_IN_PARTY, fs, _trainer.trp);
+                _suppress = true;
+                try { PopulateFromTrainer(); } finally { _suppress = false; }
+                SetDirty();
+                StatusText = "Party imported. Remember to save.";
+                await DialogHelper.ShowInfo("Trainer party imported successfully!\nRemember to save the current trainer.", "Import");
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }
 
         // ── Mon reorder support ──────────────────────────────────────────────────────
