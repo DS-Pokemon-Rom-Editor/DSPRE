@@ -237,6 +237,12 @@ namespace DSPRE
 
         public RomInfo(string id, string romFolderName)
         {
+            // These are only ever (re)populated lazily elsewhere, behind an "if (x == null)" check —
+            // without resetting them here first, switching to a different ROM mid-session would leave
+            // the FIRST-loaded ROM's overworld-sprite table/dict silently in effect forever.
+            OverworldTable = null;
+            overworldTableKeys = null;
+            ow3DSpriteDict = null;
 
             string path = Path.GetFullPath(romFolderName);
 

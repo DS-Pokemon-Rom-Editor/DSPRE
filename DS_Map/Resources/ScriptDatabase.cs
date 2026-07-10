@@ -79,6 +79,11 @@ public static class ScriptDatabaseJsonLoader
                 default:
                     throw new ArgumentOutOfRangeException(nameof(gameVersion), gameVersion, "Unsupported game");
             }
+            // Clear first — this dict is shared across every ROM of the same family, and custom command
+            // entries from a PREVIOUSLY loaded ROM's scrcmd_database.json (edited via the Custom Scrcmd
+            // Manager) would otherwise stick around forever if a later, different ROM's JSON doesn't
+            // happen to redefine the same codes.
+            commandInfoDict.Clear();
 
             // Load script commands
             JsonElement scrRoot;
@@ -141,6 +146,7 @@ public static class ScriptDatabaseJsonLoader
             if (root.TryGetProperty("sounds", out JsonElement soundsRoot))
             {
                 Dictionary<ushort, string> soundsDict = ScriptDatabase.soundNames;
+                soundsDict.Clear();
                 foreach (JsonProperty prop in soundsRoot.EnumerateObject())
                 {
                     if (ushort.TryParse(prop.Name, out ushort id))

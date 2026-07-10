@@ -84,6 +84,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
                 int count = Filesystem.GetScriptCount();
+                ScriptNames.Clear();
                 for (int i = 0; i < count; i++) ScriptNames.Add("Script File " + i);
                 StatusText = $"{count} script files.";
                 if (count > 0) SelectedScriptIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);

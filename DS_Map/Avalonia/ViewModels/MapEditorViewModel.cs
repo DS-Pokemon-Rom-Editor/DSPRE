@@ -784,6 +784,10 @@ namespace DSPRE.Avalonia.ViewModels
         public MapEditorViewModel(bool _) { }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
+        // Guards the AppEvents subscription below so re-running SetupAsync on a ROM switch doesn't
+        // stack duplicate handlers (each firing once per prior ROM load).
+        private bool _romPatchHandlerSubscribed;
+
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
@@ -796,14 +800,25 @@ namespace DSPRE.Avalonia.ViewModels
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.interiorBuildingModels });
                 _mapToArea = BuildMapAreaLookup();
                 RefreshBuildingRotationPatchState();
-                AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
+                if (!_romPatchHandlerSubscribed)
+                {
+                    _romPatchHandlerSubscribed = true;
+                    AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
+                }
 
+                // All of the below are rebuilt fresh on every ROM load (including switching to a
+                // different ROM mid-session) — clear first or these would just keep appending onto
+                // the previous ROM's entries.
+                CollisionPainters.Clear();
+                TypePainters.Clear();
                 foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
                 foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));
                 if (CollisionPainters.Count > 1) CollisionPainterIndex = 1;
                 if (TypePainters.Count > 0) TypePainterIndex = 0;
 
                 _suppress = true;
+                MapTilesets.Clear();
+                BuildingTilesets.Clear();
                 int mapTexCount = Filesystem.GetMapTexturesCount();
                 for (int i = 0; i < mapTexCount; i++) MapTilesets.Add("Map Tileset " + i);
                 BuildingTilesets.Add("None");
@@ -815,13 +830,16 @@ namespace DSPRE.Avalonia.ViewModels
                 if (MapTilesets.Count > 0) MapTilesetIndex = 0;
                 _suppress = false;
 
+                MapNames.Clear();
                 int count = Filesystem.GetMapCount();
                 for (int i = 0; i < count; i++) MapNames.Add("Map " + i);
 
+                Matrices.Clear();
                 int matrixCount = Filesystem.GetMatrixCount();
                 for (int i = 0; i < matrixCount; i++) Matrices.Add("Matrix " + i);
                 _suppress = true; if (matrixCount > 0) { _selectedMatrix = 0; OnPropertyChanged(nameof(SelectedMatrixIndex)); } _suppress = false;
 
+                HeaderNames.Clear();
                 var headerNames = HeaderLists.GetHeaderListBoxNames();
                 if (headerNames != null) foreach (var n in headerNames) HeaderNames.Add(n);
                 // Only defaults when nobody has set HeaderId yet (a standalone popup has no sidebar to

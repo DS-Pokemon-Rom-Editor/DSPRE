@@ -374,6 +374,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (overworldTableKeys != null)
                     foreach (uint key in overworldTableKeys) OwSpriteEntries.Add("OW Entry " + key);
                 PopulateOwTrainerAndItemEntries();
+                EventNames.Clear();
                 int count = Filesystem.GetEventFileCount();
                 for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
                 StatusText = $"{count} event files.";

@@ -97,6 +97,7 @@ namespace DSPRE.Avalonia.ViewModels
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.matrices });
                 int count = Filesystem.GetMatrixCount();
                 _suppress = true;
+                MatrixNames.Clear();
                 for (int i = 0; i < count; i++) MatrixNames.Add(new GameMatrix(i).ToString());
                 _suppress = false;
                 StatusText = $"{count} matrices.";

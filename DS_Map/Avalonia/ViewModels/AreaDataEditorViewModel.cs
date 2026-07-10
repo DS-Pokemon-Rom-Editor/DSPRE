@@ -115,6 +115,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.areaData });
                 int count = Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir).Length;
+                AreaNames.Clear();
                 for (int i = 0; i < count; i++) AreaNames.Add("Area Data " + i);
                 StatusText = $"{count} area data entries.";
                 if (count > 0) SelectedIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
