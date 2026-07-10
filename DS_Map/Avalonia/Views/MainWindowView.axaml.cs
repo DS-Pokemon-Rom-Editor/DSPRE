@@ -248,6 +248,19 @@ namespace DSPRE.Avalonia.Views
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
             RefreshGameIcon();
+            if (RomInfo.isHGE)
+            {
+                await DialogHelper.ShowInfo(
+                    "hg-engine ROM detected. The Pokémon, Move Data, Item, Trainer and wild-encounter " +
+                    "editors have been disabled: hg-engine manages that data itself and would overwrite " +
+                    "any changes on its next build.\n\n" +
+                    "Also note:\n" +
+                    "- Text or script files that hg-engine edits will be overwritten; manage those " +
+                    "through hg-engine.\n" +
+                    "- After editing in DSPRE, run 'make clean' before using this as hg-engine's base " +
+                    "ROM, or hg-engine will reuse its old rom.nds data.",
+                    "hg-engine detected");
+            }
             // The Maps workspace skipped its setup at boot (no ROM yet) — run it now.
             await Maps.EnsureSetupAsync();
             // First successful ROM load ever: walk the user through the UI once.
@@ -376,12 +389,6 @@ namespace DSPRE.Avalonia.Views
 
         private void TableEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTableEditor();
-
-        private void HiddenItemsEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenHiddenItemsEditor();
-
-        private void PickupTableEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenPickupTableEditor();
 
         // ── World ───────────────────────────────────────────────────────────
         private void HeaderEditor_Click(object sender, RoutedEventArgs e)

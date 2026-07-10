@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.TableEditorView"
         x:DataType="vm:TableEditorViewModel"
-        Title="Table Editor"
+        Title="Music &amp; Battle Tables"
         Width="760" Height="560"
         WindowStartupLocation="CenterScreen">
 

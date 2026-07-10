@@ -47,10 +47,11 @@
       <views:HeaderSidebarView Grid.Column="0" Margin="4" x:Name="Sidebar"/>
 
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
-        <!-- Context strip: selected header identity + Save/Reset + linked-file id chips -->
+        <!-- Context strip: selected header identity + Save/Reset + linked-file id chips.
+             x:Name is a guided-tour spotlight target. -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
                 BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3"
-                Padding="10,7" Margin="0,0,0,4">
+                Padding="10,7" Margin="0,0,0,4" x:Name="ContextStrip">
           <StackPanel Spacing="7">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" x:Name="SaveResetPanel">

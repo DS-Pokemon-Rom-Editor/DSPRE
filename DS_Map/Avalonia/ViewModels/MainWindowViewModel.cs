@@ -28,6 +28,20 @@ namespace DSPRE.Avalonia.ViewModels
         // ── ROM state ──────────────────────────────────────────────────────────
         public bool IsRomLoaded => AvaloniaEditorLauncher.IsRomLoaded;
 
+        // ── Per-editor availability (bound by menu items so unsupported editors are
+        //    greyed out instead of carrying "(HGSS)"-style labels or failing silently).
+        //    hg-engine ROMs: HGE owns/overwrites mon, move, item, trainer and encounter
+        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list).
+        public bool CanUsePokemonEditor => IsRomLoaded && !isHGE;
+        public bool CanUseMoveEditor    => IsRomLoaded && !isHGE;
+        public bool CanUseItemEditor    => IsRomLoaded && !isHGE;
+        public bool CanUseTrainerEditor => IsRomLoaded && !isHGE;
+        public bool CanUseWildEditors   => IsRomLoaded && !isHGE;
+        public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
+        // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
+        // are Plat+HGSS — nothing in it exists on DP.
+        public bool CanUseMiscTables    => IsRomLoaded && gameFamily != GameFamilies.DP;
+
         // ── Busy state while a ROM is being opened/unpacked or saved/repacked ──
         private bool _isLoadingRom;
         public bool IsLoadingRom
@@ -69,6 +83,13 @@ namespace DSPRE.Avalonia.ViewModels
         {
             OnPropertyChanged(nameof(IsRomLoaded));
             OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(CanUsePokemonEditor));
+            OnPropertyChanged(nameof(CanUseMoveEditor));
+            OnPropertyChanged(nameof(CanUseItemEditor));
+            OnPropertyChanged(nameof(CanUseTrainerEditor));
+            OnPropertyChanged(nameof(CanUseWildEditors));
+            OnPropertyChanged(nameof(IsHgssRom));
+            OnPropertyChanged(nameof(CanUseMiscTables));
             RefreshRecents();
         }
 

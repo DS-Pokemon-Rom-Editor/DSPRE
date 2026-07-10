@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.ItemTableEditorView"
         x:DataType="vm:ItemTableEditorViewModel"
-        Title="Item Table Editor"
+        Title="Item Tables (Pickup, Hidden, Rock Smash)"
         Width="900" Height="640"
         MinWidth="760" MinHeight="500"
         WindowStartupLocation="CenterScreen">

@@ -25,6 +25,7 @@ namespace DSPRE.Avalonia
             public Func<Control> Target;   // null (or a resolver returning null) => centered card, no spotlight
             public string Title;
             public string Body;
+            public Action OnEnter;         // runs once when the step becomes current (e.g. switch the live tab)
         }
 
         private static GuidedTour _active;
@@ -60,6 +61,20 @@ namespace DSPRE.Avalonia
             _layer = layer;
             var maps = main.FindControl<MapsWorkspaceView>("Maps");
 
+            // Helper: a step that switches the Maps workspace to a specific tab and spotlights the
+            // tab area, so the tour walks through each embedded editor showing the real thing.
+            Step Tab(int index, string title, string body) => new Step
+            {
+                OnEnter = () =>
+                {
+                    var tabs = maps?.FindControl<TabControl>("MapTabs");
+                    if (tabs != null && index < tabs.ItemCount) tabs.SelectedIndex = index;
+                },
+                Target = () => maps?.FindControl<Control>("MapTabs"),
+                Title = title,
+                Body = body,
+            };
+
             _steps = new List<Step>
             {
                 new Step
@@ -75,49 +90,87 @@ namespace DSPRE.Avalonia
                     Target = () => maps?.FindControl<Control>("ContextStrip"),
                     Title = "The selected header",
                     Body = "This strip shows which header is selected and which game files it points to: " +
-                           "matrix, events, scripts, text and so on. Save writes your changes to the " +
-                           "project, and Reset reverts them."
+                           "matrix, events, scripts, text and so on. Save header writes just the header's " +
+                           "own fields; Save ROM builds a playable .nds from everything saved so far."
                 },
-                new Step
-                {
-                    Target = () => maps?.FindControl<Control>("MapTabs"),
-                    Title = "Map data tabs",
-                    Body = "These tabs cover everything the selected header owns: its settings, the 3D map, " +
-                           "events, matrix, wild encounters, scripts and text. They always follow the " +
-                           "header you picked on the left."
-                },
+
+                // ── One step per Maps-workspace tab, switching the live tab as we go ──
+                Tab(0, "Tab 1 of 9: Header",
+                    "The header is this location's settings record: music, weather, camera angle, " +
+                    "location name, flags, and which game files (matrix, scripts, text…) it uses."),
+                Tab(1, "Tab 2 of 9: Map",
+                    "The 3D terrain and buildings. Paint movement collisions and terrain types, move " +
+                    "buildings around, and switch the view mode to see all of this header's maps " +
+                    "stitched together."),
+                Tab(2, "Tab 3 of 9: Events",
+                    "Everything placed ON the map: NPCs (overworlds), warps between maps, script " +
+                    "triggers and ground items. This is where you populate the world."),
+                Tab(3, "Tab 4 of 9: Matrix",
+                    "The grid that stitches individual maps into the seamless overworld. Each cell " +
+                    "points at one map file and sets its elevation."),
+                Tab(4, "Tab 5 of 9: Area Data",
+                    "Which texture pack and building set this area draws from — change it to re-skin " +
+                    "an area."),
+                Tab(5, "Tab 6 of 9: Encounters",
+                    "The wild Pokémon of this area: which species appear in grass, water and caves, " +
+                    "at what levels and rates."),
+                Tab(6, "Tab 7 of 9: Scripts",
+                    "Event logic: what happens when the player talks to an NPC or steps on a trigger. " +
+                    "Scripts reference the text you'll see in the next tabs."),
+                Tab(7, "Tab 8 of 9: Level Scripts",
+                    "Scripts that run automatically when the map loads — used for weather, one-time " +
+                    "cutscenes and map setup."),
+                Tab(8, "Tab 9 of 9: Text",
+                    "The dialogue and signs used by this area. Every piece of game text lives in an " +
+                    "archive like this one."),
+
+                // ── The menus: what lives where ──
                 new Step
                 {
                     Target = () => main.FindControl<Control>("PokemonMenu"),
                     Title = "The Pokémon menu",
-                    Body = "Editors for the creatures themselves: stats and learnsets, moves, TMs, items, " +
-                           "in-game trades and the Trainer Editor."
+                    Body = "Edit the creatures themselves here: species stats and learnsets (Pokémon " +
+                           "Editor), move data, TM/HM assignments, egg moves, in-game trades, and every " +
+                           "trainer's party in the Trainer Editor."
                 },
                 new Step
                 {
-                    Target = () => main.FindControl<Control>("WorldMenu"),
-                    Title = "The World menu",
-                    Body = "The big map tools live here: Map Editor, Event Editor, Matrix Editor, Wild " +
-                           "Pokémon Editor and more. Most of them can also be reached from the tabs you " +
-                           "just saw."
+                    Target = () => main.FindControl<Control>("ItemsMenu"),
+                    Title = "The Items menu",
+                    Body = "Edit items here: the Item Editor covers each item's data and icon, and Item " +
+                           "Tables covers where items come from — the Pickup ability's loot, hidden " +
+                           "ground items, and HGSS Rock Smash drops."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("TextMenu"),
                     Title = "The Text menu",
-                    Body = "All of the game's text lives in the Text Editor. Story and event logic lives " +
-                           "in the Script and Level Script Editors."
+                    Body = "Edit words and logic here: all game text in the Text Editor, and the same " +
+                           "Script / Level Script editors you saw as tabs, as standalone windows."
+                },
+                new Step
+                {
+                    Target = () => main.FindControl<Control>("WorldMenu"),
+                    Title = "The World menu",
+                    Body = "Edit world structure here: the same map tools you just toured as tabs, plus " +
+                           "extras like the Building and Camera editors, overworld sprites, fly/spawn " +
+                           "points, special encounters and the Advanced Header Search."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
-                    Body = "Power tools such as the ROM Patch Toolbox, Validation & Where-Used and the " +
-                           "NARC utilities, plus Settings.\n\nTip: press Ctrl+P anywhere and type an " +
-                           "editor's name to open it instantly."
+                    Body = "Power tools: the ROM Patch Toolbox, Validation & Where-Used, Music & Battle " +
+                           "Tables, the Game Icon & Banner editor, NARC utilities and Settings.\n\n" +
+                           "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly."
                 },
                 new Step
                 {
+                    OnEnter = () =>
+                    {
+                        var tabs = maps?.FindControl<TabControl>("MapTabs");
+                        if (tabs != null) tabs.SelectedIndex = 0;
+                    },
                     Target = null,
                     Title = "That's the tour!",
                     Body = "You are ready to start hacking. You can replay this tour anytime from " +
@@ -129,6 +182,7 @@ namespace DSPRE.Avalonia
         private void Begin()
         {
             _index = 0;
+            _steps[0].OnEnter?.Invoke();
             _layer.IsVisible = true;
             _main.SizeChanged += OnMainResized;
             _main.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
@@ -145,6 +199,11 @@ namespace DSPRE.Avalonia
             _layer.Children.Clear();
             _layer.IsVisible = false;
             _active = null;
+
+            // The tab-walk steps switch the live Maps tab; don't leave the user parked on a
+            // random one if they bailed out mid-tour.
+            var tabs = _main.FindControl<MapsWorkspaceView>("Maps")?.FindControl<TabControl>("MapTabs");
+            if (tabs != null) tabs.SelectedIndex = 0;
         }
 
         private void OnMainResized(object sender, SizeChangedEventArgs e) => Render();
@@ -160,6 +219,7 @@ namespace DSPRE.Avalonia
         {
             if (_index >= _steps.Count - 1) { End(); return; }
             _index++;
+            _steps[_index].OnEnter?.Invoke();
             Render();
         }
 
@@ -167,6 +227,7 @@ namespace DSPRE.Avalonia
         {
             if (_index == 0) return;
             _index--;
+            _steps[_index].OnEnter?.Invoke();
             Render();
         }
 

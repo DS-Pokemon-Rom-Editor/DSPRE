@@ -170,6 +170,21 @@ namespace DSPRE.Avalonia.Views
         private void EnsureEncountersEmbedded()
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+            if (RomInfo.isHGE)
+            {
+                // hg-engine owns encounter data; editing it here would be overwritten on its next build.
+                EncountersTab.Content = new global::Avalonia.Controls.TextBlock
+                {
+                    Text = "Wild encounters are managed by hg-engine and can't be edited here.\n" +
+                           "Edit them through your hg-engine project instead.",
+                    Margin = new global::Avalonia.Thickness(16),
+                    Opacity = 0.75,
+                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                };
+                _encountersVm = null;
+                _encountersEmbedded = true;
+                return;
+            }
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });

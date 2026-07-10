@@ -35,28 +35,27 @@
       </MenuItem>
 
       <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click"/>
-        <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click"/>
+        <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}"/>
+        <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}"/>
         <MenuItem Header="TM Editor…"        Click="TMEditor_Click"/>
         <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
         <Separator/>
-        <MenuItem Header="Item Editor…"       Click="ItemEditor_Click"/>
-        <MenuItem Header="Item Table Editor…" Click="ItemTableEditor_Click"/>
         <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
         <Separator/>
-        <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click"/>
+        <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
+      </MenuItem>
+
+      <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Item Editor…" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
+                  ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
+        <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)…" Click="ItemTableEditor_Click"
+                  ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
       </MenuItem>
 
       <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
         <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
         <MenuItem Header="Level Script Editor…" Click="LevelScriptEditor_Click"/>
-      </MenuItem>
-
-      <MenuItem Header="Ta_bles" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Table Editor…" Click="TableEditor_Click"/>
-        <MenuItem Header="Hidden Items Editor… (HGSS)" Click="HiddenItemsEditor_Click"/>
-        <MenuItem Header="Pickup Table Editor…" Click="PickupTableEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -71,11 +70,12 @@
         <MenuItem Header="Overworld Sprites (BTX)…" Click="OverworldEditor_Click"/>
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
         <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
-        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click"/>
+        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
         <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click"/>
         <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click"/>
-        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click"/>
-        <MenuItem Header="Headbutt Editor… (HGSS)" Click="HeadbuttEditor_Click"/>
+        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
+        <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding IsHgssRom}"
+                  ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
       </MenuItem>
 
       <MenuItem Header="_Tools" x:Name="ToolsMenu">
@@ -93,6 +93,8 @@
                   ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
         <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
+        <MenuItem Header="Music &amp; Battle Tables…" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
+                  ToolTip.Tip="Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)"/>
         <MenuItem Header="Game Icon &amp; Banner…" Click="BannerEditor_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)"/>
         <Separator/>

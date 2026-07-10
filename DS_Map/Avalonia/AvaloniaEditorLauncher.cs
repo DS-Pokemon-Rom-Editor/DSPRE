@@ -23,10 +23,22 @@ namespace DSPRE.Avalonia
         /// <summary>True once a ROM has been opened and <see cref="RomInfo"/> populated.</summary>
         public static bool IsRomLoaded => gameFamily != GameFamilies.NULL;
 
+        /// <summary>Guard for editors whose data hg-engine owns/overwrites (mon, move, item,
+        /// trainer, encounter data). The menu items are greyed out too, but this is the real
+        /// chokepoint: it also covers the Ctrl+P palette and the header-tree context menu.</summary>
+        private static bool BlockedForHge(string editorName)
+        {
+            if (!RomInfo.isHGE) return false;
+            AppMessages.Info(editorName + " is disabled for hg-engine ROMs: hg-engine manages this " +
+                "data itself and would overwrite any changes made here on its next build.",
+                "Not available with hg-engine");
+            return true;
+        }
+
         // ── Pokémon-related editors ────────────────────────────────────────────
         public static void OpenPokemonEditor(int initialMon = 1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Pokémon Editor")) return;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.personalPokeData, DirNames.learnsets,
@@ -50,7 +62,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenMoveDataEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Move Data Editor")) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
             var view = new MoveDataEditorView();
             if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
@@ -92,7 +104,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenItemEditor(int initialIndex = 1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Item Editor")) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
             var vm = new ItemEditorViewModel(GetItemNames());
@@ -143,37 +155,26 @@ namespace DSPRE.Avalonia
 
         public static void OpenTableEditor()
         {
-            if (!IsRomLoaded) return;
+            // Nothing in this editor (conditional music / battle-FX combos / VS posters) exists on DP.
+            if (!IsRomLoaded || gameFamily == GameFamilies.DP) return;
             new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
-        }
-
-        public static void OpenHiddenItemsEditor()
-        {
-            if (!IsRomLoaded) return;
-            new HiddenItemsEditorView(new HiddenItemsEditorViewModel(true)).ShowManaged();
-        }
-
-        public static void OpenPickupTableEditor()
-        {
-            if (!IsRomLoaded) return;
-            new PickupTableEditorView(new PickupTableEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenEncountersEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Special Encounters editor")) return;
             new EncountersEditorView(new EncountersEditorViewModel(true)).ShowManaged();
         }
 
         public static void OpenHeadbuttEncounterEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || gameFamily != GameFamilies.HGSS) return;
             new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
         public static void OpenWildEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Wild Pokémon Editor")) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
             string path = gameDirs[DirNames.encounters].unpackedDir;
             string[] names = GetPokemonNames();
@@ -213,7 +214,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTrainerEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForHge("The Trainer Editor")) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics });
             new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
@@ -422,15 +423,13 @@ namespace DSPRE.Avalonia
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
-            new() { Name = "Item Table Editor",     Keywords = "pickup mart rock smash hgss", Run = OpenItemTableEditor },
+            new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },
             new() { Name = "Level Script Editor",   Run = () => OpenLevelScriptEditor() },
-            new() { Name = "Table Editor",          Run = OpenTableEditor },
-            new() { Name = "Hidden Items Editor",   Keywords = "hgss",     Run = OpenHiddenItemsEditor },
-            new() { Name = "Pickup Table Editor",   Run = OpenPickupTableEditor },
+            new() { Name = "Music & Battle Tables", Keywords = "table conditional music battle effects combo vs poster", Run = OpenTableEditor },
             new() { Name = "Header Editor",         Keywords = "map header", Run = () => OpenHeaderEditor() },
             new() { Name = "Camera Editor",         Keywords = "angle map header", Run = OpenCameraEditor },
             new() { Name = "Map Editor",            Keywords = "3d model buildings", Run = OpenMapEditor },
