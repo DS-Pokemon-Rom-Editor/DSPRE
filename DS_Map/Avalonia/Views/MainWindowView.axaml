@@ -15,8 +15,12 @@
   <Panel>
   <DockPanel>
 
-    <!-- ── Menu bar ───────────────────────────────────────────────────────── -->
-    <Menu DockPanel.Dock="Top">
+    <!-- ── Menu bar (game icon from the loaded ROM's banner docked at the right) ── -->
+    <DockPanel DockPanel.Dock="Top">
+      <Image x:Name="GameIconImage" DockPanel.Dock="Right" Width="28" Height="28" Margin="4,2,10,2"
+             IsVisible="False" RenderOptions.BitmapInterpolationMode="None"
+             DoubleTapped="GameIcon_DoubleTapped"/>
+      <Menu>
       <MenuItem Header="_File" x:Name="FileMenu">
         <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
         <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
@@ -89,6 +93,8 @@
                   ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
         <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
+        <MenuItem Header="Game Icon &amp; Banner…" Click="BannerEditor_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)"/>
         <Separator/>
         <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON"/>
@@ -112,7 +118,8 @@
                   ToolTip.Tip="Replay the walkthrough of the main window and editor menus"/>
         <MenuItem Header="Settings…" Click="Settings_Click"/>
       </MenuItem>
-    </Menu>
+      </Menu>
+    </DockPanel>
 
     <!-- ── Status bar ─────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"

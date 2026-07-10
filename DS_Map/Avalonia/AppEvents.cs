@@ -21,8 +21,12 @@ namespace DSPRE.Avalonia
         /// (e.g. Map Editor's Building Rotation fields) should re-check their state.</summary>
         public static event EventHandler RomPatchStateChanged;
 
+        /// <summary>The game banner (icon / titles) was edited — the main window refreshes its icon.</summary>
+        public static event EventHandler BannerChanged;
+
         public static void RaiseNamesChanged() => NamesChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseLabelsChanged() => LabelsChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);
+        public static void RaiseBannerChanged() => BannerChanged?.Invoke(null, EventArgs.Empty);
     }
 }

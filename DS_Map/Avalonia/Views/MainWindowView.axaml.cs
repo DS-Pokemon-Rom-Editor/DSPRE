@@ -31,8 +31,53 @@ namespace DSPRE.Avalonia.Views
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
 
+            AppEvents.BannerChanged += (_, _) =>
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(RefreshGameIcon);
+
             RestoreWindowPlacement();
             Closing += (_, _) => SaveWindowPlacement();
+        }
+
+        /// <summary>Shows the loaded game's banner icon at the right end of the menu bar,
+        /// with its DS-menu title as tooltip. Hidden when no ROM (or no readable banner).</summary>
+        private void RefreshGameIcon()
+        {
+            try
+            {
+                GameIconImage.Source = null;
+                GameIconImage.IsVisible = false;
+                if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+                var (icon, title) = ViewModels.GameBannerUi.TryLoad();
+                if (icon == null) return;
+                GameIconImage.Source = icon;
+                GameIconImage.IsVisible = true;
+                global::Avalonia.Controls.ToolTip.SetTip(GameIconImage,
+                    string.IsNullOrWhiteSpace(title) ? RomInfo.projectName : title);
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Warn("Game icon refresh failed: " + ex.Message);
+            }
+        }
+
+        private async void GameIcon_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
+            => await OpenBannerEditorAsync();
+
+        private async void BannerEditor_Click(object sender, RoutedEventArgs e)
+            => await OpenBannerEditorAsync();
+
+        private async System.Threading.Tasks.Task OpenBannerEditorAsync()
+        {
+            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+            if (!RomInfo.IsDsRomProject)
+            {
+                await DialogHelper.ShowInfo(
+                    "Editing the game icon and banner titles requires a ds-rom-format project.\n" +
+                    "Use File → Convert to ds-rom format, then reopen this editor.",
+                    "ds-rom project required");
+                return;
+            }
+            new BannerEditorView(new ViewModels.BannerEditorViewModel()).Show();
         }
 
         // ── Window placement persistence (size + maximized; centered by the OS otherwise) ──
@@ -202,6 +247,7 @@ namespace DSPRE.Avalonia.Views
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
+            RefreshGameIcon();
             // The Maps workspace skipped its setup at boot (no ROM yet) — run it now.
             await Maps.EnsureSetupAsync();
             // First successful ROM load ever: walk the user through the UI once.
