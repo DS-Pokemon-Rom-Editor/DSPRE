@@ -47,6 +47,7 @@
   <ItemGroup>
     <CoreEmbeddedResource Include="$(DsMapDir)Resources\ROMToolboxDB\CustomScrCmdDB.resx" Link="Resources\ROMToolboxDB\CustomScrCmdDB.resx" />
     <CoreEmbeddedResource Include="$(DsMapDir)Resources\ROMToolboxDB\BDHCAMPatchDB.resx" Link="Resources\ROMToolboxDB\BDHCAMPatchDB.resx" />
+    <CoreEmbeddedResource Include="$(DsMapDir)Resources\ROMToolboxDB\BuildingRotationPatchDB.resx" Link="Resources\ROMToolboxDB\BuildingRotationPatchDB.resx" />
   </ItemGroup>
 
 </Project>

@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.ROMFiles;
+using NarcAPI;
 
 namespace DSPRE.Avalonia.Views
 {
@@ -207,7 +209,12 @@ namespace DSPRE.Avalonia.Views
                 GuidedTour.Start(this);
         }
 
-        private async void SaveRom_Click(object sender, RoutedEventArgs e)
+        private async void SaveRom_Click(object sender, RoutedEventArgs e) => await SaveRomAsync();
+
+        /// <summary>Builds a playable .nds from the current project. Public so other embedded views
+        /// (e.g. the Maps workspace's own "Save ROM" button) can trigger the exact same flow as the
+        /// File menu, with the same busy overlay and result dialogs.</summary>
+        public async System.Threading.Tasks.Task SaveRomAsync()
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -233,7 +240,25 @@ namespace DSPRE.Avalonia.Views
             {
                 ok = await System.Threading.Tasks.Task.Run(() =>
                 {
-                    try { return DSUtils.RepackROM(path); }        // builds the .nds from RomInfo.workDir
+                    try
+                    {
+                        // Mirrors Main_Window.cs's saveRom_Click: expanded text/script folders and every
+                        // touched unpacked/<dir> NARC folder have to be repacked back into their binary/
+                        // packed form BEFORE building, or the build just packs whatever was already on
+                        // disk (e.g. patches that only ever touch the unpacked side, like the synthetic
+                        // overlay used by ARM9 Expansion/Building Rotation, would silently vanish).
+                        if (!TextArchive.BuildRequiredBins()) { error = "Rebuilding text archives failed."; return false; }
+                        if (!ScriptFile.BuildRequiredBins()) { error = "Rebuilding script files failed."; return false; }
+
+                        foreach (var kvp in RomInfo.gameDirs)
+                        {
+                            var di = new System.IO.DirectoryInfo(kvp.Value.unpackedDir);
+                            if (di.Exists)
+                                Narc.FromFolder(kvp.Value.unpackedDir).Save(kvp.Value.packedDir);
+                        }
+
+                        return DSUtils.RepackROM(path);        // builds the .nds from RomInfo.workDir
+                    }
                     catch (System.Exception ex) { error = ex.Message; return false; }
                 });
             }

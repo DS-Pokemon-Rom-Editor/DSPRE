@@ -278,6 +278,14 @@ namespace DSPRE
 
             BDHCAMPatchData data = new BDHCAMPatchData();
 
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+            string expandedCheckPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (!File.Exists(expandedCheckPath) || new FileInfo(expandedCheckPath).Length < 0x16000)
+            {
+                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                return false;
+            }
+
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
             "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
             "- Backup Overlay" + data.overlayNumber + " file (overlay" + data.overlayNumber + ".bin" + BackupSuffix + " will be created)." + "\n\n" +
@@ -395,7 +403,14 @@ namespace DSPRE
                 return false;
             }
 
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
+            {
+                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                return false;
+            }
+
             uint? pickedOffset = PickSyntheticOverlayOffset("Building rotation routine", expandedPath, data.defaultPayloadOffset, data.payload, synthOverlayLoadAddress);
             if (pickedOffset == null)
             {
@@ -577,6 +592,12 @@ namespace DSPRE
             {
                 ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
                 ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset); //Write new initOffset
+
+                // The synthetic overlay's backing NARC has to actually be unpacked on disk before its
+                // file #0 can be checked/created — on a fresh project (Header Editor never opened) this
+                // directory doesn't exist yet, which used to make the block below a silent no-op while
+                // still reporting success.
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
 
                 string fullFilePath = Filesystem.expArmPath;
 
@@ -818,6 +839,7 @@ namespace DSPRE
         /// <summary>Move the ScrCommands table + count into the expanded ARM9 file (HGSS EN/ES).</summary>
         public static bool ApplyScrcmdRepointPatch()
         {
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
             if (!File.Exists(expandedPath))
             {
