@@ -1,6 +1,7 @@
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
+using AvaloniaEdit.Document;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Threading;
@@ -15,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
@@ -46,6 +48,8 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _suppress;
         private string _currentPath;
         private string _scriptText = "";
+        private TextDocument _editorDocument;
+        private bool _publishingScriptText;
         private int _selectedIndex = -1;
         private int _selectedEditorThemeIndex;
         private string _searchText = "";
@@ -60,6 +64,9 @@ namespace DSPRE.Avalonia.ViewModels
         private string _lspOpenPath;
         private int _documentVersion;
         private bool _diagnosticsAreLive;
+        private CancellationTokenSource _lspChangeDelay;
+
+        private const int LanguageServerChangeDelayMs = 300;
 
         public ObservableCollection<string> ScriptNames { get; } = new ObservableCollection<string>();
         public string[] EditorThemeNames { get; } = new[]
@@ -124,13 +131,40 @@ namespace DSPRE.Avalonia.ViewModels
 
         public string ScriptText
         {
-            get => _scriptText;
+            get => !_publishingScriptText && _editorDocument != null ? _editorDocument.Text : _scriptText;
             set
             {
-                if (!Set(ref _scriptText, value) || _suppress) return;
+                value ??= "";
+                if (string.Equals(ScriptText, value, StringComparison.Ordinal)) return;
+
+                _scriptText = value;
+                _publishingScriptText = true;
+                try { OnPropertyChanged(); }
+                finally { _publishingScriptText = false; }
+
+                if (_suppress) return;
                 Dirty();
-                _ = SendCurrentDocumentChangedToLsp();
+                ScheduleCurrentDocumentChangedToLsp();
             }
+        }
+
+        public void AttachEditorDocument(TextDocument document)
+        {
+            _editorDocument = document;
+        }
+
+        public void DetachEditorDocument(TextDocument document)
+        {
+            if (!ReferenceEquals(_editorDocument, document)) return;
+            _scriptText = document?.Text ?? _scriptText;
+            _editorDocument = null;
+        }
+
+        public void NotifyEditorDocumentChanged()
+        {
+            if (_suppress) return;
+            Dirty();
+            ScheduleCurrentDocumentChangedToLsp();
         }
 
         public bool IsBusy
@@ -420,6 +454,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public void ShutdownLsp()
         {
+            CancelPendingDocumentChange();
             if (_lsp == null) return;
             _lsp.DiagnosticsPublished -= OnLspDiagnosticsPublished;
             _lsp.Dispose();
@@ -438,7 +473,7 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 if (Path.GetExtension(_currentPath).Equals(".rotom", StringComparison.OrdinalIgnoreCase))
-                    await SendCurrentDocumentChangedToLsp();
+                    await FlushCurrentDocumentChangedToLsp();
 
                 RotomLspLocation target = await _lsp.DefinitionAsync(_currentPath, line, column);
                 if (target == null || string.IsNullOrWhiteSpace(target.Path))
@@ -882,6 +917,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_selectedIndex < 0 || _selectedIndex >= _sourceFiles.Count) return;
 
+            CancelPendingDocumentChange();
             string oldPath = _currentPath;
             _currentPath = _sourceFiles[_selectedIndex];
             _suppress = true;
@@ -960,14 +996,51 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        private void ScheduleCurrentDocumentChangedToLsp()
+        {
+            CancelPendingDocumentChange();
+            if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
+
+            var delay = new CancellationTokenSource();
+            _lspChangeDelay = delay;
+            _ = SendCurrentDocumentChangedToLspAfterDelay(delay);
+        }
+
+        private async Task SendCurrentDocumentChangedToLspAfterDelay(CancellationTokenSource delay)
+        {
+            try
+            {
+                await Task.Delay(LanguageServerChangeDelayMs, delay.Token);
+                await SendCurrentDocumentChangedToLsp();
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                if (ReferenceEquals(_lspChangeDelay, delay)) _lspChangeDelay = null;
+                delay.Dispose();
+            }
+        }
+
+        private async Task FlushCurrentDocumentChangedToLsp()
+        {
+            CancelPendingDocumentChange();
+            await SendCurrentDocumentChangedToLsp();
+        }
+
+        private void CancelPendingDocumentChange()
+        {
+            var delay = _lspChangeDelay;
+            _lspChangeDelay = null;
+            delay?.Cancel();
+        }
+
         private async Task SendCurrentDocumentSavedToLsp()
         {
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
             try
             {
-                if (string.IsNullOrWhiteSpace(_lspOpenPath) || !SamePath(_lspOpenPath, _currentPath))
-                    await OpenCurrentDocumentInLsp();
+                await FlushCurrentDocumentChangedToLsp();
                 await _lsp.DidSaveAsync(_currentPath);
             }
             catch (Exception ex)
