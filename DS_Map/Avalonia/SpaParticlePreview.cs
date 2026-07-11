@@ -82,9 +82,14 @@ namespace DSPRE.Avalonia
                     // The quad is sized by base_scale (NOT the texture's pixel size); p.Scale already carries
                     // base_scl × scale-anim. sclX = sclY × aspect (spl_draw_bb/dbb). The texture's S axis maps to the
                     // quad's local-X half-axis, its T axis to local-Y.
+                    // NOTE: quads must render at their TRUE size — screen-covering sheets are real data
+                    // (Ominous Wind is ONE 128×128 particle at base_scl 11.06 × aspect 4.10 ≈ 2158×526 px,
+                    // whose edges must stay off-screen through the flight; an old 96px cap squared it into
+                    // a small box, and even 512 exposed its edges mid-flight). BlitQuad clips its bounding
+                    // box to the screen, so oversized quads cost nothing; the cap only guards absurd data.
                     double sc = p.Scale <= 0 ? 1.0 : p.Scale;
-                    double sclY = Math.Clamp(sc * ScalePx, 1, 96);
-                    double sclX = Math.Clamp(sc * layer.Aspect * ScalePx, 1, 96);
+                    double sclY = Math.Clamp(sc * ScalePx, 1, 4096);
+                    double sclX = Math.Clamp(sc * layer.Aspect * ScalePx, 1, 4096);
                     double axx, axy, ayx, ayy;   // local-X (texture S) and local-Y (texture T) half-axes, screen px
                     if (directional && (p.VX != 0 || p.VY != 0))
                     {
@@ -92,7 +97,7 @@ namespace DSPRE.Avalonia
                         // perpendicular (width = sclX). Screen velocity = (VX, −VY) (+Y up → screen down).
                         double vx = p.VX, vy = -p.VY, vl = Math.Sqrt(vx * vx + vy * vy);
                         vx /= vl; vy /= vl;
-                        double lenY = Math.Clamp(sc * (1.0 + layer.DbbScale) * ScalePx, 1, 96);
+                        double lenY = Math.Clamp(sc * (1.0 + layer.DbbScale) * ScalePx, 1, 4096);
                         ayx = vx * lenY; ayy = vy * lenY;        // along velocity (texture T)
                         axx = -vy * sclX; axy = vx * sclX;       // perpendicular (texture S)
                     }

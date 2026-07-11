@@ -1055,10 +1055,21 @@ namespace DSPRE.Avalonia
                     if (_caps.TryGetValue(0, out var t08cap))
                     { t08cap.ScaleX = t08cap.ScaleY = 1.2; t08cap.TintR = t08cap.TintG = t08cap.TintB = 255; t08cap.TintA = 0.4; }
                     break;
-                case 75:   // WestSp_WE_POKE_OAM_VIEW: set a dropped cap's OAM view PRIORITY (z-order) so it draws in front
-                    // of / behind the mons. GPWork [0]cap_id [1]priority(81/80/31/30) [2]3DFRAME [3]0 [4]drop. (NDS OAM:
-                    // lower priority value = drawn in front; the arg is the priority, NOT a screen-Y.)
-                    if (a.Length > 3 && _caps.TryGetValue(a[2], out var pvCap)) pvCap.Priority = a[3];
+                case 75:   // WSP_PokeOAM_View (wsp_tool.c): GPWork [0]cap [1]wait [2]bg_type [3]soft_pri [4]drop_para
+                    // [5]callback [6]target. soft_pri = z-order (lower = in front). In 1v1 a view of the M2/E2
+                    // (ally) copy is disabled outright, exactly like the source's 2vs2 guard.
+                    if (a.Length > 2 && _caps.TryGetValue(a[2], out var pvCap))
+                    {
+                        int para75 = a.Length > 6 ? a[6] : -1;
+                        if (para75 == 2 || para75 == 3) { pvCap.Visible = false; break; }   // WEDEF_DROP_M2/E2 in singles
+                        if (a.Length > 5 && a[5] >= 0 && a[5] != 0xFF) pvCap.Priority = a[5];
+                        // callback != 0 → PokeOamView_464 (Dark Void): the defender's copy is dragged down into
+                        // the void in jittered +4/+8 steps, then sinks continuously and is swallowed past y≈130.
+                        // (The hardware-window clip isn't reproduced; the sink + swallow carries the read.)
+                        if (a.Length > 7 && a[7] != 0)
+                            _monFx.Add(new MonFx { Cap = pvCap, Mon = 0, Kind = 26,
+                                                   Frames = Math.Max(1, a.Length > 3 ? a[3] : 80) });
+                    }
                     break;
                 case 78:   // WestSp_WE_ALL_DROP (move 425): drop EVERY mon into an OAM cap so a following effect can move
                     // them all at once. In the 1v1 preview that's the attacker + defender.
@@ -1205,8 +1216,11 @@ namespace DSPRE.Avalonia
             int type = a[1 + cnt];                       // last payload word = WE_TOOL flag
             int mon = (type & WE_TOOL_M1) != 0 ? _atVis : (type & WE_TOOL_E1) != 0 ? _dfVis : -1;
             if (mon < 0) return;
-            double sign = mon == 0 ? 1.0 : -1.0;         // bottom (player) lunges +x, top (enemy) −x toward the centre
-            _monFx.Add(new MonFx { Mon = mon, Frames = wait, Kind = 4, Dx = ofsx * sign, Dy = ofsy });
+            // WazaTool_VecChangeX (wazatool.c): battle mode flips BOTH offsets for an enemy-side client
+            // (visual 1 = top). WE_T10 and friends multiply x AND y by it — e.g. Dark Void's enemy-branch
+            // defender drag (+4 steps then −80 return) plays unflipped on the player-side defender.
+            double sign = mon == 0 ? 1.0 : -1.0;
+            _monFx.Add(new MonFx { Mon = mon, Frames = wait, Kind = 4, Dx = ofsx * sign, Dy = ofsy * sign });
         }
 
         // Add an afterimage ghost of `mon` offset by `dx` (px), at `alpha`, recoloured toward a flat gray `g`
@@ -1839,6 +1853,19 @@ namespace DSPRE.Avalonia
                         break;
                     }
                     case 4: MonDX[fx.Mon] += fx.Dx / fx.Frames; MonDY[fx.Mon] += fx.Dy / fx.Frames; break;   // slide
+                    case 26:   // PokeOamView_464 (Dark Void sink): deterministic mid-points of the source's
+                    {          // rand() ladders — +4 at seq ~6/11/16/21, +8 at ~23, then from gene_cnt (~37)
+                               // +4 every frame; the copy is swallowed (hidden) once it passes y ≈ 130.
+                        var cap = fx.Cap;
+                        if (cap == null) break;
+                        int f = fx.Frame;
+                        if (f == 6 || f == 11 || f == 16 || f == 21) cap.Dy += 4;
+                        else if (f == 23) cap.Dy += 8;
+                        else if (f >= 37) cap.Dy += 4;
+                        double capBaseY = cap.SrcMon == _atVis ? _atY : _dfY;
+                        if (capBaseY + cap.Dy > 130 || fx.Frame >= fx.Frames - 1) cap.Visible = false;
+                        break;
+                    }
                     case 21:  // dissolve / ghost-fade: alpha ramps 1 → minAlpha (Keys[0], default 0.1) → holds → back.
                     {         // Acid Armor (WE_151) melts to ~invisible (+ squash, Keys[1]>0); Spite (WE_180) fades the
                               // defender to ~0.5 (a translucent ghost). Phases = 35% out / 30% hold / 35% in.

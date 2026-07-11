@@ -560,7 +560,7 @@ namespace DSPRE.Avalonia.ViewModels
         public System.Collections.Generic.List<string> BackgroundOptions => _backgroundOptions ??= BuildBackgroundOptions();
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
         {
-            var l = new System.Collections.Generic.List<string> { "Provided image (default)" };
+            var l = new System.Collections.Generic.List<string> { "No background" };
             for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop #{i}");
             return l;
         }
@@ -689,6 +689,10 @@ namespace DSPRE.Avalonia.ViewModels
         public string GaugeLevelText => "Lv" + _gaugeLevel;
         public double GaugeHpBarWidth => 50.0 * _gaugeHpPercent / 100.0;        // bar groove ≈ 50px at full (tunable)
         public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? Brushes.LimeGreen : _gaugeHpPercent > 20 ? Brushes.Gold : Brushes.OrangeRed;
+        /// <summary>HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.</summary>
+        public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
+            ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x28, 0x28, 0x28))
+            : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
 
         private void RenderGauges()
         {
@@ -737,7 +741,9 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 catch { rgb = null; }
             }
-            _compositor.SetBackdrop(rgb ?? LoadRgb("background.png", 256, 192));
+            // Index 0 is deliberately "No background" (plain black), NOT the bundled placeholder art —
+            // effects are easiest to judge against black, and it's honest about not being ROM data.
+            _compositor.SetBackdrop(rgb ?? new byte[256 * 192 * 3]);
         }
 
         // RGBA w×h (battle BG, usually 256×256) → opaque RGB 256×192 backdrop (top-left crop, black-padded).
@@ -835,7 +841,7 @@ namespace DSPRE.Avalonia.ViewModels
                         $"cell={res.Cell} anm={res.CellAnm})");
                 }
 
-                int emitters = WestParticles.Extract(cmds, _version).Count;
+                int emitters = WestParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
                 CellAnimNote =

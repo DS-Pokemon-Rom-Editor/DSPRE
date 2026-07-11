@@ -38,6 +38,7 @@ namespace DSPRE.Avalonia.Data
         public double BaseScale;    // base particle scale (fx32)
         public int EmitterLife;     // frames the emitter emits
         public int ParticleLife;    // frames each particle lives
+        public int StartOffset;     // base.start_offset: frames until the emitter STARTS (Seed Flare's late slashes)
         public int GenInterval;     // frames between emissions
         public int BaseAlpha;       // 0..31 base alpha
         public int AirResist;       // 0..255 (1.0 ≈ 0x80) velocity damping
@@ -139,6 +140,10 @@ namespace DSPRE.Avalonia.Data
                     EmitterLife = U16(off + 60),
                     ParticleLife = U16(off + 62),
                     Aspect = (short)U16(off + 48) / 4096.0,   // base.aspect (fx16)
+                    // start_offset (u16 @50, spl_resource.h): the emitter idles this many frames before emitting.
+                    // This is script-invisible sequencing — e.g. Seed Flare adds all 3 emitters at once but its
+                    // big slashes carry a start_offset so they fire after the small particles.
+                    StartOffset = U16(off + 50),
                     // Billboard rotation (SPLResBase): rtt_min@52 / rtt_max@54 (s16) + init_rtt@56 (u16); units = full
                     // turn / 65536. use_rtt_anm(bit12) spins by rtt_min/frame; use_init_rtt_rndm(bit13) randomises the
                     // start in [rtt_min,rtt_max]. This is what angles the Pin Missile / Sonic Boom / Horn Drill needles

@@ -52,6 +52,7 @@ namespace DSPRE.Avalonia.Data
             _e = e;
             _rng = new Random(seed);
             _air = AirResistMultiplier(e.AirResist);
+            _delay = Math.Max(0, e.StartOffset);
             _axisX = axisX; _axisY = axisY;
             _driftX = driftX; _driftY = driftY;
             _magOverride = !double.IsNaN(magOverrideX); _magX = magOverrideX; _magY = magOverrideY;
@@ -83,11 +84,18 @@ namespace DSPRE.Avalonia.Data
         /// way an "emit forever" emitter (emtr_life == 0) ever finishes.</summary>
         public void Stop() => _stopped = true;
 
-        /// <summary>True once the emitter has stopped emitting and all its particles have died.</summary>
-        public bool Finished => _ptcls.Count == 0 && _children.Count == 0 && (_stopped || (_e.EmitterLife != 0 && _frame >= _e.EmitterLife));
+        /// <summary>True once the emitter has stopped emitting and all its particles have died.
+        /// A pending start_offset counts as not-finished (the emitter simply hasn't begun yet).</summary>
+        public bool Finished => (_stopped || _delay <= 0) && _ptcls.Count == 0 && _children.Count == 0 && (_stopped || (_e.EmitterLife != 0 && _frame >= _e.EmitterLife));
+
+        // base.start_offset (spl_resource.h): the emitter idles this many frames before its own clock starts.
+        // This is what sequences e.g. Seed Flare's big slashes after its small particles without any script waits.
+        private int _delay;
 
         public void Step()
         {
+            if (_delay > 0 && !_stopped) { _delay--; return; }
+
             // Emission while the emitter is alive (emtr_life == 0 means "forever") and not EXIT_PARTICLE-stopped.
             bool emitting = !_stopped && (_e.EmitterLife == 0 || _frame < _e.EmitterLife);
             int intvl = Math.Max(1, _e.GenInterval);

@@ -161,19 +161,19 @@
                 <!-- Positions measured from a real DPP top-screen (256×192): name/Lv sit just ABOVE the cell centre,
                      the HP bar AT the centre. Enemy box ≈ x[-6..122] centre(58,36); player box ≈ x[128..256] centre(192,116). -->
                 <!-- enemy (upper-left) -->
-                <TextBlock Canvas.Left="4"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
-                <TextBlock Canvas.Left="70" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <TextBlock Canvas.Left="4"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+                <TextBlock Canvas.Left="70" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
                 <Border Canvas.Left="46" Canvas.Top="40" Width="50" Height="4" Background="#202020" CornerRadius="1">
                   <Rectangle Width="{Binding GaugeHpBarWidth}" Height="4" HorizontalAlignment="Left" Fill="{Binding GaugeHpBrush}"/>
                 </Border>
                 <!-- player (lower-right) -->
-                <TextBlock Canvas.Left="152" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
-                <TextBlock Canvas.Left="218" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <TextBlock Canvas.Left="152" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="8" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+                <TextBlock Canvas.Left="218" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="8" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
                 <Border Canvas.Left="198" Canvas.Top="117" Width="50" Height="4" Background="#202020" CornerRadius="1">
                   <Rectangle Width="{Binding GaugeHpBarWidth}" Height="4" HorizontalAlignment="Left" Fill="{Binding GaugeHpBrush}"/>
                 </Border>
                 <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game -->
-                <TextBlock Canvas.Left="200" Canvas.Top="123" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="#F8F8F8"/>
+                <TextBlock Canvas.Left="200" Canvas.Top="123" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
               </Canvas>
               <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
             </Canvas>

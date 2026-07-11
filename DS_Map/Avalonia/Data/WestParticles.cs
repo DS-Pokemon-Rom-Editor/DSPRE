@@ -23,23 +23,91 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static class WestParticles
     {
-        public static List<WestParticleRef> Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
+        /// <summary>
+        /// Walks the script the way the game's sequencer would for the previewed side, following the branch
+        /// opcodes (SIDE_JP / TURN_CHK / SEQ_JP / SEQ_CALL), and stops at the SEQEND that actually terminates
+        /// that path. A plain linear scan that stops at the FIRST SEQEND misses most side-branched moves
+        /// entirely — e.g. Dark Void's and Ominous Wind's ADD_PARTICLEs all live in per-side blocks placed
+        /// after a SEQEND and reached only via SIDE_JP.
+        /// </summary>
+        public static List<WestParticleRef> Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
+                                                    bool attackerIsEnemy = false)
         {
             var slot = new Dictionary<int, int>();   // ptc_no → data_no
             var refs = new List<WestParticleRef>();
-            if (cmds == null) return refs;
-            foreach (var c in cmds)
+            if (cmds == null || cmds.Count == 0) return refs;
+
+            // Recompute word positions (commands may come from the UI grid without parsed WordPos) —
+            // identical layout math to WestPlayer's constructor.
+            var wordToIndex = new Dictionary<int, int>();
+            var wordPos = new int[cmds.Count];
+            int wp = 0;
+            for (int i = 0; i < cmds.Count; i++)
             {
+                wordPos[i] = wp;
+                wordToIndex[wp] = i;
+                wp += 1 + cmds[i].Args.Length;
+            }
+            bool Jump(ref int pc, int argWord, int offset)
+            {
+                if (wordToIndex.TryGetValue(argWord + offset, out int idx)) { pc = idx; return true; }
+                return false;
+            }
+
+            var callStack = new List<int>();
+            int pendingTurn2 = -1;
+            var visited = new HashSet<int>();
+            int pc = 0, guard = 0;
+            while (pc >= 0 && pc < cmds.Count && guard++ < 100000)
+            {
+                var c = cmds[pc];
+                // A revisited command outside a call/turn continuation means a loop we don't model — stop.
+                if (!visited.Add(pc) && callStack.Count == 0 && pendingTurn2 < 0) break;
+                int cur = pc;
+                pc++;
+
                 string name = WestOpcodes.Name(version, c.OpId);
                 if (name == null) continue;
-
-                // Only the default fall-through path emits in the preview; conditional branches (PTAT/contest)
-                // live after the first SEQEND and are reached by jumps we don't follow.
-                if (name == "WEST_SEQEND") break;
-
                 int n = c.Args.Length;
+
                 switch (name)
                 {
+                    case "WEST_SEQEND":
+                        if (pendingTurn2 >= 0) { pc = pendingTurn2; pendingTurn2 = -1; break; }
+                        return refs;
+
+                    case "WEST_SEQ_JP":
+                        if (n >= 1) Jump(ref pc, wordPos[cur] + 1, c.Args[0]);
+                        break;
+
+                    // type, adrsPlayer, adrsEnemy (relative to the word holding each offset)
+                    case "WEST_SIDE_JP":
+                        if (n >= 3)
+                        {
+                            bool checkedIsEnemy = c.Args[0] == 0 ? attackerIsEnemy : !attackerIsEnemy;
+                            if (checkedIsEnemy) Jump(ref pc, wordPos[cur] + 3, c.Args[2]);
+                            else Jump(ref pc, wordPos[cur] + 2, c.Args[1]);
+                        }
+                        break;
+
+                    // Two-turn moves: take turn1 now, continue into turn2 at its SEQEND (mirrors WestPlayer).
+                    case "WEST_TURN_CHK":
+                        if (n >= 1 && Jump(ref pc, wordPos[cur] + 1, c.Args[0]))
+                        {
+                            if (n >= 2 && wordToIndex.TryGetValue(wordPos[cur] + 2 + c.Args[1], out int t2))
+                                pendingTurn2 = t2;
+                            break;
+                        }
+                        if (n >= 2) Jump(ref pc, wordPos[cur] + 2, c.Args[1]);
+                        break;
+
+                    case "WEST_SEQ_CALL":
+                        if (n >= 1) { callStack.Add(pc); Jump(ref pc, wordPos[cur] + 1, c.Args[0]); }
+                        break;
+                    case "WEST_END_CALL":
+                        if (callStack.Count > 0) { pc = callStack[callStack.Count - 1]; callStack.RemoveAt(callStack.Count - 1); }
+                        break;
+
                     case "WEST_LOAD_PARTICLE":
                     case "WEST_LOAD_PARTICLE_EX":
                         if (n >= 2) slot[c.Args[0]] = c.Args[1];
