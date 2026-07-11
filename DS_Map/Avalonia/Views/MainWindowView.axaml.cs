@@ -366,6 +366,9 @@ namespace DSPRE.Avalonia.Views
         private void EggMoveEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenEggMoveEditor();
 
+        private void BattleScriptEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBattleScriptEditor();
+
         private void ItemEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenItemEditor();
 

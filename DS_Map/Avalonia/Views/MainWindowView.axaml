@@ -37,6 +37,8 @@
       <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}"/>
         <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}"/>
+        <MenuItem Header="Move Animations &amp; Battle Scripts…" Click="BattleScriptEditor_Click"
+                  ToolTip.Tip="Edit move animations (WEST) and battle-effect scripts, with a live animation preview"/>
         <MenuItem Header="TM Editor…"        Click="TMEditor_Click"/>
         <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
         <Separator/>
