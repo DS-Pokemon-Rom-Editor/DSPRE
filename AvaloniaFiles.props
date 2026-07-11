@@ -12,9 +12,18 @@
   <ItemGroup>
     <AvaloniaLayerCompile Include="$(DsMapDirAv)Avalonia\**\*.cs" />
     <AvaloniaLayerXaml Include="$(DsMapDirAv)Avalonia\**\*.axaml" />
-    <!-- Embedded UI assets. Link keeps the avares:// paths identical to the on-disk layout. -->
-    <AvaloniaLayerAsset Include="$(DsMapDirAv)Avalonia\Assets\**" LinkBase="Avalonia\Assets" />
-    <AvaloniaLayerAsset Include="$(DsMapDirAv)Resources\Graphics\**" LinkBase="Resources\Graphics" />
+    <!-- Embedded UI assets. Link keeps the avares:// paths identical to the on-disk layout.
+         NOTE: LinkBase alone does NOT work here — MSBuild's AssignLinkMetadata target only
+         auto-generates Link for well-known item types (Compile/Content/None/...), not custom
+         ones like this. Without an explicit Link, Avalonia embeds each asset under its full
+         absolute disk path and every avares://DSPRE.Avalonia/Avalonia/Assets/... lookup
+         silently fails (broke all battle-scene placeholder art). -->
+    <AvaloniaLayerAsset Include="$(DsMapDirAv)Avalonia\Assets\**">
+      <Link>Avalonia\Assets\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </AvaloniaLayerAsset>
+    <AvaloniaLayerAsset Include="$(DsMapDirAv)Resources\Graphics\**">
+      <Link>Resources\Graphics\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </AvaloniaLayerAsset>
   </ItemGroup>
 
 </Project>
