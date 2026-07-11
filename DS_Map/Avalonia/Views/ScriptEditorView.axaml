@@ -55,7 +55,7 @@
                 <DataTemplate x:DataType="vm:ScriptSearchResult">
                   <StackPanel Margin="0,2">
                     <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="12"/>
-                    <TextBlock Text="{Binding Preview}" FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+                    <TextBlock Text="{Binding Preview}" FontFamily="monospace"
                                FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
                 </DataTemplate>
@@ -86,7 +86,7 @@
                     </StackPanel>
                     <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="12"/>
                     <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Preview}" FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+                    <TextBlock Text="{Binding Preview}" FontFamily="monospace"
                                FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
                 </DataTemplate>
@@ -100,7 +100,7 @@
     <ae:TextEditor x:Name="RotomEditor"
                    Margin="4"
                    ShowLineNumbers="True"
-                   FontFamily="Consolas, Cascadia Mono, Menlo, monospace"
+                   FontFamily="monospace"
                    FontSize="13"
                    HorizontalScrollBarVisibility="Auto"
                    VerticalScrollBarVisibility="Auto"/>

@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
+using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
 using AvaloniaEdit.Search;
 using AvaloniaEdit.TextMate;
@@ -47,6 +48,35 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
 
+            string[] preferredEditorFonts = OperatingSystem.IsWindows()
+                ? new[] { "Cascadia Mono", "Consolas", "Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono" }
+                : OperatingSystem.IsMacOS()
+                    ? new[] { "SF Mono", "Menlo", "Monaco", "Noto Sans Mono", "DejaVu Sans Mono" }
+                    : new[] { "Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono" };
+            FontFamily editorFont = null;
+            foreach (string preferredFont in preferredEditorFonts)
+            {
+                foreach (FontFamily installedFont in FontManager.Current.SystemFonts)
+                {
+                    if (!string.Equals(installedFont.Name, preferredFont, StringComparison.OrdinalIgnoreCase)) continue;
+                    editorFont = installedFont;
+                    break;
+                }
+                if (editorFont != null) break;
+            }
+            if (editorFont != null) RotomEditor.FontFamily = editorFont;
+
+            for (int i = 0; i < RotomEditor.TextArea.LeftMargins.Count; i++)
+            {
+                if (RotomEditor.TextArea.LeftMargins[i] is not LineNumberMargin) continue;
+                var lineNumbers = new CachedLineNumberMargin();
+                lineNumbers.SetValue(TextBlock.FontFamilyProperty, RotomEditor.FontFamily);
+                lineNumbers.SetValue(TextBlock.FontSizeProperty, RotomEditor.FontSize);
+                lineNumbers.SetValue(TextBlock.ForegroundProperty, RotomEditor.LineNumbersForeground);
+                RotomEditor.TextArea.LeftMargins[i] = lineNumbers;
+                break;
+            }
+
             RotomEditor.Options.ConvertTabsToSpaces = false;
             RotomEditor.Options.IndentationSize = 4;
             _fileSearchPanel = SearchPanel.Install(RotomEditor);
@@ -60,7 +90,7 @@ namespace DSPRE.Avalonia.Views
 
             RotomEditor.TextChanged += (_, _) =>
             {
-                if (!_syncing && VM != null) VM.ScriptText = RotomEditor.Text;
+                if (!_syncing && VM != null) VM.NotifyEditorDocumentChanged();
             };
             RotomEditor.KeyDown += RotomEditor_KeyDown;
             RotomEditor.KeyUp += RotomEditor_KeyUp;
@@ -117,11 +147,13 @@ namespace DSPRE.Avalonia.Views
                 owner.Closed += (_, _) =>
                 {
                     RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);
+                    VM?.DetachEditorDocument(RotomEditor.Document);
                     VM?.ShutdownLsp();
                     _textMate?.Dispose();
                 };
                 vm.PropertyChanged += OnVmPropertyChanged;
             }
+            vm.AttachEditorDocument(RotomEditor.Document);
             await vm.SetupAsync(owner);
             PushToEditor(vm.ScriptText);
             UpdateReadOnly();
@@ -360,7 +392,7 @@ namespace DSPRE.Avalonia.Views
                         panel.Children.Add(new SelectableTextBlock
                         {
                             Text = code.ToString().TrimEnd('\n'),
-                            FontFamily = new FontFamily("Consolas, Cascadia Mono, Menlo, monospace"),
+                            FontFamily = new FontFamily("monospace"),
                             FontSize = 12,
                             TextWrapping = TextWrapping.Wrap,
                             Background = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)),
@@ -430,7 +462,7 @@ namespace DSPRE.Avalonia.Views
                 panel.Children.Add(new SelectableTextBlock
                 {
                     Text = code.ToString().TrimEnd('\n'),
-                    FontFamily = new FontFamily("Consolas, Cascadia Mono, Menlo, monospace"),
+                    FontFamily = new FontFamily("monospace"),
                     FontSize = 12,
                     TextWrapping = TextWrapping.Wrap,
                     Background = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)),
@@ -466,7 +498,7 @@ namespace DSPRE.Avalonia.Views
                     {
                         textBlock.Inlines.Add(new Run(text.Substring(i + 1, end - i - 1))
                         {
-                            FontFamily = new FontFamily("Consolas, Cascadia Mono, Menlo, monospace")
+                            FontFamily = new FontFamily("monospace")
                         });
                         i = end + 1;
                         continue;

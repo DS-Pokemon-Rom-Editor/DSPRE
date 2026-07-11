@@ -8,7 +8,7 @@
          (only the controls were getting our colours). -->
     <Style Selector="Window">
         <Setter Property="Background" Value="{DynamicResource Window.Static.Background}"/>
-        <Setter Property="FontFamily" Value="Segoe UI, Sans Serif, sans-serif"/>
+        <Setter Property="FontFamily" Value="sans-serif"/>
         <Setter Property="FontSize" Value="{DynamicResource ControlContentThemeFontSize}"/>
     </Style>
 
