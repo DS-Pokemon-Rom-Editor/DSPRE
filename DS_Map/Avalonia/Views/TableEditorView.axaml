@@ -16,7 +16,7 @@
     <!-- ── Status bar ──────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
@@ -91,7 +91,7 @@
                 <Image Source="{Binding TrainerSpriteImage}" Stretch="Uniform"/>
               </Border>
               <StackPanel Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasTrainerSprite}">
-                <TextBlock Text="Frame" FontSize="11"/>
+                <TextBlock Text="Frame" FontSize="12"/>
                 <NumericUpDown Width="90" Minimum="0" Maximum="{Binding TrainerSpriteFrameMax}"
                                Increment="1" Value="{Binding TrainerSpriteFrame}"/>
               </StackPanel>

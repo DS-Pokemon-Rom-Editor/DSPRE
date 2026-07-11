@@ -111,14 +111,33 @@ namespace DSPRE.Avalonia.Data
                 for (int j = 0; j < frames.Length; j++)
                 {
                     var d = a.frames[j].data;
-                    double sx = a.dataType == 1 ? d.scaleX / 4096.0 : 1.0;   // fx32 → 1.0
-                    double sy = a.dataType == 1 ? d.scaleY / 4096.0 : 1.0;
-                    double rot = a.dataType == 1 ? d.rotation / 65536.0 * 360.0 : 0.0;
+                    double sx = a.dataType == 1 ? GetFrameInt(d, "scaleX", 4096) / 4096.0 : 1.0;   // fx32 → 1.0
+                    double sy = a.dataType == 1 ? GetFrameInt(d, "scaleY", 4096) / 4096.0 : 1.0;
+                    double rot = a.dataType == 1 ? GetFrameUShort(d, "rotation", 0) / 65536.0 * 360.0 : 0.0;
                     frames[j] = new CFrame(d.nCell, a.frames[j].unknown1, d.xDisplacement, d.yDisplacement, rot, sx, sy);
                 }
-                outp[i] = new CellSequence { Frames = frames, Loop = a.playMode == 2 || a.playMode == 4 };
+                uint playMode = GetAnimationUInt(a, "playMode", GetAnimationUInt(a, "unknown2", 0) | (GetAnimationUInt(a, "unknown3", 0) << 16));
+                outp[i] = new CellSequence { Frames = frames, Loop = playMode == 2 || playMode == 4 };
             }
             return outp;
+        }
+
+        private static int GetFrameInt(NANR.sNANR.Frame_Data data, string fieldName, int defaultValue)
+        {
+            var field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
+            return field == null ? defaultValue : Convert.ToInt32(field.GetValue(data));
+        }
+
+        private static ushort GetFrameUShort(NANR.sNANR.Frame_Data data, string fieldName, ushort defaultValue)
+        {
+            var field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
+            return field == null ? defaultValue : Convert.ToUInt16(field.GetValue(data));
+        }
+
+        private static uint GetAnimationUInt(NANR.sNANR.Animation animation, string fieldName, uint defaultValue)
+        {
+            var field = typeof(NANR.sNANR.Animation).GetField(fieldName);
+            return field == null ? defaultValue : Convert.ToUInt32(field.GetValue(animation));
         }
     }
 }

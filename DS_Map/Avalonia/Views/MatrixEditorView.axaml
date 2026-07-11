@@ -26,8 +26,8 @@
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <StackPanel Orientation="Horizontal" Spacing="12">
-        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding CellInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding CellInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
       </StackPanel>
     </Border>
 
@@ -37,7 +37,7 @@
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
             <TextBlock Text="Paint value:" VerticalAlignment="Center"/>
             <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MapPaint}"/>
-            <TextBlock Text="Click/drag to fill cells." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+            <TextBlock Text="Click/drag to fill cells." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
           </StackPanel>
           <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <gl:MatrixGridControl x:Name="MapGrid"/>
@@ -73,7 +73,7 @@
         <StackPanel Margin="10" Spacing="8">
           <Button Content="Add header section"  Click="AddHeaders_Click" IsEnabled="{Binding CanAddHeaders}"/>
           <Button Content="Add heights section" Click="AddHeights_Click" IsEnabled="{Binding CanAddHeights}"/>
-          <TextBlock Text="Header / height sections are optional. Adding one enables its tab." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <TextBlock Text="Header / height sections are optional. Adding one enables its tab." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         </StackPanel>
       </TabItem>
     </TabControl>

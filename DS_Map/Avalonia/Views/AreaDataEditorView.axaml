@@ -21,11 +21,11 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <StackPanel Margin="14" Spacing="8" MaxWidth="380" HorizontalAlignment="Left">
-      <TextBlock Text="These pick the NSBTX packs the map/event 3D views use." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <TextBlock Text="These pick the NSBTX packs the map/event 3D views use." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Map tileset (NSBTX)" VerticalAlignment="Center"/>
         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MapTileset}" Margin="2"/>

@@ -20,6 +20,7 @@
         <Setter Property="Background" Value="{DynamicResource ProgressBar.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource ProgressBar.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="{x:Type ProgressBar}">
                 <Grid>
@@ -28,12 +29,27 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}">
                         <Panel>
+                            <Border BorderBrush="{DynamicResource ProgressBar.TopShadow}"
+                                    BorderThickness="0,1,0,0"
+                                    Margin="1"
+                                    IsHitTestVisible="False"/>
                             <Border Name="PART_Indicator"
-                                    Background="{TemplateBinding Foreground}"
-                                    IsVisible="{Binding !IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                     Background="{TemplateBinding Foreground}"
+                                     BorderBrush="{DynamicResource ProgressBar.Progress.Border}"
+                                     BorderThickness="1"
+                                     CornerRadius="2"
+                                     IsVisible="{Binding !IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}"/>
                             <Border Name="PART_IndeterminateIndicator"
-                                    Background="{TemplateBinding Foreground}"
-                                    IsVisible="{Binding IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                     Background="{TemplateBinding Foreground}"
+                                     BorderBrush="{DynamicResource ProgressBar.Progress.Border}"
+                                     BorderThickness="1"
+                                     CornerRadius="2"
+                                     IsVisible="{Binding IsIndeterminate, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            <Border BorderBrush="{DynamicResource ProgressBar.Progress.InnerContrast}"
+                                    BorderThickness="1"
+                                    CornerRadius="2"
+                                    Margin="1"
+                                    IsHitTestVisible="False"/>
                         </Panel>
                     </Border>
                     <LayoutTransformControl Name="PART_LayoutTransformControl"

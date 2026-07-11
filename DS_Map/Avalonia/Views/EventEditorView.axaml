@@ -27,7 +27,7 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="*,520">
@@ -37,29 +37,29 @@
         <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Padding="6,4" Margin="0,0,0,4">
           <StackPanel Spacing="3">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <TextBlock Text="left-drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="left-drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
             <WrapPanel Classes="toolbar">
-              <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="11"/>
-              <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="11"/>
-              <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="11"/>
-              <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="11"/>
-              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" FontSize="11"/>
-              <CheckBox Content="Gizmos" IsChecked="False" FontSize="11"
+              <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="12"/>
+              <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="12"/>
+              <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="12"/>
+              <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="12"/>
+              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" FontSize="12"/>
+              <CheckBox Content="Gizmos" IsChecked="False" FontSize="12"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
-              <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="11"
+              <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="12"
                         ToolTip.Tip="Stitch as a DS-true fixed 32-tile grid (ON) vs continuous geometry-sized layout (OFF)"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="11" Padding="6,2"
+              <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
                             ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <TextBlock Text="View:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <Button Content="Top" Click="CamTop_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Top-down camera"/>
-              <Button Content="Iso" Click="CamIso_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Isometric camera"/>
-              <Button Content="⟲" Click="CamReset_Click" FontSize="11" Padding="6,2" ToolTip.Tip="Reset camera"/>
+              <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Button Content="Top" Click="CamTop_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Top-down camera"/>
+              <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"/>
+              <Button Content="⟲" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
             </WrapPanel>
           </StackPanel>
         </Border>

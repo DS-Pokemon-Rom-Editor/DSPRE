@@ -42,6 +42,7 @@
 
         <Style Selector="^:pointerover:not(:selected) /template/ Border#mainBorder">
             <Setter Property="Background" Value="{DynamicResource TabItem.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.MouseOver.Border}"/>
         </Style>
 
         <!-- Selected: lighter fill, full height (not recessed), pops above its neighbours -->
@@ -49,6 +50,7 @@
             <Setter Property="ZIndex" Value="1"/>
             <Style Selector="^ /template/ Border#mainBorder">
                 <Setter Property="Background" Value="{DynamicResource TabItem.Selected.Background}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
                 <!-- overlap the content frame's top border by 1px so the tab merges into the panel -->
                 <Setter Property="Margin" Value="0,0,0,-1"/>
             </Style>

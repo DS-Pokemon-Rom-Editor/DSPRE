@@ -22,7 +22,7 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="*,300" Margin="6">
@@ -37,14 +37,14 @@
       <Border Grid.Column="1" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Padding="8">
         <StackPanel Spacing="6">
           <TextBlock Text="Add a trigger" FontWeight="Bold"/>
-          <TextBlock Text="Type" FontSize="11"/>
+          <TextBlock Text="Type" FontSize="12"/>
           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerTypes}" SelectedIndex="{Binding TriggerTypeIndex}"/>
-          <TextBlock Text="Script ID to run" FontSize="11"/>
+          <TextBlock Text="Script ID to run" FontSize="12"/>
           <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewScriptId}"/>
           <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
-            <TextBlock Text="Variable to watch" FontSize="11"/>
+            <TextBlock Text="Variable to watch" FontSize="12"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewVariable}"/>
-            <TextBlock Text="Expected value" FontSize="11"/>
+            <TextBlock Text="Expected value" FontSize="12"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewValue}"/>
           </StackPanel>
           <Button Content="Add trigger" HorizontalAlignment="Stretch" Click="Add_Click" Margin="0,4,0,0"/>

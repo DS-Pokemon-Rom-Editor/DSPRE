@@ -128,7 +128,7 @@
     <!-- ── Status bar ─────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"
+      <TextBlock FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"
                  Text="{Binding StatusText}"/>
     </Border>
 

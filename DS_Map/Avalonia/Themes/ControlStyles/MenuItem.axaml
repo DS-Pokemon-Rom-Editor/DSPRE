@@ -22,6 +22,7 @@
 
     <ControlTheme x:Key="{x:Type MenuItem}" TargetType="{x:Type MenuItem}">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="6 0"/>
         <Setter Property="Template">
@@ -56,10 +57,11 @@
                                         Content="{TemplateBinding Icon}"/>
                         <ContentPresenter x:Name="PART_HeaderPresenter"
                                           Grid.Column="2"
-                                          Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="Center"
-                                          Content="{TemplateBinding Header}"
-                                          ContentTemplate="{TemplateBinding HeaderTemplate}">
+                                           Margin="{TemplateBinding Padding}"
+                                           VerticalAlignment="Center"
+                                           Content="{TemplateBinding Header}"
+                                           ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                           TextElement.Foreground="{TemplateBinding Foreground}">
                             <ContentPresenter.DataTemplates>
                                 <DataTemplate DataType="sys:String">
                                     <AccessText Text="{Binding}"/>
@@ -68,15 +70,15 @@
                         </ContentPresenter>
                         <TextBlock x:Name="PART_InputGestureText"
                                    Grid.Column="4"
-                                   VerticalAlignment="Center"
-                                   Text="{TemplateBinding InputGesture, Converter={StaticResource KeyGestureConverter}}"
-                                   Foreground="{DynamicResource ABrush.Foreground.Disabled}"/>
+                                    VerticalAlignment="Center"
+                                    Text="{TemplateBinding InputGesture, Converter={StaticResource KeyGestureConverter}}"
+                                    Foreground="{DynamicResource ABrush.Foreground.Disabled}"/>
                         <Path x:Name="rightArrow"
                               Grid.Column="5"
-                              Margin="10,0,0,0"
-                              VerticalAlignment="Center"
-                              Data="M0,0L4,3.5 0,7z"
-                              Fill="{DynamicResource ABrush.Glyph.Static}"/>
+                               Margin="10,0,0,0"
+                               VerticalAlignment="Center"
+                               Data="M0,0L4,3.5 0,7z"
+                               Fill="{Binding $parent[MenuItem].Foreground}"/>
                         <Popup Grid.Column="0"
                                x:Name="PART_Popup"
                                IsLightDismissEnabled="False"
@@ -85,7 +87,11 @@
                             <Border Background="{DynamicResource Popup.Static.Background}"
                                     BorderBrush="{DynamicResource Popup.Static.Border}"
                                     BorderThickness="1">
-                                <Grid>
+                                <Border BorderBrush="{DynamicResource Popup.FrameLight}"
+                                        BorderThickness="1,1,0,0">
+                                <Border BorderBrush="{DynamicResource Popup.FrameShadow}"
+                                        BorderThickness="0,0,1,1">
+                                 <Grid>
                                     <Border Background="{DynamicResource MenuItem.IconBar.Static.Background}"
                                             BorderBrush="{DynamicResource MenuItem.IconBar.Static.Border}"
                                             BorderThickness="0,0,1,0"
@@ -94,8 +100,10 @@
                                         <ItemsPresenter x:Name="PART_ItemsPresenter"
                                                         Grid.IsSharedSizeScope="True"
                                                         ItemsPanel="{TemplateBinding ItemsPanel}"/>
-                                    </ScrollViewer>
-                                </Grid>
+                                     </ScrollViewer>
+                                 </Grid>
+                                </Border>
+                                </Border>
                             </Border>
                         </Popup>
                     </Grid>
@@ -111,14 +119,22 @@
             </Setter>
         </Style>
 
+        <Style Selector="^:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
+        </Style>
+
         <Style Selector="^:pointerover /template/ Border#root">
             <Setter Property="Background" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Border}"/>
+        </Style>
+
+        <Style Selector="^:selected">
+            <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
         </Style>
 
         <Style Selector="^:selected /template/ Border#root">
             <Setter Property="Background" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Border}"/>
         </Style>
 
         <Style Selector="^:empty /template/ Path#rightArrow">
@@ -126,6 +142,7 @@
         </Style>
 
         <Style Selector="^:disabled">
+            <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Disabled}"/>
             <Setter Property="Background" Value="{DynamicResource MenuItem.Disabled.Background}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.Disabled.Background}"/>
         </Style>

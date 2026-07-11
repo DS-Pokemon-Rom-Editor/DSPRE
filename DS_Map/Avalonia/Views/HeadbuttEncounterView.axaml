@@ -31,7 +31,7 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="600,*" IsVisible="{Binding IsAvailable}">
@@ -43,7 +43,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttEncRow">
                     <Grid ColumnDefinitions="70,*,70,70" Margin="0,1">
-                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
                       <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
                       <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
@@ -68,7 +68,7 @@
                   <DataTemplate x:DataType="vm:HeadbuttTreeRow">
                     <StackPanel Margin="0,1">
                       <Grid ColumnDefinitions="46,*,*">
-                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                         <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
                         <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
                       </Grid>
@@ -93,7 +93,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttEncRow">
                     <Grid ColumnDefinitions="70,*,70,70" Margin="0,1">
-                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
                       <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
                       <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
@@ -117,7 +117,7 @@
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttTreeRow">
                     <Grid ColumnDefinitions="46,*,*" Margin="0,1">
-                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"/>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
                       <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
                     </Grid>
@@ -131,9 +131,9 @@
 
       <!-- 3D map with the selected group's trees -->
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
-        <TextBlock DockPanel.Dock="Top" Text="{Binding MapInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding MapInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
         <TextBlock DockPanel.Dock="Top" Text="drag orbit · right-drag pan · wheel zoom · trees: 🟢 normal 🟡 special"
-                   FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
+                   FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
         <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
           <gl:NsbmdGlControl x:Name="GlView"/>
         </Border>

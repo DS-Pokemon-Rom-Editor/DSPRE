@@ -23,7 +23,7 @@
     <!-- ── Status bar ──────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                  VerticalAlignment="Center"/>
     </Border>
 
@@ -65,7 +65,7 @@
                                         RelativeSource={RelativeSource AncestorType=DataGrid}}"
                       CommandParameter="{Binding Index}"
                       HorizontalAlignment="Stretch"
-                      Margin="2,1" Padding="4,2" FontSize="11"/>
+                      Margin="2,1" Padding="4,2" FontSize="12"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
@@ -79,7 +79,7 @@
                                         RelativeSource={RelativeSource AncestorType=DataGrid}}"
                       CommandParameter="{Binding Index}"
                       HorizontalAlignment="Stretch"
-                      Margin="2,1" Padding="4,2" FontSize="11"/>
+                      Margin="2,1" Padding="4,2" FontSize="12"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

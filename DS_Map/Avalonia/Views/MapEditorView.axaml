@@ -20,7 +20,7 @@
           <ComboBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
           <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
           <ComboBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
-          <TextBlock Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
+          <TextBlock Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
           <TextBlock Text="Header:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <ComboBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                     ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
@@ -74,7 +74,7 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
     <Grid ColumnDefinitions="*,420">
@@ -101,8 +101,8 @@
                 <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,4">
-                <TextBlock Text="Click/drag a grid to paint." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
-                <TextBlock Text="Use 🖌 Paint in the 3D view — click any of the header's maps." FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
+                <TextBlock Text="Click/drag a grid to paint." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
+                <TextBlock Text="Use 🖌 Paint in the 3D view — click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
                 <Button Content="🔎 Scan used types" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>

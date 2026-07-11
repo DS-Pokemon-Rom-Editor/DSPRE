@@ -102,7 +102,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="SelectionBrush" Value="{DynamicResource TextBox.Selection}"/>
         <!--
-        <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextBox.Static.Background}"/>
+        <Setter Property="SelectionForegroundBrush" Value="{DynamicResource ABrush.Glyph.Selected}"/>
         -->
         <Setter Property="Padding" Value="6,2"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

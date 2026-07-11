@@ -1,8 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="using:System">
-    <!-- Fusion scrollbar extent is 14px; 16 here makes the track comfortably grabbable.
-         The thumb nearly fills it (1px inset) so it reads as a solid block, not a thin pill. -->
     <sys:Double x:Key="ScrollBarThickness">16</sys:Double>
     <sys:Double x:Key="ScrollBarThumbThickness">16</sys:Double>
     <Design.PreviewWith>
@@ -22,18 +20,18 @@
             <Setter Property="Height" Value="{DynamicResource ScrollBarThickness}"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{DynamicResource ScrollBar.Static.Background}"
-                            UseLayoutRounding="False">
+                    <Grid Background="{DynamicResource ScrollBar.Static.Background}"
+                          UseLayoutRounding="False">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <RepeatButton x:Name="PART_LineUpButton"
-                                          Grid.Row="0"
-                                          Grid.Column="0"
-                                          MinWidth="{DynamicResource ScrollBarThickness}"
-                                          VerticalAlignment="Stretch"
-                                          Classes="repeat"
-                                          Focusable="False"
+                                           Grid.Row="0"
+                                           Grid.Column="0"
+                                           Width="{DynamicResource ScrollBarThickness}"
+                                           VerticalAlignment="Stretch"
+                                           Classes="repeat"
+                                           Focusable="False"
                                           ClickMode="Press">
-                                <Path Data="M 4 0 L 4 8 L 0 4 Z"/>
+                                <Path Width="7" Height="7" Stretch="Uniform" Data="M 4 0 L 4 8 L 0 4 Z"/>
                             </RepeatButton>
                             <Border x:Name="PART_MouseOverTrackPit" Grid.Column="1"
                                     Background="{DynamicResource ABrush.Tone1.Background.Static}"
@@ -63,16 +61,19 @@
                                 <Thumb x:Name="thumb" VerticalAlignment="Stretch"/>
                             </Track>
                             <RepeatButton x:Name="PART_LineDownButton"
-                                          Grid.Column="2"
-                                          MinWidth="{DynamicResource ScrollBarThickness}"
-                                          VerticalAlignment="Stretch"
-                                          Classes="repeat"
-                                          Focusable="False"
+                                           Grid.Column="2"
+                                           Width="{DynamicResource ScrollBarThickness}"
+                                           VerticalAlignment="Stretch"
+                                           Classes="repeat"
+                                           Focusable="False"
                                           ClickMode="Press">
-                                <Path Data="M 0 0 L 4 4 L 0 8 Z"/>
+                                <Path Width="7" Height="7" Stretch="Uniform" Data="M 0 0 L 4 4 L 0 8 Z"/>
                             </RepeatButton>
                         </Grid>
-                    </Border>
+                        <Border BorderBrush="{DynamicResource ScrollBar.Static.Border}"
+                                BorderThickness="1"
+                                IsHitTestVisible="False"/>
+                    </Grid>
                 </ControlTemplate>
             </Setter>
         </Style>
@@ -80,17 +81,17 @@
             <Setter Property="Width" Value="{DynamicResource ScrollBarThickness}"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{DynamicResource ScrollBar.Static.Background}"
-                            UseLayoutRounding="False">
+                    <Grid Background="{DynamicResource ScrollBar.Static.Background}"
+                          UseLayoutRounding="False">
                         <Grid RowDefinitions="Auto,*,Auto">
                             <RepeatButton x:Name="PART_LineUpButton"
-                                          Grid.Row="0"
-                                          MinHeight="{DynamicResource ScrollBarThickness}"
-                                          HorizontalAlignment="Stretch"
-                                          Classes="repeat"
-                                          Focusable="False"
+                                           Grid.Row="0"
+                                           Height="{DynamicResource ScrollBarThickness}"
+                                           HorizontalAlignment="Stretch"
+                                           Classes="repeat"
+                                           Focusable="False"
                                           ClickMode="Press">
-                                <Path Data="M 0 4 L 8 4 L 4 0 Z"/>
+                                <Path Width="7" Height="7" Stretch="Uniform" Data="M 0 4 L 8 4 L 4 0 Z"/>
                             </RepeatButton>
                             <Border x:Name="PART_MouseOverTrackPit" Grid.Row="1"
                                     Background="{DynamicResource ABrush.Tone1.Background.Static}"
@@ -121,16 +122,19 @@
                                 <Thumb x:Name="thumb"/>
                             </Track>
                             <RepeatButton x:Name="PART_LineDownButton"
-                                          Grid.Row="2"
-                                          MinHeight="{DynamicResource ScrollBarThickness}"
-                                          HorizontalAlignment="Stretch"
-                                          Classes="repeat"
-                                          Focusable="False"
+                                           Grid.Row="2"
+                                           Height="{DynamicResource ScrollBarThickness}"
+                                           HorizontalAlignment="Stretch"
+                                           Classes="repeat"
+                                           Focusable="False"
                                           ClickMode="Press">
-                                <Path Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                <Path Width="7" Height="7" Stretch="Uniform" Data="M 0 0 L 4 4 L 8 0 Z"/>
                             </RepeatButton>
                         </Grid>
-                    </Border>
+                        <Border BorderBrush="{DynamicResource ScrollBar.Static.Border}"
+                                BorderThickness="1"
+                                IsHitTestVisible="False"/>
+                    </Grid>
                 </ControlTemplate>
             </Setter>
         </Style>
@@ -139,12 +143,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate>
-                        <!-- Fusion thumb: rounded gradient, inset ~2px from the 14px track, 1px outline -->
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{DynamicResource Button.Static.Border}"
+                                BorderBrush="{DynamicResource ScrollBarButton.Static.Border}"
                                 BorderThickness="1"
-                                CornerRadius="1"
-                                Margin="0"/>
+                                CornerRadius="0"
+                                Margin="0">
+                            <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                                    BorderThickness="1"/>
+                        </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -169,8 +175,25 @@
             <Setter Property="Width" Value="{DynamicResource ScrollBarThumbThickness}"/>
         </Style>
         <Style Selector="^ /template/ RepeatButton.repeat">
-            <Setter Property="Padding" Value="2"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource ScrollBarButton.Static.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ScrollBarButton.Static.Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                                BorderThickness="1">
+                            <ContentPresenter Padding="{TemplateBinding Padding}"
+                                              HorizontalContentAlignment="Center"
+                                              VerticalContentAlignment="Center"
+                                              Content="{TemplateBinding Content}"/>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
         </Style>
         <Style Selector="^ /template/ RepeatButton.repeattrack">
             <Setter Property="Template">
@@ -182,6 +205,9 @@
 
         <Style Selector="^ /template/ RepeatButton > Path">
             <Setter Property="Fill" Value="{DynamicResource ABrush.Glyph.Static}"/>
+            <Setter Property="Width" Value="7"/>
+            <Setter Property="Height" Value="7"/>
+            <Setter Property="Stretch" Value="Uniform"/>
         </Style>
 
         <Style Selector="^ /template/ RepeatButton:pointerover > Path">

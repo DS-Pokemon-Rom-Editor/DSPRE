@@ -4,50 +4,48 @@
 			 RequestedThemeVariant="Dark">
 
 	<!-- Theme-aware editor chrome brushes (toolbars, status bars, separators, subtle text).
-	     Defined per ThemeVariant so editors stay readable in both Dark and Light, and the app
-	     can be switched at runtime via Application.RequestedThemeVariant (see ThemeManager). -->
+	     Defined per ThemeVariant so editors follow the internal Qt Fusion palette. -->
 	<Application.Resources>
 		<ResourceDictionary>
-			<!-- DSPRE SoftDark palette + control-colour mapping (vendored from WPFDarkTheme, MIT). -->
+			<!-- Internal Qt Fusion palette + control-colour mapping. -->
 			<ResourceDictionary.MergedDictionaries>
-				<MergeResourceInclude Source="Themes/Colours/SoftDark.axaml"/>
+				<MergeResourceInclude Source="Themes/Colours/Fusion.axaml"/>
 				<MergeResourceInclude Source="Themes/ControlColours.axaml"/>
 			</ResourceDictionary.MergedDictionaries>
 			<!-- Compatibility aliases: a few views (and the old DataGrid theme) reference Fluent
 			     "SystemControl*" resource keys that SimpleTheme doesn't define. Map them to the
-			     SoftDark palette so StaticResource lookups don't throw KeyNotFoundException. -->
+			     Fusion palette so StaticResource lookups don't throw KeyNotFoundException. -->
 			<SolidColorBrush x:Key="SystemControlTransparentBrush"             Color="Transparent"/>
-			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush"    Color="#A8A8A8"/>
-			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#555555"/>
-			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="#3C3C3C"/>
-			<x:Double x:Key="ControlContentThemeFontSize">14</x:Double>
+			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush"    Color="{DynamicResource AColour.Foreground.Disabled}"/>
+			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="{DynamicResource AColour.Tone2.Border.Static}"/>
+			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="{DynamicResource AColour.Tone4.Background.Static}"/>
+			<x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
 
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
-					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#F5F5F5"/>
+					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#EFEFEF"/>
 					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#FAFAFA"/>
-					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#F0F0F0"/>
-					<SolidColorBrush x:Key="Editor.Border"     Color="#DDDDDD"/>
-					<SolidColorBrush x:Key="Editor.Separator"  Color="#CCCCCC"/>
-					<SolidColorBrush x:Key="Editor.Text"       Color="#202020"/>
-					<SolidColorBrush x:Key="Editor.Subtle"     Color="#666666"/>
+					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#EFEFEF"/>
+					<SolidColorBrush x:Key="Editor.Border"     Color="#ABABAB"/>
+					<SolidColorBrush x:Key="Editor.Separator"  Color="#B8B8B8"/>
+					<SolidColorBrush x:Key="Editor.Text"       Color="#000000"/>
+					<SolidColorBrush x:Key="Editor.Subtle"     Color="#767676"/>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key="Dark">
-					<!-- Aligned to the Fusion palette so editor chrome matches the controls -->
-					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#353535"/>
-					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#3C3C3C"/>
-					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#2E2E2E"/>
-					<SolidColorBrush x:Key="Editor.Border"     Color="#262626"/>
-					<SolidColorBrush x:Key="Editor.Separator"  Color="#2E2E2E"/>
-					<SolidColorBrush x:Key="Editor.Text"       Color="#E6E6E6"/>
-					<SolidColorBrush x:Key="Editor.Subtle"     Color="#A8A8A8"/>
+					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#323232"/>
+					<SolidColorBrush x:Key="Editor.PanelBg"    Color="#323232"/>
+					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#262626"/>
+					<SolidColorBrush x:Key="Editor.Border"     Color="#242424"/>
+					<SolidColorBrush x:Key="Editor.Separator"  Color="#212121"/>
+					<SolidColorBrush x:Key="Editor.Text"       Color="#F0F0F0"/>
+					<SolidColorBrush x:Key="Editor.Subtle"     Color="#828282"/>
 				</ResourceDictionary>
 			</ResourceDictionary.ThemeDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
 
 	<Application.Styles>
-		<!-- DSPRE SoftDark control themes (vendored from WPFDarkTheme, MIT) over Avalonia SimpleTheme. -->
+		<!-- DSPRE Qt Fusion control themes over Avalonia SimpleTheme. -->
 		<SimpleTheme/>
 		<StyleInclude Source="Themes/Controls.axaml"/>
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
@@ -91,7 +89,7 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- DSPRE-local rounding + tweaks (last so its setters win over the vendored themes). -->
+		<!-- DSPRE-local rounding + tweaks (last so its setters win over the base Fusion themes). -->
 		<StyleInclude Source="Themes/DspreTweaks.axaml"/>
 	</Application.Styles>
 
