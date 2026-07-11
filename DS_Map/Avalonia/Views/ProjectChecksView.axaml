@@ -19,7 +19,7 @@
           <WrapPanel DockPanel.Dock="Top" Classes="toolbar">
             <Button Content="🔍 Run validation" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
             <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
-                       Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
+                       Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
           </WrapPanel>
           <DataGrid ItemsSource="{Binding Issues}" IsReadOnly="True" GridLinesVisibility="Horizontal"
                     Margin="0,6,0,0" CanUserResizeColumns="True">
@@ -43,7 +43,7 @@
             <Button Content="🔗 Find headers" Click="Find_Click"/>
           </WrapPanel>
           <TextBlock DockPanel.Dock="Top" Text="{Binding FindStatus}" Foreground="{DynamicResource Editor.Subtle}"
-                     FontSize="11" Margin="2,4,0,4" TextWrapping="Wrap"/>
+                     FontSize="12" Margin="2,4,0,4" TextWrapping="Wrap"/>
           <ListBox ItemsSource="{Binding FindResults}"/>
         </DockPanel>
       </TabItem>

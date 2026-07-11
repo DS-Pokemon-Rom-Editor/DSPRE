@@ -26,10 +26,10 @@
         <ComboBox Grid.Column="6" ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"/>
       </Grid>
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
-                 FontSize="11" Foreground="OrangeRed" TextWrapping="Wrap"/>
+                 FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
       <TextBlock Text="Each command is an opcode + argument words. Args are comma/space separated (decimal or 0x..). For waza/be/sub they're padded to the opcode's fixed count on save; WEST opcodes are variable-length so they're written exactly as typed. Edits are shared and repacked into the ROM on the normal save."
-                 FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                 FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
         <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"/>
@@ -55,15 +55,15 @@
                   <Expander.Header>
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
                       <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
-                                 FontFamily="Consolas,monospace" FontSize="11" VerticalAlignment="Center"/>
-                      <Button Grid.Column="1" Content="↑" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="11"/>
-                      <Button Grid.Column="2" Content="↓" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="11"/>
-                      <Button Grid.Column="3" Content="🗑" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="11"/>
+                                 FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"/>
+                      <Button Grid.Column="1" Content="↑" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="2" Content="↓" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="3" Content="🗑" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
                     </Grid>
                   </Expander.Header>
                   <StackPanel Spacing="3" Margin="0,4,0,2">
                     <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="Opcode" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+                      <TextBlock Grid.Column="0" Text="Opcode" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/>
                       <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
                                 ItemsSource="{Binding $parent[ItemsControl].((vm:BattleScriptEditorViewModel)DataContext).OpcodeDisplayNames}"
                                 SelectedIndex="{Binding OpId}"/>
@@ -74,7 +74,7 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ParamVM">
                           <Grid ColumnDefinitions="86,*" ColumnSpacing="6" Margin="0,1">
-                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11"
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
                                        Foreground="{DynamicResource Editor.Subtle}"/>
                             <!-- enum param → dropdown; otherwise → numeric entry -->
                             <ComboBox Grid.Column="1" IsVisible="{Binding IsEnum}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
@@ -86,11 +86,11 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Grid ColumnDefinitions="86,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="Raw args" VerticalAlignment="Center" FontSize="11"
+                      <TextBlock Grid.Column="0" Text="Raw args" VerticalAlignment="Center" FontSize="12"
                                  Foreground="{DynamicResource Editor.Subtle}"
                                  ToolTip.Tip="The raw argument words (read-only). Edit values above."/>
                       <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
-                               FontFamily="Consolas,monospace" FontSize="11" Background="Transparent"/>
+                               FontFamily="Consolas,monospace" FontSize="12" Background="Transparent"/>
                     </Grid>
                   </StackPanel>
                 </Expander>
@@ -111,7 +111,7 @@
         </TabControl>
         <!-- parse-error banner (shown only while the text has errors) -->
         <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
-          <TextBlock Text="{Binding TextErrorSummary}" Foreground="#FF8888" FontSize="11" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding TextErrorSummary}" Foreground="#FF8888" FontSize="12" TextWrapping="Wrap"/>
         </Border>
       </Grid>
 
@@ -184,7 +184,7 @@
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                     ToolTip.Tip="Preview the move cast from the enemy (top) side: flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
-          <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
+          <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
                     ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc, not a move effect."/>
@@ -194,34 +194,34 @@
               <Flyout>
                 <StackPanel Spacing="6" Width="190">
                   <TextBlock Text="Gauge readout" FontWeight="SemiBold"/>
-                  <TextBlock Text="Pokémon to display" FontSize="11"/>
+                  <TextBlock Text="Pokémon to display" FontSize="12"/>
                   <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
                             HorizontalAlignment="Stretch" MaxDropDownHeight="360"
                             ToolTip.Tip="Loads this species' front/back battle sprites into the preview and names the gauge."/>
-                  <TextBlock Text="Level" FontSize="11"/>
+                  <TextBlock Text="Level" FontSize="12"/>
                   <NumericUpDown Value="{Binding GaugeLevel}" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
-                  <TextBlock Text="Max HP" FontSize="11"/>
+                  <TextBlock Text="Max HP" FontSize="12"/>
                   <NumericUpDown Value="{Binding GaugeMaxHp}" Minimum="1" Maximum="999" Increment="1" FormatString="0"/>
-                  <TextBlock Text="HP %" FontSize="11"/>
+                  <TextBlock Text="HP %" FontSize="12"/>
                   <Slider Value="{Binding GaugeHpPercent}" Minimum="0" Maximum="100"/>
-                  <TextBlock Text="{Binding GaugeHpText, StringFormat='{}{0} HP'}" FontSize="11" HorizontalAlignment="Right"/>
+                  <TextBlock Text="{Binding GaugeHpText, StringFormat='{}{0} HP'}" FontSize="12" HorizontalAlignment="Right"/>
                 </StackPanel>
               </Flyout>
             </Button.Flyout>
           </Button>
-          <TextBlock Text="Terrain:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="11" Margin="0,2,4,2"/>
+          <TextBlock Text="Terrain:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="130" MaxDropDownHeight="360" Margin="0,2,6,2"
                     ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on: the tray some move animations interact with."/>
           <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
-                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
         </WrapPanel>
 
         <TextBlock Grid.Row="3" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
         <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
           <ScrollViewer>
             <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
-                     FontFamily="Consolas,monospace" FontSize="11" BorderThickness="0" Background="Transparent"/>
+                     FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
           </ScrollViewer>
         </Border>
       </Grid>

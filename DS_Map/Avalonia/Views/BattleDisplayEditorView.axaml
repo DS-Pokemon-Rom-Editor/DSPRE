@@ -52,19 +52,19 @@
           <!-- Unified display: Male + Female scenes side by side. -->
           <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UnifiedDisplay}">
             <StackPanel Spacing="2">
-              <TextBlock Text="Male" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+              <TextBlock Text="Male" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
               <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteM}" Player="{Binding PlayerSpriteM}"
                                         EnemyY="{Binding EnemyTopM}" PlayerY="{Binding PlayerTopM}"/>
             </StackPanel>
             <StackPanel Spacing="2">
-              <TextBlock Text="Female" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
+              <TextBlock Text="Female" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
               <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteF}" Player="{Binding PlayerSpriteF}"
                                         EnemyY="{Binding EnemyTopF}" PlayerY="{Binding PlayerTopF}"/>
             </StackPanel>
           </StackPanel>
 
           <TextBlock Text="Live: reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
-                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
+                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
         </StackPanel>
 
         <!-- RIGHT COLUMN: the editable fields. -->
@@ -74,7 +74,7 @@
           <StackPanel Spacing="4">
             <TextBlock Text="Party Icon" FontWeight="SemiBold"/>
             <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses, and the icon graphic itself (icons live in NARC /a/0/2/0)."
-                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
               <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
@@ -95,7 +95,7 @@
           <StackPanel Spacing="6">
             <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
             <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
-                       FontSize="11" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
+                       FontSize="12" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 
             <StackPanel IsVisible="{Binding HasSpriteData}" Spacing="6">
               <Grid ColumnDefinitions="160,10,150">
@@ -162,7 +162,7 @@
                   <NumericUpDown Grid.Column="2" Value="{Binding FormBackHeight}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                 </Grid>
                 <TextBlock Text="From height_o.narc, for the form chosen in the Sprites tab. Both genders share these."
-                           FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                           FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
               </StackPanel>
 
               <Grid ColumnDefinitions="160,10,150">
@@ -187,7 +187,7 @@
                 <Separator/>
                 <TextBlock Text="Sprite Animation (pokeanm)" FontWeight="SemiBold"/>
                 <TextBlock Text="Pattern steps: the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
-                           FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                           FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
                 <ItemsControl ItemsSource="{Binding AnimSteps}">
                   <ItemsControl.ItemTemplate>
@@ -207,7 +207,7 @@
                 <Expander Header="Program animation (advanced)" Margin="0,4,0,0">
                   <StackPanel Spacing="6">
                     <TextBlock Text="Program-animation numbers reference scripts in the pokeanime NARC (the actual motion). Front plays on the enemy sprite, the first back step on the player sprite. Press ▶ Play to see them."
-                               FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                     <Grid ColumnDefinitions="160,10,150">
                       <TextBlock Grid.Column="0" Text="Front program #" VerticalAlignment="Center"/>
                       <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontProgNum}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
@@ -216,7 +216,7 @@
                       <TextBlock Grid.Column="0" Text="Front wait" VerticalAlignment="Center"/>
                       <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontWait}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                     </Grid>
-                    <TextBlock Text="Back program steps" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <TextBlock Text="Back program steps" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
                     <ItemsControl ItemsSource="{Binding AnimBack}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:AnimProgStep">
@@ -234,7 +234,7 @@
                     <Separator/>
                     <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
                     <TextBlock Text="Edits the shared animation script, which affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
-                               FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>
                       <Button Content="💾 Save script" Click="SaveProgramScript_Click" IsEnabled="{Binding ScriptDirty}"/>
@@ -246,7 +246,7 @@
                             <DataTemplate x:DataType="vm:ProgramCmdRow">
                               <Grid ColumnDefinitions="186,*,Auto,Auto,Auto" Margin="2" ColumnSpacing="4">
                                 <ComboBox Grid.Column="0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" HorizontalAlignment="Stretch"/>
-                                <TextBox Grid.Column="1" Text="{Binding ArgsText}" Watermark="{Binding ArgHint}" FontFamily="Consolas,monospace"/>
+                                <TextBox Grid.Column="1" Text="{Binding ArgsText}" PlaceholderText="{Binding ArgHint}" FontFamily="Consolas,monospace"/>
                                 <Button Grid.Column="2" Content="↑" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
                                 <Button Grid.Column="3" Content="↓" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
                                 <Button Grid.Column="4" Content="🗑" Click="ProgramCmdRemove_Click" ToolTip.Tip="Remove"/>

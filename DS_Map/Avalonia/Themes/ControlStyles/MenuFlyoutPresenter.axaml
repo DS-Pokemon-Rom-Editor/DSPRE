@@ -15,6 +15,10 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border BorderBrush="{DynamicResource Popup.FrameLight}"
+                            BorderThickness="1,1,0,0">
+                    <Border BorderBrush="{DynamicResource Popup.FrameShadow}"
+                            BorderThickness="0,0,1,1">
                     <ScrollViewer HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
                                   Theme="{StaticResource SimpleMenuScrollViewer}"
                                   VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
@@ -24,6 +28,8 @@
                                         ItemsPanel="{TemplateBinding ItemsPanel}"
                                         KeyboardNavigation.TabNavigation="Continue"/>
                     </ScrollViewer>
+                    </Border>
+                    </Border>
                 </Border>
             </ControlTemplate>
         </Setter>

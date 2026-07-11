@@ -41,9 +41,9 @@
           <Button Grid.Column="0" Content="Show File" Click="ShowFile_Click"
                   IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
           <TextBlock Grid.Column="2" Text="{Binding ModifiedCount}"
-                     VerticalAlignment="Center" Foreground="OrangeRed" FontSize="11"/>
+                     VerticalAlignment="Center" Foreground="OrangeRed" FontSize="12"/>
         </Grid>
-        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                    TextWrapping="Wrap"/>
       </StackPanel>
 

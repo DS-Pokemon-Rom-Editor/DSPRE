@@ -18,15 +18,38 @@
         </Setter>
     </ControlTheme>
 
+    <ControlTheme x:Key="SliderRepeatProgressTrackTheme" TargetType="{x:Type RepeatButton}">
+        <Setter Property="Background" Value="{DynamicResource SliderThumb.Track.Progress.Background}"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{DynamicResource SliderThumb.Track.Progress.Border}"
+                        BorderThickness="1"
+                        CornerRadius="1">
+                    <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                            BorderThickness="1"
+                            CornerRadius="1"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
     <ControlTheme x:Key="SliderThumbHorizontalDefault" TargetType="{x:Type Thumb}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid>
-                    <Border x:Name="PART_Border" Width="11" BorderThickness="1"
+                    <Border Width="17" Height="19" Background="#28000000" Margin="0,1,0,0"/>
+                    <Border x:Name="PART_Border" Width="15" Height="17" BorderThickness="1"
                             Background="{DynamicResource SliderThumb.Static.Background}"
-                            BorderBrush="{DynamicResource SliderThumb.Static.Border}"/>
+                            BorderBrush="{DynamicResource SliderThumb.Static.Border}"
+                            CornerRadius="2">
+                        <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                                BorderThickness="1"
+                                CornerRadius="2"/>
+                    </Border>
                 </Grid>
             </ControlTemplate>
         </Setter>
@@ -46,9 +69,15 @@
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid>
-                    <Border x:Name="PART_Border" Height="11" BorderThickness="1"
+                    <Border Width="19" Height="17" Background="#28000000" Margin="1,0,0,0"/>
+                    <Border x:Name="PART_Border" Width="17" Height="15" BorderThickness="1"
                             Background="{DynamicResource SliderThumb.Static.Background}"
-                            BorderBrush="{DynamicResource SliderThumb.Static.Border}"/>
+                            BorderBrush="{DynamicResource SliderThumb.Static.Border}"
+                            CornerRadius="2">
+                        <Border BorderBrush="{DynamicResource Button.InnerContrast}"
+                                BorderThickness="1"
+                                CornerRadius="2"/>
+                    </Border>
                 </Grid>
             </ControlTemplate>
         </Setter>
@@ -78,18 +107,18 @@
                         <Border x:Name="TrackBackground"
                                 Background="{DynamicResource SliderThumb.Track.Background}"
                                 BorderBrush="{DynamicResource SliderThumb.Track.Border}"
-                                BorderThickness="1" Grid.Row="1" Height="4" Margin="6,0" VerticalAlignment="Center"/>
+                                BorderThickness="1" Grid.Row="1" Height="7" Margin="7,0" VerticalAlignment="Center" CornerRadius="1"/>
                         <Track x:Name="PART_Track"
                                Grid.Row="1"
                                IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
                                Orientation="Horizontal">
                             <Track.DecreaseButton>
-                                <RepeatButton x:Name="PART_DecreaseButton" Theme="{StaticResource SliderRepeatTrackTheme}"/>
+                                <RepeatButton x:Name="PART_DecreaseButton" Theme="{StaticResource SliderRepeatProgressTrackTheme}"/>
                             </Track.DecreaseButton>
                             <Track.IncreaseButton>
                                 <RepeatButton x:Name="PART_IncreaseButton" Theme="{StaticResource SliderRepeatTrackTheme}"/>
                             </Track.IncreaseButton>
-                            <Thumb x:Name="thumb" MinWidth="20" MinHeight="20" Theme="{StaticResource SliderThumbHorizontalDefault}"/>
+                            <Thumb x:Name="thumb" MinWidth="19" MinHeight="19" Theme="{StaticResource SliderThumbHorizontalDefault}"/>
                         </Track>
                     </Grid>
                 </ControlTemplate>
@@ -109,18 +138,18 @@
                         <Border x:Name="TrackBackground"
                                 Background="{DynamicResource SliderThumb.Track.Background}"
                                 BorderBrush="{DynamicResource SliderThumb.Track.Border}"
-                                BorderThickness="1" Grid.Column="1" Width="4" Margin="0,6" HorizontalAlignment="Center"/>
+                                BorderThickness="1" Grid.Column="1" Width="7" Margin="0,7" HorizontalAlignment="Center" CornerRadius="1"/>
                         <Track x:Name="PART_Track"
                                Grid.Column="1"
                                IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
                                Orientation="Vertical">
                             <Track.DecreaseButton>
-                                <RepeatButton x:Name="PART_DecreaseButton" Theme="{StaticResource SliderRepeatTrackTheme}"/>
+                                <RepeatButton x:Name="PART_DecreaseButton" Theme="{StaticResource SliderRepeatProgressTrackTheme}"/>
                             </Track.DecreaseButton>
                             <Track.IncreaseButton>
                                 <RepeatButton x:Name="PART_IncreaseButton" Theme="{StaticResource SliderRepeatTrackTheme}"/>
                             </Track.IncreaseButton>
-                            <Thumb x:Name="thumb" MinWidth="20" MinHeight="20" Theme="{StaticResource SliderThumbVerticalDefault}"/>
+                            <Thumb x:Name="thumb" MinWidth="19" MinHeight="19" Theme="{StaticResource SliderThumbVerticalDefault}"/>
                         </Track>
                     </Grid>
                 </ControlTemplate>

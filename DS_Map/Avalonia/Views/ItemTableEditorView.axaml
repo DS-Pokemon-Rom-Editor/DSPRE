@@ -33,7 +33,7 @@
               <NumericUpDown Value="{Binding ActivationDivisorEdit}"
                              Minimum="1" Maximum="255" FormatString="0" Width="100"/>
               <TextBlock Text="(Pickup activates when BattleSystem_Random() % divisor == 0)"
-                         VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
+                         VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
             </StackPanel>
           </Border>
 
@@ -72,7 +72,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -80,7 +80,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -88,7 +88,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item2}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item2}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -96,7 +96,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item3}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item3}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -104,7 +104,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item4}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item4}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -112,7 +112,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item5}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item5}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -120,7 +120,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item6}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item6}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -128,7 +128,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item7}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item7}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -136,7 +136,7 @@
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <ComboBox ItemsSource="{Binding ItemNamesList}"
-                                SelectedItem="{Binding Item8}" HorizontalAlignment="Stretch" FontSize="11"/>
+                                SelectedItem="{Binding Item8}" HorizontalAlignment="Stretch" FontSize="12"/>
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -162,7 +162,7 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:RarePickupRow">
                     <ComboBox ItemsSource="{Binding ItemNamesList}"
-                              SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="11"/>
+                              SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="12"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -170,7 +170,7 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:RarePickupRow">
                     <ComboBox ItemsSource="{Binding ItemNamesList}"
-                              SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="11"/>
+                              SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="12"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -190,12 +190,12 @@
                       IsEnabled="{Binding HiddenItemSelected}"/>
             </StackPanel>
             <TextBlock DockPanel.Dock="Top" Text="{Binding HiddenEntryCount}"
-                       FontSize="11" Margin="0,0,0,4"/>
+                       FontSize="12" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding HiddenItems}"
                      SelectedItem="{Binding SelectedHiddenItem}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:HiddenItemRowVM">
-                  <TextBlock Text="{Binding Display}" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding Display}" FontSize="12" TextWrapping="Wrap"/>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
@@ -206,25 +206,25 @@
                   IsEnabled="{Binding HiddenItemSelected}">
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
-                <TextBlock Text="Item:" FontSize="11"/>
+                <TextBlock Text="Item:" FontSize="12"/>
                 <ComboBox ItemsSource="{Binding ItemNames}"
                           SelectedIndex="{Binding SelectedItemID}"
                           HorizontalAlignment="Stretch"/>
               </StackPanel>
               <Grid ColumnDefinitions="*,12,*">
                 <StackPanel Grid.Column="0" Spacing="4">
-                  <TextBlock Text="Amount:" FontSize="11"/>
+                  <TextBlock Text="Amount:" FontSize="12"/>
                   <NumericUpDown Value="{Binding SelectedAmount}"
                                  Minimum="1" Maximum="99" FormatString="0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
-                  <TextBlock Text="Script ID:" FontSize="11"/>
+                  <TextBlock Text="Script ID:" FontSize="12"/>
                   <NumericUpDown Value="{Binding SelectedScriptID}"
                                  Minimum="0" Maximum="255" FormatString="0"/>
                 </StackPanel>
               </Grid>
               <TextBlock Text="{Binding SelectedScriptLabel}"
-                         FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="11"/>
+                         FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
             </StackPanel>
           </Border>
         </Grid>

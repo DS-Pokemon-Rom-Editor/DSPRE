@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using DSPRE.Editors;
 
 namespace DSPRE.Avalonia.Views
@@ -22,6 +23,27 @@ namespace DSPRE.Avalonia.Views
             Height = height;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Content = content;
+
+            if (content?.DataContext is IEditorWithUnsavedChanges editor)
+            {
+                string baseTitle = title ?? "";
+                void UpdateTitle() => Title = (editor.HasUnsavedChanges ? "● " : "") + baseTitle;
+                UpdateTitle();
+                if (editor is System.ComponentModel.INotifyPropertyChanged inpc)
+                    inpc.PropertyChanged += (_, e) =>
+                    {
+                        if (e.PropertyName == nameof(IEditorWithUnsavedChanges.HasUnsavedChanges)) UpdateTitle();
+                    };
+
+                KeyBindings.Add(new KeyBinding
+                {
+                    Gesture = new KeyGesture(Key.S, KeyModifiers.Control),
+                    Command = new DSPRE.Avalonia.EditorWindowChrome.RelayCommand(() =>
+                    {
+                        if (editor.HasUnsavedChanges) editor.SaveChanges();
+                    }),
+                });
+            }
 
             // Hosted UserControl editors don't get EditorWindowChrome; forward Ctrl+Z / Ctrl+Y here when
             // their VM supports undo (e.g. the Header editor).

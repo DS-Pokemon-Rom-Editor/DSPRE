@@ -1,9 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Control themes vendored from WPFDarkTheme's Avalonia theme (MIT, (c) 2021 REghZy):
-         https://github.com/AngryCarrot789/WPFDarkTheme  — see THIRD_PARTY_NOTICES.txt.
-         Window.axaml is intentionally omitted (it required the theme's custom WindowEx control). -->
-    <!-- This file contains all of the standard control styles/control themes -->
+    <!-- Internal Qt Fusion control themes. -->
     <Styles.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

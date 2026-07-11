@@ -47,12 +47,12 @@
 		</StackPanel>
 
 		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
-		  <TextBlock Text="{Binding EntryIdText}" FontSize="11"/>
+		  <TextBlock Text="{Binding EntryIdText}" FontSize="12"/>
 		  <Grid ColumnDefinitions="*,*">
 			<ComboBox Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding MonNames}"
 					  SelectedIndex="{Binding CbMonIndex}" Margin="0,0,0,4"/>
 		  </Grid>
-		  <TextBlock Text="{Binding MonStatusText}" FontSize="11" TextWrapping="Wrap"/>
+		  <TextBlock Text="{Binding MonStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
 			<Button Content="Add"     IsEnabled="{Binding CanAddMon}"     Click="AddMon_Click"/>
 			<Button Content="Replace" IsEnabled="{Binding CanReplaceMon}" Click="ReplaceMon_Click"/>
@@ -70,11 +70,11 @@
 
 		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
 		  <StackPanel Orientation="Horizontal" Spacing="12">
-			<TextBlock Text="{Binding MoveCountText}" Foreground="{Binding MoveCountBrush}" FontSize="11"/>
-			<TextBlock Text="{Binding MoveIdText}"    FontSize="11"/>
+			<TextBlock Text="{Binding MoveCountText}" Foreground="{Binding MoveCountBrush}" FontSize="12"/>
+			<TextBlock Text="{Binding MoveIdText}"    FontSize="12"/>
 		  </StackPanel>
 		  <ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbMoveIndex}"/>
-		  <TextBlock Text="{Binding MoveStatusText}" FontSize="11" TextWrapping="Wrap"/>
+		  <TextBlock Text="{Binding MoveStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
 			<Button Content="Add"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"/>
 			<Button Content="Replace" IsEnabled="{Binding CanReplaceMove}" Click="ReplaceMove_Click"/>
@@ -94,9 +94,9 @@
 				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
 		  <StackPanel Spacing="4">
 			<TextBlock Text="Bulk Replace Move" FontWeight="SemiBold" FontSize="12"/>
-			<TextBlock Text="Replace:" FontSize="11"/>
+			<TextBlock Text="Replace:" FontSize="12"/>
 			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
-			<TextBlock Text="With:" FontSize="11"/>
+			<TextBlock Text="With:" FontSize="12"/>
 			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplacerIndex}"/>
 			<Button Content="Bulk Replace" HorizontalAlignment="Stretch" Click="BulkReplace_Click"/>
 		  </StackPanel>

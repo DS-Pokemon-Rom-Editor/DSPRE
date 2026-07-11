@@ -37,9 +37,10 @@
                         CornerRadius="{TemplateBinding CornerRadius}">
                     <Panel>
                         <ContentPresenter x:Name="PART_HeaderPresenter"
-                                          Margin="{TemplateBinding Padding}"
-                                          Content="{TemplateBinding Header}"
-                                          ContentTemplate="{TemplateBinding HeaderTemplate}">
+                                           Margin="{TemplateBinding Padding}"
+                                           Content="{TemplateBinding Header}"
+                                           ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                           TextElement.Foreground="{TemplateBinding Foreground}">
                             <ContentPresenter.DataTemplates>
                                 <DataTemplate DataType="sys:String">
                                     <AccessText Text="{Binding}" VerticalAlignment="Center"/>
@@ -54,7 +55,11 @@
                             <Border Background="{DynamicResource Popup.Static.Background}"
                                     BorderBrush="{DynamicResource Popup.Static.Border}"
                                     BorderThickness="1">
-                                <Grid>
+                                <Border BorderBrush="{DynamicResource Popup.FrameLight}"
+                                        BorderThickness="1,1,0,0">
+                                <Border BorderBrush="{DynamicResource Popup.FrameShadow}"
+                                        BorderThickness="0,0,1,1">
+                                 <Grid>
                                     <Border Background="{DynamicResource MenuItem.IconBar.Static.Background}"
                                             BorderBrush="{DynamicResource MenuItem.IconBar.Static.Border}"
                                             BorderThickness="0,0,1,0"
@@ -63,8 +68,10 @@
                                         <ItemsPresenter x:Name="PART_ItemsPresenter"
                                                         Grid.IsSharedSizeScope="True"
                                                         ItemsPanel="{TemplateBinding ItemsPanel}"/>
-                                    </ScrollViewer>
-                                </Grid>
+                                     </ScrollViewer>
+                                 </Grid>
+                                </Border>
+                                </Border>
                             </Border>
                         </Popup>
                     </Panel>
@@ -74,7 +81,11 @@
 
         <Style Selector="^:selected /template/ Border#root">
             <Setter Property="Background" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MenuItem.MouseOver.Border}"/>
+        </Style>
+
+        <Style Selector="^:selected">
+            <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
         </Style>
 
         <Style Selector="^:empty /template/ Path#rightArrow">
@@ -89,6 +100,7 @@
 
     <ControlTheme x:Key="{x:Type Menu}" TargetType="{x:Type Menu}">
         <Setter Property="ItemContainerTheme" Value="{StaticResource SimpleTopLevelMenuItem}"/>
+        <Setter Property="Background" Value="{DynamicResource Window.Static.Background}"/>
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="Template">
             <ControlTemplate>

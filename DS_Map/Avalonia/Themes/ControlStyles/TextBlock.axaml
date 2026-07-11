@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ControlTheme x:Key="{x:Type TextBlock}" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="FontSize" Value="{DynamicResource ControlContentThemeFontSize}"/>
         <Style Selector="^:disabled">
             <Setter Property="Opacity" Value="0.5"/>
         </Style>

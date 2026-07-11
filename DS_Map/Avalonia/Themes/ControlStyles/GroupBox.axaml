@@ -4,7 +4,7 @@
          top line and interrupting it (the title's background masks the frame line behind it).
          No filled header bar. Targets Avalonia's built-in GroupBox (HeaderedContentControl). -->
     <ControlTheme x:Key="{x:Type GroupBox}" TargetType="GroupBox">
-        <Setter Property="Background" Value="{DynamicResource ABrush.Tone4.Background.Static}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource GroupBox.Static.Border}"/>
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="BorderThickness" Value="1"/>

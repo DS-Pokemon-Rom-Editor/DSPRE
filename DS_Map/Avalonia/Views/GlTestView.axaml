@@ -14,11 +14,11 @@
           <Button Content="Reset to cube" Click="ResetCube_Click"/>
         </StackPanel>
         <TextBlock Text="Drag to orbit · scroll to zoom. Open an NSBMD model, then bind its NSBTX texture file (map/building models keep textures separately). Self-contained models show textures without a separate NSBTX."
-                   FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                   FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       </StackPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock x:Name="StatusLabel" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <TextBlock x:Name="StatusLabel" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
     <!-- Transparent host Border is hit-testable, so it receives the pointer events
          that the bare OpenGlControlBase (a Control with no Background) does not. -->

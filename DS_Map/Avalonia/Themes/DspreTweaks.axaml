@@ -1,28 +1,36 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- DSPRE-local tweaks layered on top of the vendored SoftDark theme.
-         Kept separate so the vendored ControlStyles stay close to upstream. -->
+    <!-- DSPRE-local tweaks layered on top of the Qt Fusion control themes. -->
 
-    <!-- Rounded corners. The vendored templates all bind {TemplateBinding CornerRadius}
-         but never set a value (so they render square); these setters supply it. -->
-    <!-- The window itself must use our palette. We dropped the vendored Window theme, so without
+    <!-- Rounded corners. The control templates bind {TemplateBinding CornerRadius}; these setters supply it. -->
+    <!-- The window itself must use our palette. We do not ship a separate Window theme, so without
          this the window falls back to SimpleTheme's background and the whole palette looks "unchanged"
          (only the controls were getting our colours). -->
     <Style Selector="Window">
         <Setter Property="Background" Value="{DynamicResource Window.Static.Background}"/>
+        <Setter Property="FontFamily" Value="Segoe UI, Sans Serif, sans-serif"/>
+        <Setter Property="FontSize" Value="{DynamicResource ControlContentThemeFontSize}"/>
     </Style>
 
     <!-- 3px corner radius (a touch more than Fusion's nominal 2px, reads better at our DPI). -->
-    <Style Selector="Button">        <Setter Property="CornerRadius" Value="3"/></Style>
-    <Style Selector="ToggleButton">  <Setter Property="CornerRadius" Value="3"/></Style>
+    <Style Selector="Button">
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Padding" Value="9,4"/>
+    </Style>
+    <Style Selector="ToggleButton">
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Padding" Value="9,4"/>
+    </Style>
     <Style Selector="ButtonSpinner"> <Setter Property="CornerRadius" Value="3"/></Style>
     <!-- (RepeatButton intentionally left square: spin up/down are internal segments) -->
-    <Style Selector="ComboBox">      <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="24"/></Style>
-    <Style Selector="TextBox">       <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="24"/></Style>
+    <Style Selector="ComboBox">      <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="26"/></Style>
+    <Style Selector="TextBox">       <Setter Property="CornerRadius" Value="3"/><Setter Property="MinHeight" Value="26"/></Style>
     <Style Selector="ListBox">       <Setter Property="CornerRadius" Value="3"/></Style>
     <Style Selector="TabItem">       <Setter Property="CornerRadius" Value="3,3,0,0"/></Style>
 
-    <!-- NumericUpDown has no ControlTheme in the vendored set, so its own background falls
+    <!-- NumericUpDown has no local ControlTheme, so its own background falls
          through to the SimpleTheme default (the white patch behind the transparent spinner
          column). Pin it to the text-field background and round it. -->
     <Style Selector="NumericUpDown">
@@ -51,5 +59,49 @@
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="6,0"/>
+    </Style>
+
+    <Style Selector="DataGrid">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.Static.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource DataGrid.Static.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource DataGrid.HorizontalSeparatorBrush}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource DataGrid.VerticalSeparatorBrush}"/>
+        <Setter Property="RowBackground" Value="{DynamicResource DataGrid.CellItem.Static.Background}"/>
+    </Style>
+
+    <Style Selector="DataGridColumnHeader">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.HeaderItem.Static.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="Padding" Value="6,3"/>
+    </Style>
+    <Style Selector="DataGridColumnHeader:pointerover">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.HeaderItem.MouseOver.Background}"/>
+    </Style>
+    <Style Selector="DataGridColumnHeader:pressed">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.HeaderItem.MouseDown.Background}"/>
+    </Style>
+
+    <Style Selector="DataGridRow">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.CellItem.Static.Background}"/>
+    </Style>
+    <Style Selector="DataGridRow:pointerover">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.CellItem.MouseOver.Background}"/>
+    </Style>
+    <Style Selector="DataGridRow:selected">
+        <Setter Property="Background" Value="{DynamicResource DataGrid.Row.Selected.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
+    </Style>
+
+    <Style Selector="DataGridCell">
+        <Setter Property="BorderBrush" Value="{DynamicResource DataGrid.VerticalSeparatorBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="Padding" Value="4,2"/>
+    </Style>
+    <Style Selector="DataGridCell:selected">
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
     </Style>
 </Styles>

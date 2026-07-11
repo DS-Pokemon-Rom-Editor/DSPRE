@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia
             });
         }
 
-        private sealed class RelayCommand : ICommand
+        public sealed class RelayCommand : ICommand
         {
             private readonly Action _execute;
             public RelayCommand(Action execute) => _execute = execute;

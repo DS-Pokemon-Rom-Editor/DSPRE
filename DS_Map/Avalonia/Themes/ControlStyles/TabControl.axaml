@@ -9,12 +9,12 @@
             </TabControl>
         </Grid>
     </Design.PreviewWith>
-    <!-- Qt Fusion tab widget: the content sits in a frame filled with tabFrameColor (Tone4) and the
+    <!-- Qt Fusion tab widget: the content sits in a frame filled with tabFrameColor and the
          SELECTED tab is the same colour, overlapping the frame's top edge so the two merge with no
          seam (PE_FrameTabWidget). Unselected tabs are darker + recessed, so the frame line shows
          under them but not under the selected one. -->
     <ControlTheme x:Key="{x:Type TabControl}" TargetType="{x:Type TabControl}">
-        <Setter Property="Background" Value="{DynamicResource ABrush.Tone4.Background.Static}"/>
+        <Setter Property="Background" Value="{DynamicResource TabControl.Frame.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="BorderThickness" Value="1"/>
