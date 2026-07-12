@@ -26,13 +26,12 @@ namespace DSPRE
         public static async Task<Result> RunAsync(params string[] args)
         {
             if (!IsAvailable)
-                throw new FileNotFoundException("rotom.exe was not found in DSPRE's Tools folder.", ExePath);
+                throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", ExePath);
 
             using var process = new Process
             {
                 StartInfo =
                 {
-                    FileName = ExePath,
                     WorkingDirectory = ProjectRoot,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -43,13 +42,20 @@ namespace DSPRE
 
             foreach (string arg in args)
                 process.StartInfo.ArgumentList.Add(arg);
+            if (!DSUtils.ConfigureToolStartInfo(process.StartInfo, "rotom"))
+            {
+                string error = DSUtils.ToolAvailabilityError("rotom");
+                AppLogger.Error(error);
+                return new Result { ExitCode = -1, Stderr = error };
+            }
 
             var stdout = new StringBuilder();
             var stderr = new StringBuilder();
             process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.AppendLine(e.Data); };
             process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.AppendLine(e.Data); };
 
-            AppLogger.Info("Running rotom: " + ExePath + " " + string.Join(" ", args));
+            AppLogger.Info("Running rotom: " + process.StartInfo.FileName + " "
+                + string.Join(" ", process.StartInfo.ArgumentList));
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();

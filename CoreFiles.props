@@ -33,7 +33,7 @@
     <CoreCompile Include="$(DsMapDir)DatabaseSetup.cs" />
     <CoreCompile Include="$(DsMapDir)GameBanner.cs" />
     <CoreCompile Include="$(DsMapDir)GameCamera.cs" />
-    <CoreCompile Include="$(DsMapDir)RotomTool.cs" />
+
     <CoreCompile Include="$(DsMapDir)Editors\IEditorWithUnsavedChanges.cs" />
     <CoreCompile Include="$(DsMapDir)Editors\TrainerEditor\DVCalculator\DVCalculator.cs" />
     <CoreCompile Include="$(DsMapDir)Editors\Utils\NarcReader.cs" />

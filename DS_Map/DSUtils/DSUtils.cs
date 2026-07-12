@@ -18,6 +18,7 @@ namespace DSPRE {
 
         public const int ERR_OVERLAY_NOTFOUND = -1;
         public const int ERR_OVERLAY_ALREADY_UNCOMPRESSED = -2;
+        public const int ERR_TOOL_UNAVAILABLE = -3;
 
         public const string backupSuffix = ".backup";
 
@@ -104,16 +105,153 @@ namespace DSPRE {
             return buffer;
         }
         /// <summary>
-        /// Absolute path of a bundled native tool: Tools\&lt;name&gt;.exe on Windows, Tools/&lt;name&gt;
-        /// elsewhere (CI drops the per-OS binaries into the Tools folder next to the exe).
+        /// Resolves a bundled tool. Windows uses the .exe file; other platforms prefer an
+        /// extensionless native binary and fall back to the .exe when no native binary exists.
         /// </summary>
-        public static string ToolPath(string name) =>
-            Path.Combine(System.AppContext.BaseDirectory, "Tools", OperatingSystem.IsWindows() ? name + ".exe" : name);
+        public static string ToolPath(string name)
+        {
+            string toolsDirectory = Path.Combine(System.AppContext.BaseDirectory, "Tools");
+            string nativePath = Path.Combine(toolsDirectory, name);
+            if (OperatingSystem.IsWindows()) return nativePath + ".exe";
+
+            // TODO(macOS): distinguish macOS-native tools from the Linux binaries currently bundled
+            // under extensionless names. macOS will likely use the .exe files through Wine instead.
+            if (File.Exists(nativePath)) return nativePath;
+
+            string windowsPath = nativePath + ".exe";
+            return File.Exists(windowsPath) ? windowsPath : nativePath;
+        }
+
+        /// <summary>
+        /// Configures a process to run a bundled tool directly or through Wine when a non-Windows
+        /// platform only has the Windows executable available. Returns false when the tool or Wine
+        /// is unavailable, allowing callers to report the failure without reaching Process.Start().
+        /// Call this after setting any tool arguments.
+        /// </summary>
+        public static bool ConfigureToolStartInfo(ProcessStartInfo startInfo, string name)
+        {
+            if (startInfo == null) throw new ArgumentNullException(nameof(startInfo));
+
+            string toolPath = ToolPath(name);
+            if (!File.Exists(toolPath)) return false;
+
+            if (OperatingSystem.IsWindows() || !toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                startInfo.FileName = toolPath;
+                return true;
+            }
+
+            if (!IsCommandAvailable("wine")) return false;
+
+            startInfo.FileName = "wine";
+            // Wine's own diagnostics would otherwise be mixed into tool stderr; legacy callers use
+            // non-empty stderr as a failure signal.
+            startInfo.Environment["WINEDEBUG"] = "-all";
+
+            for (int i = 0; i < startInfo.ArgumentList.Count; i++)
+                startInfo.ArgumentList[i] = ToWinePath(startInfo.ArgumentList[i]);
+
+            if (startInfo.ArgumentList.Count > 0)
+            {
+                startInfo.ArgumentList.Insert(0, toolPath);
+                return true;
+            }
+
+            startInfo.Arguments = ConvertUnixPathsToWine(startInfo.Arguments);
+            string toolArgument = '"' + toolPath.Replace("\"", "\\\"") + '"';
+            startInfo.Arguments = string.IsNullOrWhiteSpace(startInfo.Arguments)
+                ? toolArgument
+                : toolArgument + " " + startInfo.Arguments;
+            return true;
+        }
+
+        /// <summary>Returns a user-facing explanation for a tool that could not be launched.</summary>
+        public static string ToolAvailabilityError(string name)
+        {
+            string toolPath = ToolPath(name);
+            if (!File.Exists(toolPath))
+                return $"{name} was not found in DSPRE's Tools folder.";
+
+            if (!OperatingSystem.IsWindows()
+                && toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                && !IsCommandAvailable("wine"))
+            {
+                return $"Wine is required to run {Path.GetFileName(toolPath)} on this platform, "
+                    + "but Wine was not found on PATH.";
+            }
+
+            return $"Unable to launch {Path.GetFileName(toolPath)}.";
+        }
+
+        /// <summary>Logs and displays a tool-launch failure without throwing from the caller.</summary>
+        public static void ReportToolUnavailable(string name)
+        {
+            string message = ToolAvailabilityError(name);
+            AppLogger.Error(message);
+            AppMessages.Error(message, "Tool unavailable");
+        }
+
+        private static bool IsCommandAvailable(string command)
+        {
+            string path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path)) return false;
+
+            foreach (string directory in path.Split(Path.PathSeparator))
+            {
+                string candidate = Path.Combine(directory, command);
+                if (File.Exists(candidate)) return true;
+            }
+
+            return false;
+        }
+
+        private static string ConvertUnixPathsToWine(string arguments)
+        {
+            if (string.IsNullOrEmpty(arguments)) return arguments;
+
+            var converted = new StringBuilder(arguments.Length);
+            int index = 0;
+            while (index < arguments.Length)
+            {
+                if (char.IsWhiteSpace(arguments[index]))
+                {
+                    converted.Append(arguments[index++]);
+                    continue;
+                }
+
+                if (arguments[index] == '"')
+                {
+                    converted.Append(arguments[index++]);
+                    int valueStart = index;
+                    while (index < arguments.Length && arguments[index] != '"') index++;
+                    converted.Append(ToWinePath(arguments.Substring(valueStart, index - valueStart)));
+                    if (index < arguments.Length) converted.Append(arguments[index++]);
+                    continue;
+                }
+
+                int tokenStart = index;
+                while (index < arguments.Length && !char.IsWhiteSpace(arguments[index])) index++;
+                converted.Append(ToWinePath(arguments.Substring(tokenStart, index - tokenStart)));
+            }
+
+            return converted.ToString();
+        }
+
+        private static string ToWinePath(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value[0] != '/') return value;
+            return "Z:" + value.Replace('/', '\\');
+        }
 
         public static Process CreateDecompressProcess(string path) {
             Process decompress = new Process();
-            decompress.StartInfo.FileName = ToolPath("blz");
             decompress.StartInfo.Arguments = @" -d " + '"' + path + '"';
+            if (!ConfigureToolStartInfo(decompress.StartInfo, "blz"))
+            {
+                ReportToolUnavailable("blz");
+                decompress.Dispose();
+                return null;
+            }
             decompress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             decompress.StartInfo.CreateNoWindow = true;
             return decompress;
@@ -145,7 +283,6 @@ namespace DSPRE {
             string headerPath = Path.Combine(workDir, "header.bin");
 
             Process unpack = new Process();
-            unpack.StartInfo.FileName = DSUtils.ToolPath("ndstool");
             unpack.StartInfo.Arguments = "-x " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + arm9Path + '"'
                 + " -7 " + '"' + arm7Path + '"'
@@ -155,6 +292,12 @@ namespace DSPRE {
                 + " -y " + '"' + overlayPath + '"'
                 + " -t " + '"' + bannerPath + '"'
                 + " -h " + '"' + headerPath + '"';
+            if (!ConfigureToolStartInfo(unpack.StartInfo, "ndstool"))
+            {
+                ReportToolUnavailable("ndstool");
+                unpack.Dispose();
+                return false;
+            }
 
             AppMessages.PumpEvents();
 
@@ -198,8 +341,13 @@ namespace DSPRE {
             Directory.CreateDirectory(workDir);
 
             Process unpack = new Process();
-            unpack.StartInfo.FileName = DSUtils.ToolPath("dsrom");
             unpack.StartInfo.Arguments = $"extract -r \"{ndsFileName}\" -o \"{workDir}\"";
+            if (!ConfigureToolStartInfo(unpack.StartInfo, "dsrom"))
+            {
+                ReportToolUnavailable("dsrom");
+                unpack.Dispose();
+                return false;
+            }
             unpack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             unpack.StartInfo.CreateNoWindow = true;
             unpack.StartInfo.RedirectStandardError = true;
@@ -286,8 +434,13 @@ namespace DSPRE {
             }
 
             Process repack = new Process();
-            repack.StartInfo.FileName = DSUtils.ToolPath("dsrom");
             repack.StartInfo.Arguments = $"build -c \"{configPath}\" -o \"{ndsFileName}\"";
+            if (!ConfigureToolStartInfo(repack.StartInfo, "dsrom"))
+            {
+                ReportToolUnavailable("dsrom");
+                repack.Dispose();
+                return false;
+            }
             repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             repack.StartInfo.CreateNoWindow = true;
             repack.StartInfo.RedirectStandardError = true;
@@ -354,7 +507,6 @@ namespace DSPRE {
             string headerPath = Path.Combine(workDir, "header.bin");
 
             Process repack = new Process();
-            repack.StartInfo.FileName = DSUtils.ToolPath("ndstool");
             repack.StartInfo.Arguments = "-c " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + arm9Path + '"'
                 + " -7 " + '"' + arm7Path + '"'
@@ -364,6 +516,12 @@ namespace DSPRE {
                 + " -y " + '"' + overlayPath + '"'
                 + " -t " + '"' + bannerPath + '"'
                 + " -h " + '"' + headerPath + '"';
+            if (!ConfigureToolStartInfo(repack.StartInfo, "ndstool"))
+            {
+                ReportToolUnavailable("ndstool");
+                repack.Dispose();
+                return false;
+            }
 
             AppMessages.PumpEvents();
             repack.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
@@ -465,7 +623,6 @@ namespace DSPRE {
             {
                 // Use ndstool directly to build temp ROM
                 Process buildTemp = new Process();
-                buildTemp.StartInfo.FileName = DSUtils.ToolPath("ndstool");
                 buildTemp.StartInfo.Arguments = "-c \"" + tempRomPath + "\""
                     + " -9 \"" + Path.Combine(workDir, "arm9.bin") + "\""
                     + " -7 \"" + Path.Combine(workDir, "arm7.bin") + "\""
@@ -475,6 +632,12 @@ namespace DSPRE {
                     + " -y \"" + Path.Combine(workDir, "overlay") + "\""
                     + " -t \"" + Path.Combine(workDir, "banner.bin") + "\""
                     + " -h \"" + Path.Combine(workDir, "header.bin") + "\"";
+                if (!ConfigureToolStartInfo(buildTemp.StartInfo, "ndstool"))
+                {
+                    ReportToolUnavailable("ndstool");
+                    buildTemp.Dispose();
+                    return 0;
+                }
                 buildTemp.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
                 buildTemp.StartInfo.CreateNoWindow = true;
                 buildTemp.StartInfo.UseShellExecute = false;

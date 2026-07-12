@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using DSPRE.Avalonia.Data;
 using Xunit;
 
+// TODO: rename WEST to something more descriptive
+
 namespace DSPRE.Tests
 {
     /// <summary>

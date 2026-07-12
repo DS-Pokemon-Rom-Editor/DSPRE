@@ -278,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 if (!RotomTool.IsAvailable)
-                    throw new FileNotFoundException("rotom.exe was not found in DSPRE's Tools folder.", RotomTool.ExePath);
+                    throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", RotomTool.ExePath);
 
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
 
@@ -681,7 +681,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!RotomTool.IsLspAvailable)
             {
-                DiagnosticsStatusText = "Live diagnostics unavailable: rotom-lsp.exe was not found.";
+                DiagnosticsStatusText = "Live diagnostics unavailable: "
+                    + DSUtils.ToolAvailabilityError("rotom-lsp");
                 return;
             }
 

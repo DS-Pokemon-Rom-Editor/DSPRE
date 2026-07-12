@@ -92,7 +92,6 @@ namespace DSPRE
             }
 
             Process chatot = new Process();
-            chatot.StartInfo.FileName = chatotPath;
             chatot.StartInfo.Arguments = $"{mode} -m \"{charMapPath}\" {plainTextArg} {binaryArg}";
             chatot.StartInfo.UseShellExecute = false;
             chatot.StartInfo.CreateNoWindow = true;
@@ -117,7 +116,14 @@ namespace DSPRE
                 chatot.StartInfo.Arguments += " " + extraArgs;
             }
 
-            // Set working directory to the directory containing chatot.exe
+            if (!DSUtils.ConfigureToolStartInfo(chatot.StartInfo, "chatot"))
+            {
+                chatot.Dispose();
+                DSUtils.ReportToolUnavailable("chatot");
+                return;
+            }
+
+            // Set working directory to the directory containing the chatot tool
             chatot.StartInfo.WorkingDirectory = Path.GetDirectoryName(chatotPath);
 
             // Debug

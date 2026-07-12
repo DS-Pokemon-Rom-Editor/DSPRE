@@ -40,8 +40,14 @@ namespace DSPRE {
             }
 
             Process apicula = new Process();
-            apicula.StartInfo.FileName = DSUtils.ToolPath("apicula");
             apicula.StartInfo.Arguments = $" convert \"{tempNSBMDPath}\" --output \"{outDir}\"";
+            if (!DSUtils.ConfigureToolStartInfo(apicula.StartInfo, "apicula"))
+            {
+                apicula.Dispose();
+                File.Delete(tempNSBMDPath);
+                DSUtils.ReportToolUnavailable("apicula");
+                return;
+            }
             apicula.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             apicula.StartInfo.CreateNoWindow = true;
             apicula.Start();
@@ -100,8 +106,14 @@ namespace DSPRE {
             }
 
             Process apicula = new Process();
-            apicula.StartInfo.FileName = DSUtils.ToolPath("apicula");
             apicula.StartInfo.Arguments = $" convert \"{tempNSBMDPath}\" -f glb --output \"{outDir}\"";
+            if (!DSUtils.ConfigureToolStartInfo(apicula.StartInfo, "apicula"))
+            {
+                apicula.Dispose();
+                File.Delete(tempNSBMDPath);
+                DSUtils.ReportToolUnavailable("apicula");
+                return;
+            }
             apicula.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             apicula.StartInfo.CreateNoWindow = true;
             apicula.Start();

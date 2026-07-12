@@ -305,15 +305,25 @@ namespace DSPRE
 
             try
             {
-                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
-
                 /* Write to overlayfile */
                 string overlayFilePath = OverlayUtils.GetPath(data.overlayNumber);
                 if (OverlayUtils.IsCompressed(data.overlayNumber))
                 {
-                    OverlayUtils.Decompress(data.overlayNumber);
+                    int decompressResult = OverlayUtils.Decompress(data.overlayNumber, makeBackup: false);
+                    if (decompressResult != 0)
+                    {
+                        AppLogger.Error($"Could not decompress overlay {data.overlayNumber}; BDHCAM patch was not applied.");
+                        File.Copy(overlayBackupPath, overlayFilePath, overwrite: true);
+                        if (decompressResult != DSUtils.ERR_TOOL_UNAVAILABLE)
+                        {
+                            ShowError("The target overlay could not be decompressed, so no changes were made.",
+                                "Decompression failed");
+                        }
+                        return false;
+                    }
                 }
 
+                ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.branchString), data.branchOffset); //Write new branchOffset
                 DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString1), data.overlayOffset1); //Write new overlayCode1
                 DSUtils.WriteToFile(overlayFilePath, DSUtils.HexStringToByteArray(data.overlayString2), data.overlayOffset2); //Write new overlayCode2
 

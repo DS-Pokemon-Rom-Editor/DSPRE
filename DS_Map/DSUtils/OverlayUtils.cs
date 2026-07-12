@@ -219,8 +219,13 @@ namespace DSPRE
             }
 
             Process compress = new Process();
-            compress.StartInfo.FileName = DSUtils.ToolPath("blz");
             compress.StartInfo.Arguments = "-en " + '"' + overlayFilePath + '"';
+            if (!DSUtils.ConfigureToolStartInfo(compress.StartInfo, "blz"))
+            {
+                compress.Dispose();
+                DSUtils.ReportToolUnavailable("blz");
+                return DSUtils.ERR_TOOL_UNAVAILABLE;
+            }
             AppMessages.PumpEvents();
             compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             compress.StartInfo.CreateNoWindow = true;
@@ -255,6 +260,7 @@ namespace DSPRE
             }
 
             Process decompress = DSUtils.CreateDecompressProcess(overlayFilePath);
+            if (decompress == null) return DSUtils.ERR_TOOL_UNAVAILABLE;
             decompress.Start();
             decompress.WaitForExit();
             return decompress.ExitCode;
