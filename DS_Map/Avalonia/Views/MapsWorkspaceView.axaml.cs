@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia;
+using DSPRE.Editors;
 using DSPRE.Avalonia.ViewModels;
 using DSPRE.Resources;
 using static DSPRE.RomInfo;
@@ -40,6 +41,26 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+        }
+
+        public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()
+        {
+            var editors = new List<(string, IEditorWithUnsavedChanges)>();
+            void Add(string name, IEditorWithUnsavedChanges editor)
+            {
+                if (editor != null) editors.Add((name, editor));
+            }
+
+            Add("Header Editor", VM);
+            Add("Map Editor", MapVM);
+            Add("Matrix Editor", MatrixVM);
+            Add("Area Data Editor", AreaDataVM);
+            Add("Event Editor", EventVM);
+            Add("Script Editor", ScriptsVM);
+            Add("Level Script Editor", LevelScriptsVM);
+            Add("Text Editor", TextVM);
+            Add("Wild Encounters Editor", _encountersVm as IEditorWithUnsavedChanges);
+            return editors;
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();

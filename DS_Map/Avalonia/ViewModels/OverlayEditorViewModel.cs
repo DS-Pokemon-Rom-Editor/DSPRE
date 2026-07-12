@@ -72,6 +72,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Overlay Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCore();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveChangesCore();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetClean();
 
         // ----------------------------------------------------------------
@@ -212,21 +217,7 @@ namespace DSPRE.Avalonia.ViewModels
                 await DialogHelper.ShowInfo("Compression is temporarily disabled until we work on a fix.", "Warning");
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
 
-            var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?",
-                "Overlay Editor - Unsaved Changes");
-
-            if (result == DialogHelper.MsgResult.Yes)
-            {
-                await SaveChangesCore();
-                return true;
-            }
-            return result == DialogHelper.MsgResult.No;
-        }
 
         // ----------------------------------------------------------------
         // Helpers

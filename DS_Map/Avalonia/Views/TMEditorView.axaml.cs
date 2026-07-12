@@ -16,8 +16,7 @@ namespace DSPRE.Avalonia.Views
             var vm = new TMEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false,
-                confirmClose: vm.ConfirmCloseAsync, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)

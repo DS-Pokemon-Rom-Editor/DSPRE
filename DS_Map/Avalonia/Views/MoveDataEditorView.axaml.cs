@@ -14,8 +14,7 @@ namespace DSPRE.Avalonia.Views
             InitializeComponent();
             DataContext = new MoveDataEditorViewModel();
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false,
-                confirmClose: ViewModel.ConfirmCloseAsync, onClosed: ViewModel.Detach);
+            EditorWindowChrome.Attach(this, ViewModel, manageTitle: false, onClosed: ViewModel.Detach);
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

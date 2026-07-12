@@ -27,8 +27,8 @@ namespace DSPRE.Avalonia
         public static Task ShowInfo(string message, string title = "Information")
             => ShowMsg(message, title, MsgButtons.Ok);
 
-        public static Task ShowError(string message, string title = "Error")
-            => ShowMsg(message, title, MsgButtons.Ok);
+        public static Task ShowError(string message, string title = "Error", Window owner = null)
+            => ShowMsg(message, title, MsgButtons.Ok, owner: owner);
 
         /// <summary>
         /// Error box with a "Copy details" button: <paramref name="details"/> (e.g. the full
@@ -38,9 +38,9 @@ namespace DSPRE.Avalonia
             => ShowMsg(message, title, MsgButtons.Ok, details);
 
         /// <returns>true = Yes, false = No</returns>
-        public static async Task<bool> AskYesNo(string message, string title = "Confirm")
+        public static async Task<bool> AskYesNo(string message, string title = "Confirm", Window owner = null)
         {
-            var result = await ShowMsg(message, title, MsgButtons.YesNo);
+            var result = await ShowMsg(message, title, MsgButtons.YesNo, owner: owner);
             return result == MsgResult.Yes;
         }
 
@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia
 
         private enum MsgButtons { Ok, YesNo, YesNoCancel }
 
-        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null)
+        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null, Window owner = null)
         {
             var tcs = new TaskCompletionSource<MsgResult>();
 
@@ -197,10 +197,15 @@ namespace DSPRE.Avalonia
             root.Children.Add(btnRow);
             win.Content = root;
 
-            // ShowDialog requires a parent; fall back to Show if none available
-            var app = global::Avalonia.Application.Current?.ApplicationLifetime
-                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-            var owner = app?.MainWindow;
+            // ShowDialog requires a parent; fall back to Show if none available. Callers may pass an
+            // explicit owner (e.g. a modal batch dialog) so nested prompts stack on top of it instead
+            // of re-attaching to the main window.
+            if (owner == null)
+            {
+                var app = global::Avalonia.Application.Current?.ApplicationLifetime
+                    as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+                owner = app?.MainWindow;
+            }
 
             if (owner != null)
                 await win.ShowDialog(owner);

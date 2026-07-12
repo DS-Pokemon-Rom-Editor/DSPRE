@@ -109,15 +109,30 @@ namespace DSPRE.Avalonia.ViewModels
         /// from the currently selected header when embedded (only triggers a rebuild while that view is
         /// active); settable directly via <see cref="SelectedHeaderIndex"/> when opened standalone.</summary>
         private int _headerId = -1;
+        private bool _headerNavigationPending;
         public int HeaderId
         {
             get => _headerId;
             set
             {
                 if (_headerId == value) return;
-                _headerId = value;
-                OnPropertyChanged(nameof(SelectedHeaderIndex));
-                if (IsHeaderView) BuildHeaderPreview();
+                if (!IsValidHeaderId(value))
+                {
+                    OnPropertyChanged(nameof(SelectedHeaderIndex));
+                    return;
+                }
+
+                if (HasUnsavedChanges)
+                {
+                    OnPropertyChanged(nameof(SelectedHeaderIndex));
+                    if (!_headerNavigationPending)
+                    {
+                        _ = ConfirmHeaderNavigationAsync(value);
+                    }
+                    return;
+                }
+
+                ApplyHeaderId(value);
             }
         }
 
@@ -125,6 +140,16 @@ namespace DSPRE.Avalonia.ViewModels
         /// embedded Maps-workspace instance (driven externally by the sidebar) and a standalone popup
         /// (driven by this combo, since it has no sidebar) share one code path.</summary>
         public int SelectedHeaderIndex { get => _headerId; set => HeaderId = value; }
+
+        private void ApplyHeaderId(int value)
+        {
+            _headerId = value;
+            OnPropertyChanged(nameof(SelectedHeaderIndex));
+            if (IsHeaderView) BuildHeaderPreview();
+        }
+
+        private bool IsValidHeaderId(int value)
+            => value >= -1 && (HeaderNames.Count == 0 || value < HeaderNames.Count);
 
         // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
         // Grid is the default — it's the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride
@@ -778,6 +803,36 @@ namespace DSPRE.Avalonia.ViewModels
         }
         public void MarkDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        private async Task ConfirmHeaderNavigationAsync(int newHeaderId)
+        {
+            _headerNavigationPending = true;
+            try
+            {
+                if (!await global::DSPRE.Avalonia.UnsavedChangesDialog.ShowIfNeededAsync(
+                    _owner, this, "Map header"))
+                {
+                    return;
+                }
+
+                if (!IsValidHeaderId(newHeaderId))
+                {
+                    return;
+                }
+
+                ApplyHeaderId(newHeaderId);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Map header navigation failed: " + ex);
+                await DialogHelper.ShowError($"Could not switch headers:\n{ex.Message}", "Map Editor");
+            }
+            finally
+            {
+                _headerNavigationPending = false;
+                OnPropertyChanged(nameof(SelectedHeaderIndex));
+            }
+        }
 
         // ── Constructors ────────────────────────────────────────────────────────────
         public MapEditorViewModel() { if (Design.IsDesignMode) MapNames.Add("Map 0"); }

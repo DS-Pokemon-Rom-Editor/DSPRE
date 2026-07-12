@@ -736,7 +736,6 @@ namespace LibNDSFormats.NSBMD {
                         reader.BaseStream.Position -= 16;
                         mod.Textures[j].texname = Utils.ReadNSBMDString(reader);
 
-                        Console.WriteLine("tex (matid={0}): {1}", mat.texmatid, mat.texname);
                     }
                 }
 
@@ -746,7 +745,6 @@ namespace LibNDSFormats.NSBMD {
                 stream.Skip(1); // skip dummy '0'
                 int palnum = reader.ReadByte(); // no of palette definition
                 Debug.Assert(palnum <= matnum); // may not always hold?
-                Console.WriteLine("DEBUG: palnum = {0}", palnum);
 
                 if (palnum > 0) {
                     stream.Seek(14 + (palnum * 4), SeekOrigin.Current); // go straight to data offsets
@@ -782,7 +780,6 @@ namespace LibNDSFormats.NSBMD {
                 stream.Seek(polyoffset, SeekOrigin.Begin);
                 stream.Skip(1); // skip dummy '0'
                 r = reader.ReadByte(); // no of polygon
-                Console.WriteLine("DEBUG: polynum = {0}", polynum);
 
                 for (var j = 0; j <= polynum; j++) {
                     mod.Polygons.Add(new NSBMDPolygon());

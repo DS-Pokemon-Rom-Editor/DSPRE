@@ -372,22 +372,7 @@ namespace DSPRE.Avalonia.ViewModels
             LoadFromFile(newID);
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!HasUnsavedChanges) return true;
 
-            var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?",
-                "Unsaved Changes");
-
-            if (result == DialogHelper.MsgResult.Yes)
-            {
-                SaveTradeCore();
-                SaveTextCore();
-                return true;
-            }
-            return result == DialogHelper.MsgResult.No;
-        }
 
         // ----------------------------------------------------------------
         // Private helpers

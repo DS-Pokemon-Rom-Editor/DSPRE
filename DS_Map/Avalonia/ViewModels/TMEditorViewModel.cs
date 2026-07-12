@@ -327,25 +327,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        /// <summary>
-        /// Called when the window is closing. Returns false if close should be cancelled.
-        /// </summary>
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
 
-            var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?",
-                "Unsaved Changes");
-
-            if (result == DialogHelper.MsgResult.Yes)
-            {
-                SaveChangesCore();
-                return true;
-            }
-
-            return result == DialogHelper.MsgResult.No;
-        }
 
         // ----------------------------------------------------------------
         // Private helpers

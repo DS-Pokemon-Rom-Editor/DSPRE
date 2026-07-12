@@ -126,6 +126,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Trainer Message Editor";
         public void SaveChanges() => _ = SaveAsync();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveAsync();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }

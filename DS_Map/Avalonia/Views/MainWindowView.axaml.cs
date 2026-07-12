@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using DSPRE.Editors;
 using DSPRE.Avalonia.ViewModels;
 using DSPRE.ROMFiles;
 using NarcAPI;
@@ -15,6 +17,8 @@ namespace DSPRE.Avalonia.Views
     /// </summary>
     public partial class MainWindowView : Window
     {
+        private bool _closeConfirmed;
+
         public MainWindowView()
         {
             InitializeComponent();
@@ -35,7 +39,22 @@ namespace DSPRE.Avalonia.Views
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(RefreshGameIcon);
 
             RestoreWindowPlacement();
-            Closing += (_, _) => SaveWindowPlacement();
+        }
+
+        protected override async void OnClosing(WindowClosingEventArgs e)
+        {
+            if (!_closeConfirmed)
+            {
+                e.Cancel = true;
+                if (!await ConfirmProjectCloseAsync()) return;
+                OpenEditors.CloseEditorWindows(this);
+                _closeConfirmed = true;
+                Close();
+                return;
+            }
+
+            SaveWindowPlacement();
+            base.OnClosing(e);
         }
 
         /// <summary>Shows the loaded game's banner icon at the right end of the menu bar,
@@ -125,6 +144,16 @@ namespace DSPRE.Avalonia.Views
             }
         }
 
+        /// <summary>Prompts the user about unsaved work across every open editor. Returns true if they
+        /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows — callers
+        /// close them only once the new project is actually chosen, so cancelling the file picker or a
+        /// preflight prompt doesn't leave the current project editor-less.</summary>
+        private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync()
+        {
+            var editors = OpenEditors.GetUnsavedEditors(this);
+            return await UnsavedChangesDialog.ShowIfNeededAsync(this, editors);
+        }
+
         private static string CompactPath(string path)
         {
             string name = System.IO.Path.GetFileName(path.TrimEnd('\\', '/'));
@@ -140,6 +169,10 @@ namespace DSPRE.Avalonia.Views
             DataContext = vm;
         }
 
+        public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()
+            => Maps?.GetEmbeddedEditors()
+                ?? System.Linq.Enumerable.Empty<(string, IEditorWithUnsavedChanges)>();
+
         // ── File ────────────────────────────────────────────────────────────
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -150,6 +183,8 @@ namespace DSPRE.Avalonia.Views
         /// <summary>Pick and open a .nds ROM (also used by the Welcome window).</summary>
         public async System.Threading.Tasks.Task OpenRomInteractiveAsync()
         {
+            if (!await ConfirmProjectCloseAsync()) return;
+
             var files = await StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
             {
                 Title = "Open ROM",
@@ -161,6 +196,7 @@ namespace DSPRE.Avalonia.Views
 
             bool? reExtract = await CheckExtractedDataChoiceAsync(path);
             if (reExtract == null) return;   // user aborted
+            OpenEditors.CloseEditorWindows(this);
             await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
         }
 
@@ -189,26 +225,33 @@ namespace DSPRE.Avalonia.Views
         /// <summary>Pick and open an extracted project folder (also used by the Welcome window).</summary>
         public async System.Threading.Tasks.Task OpenFolderInteractiveAsync()
         {
+            if (!await ConfirmProjectCloseAsync()) return;
+
             var folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
             {
                 Title = "Open extracted ROM folder", AllowMultiple = false
             });
             string path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
-            if (!string.IsNullOrEmpty(path))
-                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
+            if (string.IsNullOrEmpty(path)) return;
+            OpenEditors.CloseEditorWindows(this);
+            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
         }
 
         /// <summary>Open a recent-projects entry: a .nds file or an extracted folder.</summary>
         public async System.Threading.Tasks.Task OpenRecentAsync(string path)
         {
+            if (!await ConfirmProjectCloseAsync()) return;
+
             if (System.IO.File.Exists(path))
             {
                 bool? reExtract = await CheckExtractedDataChoiceAsync(path);
                 if (reExtract == null) return;   // user aborted
+                OpenEditors.CloseEditorWindows(this);
                 await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
             }
             else if (System.IO.Directory.Exists(path))
             {
+                OpenEditors.CloseEditorWindows(this);
                 await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
             }
             else

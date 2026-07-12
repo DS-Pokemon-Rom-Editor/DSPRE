@@ -24,6 +24,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => $"Wild Encounters (HGSS #{SelectedEncounterIndex})";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveCommand();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetClean();
 
         // ── Name lists ────────────────────────────────────────────────────
@@ -198,14 +203,7 @@ namespace DSPRE.Avalonia.ViewModels
             RaiseUndoState();
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
-            var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
-            if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
-            return r == DialogHelper.MsgResult.No;
-        }
+
 
         // ── Private helpers ───────────────────────────────────────────────
         private void OnNamesChanged(object sender, System.EventArgs e)

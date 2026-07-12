@@ -5,6 +5,7 @@ using DSPRE.Editors;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace DSPRE.Avalonia.ViewModels
 {
@@ -73,6 +74,9 @@ namespace DSPRE.Avalonia.ViewModels
             $"Pokémon Editor (#{_selectedMonIndex} {(PokemonNames.Count > _selectedMonIndex ? PokemonNames[_selectedMonIndex] : "")})";
 
         public void SaveChanges() => SaveAll();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+            => await SaveAllAsync();
+
         public void DiscardChanges()
         {
             PersonalVM.DiscardChanges();
@@ -184,7 +188,26 @@ namespace DSPRE.Avalonia.ViewModels
             if (LearnsetVM.HasUnsavedChanges)   LearnsetVM.SaveChanges();
             if (EvolutionsVM.HasUnsavedChanges) EvolutionsVM.SaveChanges();
             if (BattleDisplayVM.HasUnsavedChanges) BattleDisplayVM.SaveChanges();
-            // Sprites are saved on import (written back to NARC immediately); nothing extra to do here.
+            // TODO: SpriteVM is NOT saved here. ImportSprite marks it dirty, but PokemonSpriteEditorViewModel.SaveChanges() is a no-op and nothing writes _replacementSprites back to the NARC, so a dirty sprite import makes SaveAll()/SaveAllAsync() report failure via !HasUnsavedChanges. Implementing sprite persistence (encoding the replacement PNG back into the battle-sprite NARC entry) is a separate feature; until then, the parent's save contract honestly surfaces the missing path rather than silently reporting success.
+        }
+
+        public async Task<bool> SaveAllAsync()
+        {
+            if (PersonalVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)PersonalVM).SaveChangesAsync())
+                return false;
+            if (LearnsetVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)LearnsetVM).SaveChangesAsync())
+                return false;
+            if (EvolutionsVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)EvolutionsVM).SaveChangesAsync())
+                return false;
+            if (BattleDisplayVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)BattleDisplayVM).SaveChangesAsync())
+                return false;
+
+            // TODO: SpriteVM is NOT saved here (see SaveAll). Its HasUnsavedChanges is included in this VM's dirty aggregation, so an unsaved sprite import makes SaveAllAsync return false via !HasUnsavedChanges.
+            return !HasUnsavedChanges;
         }
 
         private async System.Threading.Tasks.Task ConfirmDiscardAsync(int pendingIndex)

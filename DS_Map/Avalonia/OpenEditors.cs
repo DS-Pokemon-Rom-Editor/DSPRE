@@ -1,35 +1,95 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using DSPRE.Avalonia.Views;
 using DSPRE.Editors;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Inspects the currently-open Avalonia editor windows. Used by the app-quit guard: each editor has its
-    /// own close-confirmation (see EditorWindowChrome), but quitting the app force-closes every window via
-    /// <c>desktop.Shutdown()</c>, which bypasses those guards — so before quitting we ask here whether any
-    /// editor still holds unsaved work.
-    /// </summary>
+    /// <summary>Enumerates Avalonia's embedded and standalone editors for project-change guards.</summary>
     public static class OpenEditors
     {
-        /// <summary>Descriptions of every open editor that currently has unsaved changes (empty = safe to quit).</summary>
-        public static IReadOnlyList<string> UnsavedDescriptions()
+        public static IReadOnlyList<UnsavedChangesDialog.UnsavedEditorInfo> GetUnsavedEditors(
+            MainWindowView mainWindow = null)
         {
-            var list = new List<string>();
-            if (global::Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-                return list;
+            var result = new List<UnsavedChangesDialog.UnsavedEditorInfo>();
+            var seen = new HashSet<IEditorWithUnsavedChanges>();
 
-            foreach (var w in desktop.Windows)
+            if (mainWindow != null)
             {
-                // Regular editor windows carry the VM as their own DataContext; UserControl-based editors
-                // hosted in EditorHostWindow carry it on the hosted content instead.
-                var ed = w.DataContext as IEditorWithUnsavedChanges
-                         ?? (w.Content as Control)?.DataContext as IEditorWithUnsavedChanges;
-                if (ed != null && ed.HasUnsavedChanges)
-                    list.Add(ed.UnsavedChangesDescription);
+                foreach (var embedded in mainWindow.GetEmbeddedEditors())
+                {
+                    AddIfDirty(result, seen, embedded.EditorName, embedded.Editor);
+                }
             }
-            return list;
+
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
+                is not IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return result;
+            }
+
+            foreach (var window in desktop.Windows.ToList())
+            {
+                if (ReferenceEquals(window, mainWindow)) continue;
+
+                var editor = GetEditor(window);
+                if (editor == null) continue;
+                AddIfDirty(result, seen, GetWindowEditorName(window, editor), editor);
+            }
+
+            return result;
+        }
+
+        /// <summary>Returns dirty standalone-window descriptions for the legacy host shutdown guard.</summary>
+        public static IReadOnlyList<string> UnsavedDescriptions()
+            => GetUnsavedEditors().Select(info => info.ToString()).ToList();
+
+        public static void CloseEditorWindows(MainWindowView mainWindow = null)
+        {
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
+                is not IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return;
+            }
+
+            foreach (var window in desktop.Windows.ToList())
+            {
+                if (ReferenceEquals(window, mainWindow)) continue;
+                if (GetEditor(window) != null) window.Close();
+            }
+        }
+
+        private static void AddIfDirty(
+            ICollection<UnsavedChangesDialog.UnsavedEditorInfo> result,
+            ISet<IEditorWithUnsavedChanges> seen,
+            string editorName,
+            IEditorWithUnsavedChanges editor)
+        {
+            if (editor == null || !editor.HasUnsavedChanges || !seen.Add(editor)) return;
+            result.Add(new UnsavedChangesDialog.UnsavedEditorInfo
+            {
+                EditorName = editorName,
+                Description = editor.UnsavedChangesDescription,
+                Editor = editor,
+            });
+        }
+
+        private static IEditorWithUnsavedChanges GetEditor(Window window)
+            => window?.DataContext as IEditorWithUnsavedChanges
+                ?? (window?.Content as Control)?.DataContext as IEditorWithUnsavedChanges;
+
+        private static string GetWindowEditorName(Window window, IEditorWithUnsavedChanges editor)
+        {
+            string title = window?.Title?.Trim() ?? string.Empty;
+            while (title.StartsWith("●", StringComparison.Ordinal))
+            {
+                title = title.Substring(1).TrimStart();
+            }
+
+            return string.IsNullOrWhiteSpace(title) ? editor.GetType().Name : title;
         }
     }
 }

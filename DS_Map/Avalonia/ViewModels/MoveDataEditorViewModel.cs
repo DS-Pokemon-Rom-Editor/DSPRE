@@ -48,6 +48,11 @@ namespace DSPRE.Avalonia.ViewModels
         public string UnsavedChangesDescription =>
             _currentFile != null ? $"Move {_currentId} - {MoveNames[_currentId]}" : "Move Data Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveCommand();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetClean();
 
         // ── Move names / type names / battle sequences ─────────────────────────
@@ -337,14 +342,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
-            var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
-            if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
-            return r == DialogHelper.MsgResult.No;
-        }
+
 
         // ── Private helpers ────────────────────────────────────────────────────
         private void SetDirty() { if (_loading) return; _dirty = true; Title = "● Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); RecordUndoSnapshot(); }

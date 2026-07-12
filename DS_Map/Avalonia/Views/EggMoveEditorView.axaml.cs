@@ -15,8 +15,7 @@ namespace DSPRE.Avalonia.Views
             var vm = new EggMoveEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, vm, manageTitle: false,
-                confirmClose: vm.ConfirmCloseAsync, onClosed: vm.Detach);
+            EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
 
         private async void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)

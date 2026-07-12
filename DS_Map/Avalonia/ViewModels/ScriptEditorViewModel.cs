@@ -523,18 +523,21 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        public async Task SaveAsync()
+        public async Task<bool> SaveAsync()
         {
-            if (_saving || !IsEditable) return;
+            if (_saving || !IsEditable) return false;
             _saving = true;
             try
             {
                 SaveSourceOnly(true);
-                await CompileAsync(false);
+                bool compiled = await CompileAsync(false);
+                if (!compiled) Dirty();   // source is on disk, but the binary wasn't regenerated — the editor is not fully saved
+                return compiled;
             }
             catch (Exception ex)
             {
                 await DialogHelper.ShowError("Save failed:\n" + ex.Message, "Script Editor");
+                return false;
             }
             finally
             {
@@ -542,9 +545,9 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        public async Task CompileAsync(bool saveCurrentFile = true)
+        public async Task<bool> CompileAsync(bool saveCurrentFile = true)
         {
-            if (IsBusy || IsReadOnly) return;
+            if (IsBusy || IsReadOnly) return false;
 
             try
             {
@@ -569,12 +572,14 @@ namespace DSPRE.Avalonia.ViewModels
 
                 if (!result.Success && diagnostics == 0)
                     await DialogHelper.ShowError("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script Editor");
+                return result.Success;
             }
             catch (Exception ex)
             {
                 StatusText = "Compile failed: " + ex.Message;
                 DiagnosticsStatusText = "Compile failed before diagnostics were available.";
                 await DialogHelper.ShowError("Compile failed:\n" + ex.Message, "Script Editor");
+                return false;
             }
             finally
             {
@@ -811,6 +816,14 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         public void SaveChanges() => _ = SaveAsync();
+
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            // SaveAsync reports whether the source AND the compiled binary were both written; if the
+            // compile failed it re-marks the editor dirty, so HasUnsavedChanges stays honest here.
+            bool ok = await SaveAsync();
+            return ok && !HasUnsavedChanges;
+        }
 
         public void DiscardChanges()
         {
