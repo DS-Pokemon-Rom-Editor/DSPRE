@@ -177,7 +177,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 var raw = BTX0.ReadRaw(_btxData);
                 if (raw == null) return false;
-                ImageConverter.ToAvaloniaBitmap(raw).Save(filePath);
+                ImageConverter.ToAvaloniaBitmap(raw).Save(filePath, PngBitmapEncoderOptions.Default);
                 return true;
             }
             catch { return false; }

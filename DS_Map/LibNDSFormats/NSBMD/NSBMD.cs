@@ -564,8 +564,6 @@ namespace LibNDSFormats.NSBMD {
                 // copy NsbmdObject names
                 for (var j = 0; j < objnum; j++) {
                     mod.Objects[j].Name = Utils.ReadNSBMDString(reader);
-                    // TO DEBUG
-                    Console.WriteLine(mod.Objects[j].Name);
                 }
 
                 ////////////////////////////////////////////////
@@ -707,7 +705,6 @@ namespace LibNDSFormats.NSBMD {
                 stream.Skip(1); // skip dummy '0'
                 int texnum = reader.ReadByte();
                 Debug.Assert(texnum <= matnum);
-                Console.WriteLine(String.Format("texnum: {0}", texnum));
 
                 if (texnum > 0) {
                     stream.Seek(14 + (texnum * 4), SeekOrigin.Current); // go straight to data offsets

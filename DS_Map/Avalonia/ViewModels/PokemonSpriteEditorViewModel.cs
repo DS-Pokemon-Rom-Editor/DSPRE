@@ -581,7 +581,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 var raw = ComposeSprite(slot, _normalPal, transparentIndex0: false, frame: -1);
                 if (raw == null) { StatusText = "Export failed: nothing to export."; return; }
-                ImageConverter.ToAvaloniaBitmap(raw).Save(path);
+                ImageConverter.ToAvaloniaBitmap(raw).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 StatusText = $"Exported {SpriteLabels[slot]}.";
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }

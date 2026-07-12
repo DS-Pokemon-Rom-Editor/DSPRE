@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
 using System.Collections.Generic;
@@ -59,7 +60,7 @@ namespace DSPRE.Avalonia.Views
             string path = file.TryGetLocalPath();
             if (path == null) return;
 
-            try { DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path); }
+            try { DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path, PngBitmapEncoderOptions.Default); }
             catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}"); }
         }
 
