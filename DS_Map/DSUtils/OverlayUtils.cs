@@ -141,9 +141,9 @@ namespace DSPRE
         {
             if (RomInfo.IsDsRomProject)
             {
-                return $"{workDir}arm9_overlays\\ov{overlayNumber:D3}.bin";
+                return Path.Combine(workDir, "arm9_overlays", $"ov{overlayNumber:D3}.bin");
             }
-            return $"{workDir}overlay\\overlay_{overlayNumber:D4}.bin";
+            return Path.Combine(workDir, "overlay", $"overlay_{overlayNumber:D4}.bin");
         }
 
         /**

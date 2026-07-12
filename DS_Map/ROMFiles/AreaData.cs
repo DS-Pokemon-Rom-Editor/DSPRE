@@ -34,7 +34,7 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
-        public AreaData (byte ID) : this(new FileStream(RomInfo.gameDirs[DirNames.areaData].unpackedDir + "//" + ID.ToString("D4"), FileMode.Open)) {}
+        public AreaData (byte ID) : this(new FileStream(Path.Combine(RomInfo.gameDirs[DirNames.areaData].unpackedDir, ID.ToString("D4")), FileMode.Open)) {}
         #endregion
 
         #region Methods (1)
