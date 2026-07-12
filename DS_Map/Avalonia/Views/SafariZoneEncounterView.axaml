@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
              xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              x:Class="DSPRE.Avalonia.Views.SafariZoneEncounterView"
              x:DataType="vm:SafariZoneEncounterViewModel">
   <Design.DataContext>
@@ -13,7 +14,7 @@
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="File:" VerticalAlignment="Center"/>
-        <ComboBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
+        <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Save As…" Click="SaveAs_Click"/>

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.PokemonEditorView"
         x:DataType="vm:PokemonEditorViewModel"
         Title="{Binding Title}"
@@ -24,7 +25,7 @@
           <Image Source="{Binding MonIconBitmap}" Stretch="Uniform"/>
         </Border>
         <NumericUpDown Grid.Column="2" Value="{Binding SelectedMonIndex}" Minimum="0" Maximum="{Binding MaxMonIndex}" FormatString="0" Width="115" FontSize="13"/>
-        <ComboBox Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedMonIndex}" HorizontalAlignment="Stretch" FontSize="13"/>
+        <controls:FusionAutoCompleteBox Grid.Column="4" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedMonIndex}" HorizontalAlignment="Stretch" FontSize="13"/>
         <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8">
           <Button Content="↶" Click="Undo_Click" Width="36" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
           <Button Content="↷" Click="Redo_Click" Width="36" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>

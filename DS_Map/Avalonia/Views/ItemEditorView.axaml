@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.ItemEditorView"
         x:DataType="vm:ItemEditorViewModel"
         Title="Item Data Editor"
@@ -16,9 +17,9 @@
         <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock VerticalAlignment="Center">Item:</TextBlock>
-                <ComboBox ItemsSource="{Binding ItemNames}"
-                          SelectedIndex="{Binding SelectedItemIndex}"
-                          Width="240" MaxDropDownHeight="300"/>
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}"
+                                                SelectedIndex="{Binding SelectedItemIndex}"
+                                                Width="240" MaxDropDownHeight="300"/>
                 <TextBlock VerticalAlignment="Center">ID:</TextBlock>
                 <NumericUpDown Value="{Binding SelectedItemIndex}"
                                Minimum="0" Maximum="{Binding MaxItemIndex}"

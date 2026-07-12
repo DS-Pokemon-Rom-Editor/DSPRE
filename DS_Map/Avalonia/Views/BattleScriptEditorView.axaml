@@ -3,6 +3,7 @@
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
              xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              x:Class="DSPRE.Avalonia.Views.BattleScriptEditorView"
              x:DataType="vm:BattleScriptEditorViewModel">
   <Design.DataContext>
@@ -23,7 +24,7 @@
         <TextBlock Grid.Column="0" Text="Archive" VerticalAlignment="Center"/>
         <ComboBox Grid.Column="2" ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" HorizontalAlignment="Stretch"/>
         <TextBlock Grid.Column="4" Text="Entry" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
-        <ComboBox Grid.Column="6" ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"/>
+        <controls:FusionAutoCompleteBox Grid.Column="6" ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"/>
       </Grid>
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>

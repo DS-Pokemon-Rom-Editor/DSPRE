@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.MoveDataEditorView"
 		x:DataType="vm:MoveDataEditorViewModel"
 		Title="{Binding Title}"
@@ -31,9 +32,9 @@
 	<Border DockPanel.Dock="Top" Margin="0,0,0,8">
 	  <StackPanel Orientation="Horizontal" Spacing="8">
 		<TextBlock Text="Move:" Classes="label" FontWeight="SemiBold"/>
-		<ComboBox ItemsSource="{Binding MoveNames}"
-				  SelectedIndex="{Binding SelectedMoveIndex}"
-				  MinWidth="260"/>
+		<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}"
+					  SelectedIndex="{Binding SelectedMoveIndex}"
+					  MinWidth="260"/>
 		<Button Content="✎ Edit move script" Click="EditMoveScript_Click"
 				ToolTip.Tip="Open the battle-script editor at this move's sequence (waza_seq / be_seq / sub_seq / animation). Platinum &amp; HGSS only."/>
 	  </StackPanel>

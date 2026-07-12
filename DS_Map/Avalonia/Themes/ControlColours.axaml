@@ -192,34 +192,41 @@
     </LinearGradientBrush>
     <SolidColorBrush x:Key="ComboBox.Static.Border" Color="{DynamicResource AColour.Button.Border}"/>
     <SolidColorBrush x:Key="ComboBox.Static.Foreground" Color="{DynamicResource AColour.Foreground.Static}"/>
-    <SolidColorBrush x:Key="ComboBox.Static.Editable.Background" Color="{DynamicResource AColour.Tone4.Background.Static}"/>
-    <SolidColorBrush x:Key="ComboBox.Static.Editable.Border" Color="{DynamicResource AColour.Tone4.Border.Static}"/>
-    <SolidColorBrush x:Key="ComboBox.Static.Editable.Button.Background" Color="Transparent"/>
-    <SolidColorBrush x:Key="ComboBox.Static.Editable.Button.Border" Color="Transparent"/>
-    <!-- Arrow blends into the one-piece button face (just a faint separator from the template) -->
+    <!-- Editable Fusion combo: a sunken line-edit field plus the narrow raised arrow subcontrol. -->
+    <SolidColorBrush x:Key="ComboBox.Static.Editable.Background" Color="{DynamicResource AColour.TextBox.Background}"/>
+    <SolidColorBrush x:Key="ComboBox.Static.Editable.Border" Color="{DynamicResource AColour.Button.Border}"/>
+    <LinearGradientBrush x:Key="ComboBox.Static.Editable.Button.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="{DynamicResource AColour.Tone6.Background.Static}"/>
+        <GradientStop Offset="1" Color="{DynamicResource AColour.Tone5.Background.Static}"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="ComboBox.Static.Editable.Button.Border" Color="{DynamicResource AColour.Tone6.Border.Static}"/>
+    <SolidColorBrush x:Key="ComboBox.Editable.Button.InnerContrast" Color="{DynamicResource AColour.InnerContrastLine}"/>
+    <LinearGradientBrush x:Key="ComboBox.MouseOver.Editable.Button.Background" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="{DynamicResource AColour.Tone6.Background.MouseOver}"/>
+        <GradientStop Offset="1" Color="{DynamicResource AColour.Tone5.Background.MouseOver}"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Button.Border" Color="{DynamicResource AColour.Tone6.Border.MouseOver}"/>
+    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Background" Color="{DynamicResource AColour.Tone6.Background.MouseDown}"/>
+    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Border" Color="{DynamicResource AColour.Tone6.Border.MouseDown}"/>
+    <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Button.Background" Color="{DynamicResource AColour.Tone5.Background.Disabled}"/>
+    <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Button.Border" Color="{DynamicResource AColour.Tone5.Border.Disabled}"/>
     <SolidColorBrush x:Key="ComboBox.Button.Static.Background" Color="Transparent"/>
     <SolidColorBrush x:Key="ComboBox.Button.Static.Border" Color="{DynamicResource AColour.Tone6.Border.Static}"/>
     <SolidColorBrush x:Key="ComboBox.MouseOver.Glyph" Color="{DynamicResource AColour.Glyph.MouseOver}"/>
     <SolidColorBrush x:Key="ComboBox.MouseOver.Background" Color="{DynamicResource AColour.Tone4.Background.MouseOver}"/>
     <SolidColorBrush x:Key="ComboBox.MouseOver.Border" Color="{DynamicResource AColour.Tone4.Border.MouseOver}"/>
-    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Background" Color="{DynamicResource AColour.Tone4.Background.MouseOver}"/>
-    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Border" Color="{DynamicResource AColour.Tone4.Border.MouseOver}"/>
-    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Button.Background" Color="Transparent"/>
-    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Button.Border" Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Background" Color="{DynamicResource AColour.TextBox.Background}"/>
+    <SolidColorBrush x:Key="ComboBox.MouseOver.Editable.Border" Color="{DynamicResource AColour.Button.MouseOver.Border}"/>
     <SolidColorBrush x:Key="ComboBox.Pressed.Glyph" Color="{DynamicResource AColour.Glyph.MouseDown}"/>
     <SolidColorBrush x:Key="ComboBox.Pressed.Background" Color="{DynamicResource AColour.Tone4.Background.MouseDown}"/>
     <SolidColorBrush x:Key="ComboBox.Pressed.Border" Color="{DynamicResource AColour.Tone4.Border.MouseDown}"/>
-    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Background" Color="{DynamicResource AColour.Tone4.Background.MouseDown}"/>
-    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Border" Color="{DynamicResource AColour.Tone4.Border.MouseDown}"/>
-    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Background" Color="Transparent"/>
-    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Border" Color="Transparent"/>
+    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Background" Color="{DynamicResource AColour.TextBox.Background}"/>
+    <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Border" Color="{DynamicResource AColour.Button.Border}"/>
     <SolidColorBrush x:Key="ComboBox.Disabled.Glyph" Color="{DynamicResource AColour.Glyph.Disabled}"/>
     <SolidColorBrush x:Key="ComboBox.Disabled.Background" Color="{DynamicResource AColour.Tone4.Background.Disabled}"/>
     <SolidColorBrush x:Key="ComboBox.Disabled.Border" Color="{DynamicResource AColour.Tone4.Border.Disabled}"/>
     <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Background" Color="{DynamicResource AColour.Tone4.Background.Disabled}"/>
     <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Border" Color="{DynamicResource AColour.Tone4.Border.Disabled}"/>
-    <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Button.Background" Color="Transparent"/>
-    <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Button.Border" Color="Transparent"/>
     <SolidColorBrush x:Key="ComboBox.Static.Glyph" Color="{DynamicResource AColour.Glyph.Static}"/>
 
     <SolidColorBrush x:Key="ComboBoxItem.ItemView.Hover.Background" Color="{DynamicResource AColour.Tone5.Background.MouseOver}"/>
