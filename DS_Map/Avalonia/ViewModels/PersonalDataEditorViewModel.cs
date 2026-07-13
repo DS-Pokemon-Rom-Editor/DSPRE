@@ -30,6 +30,11 @@ namespace DSPRE.Avalonia.ViewModels
         public string UnsavedChangesDescription =>
             _current != null ? $"Personal Data (Mon {_currentId} - {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : "")})" : "Personal Data Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveCommand();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetClean();
 
         // ── Name lists (ComboBox sources) ─────────────────────────────────────
@@ -405,14 +410,7 @@ namespace DSPRE.Avalonia.ViewModels
             SetDirty();
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
-            var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
-            if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
-            return r == DialogHelper.MsgResult.No;
-        }
+
 
         // ── Private helpers ───────────────────────────────────────────────────
 

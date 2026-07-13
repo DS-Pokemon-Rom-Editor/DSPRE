@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.SpawnEditorView"
         x:DataType="vm:SpawnEditorViewModel"
         Title="Spawn Settings Editor"
@@ -35,9 +36,9 @@
       <Grid ColumnDefinitions="*,12,*">
         <StackPanel Grid.Column="0" Spacing="3">
           <TextBlock Text="Spawn Header:" Classes="lbl"/>
-          <ComboBox ItemsSource="{Binding HeaderNames}"
-                    SelectedIndex="{Binding SelectedHeaderIndex}"
-                    HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding HeaderNames}"
+                                          SelectedIndex="{Binding SelectedHeaderIndex}"
+                                          HorizontalAlignment="Stretch"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Spacing="3">
           <TextBlock Text="Player Direction:" Classes="lbl"/>

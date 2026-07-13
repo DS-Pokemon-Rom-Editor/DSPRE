@@ -87,6 +87,7 @@ namespace DSPRE.Tests
             Assert.Equal(replacement.Bgra, roundTripped.Bgra);
         }
 
+#if NET8_0_WINDOWS
         [Fact]
         public void GdiRead_MatchesReadRaw()
         {
@@ -99,5 +100,6 @@ namespace DSPRE.Tests
             RawImage viaGdi = GdiRawBridge.FromGdi(gdi);
             Assert.Equal(raw.Bgra, viaGdi.Bgra);
         }
+#endif
     }
 }

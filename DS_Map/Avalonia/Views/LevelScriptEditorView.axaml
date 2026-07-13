@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.LevelScriptEditorView"
         x:DataType="vm:LevelScriptEditorViewModel">
 
@@ -12,7 +13,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <TextBlock Text="Script file:" VerticalAlignment="Center"/>
-        <ComboBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <controls:FusionAutoCompleteBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Import…" Click="Import_Click"/>

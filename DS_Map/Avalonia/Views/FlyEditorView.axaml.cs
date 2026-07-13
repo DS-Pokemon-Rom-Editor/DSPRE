@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Views
             _vm = new FlyEditorViewModel(headerNames);
             DataContext = _vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
-            EditorWindowChrome.Attach(this, _vm, manageTitle: false, confirmClose: _vm.ConfirmCloseAsync);
+            EditorWindowChrome.Attach(this, _vm, manageTitle: false);
         }
 
         // Parameterless constructor for previewer only

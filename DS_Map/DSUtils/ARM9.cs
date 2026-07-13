@@ -25,6 +25,7 @@ namespace DSPRE {
         public static bool Decompress(string path) {
 
             Process decompress = DSUtils.CreateDecompressProcess(path);
+            if (decompress == null) return false;
             decompress.Start();
             decompress.WaitForExit();
 
@@ -33,8 +34,13 @@ namespace DSPRE {
 
         public static bool Compress(string path) {
             Process compress = new Process();
-            compress.StartInfo.FileName = DSUtils.ToolPath("blz");
             compress.StartInfo.Arguments = @" -en9 " + '"' + path + '"';
+            if (!DSUtils.ConfigureToolStartInfo(compress.StartInfo, "blz"))
+            {
+                DSUtils.ReportToolUnavailable("blz");
+                compress.Dispose();
+                return false;
+            }
             compress.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             compress.StartInfo.CreateNoWindow = true;
             compress.Start();

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.EventEditorView"
         x:DataType="vm:EventEditorViewModel">
 
@@ -13,7 +14,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <TextBlock Text="Event file:" VerticalAlignment="Center"/>
-        <ComboBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
+        <controls:FusionAutoCompleteBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
         <Button Content="＋ Add"     Click="AddFile_Click"/>
         <Button Content="🗑 Rem last" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>

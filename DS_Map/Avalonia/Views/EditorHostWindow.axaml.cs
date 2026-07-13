@@ -40,7 +40,8 @@ namespace DSPRE.Avalonia.Views
                     Gesture = new KeyGesture(Key.S, KeyModifiers.Control),
                     Command = new DSPRE.Avalonia.EditorWindowChrome.RelayCommand(() =>
                     {
-                        if (editor.HasUnsavedChanges) editor.SaveChanges();
+                        if (editor.HasUnsavedChanges)
+                            _ = DSPRE.Avalonia.EditorWindowChrome.TrySaveChangesAsync(editor, "saving");
                     }),
                 });
             }
@@ -56,11 +57,8 @@ namespace DSPRE.Avalonia.Views
             if (!_closeConfirmed && Content is Control c && c.DataContext is IEditorWithUnsavedChanges ed && ed.HasUnsavedChanges)
             {
                 e.Cancel = true;
-                var r = await DialogHelper.AskYesNoCancel(
-                    $"You have unsaved changes to {ed.UnsavedChangesDescription}. Do you want to save them before closing?",
-                    "Unsaved Changes");
-                if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
-                if (r == DialogHelper.MsgResult.Yes) ed.SaveChanges(); else ed.DiscardChanges();
+                if (!await global::DSPRE.Avalonia.UnsavedChangesDialog.ShowIfNeededAsync(this, ed, Title))
+                    return;
                 _closeConfirmed = true; Close();
                 return;
             }

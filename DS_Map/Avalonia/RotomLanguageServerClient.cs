@@ -30,13 +30,12 @@ namespace DSPRE.Avalonia
         public async Task StartAsync()
         {
             if (!RotomTool.IsLspAvailable)
-                throw new FileNotFoundException("rotom-lsp.exe was not found in DSPRE's Tools folder.", RotomTool.LspPath);
+                throw new FileNotFoundException("rotom-lsp was not found in DSPRE's Tools folder.", RotomTool.LspPath);
 
             _process = new Process
             {
                 StartInfo =
                 {
-                    FileName = RotomTool.LspPath,
                     WorkingDirectory = RotomTool.ProjectRoot,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -46,13 +45,21 @@ namespace DSPRE.Avalonia
                 },
                 EnableRaisingEvents = true
             };
+            if (!DSUtils.ConfigureToolStartInfo(_process.StartInfo, "rotom-lsp"))
+            {
+                _process.Dispose();
+                _process = null;
+                throw new FileNotFoundException(
+                    DSUtils.ToolAvailabilityError("rotom-lsp"), RotomTool.LspPath);
+            }
             _process.ErrorDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                     AppLogger.Debug("rotom-lsp: " + e.Data);
             };
 
-            AppLogger.Info("Starting rotom-lsp: " + RotomTool.LspPath);
+            AppLogger.Info("Starting rotom-lsp: " + _process.StartInfo.FileName + " "
+                + _process.StartInfo.Arguments);
             _process.Start();
             _process.BeginErrorReadLine();
             _readLoop = Task.Run(ReadLoopAsync);

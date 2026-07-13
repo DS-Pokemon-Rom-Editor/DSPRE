@@ -37,6 +37,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Egg Move Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveCommand();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetDirty(false);
 
         // ----------------------------------------------------------------
@@ -415,15 +420,7 @@ namespace DSPRE.Avalonia.ViewModels
                 await DialogHelper.ShowError("Failed to import egg move data. Check the logs.", "Import Failed");
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
-            var result = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?",
-                "Unsaved Changes");
-            if (result == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
-            return result == DialogHelper.MsgResult.No;
-        }
+
 
         // ----------------------------------------------------------------
         // Private helpers

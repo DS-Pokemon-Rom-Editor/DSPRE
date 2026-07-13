@@ -1,0 +1,136 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls">
+    <StreamGeometry x:Key="FusionComboBoxArrowData">M 0,0 L 8,0 L 4,5 Z</StreamGeometry>
+
+    <ControlTheme x:Key="{x:Type controls:FusionAutoCompleteBox}" TargetType="{x:Type controls:FusionAutoCompleteBox}">
+        <Setter Property="Background" Value="{DynamicResource ComboBox.Static.Editable.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Static.Editable.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Padding" Value="4,0"/>
+        <Setter Property="PlaceholderForeground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="MaxDropDownHeight" Value="360"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border x:Name="OuterBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Name="PART_TextBox"
+                                     Grid.Column="0"
+                                     Background="Transparent"
+                                     BorderBrush="Transparent"
+                                     BorderThickness="0"
+                                     CaretIndex="{TemplateBinding CaretIndex, Mode=TwoWay}"
+                                     CaretBrush="{DynamicResource ABrush.Glyph.Static}"
+                                     ClearSelectionOnLostFocus="{TemplateBinding ClearSelectionOnLostFocus}"
+                                     DataValidationErrors.Errors="{TemplateBinding (DataValidationErrors.Errors)}"
+                                     Foreground="{TemplateBinding Foreground}"
+                                     InnerLeftContent="{TemplateBinding InnerLeftContent}"
+                                     InnerRightContent="{TemplateBinding InnerRightContent}"
+                                     MaxLength="{TemplateBinding MaxLength}"
+                                     MinHeight="0"
+                                     Padding="{TemplateBinding Padding}"
+                                     PlaceholderForeground="{TemplateBinding PlaceholderForeground}"
+                                     PlaceholderText="{TemplateBinding PlaceholderText}"
+                                     CornerRadius="0"
+                                     VerticalContentAlignment="Center"/>
+
+                            <ToggleButton Grid.Column="1"
+                                          Width="19"
+                                          Background="{DynamicResource ComboBox.Static.Editable.Button.Background}"
+                                          BorderBrush="{DynamicResource ComboBox.Static.Editable.Button.Border}"
+                                          BorderThickness="1"
+                                          ClickMode="Press"
+                                          Focusable="False"
+                                          Foreground="{DynamicResource ComboBox.Static.Glyph}"
+                                          IsChecked="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                                          IsTabStop="False"
+                                          MinHeight="0"
+                                          Padding="0"
+                                          CornerRadius="2">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ArrowButton"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="{TemplateBinding CornerRadius}">
+                                            <Border BorderBrush="{DynamicResource ComboBox.Editable.Button.InnerContrast}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="2">
+                                            <Path x:Name="ArrowGlyph"
+                                                  Width="8" Height="5"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Data="{StaticResource FusionComboBoxArrowData}"
+                                                  Fill="{TemplateBinding Foreground}"
+                                                  Stretch="None"/>
+                                            </Border>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                        </Grid>
+                    </Border>
+
+                    <Popup Name="PART_Popup"
+                           MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                           MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                           IsLightDismissEnabled="True"
+                           PlacementTarget="{TemplateBinding}">
+                        <Border Background="{DynamicResource Popup.Static.Background}"
+                                BorderBrush="{DynamicResource Popup.Static.Border}"
+                                BorderThickness="1"
+                                CornerRadius="2">
+                            <ListBox Name="PART_SelectingItemsControl"
+                                     Background="{DynamicResource Popup.Static.Background}"
+                                     BorderThickness="0"
+                                     Foreground="{TemplateBinding Foreground}"
+                                     ItemTemplate="{TemplateBinding ItemTemplate}"
+                                     ScrollViewer.IsScrollChainingEnabled="False"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                        </Border>
+                    </Popup>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover /template/ Border#OuterBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.MouseOver.Editable.Border}"/>
+        </Style>
+        <Style Selector="^:focus /template/ Border#OuterBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextBox.Focus.Border}"/>
+        </Style>
+        <Style Selector="^[IsDropDownOpen=True] /template/ Border#OuterBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Pressed.Editable.Border}"/>
+        </Style>
+        <Style Selector="^:disabled /template/ Border#OuterBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Disabled.Editable.Border}"/>
+            <Setter Property="Background" Value="{DynamicResource ComboBox.Disabled.Editable.Background}"/>
+        </Style>
+
+        <Style Selector="^ /template/ ToggleButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ComboBox.MouseOver.Editable.Button.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.MouseOver.Editable.Button.Border}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ComboBox.MouseOver.Glyph}"/>
+        </Style>
+        <Style Selector="^ /template/ ToggleButton:checked">
+            <Setter Property="Background" Value="{DynamicResource ComboBox.Pressed.Editable.Button.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Pressed.Editable.Button.Border}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ComboBox.Pressed.Glyph}"/>
+        </Style>
+        <Style Selector="^:disabled /template/ ToggleButton">
+            <Setter Property="Background" Value="{DynamicResource ComboBox.Disabled.Editable.Button.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Disabled.Editable.Button.Border}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ComboBox.Disabled.Glyph}"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

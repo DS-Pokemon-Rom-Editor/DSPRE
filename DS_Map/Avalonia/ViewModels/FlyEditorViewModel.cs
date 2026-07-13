@@ -143,6 +143,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Fly / Warp Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveCommand();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() => SetClean();
 
         // ── Observable state ─────────────────────────────────────────────────
@@ -227,14 +232,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        public async Task<bool> ConfirmCloseAsync()
-        {
-            if (!_dirty) return true;
-            var r = await DialogHelper.AskYesNoCancel(
-                "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
-            if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
-            return r == DialogHelper.MsgResult.No;
-        }
+
 
         // ── Private helpers ───────────────────────────────────────────────────
         private void SetDirty()  { _dirty = true;  Title = "● Fly / Warp Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }

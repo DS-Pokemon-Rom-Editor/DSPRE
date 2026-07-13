@@ -1,6 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.WildEditorHGSSView"
         x:DataType="vm:WildEditorHGSSViewModel">
   <Design.DataContext>
@@ -25,7 +26,7 @@
     <Border DockPanel.Dock="Top" Margin="0,0,0,8">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center"/>
-        <ComboBox ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
+        <controls:FusionAutoCompleteBox ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
         <Button Content="＋ Add"     Click="AddFile_Click"/>
         <Button Content="🗑 Rem last" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>

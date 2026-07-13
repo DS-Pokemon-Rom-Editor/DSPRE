@@ -1,15 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Windows hosts run both targets; non-Windows hosts default to the cross-platform target.
+         Set IncludeWindowsTests=true when a non-Windows build needs to compile the Windows target. -->
+    <IncludeWindowsTests Condition="'$(IncludeWindowsTests)' == '' and '$(OS)' == 'Windows_NT'">true</IncludeWindowsTests>
+    <IncludeWindowsTests Condition="'$(IncludeWindowsTests)' == ''">false</IncludeWindowsTests>
+    <TargetFrameworks Condition="'$(IncludeWindowsTests)' == 'true'">net8.0;net8.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="'$(IncludeWindowsTests)' != 'true'">net8.0</TargetFrameworks>
+    <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <!-- Allow restoring/compiling on Linux/macOS (GDI-dependent tests still need Windows to RUN). -->
-    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
+    <!-- Allow the opt-in Windows target to compile on Linux/macOS. -->
+    <EnableWindowsTargeting Condition="'$(TargetFramework)' == 'net8.0-windows' and '$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <Compile Remove="GdiRawBridgeTests.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
@@ -21,7 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DS_Map\DSPRE.csproj" />
+    <ProjectReference Include="..\DSPRE.Core\DSPRE.Core.csproj" />
+    <ProjectReference Include="..\DSPRE.Avalonia\DSPRE.Avalonia.csproj" />
+    <ProjectReference Include="..\DS_Map\DSPRE.csproj" Condition="'$(TargetFramework)' == 'net8.0-windows'" />
   </ItemGroup>
 
 </Project>

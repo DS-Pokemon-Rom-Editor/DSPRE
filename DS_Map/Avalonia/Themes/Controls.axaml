@@ -25,6 +25,7 @@
                 <MergeResourceInclude Source="ControlStyles/GridSplitter.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/TextBox.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/ComboBox.axaml"/>
+                <MergeResourceInclude Source="ControlStyles/FusionAutoCompleteBox.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/ComboBoxItem.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/ProgressBar.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/Menu.axaml"/>

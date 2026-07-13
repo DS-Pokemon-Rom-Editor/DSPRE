@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.AreaDataEditorView"
         x:DataType="vm:AreaDataEditorViewModel">
 
@@ -12,7 +13,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Area data:" VerticalAlignment="Center"/>
-        <ComboBox Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
+        <controls:FusionAutoCompleteBox Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>

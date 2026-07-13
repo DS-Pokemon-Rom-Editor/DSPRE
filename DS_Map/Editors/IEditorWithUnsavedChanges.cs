@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace DSPRE.Editors
 {
     /// <summary>
@@ -19,9 +21,20 @@ namespace DSPRE.Editors
         string UnsavedChangesDescription { get; }
 
         /// <summary>
-        /// Saves the current changes.
+        /// Saves the current changes synchronously.
         /// </summary>
         void SaveChanges();
+
+        /// <summary>
+        /// Saves the current changes and completes when the save has finished.
+        /// Legacy synchronous editors use the default implementation. The result is false when the
+        /// save was canceled, failed, or the editor still reports unsaved changes afterward.
+        /// </summary>
+        Task<bool> SaveChangesAsync()
+        {
+            SaveChanges();
+            return Task.FromResult(!HasUnsavedChanges);
+        }
 
         /// <summary>
         /// Discards any unsaved changes and resets the editor state.

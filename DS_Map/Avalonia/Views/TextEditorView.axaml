@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.TextEditorView"
         x:DataType="vm:TextEditorViewModel">
 
@@ -15,8 +16,8 @@
             BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <TextBlock Text="Archive:" VerticalAlignment="Center"/>
-        <ComboBox Width="160" ItemsSource="{Binding ArchiveNames}"
-                  SelectedIndex="{Binding SelectedArchiveIndex}"/>
+        <controls:FusionAutoCompleteBox Width="160" ItemsSource="{Binding ArchiveNames}"
+                                        SelectedIndex="{Binding SelectedArchiveIndex}"/>
         <Button Content="Add"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
         <Button Content="Remove" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>

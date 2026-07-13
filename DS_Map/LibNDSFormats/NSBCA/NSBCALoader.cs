@@ -80,7 +80,6 @@ namespace LibNDSFormats.NSBCA {
 
             reader.ReadByte();					// skip dummy 0
             num = reader.ReadByte(); //assert(num > 0);	// no of joint must == 1
-            Console.WriteLine("No. of Joint = %02x\n", num);
 
             //dataoffset = (int*)malloc(sizeof(int));
             //if (!dataoffset){ return NULL; }

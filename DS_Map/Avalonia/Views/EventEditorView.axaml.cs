@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -207,7 +208,7 @@ namespace DSPRE.Avalonia.Views
                     System.Runtime.InteropServices.Marshal.Copy(
                         rgba, (h - 1 - y) * rowBytes, fb.Address + y * fb.RowBytes, rowBytes);
             }
-            bmp.Save(path);
+            bmp.Save(path, PngBitmapEncoderOptions.Default);
         }
 
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();
