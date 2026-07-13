@@ -55,14 +55,13 @@ namespace DSPRE.Avalonia.Data
             }
 
             var callStack = new List<int>();
-            int pendingTurn2 = -1;
             var visited = new HashSet<int>();
             int pc = 0, guard = 0;
             while (pc >= 0 && pc < cmds.Count && guard++ < 100000)
             {
                 var c = cmds[pc];
-                // A revisited command outside a call/turn continuation means a loop we don't model — stop.
-                if (!visited.Add(pc) && callStack.Count == 0 && pendingTurn2 < 0) break;
+                // A revisited command outside a call continuation means a loop we don't model — stop.
+                if (!visited.Add(pc) && callStack.Count == 0) break;
                 int cur = pc;
                 pc++;
 
@@ -73,7 +72,6 @@ namespace DSPRE.Avalonia.Data
                 switch (name)
                 {
                     case "WEST_SEQEND":
-                        if (pendingTurn2 >= 0) { pc = pendingTurn2; pendingTurn2 = -1; break; }
                         return refs;
 
                     case "WEST_SEQ_JP":
@@ -90,14 +88,10 @@ namespace DSPRE.Avalonia.Data
                         }
                         break;
 
-                    // Two-turn moves: take turn1 now, continue into turn2 at its SEQEND (mirrors WestPlayer).
+                    // WEST_TURN_CHK: pick ONE branch by waza_eff_cnt parity (fresh battle = even = the
+                    // first branch), exactly like the game — mirrors WestPlayer.
                     case "WEST_TURN_CHK":
-                        if (n >= 1 && Jump(ref pc, wordPos[cur] + 1, c.Args[0]))
-                        {
-                            if (n >= 2 && wordToIndex.TryGetValue(wordPos[cur] + 2 + c.Args[1], out int t2))
-                                pendingTurn2 = t2;
-                            break;
-                        }
+                        if (n >= 1 && Jump(ref pc, wordPos[cur] + 1, c.Args[0])) break;
                         if (n >= 2) Jump(ref pc, wordPos[cur] + 2, c.Args[1]);
                         break;
 

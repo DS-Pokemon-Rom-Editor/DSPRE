@@ -71,6 +71,33 @@ namespace DSPRE.Avalonia.Data
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
         public double Aspect = 1.0;     // base.aspect (fx16): billboard sclX = sclY × aspect (non-square sprites)
+        // misc.scaleAnimDir (SPLResourceHeader, bits 28-30 of the word at +72): which axes the scale anim
+        // drives — 0 = both, 1 = X only, 2 = Y only (SPLDraw_Billboard applies it per-axis). A thin quad
+        // with a Y-only scale anim EXTENDS along its length instead of growing as a blob (Seed Flare slashes).
+        public int ScaleAnimDir;
+        public bool FlipS, FlipT;       // misc.flipTextureS/T (bits 0/1 of the word at +76): mirror the texture on the quad
+        public double AxisZ;            // base.axis z (VecFx16 @ +32): 3D travel axis component (+z toward camera)
+        // SPLResourceFlags bits 17-23 (decomp spl_resource.h) — polygon draw-type params + parent/child draw order.
+        public int PolyRotAxis;         // 0 = rotate about Y, 1 = rotate about the (1,1,1) diagonal (sRotationFunctions)
+        public int PolyRefPlane;        // 0 = XY plane quad, 1 = XZ plane quad (sPlaneDrawingFunctions)
+        public bool DrawChildrenFirst;  // render children before parents
+        public bool HideParent;         // only child particles are rendered
+        public bool DpolFaceEmitter;    // directional polygon faces the emitter instead of its velocity (misc bit 31)
+        // 3D field components (previously dropped in the 2D reduction).
+        public double GravityZ, RandMagZ, MagnetZ, ConvZ;
+        // SPLChildResourceFlags: the child's own draw configuration.
+        public int ChildDrawType;       // drawType bits 7-8
+        public int ChildRotType;        // rotationType bits 3-4: 0 = none, 1/2 = inherit the parent's angle (2 keeps spinning)
+        public int ChildPolyRotAxis, ChildPolyRefPlane;
+        // randomAttenuation (u8×3 @ +64): per-particle randomisation of base scale (±), lifetime (downward)
+        // and init velocity magnitudes (±), each /256 (spl_emit.c SPLRandom_*ScaledRangeFX32).
+        public int RndScale, RndLife, RndVel;
+        public int LoopFrames = 1;      // misc.loopFrames: the clock for LOOPING anims (loopTimeFactor = 0xFFFF/loopFrames)
+        public bool SclLoop, AlpLoop;   // scale/alpha anim loop flags (colour/texture already parsed)
+        public int AlpFlick;            // SPLAlphaAnim randomRange: per-frame downward alpha jitter (flicker)
+        public double ChildRandVel;     // SPLChildResource.randomInitVelMag (fx16 → px-units): ± per-component kick
+        public int ChildSclRatioRaw;    // raw byte: child base scale = parent CURRENT scale × (raw+1)/64
+        public bool ChildHasSclAnm, ChildHasAlpAnm, ChildUsesBehaviors;
         public double DbbScale;         // etc.dbb_scale (fx16 ratio): directional-billboard stretch along velocity
         public double OffsetX, OffsetY; // base.offset_x/offset_y (fx16, half-size units): billboard quad centre offset
         // SPLResTexAnm: a particle cycles through tex_no[0..UseNum-1] over its life (spl_tex_ptn_anm: pick tex_no[i]
@@ -133,8 +160,13 @@ namespace DSPRE.Avalonia.Data
                     Radius = Px(I32(off + 20)),
                     InitVelPos = Px(I32(off + 36)),
                     InitVelAxis = Px(I32(off + 40)),
-                    AxisX = (short)U16(off + 28) / 4096.0,   // base.axis VecFx16 (x@28, y@30) — unit dir, +Y up
+                    AxisX = (short)U16(off + 28) / 4096.0,   // base.axis VecFx16 (x@28, y@30, z@32) — unit dir, +Y up
                     AxisY = (short)U16(off + 30) / 4096.0,
+                    AxisZ = (short)U16(off + 32) / 4096.0,
+                    PolyRotAxis = (int)((flag >> 17) & 3),
+                    PolyRefPlane = (int)((flag >> 19) & 1),
+                    DrawChildrenFirst = (flag & (1u << 21)) != 0,
+                    HideParent = (flag & (1u << 22)) != 0,
                     Length = Px(I32(off + 24)),              // cylinder length (fx32) — spread along the emitter axis
                     BaseScale = Fx32(I32(off + 44)),
                     EmitterLife = U16(off + 60),
@@ -165,8 +197,16 @@ namespace DSPRE.Avalonia.Data
                 e.BaseAlpha = (etc0 >> 8) & 0x1F;
                 e.AirResist = (etc0 >> 16) & 0xFF;
                 e.TexNo = (etc0 >> 24) & 0xFF;
-                int etc1 = I32(off + 72);                 // loop_frame:8 | dbb_scale:16 | tex_repeat_num_s:2 | _t:2
+                int etc1 = I32(off + 72);                 // loop_frame:8 | dbb_scale:16 | tile_s:2 | tile_t:2 | scaleAnimDir:3 | dpolFace:1
                 e.DbbScale = ((etc1 >> 8) & 0xFFFF) / 4096.0;
+                e.ScaleAnimDir = (etc1 >> 28) & 0x7;
+                e.DpolFaceEmitter = (etc1 >> 31) != 0 && ((etc1 >> 31) & 1) != 0;
+                e.LoopFrames = Math.Max(1, etc1 & 0xFF);       // misc.loopFrames
+                // randomAttenuation bytes @ +64 (baseScale, lifeTime, initVel).
+                e.RndScale = d[off + 64]; e.RndLife = d[off + 65]; e.RndVel = d[off + 66];
+                int etc2 = I32(off + 76);                 // flipTextureS:1 | flipTextureT:1 (SPLResourceHeader misc, 2nd word)
+                e.FlipS = (etc2 & 1) != 0;
+                e.FlipT = (etc2 & 2) != 0;
                 e.RepeatS = ((etc1 >> 24) & 0x3) >= 1;
                 e.RepeatT = ((etc1 >> 26) & 0x3) >= 1;
                 // base.offset_x/offset_y (fx16 @ 80/82): the billboard QUAD centre offset in half-size units —
@@ -187,7 +227,11 @@ namespace DSPRE.Avalonia.Data
                 int fp = p;
                 if ((flag & (1u << 24)) != 0)
                 {
-                    if (fp + 4 <= d.Length) { e.GravityX = (short)U16(fp) / PtPerPixel; e.GravityY = (short)U16(fp + 2) / PtPerPixel; }
+                    if (fp + 6 <= d.Length)
+                    {
+                        e.GravityX = (short)U16(fp) / PtPerPixel; e.GravityY = (short)U16(fp + 2) / PtPerPixel;
+                        e.GravityZ = (short)U16(fp + 4) / PtPerPixel;
+                    }
                     fp += 8;
                 }
                 if ((flag & (1u << 25)) != 0)             // SPLRandom: VecFx16 mag(6) + u16 intvl(2)
@@ -195,6 +239,7 @@ namespace DSPRE.Avalonia.Data
                     if (fp + 8 <= d.Length)
                     {
                         e.RandMagX = (short)U16(fp) / PtPerPixel; e.RandMagY = (short)U16(fp + 2) / PtPerPixel;
+                        e.RandMagZ = (short)U16(fp + 4) / PtPerPixel;
                         e.RandIntvl = Math.Max(1, U16(fp + 6));
                     }
                     fp += 8;
@@ -204,6 +249,7 @@ namespace DSPRE.Avalonia.Data
                     if (fp + 14 <= d.Length)
                     {
                         e.MagnetX = Px(I32(fp)); e.MagnetY = Px(I32(fp + 4));   // target point (particle px space)
+                        e.MagnetZ = Px(I32(fp + 8));
                         e.MagnetMag = (short)U16(fp + 12) / 4096.0;             // spring/damper coefficient (fx16)
                         e.UseMagnet = e.MagnetMag != 0;
                     }
@@ -228,6 +274,7 @@ namespace DSPRE.Avalonia.Data
                     if (fp + 14 <= d.Length)
                     {
                         e.ConvX = Px(I32(fp)); e.ConvY = Px(I32(fp + 4));
+                        e.ConvZ = Px(I32(fp + 8));
                         e.ConvRatio = (short)U16(fp + 12) / 4096.0;
                         e.UseConv = e.ConvRatio != 0;
                     }
@@ -349,6 +396,7 @@ namespace DSPRE.Avalonia.Data
             e.SclN = (short)U16(p + 2) / 4096.0;
             e.SclE = (short)U16(p + 4) / 4096.0;
             int io = U16(p + 6); e.SclIn = io & 0xFF; e.SclOut = (io >> 8) & 0xFF;
+            e.SclLoop = (U16(p + 8) & 1) != 0;   // SPLScaleAnim.flags.loop
         }
 
         // SPLResClrAnm: clr_s/clr_e (RGB555) + in_peak_out (u32) + etc (interpolation bit 2). Peak colour = clr_n.
@@ -381,7 +429,17 @@ namespace DSPRE.Avalonia.Data
             // frame. Treating the raw byte as a frame count silently skipped ALL children whenever gen_start > life.
             e.ChildGenStart = e.ParticleLife * ((etc1 >> 8) & 0xFF) / 256;
             e.ChildGenIntvl = Math.Max(1, (etc1 >> 16) & 0xFF); e.ChildTexNo = (etc1 >> 24) & 0xFF;
-            e.ChildUseClr = (U16l(p) & (1 << 6)) != 0;   // SPLResChldFlag.use_chld_clr (bit 6)
+            int cflag = U16l(p);                          // SPLChildResourceFlags (decomp spl_resource.h)
+            e.ChildUseClr = (cflag & (1 << 6)) != 0;      // useChildColor (bit 6)
+            e.ChildRotType = (cflag >> 3) & 3;            // rotationType: 0 none, 1/2 inherit parent angle
+            e.ChildDrawType = (cflag >> 7) & 3;           // drawType (billboard / dbb / polygon / dpol)
+            e.ChildPolyRotAxis = (cflag >> 9) & 3;
+            e.ChildPolyRefPlane = (cflag >> 11) & 1;
+            e.ChildUsesBehaviors = (cflag & 1) != 0;      // usesBehaviors (bit 0)
+            e.ChildHasSclAnm = (cflag & 2) != 0;          // hasScaleAnim (bit 1)
+            e.ChildHasAlpAnm = (cflag & 4) != 0;          // hasAlphaAnim (bit 2)
+            e.ChildRandVel = (short)U16l(p + 2) / 172.0;  // randomInitVelMag (fx16 world → px-units)
+            e.ChildSclRatioRaw = (U16l(p + 8) >> 8) & 0xFF;
         }
 
         // SPLResTexAnm: u8 tex_no[8] + etc (u32: use_num:8, diff:8, use_rndm:1, loop:1).
@@ -403,6 +461,9 @@ namespace DSPRE.Avalonia.Data
         {
             int alp = U16(p);
             e.AlpS = alp & 0x1F; e.AlpN = (alp >> 5) & 0x1F; e.AlpE = (alp >> 10) & 0x1F;
+            int etc = U16(p + 2);                              // flick(randomRange):8 | loop:1
+            e.AlpFlick = etc & 0xFF;
+            e.AlpLoop = (etc & 0x100) != 0;
             int io = U16(p + 4); e.AlpIn = io & 0xFF; e.AlpOut = (io >> 8) & 0xFF;
         }
 

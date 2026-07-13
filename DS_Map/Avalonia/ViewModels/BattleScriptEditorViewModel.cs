@@ -941,6 +941,10 @@ namespace DSPRE.Avalonia.ViewModels
             _previewTimer?.Stop();
             BackgroundFrame = null;
             CellPreview = null; ParticlePreview = null;   // don't leave the last wave/particle frame statically on screen
+            // Re-render the static scene: the last played frame may have mons hidden / dragged (Dark Void
+            // vanishes the defender mid-effect) — without this the frozen composite keeps them invisible
+            // after playback ends.
+            if (IsWest && _sceneLoaded) SceneComposite = _compositor.Render(null);
             CellScaleX = CellScaleY = CellOpacity = 1;
             ShakeX = ShakeY = 0; BackgroundDarken = 0;
             PlayerOffsetX = PlayerOffsetY = EnemyOffsetX = EnemyOffsetY = 0;

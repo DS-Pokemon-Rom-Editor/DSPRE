@@ -130,7 +130,8 @@ namespace DSPRE.Avalonia
                 {
                     if (!cap.Visible) continue;
                     var cs = cap.SrcMon == 0 ? _back : _front;
-                    BlitMon(cs, true, cap.Dx, cap.Dy, cap.ScaleX, cap.ScaleY, cap.RotDeg, cap.TintA, cap.TintR, cap.TintG, cap.TintB, cap.Alpha, (int)cap.Mosaic);
+                    BlitMon(cs, true, cap.Dx, cap.Dy, cap.ScaleX, cap.ScaleY, cap.RotDeg, cap.TintA, cap.TintR, cap.TintG, cap.TintB, cap.Alpha, (int)cap.Mosaic,
+                            clipOutX0: cap.ClipOutX0, clipOutY0: cap.ClipOutY0, clipOutX1: cap.ClipOutX1, clipOutY1: cap.ClipOutY1);
                 }
             }
 
@@ -251,9 +252,11 @@ namespace DSPRE.Avalonia
                              double scaleX, double scaleY, double rotDeg, double tintA, byte tr, byte tg, byte tb,
                              double alphaMul = 1.0, int mosaic = 0, double clip = 1.0,
                              bool warp = false, double warpAmp = 0, double warpBaseDeg = 0, double warpAddPerRow = 0,
-                             double warpWidthA = 0, int warpShimmer = 0)
+                             double warpWidthA = 0, int warpShimmer = 0,
+                             double clipOutX0 = 0, double clipOutY0 = 0, double clipOutX1 = -1, double clipOutY1 = -1)
         {
             if (s.rgba == null || !visible || alphaMul <= 0) return;
+            bool hasClipOut = clipOutX1 >= clipOutX0 && clipOutY1 >= clipOutY0;   // hw-window OBJ exclusion rect
             int mblk = mosaic > 0 ? mosaic + 1 : 0;   // G2_SetOBJMosaicSize: sample is snapped to (level+1)-px blocks
             // RECT_VIEW wipe: |clip| = visible fraction of the sprite rows; clip>0 reveals from the top, clip<0 from the bottom.
             double clipAbs = Math.Min(1.0, Math.Abs(clip)); bool clipTop = clip >= 0;
@@ -280,6 +283,7 @@ namespace DSPRE.Avalonia
                 }
                 for (int x = x0; x <= x1; x++)
                 {
+                    if (hasClipOut && x >= clipOutX0 && x < clipOutX1 && y >= clipOutY0 && y < clipOutY1) continue;
                     double rx = x - cx - warpOfsX, ry = y - cy;
                     double ux = rx * cos + ry * sin, uy = -rx * sin + ry * cos;   // un-rotate
                     double sxp = ux / scaleX + s.w / 2.0, syp = uy / scaleY + s.h / 2.0;   // un-scale → sprite space

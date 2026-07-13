@@ -86,7 +86,6 @@ namespace DSPRE.Avalonia
         private bool _scriptDone, _waitParticles, _waitFlag;
         private int _bgWait;   // HAIKEI_*_WAIT: 0 = none, 1 = block until the BG change fully settles, 2 = until half-faded
         private int _guard;
-        private int _pendingTurn2 = -1;   // TURN_CHK queues turn2 to run when turn1's SEQEND is reached
 
         // Shake. WT_SHAKE (WestSp_WE_T01) shakes the mode-selected MON sprite via MonShakeX/Y; BG_SHAKE
         // (WestSp_WE_BgShake) and WE_TOOL_BG shakes scroll the whole BG frame → ShakeX/Y. Both transient (reset/frame).
@@ -134,6 +133,10 @@ namespace DSPRE.Avalonia
             public byte TintR, TintG, TintB; public double TintA;
             public bool Visible = true;
             public int Priority = 2;           // OAM view priority (POKE_OAM_VIEW); lower value = drawn in front.
+            // PokeOamView_464's hardware window: OBJ pixels INSIDE this screen rect are hidden (the window's
+            // inside-plane excludes OBJ), so the sinking copy is swallowed as it crosses into it. Empty
+            // (X1 < X0) = no clip.
+            public double ClipOutX0, ClipOutY0, ClipOutX1 = -1, ClipOutY1 = -1;
         }
         private readonly Dictionary<int, DroppedCap> _caps = new Dictionary<int, DroppedCap>();
         public IReadOnlyCollection<DroppedCap> Caps => _caps.Values;
@@ -172,7 +175,20 @@ namespace DSPRE.Avalonia
         private const int FX_BG_WRAP = 512;
         private double _bgX, _bgY, _bgSpdX, _bgSpdY;
         private double _bgOpacity, _bgPeak, _bgStopY; private int _bgFadeFrames; private bool _bgFadingOut, _bgOverlay, _bgUseStop;
-        private readonly int[] _work = new int[16];   // WORK_SET gp work (HAIKEI scroll speed lives in [0]=X, [1]=Y)
+        private readonly int[] _work = new int[16];   // WORK_SET gp work (we_def.h WEDEF_GP_INDEX_*: [0]=SPEED_X,
+                                                      // [1]=SPEED_Y, [2]=BGPOS_X, [3]=BGPOS_Y, [6]=SPEED_R)
+
+        // HaikeiChange_ParamRev (we_sys.c): the work[SPEED_R] param lets a script flip its OWN backdrop
+        // scroll/position per side — 0 = never; 1 = reverse when the DEFENDER is on the player's side;
+        // 2 = the same, except a self-targeting move (at==df) reverses when the caster is the enemy.
+        private bool HaikeiParamRev()
+        {
+            int r = _work[6];
+            if (r == 0) return false;
+            bool dfMine = _dfVis == 0;                 // defender on the player's (bottom) side
+            if (r == 2 && _atVis == _dfVis) return _attackerIsEnemy;
+            return dfMine;
+        }
         // WestSp_WE_Laster (ラスター): a per-scanline horizontal sine wave on the battle background (heat-haze/ripple
         // for Nightmare/Whirlpool/Water Pulse). All exact: ROTA_ADD = 1°/scanline, SCR_SP = 200 angle-units/frame,
         // amplitude ROTA_WIDTH = 32·FX32_ONE → FX_MUL(sin, width)>>12 = ±32 px.
@@ -307,7 +323,10 @@ namespace DSPRE.Avalonia
             else if (_waitFlag) { if (_monFx.Count == 0 && _cellPhase < 0 && _fadeFramesLeft <= 0) _waitFlag = false; }
             else if (_bgWait != 0) { if (_bgWait == 2 ? BgHalf : BgSettled) _bgWait = 0; }
             else if (_waitParticles) { if (_renderer.AllFinished) _waitParticles = false; }
-            else RunCommands();
+            // A SEQEND ends the SCRIPT, not just the frame: without this guard the next Step resumed
+            // execution right past it into the following variant block (PTAT / contest / other-side /
+            // parity blocks), replaying the whole move (double Charge Beam / Lunar Dance).
+            else if (!_scriptDone) RunCommands();
 
             _renderer.Step();   // advance all live emitters
         }
@@ -323,24 +342,17 @@ namespace DSPRE.Avalonia
 
                 switch (name)
                 {
-                    // A turn1 SEQEND with a queued turn2 continues into the attack turn (see WEST_TURN_CHK); the
-                    // final SEQEND ends the script.
                     case "WEST_SEQEND":
-                        if (_pendingTurn2 >= 0) { _pc = _pendingTurn2; _pendingTurn2 = -1; break; }
                         _scriptDone = true; return;
 
-                    // Two-turn moves (Fly/Dig/Solar Beam/…) dispatch with TURN_CHK turn1,turn2 (we_sys.c WEST_TURN_CHK:
-                    // even waza_eff_cnt → turn1/charge, odd → turn2/attack — the move plays turn1 then turn2 across its
-                    // two-turn lifecycle). There's no fall-through (a bare SEQEND follows the opcode). Preview the WHOLE
-                    // move faithfully: jump to turn1 now and queue turn2 to run when turn1's SEQEND is reached.
+                    // WEST_TURN_CHK offEven,offOdd (we_sys.c): pick ONE branch by the parity of the global
+                    // waza_eff_cnt — for genuine two-turn moves (Fly/Dig) that's charge vs attack turn, but
+                    // plenty of moves use it for alternating VARIANTS (Lunar Dance). Chaining both blocks
+                    // (the old preview behaviour) double-played those. Preview a fresh battle: count 0 →
+                    // even → the first branch, exactly like the game's first use.
                     case "WEST_TURN_CHK":
-                        if (c.Args.Length >= 1 && JumpRelative(c.WordPos + 1, c.Args[0]))
-                        {
-                            if (c.Args.Length >= 2 && _wordToIndex.TryGetValue(c.WordPos + 2 + c.Args[1], out int t2))
-                                _pendingTurn2 = t2;
-                            break;
-                        }
-                        if (c.Args.Length >= 2) JumpRelative(c.WordPos + 2, c.Args[1]);   // fallback: attack turn only
+                        if (c.Args.Length >= 1 && JumpRelative(c.WordPos + 1, c.Args[0])) break;
+                        if (c.Args.Length >= 2) JumpRelative(c.WordPos + 2, c.Args[1]);
                         break;
                     case "WEST_SEQ_JP":                                  // unconditional jump
                         if (c.Args.Length >= 1) JumpRelative(c.WordPos + 1, c.Args[0]);
@@ -391,6 +403,13 @@ namespace DSPRE.Avalonia
                     case "WEST_LOAD_PARTICLE":
                     case "WEST_LOAD_PARTICLE_EX":
                         if (c.Args.Length >= 2) _slot[c.Args[0]] = c.Args[1];
+                        break;
+                    // CAMERA_CHG no,mode / CAMERA_REVERCE no,flag (we_sys.c): set the per-particle-slot camera
+                    // mode/reverse flag — downstream anchor lookups use the turned-camera coordinate set, which
+                    // we reproduce by mirroring that slot's layers (ViewReversed).
+                    case "WEST_CAMERA_CHG":
+                    case "WEST_CAMERA_REVERCE":
+                        if (c.Args.Length >= 2) _cameraMode[c.Args[0]] = c.Args[1];
                         break;
                     // EXIT_PARTICLE no (we_sys.c Wp_Exit): stop the slot's emitters — quits emission so live particles
                     // die out, and lets an "emit forever" emitter actually finish (so WAIT_PARTICLE can release).
@@ -476,10 +495,17 @@ namespace DSPRE.Avalonia
                     // HAIKEI_CHG map_id, mode — replace the battle backdrop with BG `map_id`, fading it in; if the
                     // mode has the MOVE bit it scrolls at work[SPEED_X]/[SPEED_Y]. HAIKEI_RECOVER fades it out.
                     case "WEST_HAIKEI_CHG":
-                        // HAIKEI_CHG: full backdrop behind the mons, scrolling at work[SPEED_X]/[SPEED_Y] (read), no
-                        // stop line — stays until HAIKEI_RECOVER. (Hydro Pump scrolls X at WEDEF_HAIKEI_SPEED_X.)
-                        if (c.Args.Length >= 1) StartBackground(c.Args[0], overlay: false, posX: 0, posY: 0,
-                            spdX: _work[0], spdY: -_work[1], peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
+                        // HAIKEI_CHG: full backdrop behind the mons, starting at work[BGPOS_X/Y] and scrolling at
+                        // work[SPEED_X]/[SPEED_Y], no stop line — stays until HAIKEI_RECOVER. HaikeiSubSystem_Scroll
+                        // (we_sys.c) feeds pos += speed STRAIGHT into the BG scroll register, and hardware samples
+                        // texel(screen + scroll): positive speed_y scrolls the sky UP (Lunar Dance's rising moon; an
+                        // old Y negation here sank it). work[SPEED_R] can flip everything per side (ParamRev).
+                        if (c.Args.Length >= 1)
+                        {
+                            int hRev = HaikeiParamRev() ? -1 : 1;
+                            StartBackground(c.Args[0], overlay: false, posX: _work[2] * hRev, posY: _work[3] * hRev,
+                                spdX: _work[0] * hRev, spdY: _work[1] * hRev, peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
+                        }
                         break;
                     case "WEST_HAIKEI_RECOVER":
                         _bgFadingOut = true;
@@ -504,8 +530,12 @@ namespace DSPRE.Avalonia
                     // animated batt_bg_planm data. We approximate it as a plain HAIKEI_CHG to map_id (the per-frame
                     // palette animation frames aren't loaded); ch_mode/ex_bit select the plane-anim variant.
                     case "WEST_HAIKEI_CHG_EX":
-                        if (c.Args.Length >= 1) StartBackground(c.Args[0], overlay: false, posX: 0, posY: 0,
-                            spdX: _work[0], spdY: -_work[1], peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
+                        if (c.Args.Length >= 1)
+                        {
+                            int hRevEx = HaikeiParamRev() ? -1 : 1;
+                            StartBackground(c.Args[0], overlay: false, posX: _work[2] * hRevEx, posY: _work[3] * hRevEx,
+                                spdX: _work[0] * hRevEx, spdY: _work[1] * hRevEx, peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
+                        }
                         break;
                     // WEST_BATONTATTI_JP adrs (we_sys.c) — Baton Pass touch: jumps by `adrs` ONLY when the attacker has
                     // a client pair (double battle). In a single-target preview at_client_pair is false, so it just
@@ -540,7 +570,7 @@ namespace DSPRE.Avalonia
             if (emitterNo < 0 || emitterNo >= arc.Emitters.Count) return null;
             var em = arc.Emitters[emitterNo];
             var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
-            var (cx, cy, ax, ay) = Place(callback, sepIndex, sepCount);
+            var (cx, cy, ax, ay, z) = Place(callback, sepIndex, sepCount);
             cx += em.PosX; cy -= em.PosY;   // emitter base offset (+Y up): hand-above (Karate Chop), L/R slap (Double Slap)
             // init_vel_axis needs an axis direction: the callback's (AXIS_ATTACK → toward defender) if it set one,
             // else the emitter's OWN base.axis (Flame Wheel's spinning flames stream along it, then spin → a wheel).
@@ -548,14 +578,22 @@ namespace DSPRE.Avalonia
             if (ax != 0 || ay != 0) { axX = ax; axY = -ay; }
             else { axX = em.AxisX; axY = em.AxisY; }
             var sim = new SpaSimulator(em, axX, axY) { AnchorX = cx, AnchorY = cy };   // spawn anchor (for EMIT_ROTATION re-centering)
+            // EmitCall_CameraReverse* (cb 1/2) with an enemy attacker, or a WEST_CAMERA_CHG/REVERCE on this
+            // slot: the game turns the particle camera 180°, mirroring the layer (and rotation chirality).
+            bool reversed = ((callback == 1 || callback == 2) && _attackerIsEnemy)
+                            || (_cameraMode.TryGetValue(ptc, out int camMode) && camMode != 0);
             // Mirror a quadrant texture into a full sprite only when the texture flips AND the emitter doubles the
             // texcoord span (tex_repeat ≥ 1) — that's what builds a ring/flare from one stored quarter.
             _renderer.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
-                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY));
+                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
+                baseZ: z + em.PosZ, viewReversed: reversed, flipS: em.FlipS, flipT: em.FlipT, em: em));
             _lastSim = sim;
             TrackSim(ptc, sim);
             return sim;
         }
+
+        // WEST_CAMERA_CHG/REVERCE per particle-slot camera state (we_sys camera_mode[]/camera_flag[]).
+        private readonly Dictionary<int, int> _cameraMode = new Dictionary<int, int>();
 
         // Remember which emitters a particle slot spawned, so WEST_EXIT_PARTICLE can stop exactly those.
         private void TrackSim(int ptc, SpaSimulator sim)
@@ -640,6 +678,7 @@ namespace DSPRE.Avalonia
             }
             double sx = anchorX + em.PosX + posOfsX, sy = anchorY - em.PosY - posOfsY;
             double driftX = 0, driftY = 0, magOX = double.NaN, magOY = double.NaN, convOX = double.NaN, convOY = double.NaN;
+            double magOZ = double.NaN, convOZ = double.NaN;
             // The emit axis points from s_client to e_client (AxisPosTable[type(s)][type(e)] — for TARGET_AT that is
             // defender→attacker, the reverse of TARGET_DF). Unit direction in sim space (+Y up): screen Δ, Y flipped.
             double sCx = sClient == 0 ? _atX : _dfX, sCy = sClient == 0 ? _atY : _dfY;
@@ -659,8 +698,11 @@ namespace DSPRE.Avalonia
                     tgY = PARTICLE_ORIGIN_Y + f * (tgY - PARTICLE_ORIGIN_Y);
                 }
                 double rX = tgX - sx, rY = sy - tgY;   // sim space (+Y up), relative to the emitter anchor
-                if ((fldMode & 0x1000) != 0) { convOX = rX; convOY = rY; }   // FLD_CONVERGENCE_POS
-                else if ((fldMode & 0x10) != 0) { magOX = rX; magOY = rY; } // FLD_MAGNET_POS
+                // Depth of the target mon's plane relative to the emitter's plane — the field targets are
+                // 3D points in-game (a Mega Drain magnet on the far-side mon pulls in depth too).
+                double rZ = ZOfVis(fldTgt == 2 ? _atVis : _dfVis) - (ZOfVis(src == 0 ? _atVis : _dfVis) + em.PosZ);
+                if ((fldMode & 0x1000) != 0) { convOX = rX; convOY = rY; convOZ = rZ; }   // FLD_CONVERGENCE_POS
+                else if ((fldMode & 0x10) != 0) { magOX = rX; magOY = rY; magOZ = rZ; }  // FLD_MAGNET_POS
             }
             // (driftX/driftY stay 0 — there is no emitter drift; see axisOverride note above.)
             // AXIS override → spray along the at→df line (init_vel_axis carries it). The *_SIDE variants (4/5) only
@@ -687,9 +729,15 @@ namespace DSPRE.Avalonia
                 opAxX = ax / l; opAxY = ay / l;
             }
             else { opAxX = em.AxisX; opAxY = em.AxisY; }
-            var sim = new SpaSimulator(em, opAxX, opAxY, driftX, driftY, magOX, magOY, convOX, convOY);
+            var sim = new SpaSimulator(em, opAxX, opAxY, driftX, driftY, magOX, magOY, convOX, convOY,
+                                       magOverrideZ: magOZ, convOverrideZ: convOZ);
+            // Anchor-plane depth: the side the emitter actually sits on (the fixed-formation positions
+            // 145/225/226 belong to the s_client side too).
+            double opZ = ZOfVis(src == 0 ? _atVis : _dfVis) + em.PosZ;
+            bool opReversed = _cameraMode.TryGetValue(ptc, out int opCam) && opCam != 0;
             _renderer.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, sx, sy, em.DrawType,
-                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY));
+                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
+                baseZ: opZ, viewReversed: opReversed, flipS: em.FlipS, flipT: em.FlipT, em: em));
             _lastSim = sim;
             TrackSim(ptc, sim);
         }
@@ -1065,10 +1113,17 @@ namespace DSPRE.Avalonia
                         if (a.Length > 5 && a[5] >= 0 && a[5] != 0xFF) pvCap.Priority = a[5];
                         // callback != 0 → PokeOamView_464 (Dark Void): the defender's copy is dragged down into
                         // the void in jittered +4/+8 steps, then sinks continuously and is swallowed past y≈130.
-                        // (The hardware-window clip isn't reproduced; the sink + swallow carries the read.)
+                        // The source also sets a hardware WINDOW whose inside-plane EXCLUDES OBJ — the copy is
+                        // hidden wherever it overlaps the rect, so it visibly sinks below that line:
+                        // target 0 → G2_SetWnd0Position(0,160,128,192); else (128,86,256,192).
                         if (a.Length > 7 && a[7] != 0)
+                        {
+                            bool tgt0 = a.Length > 8 && a[8] == 0;
+                            pvCap.ClipOutX0 = tgt0 ? 0 : 128; pvCap.ClipOutY0 = tgt0 ? 160 : 86;
+                            pvCap.ClipOutX1 = tgt0 ? 128 : 256; pvCap.ClipOutY1 = 192;
                             _monFx.Add(new MonFx { Cap = pvCap, Mon = 0, Kind = 26,
                                                    Frames = Math.Max(1, a.Length > 3 ? a[3] : 80) });
+                        }
                     }
                     break;
                 case 78:   // WestSp_WE_ALL_DROP (move 425): drop EVERY mon into an OAM cap so a following effect can move
@@ -2146,8 +2201,13 @@ namespace DSPRE.Avalonia
             _fadeCur = _fadeStart + (_fadeEnd - _fadeStart) * t;
         }
 
-        // EMTFUNC_* → emitter screen centre + travel axis (see wp_callback.c).
-        private (double cx, double cy, double ax, double ay) Place(int callback, int sepIndex, int sepCount)
+        // Anchor-plane depth in px-units (+z toward the camera), from we_tool.h: player (visual 0, bottom)
+        // WET_PARTICLE_Z_A = 0x40 → ≈0; enemy (visual 1, top) Z_BB = −5248 → −30.5 (farther from the camera —
+        // the real reason enemy-side effects render smaller in-game).
+        private static double ZOfVis(int vis) => vis == 1 ? -5248.0 / 172.0 : 64.0 / 172.0;
+
+        // EMTFUNC_* → emitter screen centre + travel axis + anchor-plane depth (see wp_callback.c).
+        private (double cx, double cy, double ax, double ay, double z) Place(int callback, int sepIndex, int sepCount)
         {
             double dx = _dfX - _atX, dy = _dfY - _atY;
             double len = Math.Sqrt(dx * dx + dy * dy); if (len > 0) { dx /= len; dy /= len; }
@@ -2158,16 +2218,16 @@ namespace DSPRE.Avalonia
                           // variant BAKES its source + aim into base.pos/base.axis (Water Gun index0 base.pos = the
                           // player's mouth, index3 = the enemy's; Hyper Beam likewise), so anchor at the PARTICLE
                           // ORIGIN and let base.pos place it — NOT the attacker (that double-offset it off-screen).
-                    return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0);
+                    return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
                 case 1: case 3: case 19: case 21:                                   // attacker
-                    return (_atX, _atY, 0, 0);
+                    return (_atX, _atY, 0, 0, ZOfVis(_atVis));
                 case 5: case 7: case 8: case 9: case 10: case 11:                    // AXIS_ATTACK family → travel to defender
                 case 12: case 13: case 14: case 15: case 16:
-                    return (_atX, _atY, dx, dy);
+                    return (_atX, _atY, dx, dy, ZOfVis(_atVis));
                 case 6:                                                              // AXIS_DEFENCE → travel to attacker
-                    return (_dfX, _dfY, -dx, -dy);
+                    return (_dfX, _dfY, -dx, -dy, ZOfVis(_dfVis));
                 default:                                                             // DEFENCE_POS / DUMMY / etc.
-                    return (_dfX, _dfY, 0, 0);
+                    return (_dfX, _dfY, 0, 0, ZOfVis(_dfVis));
             }
         }
     }
