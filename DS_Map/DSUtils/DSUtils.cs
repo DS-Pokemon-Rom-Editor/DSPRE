@@ -135,14 +135,55 @@ namespace DSPRE {
             string toolPath = ToolPath(name);
             if (!File.Exists(toolPath)) return false;
 
-            if (OperatingSystem.IsWindows() || !toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            if (OperatingSystem.IsWindows())
             {
                 startInfo.FileName = toolPath;
                 return true;
             }
 
+            if (!toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryEnsureUnixExecutable(toolPath))
+                {
+                    startInfo.FileName = toolPath;
+                    return true;
+                }
+
+                string windowsPath = toolPath + ".exe";
+                if (!File.Exists(windowsPath)) return false;
+                toolPath = windowsPath;
+            }
+
             if (!IsCommandAvailable("wine")) return false;
 
+            ConfigureWineStartInfo(startInfo, toolPath);
+            return true;
+        }
+
+        private static bool TryEnsureUnixExecutable(string toolPath)
+        {
+            const UnixFileMode executeBits = UnixFileMode.UserExecute
+                | UnixFileMode.GroupExecute
+                | UnixFileMode.OtherExecute;
+
+            try
+            {
+                UnixFileMode mode = File.GetUnixFileMode(toolPath);
+                if ((mode & executeBits) != executeBits)
+                    File.SetUnixFileMode(toolPath, mode | executeBits);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException
+                || ex is UnauthorizedAccessException
+                || ex is PlatformNotSupportedException)
+            {
+                AppLogger.Error($"Unable to make native tool executable: {toolPath}: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static void ConfigureWineStartInfo(ProcessStartInfo startInfo, string toolPath)
+        {
             startInfo.FileName = "wine";
             // Wine's own diagnostics would otherwise be mixed into tool stderr; legacy callers use
             // non-empty stderr as a failure signal.
@@ -154,7 +195,7 @@ namespace DSPRE {
             if (startInfo.ArgumentList.Count > 0)
             {
                 startInfo.ArgumentList.Insert(0, toolPath);
-                return true;
+                return;
             }
 
             startInfo.Arguments = ConvertUnixPathsToWine(startInfo.Arguments);
@@ -162,7 +203,6 @@ namespace DSPRE {
             startInfo.Arguments = string.IsNullOrWhiteSpace(startInfo.Arguments)
                 ? toolArgument
                 : toolArgument + " " + startInfo.Arguments;
-            return true;
         }
 
         /// <summary>Returns a user-facing explanation for a tool that could not be launched.</summary>
@@ -374,9 +414,11 @@ namespace DSPRE {
                     AppLogger.Info("dsrom stdout: " + output);
                 }
             }
-            catch (System.ComponentModel.Win32Exception)
+            catch (System.ComponentModel.Win32Exception ex)
             {
-                AppMessages.Error("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                string message = "Failed to start dsrom: " + ex.Message;
+                AppLogger.Error(message);
+                AppMessages.Error(message + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
                     "Couldn't unpack ROM");
                 return false;
             }
@@ -467,9 +509,11 @@ namespace DSPRE {
                     AppLogger.Info("dsrom stdout: " + output);
                 }
             }
-            catch (System.ComponentModel.Win32Exception)
+            catch (System.ComponentModel.Win32Exception ex)
             {
-                AppMessages.Error("Failed to call dsrom.exe" + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
+                string message = "Failed to start dsrom: " + ex.Message;
+                AppLogger.Error(message);
+                AppMessages.Error(message + Environment.NewLine + "Make sure DSPRE's Tools folder is intact.",
                     "Couldn't repack ROM");
                 return false;
             }
