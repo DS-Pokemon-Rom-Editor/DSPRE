@@ -369,8 +369,13 @@ namespace DSPRE.Avalonia.Views
                 if (vm != null) vm.IsLoadingRom = false;
             }
             if (vm != null) vm.StatusText = ok ? "ROM built: " + path : "ROM build failed.";
-            if (ok) await DialogHelper.ShowInfo("ROM built successfully:\n" + path, "Save ROM");
-            else await DialogHelper.ShowError(error ?? "Building the ROM failed. See the log for details.", "Save ROM");
+            if (ok)
+            {
+                AppLogger.Info("ROM built successfully: " + path);
+                return;
+            }
+
+            await DialogHelper.ShowError(error ?? "Building the ROM failed. See the log for details.", "Save ROM", this);
         }
 
         private async void ConvertDsRom_Click(object sender, RoutedEventArgs e)
