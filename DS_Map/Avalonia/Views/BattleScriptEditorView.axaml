@@ -29,11 +29,12 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock Text="Each command is an opcode + argument words. Args are comma/space separated (decimal or 0x..). For waza/be/sub they're padded to the opcode's fixed count on save; WEST opcodes are variable-length so they're written exactly as typed. Edits are shared and repacked into the ROM on the normal save."
+      <TextBlock Text="One command per line, written like a command: 'CommandName label=value label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex; settings with named options use the option word (like target=Attacker). Labels can be given in any order; unlabeled values just fill whichever slots are left, in order. Lines starting with // are comments. The raw 'OPCODE 1 2 3' form is still accepted. Edits are shared with the cards and repacked into the ROM on save."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
         <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"/>
+        <Button Content="❓ Command guide" Click="CommandGuide_Click"/>
       </StackPanel>
     </StackPanel>
 

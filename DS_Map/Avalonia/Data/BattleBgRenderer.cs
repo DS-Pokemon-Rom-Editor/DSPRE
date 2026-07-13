@@ -15,12 +15,11 @@ namespace DSPRE.Avalonia.Data
     {
         public sealed class BgImage { public byte[] Rgba; public int Width, Height; public int Period; }
 
-        // BG_ID → (chr, pal, scr, scrReverse) file indices in the battle-bg NARC, generated from each game's
-        // leaked Haikei_BG_Table[][5]: Platinum resolved through pl_batt_bg_def.h (pl_batt_bg.narc), HGSS
-        // through batt_bg_gs_def.h (batt_bg_gs.narc = retail a/0/0/7 — 351 entries, verified). Index = the
-        // BG_ID the WEST scripts pass to HAIKEI_CHG / WE_T02 (BG_ID_057 = 48 → Surf; BG_ID 44 → Dark Void).
-        // −1 = no reverse-side tilemap. The two games' file layouts differ throughout — using one game's
-        // table on the other decodes the wrong entries entirely (Dark Void's "completely different" HG look).
+        // BG_ID → (chr, pal, scr, scrReverse) file indices in the battle-background NARC, one table per game
+        // family: Platinum uses pl_batt_bg.narc, HGSS uses batt_bg_gs.narc (retail a/0/0/7, 351 entries).
+        // Index = the BG_ID the move-effect scripts pass to the background-change / background-scroll opcodes
+        // (BG_ID 48 → Surf; BG_ID 44 → Dark Void). −1 = no reverse-side tilemap. The two families' file layouts
+        // differ throughout — using one family's table on the other decodes entirely wrong entries.
         private static readonly (int chr, int pal, int scr, int scrRev)[] PlatTable =
         {
             (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,321,62,63),
@@ -55,13 +54,12 @@ namespace DSPRE.Avalonia.Data
         public static bool HasBg(int bgId) => bgId >= 0 && bgId < Table.Length;
         public static int BgCount => Table.Length;
 
-        // The REAL battle-scene backdrops (the scenery behind the platforms), distinct from the move-effect BGs above.
-        // client_tool.c: chr = BATTLE_BG00_NCGR_BIN(3) + bg_id, and a SINGLE shared tilemap BATTLE_BG00_NSCR_BIN(2)
-        // for every bg_id. 23 backdrops (BG00..BG22). The BG00_D_NCLR palette base is PER-FAMILY — verified by
-        // scanning both real archives for the 23×3 (day/eve/night) NCLR run: Platinum pl_batt_bg = 172..240
-        // (matches the leaked-source constant BATT_BG00_D_NCLR=172), HGSS a/0/0/7 = 176..244. Hardcoding either
-        // one breaks the other: the wrong base still lands on SOME valid palette (the TTLP guard passes), so it
-        // renders confidently wrong colours rather than falling back.
+        // The real battle-scene backdrops (the scenery behind the platforms), distinct from the move-effect BGs
+        // above. The character file = base graphic index (3) + bg_id, with a single shared tilemap (index 2) for
+        // every bg_id. 23 backdrops (BG00..BG22). The day/eve/night palette base is PER-FAMILY — confirmed by
+        // scanning both real archives for the 23×3 palette run: Platinum pl_batt_bg = 172..240, HGSS a/0/0/7 =
+        // 176..244. Hardcoding either base breaks the other family: the wrong base still lands on SOME valid
+        // palette (the palette-chunk guard passes), so it renders confidently wrong colours rather than failing.
         public const int BackdropCount = 23;
         private const int BackdropChr0 = 3, BackdropScr = 2;
         private static int BackdropPal0 => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? 176 : 172;

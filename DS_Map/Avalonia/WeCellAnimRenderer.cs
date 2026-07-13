@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia
     /// Renders a move visual-effect CELL animation (the CATS layer of the WEST scripts) into Avalonia bitmap frames,
     /// reusing the existing Nitro image stack (NCGR char + NCLR palette + NCER cells + NANR animation). The four
     /// resources live in the wazaeffect/effectclact NARCs (wechar/wepltt/wecell/wecellanm); a WEST script's
-    /// <c>CATS_*_RES_LOAD res,arc</c> commands pick the file indices to load. Mirrors TrainerClassSpriteRenderer +
+    /// <c>ACT_ADD res,arc</c> commands pick the file indices to load. Mirrors TrainerClassSpriteRenderer +
     /// the Images AnimationControl reference. Covers the ~32 cell-animation moves; particle moves are unaffected.
     /// </summary>
     public sealed class WeCellAnimRenderer

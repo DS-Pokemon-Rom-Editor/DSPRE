@@ -10,23 +10,22 @@ namespace DSPRE.Avalonia.Data
     {
         public int Width, Height;
         public byte[] Rgba;   // width*height*4, or null if it couldn't be decoded
-        // SPLTexParam flip flags (bits 14-15): the texture is a quadrant the hardware reflects across the particle
+        // the texture parameters flip flags (bits 14-15): the texture is a quadrant the hardware reflects across the particle
         // centre to build a symmetric sprite (e.g. a ring stored as one quarter). Mirror it at draw time.
         public bool MirrorX, MirrorY;
     }
 
     /// <summary>
-    /// Parses an SPA particle archive (the NDS "simple particle library" format — see the leaked
-    /// include/library/spl_resource.h). Layout: a 32-byte <c>SPLArcHdr</c> then <c>res_num</c> variable-length
-    /// emitter records (an 88-byte <c>SPLResBase</c> plus flag-gated scale/colour/alpha/texture/child blocks and a
-    /// field array), then a texture section. This decodes the header + each emitter's simulation-relevant base
-    /// parameters and walks the records correctly; the texture section is located but not yet decoded.
-    /// Foundation for the move-effect particle preview (the ~425 particle-based moves).
+    /// Parses an SPA particle archive (the NDS "simple particle library" resource format). Layout: a 32-byte
+    /// archive header, then a set of variable-length emitter records (an 88-byte base block plus flag-gated
+    /// scale/colour/alpha/texture/child blocks and a field array), then a texture section. This decodes the
+    /// header and each emitter's simulation parameters and walks the records; the texture section is located and
+    /// decoded on demand. Foundation for the move-effect particle preview (the roughly 425 particle-based moves).
     /// </summary>
     public sealed class SpaEmitter
     {
-        public int InitPosType;     // SPL_INIT_POS_TYPE_* (sphere/circle/…)
-        public int CircleAxis;      // SPL_CIRCLE_AXIS_* (0=Z screen-plane, 1=Y, 2=X, 3=arbitrary)
+        public int InitPosType;     // the emission-shape constants* (sphere/circle/…)
+        public int CircleAxis;      // the circle-axis emission constants* (0=Z screen-plane, 1=Y, 2=X, 3=arbitrary)
         public int DrawType;        // billboard / polygon
         public double PosX, PosY, PosZ;   // emitter offset (world units; fx32 → /4096)
         public double GenNum;       // particles generated (fx32)
@@ -52,7 +51,7 @@ namespace DSPRE.Avalonia.Data
         public double InitRot, RttMinRot, RttMaxRot, RotRate;   // billboard rotation (radians); RotRate = spin rad/frame
         public bool UseRttAnm, UseInitRttRndm;
 
-        // Animation curves over a particle's life (lifeRate 0..255), decoded from spl_anm.c — these are what make
+        // Animation curves over a particle's life (lifeRate 0..255), decoded from — these are what make
         // particles fade, shrink/grow and recolour like the game.
         public double SclS, SclN, SclE; public int SclIn, SclOut;                    // scale anim (×base_scl)
         public byte ClrSR, ClrSG, ClrSB, ClrER, ClrEG, ClrEB; public int ClrIn, ClrPeak, ClrOut; public bool ClrInterp;
@@ -65,19 +64,19 @@ namespace DSPRE.Avalonia.Data
         public double RandMagX, RandMagY; public int RandIntvl;                     // random field: velocity kick every intvl
         public bool UseConv; public double ConvX, ConvY, ConvRatio;                 // convergence field: lerp pos→point/frame
         public bool UseColl; public double CollY, CollBounce; public int CollEvent; // collision plane: kill(0)/bounce(1)
-        // SPLResChld — parent particles spawn child particles (trails/sparks): half of all emitters use this.
+        // the child-resource block — parent particles spawn child particles (trails/sparks): half of all emitters use this.
         public int ChildLife, ChildGenNum, ChildGenStart, ChildGenIntvl, ChildTexNo;
         public double ChildVelRatio, ChildSclRatio, ChildSclEnd;
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
         public double Aspect = 1.0;     // base.aspect (fx16): billboard sclX = sclY × aspect (non-square sprites)
-        // misc.scaleAnimDir (SPLResourceHeader, bits 28-30 of the word at +72): which axes the scale anim
-        // drives — 0 = both, 1 = X only, 2 = Y only (SPLDraw_Billboard applies it per-axis). A thin quad
+        // misc.scaleAnimDir (the resource header, bits 28-30 of the word at +72): which axes the scale anim
+        // drives — 0 = both, 1 = X only, 2 = Y only (the hardware billboard-build step applies it per-axis). A thin quad
         // with a Y-only scale anim EXTENDS along its length instead of growing as a blob (Seed Flare slashes).
         public int ScaleAnimDir;
         public bool FlipS, FlipT;       // misc.flipTextureS/T (bits 0/1 of the word at +76): mirror the texture on the quad
         public double AxisZ;            // base.axis z (VecFx16 @ +32): 3D travel axis component (+z toward camera)
-        // SPLResourceFlags bits 17-23 (decomp spl_resource.h) — polygon draw-type params + parent/child draw order.
+        // Resource-flag bits 17-23 — polygon draw-type params + parent/child draw order.
         public int PolyRotAxis;         // 0 = rotate about Y, 1 = rotate about the (1,1,1) diagonal (sRotationFunctions)
         public int PolyRefPlane;        // 0 = XY plane quad, 1 = XZ plane quad (sPlaneDrawingFunctions)
         public bool DrawChildrenFirst;  // render children before parents
@@ -85,22 +84,22 @@ namespace DSPRE.Avalonia.Data
         public bool DpolFaceEmitter;    // directional polygon faces the emitter instead of its velocity (misc bit 31)
         // 3D field components (previously dropped in the 2D reduction).
         public double GravityZ, RandMagZ, MagnetZ, ConvZ;
-        // SPLChildResourceFlags: the child's own draw configuration.
+        // the child-particle resource flags: the child's own draw configuration.
         public int ChildDrawType;       // drawType bits 7-8
         public int ChildRotType;        // rotationType bits 3-4: 0 = none, 1/2 = inherit the parent's angle (2 keeps spinning)
         public int ChildPolyRotAxis, ChildPolyRefPlane;
         // randomAttenuation (u8×3 @ +64): per-particle randomisation of base scale (±), lifetime (downward)
-        // and init velocity magnitudes (±), each /256 (spl_emit.c SPLRandom_*ScaledRangeFX32).
+        // and init velocity magnitudes (±), each /256 (the randomization helpers*ScaledRangeFX32).
         public int RndScale, RndLife, RndVel;
         public int LoopFrames = 1;      // misc.loopFrames: the clock for LOOPING anims (loopTimeFactor = 0xFFFF/loopFrames)
         public bool SclLoop, AlpLoop;   // scale/alpha anim loop flags (colour/texture already parsed)
-        public int AlpFlick;            // SPLAlphaAnim randomRange: per-frame downward alpha jitter (flicker)
-        public double ChildRandVel;     // SPLChildResource.randomInitVelMag (fx16 → px-units): ± per-component kick
+        public int AlpFlick;            // the alpha-animation curve randomRange: per-frame downward alpha jitter (flicker)
+        public double ChildRandVel;     // the child-particle resource.randomInitVelMag (fx16 → px-units): ± per-component kick
         public int ChildSclRatioRaw;    // raw byte: child base scale = parent CURRENT scale × (raw+1)/64
         public bool ChildHasSclAnm, ChildHasAlpAnm, ChildUsesBehaviors;
         public double DbbScale;         // etc.dbb_scale (fx16 ratio): directional-billboard stretch along velocity
         public double OffsetX, OffsetY; // base.offset_x/offset_y (fx16, half-size units): billboard quad centre offset
-        // SPLResTexAnm: a particle cycles through tex_no[0..UseNum-1] over its life (spl_tex_ptn_anm: pick tex_no[i]
+        // the texture-animation resource block: a particle cycles through tex_no[0..UseNum-1] over its life (spl_tex_ptn_anm: pick tex_no[i]
         // where i is the first index with lifeRate < Diff·(i+1)); UseRndm picks one at random at birth. This is what
         // makes e.g. Thunderbolt's sparks show full bolt sprites instead of the emitter's base quadrant texture.
         public int[] TexSeq; public int TexUseNum, TexDiff; public bool TexUseRndm;
@@ -114,7 +113,7 @@ namespace DSPRE.Avalonia.Data
         public List<SpaEmitter> Emitters { get; } = new List<SpaEmitter>();
         public List<SpaTexture> Textures { get; } = new List<SpaTexture>();
 
-        // struct sizes (bytes) from spl_resource.h / spl_field.h
+        // struct sizes (bytes) from / 
         private const int HdrSize = 32, BaseSize = 88;
         private const int SclAnmSize = 12, ClrAnmSize = 12, AlpAnmSize = 8, TexAnmSize = 12, ChldSize = 20;
 
@@ -126,7 +125,7 @@ namespace DSPRE.Avalonia.Data
             int U16(int o) => d[o] | (d[o + 1] << 8);
             int I32(int o) => d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24);
 
-            // SPLArcHdr
+            // the archive header
             int resNum = U16(8);
             a.TextureCount = U16(10);
             a.Version = I32(4);
@@ -152,7 +151,7 @@ namespace DSPRE.Avalonia.Data
                     UseChild = (flag & (1u << 16)) != 0,
                     RandomLoopAnm = (flag & (1u << 20)) != 0,   // ptcl_random_loop_anm: random per-particle anim phase
                     // Spatial fields are in particle coordinates: 1 screen pixel = PT_LCD_DOT (172) units
-                    // (we_def.h / we_tool.h), so divide by 172 to get pixels. gen_num/base_scl are plain fx32.
+                    // (/), so divide by 172 to get pixels. gen_num/base_scl are plain fx32.
                     PosX = Px(I32(off + 4)),
                     PosY = Px(I32(off + 8)),
                     PosZ = Px(I32(off + 12)),
@@ -172,11 +171,11 @@ namespace DSPRE.Avalonia.Data
                     EmitterLife = U16(off + 60),
                     ParticleLife = U16(off + 62),
                     Aspect = (short)U16(off + 48) / 4096.0,   // base.aspect (fx16)
-                    // start_offset (u16 @50, spl_resource.h): the emitter idles this many frames before emitting.
+                    // start_offset (u16 @50,): the emitter idles this many frames before emitting.
                     // This is script-invisible sequencing — e.g. Seed Flare adds all 3 emitters at once but its
                     // big slashes carry a start_offset so they fire after the small particles.
                     StartOffset = U16(off + 50),
-                    // Billboard rotation (SPLResBase): rtt_min@52 / rtt_max@54 (s16) + init_rtt@56 (u16); units = full
+                    // Billboard rotation (the resource base header): rtt_min@52 / rtt_max@54 (s16) + init_rtt@56 (u16); units = full
                     // turn / 65536. use_rtt_anm(bit12) spins by rtt_min/frame; use_init_rtt_rndm(bit13) randomises the
                     // start in [rtt_min,rtt_max]. This is what angles the Pin Missile / Sonic Boom / Horn Drill needles
                     // & waves (draw=0 billboards that otherwise render straight up).
@@ -204,7 +203,7 @@ namespace DSPRE.Avalonia.Data
                 e.LoopFrames = Math.Max(1, etc1 & 0xFF);       // misc.loopFrames
                 // randomAttenuation bytes @ +64 (baseScale, lifeTime, initVel).
                 e.RndScale = d[off + 64]; e.RndLife = d[off + 65]; e.RndVel = d[off + 66];
-                int etc2 = I32(off + 76);                 // flipTextureS:1 | flipTextureT:1 (SPLResourceHeader misc, 2nd word)
+                int etc2 = I32(off + 76);                 // flipTextureS:1 | flipTextureT:1 (the resource header misc, 2nd word)
                 e.FlipS = (etc2 & 1) != 0;
                 e.FlipT = (etc2 & 2) != 0;
                 e.RepeatS = ((etc1 >> 24) & 0x3) >= 1;
@@ -234,7 +233,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     fp += 8;
                 }
-                if ((flag & (1u << 25)) != 0)             // SPLRandom: VecFx16 mag(6) + u16 intvl(2)
+                if ((flag & (1u << 25)) != 0)             // the randomization helper: VecFx16 mag(6) + u16 intvl(2)
                 {
                     if (fp + 8 <= d.Length)
                     {
@@ -244,7 +243,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     fp += 8;
                 }
-                if ((flag & (1u << 26)) != 0)             // SPLMagnet: VecFx32 pos(12) + fx16 mag(2) + u16(2)
+                if ((flag & (1u << 26)) != 0)             // the magnet field: VecFx32 pos(12) + fx16 mag(2) + u16(2)
                 {
                     if (fp + 14 <= d.Length)
                     {
@@ -257,10 +256,10 @@ namespace DSPRE.Avalonia.Data
                 }
                 if ((flag & (1u << 27)) != 0)
                 {
-                    if (fp + 4 <= d.Length) { e.SpinRadian = (short)U16(fp); e.SpinAxis = U16(fp + 2) & 0x3; }   // SPLSpin: radian + axis_type(0=X,1=Y,2=Z)
+                    if (fp + 4 <= d.Length) { e.SpinRadian = (short)U16(fp); e.SpinAxis = U16(fp + 2) & 0x3; }   // the spin field: radian + axis_type(0=X,1=Y,2=Z)
                     fp += 4;
                 }
-                if ((flag & (1u << 28)) != 0)             // SPLSimpleCollisionField: fx32 y(4) + fx16 coeff_bounce(2) + etc(2)
+                if ((flag & (1u << 28)) != 0)             // the simple collision-plane field: fx32 y(4) + fx16 coeff_bounce(2) + etc(2)
                 {
                     if (fp + 8 <= d.Length)
                     {
@@ -269,7 +268,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     fp += 8;
                 }
-                if ((flag & (1u << 29)) != 0)             // SPLConvergence: VecFx32 pos(12) + fx16 ratio(2) + u16(2)
+                if ((flag & (1u << 29)) != 0)             // the convergence field: VecFx32 pos(12) + fx16 ratio(2) + u16(2)
                 {
                     if (fp + 14 <= d.Length)
                     {
@@ -286,7 +285,7 @@ namespace DSPRE.Avalonia.Data
             return a;
         }
 
-        // Walks the texture section (at tex_offset): each SPLTexHdr (32 B) + texel + palette, decoded via the
+        // Walks the texture section (at tex_offset): each the texture header (32 B) + texel + palette, decoded via the
         // shared NDS texture decoder. Overlapped textures reuse a sibling's pixels.
         private void DecodeTextures(byte[] d)
         {
@@ -309,7 +308,7 @@ namespace DSPRE.Avalonia.Data
                 bool color0Transparent = ((param >> 16) & 1) != 0;
                 bool overlapped = ((param >> 17) & 1) != 0;
                 int sharedNo = (param >> 18) & 0xFF;
-                bool flipS = ((param >> 14) & 1) != 0;   // SPLTexParam.flp bit0 → mirror across S
+                bool flipS = ((param >> 14) & 1) != 0;   // the texture parameters.flp bit0 → mirror across S
                 bool flipT = ((param >> 15) & 1) != 0;   // .flp bit1 → mirror across T (quadrant → full sprite)
 
                 SpaTexture tex;
@@ -380,26 +379,26 @@ namespace DSPRE.Avalonia.Data
         private static int FieldBytes(uint flag)
         {
             int n = 0;
-            if ((flag & (1u << 24)) != 0) n += 8;    // SPLGravity
-            if ((flag & (1u << 25)) != 0) n += 8;    // SPLRandom
-            if ((flag & (1u << 26)) != 0) n += 16;   // SPLMagnet
-            if ((flag & (1u << 27)) != 0) n += 4;    // SPLSpin
-            if ((flag & (1u << 28)) != 0) n += 8;    // SPLSimpleCollisionField
-            if ((flag & (1u << 29)) != 0) n += 16;   // SPLConvergence
+            if ((flag & (1u << 24)) != 0) n += 8;    // the gravity field
+            if ((flag & (1u << 25)) != 0) n += 8;    // the randomization helper
+            if ((flag & (1u << 26)) != 0) n += 16;   // the magnet field
+            if ((flag & (1u << 27)) != 0) n += 4;    // the spin field
+            if ((flag & (1u << 28)) != 0) n += 8;    // the simple collision-plane field
+            if ((flag & (1u << 29)) != 0) n += 16;   // the convergence field
             return n;
         }
 
-        // SPLResSclAnm: scl_s/n/e (fx16) + in_out (u16: in:8,out:8).
+        // the scale-animation resource block: scl_s/n/e (fx16) + in_out (u16: in:8,out:8).
         private static void ParseScl(SpaEmitter e, int p, Func<int, int> U16)
         {
             e.SclS = (short)U16(p) / 4096.0;
             e.SclN = (short)U16(p + 2) / 4096.0;
             e.SclE = (short)U16(p + 4) / 4096.0;
             int io = U16(p + 6); e.SclIn = io & 0xFF; e.SclOut = (io >> 8) & 0xFF;
-            e.SclLoop = (U16(p + 8) & 1) != 0;   // SPLScaleAnim.flags.loop
+            e.SclLoop = (U16(p + 8) & 1) != 0;   // the scale-animation curve.flags.loop
         }
 
-        // SPLResClrAnm: clr_s/clr_e (RGB555) + in_peak_out (u32) + etc (interpolation bit 2). Peak colour = clr_n.
+        // the color-animation resource block: clr_s/clr_e (RGB555) + in_peak_out (u32) + etc (interpolation bit 2). Peak colour = clr_n.
         private static void ParseClr(SpaEmitter e, int p, Func<int, int> U16)
         {
             int cs = U16(p), ce = U16(p + 2);
@@ -411,7 +410,7 @@ namespace DSPRE.Avalonia.Data
             e.ClrRndm = (cetc & 1) != 0; e.ClrLoop = ((cetc >> 1) & 1) != 0; e.ClrInterp = ((cetc >> 2) & 1) != 0;
         }
 
-        // SPLResChld (20 B): flag(2) init_vel_mag_rndm(2) scl_e@4(fx16) life@6(u16) ratio@8(vel:8,scl:8) clr@10
+        // the child-resource block (20 B): flag(2) init_vel_mag_rndm(2) scl_e@4(fx16) life@6(u16) ratio@8(vel:8,scl:8) clr@10
         // etc1@12 (gen_num:8, gen_start:8, gen_intvl:8, tex_no:8) etc2@16.
         private static void ParseChild(SpaEmitter e, int p, byte[] d)
         {
@@ -425,11 +424,11 @@ namespace DSPRE.Avalonia.Data
             e.ChildR = Expand5(cc & 0x1F); e.ChildG = Expand5((cc >> 5) & 0x1F); e.ChildB = Expand5((cc >> 10) & 0x1F);
             int etc1 = U16l(p + 12) | (U16l(p + 14) << 16);
             e.ChildGenNum = etc1 & 0xFF;
-            // gen_start is a FRACTION of the parent's life (spl_emitter.c: age ≥ life·gen_start/256), NOT an absolute
+            // gen_start is a FRACTION of the parent's life (age ≥ life·gen_start/256), NOT an absolute
             // frame. Treating the raw byte as a frame count silently skipped ALL children whenever gen_start > life.
             e.ChildGenStart = e.ParticleLife * ((etc1 >> 8) & 0xFF) / 256;
             e.ChildGenIntvl = Math.Max(1, (etc1 >> 16) & 0xFF); e.ChildTexNo = (etc1 >> 24) & 0xFF;
-            int cflag = U16l(p);                          // SPLChildResourceFlags (decomp spl_resource.h)
+            int cflag = U16l(p);                          // child-resource flags
             e.ChildUseClr = (cflag & (1 << 6)) != 0;      // useChildColor (bit 6)
             e.ChildRotType = (cflag >> 3) & 3;            // rotationType: 0 none, 1/2 inherit parent angle
             e.ChildDrawType = (cflag >> 7) & 3;           // drawType (billboard / dbb / polygon / dpol)
@@ -442,7 +441,7 @@ namespace DSPRE.Avalonia.Data
             e.ChildSclRatioRaw = (U16l(p + 8) >> 8) & 0xFF;
         }
 
-        // SPLResTexAnm: u8 tex_no[8] + etc (u32: use_num:8, diff:8, use_rndm:1, loop:1).
+        // the texture-animation resource block: u8 tex_no[8] + etc (u32: use_num:8, diff:8, use_rndm:1, loop:1).
         private static void ParseTexAnm(SpaEmitter e, int p, byte[] d)
         {
             if (p + 12 > d.Length) return;
@@ -456,7 +455,7 @@ namespace DSPRE.Avalonia.Data
             e.TexLoop = ((etc >> 17) & 1) != 0;
         }
 
-        // SPLResAlpAnm: alp (u16: s:5,n:5,e:5) + in_out (u16: in:8,out:8 at +4).
+        // the alpha-animation resource block: alp (u16: s:5,n:5,e:5) + in_out (u16: in:8,out:8 at +4).
         private static void ParseAlp(SpaEmitter e, int p, Func<int, int> U16)
         {
             int alp = U16(p);

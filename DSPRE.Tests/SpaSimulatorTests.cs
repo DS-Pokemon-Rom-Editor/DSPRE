@@ -5,7 +5,7 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// The SPA simulator reproduces the leaked spl emission/update model: emit gen_num/tick while alive, age each
+    /// The SPA simulator reproduces the NDS particle-library emission/update model: emit gen_num/tick while alive, age each
     /// particle, kill at age &gt; ptcl_life, damp velocity by (air_resist+0.09375)/512 per frame.
     /// </summary>
     public class SpaSimulatorTests

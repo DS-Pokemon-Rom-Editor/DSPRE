@@ -11,31 +11,31 @@ namespace DSPRE.Avalonia.Data
         public double VX, VY;   // velocity (for directional/line billboards)
         public double VZ;       // depth velocity (directional polygons orient in 3D)
         public double Scale;    // world scale (base × anim; used by the dot fallback)
-        // Per-axis scales per SPLDraw_Billboard: the scale anim applies to X / Y / both according to
+        // Per-axis scales per the hardware billboard-build step: the scale anim applies to X / Y / both according to
         // misc.scaleAnimDir; the renderer must use these (then × aspect on X), not Scale, for the quad.
         public double ScaleForX, ScaleForY;
         public double Alpha;    // 0..1
         public byte R, G, B;
-        public int TexNo;       // current texture index (SPLResTexAnm picks this per particle over its life)
+        public int TexNo;       // current texture index (the texture-animation resource block picks this per particle over its life)
         public double Rotation; // billboard rotation (radians), from init_rtt + rotation-anim spin
-        public bool IsChild;    // child particles use the SPLChildResourceFlags draw configuration
+        public bool IsChild;    // child particles use the the child-particle resource flags draw configuration
     }
 
     /// <summary>
-    /// Simulates a single SPA emitter's particles frame-by-frame, faithfully to the leaked spl library
-    /// (spl_gen.c emission + spl_emitter.c update): each emission tick spawns <c>gen_num</c> particles (fractional
-    /// accumulation) while the emitter is alive; each particle starts on the emission shape (× radius) with velocity
-    /// = direction·init_vel_pos, then every frame <c>vel = vel·(air_resist+0.09375)/512; pos += vel; age++</c> and
-    /// dies when <c>age &gt; ptcl_life</c>. A pragmatic 2D reduction (X/Y plane) for the preview; fields/child/3D
-    /// projection are omitted, colour/alpha fade is linear unless extended later.
+    /// Simulates a single SPA emitter's particles frame-by-frame, matching the NDS particle-library runtime:
+    /// each emission tick spawns <c>gen_num</c> particles (fractional accumulation) while the emitter is alive;
+    /// each particle starts on the emission shape (× radius) with velocity = direction·init_vel_pos, then every
+    /// frame <c>vel = vel·(air_resist+0.09375)/512; pos += vel; age++</c> and dies when <c>age &gt; ptcl_life</c>.
+    /// The full behaviour is reproduced: 3D position/velocity, the gravity/random/magnet/spin/collision/
+    /// convergence fields, child particles, and per-particle randomisation of scale/lifetime/velocity.
     /// </summary>
     public sealed class SpaSimulator
     {
         private struct P { public double X, Y, Z, VX, VY, VZ; public int Age, Life, RndTex, ClrRnd, LrOff; public double OVX, OVY, Phase, Rot0, RotRate, Scl; }
-        // SPLResChld: a child particle spawned by a parent (trail/spark) — its own life, decaying scale/alpha.
+        // the child-resource block: a child particle spawned by a parent (trail/spark) — its own life, decaying scale/alpha.
         private struct Child { public double X, Y, Z, VX, VY, VZ; public int Age, Life; public double Scale0, Rot, RotRate, Alpha0; }
 
-        // SPLRandom_RangeFX32: uniform in [−num, num).
+        // the random-range helper: uniform in [−num, num).
         private double Rng(double num) => num == 0 ? 0 : num * (_rng.NextDouble() * 2.0 - 1.0);
 
         private readonly SpaEmitter _e;
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
         public int AliveCount => _ptcls.Count;
 
         private bool _stopped;
-        /// <summary>WEST_EXIT_PARTICLE (Wp_Exit): stop emitting now and let the live particles die out. Also the only
+        /// <summary>WEST_EXIT_PARTICLE (the emitter-stop routine): stop emitting now and let the live particles die out. Also the only
         /// way an "emit forever" emitter (emtr_life == 0) ever finishes.</summary>
         public void Stop() => _stopped = true;
 
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Data
         /// A pending start_offset counts as not-finished (the emitter simply hasn't begun yet).</summary>
         public bool Finished => (_stopped || _delay <= 0) && _ptcls.Count == 0 && _children.Count == 0 && (_stopped || (_e.EmitterLife != 0 && _frame >= _e.EmitterLife));
 
-        // base.start_offset (spl_resource.h): the emitter idles this many frames before its own clock starts.
+        // base.start_offset: the emitter idles this many frames before its own clock starts.
         // This is what sequences e.g. Seed Flare's big slashes after its small particles without any script waits.
         private int _delay;
 
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Data
             {
                 var p = _ptcls[i];
                 p.VX *= _air; p.VY *= _air; p.VZ *= _air;
-                // Field accelerations accumulate in 3D, then vel += acc (spl_emitter.c: vel*=air; vel+=acc).
+                // Field accelerations accumulate in 3D, then vel += acc (vel*=air; vel+=acc).
                 double accX = _e.GravityX, accY = _e.GravityY, accZ = _e.GravityZ;
                 if (_e.UseMagnet || _magOverride)   // spl_calc_magnet: acc += mag·((target − pos) − vel) → spring-pull
                 {
@@ -161,7 +161,7 @@ namespace DSPRE.Avalonia.Data
                     p.Y += ratio * (ctY - p.Y);
                     p.Z += ratio * (ctZ - p.Z);
                 }
-                if (_e.UseColl)   // SPLBehavior_ApplyCollisionPlane: a WORLD horizontal plane — the game tests
+                if (_e.UseColl)   // the collision-plane behavior step: a WORLD horizontal plane — the game tests
                 {                 // emitterPos.y + particle.y against the plane, so include the anchor's world y.
                     double wy = AnchorWorldY + p.Y, wyPrev = wy - p.VY;
                     if ((wyPrev > _e.CollY) != (wy > _e.CollY))   // crossed the plane this frame
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.Data
                     else if (_e.SpinAxis == 1) { double nx = p.Z * _spinSin + p.X * _spinCos, nz = p.Z * _spinCos - p.X * _spinSin; p.X = nx; p.Z = nz; } // Y: Z↔X (Y free)
                     else { double ny = p.Y * _spinCos - p.Z * _spinSin, nz = p.Y * _spinSin + p.Z * _spinCos; p.Y = ny; p.Z = nz; }                       // X: Y↔Z (X free)
                 }
-                // SPLResChld (spl_emit.c EmitChildren): children inherit full 3D position/velocity ×velRatio
+                // the child-resource block (EmitChildren): children inherit full 3D position/velocity ×velRatio
                 // PLUS a ±randomInitVelMag kick per component; base scale = the parent's CURRENT animated
                 // scale × (scaleRatio+1)/64; initial alpha = the parent's CURRENT alpha; rotation per
                 // rotationType (1 = frozen at the parent's angle, 2 = keeps the parent's spin).
@@ -202,8 +202,8 @@ namespace DSPRE.Avalonia.Data
                 else _ptcls[i] = p;
             }
             // Children: air-damped drift, die at their own life (the parent may already be gone). The
-            // behavior fields apply to children ONLY when SPLChildResourceFlags.usesBehaviors is set
-            // (spl_emitter.c zeroes behaviorCount otherwise).
+            // behavior fields apply to children ONLY when the child-particle resource flags.usesBehaviors is set
+            // (zeroes behaviorCount otherwise).
             for (int i = _children.Count - 1; i >= 0; i--)
             {
                 var c = _children[i];
@@ -245,10 +245,10 @@ namespace DSPRE.Avalonia.Data
         }
 
         // Spawn one particle. emIdx/emCount are this tick's index/total so CIRCLE_RI rings come out evenly spaced
-        // (spl_gen.c uses idx = emission·16/total), instead of clumping into a wedge with random angles.
+        // (uses idx = emission·16/total), instead of clumping into a wedge with random angles.
         private void Emit(int emIdx, int emCount)
         {
-            // The SPL shapes are 3D; the preview camera is orthographic facing −Z, so we emit in 3D then keep (x,y).
+            // The the particle library shapes are 3D; the preview camera is orthographic facing −Z, so we emit in 3D then keep (x,y).
             // The circle/cylinder shapes lie in the plane perpendicular to circle_axis (Z = screen plane → a full
             // on-screen ring; Y/X → an edge-on ring that projects to a horizontal/vertical spread, as in-game).
             double ux, uy, uz = 0;         // unit emission direction; z (depth) is kept only to drive an X/Y-axis spin
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.Data
             }
             double r = _e.Radius * rscale;
             // Spawn position on the emission shape. VOLUME shapes (sphere/circle/hemisphere interiors) scale
-            // EACH component by its OWN random factor (spl_emit.c: FX_MUL(pos.c, radius) × RangeFX32/…) —
+            // EACH component by its OWN random factor (FX_MUL(pos.c, radius) × RangeFX32/…) —
             // the shape switch above provides the direction and a per-type rscale; the per-component spread
             // for volume types is applied here.
             double posX = ux * r + lox, posY = uy * r + loy, posZ = uz * r;
@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.Data
                 posZ = uz * _e.Radius * ((_rng.NextDouble() * 2.0 - 1.0) * 0.5 + 0.5);
             }
             // Radial velocity direction = normalize(spawn position); a POINT emitter (pos 0) gets a RANDOM 3D
-            // direction (spl_emit.c posNorm) — point bursts are omnidirectional, not static.
+            // direction (posNorm) — point bursts are omnidirectional, not static.
             double nx, ny, nz;
             {
                 double pl = Math.Sqrt(posX * posX + posY * posY + posZ * posZ);
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.Data
                 if (_e.InitPosType == 6)   // CYLINDER_SURFACE: direction = the circle dir (no length component)
                 { nx = ux; ny = uy; nz = uz; }
             }
-            // randomAttenuation (spl_emit.c): velocity magnitudes and base scale spread ±rnd/256 per particle
+            // randomAttenuation: velocity magnitudes and base scale spread ±rnd/256 per particle
             // (DoubleScaledRange); lifetime attenuates downward (ScaledRange), minimum 1 frame.
             double magPos = _e.InitVelPos * DoubleScaled(_e.RndVel);
             double magAxis = _e.InitVelAxis * DoubleScaled(_e.RndVel);
@@ -314,11 +314,11 @@ namespace DSPRE.Avalonia.Data
             // PARABOLIC sweep the emitter attacker→defender). Without this the needle has no velocity and points up.
             (double pmx, double pmy) = _emitterMotion?.Invoke(Math.Max(0, _frame - 1)) ?? (0.0, 0.0);
             double ovx = mx - pmx, ovy = my - pmy;
-            // Rotation (spl_emit.c): randomInitAngle → a FULLY random angle (not a min..max pick); the spin
+            // Rotation: randomInitAngle → a FULLY random angle (not a min..max pick); the spin
             // rate (hasRotation) is random in [minRotation, maxRotation] PER PARTICLE.
             double rot0 = _e.UseInitRttRndm ? _rng.NextDouble() * 2.0 * Math.PI : _e.InitRot;
             double rotRate = _e.UseRttAnm ? _e.RttMinRot + _rng.NextDouble() * (_e.RttMaxRot - _e.RttMinRot) : 0.0;
-            // spl_gen.c: a random tex-anim picks one tex_no at birth; otherwise the texture is chosen per frame by age.
+            //: a random tex-anim picks one tex_no at birth; otherwise the texture is chosen per frame by age.
             int rndTex = (_e.UseTexAnm && _e.TexUseRndm && _e.TexSeq != null)
                 ? _e.TexSeq[_rng.Next(Math.Max(1, _e.TexUseNum)) % _e.TexSeq.Length] : _e.TexNo;
             _ptcls.Add(new P
@@ -339,7 +339,7 @@ namespace DSPRE.Avalonia.Data
                 OVX = ovx, OVY = ovy,   // emitter travel direction at spawn (orientation only)
                 Phase = _e.RandomLoopAnm ? _rng.NextDouble() : 0.0,
                 LrOff = _e.RandomLoopAnm ? _rng.Next(256) : 0,        // lifeRateOffset for LOOPING anims
-                // colour use_rndm (spl_emit.c): pick ONE of {start, base, end} at birth — a discrete 3-way
+                // colour use_rndm: pick ONE of {start, base, end} at birth — a discrete 3-way
                 // pick, and the colour anim is NOT registered for such emitters (the pick stays for life).
                 ClrRnd = _e.ClrRndm ? _rng.Next(3) : 0,
                 Rot0 = rot0, RotRate = rotRate,
@@ -349,9 +349,9 @@ namespace DSPRE.Avalonia.Data
             });
         }
 
-        // SPLRandom_DoubleScaledRangeFX32: uniform multiplier in [1 − r/256, 1 + r/256).
+        // the double-scaled random-range helper: uniform multiplier in [1 − r/256, 1 + r/256).
         private double DoubleScaled(int rnd) => rnd == 0 ? 1.0 : 1.0 + (rnd / 256.0) * (_rng.NextDouble() * 2.0 - 1.0);
-        // SPLRandom_ScaledRangeFX32: uniform multiplier in [1 − r/256, 1].
+        // the scaled random-range helper: uniform multiplier in [1 − r/256, 1].
         private double Scaled(int rnd) => rnd == 0 ? 1.0 : 1.0 - (rnd / 256.0) * _rng.NextDouble();
 
         // A point on the unit circle in the plane perpendicular to circle_axis → (x, y, z); z is the depth component.
@@ -376,7 +376,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The alive particles this frame, with the SPA scale/colour/alpha animation curves applied over
-        /// each particle's life (spl_anm.c). Without a curve a field stays at its base value (the game holds alpha
+        /// each particle's life. Without a curve a field stays at its base value (the game holds alpha
         /// constant and the particle simply ends at death — no synthetic fade).</summary>
         public IEnumerable<SpaParticleState> Particles()
         {
@@ -387,7 +387,7 @@ namespace DSPRE.Avalonia.Data
             (double emx, double emy) = follow ? _emitterMotion(_frame) : (0.0, 0.0);
             (double pemx, double pemy) = follow ? _emitterMotion(Math.Max(0, _frame - 1)) : (0.0, 0.0);
             double emVX = emx - pemx, emVY = emy - pemy;   // emitter path velocity this frame (sim space)
-            // drawChildrenFirst / hideParent (SPLResourceFlags bits 21/22): parent/child render order,
+            // drawChildrenFirst / hideParent (the resource flags bits 21/22): parent/child render order,
             // and "only children are rendered" (the parent is just an invisible child-spawner).
             if (_e.DrawChildrenFirst)
                 foreach (var s in ChildStates()) yield return s;
@@ -397,7 +397,7 @@ namespace DSPRE.Avalonia.Data
                 int lr = (int)(255.0 * p.Age / Math.Max(1, p.Life));   // lifeRate 0..255 (once through the life)
                 if (lr > 255) lr = 255;
                 // LOOPING anims run on the loopFrames clock, offset by the per-particle lifeRateOffset and
-                // WRAPPING (spl_emitter.c: lifeRateOffset + loopTimeFactor·age, u8 wrap) — NOT on the life
+                // WRAPPING (lifeRateOffset + loopTimeFactor·age, u8 wrap) — NOT on the life
                 // fraction. Each anim picks its clock by its own loop flag.
                 int lrLoop = (p.LrOff + p.Age * 255 / _e.LoopFrames) & 0xFF;
                 int lrScl = _e.SclLoop ? lrLoop : lr;
@@ -407,11 +407,11 @@ namespace DSPRE.Avalonia.Data
 
                 double anim = _e.UseScaleAnm ? SclCurve(lrScl) : 1.0;
                 double scale = p.Scl * anim;
-                // misc.scaleAnimDir (SPLDraw_Billboard): 0 = anim on both axes, 1 = X only, 2 = Y only.
+                // misc.scaleAnimDir (the hardware billboard-build step): 0 = anim on both axes, 1 = X only, 2 = Y only.
                 double scaleForX = p.Scl * (_e.ScaleAnimDir == 2 ? 1.0 : anim);
                 double scaleForY = p.Scl * (_e.ScaleAnimDir == 1 ? 1.0 : anim);
                 byte r = _e.ColorR, g = _e.ColorG, b = _e.ColorB;
-                // colour use_rndm (spl_emit.c randomStartColor): each particle picks ONE of {start, base, end}
+                // colour use_rndm (randomStartColor): each particle picks ONE of {start, base, end}
                 // at birth and KEEPS it (the colour anim isn't registered for such emitters). Otherwise the
                 // in/peak/out curve runs.
                 if (_e.UseColorAnm)
@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia.Data
                     else (r, g, b) = ClrCurve(lrClr, _e.ClrInterp);
                 }
                 double alpha = (_e.UseAlphaAnm ? AlpCurve(lrAlp) : _e.BaseAlpha) / 31.0;
-                // SPLAlphaAnim randomRange: a per-frame downward jitter of the alpha (flicker). Deterministic
+                // the alpha-animation curve randomRange: a per-frame downward jitter of the alpha (flicker). Deterministic
                 // per (particle, frame) hash so re-enumerating a frame renders identically.
                 if (_e.AlpFlick > 0)
                 {
@@ -452,15 +452,15 @@ namespace DSPRE.Avalonia.Data
                 foreach (var s in ChildStates()) yield return s;
         }
 
-        // Children (SPLResChld): scale 1→scl_e, alpha fades out over life, own colour if use_chld_clr;
+        // Children (the child-resource block): scale 1→scl_e, alpha fades out over life, own colour if use_chld_clr;
         // rotation per rotationType (inherited at spawn, optionally still spinning).
         private IEnumerable<SpaParticleState> ChildStates()
         {
             foreach (var c in _children)
             {
                 double t = (double)c.Age / Math.Max(1, c.Life);
-                // SPLAnim_ChildScale/ChildAlpha run ONLY when the child flags request them; otherwise the
-                // child keeps its spawn scale and its captured parent alpha (spl_emitter.c anim registration).
+                // the child scale-animation step/ChildAlpha run ONLY when the child flags request them; otherwise the
+                // child keeps its spawn scale and its captured parent alpha (anim registration).
                 double cscale = c.Scale0 * (_e.ChildHasSclAnm ? 1.0 + (_e.ChildSclEnd - 1.0) * t : 1.0);
                 double calpha = c.Alpha0 * (_e.ChildHasAlpAnm ? 1.0 - t : 1.0);
                 yield return new SpaParticleState

@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Interprets a parsed PAST program-animation script (see <see cref="PokeAnimScript"/>) and produces the
-    /// per-frame sprite transform, faithfully reproducing the runtime in the leaked source (src/pokeanime/
-    /// p_anm_sys.c). Pure/UI-free so it can be unit-tested and driven by a 60 fps timer in the preview.
+    /// Interprets a parsed Pokémon program-animation script (see <see cref="PokeAnimScript"/>) and produces the
+    /// per-frame sprite transform, reproducing the game's runtime behaviour exactly. Pure/UI-free so it can be
+    /// unit-tested and driven by a 60 fps timer in the preview.
     ///
     /// Model: each 60 fps tick = one <see cref="Step"/>. A frame either decrements an outstanding wait, or runs
     /// the move-functions then executes commands until one yields the frame (SET_WAIT / HOLD_CMD while move-funcs
@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public sealed class PokeAnimPlayer
     {
-        // PAST enums (past_def.h)
+        // PAST enums 
         private const int TARGET_DX = 35, TARGET_DY = 36, TARGET_RX = 37, TARGET_RY = 38, TARGET_ROT = 39;
         private const int CURVE_SIN = 30, CURVE_COS = 31, CURVE_SIN_MINUS = 32, CURVE_COS_MINUS = 33;
         private const int APPLY_SET = 24, APPLY_ADD = 25, APPLY_SYNTHE = 26;
@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         public bool Finished => _end;
-        // Output transform for the current frame (mirrors ApplyTrans/ApplyAffine in p_anm_sys.c).
+        // Output transform for the current frame (mirrors ApplyTrans/ApplyAffine in).
         // X: OrgX ± (TransX+dx) per the PokeReverse flag.  Y: OrgY + TransY + dy, plus the scale-anchor DY correction.
         public double OffsetX => Reverse ? -(_transX + _dx) : (_transX + _dx);
         public double OffsetY => _transY + _dy + DyCorrection();

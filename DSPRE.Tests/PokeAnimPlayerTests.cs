@@ -10,7 +10,7 @@ namespace DSPRE.Tests
     /// </summary>
     public class PokeAnimPlayerTests
     {
-        // PAST constants (past_def.h)
+        // Pokémon-animation constants
         private const int APPLY_SET = 24, CURVE_SIN = 30, CURVE_SIN_MINUS = 32;
         private const int TARGET_DX = 35, TARGET_DY = 36, TARGET_RY = 38, CORRECT_ON_MINUS = 27;
 
@@ -54,7 +54,7 @@ namespace DSPRE.Tests
         }
 
         // SET_DY_CORRECT keeps a *scaling* sprite anchored: when ry<0 (shrinking) it nudges POS_Y by -ry/8.
-        // It does NOT touch X (the leaked CorrectDy in p_anm_sys.c only calcs POS_Y).
+        // It does NOT touch X (the DY-correction only adjusts POS_Y).
         [Fact]
         public void DyCorrect_AnchorsScalingSprite_NotX()
         {

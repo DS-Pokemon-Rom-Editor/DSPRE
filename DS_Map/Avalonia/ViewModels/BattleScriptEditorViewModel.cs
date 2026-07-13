@@ -80,6 +80,10 @@ namespace DSPRE.Avalonia.ViewModels
         private bool IsWest => (Archive)_archiveIndex == Archive.MoveAnimation;
         private ScriptNarc CurrentNarc => _narcs[_archiveIndex];
 
+        /// <summary>Builds the reference data for the command guide window, for whichever command set this
+        /// archive uses (WEST move-animation opcodes, or the waza/be/sub effect-sequence opcodes).</summary>
+        public ScriptCommandGuideViewModel BuildCommandGuideViewModel() => new ScriptCommandGuideViewModel(IsWest);
+
         /// <summary>Internal opcode names for the current archive (index = opcode id) — used for schema lookups.</summary>
         public ObservableCollection<string> OpcodeNames { get; } = new ObservableCollection<string>();
         /// <summary>Friendly opcode titles (index = opcode id) — drives the per-row opcode dropdown.</summary>
@@ -318,23 +322,50 @@ namespace DSPRE.Avalonia.ViewModels
             _pushingText = false;
         }
 
+        // The text format is a single-word command line: "CommandName label=value label=value ...", e.g.
+        // "AddParticles slot=0 data=482 behavior=3". Every command/argument/enum-value token is a single
+        // camel/Pascal-case word (WestParamSchema.CommandName/ArgToken/Token) so it types and greps like a real
+        // command line rather than a sentence. Args may be named (label=value, any order — the label pins it to
+        // that parameter's slot) or bare (a plain number/enum name — fills the next slot not already claimed by
+        // a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
         private string RowsToText()
         {
             var sb = new StringBuilder();
             foreach (var row in Rows)
             {
-                sb.Append(OpNameOf(row.OpId));
-                foreach (var a in row.Args) sb.Append(' ').Append(a.ToString(CultureInfo.InvariantCulture));
+                string raw = OpNameOf(row.OpId);
+                sb.Append(DSPRE.Avalonia.Data.WestParamSchema.CommandName(raw));
+                for (int i = 0; i < row.Args.Count; i++)
+                {
+                    sb.Append(' ');
+                    int v = row.Args[i];
+                    string label = DSPRE.Avalonia.Data.WestParamSchema.ParamName(raw, i);
+                    // An enum parameter shows its friendly value token; a generic "Param N" label is dropped
+                    // (bare number) since a made-up name would add no meaning.
+                    var opts = DSPRE.Avalonia.Data.WestParamSchema.EnumFor(raw, i);
+                    string valText = v.ToString(CultureInfo.InvariantCulture);
+                    if (opts != null)
+                        foreach (var o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.WestParamSchema.Token(o.Label, true); break; }
+                    if (label.StartsWith("Param ", StringComparison.Ordinal)) sb.Append(valText);
+                    else sb.Append(DSPRE.Avalonia.Data.WestParamSchema.ArgToken(raw, i)).Append('=').Append(valText);
+                }
                 sb.Append('\n');
             }
             return sb.ToString();
         }
 
         private Dictionary<string, int> _nameToOp;
+        // Maps BOTH the raw opcode identifier and its single-word command name → opId (== table index), so a
+        // text line can start with either. Built once per version.
         private Dictionary<string, int> NameToOp()
         {
             var d = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < OpcodeNames.Count; i++) d[OpcodeNames[i]] = i;   // index == opId
+            for (int i = 0; i < OpcodeNames.Count; i++)
+            {
+                d[OpcodeNames[i]] = i;   // index == opId
+                string cmd = DSPRE.Avalonia.Data.WestParamSchema.CommandName(OpcodeNames[i]);
+                if (!string.IsNullOrEmpty(cmd) && !d.ContainsKey(cmd)) d[cmd] = i;   // single-word name (first wins on collision)
+            }
             return d;
         }
 
@@ -344,6 +375,42 @@ namespace DSPRE.Avalonia.ViewModels
             return t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
                 ? int.TryParse(t.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v)
                 : int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out v);
+        }
+
+        // Resolve a friendly enum value token (e.g. "AttackerSide", "ConvergeToPoint") — or the old spaced label,
+        // still accepted — back to its engine value for an enum-typed parameter.
+        private static bool TryResolveEnum(string rawOpName, int argIndex, string token, out int value)
+        {
+            value = 0;
+            var opts = DSPRE.Avalonia.Data.WestParamSchema.EnumFor(rawOpName, argIndex);
+            if (opts == null) return false;
+            foreach (var o in opts)
+            {
+                if (string.Equals(o.Label, token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
+                if (string.Equals(DSPRE.Avalonia.Data.WestParamSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
+            }
+            return false;
+        }
+
+        private static bool TryParseArgValue(string rawOpName, int argIndex, string token, out int v)
+            => TryParseWord(token, out v) || TryResolveEnum(rawOpName, argIndex, token, out v);
+
+        // Finds the argument index whose single-word label (or, for a payload slot with no known name, "paramN"/
+        // "argN") matches the given token — scanning only the opcode's KNOWN fixed labels (stops at the first
+        // generic "Param N" fallback, since anything past that is unnamed variable payload).
+        private static int ResolveArgIndex(string rawOpName, string label)
+        {
+            string digits = label.Length > 5 && label.StartsWith("param", StringComparison.OrdinalIgnoreCase) ? label.Substring(5)
+                           : label.Length > 3 && label.StartsWith("arg", StringComparison.OrdinalIgnoreCase) ? label.Substring(3)
+                           : null;
+            if (digits != null && int.TryParse(digits, out int n) && n >= 1) return n - 1;
+            for (int i = 0; i < 32; i++)
+            {
+                string pn = DSPRE.Avalonia.Data.WestParamSchema.ParamName(rawOpName, i);
+                if (pn.StartsWith("Param ", StringComparison.Ordinal)) break;
+                if (string.Equals(DSPRE.Avalonia.Data.WestParamSchema.ArgToken(rawOpName, i), label, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            return -1;
         }
 
         // Text → Rows. Collects per-token errors (offset/length for squiggles). Rebuilds the cards ONLY when clean.
@@ -362,24 +429,71 @@ namespace DSPRE.Avalonia.ViewModels
                 if (line.Length == 0) continue;                                   // blank line = no command
                 if (line.StartsWith("//") || line.StartsWith("#")) continue;      // allow comment lines
 
+                // Command = the first whitespace/comma-separated token; the rest are its arguments.
                 var toks = line.Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
-                if (!_nameToOp.TryGetValue(toks[0], out int opId))
+                string cmdName = toks[0];
+
+                if (!_nameToOp.TryGetValue(cmdName, out int opId))
                 {
-                    int col = rawLine.IndexOf(toks[0], StringComparison.Ordinal);
-                    errors.Add(new TextError(lineStart + Math.Max(0, col), toks[0].Length, $"Unknown opcode '{toks[0]}'"));
+                    int col = rawLine.IndexOf(cmdName, StringComparison.Ordinal);
+                    errors.Add(new TextError(lineStart + Math.Max(0, col), cmdName.Length, $"Unknown command '{cmdName}'"));
                     continue;
                 }
-                var args = new List<int>();
+                string raw = OpNameOf(opId);
+
                 bool argOk = true;
-                int searchFrom = rawLine.IndexOf(toks[0], StringComparison.Ordinal) + toks[0].Length;
+                int searchFrom = Math.Max(0, rawLine.IndexOf(cmdName, StringComparison.Ordinal) + cmdName.Length);
+                var slotValue = new Dictionary<int, int>();
+                var bareToks = new List<(string tok, int col)>();
+
+                // Pass 1: named "label=value" tokens claim their specific slot, wherever they appear on the line.
                 for (int i = 1; i < toks.Length; i++)
                 {
-                    int col = rawLine.IndexOf(toks[i], searchFrom, StringComparison.Ordinal);
-                    if (col >= 0) searchFrom = col + toks[i].Length;
-                    if (TryParseWord(toks[i], out int v)) args.Add(v);
-                    else { errors.Add(new TextError(lineStart + Math.Max(0, col), toks[i].Length, $"'{toks[i]}' is not a number")); argOk = false; }
+                    string tok = toks[i];
+                    int col = rawLine.IndexOf(tok, searchFrom, StringComparison.Ordinal);
+                    if (col >= 0) searchFrom = col + tok.Length;
+
+                    int eq = tok.IndexOf('=');
+                    if (eq <= 0) { bareToks.Add((tok, col)); continue; }
+
+                    string label = tok.Substring(0, eq);
+                    string valTok = tok.Substring(eq + 1);
+                    int idx = ResolveArgIndex(raw, label);
+                    if (idx < 0)
+                    {
+                        errors.Add(new TextError(lineStart + Math.Max(0, col), tok.Length, $"Unknown argument '{label}'"));
+                        argOk = false; continue;
+                    }
+                    if (!TryParseArgValue(raw, idx, valTok, out int v))
+                    {
+                        errors.Add(new TextError(lineStart + Math.Max(0, col), tok.Length, $"'{valTok}' is not a number or known value"));
+                        argOk = false; continue;
+                    }
+                    slotValue[idx] = v;
                 }
-                if (argOk) parsed.Add((opId, args.ToArray()));
+
+                // Pass 2: bare tokens fill whichever slots are left, in order.
+                int cursor = 0;
+                foreach (var (tok, col) in bareToks)
+                {
+                    while (slotValue.ContainsKey(cursor)) cursor++;
+                    if (!TryParseArgValue(raw, cursor, tok, out int v))
+                    {
+                        errors.Add(new TextError(lineStart + Math.Max(0, col < 0 ? 0 : col), tok.Length, $"'{tok}' is not a number or known value"));
+                        argOk = false; cursor++; continue;
+                    }
+                    slotValue[cursor] = v;
+                    cursor++;
+                }
+
+                if (argOk)
+                {
+                    int maxIdx = -1;
+                    foreach (var k in slotValue.Keys) if (k > maxIdx) maxIdx = k;
+                    var args = new int[maxIdx + 1];
+                    foreach (var kv in slotValue) args[kv.Key] = kv.Value;
+                    parsed.Add((opId, args));
+                }
             }
 
             TextErrors = errors;
@@ -581,7 +695,7 @@ namespace DSPRE.Avalonia.ViewModels
         private System.Collections.Generic.List<string> _terrainOptions;
         /// <summary>Dropdown: "Placeholder" (the bundled platform PNGs) + each GROUND_ID terrain (Gravel, Sand, Lawn,
         /// Pool, Rock, Cave, Snow, Water, Ice, Floor). Picking one renders the real in-game ground "tray" the Pokémon
-        /// stand on (battle/ground.c), which move animations interact with, from pl_batt_obj.narc.</summary>
+        /// stand on (battle/), which move animations interact with, from pl_batt_obj.narc.</summary>
         public System.Collections.Generic.List<string> TerrainOptions => _terrainOptions ??= BuildTerrainOptions();
         private static System.Collections.Generic.List<string> BuildTerrainOptions()
         {
@@ -636,7 +750,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
         public bool ShowPlaceholderGauges => !HasRealGauges;
 
-        // CT_WazaEffectGaugeShadowOnOffCheck (client_tool.c): during a move the gauges are hidden UNLESS the move's
+        // CT_WazaEffectGaugeShadowOnOffCheck: during a move the gauges are hidden UNLESS the move's
         // WazaData flag (byte 11) has FLAG_PUT_GAUGE(0x40); the soft-sprite shadow is hidden if FLAG_DEL_SHADOW(0x80).
         // Re-shown when the effect ends. So most moves drop the HUD for their animation — exactly per the code.
         private bool _hideGaugesThisMove, _hideShadowThisMove;
@@ -820,7 +934,7 @@ namespace DSPRE.Avalonia.ViewModels
                     bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
                     if (loaded)
                     {
-                        // WE_057 picks the cell animation SEQUENCE by side (CATS_ObjectAnimeSeqSetCap 0=player /
+                        // WE_057 picks the cell animation SEQUENCE by side (0=player /
                         // 1=enemy) — sequence 1 is the enemy-facing (flipped) wave.
                         int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
                         _cellFrames = _cellRenderer.RenderAnimation(bank);

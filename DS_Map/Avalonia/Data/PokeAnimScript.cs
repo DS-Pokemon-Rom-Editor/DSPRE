@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// The "PAST" (Poke Anime Sequence Tool) program-animation opcodes, in their numeric order (the value =
-    /// the command id stored in the bytecode). Decoded from the leaked source (src/pokeanime/past.h). These
-    /// drive the per-mon entry/idle program animations referenced by POKE_ANM_DATA.prg_anm_* (pokeanime NARC).
+    /// The Pokémon sprite program-animation opcodes, in their numeric order (the value = the command id stored in
+    /// the bytecode). These drive the per-Pokémon entry/idle program animations referenced by the animation data
+    /// table (the Pokémon animation NARC).
     /// </summary>
     public enum PastOp
     {
@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static class PokeAnimScript
     {
-        // Argument-word count per opcode (index = (int)PastOp), from the macros in past.h.
+        // Argument-word count per opcode (index = (int)PastOp).
         private static readonly int[] ArgCount =
         {
             /*End*/0, /*SetRequest*/0, /*SetDefault*/0, /*SetIfWorkVal*/7, /*SetWorkVal*/2, /*CopyWorkVal*/2,
@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
             return (i >= 0 && i < ArgCount.Length) ? ArgCount[i] : 0;
         }
 
-        // Friendly argument names per opcode (from the macros in past.h), for the editor's hints.
+        // Friendly argument names per opcode, for the editor's hints.
         private static readonly System.Collections.Generic.Dictionary<PastOp, string[]> ArgNamesTable = new()
         {
             [PastOp.SetIfWorkVal] = new[] { "use1", "v1", "v2", "comp", "use2", "dst", "v4" },

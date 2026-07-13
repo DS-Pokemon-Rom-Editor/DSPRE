@@ -178,7 +178,7 @@ namespace DSPRE.Tests
             var cmds = new List<WazaSeqCommand>
             {
                 // word layout: op+args → SIDE_JP occupies words 0..3 (offsets are relative to the word
-                // holding each offset, exactly as we_sys.c's WEST_SIDE_JP consumes them).
+                // holding each offset, exactly as the side-branch opcode consumes them).
                 new WazaSeqCommand(sideJp, new[] { 0, 3, 10 }),   // player: word2+3=5 → [2]; enemy: word3+10=13 → [5]
                 new WazaSeqCommand(seqEnd, Array.Empty<int>()),   // word 4 — the separator, never truly executed
                 new WazaSeqCommand(load, new[] { 0, 5 }),         // words 5..7   (player block)

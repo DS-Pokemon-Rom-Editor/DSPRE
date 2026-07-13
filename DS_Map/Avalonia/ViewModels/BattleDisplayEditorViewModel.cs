@@ -428,10 +428,10 @@ namespace DSPRE.Avalonia.ViewModels
             RaiseLayout();
         }
 
-        // ── Battle-sprite animation (pokeanm.narc; DP/Plat/HGSS) — structured POKE_ANM_DATA (28 bytes/mon) ──
-        // Layout (verified from the leaked source): [0] front program-anim #, [1] its wait, [2..7] three back
-        // program-anim steps {patno,wait}, [8..27] ten "pattern" steps {s8 patno(frame), u8 wait} — patno=-1
-        // (0xFF) terminates. The pattern steps ARE the on-field sprite wiggle, so they drive the mock loop.
+        // ── Battle-sprite animation (the Pokémon battle-animation NARC; DP/Plat/HGSS) — 28 bytes per Pokémon ──
+        // Record layout: [0] front program-anim #, [1] its wait, [2..7] three back program-anim steps
+        // {patno,wait}, [8..27] ten "pattern" steps {s8 patno(frame), u8 wait} — patno=-1 (0xFF) terminates.
+        // The pattern steps are the on-field sprite wiggle, so they drive the preview loop.
         private const int ANIM_REC_LEN = 28, ANIM_PAT_OFFSET = 8, ANIM_PAT_MAX = 10;
         private OffsetNarc _animNarc;
         private bool _animNarcTried;
@@ -558,7 +558,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // The own-mon back sprite has THREE alternative program animations (prg_anm_b[0..2]); the game plays exactly
         // ONE, chosen from the Pokémon's nature via PokeAnm_GetBackAnmSlotNo (0 = lively, 1 = neutral, 2 = reserved
-        // natures). We expose the slot directly so the editor can preview each variant. (poke_tool.c PokePrgAnmDataSet)
+        // natures). We expose the slot directly so the editor can preview each variant. (PokePrgAnmDataSet)
         private int _backVariant;
         public int BackVariantIndex
         {

@@ -93,6 +93,11 @@ namespace DSPRE.Avalonia.Views
 
         private void AddCommand_Click(object sender, RoutedEventArgs e) => VM?.AddCommand();
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private void CommandGuide_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            new ScriptCommandGuideView(VM.BuildCommandGuideViewModel()).ShowManaged();
+        }
         private void Up_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, -1); }
         private void Down_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, 1); }
         private void Remove_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.RemoveCommand(r); }

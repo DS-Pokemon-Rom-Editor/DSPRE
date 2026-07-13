@@ -15,32 +15,32 @@ namespace DSPRE.Avalonia
     /// </summary>
     public sealed class WestPlayer
     {
-        // Pokémon particle-coordinate positions (we_tool.c) → screen px: x = plcd/172 + 120, y = 96 − plcd/172.
+        // Pokémon particle-coordinate positions → screen px: x = plcd/172 + 120, y = 96 − plcd/172.
         public static (double x, double y) AttackerScreen => ToScreen(-15360, -6272);   // client A (player)
         public static (double x, double y) DefenderScreen => ToScreen(+13568, +2944);   // client B (enemy)
         private static (double x, double y) ToScreen(double px, double py) => (px / 172.0 + 120.0, 96.0 - py / 172.0);
 
-        // WEST_SP_* function ids (west_sp_def.h order — verified)
+        // WEST_SP_* function ids (order — verified)
         private const int FN_POKEROTA = 4, FN_HAIKEI_PAL_FADE = 33, FN_SSP_POKE_PAL_FADE = 34,
                           FN_CAP_POKE_SCALE = 35, FN_WT_SHAKE = 36, FN_POKE_VANISH = 40, FN_SSP_POKE_SCALE = 42,
                           FN_BG_SHAKE = 68,
                           FN_EMIT_STRAIGHT = 65, FN_EMIT_PARABOLIC = 66, FN_EMIT_ROTATION = 72;
-        // The WE_T* linear-slide "move the Pokémon" primitives (WazaTool_InitStraightSyncFx): T04(51) back-attack,
+        // The WE_T* linear-slide "move the Pokémon" primitives (the straight-line sync-move helper): T04(51) back-attack,
         // T05(52)/T06(53)/T07(54) return-to-pos, T10(57). NOTE: 50=T03 is a BLINK and 56=T08 is an AURA — NOT moves,
         // handled separately. 44/45 (WE_T02/T22) scroll the background, also separate.
         private static readonly HashSet<int> FN_WE_MOVE = new HashSet<int> { 51, 52, 53, 54, 57 };
         private const int FN_WE_T03 = 50;   // blink (toggles the attacker's visibility)
-        // Position tools (west_sp_def.h): slide the SSP mon off-screen / back / to default pos.
-        // Verified against west_sp_def.h enum (table index = id): DISP_OUT=61, DISP_DEF=62, PALCOL_CHANGE=74,
+        // Position tools: slide the SSP mon off-screen / back / to default pos.
+        // Verified against enum (table index = id): DISP_OUT=61, DISP_DEF=62, PALCOL_CHANGE=74,
         // DISP_MOVE=77. (Earlier 110/111/123/126 were out of range, so these handlers never fired — PALCOL grayscale
         // was dead on 18 moves, the DISP slide-out/back was dead too.)
         private const int FN_DISP_OUT = 61, FN_DISP_DEF = 62, FN_DISP_MOVE = 77, FN_PALCOL_CHANGE = 74;
-        private const int WIN_OSX = -80, WIN_OEX = 256 + 80;   // off-screen X (wsp_tool.c WIN_OSX/WIN_OEX)
-        private const int FN_WE_T02 = 44, FN_WE_T22 = 45;   // background-scroll routines (WestSp_WE_T02/T22)
-        private const int FN_KAITEN = 60;   // WestSp_WE_Kaiten: mon traces an ellipse (dizzy/spin)
-        // WE_TOOL flags (we_def.h): which Pokémon a routine targets.
-        private const int WE_TOOL_M1 = 0x0002, WE_TOOL_E1 = 0x0008, WE_TOOL_BG = 0x0400;   // we_def.h target flags
-        // EMTFUNC_FIELD_OPERATOR (wp_num.h) — projectile/operator callback (uses the following EX_DATA).
+        private const int WIN_OSX = -80, WIN_OEX = 256 + 80;   // off-screen X (WIN_OSX/WIN_OEX)
+        private const int FN_WE_T02 = 44, FN_WE_T22 = 45;   // background-scroll routines
+        private const int FN_KAITEN = 60;   // mon traces an ellipse (dizzy/spin)
+        // WE_TOOL flags: which Pokémon a routine targets.
+        private const int WE_TOOL_M1 = 0x0002, WE_TOOL_E1 = 0x0008, WE_TOOL_BG = 0x0400;   // target flags
+        // EMTFUNC_FIELD_OPERATOR — projectile/operator callback (uses the following EX_DATA).
         private const int EMTFUNC_FIELD_OPERATOR = 17;
 
         // Per-Pokémon sprite transforms (index 0 = attacker/player, 1 = defender/enemy) the routines animate; the
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia
         public readonly double[] MonScaleY = { 1, 1 };
         public readonly double[] MonTintA = { 0, 0 };
         public readonly bool[] MonVisible = { true, true };
-        private readonly bool[] _monVanish = { false, false };   // WestSp_WE_SSP_PokeVanish: persistent hide until shown again
+        private readonly bool[] _monVanish = { false, false };   // persistent hide until shown again
         public byte TintR { get; private set; } = 0;
         public byte TintG { get; private set; } = 0;
         public byte TintB { get; private set; } = 0;
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia
         private readonly Dictionary<int, List<SpaSimulator>> _ptcSims = new Dictionary<int, List<SpaSimulator>>();  // ptc_no → its sims (EXIT_PARTICLE)
         private SpaSimulator _lastSim;   // for EMIT_* that don't match a slot (fall back to the last emitter)
 
-        // WEST_LOOP_LABEL/WEST_LOOP (we_sys.c) — a stack of active loop frames; WEST_SEQ_CALL/WEST_END_CALL — a
+        // WEST_LOOP_LABEL/WEST_LOOP — a stack of active loop frames; WEST_SEQ_CALL/WEST_END_CALL — a
         // return-address stack. Both mirror the in-game fixed arrays but a stack suffices (and supports nesting).
         private sealed class LoopFrame { public int Body, Total, Count; }
         private readonly List<LoopFrame> _loops = new List<LoopFrame>();
@@ -87,11 +87,11 @@ namespace DSPRE.Avalonia
         private int _bgWait;   // HAIKEI_*_WAIT: 0 = none, 1 = block until the BG change fully settles, 2 = until half-faded
         private int _guard;
 
-        // Shake. WT_SHAKE (WestSp_WE_T01) shakes the mode-selected MON sprite via MonShakeX/Y; BG_SHAKE
-        // (WestSp_WE_BgShake) and WE_TOOL_BG shakes scroll the whole BG frame → ShakeX/Y. Both transient (reset/frame).
+        // Shake. WT_SHAKE shakes the mode-selected MON sprite via MonShakeX/Y; BG_SHAKE
+        // and WE_TOOL_BG shakes scroll the whole BG frame → ShakeX/Y. Both transient (reset/frame).
         public readonly double[] MonShakeX = { 0, 0 };
         public readonly double[] MonShakeY = { 0, 0 };
-        public readonly double[] MonMosaic = { 0, 0 };   // WSP_Mosaic: OBJ mosaic level 0..15 (block = level+1) per mon
+        public readonly double[] MonMosaic = { 0, 0 };   // the mosaic-level handler: OBJ mosaic level 0..15 (block = level+1) per mon
         // RECT_VIEW vertical wipe (SoftSpriteVisibleSet): visible fraction of the sprite; sign = reveal direction
         // (+ from the top, − from the bottom). 1.0 = fully shown (default each frame).
         public readonly double[] MonClip = { 1, 1 };
@@ -109,15 +109,15 @@ namespace DSPRE.Avalonia
         public int MonWarpShimmer { get; private set; }        // ±WIDTH_OFS(1) per-frame shiver (0 = none)
         public double ShakeX { get; private set; }
         public double ShakeY { get; private set; }
-        public bool Grayscale { get; private set; }   // WSP_PalColChange: desaturate the whole scene palette (mode!=0)
-        // Background colour flash (ColorConceChangePfd on FADE_MAIN_BG): tints the BACKDROP+platforms toward a colour
+        public bool Grayscale { get; private set; }   // the grayscale-toggle handler: desaturate the whole scene palette (mode!=0)
+        // Background colour flash (a palette color-change on FADE_MAIN_BG): tints the BACKDROP+platforms toward a colour
         // (NOT the mons). Earthquake (WE_089) pulses this black↔white each shake step. Transient (reset per frame).
         public double BgFlashAmount { get; private set; }
         public byte BgFlashR { get; private set; }
         public byte BgFlashG { get; private set; }
         public byte BgFlashB { get; private set; }
         // Afterimage ghosts (Double Team WE_104, Agility/After You blur, …): extra copies of a mon sprite at an offset,
-        // scaled/faded and palette-recoloured (the gray PokeColorChange copies). Rebuilt every frame in UpdateMonFx,
+        // scaled/faded and palette-recoloured (grayscale copies via the mon color-change call). Rebuilt every frame in UpdateMonFx,
         // drawn behind the real mons by the compositor.
         public struct MonGhost { public int Mon; public double Dx, Dy, ScaleX, ScaleY, Alpha; public byte TintR, TintG, TintB; public double TintA; }
         private readonly List<MonGhost> _ghosts = new List<MonGhost>();
@@ -133,19 +133,19 @@ namespace DSPRE.Avalonia
             public byte TintR, TintG, TintB; public double TintA;
             public bool Visible = true;
             public int Priority = 2;           // OAM view priority (POKE_OAM_VIEW); lower value = drawn in front.
-            // PokeOamView_464's hardware window: OBJ pixels INSIDE this screen rect are hidden (the window's
+            // the sink-into-void step function's hardware window: OBJ pixels INSIDE this screen rect are hidden (the window's
             // inside-plane excludes OBJ), so the sinking copy is swallowed as it crosses into it. Empty
             // (X1 < X0) = no clip.
             public double ClipOutX0, ClipOutY0, ClipOutX1 = -1, ClipOutY1 = -1;
         }
         private readonly Dictionary<int, DroppedCap> _caps = new Dictionary<int, DroppedCap>();
         public IReadOnlyCollection<DroppedCap> Caps => _caps.Values;
-        // WE_TOOL_C0..C3 (we_def.h 0x02/0x04/0x08/0x10) → cap-id 0..3, or −1 if the flag isn't a cap target.
+        // WE_TOOL_C0..C3 (0x02/0x04/0x08/0x10) → cap-id 0..3, or −1 if the flag isn't a cap target.
         private static int CapIdFromToolFlag(int flag)
         { for (int i = 0; i < 4; i++) if ((flag & (0x2 << i)) != 0) return i; return -1; }
 
-        // Exact port of wazatool.c WazaTool_InitShake / WazaTool_CalcShake / WazaTool_ShakeTool. The offset cycles
-        // +amp → 0 → −amp → 0 (one ShakeTool step every `sync` frames); after 4 steps `num` decrements. Done at num==0.
+        // Exact port of the shake initializer / the shake-step calculator / the shake-tool state stepper. The offset cycles
+        // +amp → 0 → −amp → 0 (one the shake-tool state stepper step every `sync` frames); after 4 steps `num` decrements. Done at num==0.
         private sealed class Shake
         {
             public readonly int AmpX, AmpY, Sync, Num0; private int _cnt, _num, _step, _befX, _befY;
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia
             public Shake(int x, int y, int sync, int num)
             { AmpX = x; AmpY = y; Sync = sync; Num0 = num; _cnt = sync; _num = num; _befX = -x; _befY = -y; }
             private static void Tool(ref int now, ref int bef) { int t = bef; bef = now; now = (t == 0) ? 0 : -t; }
-            public bool Calc()   // returns FALSE once the shake has finished (matches WazaTool_CalcShake)
+            public bool Calc()   // returns FALSE once the shake has finished (matches the shake-step calculator)
             {
                 if (_num == 0) return false;
                 if (++_cnt >= Sync) { _cnt = 0; Tool(ref X, ref _befX); Tool(ref Y, ref _befY); if (++_step >= 4) { _step = 0; _num--; } }
@@ -166,22 +166,22 @@ namespace DSPRE.Avalonia
         // semi-transparent); HAIKEI_CHG replaces the battle backdrop (drawn behind the mons).
         private readonly BattleBgRenderer _bgRenderer = new BattleBgRenderer();
         private byte[] _bgRgba; private int _bgW, _bgH, _bgWrapW, _bgWrapH;
-        // wsp_tool.c WeT02 constants (BG-scroll-register space; same for all moves):
+        // WeT02 constants (BG-scroll-register space; same for all moves):
         private const int WET02_START_Y_OFS = 128;                       // pos_y nudged by (OFS/3*2) at start
         private const int WET02_STOP_Y_HI = 512, WET02_STOP_Y_LO = -412; // WET02_STOP_Y_1 / _2 → fade-out trigger
-        // BATTLE_FRAME_EFFECT (FRAME2_M) is a GF_BGL_SCRSIZ_512x512 BG (fight.c TextBgCntDat). The effect frame is
+        // BATTLE_FRAME_EFFECT (FRAME2_M) is a GF_BGL_SCRSIZ_512x512 BG (TextBgCntDat). The effect frame is
         // ScrClear'd then the NSCR is loaded into the top — so the layer WRAPS at 512×512 with the rows beyond the
         // loaded NSCR transparent. (This is why a 512×256 water sheet does NOT tile straight into 2 bands.)
         private const int FX_BG_WRAP = 512;
         private double _bgX, _bgY, _bgSpdX, _bgSpdY;
         private double _bgOpacity, _bgPeak, _bgStopY; private int _bgFadeFrames; private bool _bgFadingOut, _bgOverlay, _bgUseStop;
-        private readonly int[] _work = new int[16];   // WORK_SET gp work (we_def.h WEDEF_GP_INDEX_*: [0]=SPEED_X,
+        private readonly int[] _work = new int[16];   // WORK_SET gp work (WEDEF_GP_INDEX_*: [0]=SPEED_X,
                                                       // [1]=SPEED_Y, [2]=BGPOS_X, [3]=BGPOS_Y, [6]=SPEED_R)
 
-        // HaikeiChange_ParamRev (we_sys.c): the work[SPEED_R] param lets a script flip its OWN backdrop
+        // the per-script scroll-reversal rule: the work[SPEED_R] param lets a script flip its OWN backdrop
         // scroll/position per side — 0 = never; 1 = reverse when the DEFENDER is on the player's side;
         // 2 = the same, except a self-targeting move (at==df) reverses when the caster is the enemy.
-        private bool HaikeiParamRev()
+        private bool BackdropScrollReversedForSide()
         {
             int r = _work[6];
             if (r == 0) return false;
@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia
             if (r == 2 && _atVis == _dfVis) return _attackerIsEnemy;
             return dfMine;
         }
-        // WestSp_WE_Laster (ラスター): a per-scanline horizontal sine wave on the battle background (heat-haze/ripple
+        // ラスター: a per-scanline horizontal sine wave on the battle background (heat-haze/ripple
         // for Nightmare/Whirlpool/Water Pulse). All exact: ROTA_ADD = 1°/scanline, SCR_SP = 200 angle-units/frame,
         // amplitude ROTA_WIDTH = 32·FX32_ONE → FX_MUL(sin, width)>>12 = ±32 px.
         private int _rasterLeft;
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia
         public double RasterLineAdd => Math.PI / 180.0;   // ROTA_ADD = FX_GET_ROTA_NUM(1) = 1°
         public bool HasBackground => _bgRgba != null && _bgOpacity > 0.001;
         public bool BackgroundIsOverlay => _bgOverlay;
-        // HAIKEI background transition state (we_sys.c haikei_chg_flag): NONE once a HAIKEI_CHG fade-in reaches peak or
+        // HAIKEI background transition state (haikei_chg_flag): NONE once a HAIKEI_CHG fade-in reaches peak or
         // a RECOVER fade-out reaches zero (rgba cleared). HAIKEI_CHG_WAIT (60 moves) blocks until this settles —
         // without it the move fired its effect before the backdrop appeared (Hyper Beam etc.).
         private bool BgSettled => _bgRgba == null || (!_bgFadingOut && _bgOpacity >= _bgPeak - 1e-6);
@@ -225,14 +225,14 @@ namespace DSPRE.Avalonia
             return true;
         }
 
-        // WE_057 (Surf wave, WestSp_WE_057): the CATS wave actor scales thin→tall (rise) then wide→flat (wash) while
-        // fading in/out. These three are internal scratch for the phase curve (scale = s/100, WazaTool scale-rate),
-        // applied to the wave CellActor each frame in UpdateCellFx — the actor renders through the normal CATS path.
+        // WE_057 (Surf wave): the wave actor scales thin→tall (rise) then wide→flat (wash) while
+        // fading in/out. These three are internal scratch for the phase curve (scale = s/100, scale-rate helper),
+        // applied to the wave CellActor each frame in UpdateCellFx — the actor renders through the normal cell-actor path.
         private double _cellScaleX = 1, _cellScaleY = 1, _cellOpacity = 1;
         private int _cellPhase = -1, _cellFrame, _cellDefX, _cellDefY;
         private CellActor _we057Actor;   // the casting wave actor WE_057 drives (one of the two ACT_ADD_EZ actors)
         private const int FN_WE_057 = 49;
-        private const int WE057_OAM_HEIGHT = 16;          // wsp_goto.c WE057_OAM_HEIGHT (the Y-anchor poke_h)
+        private const int WE057_OAM_HEIGHT = 16;          // WE057_OAM_HEIGHT (the Y-anchor poke_h)
 
         // ── General CATS cell-actor engine ──────────────────────────────────────────────────────────────────────
         // The VM sets Cells to the loaded effectclact resources before play. WEST_CATS_ACT_ADD[_EZ] create live
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia
         private CellSequence[] CellSeqs => _cellSeqs ??= (Cells != null && Cells.Loaded ? Cells.BuildSequences() : Array.Empty<CellSequence>());
         private readonly List<CellActor> _catsActors = new List<CellActor>();
         public IReadOnlyList<CellActor> CatsActors => _catsActors;
-        // WestSp_WE_057 places the wave at the CASTER def: player (76,120) / enemy (144,64) (wsp_goto.c).
+        // WE_057 places the wave at the CASTER def: player (76,120) / enemy (144,64).
         private static readonly (int x, int y) WE057_DEF_PLAYER = (76, 120), WE057_DEF_ENEMY = (144, 64);
         private static double Lerp(double a, double b, double t) => a + (b - a) * Math.Clamp(t, 0, 1);
 
@@ -317,7 +317,7 @@ namespace DSPRE.Avalonia
             }
 
             if (_wait > 0) _wait--;
-            // WAIT_FLAG (we_sys.c) blocks until every flagged WEEffect TCB finishes. HAIKEI_PAL_FADE registers such a
+            // WAIT_FLAG blocks until every flagged WEEffect TCB finishes. HAIKEI_PAL_FADE registers such a
             // TCB (WeBGPalFade_TCB), so the fade must complete before the script continues — Flamethrower fades the BG
             // to red-brown and only THEN fires the beam (without this the beam shot before the fade was visible).
             else if (_waitFlag) { if (_monFx.Count == 0 && _cellPhase < 0 && _fadeFramesLeft <= 0) _waitFlag = false; }
@@ -345,7 +345,7 @@ namespace DSPRE.Avalonia
                     case "WEST_SEQEND":
                         _scriptDone = true; return;
 
-                    // WEST_TURN_CHK offEven,offOdd (we_sys.c): pick ONE branch by the parity of the global
+                    // WEST_TURN_CHK offEven,offOdd: pick ONE branch by the parity of the global
                     // waza_eff_cnt — for genuine two-turn moves (Fly/Dig) that's charge vs attack turn, but
                     // plenty of moves use it for alternating VARIANTS (Lunar Dance). Chaining both blocks
                     // (the old preview behaviour) double-played those. Preview a fresh battle: count 0 →
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia
                     case "WEST_SEQ_JP":                                  // unconditional jump
                         if (c.Args.Length >= 1) JumpRelative(c.WordPos + 1, c.Args[0]);
                         break;
-                    // SIDE_JP type,adrs1,adrs2 (we_sys.c WEST_SIDE_JP): checks a client's battle side — type 0 = the
+                    // SIDE_JP type,adrs1,adrs2 (WEST_SIDE_JP): checks a client's battle side — type 0 = the
                     // attacker, else the defender — and jumps adrs2 if that client is on the ENEMY side, otherwise
                     // adrs1. Mirrors how a move flips for player-vs-enemy casters; the preview's side toggle decides.
                     case "WEST_SIDE_JP":
@@ -368,7 +368,7 @@ namespace DSPRE.Avalonia
                             else { if (JumpRelative(c.WordPos + 2, c.Args[1])) break; }
                         }
                         break;
-                    // LOOP_LABEL cnt … LOOP repeats the block `cnt` times (we_sys.c WEST_LOOP_LABEL/WEST_LOOP). The
+                    // LOOP_LABEL cnt … LOOP repeats the block `cnt` times (WEST_LOOP_LABEL/WEST_LOOP). The
                     // body starts at the command right after LOOP_LABEL (= _pc, already advanced).
                     case "WEST_LOOP_LABEL":
                         _loops.Add(new LoopFrame { Body = _pc, Total = c.Args.Length > 0 ? c.Args[0] : 1, Count = 0 });
@@ -381,7 +381,7 @@ namespace DSPRE.Avalonia
                             else _pc = f.Body;                                              // else → back to the body
                         }
                         break;
-                    // SEQ_CALL adrs … END_CALL is a subroutine call/return (we_sys.c WEST_SEQ_CALL/WEST_END_CALL):
+                    // SEQ_CALL adrs … END_CALL is a subroutine call/return (WEST_SEQ_CALL/WEST_END_CALL):
                     // push the next command as the return point, jump to the (relative) target, run until END_CALL.
                     case "WEST_SEQ_CALL":
                         if (c.Args.Length >= 1) { _callStack.Add(_pc); JumpRelative(c.WordPos + 1, c.Args[0]); }
@@ -404,14 +404,14 @@ namespace DSPRE.Avalonia
                     case "WEST_LOAD_PARTICLE_EX":
                         if (c.Args.Length >= 2) _slot[c.Args[0]] = c.Args[1];
                         break;
-                    // CAMERA_CHG no,mode / CAMERA_REVERCE no,flag (we_sys.c): set the per-particle-slot camera
+                    // CAMERA_CHG no,mode / CAMERA_REVERCE no,flag: set the per-particle-slot camera
                     // mode/reverse flag — downstream anchor lookups use the turned-camera coordinate set, which
                     // we reproduce by mirroring that slot's layers (ViewReversed).
                     case "WEST_CAMERA_CHG":
                     case "WEST_CAMERA_REVERCE":
                         if (c.Args.Length >= 2) _cameraMode[c.Args[0]] = c.Args[1];
                         break;
-                    // EXIT_PARTICLE no (we_sys.c Wp_Exit): stop the slot's emitters — quits emission so live particles
+                    // EXIT_PARTICLE no (the emitter-stop routine): stop the slot's emitters — quits emission so live particles
                     // die out, and lets an "emit forever" emitter actually finish (so WAIT_PARTICLE can release).
                     case "WEST_EXIT_PARTICLE":
                         if (c.Args.Length >= 1 && _ptcSims.TryGetValue(c.Args[0], out var exitSims))
@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia
                         break;
                     case "WEST_ADD_PARTICLE_SEP":
                     case "WEST_ADD_PARTICLE_PTAT":
-                        // WEST_ADD_PARTICLE_SEP/PTAT (we_sys.c) list 6/4 pre-aimed emitter variants (one per battle
+                        // WEST_ADD_PARTICLE_SEP/PTAT list 6/4 pre-aimed emitter variants (one per battle
                         // formation aa/bb/a/b/c/d) but create EXACTLY ONE: index[ParticleSepIndexGet()]. In 1v1 that's
                         // 0 when the player attacks (beam aimed at the enemy) or 3 when the enemy attacks. Spawning all
                         // of them fired every direction at once (Hyper Beam shot forwards+sideways; Water Gun doubled).
@@ -484,7 +484,7 @@ namespace DSPRE.Avalonia
                         _caps.Clear();
                         break;
 
-                    // WORK_SET soeji,work / WORK_CLEAR (we_sys.c): GP work registers. The HAIKEI background scroll
+                    // WORK_SET soeji,work / WORK_CLEAR: GP work registers. The HAIKEI background scroll
                     // reads its speed from work[SPEED_X=0] / work[SPEED_Y=1].
                     case "WEST_WORK_SET":
                         if (c.Args.Length >= 2 && c.Args[0] >= 0 && c.Args[0] < _work.Length) _work[c.Args[0]] = c.Args[1];
@@ -496,13 +496,13 @@ namespace DSPRE.Avalonia
                     // mode has the MOVE bit it scrolls at work[SPEED_X]/[SPEED_Y]. HAIKEI_RECOVER fades it out.
                     case "WEST_HAIKEI_CHG":
                         // HAIKEI_CHG: full backdrop behind the mons, starting at work[BGPOS_X/Y] and scrolling at
-                        // work[SPEED_X]/[SPEED_Y], no stop line — stays until HAIKEI_RECOVER. HaikeiSubSystem_Scroll
-                        // (we_sys.c) feeds pos += speed STRAIGHT into the BG scroll register, and hardware samples
+                        // work[SPEED_X]/[SPEED_Y], no stop line — stays until HAIKEI_RECOVER. the backdrop-scroll updater
+                        // feeds pos += speed STRAIGHT into the BG scroll register, and hardware samples
                         // texel(screen + scroll): positive speed_y scrolls the sky UP (Lunar Dance's rising moon; an
                         // old Y negation here sank it). work[SPEED_R] can flip everything per side (ParamRev).
                         if (c.Args.Length >= 1)
                         {
-                            int hRev = HaikeiParamRev() ? -1 : 1;
+                            int hRev = BackdropScrollReversedForSide() ? -1 : 1;
                             StartBackground(c.Args[0], overlay: false, posX: _work[2] * hRev, posY: _work[3] * hRev,
                                 spdX: _work[0] * hRev, spdY: _work[1] * hRev, peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
                         }
@@ -510,7 +510,7 @@ namespace DSPRE.Avalonia
                     case "WEST_HAIKEI_RECOVER":
                         _bgFadingOut = true;
                         break;
-                    // HAIKEI_CHG_WAIT / HAIKEI_HALF_WAIT (we_sys.c): block the script until the backdrop fade settles
+                    // HAIKEI_CHG_WAIT / HAIKEI_HALF_WAIT: block the script until the backdrop fade settles
                     // (flag→NONE) / passes its midpoint (flag→HALF). 60 / 3 moves rely on this for correct ordering.
                     case "WEST_HAIKEI_CHG_WAIT":
                         if (!BgSettled) { _bgWait = 1; return; }
@@ -519,25 +519,25 @@ namespace DSPRE.Avalonia
                         if (!BgHalf) { _bgWait = 2; return; }
                         break;
 
-                    // ── HGSS-only opcodes (appended after WEST_KEY_WAIT in HG's west.h) ──────────────
-                    // WEST_FLASH time (we_sys.c) — a full-screen WHITE flash that fades out over `time` frames.
+                    // ── HGSS-only opcodes (appended after WEST_KEY_WAIT in HG's) ──────────────
+                    // WEST_FLASH time — a full-screen WHITE flash that fades out over `time` frames.
                     case "WEST_FLASH":
                         _fadeStart = 1.0; _fadeEnd = 0; _fadeCur = 1.0;
                         _fadeFrames = _fadeFramesLeft = c.Args.Length >= 1 && c.Args[0] > 0 ? c.Args[0] : 8;
                         FadeR = FadeG = FadeB = 255;
                         break;
-                    // WEST_HAIKEI_CHG_EX map_id, ch_mode, ex_bit (we_sys.c) — extended backdrop change driven by HG's
+                    // WEST_HAIKEI_CHG_EX map_id, ch_mode, ex_bit — extended backdrop change driven by HG's
                     // animated batt_bg_planm data. We approximate it as a plain HAIKEI_CHG to map_id (the per-frame
                     // palette animation frames aren't loaded); ch_mode/ex_bit select the plane-anim variant.
                     case "WEST_HAIKEI_CHG_EX":
                         if (c.Args.Length >= 1)
                         {
-                            int hRevEx = HaikeiParamRev() ? -1 : 1;
+                            int hRevEx = BackdropScrollReversedForSide() ? -1 : 1;
                             StartBackground(c.Args[0], overlay: false, posX: _work[2] * hRevEx, posY: _work[3] * hRevEx,
                                 spdX: _work[0] * hRevEx, spdY: _work[1] * hRevEx, peak: 1.0, fadeFrames: 12, stopY: 0, useStop: false);
                         }
                         break;
-                    // WEST_BATONTATTI_JP adrs (we_sys.c) — Baton Pass touch: jumps by `adrs` ONLY when the attacker has
+                    // WEST_BATONTATTI_JP adrs — Baton Pass touch: jumps by `adrs` ONLY when the attacker has
                     // a client pair (double battle). In a single-target preview at_client_pair is false, so it just
                     // skips the offset — a no-op here (the arg is already consumed by the parser).
                     case "WEST_BATONTATTI_JP":
@@ -604,7 +604,7 @@ namespace DSPRE.Avalonia
 
         private SpaSimulator FindEmitter(int idx) => _emitSlots.TryGetValue(idx, out var s) ? s : _lastSim;
 
-        // OPERATOR_POS_* values (wpcb_def.h) whose case reads s_client (the start/attacker side) → particles travel
+        // OPERATOR_POS_* values whose case reads s_client (the start/attacker side) → particles travel
         // to the target: SP(1) SP_OFS(4) LSP(6) RSP(8) L2SP(10) L3SP(14) L095SP(16) L161SP(18) L308SP(20) L304SP(22)
         // L320SP(24) L406SP(26) — plus POS_194(34) which also just reads s_client. All other (EP) positions sit at the
         // target end. The FIXED-table positions (145/225/226) override the anchor entirely (handled below).
@@ -625,7 +625,7 @@ namespace DSPRE.Avalonia
                 target = ex.Length > 2 ? ex[2] : 2;
                 pos = ex.Length > 3 ? ex[3] : 0;
                 axis = ex.Length > 4 ? ex[4] : 0;
-                fldMode = ex.Length > 5 ? ex[5] : 0;   // wpcb_def.h FLD bitmask: MAGNET_POS=0x10, CONVERGENCE_POS=0x1000
+                fldMode = ex.Length > 5 ? ex[5] : 0;   // FLD bitmask: MAGNET_POS=0x10, CONVERGENCE_POS=0x1000
                 if (_pc + 1 < _cmds.Count && WestOpcodes.Name(_version, _cmds[_pc + 1].OpId) == "WEST_EX_DATA")
                 {
                     var ex2 = _cmds[_pc + 1].Args;
@@ -642,7 +642,7 @@ namespace DSPRE.Avalonia
                     }
                 }
             }
-            // wpcb_operator.c WeSysExDataGet TARGET switch: TARGET_AT(1)/AT_SIDE(3) SWAP the clients —
+            // WeSysExDataGet TARGET switch: TARGET_AT(1)/AT_SIDE(3) SWAP the clients —
             // s_client=DF (defender), e_client=AT (attacker); TARGET_NONE(0)/DF(2)/DF_SIDE(4) keep s_client=AT,
             // e_client=DF. Each POS reads s_client ("*SP"/start positions: SP, LSP, RSP, L2SP, L3SP, L095SP…L406SP,
             // SP_OFS) or e_client ("*EP"/end positions). So Flash Cannon (TARGET_AT + EP) → e_client=attacker; an
@@ -651,11 +651,11 @@ namespace DSPRE.Avalonia
             int sClient = swapClients ? 1 : 0;
             int eClient = swapClients ? 0 : 1;
             int src = (IsStartPos(pos) || pos == 12) ? sClient : eClient;   // POS_AT_SIDE_OFS(12) anchors on the attacker side
-            // ECB_Operator_Axiss: any AT/DF directional axis — AT(1)/DF(2), the _SIDE pair (4/5), the _OLD pair (6/7)
-            // and every angled-laser variant AT_3…DF_406 (8…21) — calls SPL_SetEmitterAxis with the attacker→defender
+            // Any AT/DF directional axis — AT(1)/DF(2), the _SIDE pair (4/5), the _OLD pair (6/7)
+            // and every angled-laser variant AT_3…DF_406 (8…21) — calls the emitter-axis setter with the attacker→defender
             // line (AxisPosTable[at][df]); particles then STREAM along it by their own init_vel_axis. AXIS_NONE leaves
-            // the emitter on the SPA's OWN axis. SET(3) and the contest axes fall back to the SPA axis. There is NO
-            // emitter drift anywhere — ECB_Operator_Position only calls SPL_SetEmitterPosition, so a beam IS the
+            // the emitter on the archive's OWN axis. SET(3) and the contest axes fall back to the archive's axis. There is NO
+            // emitter drift anywhere — the operator's position handling only calls the emitter-position setter, so a beam IS the
             // particle stream and a start-position sparkle (Absorb's KIRA at POS_SP) stays put on the attacker.
             bool axisOverride = axis >= 1 && axis <= 21 && axis != 3;
 
@@ -666,7 +666,7 @@ namespace DSPRE.Avalonia
             var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
 
             // The emitter anchor: normally the start/end mon, BUT OPERATOR_POS_145 (Bubble) is a FIXED formation
-            // position per client type (pos145 table, wpcb_operator.c) — fx32 world → particle px (/172), screen =
+            // position per client type (pos145 table,) — fx32 world → particle px (/172), screen =
             // origin ± (Y up). + base offset + the POS_*_OFS offset (+Y up → screen subtract).
             double anchorX = src == 0 ? _atX : _dfX, anchorY = src == 0 ? _atY : _dfY;
             if (pos == 30 || pos == 31 || pos == 32)   // OPERATOR_POS_226 / 145 / 225: fixed formation position per type
@@ -689,7 +689,7 @@ namespace DSPRE.Avalonia
             if (fldTgt >= 0 && fldMode != 0)
             {   // The operator retargets the emitter's MAGNET (Mega Drain) or CONVERGENCE field (BubbleBeam/Aurora beam)
                 // to a mon. FLD_SET_DF scales the target toward the particle origin (screen ≈120,96) by num/den. The
-                // SPA stores this RELATIVE to the emitter (wpcb_field.c: pos −= odp->pos), so subtract the anchor.
+                // SPA stores this RELATIVE to the emitter (pos −= odp->pos), so subtract the anchor.
                 double tgX = fldTgt == 2 ? _atX : _dfX, tgY = fldTgt == 2 ? _atY : _dfY;
                 if (fldFracD != 1 || fldFracN != 1)   // FLD_SET_DF: target = origin + (num/den)·(mon − origin)
                 {
@@ -742,10 +742,10 @@ namespace DSPRE.Avalonia
             TrackSim(ptc, sim);
         }
 
-        // Particle-space origin in screen px: particle (0,0,0) renders at (120, 96) (we_tool.c mapping, see top of file).
+        // Particle-space origin in screen px: particle (0,0,0) renders at (120, 96) (mapping, see top of file).
         // FLD_SET_DF convergence scales the target toward this point.
         private const double PARTICLE_ORIGIN_X = 120, PARTICLE_ORIGIN_Y = 96;
-        // OPERATOR_POS_145/225/226 + AXIS_145 fixed-formation tables (wpcb_operator.c), 1v1 rows AA/BB (fx32 world).
+        // OPERATOR_POS_145/225/226 + AXIS_145 fixed-formation tables, 1v1 rows AA/BB (fx32 world).
         // 145 = Bubble, 225 = Dragon Breath, 226 = Baton Pass. (The _CON contest rows are unused in a 1v1 preview.)
         private static readonly (int x, int y)[] Pos145 = { (-5760, -4352), (9488, -1984) };
         private static readonly (int x, int y)[] Pos225 = { (-4608, -4480), (7624, 2248) };
@@ -759,7 +759,7 @@ namespace DSPRE.Avalonia
             if (FN_WE_MOVE.Contains(fn)) { MoveMon(a); return; }
             if (fn == FN_WE_057)
             {
-                // WestSp_WE_057 (wsp_goto.c): drives one of the two CATS_ACT_ADD_EZ wave actors created just before it.
+                // drives one of the two wave actors created just before it (added via the simplified actor-add call).
                 // It selects the CASTER's wave (player cap0/seq0 def (76,120); enemy cap1/seq1 def (144,64)), disables
                 // the other, then animates SCALE + Y-pos + blend through the rise/hold/wash phases. Now rendered through
                 // the general CATS actor path (BlitCellActors) like every other cell move — no legacy view overlay.
@@ -768,20 +768,20 @@ namespace DSPRE.Avalonia
                 foreach (var act in _catsActors)
                 {
                     if (act.CapId == castCap) { _we057Actor = act; }
-                    else if (act.CapId == 0 || act.CapId == 1) { act.Visible = false; act.Alive = false; }   // CATS_ObjectEnableCap FALSE
+                    else if (act.CapId == 0 || act.CapId == 1) { act.Visible = false; act.Alive = false; }   // the actor visibility-toggle call FALSE
                 }
                 var def = _attackerIsEnemy ? WE057_DEF_ENEMY : WE057_DEF_PLAYER;
                 _cellDefX = def.x; _cellDefY = def.y;
                 _cellPhase = 0; _cellFrame = 0;
                 if (_we057Actor != null)
                 {
-                    if (_we057Actor.SeqCount > castCap) _we057Actor.SetSeq(castCap);   // CATS_ObjectAnimeSeqSetCap
+                    if (_we057Actor.SeqCount > castCap) _we057Actor.SetSeq(castCap);   // the actor's set-animation-sequence call
                     _we057Actor.Visible = true; _we057Actor.X = _cellDefX; _we057Actor.Y = _cellDefY;
                     _we057Actor.ScaleX = 1; _we057Actor.ScaleY = 0.05; _we057Actor.Alpha = 0;
                 }
                 return;
             }
-            // WE_T02/T22 (WestSp_WE_T02): scroll a background as an effect overlay. GPWork = a[2..]: [0]=BG_ID,
+            // WE_T02/T22: scroll a background as an effect overlay. GPWork = a[2..]: [0]=BG_ID,
             // [1]=posX, [2]=posY, [3]=spdX, [4]=spdY, [5]=rev, [6]=bld_def, [7]=timer. Reverses for an enemy caster.
             if ((fn == FN_WE_T02 || fn == FN_WE_T22) && a.Length >= 10)
             {
@@ -802,7 +802,7 @@ namespace DSPRE.Avalonia
             switch (fn)
             {
                 case FN_WT_SHAKE when a.Length >= 6:
-                {   // WestSp_WE_T01: GPWork [0]powX [1]powY [2]sync [3]num [4]mode. Shakes the mode-selected MON sprite
+                {   // GPWork [0]powX [1]powY [2]sync [3]num [4]mode. Shakes the mode-selected MON sprite
                     // (WE_TOOL_M1=attacker, else target) — or the BG frame if WE_TOOL_BG. pow is raw pixels (1:1).
                     int mode = a.Length > 6 ? a[6] : WE_TOOL_E1;
                     bool toScene = (mode & WE_TOOL_BG) != 0;
@@ -812,7 +812,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_BG_SHAKE when a.Length >= 6:
-                {   // WestSp_WE_BgShake: GPWork [0]powX [1]powY [2]sync [3]num [4]num_max [5]frame. Shakes the BG/effect
+                {   // GPWork [0]powX [1]powY [2]sync [3]num [4]num_max [5]frame. Shakes the BG/effect
                     // frame scroll, re-running the whole shake num_max extra times (WeBgShake_TCB seq-- loop).
                     _monFx.Add(new MonFx { Kind = 5, Mon = 0, ToScene = true,
                         Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])),
@@ -821,15 +821,15 @@ namespace DSPRE.Avalonia
                 }
 
                 case FN_HAIKEI_PAL_FADE when a.Length >= 6:
-                {   // WestSp_WE_HaikeiPalFade → PaletteFadeReq(pfd, MAIN_BG, bit, WAIT=GPWork[1], START_EVY=GPWork[2],
+                {   // Issues the palette-fade request (pfd, MAIN_BG, bit, WAIT=GPWork[1], START_EVY=GPWork[2],
                     // END_EVY=GPWork[3], COLOR=GPWork[4]). evy/16 = darkening toward COLOR; the fade ramps 1 evy step per
                     // `wait` frames so the duration = |end−start|·wait. (Was reading the args shifted — backgrounds didn't show.)
-                    int wait = a[3];   // s8 in palanm.c — may be NEGATIVE (Thunder uses -4)
+                    int wait = a[3];   // s8 in — may be NEGATIVE (Thunder uses -4)
                     int startEvy = a[4], endEvy = a.Length > 5 ? a[5] : 0;
                     _fadeStart = Math.Clamp(startEvy / 16.0, 0, 1);
                     _fadeEnd = Math.Clamp(endEvy / 16.0, 0, 1);
                     _fadeCur = _fadeStart;
-                    // palanm.c FadeReqSet: evy steps by DEF_FADE_VAL(=2) each update; a step happens every (wait+1)
+                    // FadeReqSet: evy steps by DEF_FADE_VAL(=2) each update; a step happens every (wait+1)
                     // frames. wait<0 → fade_value = 2+|wait| and wait=0 (snappy: a big step EVERY frame). So Thunder's
                     // wait=-4 over evy 0→12 = step 6/frame = 2 frames (a sharp lightning flash), not 12/48.
                     int fadeVal = wait < 0 ? 2 + (-wait) : 2;
@@ -856,7 +856,7 @@ namespace DSPRE.Avalonia
                     });
                     break;
                 }
-                case FN_CAP_POKE_SCALE when a.Length >= 9:           // WestSp_WE_CAPPokeScaleUpDown on a dropped CAP. GPWork
+                case FN_CAP_POKE_SCALE when a.Length >= 9:           // Scales a dropped CAP up/down over time. GPWork
                 {   // [0]at_df [1]alpha [2]scale_s [3]scale_e [4]scale_d(divisor) [5]num [6](upF<<16|downF) [7]capId.
                     int sd = Math.Max(1, a[6]);                     // scale = scale_s/scale_d → scale_e/scale_d (NOT /100)
                     double s = a[4] / (double)sd, e = a[5] / (double)sd;
@@ -871,11 +871,11 @@ namespace DSPRE.Avalonia
                     });
                     break;
                 }
-                case FN_POKE_VANISH:                                // WestSp_WE_SSP_PokeVanish: GPWork [0]target [1]flag
+                case FN_POKE_VANISH:                                // GPWork [0]target [1]flag
                     // (0=show, 1=hide). An INSTANT, PERSISTENT visibility set — not a blink.
                     _monVanish[MonFromFlag(a, 2)] = a.Length > 3 && a[3] != 0;
                     break;
-                case FN_DISP_OUT:                                   // WestSp_WE_DispOut: GPWork [0]target [1]wait. Slide
+                case FN_DISP_OUT:                                   // GPWork [0]target [1]wait. Slide
                     // the mon off-screen (X→−80 if on the bottom/own side, →336 if top) over `wait` frames; stays out.
                     {
                         int mon = MonFromFlag(a, 2), wait = Math.Max(1, a.Length > 3 ? a[3] : 1);
@@ -883,7 +883,7 @@ namespace DSPRE.Avalonia
                         _monFx.Add(new MonFx { Mon = mon, Kind = 4, Frames = wait, Dx = OffscreenX(mon) - restX, Dy = 0 });
                     }
                     break;
-                case FN_DISP_MOVE:                                   // WestSp_WE_DispMove: GPWork [0]mode(0=out/else in)
+                case FN_DISP_MOVE:                                   // GPWork [0]mode(0=out/else in)
                     // [1]target [2]wait. mode 0 slides off-screen; else snaps off-screen then slides back to default.
                     {
                         int mode = a.Length > 2 ? a[2] : 0, mon = MonFromFlag(a, 3), wait = Math.Max(1, a.Length > 4 ? a[4] : 1);
@@ -892,34 +892,34 @@ namespace DSPRE.Avalonia
                         else { MonDX[mon] = off; _monFx.Add(new MonFx { Mon = mon, Kind = 4, Frames = wait, Dx = -off, Dy = 0 }); }
                     }
                     break;
-                case FN_DISP_DEF:                                    // WestSp_WE_DispDef: GPWork [0]target. Snap the mon
+                case FN_DISP_DEF:                                    // GPWork [0]target. Snap the mon
                     MonDX[MonFromFlag(a, 2)] = MonDY[MonFromFlag(a, 2)] = 0;   // back to its default position, instantly.
                     break;
-                case FN_PALCOL_CHANGE:                               // WSP_PalColChange: GPWork [0] !=0 → grayscale the
+                case FN_PALCOL_CHANGE:                               // the grayscale-toggle handler: GPWork [0] !=0 → grayscale the
                     Grayscale = a.Length > 2 && a[2] != 0;           // scene palette, 0 → restore normal.
                     break;
-                // ── Self-buff scale/shake routines (wsp_goto.c), all on the ATTACKER (WeSysATNoGet). Ported from each
-                //    routine's real WazaTool_InitScaleRateEx phases / InitShake params. Kind 8 = scale-keyframe sequence.
-                case 6:    // WestSp_WE_339 (Bulk Up): flex — wide-short → narrow-tall → … → normal.
+                // ── Self-buff scale/shake routines, all on the ATTACKER (WeSysATNoGet). Ported from each
+                //    routine's real the scale-rate keyframe helper phases / the shake initializer params. Kind 8 = scale-keyframe sequence.
+                case 6:    // Bulk Up: flex — wide-short → narrow-tall → … → normal.
                     AddScaleSeq(_atVis, new[] { new double[]{100,150,100,50,10}, new double[]{150,50,50,150,10},
                         new double[]{50,100,150,100,5}, new double[]{100,150,100,150,5}, new double[]{150,100,150,100,5} });
                     break;
-                case 13:   // WestSp_WE_074 (Growth / Doom Desire's charge, We074_TCB): pulse 100↔115 (6+6f ×4) AND flash
+                case 13:   // Growth / Doom Desire's charge: pulse 100↔115 (6+6f ×4) AND flash
                            // the attacker WHITE in sync (SoftSpritePalFade evy 0→6→0, colour 0x7FFF) — 2 blinks over the 4 steps.
                     AddScaleSeq(_atVis, new[] { new double[]{100,115,100,115,6}, new double[]{115,100,115,100,6} }, 4);
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 6, Frames = 24, UpF = 6, WaitF = 0,
                         Keys = new double[] { 6 }, R = 255, G = 255, B = 255 });   // white flash synced with the pulse
                     break;
-                case 14:   // WestSp_WE_096 (Yoga pose): squash → stretch → normal (w096_step_data).
+                case 14:   // Yoga pose: squash → stretch → normal (a scripted step sequence).
                     AddScaleSeq(_atVis, new[] { new double[]{100,150,100,50,8}, new double[]{150,50,50,150,8}, new double[]{50,100,150,100,8} });
                     break;
-                case 15:   // WestSp_WE_100: stretch thin+tall (100→10 X, 100→180 Y) then collapse to nothing (w100_step_data).
+                case 15:   // stretch thin+tall (100→10 X, 100→180 Y) then collapse to nothing (a scripted step sequence).
                     AddScaleSeq(_atVis, new[] { new double[]{100,10,100,180,10}, new double[]{10,10,180,0,5} });
                     break;
-                case 19:   // WestSp_WE_150: squash→stretch→normal jiggle, ×3 (w150_step_data, LOOP_CNT 3).
+                case 19:   // squash→stretch→normal jiggle, ×3 (a scripted step sequence, LOOP_CNT 3).
                     AddScaleSeq(_atVis, new[] { new double[]{100,120,100,80,5}, new double[]{120,100,80,120,5}, new double[]{100,100,120,100,5} }, 3);
                     break;
-                case 5:    // WestSp_WE_070 (Strength, We070_TCB): the attacker SQUASHES 1.0→GPWork[0]/100 (+ a light shake),
+                case 5:    // Strength: the attacker SQUASHES 1.0→GPWork[0]/100 (+ a light shake),
                 {          // pulses a colour WE070_FADE_CNT 3× (evy 10/16, col 0x1F = RED) while squashed, then STRETCHES to
                            // GPWork[1]/100 ("びよよーん" boing) and settles to 1.0. My old handler did ONLY the shake.
                     int sq = a.Length > 2 ? a[2] : 70, st = a.Length > 3 ? a[3] : 120;   // GPWork[0] squash, [1] stretch (/100)
@@ -931,26 +931,26 @@ namespace DSPRE.Avalonia
                         Keys = new double[] { 10 }, R = 255, G = 0, B = 0, Delay = sqSync });   // 3 red effort-pulses while squashed
                     break;
                 }
-                case 24:   // WestSp_WE_089 (Earthquake): the whole world shakes (mons + BG) at a decreasing amplitude
+                case 24:   // Earthquake: the whole world shakes (mons + BG) at a decreasing amplitude
                            // WHILE the background flashes black↔white each step — not a plain mon shake. (Kind 20.)
                     _monFx.Add(new MonFx { Kind = 20, Frames = 40 });
                     break;
-                case 7:    // WestSp_WE_104 (Double Team): 4 gray afterimages of the attacker oscillate ±32px then fade.
+                case 7:    // Double Team: 4 gray afterimages of the attacker oscillate ±32px then fade.
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 9, Frames = 80 });
                     break;
-                // ── wsp_tomoya.c bespoke routines, ported from their real #define params ──
-                case 8:    // WestSp_WE_098 (Rolling Kick): attacker rolls — MakeDefRota ROTA_NUM 1 turn over SYNC 8, dir=vec_x,
+                // ── bespoke routines, ported from their real #define params ──
+                case 8:    // Rolling Kick: attacker rolls — the rotation-motion builder ROTA_NUM 1 turn over SYNC 8, dir=vec_x,
                     // WITH WE098_OAM_MAX 2 zanzou after-image trails (DO_WAIT 2f apart) — set via NumMax.
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 22, Frames = 8, Cycles = 1, Dx = _atVis == 0 ? 1 : -1, NumMax = 2 });
                     break;
-                case 9:    // WestSp_WE_065 (Drill Peck, We065_TCB): the attacker JABS −32·vec horizontally (out over MOVE_SYNC
+                case 9:    // Drill Peck: the attacker JABS −32·vec horizontally (out over MOVE_SYNC
                 {          // 3, back over MOVE2_SYNC 2) via SetSspMatrix AND tilts SS_PARA_ROT_Z 0→20° then un-tilts — a drill.
                     double s = _atVis == 0 ? 1.0 : -1.0;   // MOVE_WIDTH −32 · vec_x
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 10, Frames = 14, Keys = new double[] { 20, 1 } });   // tilt out & back
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 13, Frames = 3 + 7 + 2, UpF = 3, WaitF = 7, DownF = 2, Dx = -32 * s, Dy = 0 });
                     break;
                 }
-                case 10:   // WestSp_WE_066 (Submission): MakeDefRota — the GPWork[2]-flagged mon ROLLS GPWork[0](=7) turns over
+                case 10:   // Submission: the rotation-motion builder — the GPWork[2]-flagged mon ROLLS GPWork[0](=7) turns over
                     // GPWork[1](=10) sync = 70f. Called once for the attacker (dir reversed, work[2]*=−1) and once for the
                     // defender. NOT a scale (my old handler scaled GPWork[0]→[1], which was flatly wrong).
                     if (a.Length >= 5)
@@ -960,25 +960,25 @@ namespace DSPRE.Avalonia
                         _monFx.Add(new MonFx { Mon = MonFromFlag(a, 4), Kind = 22, Frames = sync * rn, Cycles = rn, Dx = dir });
                     }
                     break;
-                case 58:   // WestSp_WE_102: defender shrinks to 20% (InitScaleRateEx 100→20) over 10 (a vanish/shrink).
+                case 58:   // defender shrinks to 20% (the scale-rate keyframe helper 100→20) over 10 (a vanish/shrink).
                     AddScaleSeq(_dfVis, new[] { new double[] { 100, 20, 100, 20, 10 } });
                     break;
-                case 31:   // WestSp_WE_207_MAIN (Swagger): attacker scales UP 1.0→1.5 (S/D 10/10 → E/D 15/10) over SYNC 8,
+                case 31:   // Swagger: attacker scales UP 1.0→1.5 (S/D 10/10 → E/D 15/10) over SYNC 8,
                     // holds SCALE_POKE_WAIT 4, then DOWN 1.5→1.0 over 8 (WE207_AT_SCALE_UP/WAIT/SCALE_DOWN).
                     AddScaleSeq(_atVis, new[] { new double[]{100,150,100,150,8}, new double[]{150,150,150,150,4}, new double[]{150,100,150,100,8} });
                     break;
-                case 46:   // WestSp_WE_224 (base): attacker shake (WE224AT_SHAKE_X 4, NUM 4, SYNC 1).
+                case 46:   // base: attacker shake (WE224AT_SHAKE_X 4, NUM 4, SYNC 1).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(4, 0, 1, 4), NumMax = 0 });
                     break;
-                case 47:   // WestSp_WE_224AT (Megahorn attacker, We_224ATTCB): vibrate in place (shake 4,0,sync1,num4 ≈16f),
+                case 47:   // Megahorn attacker, We_224ATTCB: vibrate in place (shake 4,0,sync1,num4 ≈16f),
                 {          // THEN charge toward the defender by (MOVE_X 40, MOVE_Y −7)·vec over SYNC 4, hold WAIT_NUM 8, return 4.
-                    double s = _atVis == 0 ? 1.0 : -1.0;   // VecChangeX/Y: player side +1, enemy side −1 (both axes)
+                    double s = _atVis == 0 ? 1.0 : -1.0;   // the X-vector flip helper/Y: player side +1, enemy side −1 (both axes)
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(4, 0, 1, 4), NumMax = 0 });
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 13, Frames = 4 + 8 + 4, UpF = 4, WaitF = 8, DownF = 4,
                                            Dx = 40 * s, Dy = -7 * s, Delay = 16 });
                     break;
                 }
-                case 48:   // WestSp_WE_224DF (Megahorn defender, We_224DFTCB): knocked back by (MOVE_X −40, MOVE_Y +16)·vec over
+                case 48:   // Megahorn defender, We_224DFTCB: knocked back by (MOVE_X −40, MOVE_Y +16)·vec over
                 {          // SYNC 4, shakes (4,0,sync1,num4) at the displaced spot, then returns over 4 (MOVE1→SHAKE→MOVE2).
                     double s = _dfVis == 0 ? 1.0 : -1.0;
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 13, Frames = 4 + 16 + 4, UpF = 4, WaitF = 16, DownF = 4,
@@ -986,51 +986,51 @@ namespace DSPRE.Avalonia
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 5, Sh = new Shake(4, 0, 1, 4), NumMax = 0, Delay = 4 });
                     break;
                 }
-                case 55:   // WestSp_WE_293 (Camouflage): NOT a colour tint — a window-OBJ + translucency fade. The mon
+                case 55:   // Camouflage: NOT a colour tint — a window-OBJ + translucency fade. The mon
                     // fades to ~EVA_E/16 = 2/16 opacity over WE293_EV_FRAME 16 (blends into the background = "camouflage").
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 16, Frames = 16, Keys = new double[] { 16, 2 } });
                     break;
-                case 26:   // WestSp_WE_171: slide the mon (GPWork[0]==0 ? defender : attacker) by OFS (−20,+20) over SYNC 20.
+                case 26:   // slide the mon (GPWork[0]==0 ? defender : attacker) by OFS (−20,+20) over SYNC 20.
                     _monFx.Add(new MonFx { Mon = (a.Length > 2 && a[2] == 0) ? _dfVis : _atVis, Kind = 4, Frames = 20, Dx = -20, Dy = 20 });
                     break;
-                case 27:   // WestSp_WE_175: shake the sep-selected mon with GPWork params (st.x,y,w,n = ampX,ampY,sync,num).
+                case 27:   // shake the sep-selected mon with GPWork params (st.x,y,w,n = ampX,ampY,sync,num).
                     if (a.Length >= 7)
                         _monFx.Add(new MonFx { Mon = a[2] == 0 ? _atVis : _dfVis, Kind = 5,
                             Sh = new Shake(a[3], a[4], Math.Max(1, a[5]), Math.Max(1, a[6])), NumMax = 0 });
                     break;
-                case 28:   // WestSp_WE_222 (Magnitude, We222_TCB): InitShake(2+pow, pow, sync→1, 10) shakes the mons AND
+                case 28:   // Magnitude: the shake initializer(2+pow, pow, sync→1, 10) shakes the mons AND
                 {   // scrolls the background (GF_BGL_ScrollSet) — i.e. the whole world shakes. pow maps the move's power
                     // exactly per source: 150→6, 110→5, 90→4, 70→3, 50→2, 30→1, else 0 (WazaEffParaGet(WE_PARA_POW)).
                     int pow = MovePower switch { 150 => 6, 110 => 5, 90 => 4, 70 => 3, 50 => 2, 30 => 1, _ => 0 };
                     _monFx.Add(new MonFx { Kind = 5, ToScene = true, Sh = new Shake(2 + pow, pow, 1, 10), NumMax = 0 });
                     break;
                 }
-                case 11:   // WestSp_WE_093: defender hit — shake (2,0,sync1,DFNUM6) + Z-scale 1.0→1.2x/1.5y then back.
+                case 11:   // defender hit — shake (2,0,sync1,DFNUM6) + Z-scale 1.0→1.2x/1.5y then back.
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 5, Sh = new Shake(2, 0, 1, 6), NumMax = 0 });
                     AddScaleSeq(_dfVis, new[] { new double[]{100,120,100,150,7}, new double[]{120,100,150,100,4} });
                     break;
-                case 17:   // WestSp_WE_101AT: attacker scales 1.4→1.0 (START14/END10) over SYNC 8 (appears + settles).
+                case 17:   // attacker scales 1.4→1.0 (START14/END10) over SYNC 8 (appears + settles).
                     AddScaleSeq(_atVis, new[] { new double[]{140,100,140,100,8} });
                     break;
-                case 18:   // WestSp_WE_101DF: defender shake (WIDTH4,sync1,NUM4) + flash to black (BLACK_FADE 0→16).
+                case 18:   // defender shake (WIDTH4,sync1,NUM4) + flash to black (BLACK_FADE 0→16).
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 5, Sh = new Shake(4, 0, 1, 4), NumMax = 0 });
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 3, Frames = 16, R = 0, G = 0, B = 0 });
                     break;
-                case 23:   // WestSp_WE_185 (Feint Attack / "DAMASIUTI", We185_TCB): the attacker goes translucent and
+                case 23:   // Feint Attack / "DAMASIUTI": the attacker goes translucent and
                            // ORBITS an ellipse 2× over 32f (ROTA_NUM 2 × ROTA_SYNC 16) while FADING OUT (alpha 16→0),
                            // the defender takes damage, then it fades back in — a deceptive disappear-and-strike. (Was
                            // wrongly an in-place 720° sprite spin.)
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 7, Frames = 32, Keys = new double[] { 24, 8, 16, 0 } });   // ellipse orbit ×2
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 21, Frames = 64, Keys = new double[] { 0.0, 0 } });          // fade out → hold → back in
                     break;
-                case 25:   // WestSp_WE_204: the GPWork[0]-mon rocks ±15° (ROTA_E) MOVE_NUM 4 times, SYNC 3 (≈12 frames),
+                case 25:   // the GPWork[0]-mon rocks ±15° (ROTA_E) MOVE_NUM 4 times, SYNC 3 (≈12 frames),
                     // around an off-centre pivot (ROT_CY 50). GPWork[0]==0 → attacker, else defender.
                     _monFx.Add(new MonFx { Mon = (a.Length > 2 && a[2] == 0) ? _atVis : _dfVis, Kind = 10, Frames = 12, Keys = new double[] { 15, 4 } });
                     break;
-                case 29:   // WestSp_WE_216: attacker vertical shake (SHAKE_Y 32, ONE_SYNC 6, NUM 4).
+                case 29:   // attacker vertical shake (SHAKE_Y 32, ONE_SYNC 6, NUM 4).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(0, 32, 6, 4), NumMax = 0 });
                     break;
-                case 30:   // WestSp_WE_233 (Vital Throw, We233_TCB): attacker ROLLS (MakeDefRota 1 turn over ROTA_SYNC 64),
+                case 30:   // Vital Throw: attacker ROLLS (the rotation-motion builder 1 turn over ROTA_SYNC 64),
                 {          // THEN lunges toward the defender (STRAIGHT_MOVE_X 32·vec over SYNC 2), the defender is knocked the
                            // same 32·vec (2f), and the attacker returns over MOVE1_SYNC 8 — the grab-and-throw.
                     double sAt = _atVis == 0 ? 1.0 : -1.0;   // both the attacker's lunge AND the defender's knock use the
@@ -1041,69 +1041,69 @@ namespace DSPRE.Avalonia
                                            Dx = 32 * sAt, Dy = 0, Delay = 66 });
                     break;
                 }
-                case 32:   // WestSp_WE_262: attacker stretches thin+tall (X→0.1, Y→2.0) then settles back (SCALEOUT/IN).
+                case 32:   // attacker stretches thin+tall (X→0.1, Y→2.0) then settles back (SCALEOUT/IN).
                     AddScaleSeq(_atVis, new[] { new double[]{100,10,100,200,6}, new double[]{20,100,200,100,8} });
                     break;
-                case 37:   // WestSp_WE_326DF (Extrasensory / じんつうりき, We326DF_TCB): a DEFLASTER per-scanline warp of the
+                case 37:   // Extrasensory / じんつうりき: a DEFLASTER per-scanline warp of the
                     // defender — a horizontal sine bulge (angle 180°→360° over SIZE_Y) + a shear, shimmering, over
                     // WE326_CHANGE_NUM 3 phases × CHANGE_WAIT 16f. (Was a bitmap Z-spin; now the faithful raster twist.)
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 23, Frames = 3 * 16 });
                     break;
-                case 12:   // WestSp_WE_151 (Acid Armor / "TOKERU" = melt): the attacker DISSOLVES — a ScrLaster per-scanline
+                case 12:   // Acid Armor / "TOKERU" = melt: the attacker DISSOLVES — a ScrLaster per-scanline
                            // sine ripple (WE151_ROTA_WIDTH 8, ROTA_ADD 5°/row, scrolling) PLUS a blend-alpha fade out → hold
-                           // → fade in (We151_TCB RASTER/FADE_OUT → WAIT → FADE_IN). Ripple = Kind 24, dissolve = Kind 21.
+                           // → fade in (RASTER/FADE_OUT → WAIT → FADE_IN). Ripple = Kind 24, dissolve = Kind 21.
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 21, Frames = 44, Keys = new double[] { 0.1, 1 } });
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 24, Frames = 44 });   // the melt ripple runs the whole dissolve
                     break;
-                case 67:   // WSP_RectView: vertical wipe-reveal of the GPWork[0]-mon over `wait` (GPWork[4]); GPWork[3] sign = dir.
+                case 67:   // the rectangular wipe-reveal handler: vertical wipe-reveal of the GPWork[0]-mon over `wait` (GPWork[4]); GPWork[3] sign = dir.
                 {   // my>0 → reveal top-down; my≤0 → bottom-up. SoftSpriteVisibleSet grows the visible band.
                     int mon = MonFromFlag(a, 2), wait = Math.Max(1, a.Length > 6 ? a[6] : 8);
                     int my = a.Length > 5 ? a[5] : 1;
                     _monFx.Add(new MonFx { Mon = mon, Kind = 15, Frames = wait, Dx = my > 0 ? 1 : -1 });
                     break;
                 }
-                case 22:   // WestSp_WE_107: 4 gray copies of the attacker shrink away staggered then re-expand (we_107_wait).
+                case 22:   // 4 gray copies of the attacker shrink away staggered then re-expand.
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 14, Frames = 28 });
                     break;
-                case 20:   // WestSp_WE_180 (Spite, We180_TCB): the DEFENDER is hidden and shown as a translucent ghost
+                case 20:   // Spite: the DEFENDER is hidden and shown as a translucent ghost
                            // copy that fades in to ~50% (EVA 0→8) and back out (WE180 alpha fade) — not an attacker orbit.
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 21, Frames = 48, Keys = new double[] { 0.5, 0 } });
                     break;
-                case 21:   // WestSp_WE_106: attacker flashes WHITE (PokeColorChange 256,256,256) + shrinks to 5% (window).
+                case 21:   // attacker flashes WHITE (the mon color-change call 256,256,256) + shrinks to 5% (window).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 3, Frames = 12, R = 255, G = 255, B = 255 });
                     AddScaleSeq(_atVis, new[] { new double[]{100,5,100,5,5}, new double[]{5,100,5,100,5} });
                     break;
-                case 59:   // WestSp_WE_325 (Shadow Punch, We325_TCB): a translucent gray shadow copy of the attacker
-                           // LUNGES forward 48px toward the target and back (InitStraightSyncFx 0→+48→0), the punch.
+                case 59:   // Shadow Punch: a translucent gray shadow copy of the attacker
+                           // LUNGES forward 48px toward the target and back (the straight-line sync-move helper 0→+48→0), the punch.
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 3, Frames = 20, R = 196, G = 196, B = 196 });   // gray/shadow tint
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 13, Frames = 20, UpF = 10, DownF = 10,
                         Dx = 48 * (_atVis == 0 ? 1 : -1), Dy = 0 });   // forward-and-back punch lunge
                     break;
-                case 38:   // WestSp_WE_CAP_NormalAlphaFade: fade the cap_bit-selected mons' alpha (StartAlphaFade a1_s→a1_e/16).
+                case 38:   // fade the cap_bit-selected mons' alpha (the alpha-fade starter a1_s→a1_e/16).
                 {   // GPWork [0]cap_bit [1]a1_s [2]a1_e [3]a2_s [4]a2_e [5]sync.
                     int capBit = a.Length > 2 ? a[2] : 1, a1s = a.Length > 3 ? a[3] : 16, a1e = a.Length > 4 ? a[4] : 16, sync = Math.Max(1, a.Length > 7 ? a[7] : 8);
                     for (int b = 0; b < 2; b++) if ((capBit & (1 << b)) != 0)
                         _monFx.Add(new MonFx { Mon = b, Kind = 16, Frames = sync, Keys = new double[] { a1s, a1e } });
                     break;
                 }
-                case 41:   // WestSp_WE_252Back (Wish): BG flashes WHITE — PaletteFadeReq to 0xffff is INSTANT (BRIN_SYNC 0),
+                case 41:   // Wish: BG flashes WHITE — the palette-fade request to 0xffff is INSTANT (BRIN_SYNC 0),
                     _fadeStart = 1.0; _fadeEnd = 0; _fadeCur = 1.0; _fadeFrames = _fadeFramesLeft = 8;   // then fades out over BROUT_SYNC 8.
                     FadeR = FadeG = FadeB = 255;
                     break;
-                case 43:   // WestSp_WE_252SSPPoke: fade the poke alpha (WE252_CAP_ALPHA 0→16 over CAP_SYNC 8).
+                case 43:   // fade the poke alpha (WE252_CAP_ALPHA 0→16 over CAP_SYNC 8).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 16, Frames = 8, Keys = new double[] { 0, 16 } });
                     break;
-                case 79:   // WSP_166: defender translucent (SS_PARA_ALPHA 8 = 0.5) for the W166_Tcb window-reveal loop —
+                case 79:   // handler 166: defender translucent (SS_PARA_ALPHA 8 = 0.5) for the W166_Tcb window-reveal loop —
                     // (YOFS_MAX 38 + 1) cycles × 4 frames ≈ 156, then alpha restored.
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 16, Frames = 156, Keys = new double[] { 8, 8 } });
                     break;
-                case 56:   // WestSp_WE_T08 (Superpower aura, wsp_tool.c): CATS_ObjectScaleSetCap(cap0,1.2) in OBJWND window
+                case 56:   // Superpower aura,: the actor scale-set call(cap0,1.2) in OBJWND window
                     // mode → an aura silhouette behind the mon. The TCB is vestigial (sets up then tears down), so it's a
                     // brief static aura — scale the dropped cap-0 copy 1.2× with a soft white glow.
                     if (_caps.TryGetValue(0, out var t08cap))
                     { t08cap.ScaleX = t08cap.ScaleY = 1.2; t08cap.TintR = t08cap.TintG = t08cap.TintB = 255; t08cap.TintA = 0.4; }
                     break;
-                case 75:   // WSP_PokeOAM_View (wsp_tool.c): GPWork [0]cap [1]wait [2]bg_type [3]soft_pri [4]drop_para
+                case 75:   // the OAM-view drag/sink handler: GPWork [0]cap [1]wait [2]bg_type [3]soft_pri [4]drop_para
                     // [5]callback [6]target. soft_pri = z-order (lower = in front). In 1v1 a view of the M2/E2
                     // (ally) copy is disabled outright, exactly like the source's 2vs2 guard.
                     if (a.Length > 2 && _caps.TryGetValue(a[2], out var pvCap))
@@ -1111,7 +1111,7 @@ namespace DSPRE.Avalonia
                         int para75 = a.Length > 6 ? a[6] : -1;
                         if (para75 == 2 || para75 == 3) { pvCap.Visible = false; break; }   // WEDEF_DROP_M2/E2 in singles
                         if (a.Length > 5 && a[5] >= 0 && a[5] != 0xFF) pvCap.Priority = a[5];
-                        // callback != 0 → PokeOamView_464 (Dark Void): the defender's copy is dragged down into
+                        // callback != 0 → the sink-into-void step function (Dark Void): the defender's copy is dragged down into
                         // the void in jittered +4/+8 steps, then sinks continuously and is swallowed past y≈130.
                         // The source also sets a hardware WINDOW whose inside-plane EXCLUDES OBJ — the copy is
                         // hidden wherever it overlaps the rect, so it visibly sinks below that line:
@@ -1126,26 +1126,26 @@ namespace DSPRE.Avalonia
                         }
                     }
                     break;
-                case 78:   // WestSp_WE_ALL_DROP (move 425): drop EVERY mon into an OAM cap so a following effect can move
+                case 78:   // move 425: drop EVERY mon into an OAM cap so a following effect can move
                     // them all at once. In the 1v1 preview that's the attacker + defender.
                     _caps[0] = new DroppedCap { SrcMon = _atVis };
                     _caps[1] = new DroppedCap { SrcMon = _dfVis };
                     break;
-                case 70:   // WSP_272 (Role Play): attacker's white image appears at the defender (cap[0] at cap[1]−32px),
+                case 70:   // handler 272 (Role Play): attacker's white image appears at the defender (cap[0] at cap[1]−32px),
                     // fading in over the PaletteSoftFade (num 16 → 0→15 evy).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 17, Frames = 16 });
                     break;
-                case 76:   // WestSp_WE_Laster: per-scanline raster sine wave on the BG for GPWork[0] frames (lst_wait_max).
+                case 76:   // per-scanline raster sine wave on the BG for GPWork[0] frames (lst_wait_max).
                     _rasterLeft = Math.Max(1, a.Length > 2 ? a[2] : 60); RasterAmp = 32; RasterPhase = 0;
                     break;
-                case 71:   // WSP_289 (Snatch): the attacker dashes off one edge (±(255+80)) and back from the other (∓80).
+                case 71:   // handler 289 (Snatch): the attacker dashes off one edge (±(255+80)) and back from the other (∓80).
                 {   // vec = +1 for the player side (off right first), −1 for the enemy side.
                     int vec = _atVis == 0 ? 1 : -1;
-                    _monFx.Add(new MonFx { Mon = _atVis, Kind = 18, Frames = 45,   // 3 × InitStraightSyncFx sync 15
+                    _monFx.Add(new MonFx { Mon = _atVis, Kind = 18, Frames = 45,   // 3 × the straight-line sync-move helper sync 15
                         Dx = vec > 0 ? 255 + 80 : 0 - 80, Dy = vec > 0 ? 0 - 80 : 255 + 80 });
                     break;
                 }
-                case 63:   // WestSp_WE_OAM_PalFade: ramp the (dropped CAP's) OAM palette toward `col` over `wait`.
+                case 63:   // ramp the (dropped CAP's) OAM palette toward `col` over `wait`.
                 {   // GPWork [0]mode(WE_TOOL_C* = cap) [1]wait [2]param [3]start [4]end [5]col.
                     int mode = a.Length > 2 ? a[2] : 0, wait = Math.Max(1, a.Length > 3 ? a[3] : 1);
                     int start = a.Length > 5 ? a[5] : 0, end = a.Length > 6 ? a[6] : 16, col = a.Length > 7 ? a[7] : 0;
@@ -1155,7 +1155,7 @@ namespace DSPRE.Avalonia
                         Keys = new double[] { start, end }, R = R5(col), G = G5(col), B = B5(col) });
                     break;
                 }
-                case 73:   // WSP_Emitter_SimpleUD: the emitter rises from the target mon to DispOutTop (screen y=−60, i.e.
+                case 73:   // the emitter's simple up/down-scale handler: the emitter rises from the target mon to DispOutTop (screen y=−60, i.e.
                 {   // PT_LCD_T + 60·PT_LCD_DOT) and back, looping. GPWork [0]emit_id [1]target [2]mode [3]time [4]wait.
                     var sim = FindEmitter(a.Length > 2 ? a[2] : 0);
                     int time = Math.Max(1, a.Length > 5 ? a[5] : 16);
@@ -1164,7 +1164,7 @@ namespace DSPRE.Avalonia
                     sim?.SetEmitterMotion(f => { double tt = (f % (2 * time)) / (double)time; double up = tt < 1 ? tt : 2 - tt; return (0, up * amp); });
                     break;
                 }
-                case 69:   // WSP_Mosaic: pixelate the mon — ramp level GPWork[2]→(15 if add>0 else 0) by add/frame.
+                case 69:   // the mosaic-level handler: pixelate the mon — ramp level GPWork[2]→(15 if add>0 else 0) by add/frame.
                 {   // GPWork [0]cap_id [1]add [2]h_start [3]v_start. G2_SetOBJMosaicSize(h,v): block = level+1.
                     int capId = a.Length > 2 ? a[2] : 0, add = a.Length > 3 ? a[3] : 1, hs = a.Length > 4 ? a[4] : 0;
                     double end = add < 0 ? 0 : 15;
@@ -1173,27 +1173,27 @@ namespace DSPRE.Avalonia
                     _monFx.Add(new MonFx { Mon = cap != null ? cap.SrcMon : (capId & 1), Cap = cap, Kind = 11, Frames = frames + 1, Keys = new double[] { hs, end, add } });
                     break;
                 }
-                case 39:   // WestSp_WE_316: shake the attacker (InitShake 20,0,…,10) + the defender (2,0,…,10).
+                case 39:   // shake the attacker (the shake initializer 20,0,…,10) + the defender (2,0,…,10).
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(20, 0, 1, 10), NumMax = 0 });
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 5, Sh = new Shake(2, 0, 1, 10), NumMax = 0 });
                     break;
-                case FN_KAITEN when a.Length >= 5:                  // WestSp_WE_Kaiten (wsp_tool.c): the mon traces an
-                {   // ellipse — WazaTool_MakeDefRota(rota_num, sync) then halves the widths → CalcRotaFx gives
+                case FN_KAITEN when a.Length >= 5:                  // the mon traces an
+                {   // ellipse — the rotation-motion builder(rota_num, sync) then halves the widths → the rotation-fx calculator gives
                     // x = 16·sin(θ), y = −4·cos(θ); base raised +8 (poke.p.y −= ROTA_W_Y=−8). θ advances 2π/sync per
                     // frame for rota_num revolutions (work[0]=sync·rota_num total). GPWork [0]target [1]rota_num [2]sync.
                     int mon = MonFromFlag(a, 2), rotaNum = Math.Max(1, a[3]), sync = Math.Max(1, a[4]);
                     _monFx.Add(new MonFx { Mon = mon, Kind = 7, Frames = sync * rotaNum, Keys = new double[] { 16, -4, sync, 8 } });
                     break;
                 }
-                case FN_WE_T03:                                     // WestSp_WE_T03 blink: GPWork [0]num [1]wait. Toggles
-                    // the ATTACKER's visibility every `wait` frames, num·2 times (WeT03_TCB), then restores visible.
+                case FN_WE_T03:                                     // Blink: GPWork [0]num [1]wait. Toggles
+                    // the ATTACKER's visibility every `wait` frames, num·2 times, then restores visible.
                     {
                         int num = Math.Max(1, a.Length > 2 ? a[2] : 1) * 2, wait = Math.Max(1, a.Length > 3 ? a[3] : 1);
                         _monFx.Add(new MonFx { Mon = _atVis, Kind = 2, UpF = wait, Cycles = num, Frames = num * wait });
                     }
                     break;
                 case FN_SSP_POKE_PAL_FADE when a.Length >= 6:
-                {   // WestSp_WE_SSPPokePalFade GPWork [0]target [1]fade_wait [2]count [3]rgb [4]evy_max(/16) [5]wait.
+                {   // GPWork [0]target [1]fade_wait [2]count [3]rgb [4]evy_max(/16) [5]wait.
                     // Blink: ramp tint 0→evy_max over fade_wait frames, hold `wait`, ramp back to 0, repeated `count`×.
                     int fadeWait = Math.Max(0, a[3]), count = Math.Max(1, a[4]), col = a[5];
                     int evyMax = a.Length > 6 ? a[6] : 8, wait = a.Length > 7 ? a[7] : 0;
@@ -1211,8 +1211,8 @@ namespace DSPRE.Avalonia
                     var sim = FindEmitter(a[2]);
                     if (sim == null) break;
                     // GPWork[1..6] are angles in DEGREES (the C does FX_GET_ROTA_NUM = x·0xffff/360) and rx/ry are
-                    // PIXEL radii (wsp_tool.c WSP_Emitter_Rotation). The emitter traces an ellipse: offset.x =
-                    // sin(angX)·rx, offset.y = cos(angY)·ry (WazaTool_CalcRotaFx) over `wait` frames.
+                    // PIXEL radii (the emitter's rotation-field handler). The emitter traces an ellipse: offset.x =
+                    // sin(angX)·rx, offset.y = cos(angY)·ry (the rotation-fx calculator) over `wait` frames.
                     double radSx = a[3], radEx = a[4], radSy = a[5], radEy = a[6];
                     double rx = a[7], ry = a[8];
                     int wait = Math.Max(1, a[9]);
@@ -1232,7 +1232,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
 
-                // EMIT_STRAIGHT / PARABOLIC (wsp_tool.c EmitMove_Init): the emitter travels from the start client to
+                // EMIT_STRAIGHT / PARABOLIC (EmitMove_Init): the emitter travels from the start client to
                 // the other over `time` frames — GPWork [0]=emit_id [3]=wait [4]=time [5]=height(px) [6]=target
                 // (0=attacker start). STRAIGHT is a straight line; PARABOLIC arcs up to `height` px at mid-flight.
                 case FN_EMIT_STRAIGHT when a.Length >= 7:
@@ -1271,7 +1271,7 @@ namespace DSPRE.Avalonia
             int type = a[1 + cnt];                       // last payload word = WE_TOOL flag
             int mon = (type & WE_TOOL_M1) != 0 ? _atVis : (type & WE_TOOL_E1) != 0 ? _dfVis : -1;
             if (mon < 0) return;
-            // WazaTool_VecChangeX (wazatool.c): battle mode flips BOTH offsets for an enemy-side client
+            // the X-vector flip helper: battle mode flips BOTH offsets for an enemy-side client
             // (visual 1 = top). WE_T10 and friends multiply x AND y by it — e.g. Dark Void's enemy-branch
             // defender drag (+4 steps then −80 return) plays unflipped on the player-side defender.
             double sign = mon == 0 ? 1.0 : -1.0;
@@ -1279,12 +1279,12 @@ namespace DSPRE.Avalonia
         }
 
         // Add an afterimage ghost of `mon` offset by `dx` (px), at `alpha`, recoloured toward a flat gray `g`
-        // (PokeColorChange to 128 = mid-gray, 196 = light-gray copies). TintA fixed high so the copy reads as a shadow.
+        // (the mon color-change call to 128 = mid-gray, 196 = light-gray copies). TintA fixed high so the copy reads as a shadow.
         private void AddGhost(int mon, double dx, double alpha, byte g)
             => _ghosts.Add(new MonGhost { Mon = mon, Dx = dx, Dy = 0, ScaleX = 1, ScaleY = 1, Alpha = alpha,
                                           TintR = g, TintG = g, TintB = g, TintA = 0.7 });
 
-        // Add a scale-keyframe-sequence MonFx (WazaTool_InitScaleRateEx phases). `phases` rows = [sxS,sxE,syS,syE,frames]
+        // Add a scale-keyframe-sequence MonFx (the scale-rate keyframe helper phases). `phases` rows = [sxS,sxE,syS,syE,frames]
         // in /100 units; `repeat` re-runs the whole list (WE_074's CNT_MAX). Faithful to the source's squash/stretch flex.
         private void AddScaleSeq(int mon, double[][] phases, int repeat = 1)
         {
@@ -1317,7 +1317,7 @@ namespace DSPRE.Avalonia
             if (seqs.Length == 0) return;
             if (withCallback)
             {
-                // ACT_ADD: actor driven by CATS callback `idOrCap` (WeSysSP_ClactFuncTable). Default = visible, playing
+                // ACT_ADD: actor driven by CATS callback `idOrCap` (the opcode dispatch table). Default = visible, playing
                 // seq 0 at the defender (the faithful base for the many marks/slashes that just play at the target);
                 // a ported driver refines pos/scale/visibility. Un-ported callbacks keep the base behaviour.
                 var actor = new CellActor(seqs, 0) { FuncId = idOrCap, Gp = gp ?? Array.Empty<int>(),
@@ -1332,14 +1332,14 @@ namespace DSPRE.Avalonia
             }
         }
 
-        // CATS callback ids (WeSysSP_ClactFuncTable order, west_sp_def.h CATS section).
+        // CATS callback ids (the opcode dispatch table order, CATS section).
         private const int FN_CSP_WE_081 = 1, FN_CSP_WE_134 = 2, FN_CSP_WE_271 = 3, FN_CSP_WE_118 = 4, FN_CSP_WE_132 = 5,
                           FN_CSP_WE_155 = 6, FN_CSP_WE_184 = 7, FN_CSP_WE_193 = 8, FN_CSP_WE_199 = 9, FN_CSP_WE_207_SUB = 10,
                           FN_CSP_WE_212 = 11, FN_CSP_WE_259 = 12, FN_CSP_WE_226 = 13, FN_CSP_WE_333 = 17, FN_CSP_WE_232 = 22,
                           FN_CSP_FREE = 25, FN_CSP_266 = 26, FN_CSP_090 = 27, FN_CSP_WE_269 = 19,
                           FN_CSP_WE_288 = 15, FN_CSP_WE_320 = 16, FN_CSP_WE_270 = 20, FN_CSP_WE_274 = 21, FN_CSP_WE_338 = 24,
                           FN_CSP_WE_275 = 23, FN_CSP_WE_286 = 14, FN_CSP_WE_252 = 18;
-        private static readonly int[][] We081Wait = { new[] { 8, 2 }, new[] { 13, 1 }, new[] { 18, 3 } };
+        private static readonly int[][] BindingBandWaitSteps = { new[] { 8, 2 }, new[] { 13, 1 }, new[] { 18, 3 } };
 
         // Per-callback spawn-time setup: initial visibility/position, and any SIBLING actors the callback creates.
         private void SetupCats(CellActor leader)
@@ -1347,19 +1347,19 @@ namespace DSPRE.Avalonia
             switch (leader.FuncId)
             {
                 case FN_CSP_WE_207_SUB:
-                    leader.Visible = false;   // CATS_ObjectEnableCap(FALSE) until the driver pops it in
+                    leader.Visible = false;   // the actor visibility-toggle call(FALSE) until the driver pops it in
                     break;
-                case FN_CSP_WE_226:   // WestSp_CAT_WE_226 (Baton Pass): the ball OPENS at the attacker, the mon SHRINKS into it
+                case FN_CSP_WE_226:   // Baton Pass: the ball OPENS at the attacker, the mon SHRINKS into it
                     // (POKE_IN_BALL scale 1.0→0 over WE226_SCALE_SYNC 8) and VANISHES, the ball CLOSES (seq 1) then FLIES UP.
                     leader.X = leader.BaseX = _atX; leader.Y = leader.BaseY = _atY;
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 25, Frames = 48 });   // the attacker's shrink-into-ball + hide
                     break;
-                case FN_CSP_FREE:     // WestSp_Free: just offset the cell by gp(0,1) from the defender and play its anim.
+                case FN_CSP_FREE:     // just offset the cell by gp(0,1) from the defender and play its anim.
                     if (leader.Gp.Length >= 2) { leader.X += leader.Gp[0]; leader.Y += leader.Gp[1]; leader.BaseX = leader.X; leader.BaseY = leader.Y; }
                     break;
                 case FN_CSP_WE_270:
-                {   // WestSp_CAT_WE_270: 6 symbols in two columns (±32 x) × 3 rows (∓24 y) around centre (128,80),
-                    // per-cell anim seq {0,0,1,1,2,3}; cap0/cap3 flipped. (pos_tbl_270)
+                {   // 6 symbols in two columns (±32 x) × 3 rows (∓24 y) around centre (128,80),
+                    // per-cell anim seq {0,0,1,1,2,3}; cap0/cap3 flipped.
                     int[] seqs = { 0, 0, 1, 1, 2, 3 };
                     double[] xs = { -32, 32, -32, 32, -32, 32 }, ys = { -24, -24, 24, 24, 0, 0 };
                     for (int i = 0; i < 6; i++)
@@ -1372,7 +1372,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_275:
-                {   // WestSp_CAT_WE_275 (Ingrain): 4 root cells at the attacker's base (y=140 player / 84 enemy),
+                {   // Ingrain: 4 root cells at the attacker's base (y=140 player / 84 enemy),
                     // spread ±, inner pair flipped, appearing staggered.
                     double py = _attackerIsEnemy ? 84 : 140;
                     double[] xo = { -24, -8, 8, 24 }; bool[] fl = { false, true, true, false };
@@ -1385,7 +1385,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_274:
-                {   // WestSp_CAT_WE_274: 12 cells scattered across the field (rand_rect), staggered random lifetimes.
+                {   // 12 cells scattered across the field (rand_rect), staggered random lifetimes.
                     for (int i = 0; i < 12; i++)
                     {
                         var c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = FN_CSP_WE_274 };
@@ -1395,7 +1395,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_338:
-                {   // WestSp_CAT_WE_338 (Frenzy Plant): 8 cells chained along the attacker→defender line, alternating
+                {   // Frenzy Plant: 8 cells chained along the attacker→defender line, alternating
                     // flip, revealed in sequence (the plant grows across).
                     for (int i = 0; i < 8; i++)
                     {
@@ -1407,7 +1407,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_320:
-                {   // WestSp_CAT_WE_320 (music notes — Sing/Perish Song): 15 notes float up from the attacker, each a
+                {   // music notes — Sing/Perish Song: 15 notes float up from the attacker, each a
                     // different note graphic (seq i%3), appearing staggered.
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX; leader.Y = _atY; leader.Visible = false;
                     for (int i = 1; i < 15; i++)
@@ -1420,28 +1420,28 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_288:
-                {   // WestSp_CAT_WE_288 (Grudge): 6 spirits float out from the attacker, staggered.
+                {   // Grudge: 6 spirits float out from the attacker, staggered.
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX; leader.Y = _atY; leader.Visible = false;
                     for (int i = 1; i < 6; i++)
                         _catsActors.Add(new CellActor(CellSeqs, 0) { FuncId = FN_CSP_WE_288, CapId = i, X = _atX, Y = _atY, BaseX = _atX, BaseY = _atY, Visible = false });
                     break;
                 }
                 case FN_CSP_WE_269:
-                {   // WestSp_CAT_WE_269 (Taunt): ONE translucent taunt cell at screen (128,80) (W269_OAM_MAX=1, NOT a
+                {   // Taunt: ONE translucent taunt cell at screen (128,80) (W269_OAM_MAX=1, NOT a
                     // stack of bind bands), playing its animation seq (0 normally / 1 when the enemy is the caster).
                     leader.X = leader.BaseX = 128; leader.Y = leader.BaseY = 80;
                     if (leader.SeqCount > 1 && _attackerIsEnemy) leader.SetSeq(1);
                     leader.Alpha = 0.5;
                     break;
                 }
-                case FN_CSP_090:      // WestSp_090 (Fissure): the crack sits at the defender's base — y=126 if the
+                case FN_CSP_090:      // Fissure: the crack sits at the defender's base — y=126 if the
                     // defender is on the player (bottom) side / 32 if enemy (top) — with a per-side anim seq.
                     leader.X = leader.BaseX = _dfX;
                     leader.Y = leader.BaseY = _attackerIsEnemy ? 126 : 32;
                     if (leader.SeqCount > 1) leader.SetSeq(_attackerIsEnemy ? 1 : 0);
                     break;
                 case FN_CSP_WE_259:
-                {   // WestSp_CAT_WE_259 (Torment): 6 anger marks fan around the attacker's head — 3 pairs at 0/30/60°,
+                {   // Torment: 6 anger marks fan around the attacker's head — 3 pairs at 0/30/60°,
                     // radius 48; even index = right (flipped), odd = left. Appear staggered.
                     for (int i = 0; i < 6; i++)
                     {
@@ -1454,7 +1454,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_118:
-                {   // WestSp_CAT_WE_118 (Metronome finger-wag): hand at attacker+(40·vec,0), per-side anim seq.
+                {   // Metronome finger-wag: hand at attacker+(40·vec,0), per-side anim seq.
                     double vec = _attackerIsEnemy ? -1 : 1;
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX + 40 * vec; leader.Y = _atY;
                     leader.ScaleX = leader.ScaleY = 0.1;
@@ -1462,7 +1462,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_132:
-                {   // WestSp_CAT_WE_132 (Constrict): 4 grass tendrils from the defender's base, stacked up 10px,
+                {   // Constrict: 4 grass tendrils from the defender's base, stacked up 10px,
                     // alternating flip, appearing staggered (×4f).
                     leader.X = _dfX; leader.Y = _dfY + 16; leader.CapId = 0;
                     for (int i = 1; i < 4; i++)
@@ -1471,11 +1471,11 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_155:
-                    // WestSp_CAT_WE_155 (Bonemerang): the bone boomerangs attacker→defender→attacker. Base = attacker.
+                    // Bonemerang: the bone boomerangs attacker→defender→attacker. Base = attacker.
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX; leader.Y = _atY;
                     break;
                 case FN_CSP_WE_134:
-                {   // WestSp_CAT_WE_134 (Kinesis spoon-bend): spoon at the attacker, translucent; 2 afterimages trail
+                {   // Kinesis spoon-bend: spoon at the attacker, translucent; 2 afterimages trail
                     // by 8f each. Base = attacker. (The bend itself is the cell's NANR anim.)
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX; leader.Y = _atY; leader.Alpha = 0;
                     for (int i = 1; i <= 2; i++)   // WE134_ZANZOU_NUM afterimages
@@ -1484,7 +1484,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_286:
-                {   // WestSp_CAT_WE_286 (Grudge — the 封 seal): 3 cells at the defender (raised by its shadow height).
+                {   // Grudge — the 封 seal: 3 cells at the defender (raised by its shadow height).
                     // cap 0 = the seal symbol (NANR seq 1, opaque); caps 1-2 = translucent afterimage trails (WE286_ZANZOU_NUM).
                     leader.BaseX = _dfX; leader.BaseY = _dfY; leader.X = _dfX; leader.Y = _dfY; leader.CapId = 0; leader.Visible = false;
                     if (leader.SeqCount > 1) leader.SetSeq(1);   // "最初のアクターは違う絵" — the seal uses a different anim seq
@@ -1496,7 +1496,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_184:
-                {   // WestSp_CAT_WE_184 (Scary Face): a face cell appears at the attacker (+32·vec) and slides
+                {   // Scary Face: a face cell appears at the attacker (+32·vec) and slides
                     // forward/up while scaling up, then fades. Base = attacker, not defender.
                     double vec = _attackerIsEnemy ? -1 : 1;
                     leader.BaseX = _atX; leader.BaseY = _atY;
@@ -1504,12 +1504,12 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_271:
-                    // WestSp_CAT_WE_271 (shell-game shuffle): two cups at fixed screen spots fall, orbit, fade.
+                    // shell-game shuffle: two cups at fixed screen spots fall, orbit, fade.
                     leader.X = leader.BaseX = 100; leader.Y = leader.BaseY = 54; leader.CapId = 0;
                     _catsActors.Add(new CellActor(CellSeqs, 0) { FuncId = FN_CSP_WE_271, CapId = 1, X = 180, Y = 39, BaseX = 180, BaseY = 39 });
                     break;
                 case FN_CSP_WE_232:
-                {   // WestSp_CAT_WE_232 (Iron/Metal Claw): 4 claw marks — left pair (flipped H) at −32, right pair at
+                {   // Iron/Metal Claw: 4 claw marks — left pair (flipped H) at −32, right pair at
                     // +32, the lower of each at +32 y, all relative to the defender. Right pair appears 10f later.
                     leader.X = _dfX - 32; leader.Y = _dfY; leader.FlipH = true; leader.CapId = 0;
                     (int dx, int dy, bool flip)[] p = { (-32, 32, true), (32, 0, false), (32, 32, false) };
@@ -1519,7 +1519,7 @@ namespace DSPRE.Avalonia
                     break;
                 }
                 case FN_CSP_WE_081:
-                {   // WestSp_CAT_WE_081 (Bind/Wrap/Clamp): GPWork[0] binding bands stacked on the defender's default
+                {   // Bind/Wrap/Clamp: GPWork[0] binding bands stacked on the defender's default
                     // pos (PosMove 0, DEF_POS−i·4 = 32,28,24…). Spawn the extra bands as siblings (band 0 = leader).
                     int n = leader.Gp.Length > 0 ? Math.Max(1, leader.Gp[0]) : 1;
                     leader.Y = leader.BaseY + 32;
@@ -1531,7 +1531,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        // Runs the ported WestSp_CAT_* per-frame logic for an actor (dispatch by callback id). Unknown ids do nothing
+        // Runs the ported the cell-actor callback* per-frame logic for an actor (dispatch by callback id). Unknown ids do nothing
         // → the actor just plays its cell animation at the defender (the correct base for most marks/hit-sprites).
         private void RunCatsDriver(CellActor a)
         {
@@ -1565,7 +1565,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        // WestSp_CAT_WE_226 (Baton Pass) ball `a`: opens (seq 0) at the attacker while the mon shrinks into it (Kind 25);
+        // Baton Pass ball `a`: opens (seq 0) at the attacker while the mon shrinks into it (Kind 25);
         // at ~f24 it CLOSES (anim seq 1), then at ~f40 it FLIES UP off the top (WE226_MOVE_SYNC 8, y → 0) and is gone by f48.
         private void Drive226(CellActor a)
         {
@@ -1576,7 +1576,7 @@ namespace DSPRE.Avalonia
             else if (t >= 48) { a.Visible = false; a.Alive = false; }
         }
 
-        // WestSp_CAT_WE_252_DrawCap (Fake Out / NEKODAMASI clap): a TRANSLUCENT (GX_OAM_MODE_XLU) cell at the defender
+        // Fake Out / NEKODAMASI clap: a TRANSLUCENT (GX_OAM_MODE_XLU) cell at the defender
         // that fades IN, auto-plays its clap NANR once, then fades OUT (We252 DrawCapTcb: ALPHAIN → ANM → ALPHAOUT).
         private void Drive252(CellActor a)
         {
@@ -1613,7 +1613,7 @@ namespace DSPRE.Avalonia
             else if (t > life - 12) a.Alpha = (life - t) / 12.0;
         }
 
-        // WestSp_266 (Follow Me): the finger sways side-to-side (±~40px, ~1.5 cycles over 42f, we_266_x table) then
+        // Follow Me: the finger sways side-to-side (±~40px, ~1.5 cycles over 42f) then
         // rotation-wags ±20° (±FX_GET_ROTA_NUM(20) over WAIT_266=4f each, ~6 swings), then gone.
         private void Drive266(CellActor a)
         {
@@ -1623,7 +1623,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_212 (Mean Look): the gaze cell plays at the defender, then scales 1.5→1.0 and alpha-fades out.
+        // Mean Look: the gaze cell plays at the defender, then scales 1.5→1.0 and alpha-fades out.
         private void Drive212(CellActor a)
         {
             int t = a.Age; const int Hold = 40, Fade = 24;
@@ -1632,7 +1632,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_259 (Torment) mark `a`: appears staggered by CapId (×4f), holds, then fades out.
+        // Torment mark `a`: appears staggered by CapId (×4f), holds, then fades out.
         private void Drive259(CellActor a)
         {
             int t = a.Age, appear = a.CapId * 4; const int Hold = 40, Fade = 12;
@@ -1643,7 +1643,7 @@ namespace DSPRE.Avalonia
             else if (u >= Hold + Fade) a.Visible = false;
         }
 
-        // WestSp_CAT_WE_199 (Lock-On/Mind Reader): the crosshair shows on the defender and auto-animates, then a white
+        // Lock-On/Mind Reader: the crosshair shows on the defender and auto-animates, then a white
         // flash, then it blinks SWITCH_COUNT=4 times (every 4f), then gone. (The HW screen flash is omitted.)
         private void Drive199(CellActor a)
         {
@@ -1653,7 +1653,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_193 (Foresight/Odor Sleuth): the magnifying glass traces a 6-segment zigzag over the defender
+        // Foresight/Odor Sleuth: the magnifying glass traces a 6-segment zigzag over the defender
         // (W=H=80, 8f move + 4f wait each, returns to start), then fades out 16f while the defender flashes white.
         private static readonly (double x, double y)[] We193Pts =
             { (0, 0), (40, 40), (40, -40), (-40, 40), (-40, -40), (40, 40), (0, 0) };
@@ -1676,7 +1676,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        // WestSp_CAT_WE_118 (Metronome): scale the hand in 0.1→1.0 (8f), wag ±20° about ∓20° for ~4 swings (rota
+        // Metronome: scale the hand in 0.1→1.0 (8f), wag ±20° about ∓20° for ~4 swings (rota
         // 359°↔320° forward / 0°↔40° reverse, one-sync 4f), then scale out. Stays at attacker+40·vec.
         private void Drive118(CellActor a)
         {
@@ -1688,7 +1688,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_132 (Constrict) grass `a` (CapId 0-3): appear staggered (×4f), then squeeze scaleX 1.0↔0.8
+        // Constrict grass `a` (CapId 0-3): appear staggered (×4f), then squeeze scaleX 1.0↔0.8
         // three times (8f each half), then gone; the defender gets a brief shake while the grass binds.
         private void Drive132(CellActor a)
         {
@@ -1703,7 +1703,7 @@ namespace DSPRE.Avalonia
             else if (t >= AllIn + Squeeze) a.Visible = false;
         }
 
-        // WestSp_CAT_WE_155 (Bonemerang): the bone arcs attacker→defender (10f, up 32px) then back defender→attacker
+        // Bonemerang: the bone arcs attacker→defender (10f, up 32px) then back defender→attacker
         // (10f), spinning throughout, then gone.
         private void Drive155(CellActor a)
         {
@@ -1714,8 +1714,8 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_134 (Kinesis) spoon/afterimage `a` (CapId 0=main, 1-2=trails delayed 8f each): fade in 31f,
-        // sweep a flat arc (sin·−32·vec X, cos·−8 Y; angle 90°→270° over 18f — WazaTool_InitRotaSpeedFx), hold while
+        // Kinesis spoon/afterimage `a` (CapId 0=main, 1-2=trails delayed 8f each): fade in 31f,
+        // sweep a flat arc (sin·−32·vec X, cos·−8 Y; angle 90°→270° over 18f — the rotation-speed helper), hold while
         // the bend anime plays, fade out 8f. Trails are dimmer. (Afterimage trail is a faithful approximation.)
         private void Drive134(CellActor a)
         {
@@ -1732,7 +1732,7 @@ namespace DSPRE.Avalonia
             else { double f = (t - (FadeIn + Sweep + Hold)) / (double)FadeOut; a.Alpha = peak * (1 - f); if (f >= 1) a.Visible = false; }
         }
 
-        // WestSp_CAT_WE_286 (Grudge) seal `a` (CapId 0 = the 封 seal, opaque; 1-2 = translucent trails, each delayed
+        // Grudge seal `a` (CapId 0 = the 封 seal, opaque; 1-2 = translucent trails, each delayed
         // ZANZOU_WAIT 9f): scale IN 2.5→1.0 (SCALE_S/D 25/10 → E/D 10/10) over SCALE_SYNC 10, hold while the defender
         // shakes, then scale OUT 1.0→2.5 over SCALEOUT_SYNC 6 and vanish. Positioned at the defender.
         private void Drive286(CellActor a)
@@ -1748,7 +1748,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_184 (Scary Face) face cell: slide from the attacker (+32·vec) by (64·vec, −16) over 32f while
+        // Scary Face face cell: slide from the attacker (+32·vec) by (64·vec, −16) over 32f while
         // scaling 0.5→1.2 (face-scale-rate 5/10→12/10), then fade out over 8f.
         private void Drive184(CellActor a)
         {
@@ -1767,7 +1767,7 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_269 (Taunt): hold the single translucent taunt cell at screen (128,80), playing its NANR
+        // Taunt: hold the single translucent taunt cell at screen (128,80), playing its NANR
         // animation, for WE269_EFF_TIME = 45 frames, then hide. (Was wrongly the WE_081 bind/squeeze.)
         private void Drive269(CellActor a)
         {
@@ -1775,8 +1775,8 @@ namespace DSPRE.Avalonia
             a.Visible = a.Age < 45;
         }
 
-        // WestSp_CAT_WE_271 cup `a` (CapId 0/1): fall ~25f (2px/frame), then orbit the shared midpoint ×5 (each loop a
-        // 180° swap over 10f via WazaTool curves → the two cups circle each other), then fade out. Faithful essence.
+        // Cup `a` (CapId 0/1): fall ~25f (2px/frame), then orbit the shared midpoint ×5 (each loop a
+        // 180° swap over 10f via a scale-rate curve → the two cups circle each other), then fade out.
         private void Drive271(CellActor a)
         {
             int t = a.Age; const int Fall = 25, Orbit = 50;
@@ -1792,17 +1792,17 @@ namespace DSPRE.Avalonia
             else { double k = Math.Min(1.0, (t - Fall - Orbit) / 8.0); a.Alpha = 1 - k; if (k >= 1) a.Visible = false; }
         }
 
-        // WestSp_CAT_WE_232 claw mark `a` (CapId 0-3): the two right-side claws (CapId≥2) appear after a 10f wait;
-        // every claw plays its slash animation and is gone after 40 frames (We232_TCB).
+        // Claw mark `a` (CapId 0-3): the two right-side claws (CapId≥2) appear after a 10f wait;
+        // every claw plays its slash animation and is gone after 40 frames.
         private void Drive232(CellActor a)
         {
             if (a.CapId >= 2 && a.Age < 10) { a.Visible = false; return; }
             a.Visible = a.Age < 40;
         }
 
-        // WestSp_CAT_WE_333 (Icicle Spear / Spike Cannon): the cell flies a parabolic curve from the attacker to the
+        // Icicle Spear / Spike Cannon: the cell flies a parabolic curve from the attacker to the
         // defender (+gp offset·vec) over `time` frames, arcing up `height` px, while spinning 20°→130° (forward) /
-        // 90°→130° (reverse) over the first 10f (WazaTool_InitCurveYFx + InitMoveOneSync). Gone when the curve ends.
+        // 90°→130° (reverse) over the first 10f (the curved Y-motion helper + InitMoveOneSync). Gone when the curve ends.
         private void Drive333(CellActor a)
         {
             int ofsX = a.Gp.Length > 0 ? a.Gp[0] : 0, ofsY = a.Gp.Length > 1 ? a.Gp[1] : 0;
@@ -1817,9 +1817,9 @@ namespace DSPRE.Avalonia
             if (a.Age >= time) a.Visible = false;
         }
 
-        // WestSp_CAT_WE_207_SUB anger "kiremark" (Taunt/Swagger): two marks pop in by the defender's head — first
+        // Anger "kiremark" (Taunt/Swagger): two marks pop in by the defender's head — first
         // upper-FORWARD (df+24·vec,−16), then upper-BACK (df−24·vec,−24) — each scaling 1.0→1.4 (4f) then settling
-        // →1.2 (2f) (WazaTool scale-rate s10→e14 / ret14→e12), with a 4f gap; then it's gone.
+        // →1.2 (2f) (scale-rate s10→e14 / ret14→e12), with a 4f gap; then it's gone.
         private void Drive207Sub(CellActor a)
         {
             double vec = _attackerIsEnemy ? -1 : 1; int t = a.Age;
@@ -1831,12 +1831,12 @@ namespace DSPRE.Avalonia
             else a.Visible = false;
         }
 
-        // WestSp_CAT_WE_081 binding band `a` (a.CapId = band index): blink in (staggered per We081Wait until t=45),
-        // squeeze scaleX 100→60% over 10f, hold 45f, then fade out — mirrors We081_TCB's 4-phase sequence.
+        // Binding band `a` (a.CapId = band index): blink in (staggered until t=45),
+        // squeeze scaleX 100→60% over 10f, hold 45f, then fade out — mirrors a similar 4-phase sequence.
         private void Drive081(CellActor a)
         {
-            int t = a.Age, idx = Math.Min(a.CapId, We081Wait.Length - 1);
-            int delay = We081Wait[idx][0], interval = Math.Max(1, We081Wait[idx][1]);
+            int t = a.Age, idx = Math.Min(a.CapId, BindingBandWaitSteps.Length - 1);
+            int delay = BindingBandWaitSteps[idx][0], interval = Math.Max(1, BindingBandWaitSteps[idx][1]);
             const int Eff = 45;
             if (t < Eff) a.Visible = t >= delay && ((t - delay) / interval) % 2 == 0;   // staggered blink-in
             else if (t < Eff + 10) { a.Visible = true; a.ScaleX = 1.0 - 0.4 * ((t - Eff) / 10.0); a.ScaleY = 1.0; }  // squeeze
@@ -1864,7 +1864,7 @@ namespace DSPRE.Avalonia
             {
                 var fx = _monFx[i];
                 if (fx.Delay > 0) { fx.Delay--; continue; }   // dormant until its scheduled start (e.g. Megahorn lunge after the shake)
-                if (fx.Kind == 5)   // shake (exact WazaTool_CalcShake); manages its own lifetime + BG_SHAKE outer repeats
+                if (fx.Kind == 5)   // shake (exact the shake-step calculator); manages its own lifetime + BG_SHAKE outer repeats
                 {
                     if (!fx.Sh.Calc())
                     {
@@ -1908,7 +1908,7 @@ namespace DSPRE.Avalonia
                         break;
                     }
                     case 4: MonDX[fx.Mon] += fx.Dx / fx.Frames; MonDY[fx.Mon] += fx.Dy / fx.Frames; break;   // slide
-                    case 26:   // PokeOamView_464 (Dark Void sink): deterministic mid-points of the source's
+                    case 26:   // the sink-into-void step function (Dark Void sink): deterministic mid-points of the source's
                     {          // rand() ladders — +4 at seq ~6/11/16/21, +8 at ~23, then from gene_cnt (~37)
                                // +4 every frame; the copy is swallowed (hidden) once it passes y ≈ 130.
                         var cap = fx.Cap;
@@ -1936,9 +1936,9 @@ namespace DSPRE.Avalonia
                         if (squash) MonScaleY[fx.Mon] = 0.7 + 0.3 * MonAlpha[fx.Mon];
                         break;
                     }
-                    case 20:  // WestSp_WE_089 Earthquake (We089_TCB): 8 steps × 5f. Each step shakes the whole world
+                    case 20:  // Earthquake: 8 steps × 5f. Each step shakes the whole world
                     {         // (mons + BG) horizontally at a decreasing amplitude AND flashes the BACKGROUND black↔
-                              // white (ColorConceChangePfd, held 3 of 5 frames), per we089_shake {12,10,8,6,4,2,1,0}.
+                              // white (a palette color-change, held 3 of 5 frames), per a decreasing shake-amplitude table {12,10,8,6,4,2,1,0}.
                         int[] eqAmp = { 12, 10, 8, 6, 4, 2, 1, 0 };
                         int step = Math.Min(eqAmp.Length - 1, fx.Frame / 5), within = fx.Frame % 5;
                         ShakeX = eqAmp[step] * ((fx.Frame % 2) == 0 ? 1 : -1);   // sharp horizontal world shake
@@ -1950,7 +1950,7 @@ namespace DSPRE.Avalonia
                         }
                         break;
                     }
-                    case 7:   // WE_KAITEN elliptical orbit (WazaTool_CalcRotaFx): x = ampX·sin θ, y = base + ampY·cos θ.
+                    case 7:   // WE_KAITEN elliptical orbit (the rotation-fx calculator): x = ampX·sin θ, y = base + ampY·cos θ.
                         if (fx.Keys != null && fx.Keys.Length >= 4)
                         {
                             double ang = fx.Frame * 2.0 * Math.PI / Math.Max(1, fx.Keys[2]);
@@ -1959,7 +1959,7 @@ namespace DSPRE.Avalonia
                         }
                         break;
                     case 9:   // WE_104 Double Team (かげぶんしん): 4 gray afterimages slide ±WE104_RANGE(32) px out and
-                    {   // back (we_104_pos), ~9 loops, then fade out (eva 8→0). Blend eva/16 ⇒ ghost alpha. Gray 128/196.
+                    {   // back, ~9 loops, then fade out (eva 8→0). Blend eva/16 ⇒ ghost alpha. Gray 128/196.
                         const int osc = 72, range = 32, loopLen = 8;
                         double eva = fx.Frame < osc ? 8 : Math.Max(0, 8 - (fx.Frame - osc));
                         double alpha = eva / 16.0;
@@ -1976,7 +1976,7 @@ namespace DSPRE.Avalonia
                         if (fx.Keys != null && fx.Keys.Length > 0)
                             MonRot[fx.Mon] = fx.Keys.Length > 1 && fx.Keys[1] > 0 ? fx.Keys[0] * Math.Sin(t * Math.PI * fx.Keys[1]) : fx.Keys[0] * t;
                         break;
-                    case 11:  // WSP_Mosaic: ramp OBJ mosaic from Keys[0] toward Keys[1](0/15) by Keys[2]/frame (Mosaic_TCB).
+                    case 11:  // the mosaic-level handler: ramp OBJ mosaic from Keys[0] toward Keys[1](0/15) by Keys[2]/frame (Mosaic_TCB).
                         if (fx.Keys != null && fx.Keys.Length >= 3)
                         {
                             double mv = Math.Clamp(fx.Keys[0] + fx.Keys[2] * fx.Frame, Math.Min(fx.Keys[0], fx.Keys[1]), Math.Max(fx.Keys[0], fx.Keys[1]));
@@ -1999,7 +1999,7 @@ namespace DSPRE.Avalonia
                         if (fx.Keys != null && fx.Keys.Length >= 2)
                             MonAlpha[fx.Mon] = Math.Clamp((fx.Keys[0] + (fx.Keys[1] - fx.Keys[0]) * t) / 16.0, 0, 1);
                         break;
-                    case 18:  // WSP_289 (Snatch): 3 InitStraightSyncFx segments of 15f each — home→Dx(off one edge),
+                    case 18:  // handler 289 (Snatch): 3 the straight-line sync-move helper segments of 15f each — home→Dx(off one edge),
                     {   // Dx→Dy (off the other, an invisible cross-screen), Dy→home. point_x[0,1,2] = Dx, Dy, home.
                         double home = fx.Mon == 0 ? _atX : _dfX;
                         int seg = Math.Min(2, fx.Frame / 15); double k = (fx.Frame % 15) / 15.0;
@@ -2008,7 +2008,7 @@ namespace DSPRE.Avalonia
                         MonDX[fx.Mon] += (from + (to - from) * k) - home;
                         break;
                     }
-                    case 17:  // WSP_272 (Role Play): the attacker's white image appears at the defender (−32px), fading in
+                    case 17:  // handler 272 (Role Play): the attacker's white image appears at the defender (−32px), fading in
                         _ghosts.Add(new MonGhost { Mon = _atVis, Dx = (_dfX - 32) - _atX, Dy = _dfY - _atY,   // (eva 0→15).
                             ScaleX = 1, ScaleY = 1, Alpha = Math.Clamp(t * 2, 0, 1), TintR = 255, TintG = 255, TintB = 255, TintA = 0.5 });
                         break;
@@ -2022,7 +2022,7 @@ namespace DSPRE.Avalonia
                         MonDX[fx.Mon] += fx.Dx * k; MonDY[fx.Mon] += fx.Dy * k;
                         break;
                     }
-                    case 22:  // WazaTool_MakeDefRota orbit (Rolling Kick 098 / Submission 066 / Vital Throw 233): SetSspMatrix
+                    case 22:  // the rotation-motion builder orbit (Rolling Kick 098 / Submission 066 / Vital Throw 233): SetSspMatrix
                     {         // moves the sprite POSITION around a wide flat ellipse (DEF_ROTA_W_X 32, W_Y −8) — ±32px across,
                               // bobbing DOWN 0→16 — completing Cycles full turns. Dx sign = rotation direction (vec_x). Reads
                               // as a roll/spin. (Was a bitmap self-rotation / — Submission — a scale; both unfaithful.)
@@ -2062,7 +2062,7 @@ namespace DSPRE.Avalonia
                         else MonVisible[fx.Mon] = false;                                                         // closes + flies up (Drive226).
                         break;
                     case 14:  // WE_107: 4 gray afterimage copies at the mon shrink 1.0→0.05 over 5f (staggered by
-                        for (int gi = 0; gi < 4; gi++)   // we_107_wait {2,7,13,18}) then re-expand — bottom-anchored.
+                        for (int gi = 0; gi < 4; gi++)   // staggered wait steps {2,7,13,18}, then re-expand — bottom-anchored.
                         {
                             int[] delay = { 2, 7, 13, 18 };
                             int local = fx.Frame - delay[gi];
@@ -2072,7 +2072,7 @@ namespace DSPRE.Avalonia
                                                        Alpha = 0.7, TintR = 128, TintG = 128, TintB = 128, TintA = 0.5 });
                         }
                         break;
-                    case 8:   // scale-keyframe sequence (WazaTool_InitScaleRateEx phases): squash/stretch flexes. Each
+                    case 8:   // scale-keyframe sequence (the scale-rate keyframe helper phases): squash/stretch flexes. Each
                         if (fx.Phases != null && fx.Phases.Length > 0)   // phase = [sxStart,sxEnd,syStart,syEnd,frames] /100.
                         {
                             int acc = 0, pi = 0;
@@ -2083,7 +2083,7 @@ namespace DSPRE.Avalonia
                             double scy = (ph[2] + (ph[3] - ph[2]) * k) / 100.0;
                             MonScaleX[fx.Mon] = (ph[0] + (ph[1] - ph[0]) * k) / 100.0;
                             MonScaleY[fx.Mon] = scy;
-                            MonShakeY[fx.Mon] += (1 - scy) * 24;   // CalcScaleRateToYPosFX: keep the feet planted as it scales
+                            MonShakeY[fx.Mon] += (1 - scy) * 24;   // the Y-position scale-rate helper: keep the feet planted as it scales
                         }
                         break;
                 }
@@ -2094,7 +2094,7 @@ namespace DSPRE.Avalonia
         }
 
         // WE_057 wave: rise (thin→tall, fade in) → hold → wash (wide→flat, fade out). The Y position re-anchors each
-        // frame (WazaTool_CalcScaleRateToYPosFX, poke_h=16 → ofs = 24·(1−scaleY)) so the wave's BASE stays put and it
+        // frame (the Y-position scale-rate helper, poke_h=16 → ofs = 24·(1−scaleY)) so the wave's BASE stays put and it
         // grows upward instead of scaling about its centre.
         private void UpdateCellFx()
         {
@@ -2106,8 +2106,8 @@ namespace DSPRE.Avalonia
                 case 2: _cellScaleX = 0.6; _cellScaleY = 1.5; _cellOpacity = 1; if (++_cellFrame >= 4) { _cellPhase = 3; _cellFrame = 0; } break;
                 case 3: { double t = _cellFrame / 12.0; _cellScaleX = Lerp(0.6, 1.5, t); _cellScaleY = Lerp(1.5, 0.1, t); _cellOpacity = 1 - t; if (++_cellFrame >= 12) { _cellPhase = -1; _cellOpacity = 0; } break; }
             }
-            // Apply the phase state to the casting wave actor (CATS_ObjectScaleSetCap / PosSetCap / blend). The Y re-anchor
-            // (WazaTool_CalcScaleRateToYPosFX, poke_h=16 → ofs = 24·(1−scaleY)) keeps the wave's BASE put so it grows up.
+            // Apply the phase state to the casting wave actor (the actor scale-set call / PosSetCap / blend). The Y re-anchor
+            // (the Y-position scale-rate helper, poke_h=16 → ofs = 24·(1−scaleY)) keeps the wave's BASE put so it grows up.
             if (_we057Actor != null)
             {
                 _we057Actor.ScaleX = _cellScaleX; _we057Actor.ScaleY = _cellScaleY; _we057Actor.Alpha = _cellOpacity;
@@ -2119,10 +2119,10 @@ namespace DSPRE.Avalonia
         }
 
         // ── HAIKEI scrolling background ──────────────────────────────────────────────────────────────────────────
-        // Faithful to WeT02_TCB / HaikeiChange: scroll at constant speed, fade IN to peak, and (WE_T02) once pos_y
+        // Faithful to WeT02_TCB / the backdrop-change routine: scroll at constant speed, fade IN to peak, and (WE_T02) once pos_y
         // crosses the stop line (WET02_STOP_Y = +512 / −412) start fading OUT, then drop the layer. HAIKEI_CHG has
         // no stop line — it stays until HAIKEI_RECOVER flips _bgFadingOut.
-        // Mirrors WeT02_TCB / HaikeiChange exactly: the move-effect BG is a full WRAPPING tiled layer (the NSCR is a
+        // Mirrors WeT02_TCB / the backdrop-change routine exactly: the move-effect BG is a full WRAPPING tiled layer (the NSCR is a
         // seamless 512×256 sheet) scrolled by (posX,posY) at the (spdX,spdY) READ from the effect — displayed in
         // full, never cropped. It fades IN to peak; a WE_T02 overlay additionally fades OUT once pos_y crosses the
         // source stop line, continuing to scroll meanwhile. HAIKEI_CHG backdrops (useStop=false) stay until RECOVER.
@@ -2201,12 +2201,12 @@ namespace DSPRE.Avalonia
             _fadeCur = _fadeStart + (_fadeEnd - _fadeStart) * t;
         }
 
-        // Anchor-plane depth in px-units (+z toward the camera), from we_tool.h: player (visual 0, bottom)
+        // Anchor-plane depth in px-units (+z toward the camera), from: player (visual 0, bottom)
         // WET_PARTICLE_Z_A = 0x40 → ≈0; enemy (visual 1, top) Z_BB = −5248 → −30.5 (farther from the camera —
         // the real reason enemy-side effects render smaller in-game).
         private static double ZOfVis(int vis) => vis == 1 ? -5248.0 / 172.0 : 64.0 / 172.0;
 
-        // EMTFUNC_* → emitter screen centre + travel axis + anchor-plane depth (see wp_callback.c).
+        // EMTFUNC_* → emitter screen centre + travel axis + anchor-plane depth.
         private (double cx, double cy, double ax, double ay, double z) Place(int callback, int sepIndex, int sepCount)
         {
             double dx = _dfX - _atX, dy = _dfY - _atY;
@@ -2214,7 +2214,7 @@ namespace DSPRE.Avalonia
             switch (callback)
             {
                 case 18:  // SEP_POS (EmitCall_SepPos): sets the emitter position to a per-formation offset that is 0 in
-                          // a 1v1, so emtr_pos = 0 + base.pos (SPL_SetEmitterPositionX adds base.pos). The chosen
+                          // a 1v1, so emtr_pos = 0 + base.pos (the emitter X-position setter adds base.pos). The chosen
                           // variant BAKES its source + aim into base.pos/base.axis (Water Gun index0 base.pos = the
                           // player's mouth, index3 = the enemy's; Hyper Beam likewise), so anchor at the PARTICLE
                           // ORIGIN and let base.pos place it — NOT the attacker (that double-offset it off-screen).

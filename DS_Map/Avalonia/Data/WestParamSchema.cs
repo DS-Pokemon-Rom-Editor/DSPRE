@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -93,11 +94,113 @@ namespace DSPRE.Avalonia.Data
             ["WEST_PT_DROP_RESET"] = "Reset particle copy",
             ["WEST_POKEOAM_CHECK"] = "Check mon copy",
             ["WEST_KEY_WAIT"] = "Wait for button",
+            ["WEST_CONTEST_CHK_JP"] = "Branch (contest check)",
+            ["WEST_HAIKEI_CHKCHG"] = "Change background if different",
+            ["WEST_HAIKEI_CHG_EX"] = "Change background (extended)",
+            ["WEST_BATONTATTI_JP"] = "Branch (Baton Pass)",
         };
 
         /// <summary>Friendly title for an opcode; falls back to a Title-Cased form of the raw identifier.</summary>
-        /// <summary>One-line description of what the opcode does, or "" if none. (Effect-script WS_* opcodes only.)</summary>
-        public static string OpcodeDoc(string opName) => WazaSeqSchema.Handles(opName) ? WazaSeqSchema.Doc(opName) : "";
+        /// <summary>One-line description of what the opcode does, or "" if none is known.</summary>
+        public static string OpcodeDoc(string opName)
+        {
+            if (WazaSeqSchema.Handles(opName)) return WazaSeqSchema.Doc(opName);
+            return opName != null && Docs.TryGetValue(opName, out var d) ? d : "";
+        }
+
+        // Internal opcode identifier → one-line description, for the move-script command guide.
+        private static readonly Dictionary<string, string> Docs = new()
+        {
+            ["WEST_WAIT"] = "Pause the script for the given number of frames before continuing.",
+            ["WEST_WAIT_FLAG"] = "Pause until every active particle effect finishes, then continue.",
+            ["WEST_LOOP_LABEL"] = "Mark the start of a loop and set how many times it repeats.",
+            ["WEST_LOOP"] = "Jump back to the matching loop start if repeats remain.",
+            ["WEST_SEQEND"] = "End the script. Playback stops here.",
+            ["WEST_SE"] = "Play a sound effect.",
+            ["WEST_POKEBG"] = "Render the mon as a flat background layer, used for palette or blend tricks like Camouflage.",
+            ["WEST_POKEBG_RESET"] = "Restore the mon to its normal sprite layer.",
+            ["WEST_BLDALPHA_SET"] = "Set the hardware alpha-blend weights (source and destination) used by translucency effects.",
+            ["WEST_BLDALPHA_RESET"] = "Restore the alpha-blend weights to their default.",
+            ["WEST_SEQ_CALL"] = "Call another WEST script and return here when it ends.",
+            ["WEST_END_CALL"] = "Return from a called script to where it was called from.",
+            ["WEST_WORK_SET"] = "Set a script variable to a value.",
+            ["WEST_WORK_CLEAR"] = "Clear a script variable back to 0.",
+            ["WEST_TURN_CHK"] = "Pick one of two branches depending on whether this is the move's first or second use. Drives two-turn moves (Fly, Dig) and moves that alternate between two variants (Lunar Dance).",
+            ["WEST_TURN_JP"] = "Jump to a target only on the given turn (first or second use of the move).",
+            ["WEST_SEQ_JP"] = "Jump to another point in this script.",
+            ["WEST_HAIKEI_CHG"] = "Swap in a new scrolling background and start it moving.",
+            ["WEST_HAIKEI_PARA_CHG"] = "Change one setting of the current scrolling background (speed, position or blend) without swapping it out.",
+            ["WEST_HAIKEI_RECOVER"] = "Restore the original battle backdrop, ending the background effect.",
+            ["WEST_HAIKEI_HALF_WAIT"] = "Wait until the background change is half faded in.",
+            ["WEST_HAIKEI_CHG_WAIT"] = "Wait until the background change has fully settled.",
+            ["WEST_HAIKEI_SET"] = "Set the background immediately, with no fade transition.",
+            ["WEST_SEPLAY_PAN"] = "Play a sound effect at a fixed stereo pan position.",
+            ["WEST_SEPAN"] = "Set the stereo pan of the sound currently playing.",
+            ["WEST_SEPAN_FLOW"] = "Sweep a sound's stereo pan from one side to the other over time.",
+            ["WEST_SE_REPEAT"] = "Play a sound effect on a loop.",
+            ["WEST_SE_WAITPLAY"] = "Play a sound effect after a delay.",
+            ["WEST_SE_STOP"] = "Stop a sound effect that is currently playing.",
+            ["WEST_SE_TASK"] = "Start or stop a background sound task, an ambient loop tied to the effect.",
+            ["WEST_BLDCNT_SET"] = "Set which screen layers take part in the hardware blend.",
+            ["WEST_WORKCHK_JP"] = "Compare a script variable to a value and jump if it matches.",
+            ["WEST_POKEBG_DROP"] = "Create a background copy of the mon that can be moved independently of the real sprite.",
+            ["WEST_POKEBG_DROP_RESET"] = "Remove a mon background copy.",
+            ["WEST_BGPRI_GAPSET"] = "Adjust the battle background's draw priority relative to the mons.",
+            ["WEST_BGPRI_GAPSET2"] = "Adjust the battle background's draw priority relative to the mons (variant 2).",
+            ["WEST_BGPRI_GAPSET3"] = "Adjust the battle background's draw priority relative to the mons (variant 3).",
+            ["WEST_POKE_BANISH_ON"] = "Hide a mon from the scene.",
+            ["WEST_POKE_BANISH_OFF"] = "Show a previously hidden mon again.",
+            ["WEST_PARTY_ATTACK_BGOFF"] = "Hide the party-attack background overlay.",
+            ["WEST_PARTY_ATTACK_BGEND"] = "End the party-attack background overlay.",
+            ["WEST_FUNC_CALL"] = "Run a built-in effect routine by ID. Covers most non-particle move motion: shakes, slides, scale changes, colour flashes and similar.",
+            ["WEST_OLDACT_FUNC_CALL"] = "Run a built-in cell-actor routine by ID, driving a CATS actor's per-frame behaviour.",
+            ["WEST_ADD_PARTICLE"] = "Spawn a particle effect from a loaded particle set into a slot.",
+            ["WEST_ADD_PARTICLE_EMIT_SET"] = "Spawn a particle effect using one specific emitter from a loaded particle set.",
+            ["WEST_ADD_PARTICLE_SEP"] = "Spawn a particle effect built from several separate emitter definitions at once.",
+            ["WEST_ADD_PARTICLE_PTAT"] = "Spawn a particle effect for a party (double or multi) attack.",
+            ["WEST_WAIT_PARTICLE"] = "Wait until every particle in a slot has finished.",
+            ["WEST_LOAD_PARTICLE"] = "Load a particle set into a slot, ready to spawn.",
+            ["WEST_LOAD_PARTICLE_EX"] = "Load a particle set from a specific archive into a slot.",
+            ["WEST_EXIT_PARTICLE"] = "Stop a slot's emitters immediately. Existing particles finish naturally, but no new ones spawn.",
+            ["WEST_EX_DATA"] = "Configure the next particle spawn's operator settings: priority, anchor, position, direction, field and camera mode.",
+            ["WEST_POKEOAM_RES_INIT"] = "Prepare the mon-copy (dropped sprite) system for use.",
+            ["WEST_POKEOAM_RES_LOAD"] = "Load the graphics needed for a mon copy.",
+            ["WEST_POKEOAM_DROP"] = "Create a movable copy of a mon's sprite, used for effects like Substitute, Disable and Dark Void.",
+            ["WEST_POKEOAM_RES_FREE"] = "Free the mon-copy resources.",
+            ["WEST_POKEOAM_DROP_RESET"] = "Remove a mon copy.",
+            ["WEST_POKEOAM_AUTO_STOP"] = "Stop a mon copy's automatic motion.",
+            ["WEST_CAMERA_CHG"] = "Switch the effect camera to a different mode (spin, custom path, follow a mon and similar).",
+            ["WEST_CAMERA_REVERCE"] = "Flip the camera to the mirrored side, so an effect still looks correct when the caster is on the other side.",
+            ["WEST_SIDE_JP"] = "Branch depending on whether the given mon is on the player's or the enemy's side.",
+            ["WEST_VOICE_PLAY"] = "Play the mon's cry.",
+            ["WEST_VOICE_WAIT_STOP"] = "Wait the given number of frames, then stop the mon's cry if it is still playing.",
+            ["WEST_HENSIN_ON"] = "Turn on the Transform (Ditto) sprite swap.",
+            ["WEST_HENSIN_ON_RC"] = "Turn on Transform, applying a recolour instead of a full sprite swap.",
+            ["WEST_TENKI_JP"] = "Branch depending on the current weather (clear, sun, rain, snow, sandstorm).",
+            ["WEST_CONTEST_JP"] = "Branch depending on whether this is a contest rather than a battle.",
+            ["WEST_CONTEST_CHK_JP"] = "Check a contest-specific condition and branch.",
+            ["WEST_PTAT_JP"] = "Branch depending on whether this is a party (double or multi) attack.",
+            ["WEST_CATS_RES_INIT"] = "Prepare the cell-actor system for use.",
+            ["WEST_CATS_CAHR_RES_LOAD"] = "Load a cell actor's tile graphics.",
+            ["WEST_CATS_PLTT_RES_LOAD"] = "Load a cell actor's palette.",
+            ["WEST_CATS_CELL_RES_LOAD"] = "Load a cell actor's cell layout.",
+            ["WEST_CATS_CELLANM_RES_LOAD"] = "Load a cell actor's animation sequences.",
+            ["WEST_CATS_ACT_ADD"] = "Create a cell actor driven by a built-in callback routine, a scripted per-move animation.",
+            ["WEST_CATS_ACT_ADD_EZ"] = "Create a simple cell actor that just plays its animation with no extra behaviour.",
+            ["WEST_CATS_RES_FREE"] = "Free a cell actor's loaded resources.",
+            ["WEST_POKE_OAM_ENABLE"] = "Show or hide a mon copy.",
+            ["WEST_PT_DROP"] = "Create a particle-linked copy used to attach an effect to a mon.",
+            ["WEST_PT_DROP_RESET"] = "Remove a particle-linked copy.",
+            ["WEST_POKEOAM_CHECK"] = "Check whether a mon copy exists and is active.",
+            ["WEST_KEY_WAIT"] = "Wait for a button press before continuing.",
+            ["WEST_HAIKEI_CHG_EX"] = "Swap in a new scrolling background with an extended parameter set, including the initial scroll position.",
+            ["WEST_HAIKEI_CHKCHG"] = "Change the background only if it isn't already showing, avoiding an unwanted restart.",
+            ["WEST_SEPAN_FLOWFIX"] = "Sweep a sound's stereo pan the same way as Sound pan sweep, with a fixed step size.",
+            ["WEST_SEPAN_FLOW_AF"] = "Sweep a sound's stereo pan, continuing after the main effect ends.",
+            ["WEST_SEWAIT_FLAG"] = "Wait until the current sound effect finishes playing.",
+            ["WEST_BATONTATTI_JP"] = "Jump only when the attacker is being replaced through Baton Pass.",
+            ["WEST_FLASH"] = "Flash the screen white and fade back out over the given number of frames.",
+        };
 
         public static string OpcodeDisplay(string opName)
         {
@@ -183,6 +286,10 @@ namespace DSPRE.Avalonia.Data
             ["WEST_POKE_OAM_ENABLE"] = new[] { "Copy", "Show" },
             ["WEST_PT_DROP"] = new[] { "Type", "Mode", "Copy ID" },
             ["WEST_PT_DROP_RESET"] = new[] { "Mode" },
+            ["WEST_CONTEST_CHK_JP"] = new[] { "Target" },
+            ["WEST_HAIKEI_CHKCHG"] = new[] { "Background", "Mode", "Check" },
+            ["WEST_HAIKEI_CHG_EX"] = new[] { "Background", "Mode", "Start offset" },
+            ["WEST_BATONTATTI_JP"] = new[] { "Target" },
         };
 
         /// <summary>Friendly label for argument <paramref name="index"/> of <paramref name="opName"/>, or
@@ -192,6 +299,38 @@ namespace DSPRE.Avalonia.Data
             if (WazaSeqSchema.Handles(opName) && WazaSeqSchema.Params(opName) is string[] wp && index >= 0 && index < wp.Length) return wp[index];
             return opName != null && Names.TryGetValue(opName, out var a) && index >= 0 && index < a.Length ? a[index] : "Param " + (index + 1);
         }
+
+        // ── Single-word tokens for the plain-text script editor ─────────────────────────
+        // The card view shows spaced titles ("Add particles"); the text editor instead needs a single typeable
+        // word per command/argument/enum-value, so a line reads like a command line ("AddParticles slot=0 data=482").
+        // These are derived mechanically from the existing friendly text (every letter/digit run becomes one
+        // camel/Pascal-case word) rather than a second hand-curated table, so the two views can never drift apart.
+        // Any distinguishing text already in the friendly name (e.g. the "(emitter)"/"(segmented)" suffixes on the
+        // several "Add particles" variants) carries over and keeps the tokens unique.
+        public static string Token(string text, bool pascalCase)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var sb = new StringBuilder();
+            bool capNext = pascalCase, sawFirst = false;
+            foreach (char c in text)
+            {
+                if (char.IsLetterOrDigit(c))
+                {
+                    sb.Append(!sawFirst ? (pascalCase ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c))
+                                        : (capNext ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c)));
+                    sawFirst = true;
+                    capNext = false;
+                }
+                else capNext = true;
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Single-word command name for the text editor (PascalCase), e.g. <c>AddParticlesEmitter</c>.</summary>
+        public static string CommandName(string opName) => Token(OpcodeDisplay(opName), pascalCase: true);
+
+        /// <summary>Single-word argument label for the text editor (camelCase), e.g. <c>particleSlot</c>.</summary>
+        public static string ArgToken(string opName, int index) => Token(ParamName(opName, index), pascalCase: false);
 
         // ── Operator enums (engine values kept; labels are friendly) — for a FIELD_OPERATOR's settings ──
         public readonly record struct EnumOption(string Label, int Value);

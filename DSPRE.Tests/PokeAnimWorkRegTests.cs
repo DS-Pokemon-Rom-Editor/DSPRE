@@ -11,7 +11,7 @@ namespace DSPRE.Tests
     /// </summary>
     public class PokeAnimWorkRegTests
     {
-        // PAST work-register constants (past_def.h)
+        // Pokémon-animation work-register constants
         private const int WORK0 = 0, WORK1 = 1, WORK2 = 2;
         private const int CALC_VAL = 18, CALC_WORK = 19, USE_VAL = 20, PARAM_DX = 10;
 

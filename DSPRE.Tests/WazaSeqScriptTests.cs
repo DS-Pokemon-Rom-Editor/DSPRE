@@ -8,7 +8,7 @@ namespace DSPRE.Tests
     /// <summary>
     /// The battle move-sequence bytecode (waza_seq / be_seq / sub_seq) is a stream of little-endian 32-bit words:
     /// an opcode id then that opcode's fixed argument words, with the per-word arg count coming from the
-    /// version-specific <see cref="WazaSeqOpcodes"/> table decoded from the leaked assembler defs.
+    /// version-specific <see cref="WazaSeqOpcodes"/> table for each game.
     /// </summary>
     public class WazaSeqScriptTests
     {

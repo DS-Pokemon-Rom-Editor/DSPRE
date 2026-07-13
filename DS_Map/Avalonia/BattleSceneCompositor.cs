@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
             {
                 if (west != null && west.RasterActive)
                 {
-                    // WestSp_WE_Laster: shift each scanline horizontally by amp·sin(phase + y·lineAdd) (ripple/heat-haze).
+                    // shift each scanline horizontally by amp·sin(phase + y·lineAdd) (ripple/heat-haze).
                     for (int y = 0; y < H; y++)
                     {
                         int off = (int)Math.Round(west.RasterAmp * Math.Sin(west.RasterPhase + y * west.RasterLineAdd));
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia
             // 2. platforms (alpha-over).
             foreach (var s in _statics) BlitAxisAligned(s.rgba, s.w, s.h, s.left, s.top);
 
-            // 2b. WSP_PalColChange grayscale — WeTool_PalGrayScale only grays FADE_MAIN_BG (the BACKGROUND palette),
+            // 2b. the grayscale-toggle handler grayscale — WeTool_PalGrayScale only grays FADE_MAIN_BG (the BACKGROUND palette),
             //     NOT the OBJ/mons. So desaturate the backdrop+platforms here, BEFORE the mons (they stay in colour).
             if (west != null && west.Grayscale)
                 for (int i = 0; i < W * H * 3; i += 3)
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia
                     _scene[i] = _scene[i + 1] = _scene[i + 2] = y8;
                 }
 
-            // 2c. ColorConceChangePfd flash on FADE_MAIN_BG — lerp the backdrop+platforms toward a colour (Earthquake's
+            // 2c. Palette color-change flash on FADE_MAIN_BG — lerp the backdrop+platforms toward a colour (Earthquake's
             //     black↔white pulses). BG-only (same as grayscale), so the mons stay unflashed.
             if (west != null && west.BgFlashAmount > 0)
             {
@@ -79,7 +79,7 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            // 2d. HAIKEI_PAL_FADE / Wish BG flash — PaletteFadeReq on FADE_MAIN_BG ramps the BACKGROUND toward a colour
+            // 2d. HAIKEI_PAL_FADE / Wish BG flash — the palette-fade request on FADE_MAIN_BG ramps the BACKGROUND toward a colour
             //     (Thunder etc. darken toward black; Wish flashes white). BG-only like 2b/2c, so the mons stay LIT — the
             //     game fades only the main-BG palette, not the OBJ/soft-sprite mons (was a full-screen overlay in the view).
             if (west != null && west.FadeOpacity > 0)
@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia
                 double sclX = a.ScaleX * a.FrameScaleX, sclY = a.ScaleY * a.FrameScaleY;
                 if (sclX <= 0.0001 || sclY <= 0.0001) continue;
                 double cx = a.X + a.FrameX, cy = a.Y + a.FrameY;   // screen position of the actor origin
-                double rot = a.FrameRotDeg * Math.PI / 180.0;      // CATS_ObjectRotationSetCap + frame SRT rotation
+                double rot = a.FrameRotDeg * Math.PI / 180.0;      // the actor rotation-set call + frame SRT rotation
                 bool rotated = Math.Abs(a.FrameRotDeg) > 0.01;
                 double cosR = Math.Cos(-rot), sinR = Math.Sin(-rot);   // inverse (screen→source) rotation
                 double ex = rotated ? half * Math.Max(sclX, sclY) * 1.4143 : half * sclX;

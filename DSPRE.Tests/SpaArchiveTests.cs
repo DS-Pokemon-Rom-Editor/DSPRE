@@ -7,7 +7,7 @@ namespace DSPRE.Tests
     /// <summary>
     /// The SPA particle archive = a 32-byte header then variable-length emitter records (88-byte base + flag-gated
     /// anim/child blocks + fields). These pin the header fields, the SPLResBase offsets, and the record-walk that
-    /// must skip optional blocks to reach the next emitter — decoded from the leaked spl_resource.h.
+    /// must skip optional blocks to reach the next emitter, matching the NDS particle-library resource format.
     /// </summary>
     public class SpaArchiveTests
     {

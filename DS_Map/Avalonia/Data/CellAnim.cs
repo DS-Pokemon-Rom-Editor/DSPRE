@@ -26,10 +26,10 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// A live CATS cell actor — the faithful playback model behind CATS_ObjectAdd/AnimeSeqSetCap. It advances the
-    /// current sequence frame-by-frame honouring each frame's hold duration and the sequence play-mode (loop vs
-    /// once), and carries the actor-level transform (position/scale/flip/palette/visibility) the WestSp_CAT_*
-    /// callbacks set each tick. Rendering (NCER cell → OAM) is applied on top of <see cref="CellIndex"/> + the
+    /// A live CATS cell actor — the faithful playback model behind the actor-add and set-animation-sequence calls.
+    /// It advances the current sequence frame-by-frame honouring each frame's hold duration and the sequence
+    /// play-mode (loop vs once), and carries the actor-level transform (position/scale/flip/palette/visibility)
+    /// the per-move callbacks set each tick. Rendering (NCER cell → OAM) is applied on top of <see cref="CellIndex"/> + the
     /// frame SRT + this transform by the scene compositor; this class owns only the timeline + state, so it is
     /// fully unit-testable without graphics.
     /// </summary>
@@ -38,11 +38,11 @@ namespace DSPRE.Avalonia.Data
         private readonly CellSequence[] _seqs;
         private int _frame, _timer;
 
-        // Actor transform — set by callbacks (CATS_ObjectPosSetCap / ScaleSetCap / FlipSetCap / palette).
+        // Actor transform — set by callbacks (set-position / set-scale / set-flip / palette).
         public double X, Y;
         public double ScaleX = 1, ScaleY = 1;
         public bool FlipH, FlipV;
-        public int PalShift;                 // palette-bank offset (CATS_ObjectDrawPriorityShift-style pal change)
+        public int PalShift;                 // palette-bank offset (a draw-priority-style palette change)
         public bool Visible = true;
         public double ExtraRotDeg;           // actor-level spin some callbacks add on top of the frame SRT
         public double Alpha = 1.0;
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Data
         public int SeqCount => _seqs?.Length ?? 0;
         public int CapId = -1;        // WEST_CATS_ACT_ADD_EZ slot (so a later FUNC_CALL can find this actor); -1 = anonymous
         public bool Alive = true;     // cleared by RES_FREE
-        public int FuncId = -1;       // WEST_CATS_ACT_ADD callback id (WeSysSP_ClactFuncTable) driving this actor
+        public int FuncId = -1;       // WEST_CATS_ACT_ADD callback id (the opcode dispatch table) driving this actor
         public int Age;               // frames since spawn (the callback timeline clock)
         public int[] Gp = System.Array.Empty<int>();   // the ACT_ADD gp_wk args the callback reads
         public double BaseX, BaseY;   // spawn position (callbacks animate X,Y relative to this)
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
         public CellActor(CellSequence[] sequences, int seq = 0)
         { _seqs = sequences ?? Array.Empty<CellSequence>(); SetSeq(seq); }
 
-        /// <summary>CATS_ObjectAnimeSeqSetCap: switch to sequence <paramref name="seq"/> and restart it.</summary>
+        /// <summary>Switch to sequence <paramref name="seq"/> and restart it.</summary>
         public void SetSeq(int seq)
         { Seq = (_seqs.Length == 0) ? 0 : Math.Clamp(seq, 0, _seqs.Length - 1); _frame = 0; _timer = 0; Finished = false; }
 
