@@ -34,6 +34,9 @@ namespace DSPRE
         public bool convertLegacyText { get; set; } = true;
         public string rotomEditorTheme { get; set; } = "OneDark";
 
+        /// <summary>Avalonia scale override (0 = use the platform scale).</summary>
+        public double uiScale { get; set; } = 0;
+
         // 3D-view camera behaviour (mouse). Speeds are multipliers (1.0 = default); invert flags flip an axis.
         public float camPanSpeed { get; set; } = 1.0f;
         public float camOrbitSpeed { get; set; } = 1.0f;

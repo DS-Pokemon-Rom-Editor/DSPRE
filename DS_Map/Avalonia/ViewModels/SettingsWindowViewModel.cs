@@ -90,6 +90,13 @@ namespace DSPRE.Avalonia.ViewModels
             set => Set(ref _autoUpdateDBs, value);
         }
 
+        private decimal _uiScale;
+        public decimal UiScale
+        {
+            get => _uiScale;
+            set => Set(ref _uiScale, value);
+        }
+
         private string _versionLabel = string.Empty;
         public string VersionLabel
         {
@@ -140,6 +147,7 @@ namespace DSPRE.Avalonia.ViewModels
             AutoUpdateDBs    = SettingsManager.Settings.automaticallyUpdateDBs;
             ShowWelcomeOnStartup = SettingsManager.Settings.showWelcomeOnStartup;
             ShowGuidedTourNextLoad = !SettingsManager.Settings.guidedTourShown;
+            UiScale           = (decimal)SettingsManager.Settings.uiScale;
 
             CamPanSpeed      = (decimal)SettingsManager.Settings.camPanSpeed;
             CamOrbitSpeed    = (decimal)SettingsManager.Settings.camOrbitSpeed;
@@ -170,6 +178,7 @@ namespace DSPRE.Avalonia.ViewModels
             SettingsManager.Settings.automaticallyUpdateDBs = AutoUpdateDBs;
             SettingsManager.Settings.showWelcomeOnStartup   = ShowWelcomeOnStartup;
             SettingsManager.Settings.guidedTourShown        = !ShowGuidedTourNextLoad;
+            SettingsManager.Settings.uiScale                = (double)UiScale;
 
             SettingsManager.Settings.camPanSpeed     = (float)CamPanSpeed;
             SettingsManager.Settings.camOrbitSpeed   = (float)CamOrbitSpeed;

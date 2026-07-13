@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Avalonia;
 
 namespace DSPRE.AvaloniaShell
@@ -16,7 +17,20 @@ namespace DSPRE.AvaloniaShell
             // Cross-platform: Windows installer packages and Linux AppImages alike.
             Velopack.VelopackApp.Build().Run();
 
+            DSPRE.SettingsManager.Load();
+            ApplyUiScaleOverride();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+
+        private static void ApplyUiScaleOverride()
+        {
+            double scale = DSPRE.SettingsManager.Settings?.uiScale ?? 0;
+            if (scale >= 0.5 && scale <= 8 &&
+                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR")))
+            {
+                Environment.SetEnvironmentVariable("AVALONIA_GLOBAL_SCALE_FACTOR",
+                    scale.ToString(CultureInfo.InvariantCulture));
+            }
         }
 
         /// <summary>Avalonia app builder — also used by the AXAML previewer.</summary>

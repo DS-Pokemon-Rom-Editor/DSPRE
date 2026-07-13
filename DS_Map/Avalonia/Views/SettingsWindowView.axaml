@@ -60,6 +60,16 @@
 	  <CheckBox Content="Update Databases Automatically"  IsChecked="{Binding AutoUpdateDBs}"/>
 	</StackPanel>
 
+	<!-- Avalonia scale override -->
+	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
+	  <Grid ColumnDefinitions="Auto,110,*">
+		<TextBlock Grid.Column="0" Text="UI scale factor" VerticalAlignment="Center" Margin="0,0,8,0"/>
+		<NumericUpDown Grid.Column="1" Value="{Binding UiScale}" Minimum="0" Maximum="8" Increment="0.05" FormatString="0.00"/>
+		<TextBlock Grid.Column="2" Text="0 = automatic; restart required" VerticalAlignment="Center" Margin="8,0,0,0"
+		           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+	  </Grid>
+	</Border>
+
 	<!-- Onboarding -->
 	<StackPanel Orientation="Horizontal" Spacing="24">
 	  <CheckBox Content="Show Welcome at startup"       IsChecked="{Binding ShowWelcomeOnStartup}"/>
