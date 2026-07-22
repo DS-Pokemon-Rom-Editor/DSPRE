@@ -6,8 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using global::Avalonia.Collections;
 using global::Avalonia.Controls;
+using global::Avalonia.Threading;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
@@ -100,8 +103,16 @@ namespace DSPRE.Avalonia.ViewModels
         public int CurrentHeaderId => _header?.ID ?? -1;
 
         // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
-        public ObservableCollection<HeaderTreeFolder> TreeFolders { get; } = new ObservableCollection<HeaderTreeFolder>();
+        private readonly AvaloniaList<HeaderTreeFolder> _treeFolders = new AvaloniaList<HeaderTreeFolder>();
+        public AvaloniaList<HeaderTreeFolder> TreeFolders => _treeFolders;
+        private List<HeaderTreeFolder> _allTreeFolders = new List<HeaderTreeFolder>();
+        private IReadOnlyList<HeaderSearchEntry> _headerSearchIndex = Array.Empty<HeaderSearchEntry>();
         private List<int> _locationIndexByHeader = new List<int>();
+        private Dictionary<HeaderTreeFolder, bool> _folderExpansionBeforeFilter;
+        private bool _filterTreeActive;
+
+        private CancellationTokenSource _treeFilterCancellation;
+        private int _treeFilterGeneration;
 
         private HeaderTreeNode _selectedTreeNode;
         public HeaderTreeNode SelectedTreeNode
@@ -109,6 +120,9 @@ namespace DSPRE.Avalonia.ViewModels
             get => _selectedTreeNode;
             set
             {
+                // Hiding the TreeView while a filter is active can make its binding briefly report
+                // null. Keep the logical selection stable instead of reloading or losing the header.
+                if (value == null && !_suppress && _selectedTreeNode != null) return;
                 if (!Set(ref _selectedTreeNode, value) || _suppress) return;
                 if (value is HeaderTreeLeaf leaf) { SelectedHeaderId = leaf.HeaderId; LoadHeader(leaf.HeaderId); }
             }
@@ -117,18 +131,25 @@ namespace DSPRE.Avalonia.ViewModels
         private ushort _selectedHeaderId;
         public ushort SelectedHeaderId { get => _selectedHeaderId; private set => Set(ref _selectedHeaderId, value); }
 
+        public bool IsFiltering => !string.IsNullOrWhiteSpace(_treeFilterText);
+
         private string _treeFilterText = "";
         public string TreeFilterText
         {
             get => _treeFilterText;
-            set { if (Set(ref _treeFilterText, value)) RebuildTree(); }
+            set
+            {
+                if (!Set(ref _treeFilterText, value ?? string.Empty)) return;
+                OnPropertyChanged(nameof(IsFiltering));
+                ScheduleTreeRebuild();
+            }
         }
 
         private bool _fuzzySearch;
         public bool FuzzySearch
         {
             get => _fuzzySearch;
-            set { if (Set(ref _fuzzySearch, value)) RebuildTree(); }
+            set { if (Set(ref _fuzzySearch, value)) ScheduleTreeRebuild(); }
         }
 
         // ── Common scalar fields ─────────────────────────────────────────────────────
@@ -441,31 +462,6 @@ namespace DSPRE.Avalonia.ViewModels
             return 0;
         }
 
-        /// <summary>Raw location name for a header (before the "Routes" collapse); "" if none.</summary>
-        private string LocationNameFor(ushort id)
-        {
-            int idx = id < _locationIndexByHeader.Count ? _locationIndexByHeader[id] : -1;
-            return (idx >= 0 && idx < LocationNames.Count) ? (LocationNames[idx] ?? "").Trim() : "";
-        }
-
-        private string FolderNameFor(ushort id)
-        {
-            string name = LocationNameFor(id);
-            if (name.StartsWith("Route ", StringComparison.OrdinalIgnoreCase)) return "Routes";
-            return string.IsNullOrEmpty(name) ? "Unknown" : name;
-        }
-
-        /// <summary>Exact substring match on label / folder / location / id, plus optional fuzzy (typo-tolerant) match.</summary>
-        private bool HeaderMatchesFilter(string q, string label, string folderName, string locName, ushort id)
-        {
-            if (label.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || locName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-            return _fuzzySearch && (FuzzyMatches(q, locName) || FuzzyMatches(q, label));
-        }
-
         /// <summary>True if any word in <paramref name="text"/> is within a small edit distance of the query.</summary>
         private static bool FuzzyMatches(string query, string text)
         {
@@ -481,46 +477,272 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>
         /// Rebuilds <see cref="TreeFolders"/> from the header list, grouped by location (all "Route *"
         /// in one "Routes" bucket); folders and leaves come out ascending by ID. A non-empty
-        /// <see cref="TreeFilterText"/> keeps only matching headers and expands every folder; an empty
-        /// one collapses all but the selected header's folder. Selection is preserved.
+        /// <see cref="TreeFilterText"/> is projected into the flat filtered list; an empty one
+        /// restores the tree and collapses all but the selected header's folder. Selection is preserved.
         /// </summary>
         private void RebuildTree()
         {
-            ushort keep = SelectedHeaderId;
-            string q = (TreeFilterText ?? "").Trim();
-            bool filtering = q.Length > 0;
+            CancelPendingTreeRebuild();
+            _filterTreeActive = false;
+            _folderExpansionBeforeFilter = null;
+            TreeBuildInput input = CaptureTreeBuildInput();
+            ApplyTreeBuild(BuildTreeStructure(input), input.Query, input.Fuzzy);
+        }
 
-            var byName = new Dictionary<string, HeaderTreeFolder>(StringComparer.OrdinalIgnoreCase);
-            var order = new List<HeaderTreeFolder>();   // first-seen order == ascending min ID
+        private void ScheduleTreeRebuild()
+        {
+            CancelPendingTreeRebuild();
+            if (_headerSearchIndex.Count == 0 || _allTreeFolders.Count == 0) return;
 
-            for (ushort id = 0; id < _headerListNames.Count; id++)
+            string query = (TreeFilterText ?? "").Trim();
+            var input = new TreeFilterInput(_headerSearchIndex, query, _fuzzySearch);
+            if (!input.Filtering)
             {
-                string label = _headerListNames[id];
-                string folderName = FolderNameFor(id);
+                ApplyTreeFilter(input, new HashSet<ushort>());
+                return;
+            }
 
-                if (filtering
-                    && label.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && folderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && LocationNameFor(id).IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && id.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
-                    continue;
+            int generation = unchecked(++_treeFilterGeneration);
+            var cancellation = new CancellationTokenSource();
+            _treeFilterCancellation = cancellation;
+            _ = RebuildTreeAsync(cancellation, generation, input);
+        }
+
+        private TreeBuildInput CaptureTreeBuildInput()
+        {
+            return new TreeBuildInput
+            {
+                HeaderNames = _headerListNames.ToList(),
+                LocationIndices = _locationIndexByHeader.ToList(),
+                LocationNames = LocationNames.ToList(),
+                Query = (TreeFilterText ?? "").Trim(),
+                Fuzzy = _fuzzySearch
+            };
+        }
+
+        private async Task RebuildTreeAsync(CancellationTokenSource cancellation, int generation, TreeFilterInput input)
+        {
+            CancellationToken token = cancellation.Token;
+            try
+            {
+                HashSet<ushort> matches = await Task.Run(() => BuildTreeFilter(input, token), token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (token.IsCancellationRequested || generation != _treeFilterGeneration) return;
+                    ApplyTreeFilter(input, matches);
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer filter value superseded this rebuild.
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Header tree filter failed: " + ex);
+            }
+            finally
+            {
+                if (ReferenceEquals(_treeFilterCancellation, cancellation))
+                    _treeFilterCancellation = null;
+                cancellation.Dispose();
+            }
+        }
+
+        private static TreeBuildResult BuildTreeStructure(TreeBuildInput input)
+        {
+            var byName = new Dictionary<string, HeaderTreeFolder>(StringComparer.OrdinalIgnoreCase);
+            var order = new List<HeaderTreeFolder>();
+            var searchIndex = new List<HeaderSearchEntry>(input.HeaderNames.Count);
+
+            for (int id = 0; id < input.HeaderNames.Count; id++)
+            {
+                ushort headerId = (ushort)id;
+                string label = input.HeaderNames[id];
+                string locationName = LocationNameFor(input, headerId);
+                string folderName = FolderNameFor(locationName);
 
                 if (!byName.TryGetValue(folderName, out var folder))
                 {
-                    folder = new HeaderTreeFolder { DisplayName = folderName, IsExpanded = filtering };
+                    folder = new HeaderTreeFolder { DisplayName = folderName };
                     byName[folderName] = folder;
                     order.Add(folder);
                 }
-                folder.Children.Add(new HeaderTreeLeaf { HeaderId = id, DisplayName = label });
+                var leaf = new HeaderTreeLeaf { HeaderId = headerId, DisplayName = label };
+                folder.Children.Add(leaf);
+                searchIndex.Add(new HeaderSearchEntry(headerId, label, locationName, folderName));
             }
 
+            return new TreeBuildResult(
+                order.OrderBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList(),
+                searchIndex);
+        }
+
+        private static HashSet<ushort> BuildTreeFilter(TreeFilterInput input, CancellationToken cancellationToken)
+        {
+            var matches = new HashSet<ushort>();
+            if (!input.Filtering) return matches;
+
+            foreach (var entry in input.Entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (HeaderMatchesFilter(input.Query, entry, input.Fuzzy))
+                    matches.Add(entry.HeaderId);
+            }
+            return matches;
+        }
+
+        private void ApplyTreeBuild(TreeBuildResult result, string query, bool fuzzy)
+        {
+            _allTreeFolders = result.Folders;
+            _headerSearchIndex = result.SearchIndex;
+            _treeFolders.Clear();
+            _treeFolders.AddRange(result.Folders);
+            var input = new TreeFilterInput(_headerSearchIndex, query, fuzzy);
+            ApplyTreeFilter(input, BuildTreeFilter(input, CancellationToken.None));
+        }
+
+        private void ApplyTreeFilter(TreeFilterInput input, HashSet<ushort> matches)
+        {
             _suppress = true;
-            TreeFolders.Clear();
-            foreach (var folder in order.OrderBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase))
-                TreeFolders.Add(folder);
-            if (!filtering) ExpandFolderContaining(keep);
-            SelectedTreeNode = FindLeaf(keep);   // re-assert highlight (suppressed: no reload)
-            _suppress = false;
+            try
+            {
+                ushort keepHeaderId = SelectedHeaderId;
+                if (input.Filtering)
+                {
+                    if (!_filterTreeActive)
+                    {
+                        _folderExpansionBeforeFilter = _allTreeFolders.ToDictionary(f => f, f => f.IsExpanded);
+                        _filterTreeActive = true;
+                    }
+
+                    foreach (var folder in _allTreeFolders)
+                    {
+                        bool hasMatch = false;
+                        foreach (var leaf in folder.Children.OfType<HeaderTreeLeaf>())
+                        {
+                            bool visible = matches.Contains(leaf.HeaderId);
+                            leaf.IsVisible = visible;
+                            hasMatch |= visible;
+                        }
+                        folder.IsVisible = hasMatch;
+                        folder.IsExpanded = hasMatch;
+                    }
+
+                    HeaderTreeNode logicalSelection = FindLeaf(keepHeaderId) ?? _selectedTreeNode;
+                    if (logicalSelection != null) SelectedTreeNode = logicalSelection;
+                }
+                else
+                {
+                    foreach (var folder in _allTreeFolders)
+                    {
+                        folder.IsVisible = true;
+                        foreach (var leaf in folder.Children.OfType<HeaderTreeLeaf>())
+                            leaf.IsVisible = true;
+
+                        if (_filterTreeActive && _folderExpansionBeforeFilter != null
+                            && _folderExpansionBeforeFilter.TryGetValue(folder, out bool wasExpanded))
+                            folder.IsExpanded = wasExpanded;
+                        else
+                            folder.IsExpanded = folder.Children.OfType<HeaderTreeLeaf>().Any(l => l.HeaderId == keepHeaderId);
+                    }
+                    _filterTreeActive = false;
+                    _folderExpansionBeforeFilter = null;
+                    SelectedTreeNode = FindLeaf(keepHeaderId);
+                }
+            }
+            finally
+            {
+                _suppress = false;
+            }
+        }
+
+        private void CancelPendingTreeRebuild()
+        {
+            var cancellation = _treeFilterCancellation;
+            _treeFilterCancellation = null;
+            try { cancellation?.Cancel(); }
+            catch (ObjectDisposedException) { }
+            unchecked { _treeFilterGeneration++; }
+        }
+
+        private sealed class TreeBuildInput
+        {
+            public List<string> HeaderNames { get; set; }
+            public List<int> LocationIndices { get; set; }
+            public List<string> LocationNames { get; set; }
+            public string Query { get; set; }
+            public bool Fuzzy { get; set; }
+        }
+
+        private sealed class TreeBuildResult
+        {
+            public List<HeaderTreeFolder> Folders { get; }
+            public IReadOnlyList<HeaderSearchEntry> SearchIndex { get; }
+
+            public TreeBuildResult(List<HeaderTreeFolder> folders, IReadOnlyList<HeaderSearchEntry> searchIndex)
+            {
+                Folders = folders;
+                SearchIndex = searchIndex;
+            }
+        }
+
+        private sealed class TreeFilterInput
+        {
+            public IReadOnlyList<HeaderSearchEntry> Entries { get; }
+            public string Query { get; }
+            public bool Fuzzy { get; }
+            public bool Filtering => Query.Length > 0;
+
+            public TreeFilterInput(IReadOnlyList<HeaderSearchEntry> entries, string query, bool fuzzy)
+            {
+                Entries = entries;
+                Query = query;
+                Fuzzy = fuzzy;
+            }
+        }
+
+        private sealed class HeaderSearchEntry
+        {
+            public ushort HeaderId { get; }
+            public string Label { get; }
+            public string LocationName { get; }
+            public string FolderName { get; }
+            public string IdText { get; }
+
+            public HeaderSearchEntry(ushort headerId, string label, string locationName, string folderName)
+            {
+                HeaderId = headerId;
+                Label = label ?? "";
+                LocationName = locationName ?? "";
+                FolderName = folderName ?? "";
+                IdText = headerId.ToString();
+            }
+        }
+
+        private static string LocationNameFor(TreeBuildInput input, ushort id)
+        {
+            int index = id < input.LocationIndices.Count ? input.LocationIndices[id] : -1;
+            return index >= 0 && index < input.LocationNames.Count
+                ? (input.LocationNames[index] ?? "").Trim()
+                : "";
+        }
+
+        private static string FolderNameFor(string locationName)
+        {
+            if (locationName.StartsWith("Route ", StringComparison.OrdinalIgnoreCase)) return "Routes";
+            return string.IsNullOrEmpty(locationName) ? "Unknown" : locationName;
+        }
+
+        private static bool HeaderMatchesFilter(string q, HeaderSearchEntry entry, bool fuzzy)
+        {
+            if (entry.Label.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || entry.FolderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || entry.LocationName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
+                || entry.IdText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return fuzzy && (FuzzyMatches(q, entry.LocationName) || FuzzyMatches(q, entry.Label));
         }
 
         public void ExpandAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = true; }

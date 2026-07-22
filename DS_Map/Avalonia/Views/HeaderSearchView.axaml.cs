@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views
         public HeaderSearchView()
         {
             InitializeComponent();
+            Closed += (_, _) => VM?.Dispose();
         }
 
         public HeaderSearchView(HeaderSearchViewModel vm) : this()

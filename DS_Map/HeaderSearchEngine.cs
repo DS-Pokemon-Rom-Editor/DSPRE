@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -72,7 +73,7 @@ namespace DSPRE
         public static bool IsNumericField(int fieldToSearch) =>
             (MapHeader.SearchableFields)fieldToSearch != MapHeader.SearchableFields.InternalName;
 
-        public static HashSet<string> AdvancedSearch(ushort startID, ushort finalID, List<string> intNames, int fieldToSearch, int oper, string valToSearch)
+        public static HashSet<string> AdvancedSearch(ushort startID, ushort finalID, List<string> intNames, int fieldToSearch, int oper, string valToSearch, CancellationToken cancellationToken = default)
         {
             if (fieldToSearch < 0 || oper < 0 || valToSearch == "")
             {
@@ -86,6 +87,7 @@ namespace DSPRE
                 case (int)MapHeader.SearchableFields.InternalName:
                     for (ushort i = startID; i < finalID; i++)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         switch (oper)
                         {
                             case (int)TextOperators.IsExactly:
@@ -138,9 +140,17 @@ namespace DSPRE
                     }
 
                     bool dynamicHeaders = RomPatchState.flag_DynamicHeadersPatchApplied || PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied();
+                    byte[] arm9Headers = null;
+                    if (!dynamicHeaders && finalID > startID)
+                    {
+                        long headerOffset = RomInfo.headerTableOffset + (long)MapHeader.length * startID;
+                        long headerBytes = (long)MapHeader.length * (finalID - startID);
+                        arm9Headers = DSUtils.ReadFromFile(RomInfo.arm9Path, headerOffset, headerBytes);
+                    }
 
                     for (ushort i = startID; i < finalID; i++)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         MapHeader h;
                         if (dynamicHeaders)
                         {
@@ -148,7 +158,17 @@ namespace DSPRE
                         }
                         else
                         {
-                            h = MapHeader.LoadFromARM9(i);
+                            int headerOffset = (i - startID) * MapHeader.length;
+                            if (arm9Headers != null && headerOffset + MapHeader.length <= arm9Headers.Length)
+                            {
+                                byte[] headerData = new byte[MapHeader.length];
+                                Buffer.BlockCopy(arm9Headers, headerOffset, headerData, 0, MapHeader.length);
+                                h = MapHeader.LoadFromByteArray(headerData, i);
+                            }
+                            else
+                            {
+                                h = MapHeader.LoadFromARM9(i);
+                            }
                         }
 
                         int headerField = int.Parse(property.GetValue(h, null).ToString());

@@ -39,7 +39,7 @@
     </Border>
 
     <!-- Sidebar tree + detail form (both shared with the Maps workspace) -->
-    <Grid ColumnDefinitions="280,*">
+    <Grid ColumnDefinitions="230,*">
       <views:HeaderSidebarView Grid.Column="0" Margin="4"/>
       <views:HeaderFieldsView  Grid.Column="1"/>
     </Grid>

@@ -43,7 +43,7 @@
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Grid ColumnDefinitions="280,*">
+    <Grid ColumnDefinitions="230,*">
       <views:HeaderSidebarView Grid.Column="0" Margin="4" x:Name="Sidebar"/>
 
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
