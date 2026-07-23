@@ -103,8 +103,15 @@ namespace DSPRE.Avalonia.ViewModels
         public int CurrentHeaderId => _header?.ID ?? -1;
 
         // ── Sidebar tree (location-grouped) ──────────────────────────────────────────
-        private readonly AvaloniaList<HeaderTreeFolder> _treeFolders = new AvaloniaList<HeaderTreeFolder>();
-        public AvaloniaList<HeaderTreeFolder> TreeFolders => _treeFolders;
+        // Bound directly to the TreeView's ItemsSource, so this MUST be typed HeaderTreeNode (the base
+        // type), even though only HeaderTreeFolder instances are ever added at the root: Avalonia's
+        // TreeView resolves a clicked item's container via ItemsSourceView.IndexOf against this
+        // collection's IList.IndexOf(object), which does an unchecked (T)value cast before comparing —
+        // clicking a HeaderTreeLeaf nested under a folder throws InvalidCastException there if T is
+        // narrowed to HeaderTreeFolder, because the cast fails before it ever gets to "not found in this
+        // list, must be nested deeper." Root-only, strongly-typed iteration should use _allTreeFolders.
+        private readonly AvaloniaList<HeaderTreeNode> _treeFolders = new AvaloniaList<HeaderTreeNode>();
+        public AvaloniaList<HeaderTreeNode> TreeFolders => _treeFolders;
         private List<HeaderTreeFolder> _allTreeFolders = new List<HeaderTreeFolder>();
         private IReadOnlyList<HeaderSearchEntry> _headerSearchIndex = Array.Empty<HeaderSearchEntry>();
         private List<int> _locationIndexByHeader = new List<int>();
@@ -761,7 +768,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void ExpandFolderContaining(ushort headerId)
         {
-            foreach (var folder in TreeFolders)
+            foreach (var folder in _allTreeFolders)
                 if (folder.Children.OfType<HeaderTreeLeaf>().Any(l => l.HeaderId == headerId))
                 {
                     folder.IsExpanded = true;
@@ -771,7 +778,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private HeaderTreeLeaf FindLeaf(ushort headerId)
         {
-            foreach (var folder in TreeFolders)
+            foreach (var folder in _allTreeFolders)
             {
                 var leaf = folder.Children.OfType<HeaderTreeLeaf>().FirstOrDefault(l => l.HeaderId == headerId);
                 if (leaf != null) return leaf;
