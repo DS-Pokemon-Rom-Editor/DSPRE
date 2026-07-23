@@ -1431,7 +1431,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    abilityNamesTextNumber = 610;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 604 : 610;
                     break;
 
                 case GameFamilies.HGSS:
@@ -1448,11 +1448,11 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    attackNamesTextNumber = 588;
+                    attackNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 575 : 588;
                     break;
 
                 case GameFamilies.Plat:
-                    attackNamesTextNumber = 647;
+                    attackNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 636 : 647;
                     break;
 
                 default:
@@ -1471,7 +1471,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    itemNamesTextNumber = 392;
+                    itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 390 : 392;
                     itemDescriptionsTextNumber = 0;
                     break;
 
@@ -1487,11 +1487,11 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    locationNamesTextNumber = 382;
+                    locationNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 374 : 382;
                     break;
 
                 case GameFamilies.Plat:
-                    locationNamesTextNumber = 433;
+                    locationNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 427 : 433;
                     break;
 
                 default:
@@ -1509,7 +1509,9 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    pokemonNamesTextNumbers = new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
+                    pokemonNamesTextNumbers = gameLanguage == GameLanguages.Japanese
+                        ? new int[1] { 408 }
+                        : new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
                     break;
 
                 case GameFamilies.HGSS:
@@ -1531,7 +1533,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    trainerNamesMessageNumber = 618;
+                    trainerNamesMessageNumber = gameLanguage == GameLanguages.Japanese ? 611 : 618;
                     break;
 
                 default:
@@ -1557,7 +1559,9 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    trainerClassMessageNumber = 619;
+                    // Other languages have a separate "a Jogger"-style article-prefixed variant elsewhere;
+                    // Japanese doesn't use articles, so there's no equivalent bank to also branch on here.
+                    trainerClassMessageNumber = gameLanguage == GameLanguages.Japanese ? 612 : 619;
                     break;
 
                 default:
@@ -1571,20 +1575,21 @@ namespace DSPRE
         }
         private static void SetMoveTextNumbers()
         {
+            bool jp = gameLanguage == GameLanguages.Japanese;
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    moveDescriptionsTextNumbers = 587;
-                    moveNamesTextNumbers = 588;
+                    moveDescriptionsTextNumbers = jp ? 574 : 587;
+                    moveNamesTextNumbers = jp ? 575 : 588;
                     break;
                 case GameFamilies.Plat:
-                    moveDescriptionsTextNumbers = 646;
-                    moveNamesTextNumbers = 647;
+                    moveDescriptionsTextNumbers = jp ? 635 : 646;
+                    moveNamesTextNumbers = jp ? 636 : 647;
                     break;
 
                 case GameFamilies.HGSS:
-                    moveDescriptionsTextNumbers = 749;
-                    moveNamesTextNumbers = 750;
+                    moveDescriptionsTextNumbers = jp ? 738 : 749;
+                    moveNamesTextNumbers = jp ? 739 : 750;
                     break;
             }
         }
@@ -1609,16 +1614,17 @@ namespace DSPRE
 
         private static void SetTypesTextNumber()
         {
+            bool jp = gameLanguage == GameLanguages.Japanese;
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    typesTextNumber = 565;
+                    typesTextNumber = jp ? 555 : 565;
                     break;
                 case GameFamilies.Plat:
-                    typesTextNumber = 624;
+                    typesTextNumber = jp ? 616 : 624;
                     break;
                 case GameFamilies.HGSS:
-                    typesTextNumber = 735;
+                    typesTextNumber = jp ? 724 : 735;
                     break;
             }
         }
@@ -1631,7 +1637,7 @@ namespace DSPRE
                     trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 549 : 558;
                     break;
                 case GameFamilies.Plat:
-                    trainerMessageTextNumber = 617;
+                    trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 610 : 617;
                     break;
                 case GameFamilies.HGSS:
                     trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 718 : 728;
