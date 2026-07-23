@@ -291,6 +291,29 @@ namespace DSPRE.Avalonia
         private readonly bool _attackerIsEnemy;
         private readonly Dictionary<int, int> _wordToIndex = new Dictionary<int, int>();
 
+        /// <summary>Fired when a WEST_SE-family opcode plays a sound during preview, with the sound ID from the
+        /// command's argument. The ViewModel wires this to actually render + play it; left null, playback just
+        /// stays silent (the visual preview still runs normally).</summary>
+        public Action<int> PlaySound;
+
+        // Sounds scheduled by WEST_SE_WAITPLAY/WEST_SE_REPEAT to fire a real N-frame delay later instead of
+        // immediately — ticked once per Step() alongside everything else on this same frame timeline.
+        private readonly List<(int framesLeft, int soundId)> _pendingSounds = new List<(int, int)>();
+        private void SchedulePlaySound(int soundId, int delayFrames)
+        {
+            if (delayFrames <= 0) PlaySound?.Invoke(soundId);
+            else _pendingSounds.Add((delayFrames, soundId));
+        }
+        private void TickPendingSounds()
+        {
+            for (int i = _pendingSounds.Count - 1; i >= 0; i--)
+            {
+                var (framesLeft, soundId) = _pendingSounds[i];
+                if (framesLeft <= 0) { PlaySound?.Invoke(soundId); _pendingSounds.RemoveAt(i); }
+                else _pendingSounds[i] = (framesLeft - 1, soundId);
+            }
+        }
+
         // Jump to the command at a word-relative target (offset measured from argWord, the word holding the offset),
         // as the assembler encodes it: (target − .)/4. Returns true if the jump landed on a known command.
         private bool JumpRelative(int argWord, int offset)
@@ -299,11 +322,12 @@ namespace DSPRE.Avalonia
             return false;
         }
 
-        public bool Finished => _scriptDone && _renderer.AllFinished && _fadeFramesLeft <= 0 && _monFx.Count == 0 && !HasBackground && _cellPhase < 0;
+        public bool Finished => _scriptDone && _renderer.AllFinished && _fadeFramesLeft <= 0 && _monFx.Count == 0 && !HasBackground && _cellPhase < 0 && _pendingSounds.Count == 0;
         public WriteableBitmap RenderFrame() => _renderer.RenderFrame();
 
         public void Step()
         {
+            TickPendingSounds();
             UpdateFade();
             UpdateMonFx();
             UpdateBackground();
@@ -344,6 +368,43 @@ namespace DSPRE.Avalonia
                 {
                     case "WEST_SEQEND":
                         _scriptDone = true; return;
+
+                    // Sound-effect opcodes: the first argument is always the raw sound (sequence) number.
+                    // WEST_SEPAN_FLOW (a sound whose PAN sweeps from a start to an end value over time —
+                    // Water Gun/Hydro Pump's water-stream sound, confirmed via a real animation trace: both
+                    // use it, and were previously silent during animation playback despite rendering fine
+                    // from the card's manual preview button, because this opcode had no case here at all)
+                    // fires immediately like WEST_SE/WEST_SEPLAY_PAN; the pan sweep itself isn't modelled
+                    // (the render is a fixed mono-to-stereo pan like every other WEST_SE variant).
+                    case "WEST_SE":
+                    case "WEST_SEPLAY_PAN":
+                    case "WEST_SEPAN_FLOW":
+                        if (c.Args.Length >= 1) PlaySound?.Invoke(c.Args[0]);
+                        break;
+
+                    // WEST_SE_WAITPLAY sound,pan,wait — fires the sound `wait` FRAMES later, not immediately
+                    // (was previously approximated as instant, per this file's earlier doc comment — confirmed
+                    // wrong while investigating Metronome, which uses the sibling WEST_SE_REPEAT opcode with a
+                    // real, non-zero wait/repeat pair that was being silently dropped the same way).
+                    case "WEST_SE_WAITPLAY":
+                        if (c.Args.Length >= 3) SchedulePlaySound(c.Args[0], c.Args[2]);
+                        else if (c.Args.Length >= 1) PlaySound?.Invoke(c.Args[0]);
+                        break;
+
+                    // WEST_SE_REPEAT sound,pan,wait,repeat — plays the sound `repeat` times, `wait` frames
+                    // apart (Metronome's own tick: SEQ_SE_DP_W039 repeated 3x, 8 frames/~133ms apart — a
+                    // metronome's real ticking rhythm). Previously fired the sound exactly once with the
+                    // wait/repeat args silently dropped, which is the concrete gap behind a reported "loud,
+                    // wrong-sounding" Metronome tick — a single trigger of a sound authored to be heard as a
+                    // spaced-out rhythmic repeat reads as an unnaturally dense/loud one-shot instead.
+                    case "WEST_SE_REPEAT":
+                        if (c.Args.Length >= 4)
+                        {
+                            int wait = Math.Max(0, c.Args[2]), repeat = Math.Max(1, c.Args[3]);
+                            for (int r = 0; r < repeat; r++) SchedulePlaySound(c.Args[0], r * wait);
+                        }
+                        else if (c.Args.Length >= 1) PlaySound?.Invoke(c.Args[0]);
+                        break;
 
                     // WEST_TURN_CHK offEven,offOdd: pick ONE branch by the parity of the global
                     // waza_eff_cnt — for genuine two-turn moves (Fly/Dig) that's charge vs attack turn, but

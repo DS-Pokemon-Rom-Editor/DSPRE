@@ -75,7 +75,7 @@
                     <ItemsControl ItemsSource="{Binding Params}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ParamVM">
-                          <Grid ColumnDefinitions="86,*" ColumnSpacing="6" Margin="0,1">
+                          <Grid ColumnDefinitions="86,*,Auto" ColumnSpacing="6" Margin="0,1">
                             <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"
                                        Foreground="{DynamicResource Editor.Subtle}"/>
                             <!-- enum param → dropdown; otherwise → numeric entry -->
@@ -83,6 +83,12 @@
                                       ItemsSource="{Binding EnumItems}" SelectedIndex="{Binding SelectedEnumIndex}"/>
                             <NumericUpDown Grid.Column="1" IsVisible="{Binding IsInt}" Value="{Binding ValueDec}"
                                            FormatString="0" Increment="1" HorizontalAlignment="Stretch"/>
+                            <!-- Sound arguments (WEST_SE and friends): show the real sound name + a preview button. -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSound}" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding SoundName}" FontSize="11" VerticalAlignment="Center"
+                                         Foreground="{DynamicResource Editor.Subtle}" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
+                              <Button Content="🔊" Padding="6,2" Click="PreviewSound_Click" ToolTip.Tip="Play this sound"/>
+                            </StackPanel>
                           </Grid>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Forms;
 using WinFormsApp = System.Windows.Forms.Application;
 using Velopack;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE
 {
@@ -35,6 +36,10 @@ namespace DSPRE
             // This exe hosts the legacy WinForms shell (unless DSPRE_AVALONIA_SHELL=1 forces the
             // pure-Avalonia one); the cross-platform DSPRE.Avalonia exe never installs these hooks.
             WinFormsShellHost.InstallHooks();
+
+            // Real sound-effect playback. NAudioOutput itself no-ops on non-Windows, so this is safe to
+            // wire unconditionally (both shells do the same).
+            AudioOutput.Current = new NAudioOutput();
 
 #if DEBUG
             ScreenshotTool.EnableGlobally();

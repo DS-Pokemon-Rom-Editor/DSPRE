@@ -98,6 +98,12 @@ namespace DSPRE.Avalonia.Views
             if (VM == null) return;
             new ScriptCommandGuideView(VM.BuildCommandGuideViewModel()).ShowManaged();
         }
+        private async void PreviewSound_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.DataContext is not ParamVM p) return;
+            string error = p.PreviewSound();
+            if (error != null) await DSPRE.Avalonia.DialogHelper.ShowError(error, "Couldn't play sound");
+        }
         private void Up_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, -1); }
         private void Down_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, 1); }
         private void Remove_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.RemoveCommand(r); }

@@ -32,6 +32,13 @@ namespace DSPRE.Avalonia
 
         public bool Loaded => _cell != null && _char != null && _pltt != null && _anm != null;
 
+        /// <summary>Drops whatever resources are currently loaded. This instance is shared across every move
+        /// preview in the editor session (persisted so switching moves doesn't re-decode graphics unnecessarily),
+        /// so a move whose own WEST script has no CATS cell-anim resource must call this — otherwise the
+        /// PREVIOUS move's graphics (e.g. Surf's wave sprite) stay loaded and get reused by any later move
+        /// whose script still fires a generic ACT_ADD-family opcode.</summary>
+        public void Unload() { _char = null; _pltt = null; _cell = null; _anm = null; _cellRgbaCache.Clear(); }
+
         // Centre of the rendered sprite's non-transparent content in the 256×192 frame (for WE_057 scale/anchor).
         public int ContentCx { get; private set; } = 128;
         public int ContentCy { get; private set; } = 96;
@@ -42,6 +49,12 @@ namespace DSPRE.Avalonia
         public bool Load(int charIdx, int plttIdx, int cellIdx, int anmIdx)
         {
             _char = null; _pltt = null; _cell = null; _anm = null;
+            // RenderCellRgba's cache is keyed by a bare cell INDEX, with no idea which resource set it came
+            // from — without clearing it here, a later move whose actor requests the same index (e.g. cell 0)
+            // would get back a bitmap rendered from the PREVIOUSLY loaded char/pltt/cell archives instead of
+            // this move's own (confirmed live: Metronome's hand sprite bled into Icicle Spear this way, even
+            // after fixing the separate bug of Unload() never being called for cell-anim-less moves).
+            _cellRgbaCache.Clear();
             try
             {
                 string charPath = EntryPath(DirNames.wazaEffectChar, charIdx);

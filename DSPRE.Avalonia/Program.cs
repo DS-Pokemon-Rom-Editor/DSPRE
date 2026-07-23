@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Avalonia;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.AvaloniaShell
 {
@@ -19,6 +20,11 @@ namespace DSPRE.AvaloniaShell
 
             DSPRE.SettingsManager.Load();
             ApplyUiScaleOverride();
+
+            // Real sound-effect playback. NAudioOutput itself no-ops on non-Windows, so this is safe to
+            // wire unconditionally (matches the WinForms-hybrid shell's Program.cs).
+            AudioOutput.Current = new NAudioOutput();
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 

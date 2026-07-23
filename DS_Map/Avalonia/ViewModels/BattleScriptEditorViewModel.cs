@@ -84,6 +84,94 @@ namespace DSPRE.Avalonia.ViewModels
         /// archive uses (WEST move-animation opcodes, or the waza/be/sub effect-sequence opcodes).</summary>
         public ScriptCommandGuideViewModel BuildCommandGuideViewModel() => new ScriptCommandGuideViewModel(IsWest);
 
+        // ── Sound preview (WEST_SE and friends' "Sound" argument) ───────────────────────
+        // Lazily loads and caches the ROM's own sound archive so scrubbing through several sound IDs in a
+        // session only pays the parse cost once.
+        private SdatArchive _sdat;
+        private bool _sdatLoadTried;
+        private string _sdatLoadError;
+        private SdatArchive LoadSdat()
+        {
+            if (_sdat != null || _sdatLoadTried) return _sdat;
+            _sdatLoadTried = true;
+            try
+            {
+                // Verified directly against the leaked Platinum source (main/src/system/snd_system.c): Platinum's
+                // real init call is NNS_SndArcInit(..., "data/sound/pl_sound_data.sdat", ...), with the DP-era
+                // call left commented out right above it — "data/sound/sound_data.sdat", no prefix. So DP is a
+                // third, distinct filename, not just "whatever Plat uses" (the previous two-way ternary silently
+                // pointed DP projects at Platinum's "pl_" file, which a real DP ROM doesn't carry).
+                string fileName = gameFamily switch
+                {
+                    GameFamilies.HGSS => "gs_sound_data.sdat",
+                    GameFamilies.Plat => "pl_sound_data.sdat",
+                    GameFamilies.DP => "sound_data.sdat",
+                    _ => "sound_data.sdat",
+                };
+                // workDir is the project's own root (where arm9/banner/etc. live); the ROM's own internal
+                // filesystem (where "data/sound/..." actually lives) is nested one level deeper, under "files"
+                // for a ds-rom project or "data" for a legacy one.
+                string romRoot = System.IO.Path.Combine(workDir, IsDsRomProject ? "files" : "data");
+                string path = System.IO.Path.Combine(romRoot, "data", "sound", fileName);
+                if (!System.IO.File.Exists(path)) { _sdatLoadError = $"Sound archive not found at:\n{path}"; return null; }
+                _sdat = SdatArchive.Parse(System.IO.File.ReadAllBytes(path));
+                if (_sdat.Sequences.Count == 0) _sdatLoadError = $"Sound archive at {path} parsed to 0 sequences (unexpected format?).";
+            }
+            catch (System.Exception ex) { _sdat = null; _sdatLoadError = ex.ToString(); }
+            return _sdat;
+        }
+
+        /// <summary>The sound's real name from the ROM's own sound archive (e.g. "SEQ_SE_PL_KEZURI"), or null if
+        /// it can't be resolved — shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
+        private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out var n) == true ? n : null;
+
+        /// <summary>Renders and plays the given sound ID through the active <see cref="AudioOutput"/> backend.
+        /// Best-effort: an out-of-range ID or an unresolved instrument just stays silent rather than erroring.
+        /// Used during animation playback, where a popup per failed note would be disruptive.
+        ///
+        /// Rendering (SSEQ interpretation + PCM mixdown) runs on a background thread, not inline on the
+        /// caller. This is called from <see cref="WestPlayer"/>'s frame Step(), which runs on the UI dispatcher's
+        /// 60Hz preview timer — measured directly (GC.GetAllocatedBytesForCurrentThread on real ROM sounds):
+        /// every render allocates ~2MB on the Large Object Heap, and repeated LOH churn from firing several SEs
+        /// through a script's timeline provokes blocking gen1/gen2 collections that stall every thread in the
+        /// process, including whatever's already mid-playback. That reads as exactly the "choppy"/"staticky"
+        /// glitching this was built to avoid, and it has nothing to do with the sound content itself. Moving the
+        /// render off the dispatcher thread keeps the 60Hz animation loop from stalling on it and stops the
+        /// allocation from landing in the same GC generation the UI thread's own churn is driving.</summary>
+        private void PreviewSound(int soundId)
+        {
+            var sdat = LoadSdat();
+            if (sdat == null) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var pcm = SseqPlayer.Render(sdat, soundId);
+                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
+                }
+                catch { /* best-effort preview; animation playback must never surface an error dialog */ }
+            });
+        }
+
+        /// <summary>Same as <see cref="PreviewSound"/> but returns a human-readable reason on failure (null on
+        /// success), for the card's "Preview sound" button to surface via a dialog instead of failing silently.</summary>
+        internal string TryPreviewSound(int soundId)
+        {
+            var sdat = LoadSdat();
+            if (sdat == null) return _sdatLoadError ?? "Sound archive could not be loaded.";
+            try
+            {
+                if (!sdat.SeqNames.ContainsKey(soundId) && (soundId < 0 || soundId >= sdat.Sequences.Count || sdat.Sequences[soundId] == null))
+                    return $"Sound ID {soundId} doesn't resolve to a sequence in this ROM's sound archive.";
+                var pcm = SseqPlayer.Render(sdat, soundId);
+                if (pcm == null || pcm.Length == 0) return $"Sound {soundId} rendered to no audio (an unsupported instrument type, most likely).";
+                AudioOutput.Current.Play(pcm, 32000);
+                if (AudioOutput.Current is NullAudioOutput) return "No audio backend is wired up in this shell (the pure cross-platform preview build has no sound output yet).";
+                return null;
+            }
+            catch (System.Exception ex) { return ex.ToString(); }
+        }
+
         /// <summary>Internal opcode names for the current archive (index = opcode id) — used for schema lookups.</summary>
         public ObservableCollection<string> OpcodeNames { get; } = new ObservableCollection<string>();
         /// <summary>Friendly opcode titles (index = opcode id) — drives the per-row opcode dropdown.</summary>
@@ -181,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void AddRow(int opId, int[] args)
         {
-            var row = new ScriptCmdRow { OpNameOf = OpNameOf, FixedArgCountOf = FixedArgCountOf, OnEdited = OnRowEdited };
+            var row = new ScriptCmdRow { OpNameOf = OpNameOf, FixedArgCountOf = FixedArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
             row.Args.AddRange(args ?? System.Array.Empty<int>());
             row._opIdSilent(opId);   // set without firing OnEdited during load
             row.Rebuild();
@@ -759,10 +847,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool RealGaugesVisible => HasRealGauges && GaugesVisible;
         public bool PlaceholderGaugesVisible => !HasRealGauges && GaugesVisible;
 
-        private int GetMoveFlagField()
+        private int GetMoveFlagField(int moveId = -1)
         {
-            if ((Archive)_archiveIndex != Archive.MoveAnimation || _fileIndex < 0) return -1;
-            try { return new MoveData(_fileIndex).flagField; }
+            if (moveId < 0) moveId = _fileIndex;
+            if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return -1;
+            try { return new MoveData(moveId).flagField; }
             catch { return -1; }
         }
 
@@ -927,33 +1016,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (IsWest && _fileIndex >= 0)
             {
                 var cmds = BuildCommands();
-
-                var res = WestCats.Extract(cmds, _version);
-                if (res.HasCellAnimation)
-                {
-                    bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
-                    if (loaded)
-                    {
-                        // WE_057 picks the cell animation SEQUENCE by side (0=player /
-                        // 1=enemy) — sequence 1 is the enemy-facing (flipped) wave.
-                        int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
-                        _cellFrames = _cellRenderer.RenderAnimation(bank);
-                        if (_cellFrames.Count > 0)
-                        {
-                            HasCellAnimation = true;   // shown only on ▶ play, not as a static poster
-                            CellOrigin = new global::Avalonia.RelativePoint(
-                                _cellRenderer.ContentCx / 256.0, _cellRenderer.ContentCy / 192.0,
-                                global::Avalonia.RelativeUnit.Relative);
-                        }
-                    }
-                    AppLogger.Info($"WEST cell-anim file {_fileIndex}: char={res.Char} pltt={res.Pltt} cell={res.Cell} " +
-                        $"anm={res.CellAnm} → load={loaded} banks={_cellRenderer.AnimationCount} frames={_cellFrames.Count}");
-                }
-                else
-                {
-                    AppLogger.Info($"WEST file {_fileIndex}: no CATS cell-anim (char={res.Char} pltt={res.Pltt} " +
-                        $"cell={res.Cell} anm={res.CellAnm})");
-                }
+                LoadCellResourcesForCommands(cmds, _fileIndex);
 
                 int emitters = WestParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
@@ -967,24 +1030,107 @@ namespace DSPRE.Avalonia.ViewModels
             RaisePreviewProps();
         }
 
+        /// <summary>Loads (or explicitly unloads) the shared <see cref="_cellRenderer"/> for one move's parsed
+        /// commands, updating <see cref="HasCellAnimation"/>/<see cref="_cellFrames"/>/<see cref="CellOrigin"/>.
+        /// Factored out of <see cref="SetupCellPreview"/> so the Metronome "plays a randomly called move's real
+        /// animation" preview (see <see cref="StartChainedWest"/>) can load the CALLED move's own cell resource
+        /// the same correct way — without this, the called move would render with whatever Metronome's own hand
+        /// graphics left loaded (the exact stale-cache bug already fixed once for ordinary move-to-move switches).</summary>
+        private void LoadCellResourcesForCommands(List<WazaSeqCommand> cmds, int moveIdForLogging)
+        {
+            HasCellAnimation = false;
+            var res = WestCats.Extract(cmds, _version);
+            if (res.HasCellAnimation)
+            {
+                bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
+                if (loaded)
+                {
+                    // WE_057 picks the cell animation SEQUENCE by side (0=player /
+                    // 1=enemy) — sequence 1 is the enemy-facing (flipped) wave.
+                    int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
+                    _cellFrames = _cellRenderer.RenderAnimation(bank);
+                    if (_cellFrames.Count > 0)
+                    {
+                        HasCellAnimation = true;   // shown only on ▶ play, not as a static poster
+                        CellOrigin = new global::Avalonia.RelativePoint(
+                            _cellRenderer.ContentCx / 256.0, _cellRenderer.ContentCy / 192.0,
+                            global::Avalonia.RelativeUnit.Relative);
+                    }
+                }
+                AppLogger.Info($"WEST cell-anim file {moveIdForLogging}: char={res.Char} pltt={res.Pltt} cell={res.Cell} " +
+                    $"anm={res.CellAnm} → load={loaded} banks={_cellRenderer.AnimationCount} frames={_cellFrames.Count}");
+            }
+            else
+            {
+                // _cellRenderer is shared across every move preview in this session (not recreated per
+                // move) — without explicitly unloading here, a move with no CATS resource of its own
+                // would keep whatever the PREVIOUSLY previewed move loaded (e.g. Surf's wave sprite),
+                // and any later move whose script still fires a generic ACT_ADD-family opcode would
+                // render using that stale graphic instead of nothing.
+                _cellRenderer.Unload();
+                _cellFrames = Array.Empty<WeCellAnimRenderer.Frame>();
+                AppLogger.Info($"WEST file {moveIdForLogging}: no CATS cell-anim (char={res.Char} pltt={res.Pltt} " +
+                    $"cell={res.Cell} anm={res.CellAnm})");
+            }
+        }
+
+        // Metronome's real move id, verified against the leak's wazano_def.h (WAZANO_METRONOME = 118) —
+        // consistent across DP/Platinum/HGSS since all three generations share the same move-id table. Its
+        // own WEST script is just the self-contained finger-wag flourish (resource set 3, confirmed by
+        // parsing the real script directly); the actual "call a random other move" behaviour lives in the
+        // battle engine's move-selection logic, not in the animation script — so this preview picks one
+        // itself, purely as a fun, plausible-looking bonus once the finger-wag finishes.
+        private const int MetronomeMoveId = 118;
+        private bool IsMetronomePreview => IsWest && _fileIndex == MetronomeMoveId;
+        private static readonly Random _metronomeRandom = new Random();
+        private int _metronomeCalledMoveId = -1;
+
+        /// <summary>Picks a move id for Metronome's preview flourish to "call". Real Metronome excludes a long,
+        /// specific table of moves (other move-calling moves, signature/exclusive moves, Struggle, etc.) — not
+        /// ported here, since this is a discretionary visual bonus, not an accuracy requirement; only excludes
+        /// Metronome itself, move id 0 (the no-move placeholder) and any id whose script fails to parse.</summary>
+        private int PickRandomMetronomeTarget()
+        {
+            int count = CurrentNarc.Count;
+            if (count <= 1) return -1;
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                int id = _metronomeRandom.Next(1, count);
+                if (id == MetronomeMoveId) continue;
+                var bytes = CurrentNarc.Get(id);
+                if (bytes != null && bytes.Length >= 4) return id;
+            }
+            return -1;
+        }
+
         public void ToggleCellPlay()
         {
             if (!HasPreview) return;
             if (IsCellPlaying) { StopCell(); return; }
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
+            // Re-establish the CURRENTLY selected move's own cell resource before every fresh play, not just
+            // when the move is first selected: a previous play-through may have chained into a Metronome-
+            // called move (StartChainedWest), which reloads the shared _cellRenderer for THAT move — without
+            // redoing it here, a second Play click on Metronome itself would start with the LAST called
+            // move's graphics (or none) still loaded instead of Metronome's own hand, since SetupCellPreview
+            // only runs on move SELECTION, not on repeated Play clicks for the same move.
+            var cmds = BuildCommands();
+            LoadCellResourcesForCommands(cmds, _fileIndex);
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
             // Fresh timeline interpreter each play: runs the WEST script, spawning emitters / firing shake+fade
             // at the right frames, anchored on the two Shuckle.
             // Anchor the attacker on the chosen side: player (bottom) by default, enemy (top) when toggled.
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
-            _west = new WestPlayer(BuildCommands(), _version, _particleNarc, aX, aY, dX, dY,
+            _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
                                    attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove());
             _west.Cells = _cellRenderer;   // general CATS engine: ACT_ADD opcodes spawn live cell actors from these
+            _west.PlaySound = PreviewSound;   // WEST_SE-family opcodes audibly play their sound during preview
             _west.MovePower = GetMovePower();   // real base power (MoveData.damage) for WE_222's power-scaled shake
             int moveFlag = GetMoveFlagField();  // WazaData byte 11: hide gauges unless FLAG_PUT_GAUGE, shadow if DEL_SHADOW
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
             _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
+            _metronomeCalledMoveId = IsMetronomePreview ? PickRandomMetronomeTarget() : -1;
 
             ParticlePreview = _west.RenderFrame();
             _previewTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
@@ -993,22 +1139,52 @@ namespace DSPRE.Avalonia.ViewModels
             RaisePreviewProps();
         }
 
+        /// <summary>Swaps the live preview to a SECOND, independent WestPlayer for the move Metronome "called" —
+        /// its own real WEST script (not the currently-edited grid), so an in-progress edit to Metronome's own
+        /// script can't affect it. Reloads the shared cell renderer for the called move's own CATS resource
+        /// (same fix as ordinary move-to-move switching — otherwise it would render with Metronome's hand).</summary>
+        private void StartChainedWest(int moveId)
+        {
+            var bytes = CurrentNarc.Get(moveId);
+            var cmds = bytes != null ? WestScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
+            LoadCellResourcesForCommands(cmds, moveId);
+
+            double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
+            double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
+            _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
+                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId));
+            _west.Cells = _cellRenderer;
+            _west.PlaySound = PreviewSound;
+            _west.MovePower = GetMovePower(moveId);
+            int moveFlag = GetMoveFlagField(moveId);
+            _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
+            _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
+            _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0;
+            if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
+
+            string calledName = moveId >= 0 && moveId < _moveNames.Length ? _moveNames[moveId] : $"Move {moveId}";
+            CellAnimNote = $"🎲 Metronome called {calledName}!";
+            RaisePreviewProps();
+        }
+
         // A move whose range targets the user (User / User-side / User-or-ally bits) plays its effect on the caster —
         // in-game df_client == at_client. Only meaningful for the move-animation archive (file index = move id).
         // The move's base power (MoveData.damage) when previewing the move-animation archive, else −1 (unknown).
-        private int GetMovePower()
+        private int GetMovePower(int moveId = -1)
         {
-            if ((Archive)_archiveIndex != Archive.MoveAnimation || _fileIndex < 0) return -1;
-            try { return new MoveData(_fileIndex).damage; }
+            if (moveId < 0) moveId = _fileIndex;
+            if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return -1;
+            try { return new MoveData(moveId).damage; }
             catch { return -1; }
         }
 
-        private bool IsSelfTargetMove()
+        private bool IsSelfTargetMove(int moveId = -1)
         {
-            if ((Archive)_archiveIndex != Archive.MoveAnimation || _fileIndex < 0) return false;
+            if (moveId < 0) moveId = _fileIndex;
+            if ((Archive)_archiveIndex != Archive.MoveAnimation || moveId < 0) return false;
             try
             {
-                ushort range = new MoveData(_fileIndex).target;
+                ushort range = new MoveData(moveId).target;
                 const ushort USER = 1 << 4, USER_SIDE = 1 << 5, USER_OR_ALLY = 1 << 9;
                 return (range & (USER | USER_SIDE | USER_OR_ALLY)) != 0;
             }
@@ -1047,12 +1223,21 @@ namespace DSPRE.Avalonia.ViewModels
                     TintBrush = new SolidColorBrush(Color.FromRgb(_west.TintR, _west.TintG, _west.TintB));
             }
             bool done = _west != null ? _west.Finished : (_cellLoops >= 1);
+            if (done && _metronomeCalledMoveId >= 0)
+            {
+                int calledMoveId = _metronomeCalledMoveId;
+                _metronomeCalledMoveId = -1;   // only chain once — the called move doesn't itself call another
+                _previewFrames = 0;
+                StartChainedWest(calledMoveId);
+                return;   // keep the timer running for the chained move instead of stopping
+            }
             if (done || ++_previewFrames >= MaxPreviewFrames) StopCell();
         }
 
         private void StopCell()
         {
             _previewTimer?.Stop();
+            _metronomeCalledMoveId = -1;   // manually stopped mid-Metronome — don't chain into it on a later, unrelated play
             BackgroundFrame = null;
             CellPreview = null; ParticlePreview = null;   // don't leave the last wave/particle frame statically on screen
             // Re-render the static scene: the last played frame may have mons hidden / dragged (Dark Void
@@ -1101,6 +1286,8 @@ namespace DSPRE.Avalonia.ViewModels
         internal System.Func<int, string> OpNameOf;
         internal System.Func<int, int> FixedArgCountOf;
         internal System.Action<ScriptCmdRow> OnEdited;
+        internal System.Func<int, string> PreviewSound;   // returns an error message, or null on success
+        internal System.Func<int, string> SoundNameOf;
 
         public System.Collections.Generic.List<int> Args { get; } = new();
         public ObservableCollection<ParamVM> Params { get; } = new();
@@ -1198,10 +1385,16 @@ namespace DSPRE.Avalonia.ViewModels
         public int Value
         {
             get => _value;
-            set { if (_value != value) { _value = value; Raise(nameof(Value)); Raise(nameof(ValueDec)); Raise(nameof(SelectedEnumIndex)); _row.SetParam(_index, value); } }
+            set { if (_value != value) { _value = value; Raise(nameof(Value)); Raise(nameof(ValueDec)); Raise(nameof(SelectedEnumIndex)); Raise(nameof(SoundName)); _row.SetParam(_index, value); } }
         }
         // NumericUpDown.Value is decimal? — bridge it to the int store.
         public decimal ValueDec { get => _value; set { Value = (int)value; } }
+
+        // A "Sound" argument gets a name lookup + a preview-playback button next to its numeric entry.
+        public bool IsSound => Name == "Sound";
+        public string SoundName => IsSound ? _row.SoundNameOf?.Invoke(_value) : null;
+        /// <summary>Plays this sound; returns an error message to show the user, or null on success.</summary>
+        public string PreviewSound() => IsSound ? _row.PreviewSound?.Invoke(_value) : null;
 
         public int SelectedEnumIndex
         {
