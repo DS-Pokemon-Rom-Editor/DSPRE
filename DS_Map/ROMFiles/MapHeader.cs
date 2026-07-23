@@ -201,6 +201,18 @@ namespace DSPRE.ROMFiles {
         }
 
         public static MapHeader GetMapHeader(ushort headerNumber) {
+            // Callers routinely probe a header number that comes from ROM data (e.g. a warp's
+            // destination-header field) rather than from a UI control already clamped to a valid
+            // range, so an out-of-range value here is an expected "no such header" case, not a
+            // corrupt-file situation. Without this guard, LoadFromFile reads past the end of the
+            // header table, LoadFromByteArray sees a too-short buffer and pops an "Header file too
+            // small" error dialog for what is really just "there is no header this large" — return
+            // null quietly instead, matching what every caller (e.g. EventEditorViewModel.TestWarp)
+            // already expects a not-found lookup to look like.
+            if (headerNumber >= GetHeaderCount()) {
+                return null;
+            }
+
             MapHeader mapHeader;
 
             //Dynamic headers patch unsupported in DP

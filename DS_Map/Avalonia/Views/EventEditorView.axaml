@@ -144,6 +144,9 @@
                   </StackPanel>
 
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptIndexOutOfRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
 
                   <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
@@ -222,8 +225,12 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
-                  <TextBlock Text="Script / width / height" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptIndexOutOfRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
+                  <TextBlock Text="Width / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrWidth}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrHeight}"/>
                   <TextBlock Text="Variable watched / expected value" FontWeight="Bold" Margin="0,4,0,0"/>
@@ -261,8 +268,12 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
-                  <TextBlock Text="Script / type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptIndexOutOfRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
+                  <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpType}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpDir}"/>
                 </StackPanel>

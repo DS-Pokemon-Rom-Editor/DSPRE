@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels
         private EventFile _file;
 
         // ── 3D map view ────────────────────────────────────────────────────────────────
-        private Dictionary<int, (ushort matrixId, byte areaId)> _eventToHeader; // event file → its header's matrix + area
+        private Dictionary<int, (ushort matrixId, byte areaId, ushort scriptFileId)> _eventToHeader; // event file → its header's matrix + area + paired script file
         private GameMatrix _matrix;
         private byte _areaDataId;
         private readonly Dictionary<long, byte[,]> _collisionCache = new Dictionary<long, byte[,]>();
@@ -138,6 +138,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (_ow != null) _ow.scriptNumber = value;
             _owScript = value;
             OnPropertyChanged(nameof(OwScript));
+            OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
             Dirty();
         }
 
@@ -239,9 +240,27 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Spawnable fields ────────────────────────────────────────────────────────
         private decimal _spScript, _spType, _spDir;
-        public decimal SpScript { get => _spScript; set { if (Set(ref _spScript, value) && !_suppress && _spawn != null) { _spawn.scriptNumber = (ushort)value; Dirty(); } } }
+        public decimal SpScript
+        {
+            get => _spScript;
+            set
+            {
+                if (Set(ref _spScript, value) && !_suppress && _spawn != null)
+                {
+                    _spawn.scriptNumber = (ushort)value; Dirty();
+                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
+                }
+            }
+        }
         public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.type = (ushort)value; Dirty(); } } }
         public decimal SpDir { get => _spDir; set { if (Set(ref _spDir, value) && !_suppress && _spawn != null) { _spawn.dir = (ushort)value; Dirty(); } } }
+
+        public int SpScriptIndex
+        {
+            get => IndexOfAvailableScript(_spScript);
+            set { if (value >= 0 && value < _availableScriptIds.Count) SpScript = _availableScriptIds[value]; }
+        }
+        public bool SpScriptIndexOutOfRange => _spawn != null && SpScriptIndex < 0;
 
         // ── Overworld fields ────────────────────────────────────────────────────────
         private decimal _owId, _owSprite, _owMove, _owType, _owFlag, _owScript, _owOrient, _owSight, _owXr, _owYr;
@@ -254,7 +273,24 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal OwMovement { get => _owMove; set { if (Set(ref _owMove, value) && !_suppress && _ow != null) { _ow.movement = (ushort)value; Dirty(); } } }
         public decimal OwType { get => _owType; set { if (Set(ref _owType, value) && !_suppress && _ow != null) { _ow.type = (ushort)value; Dirty(); } } }
         public decimal OwFlag { get => _owFlag; set { if (Set(ref _owFlag, value) && !_suppress && _ow != null) { _ow.flag = (ushort)value; Dirty(); } } }
-        public decimal OwScript { get => _owScript; set { if (Set(ref _owScript, value) && !_suppress && _ow != null) { _ow.scriptNumber = (ushort)value; Dirty(); } } }
+        public decimal OwScript
+        {
+            get => _owScript;
+            set
+            {
+                if (Set(ref _owScript, value) && !_suppress && _ow != null)
+                {
+                    _ow.scriptNumber = (ushort)value; Dirty();
+                    OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
+                }
+            }
+        }
+        public int OwScriptIndex
+        {
+            get => IndexOfAvailableScript(_owScript);
+            set { if (value >= 0 && value < _availableScriptIds.Count) OwScript = _availableScriptIds[value]; }
+        }
+        public bool OwScriptIndexOutOfRange => _ow != null && OwScriptIndex < 0;
         public decimal OwOrientation
         {
             get => _owOrient;
@@ -313,7 +349,24 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Trigger fields ──────────────────────────────────────────────────────────
         private decimal _trScript, _trW, _trH, _trVarVal, _trVar;
-        public decimal TrScript { get => _trScript; set { if (Set(ref _trScript, value) && !_suppress && _trig != null) { _trig.scriptNumber = (ushort)value; Dirty(); } } }
+        public decimal TrScript
+        {
+            get => _trScript;
+            set
+            {
+                if (Set(ref _trScript, value) && !_suppress && _trig != null)
+                {
+                    _trig.scriptNumber = (ushort)value; Dirty();
+                    OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
+                }
+            }
+        }
+        public int TrScriptIndex
+        {
+            get => IndexOfAvailableScript(_trScript);
+            set { if (value >= 0 && value < _availableScriptIds.Count) TrScript = _availableScriptIds[value]; }
+        }
+        public bool TrScriptIndexOutOfRange => _trig != null && TrScriptIndex < 0;
         public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value) && !_suppress && _trig != null) { _trig.widthX = (ushort)value; Dirty(); } } }
         public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value) && !_suppress && _trig != null) { _trig.heightY = (ushort)value; Dirty(); } } }
         public decimal TrVarValue { get => _trVarVal; set { if (Set(ref _trVarVal, value) && !_suppress && _trig != null) { _trig.expectedVarValue = (ushort)value; Dirty(); } } }
@@ -432,6 +485,7 @@ namespace DSPRE.Avalonia.ViewModels
             LoadPosition(_spawn);
             SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
             _suppress = false;
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
             RefreshMarkers();
         }
 
@@ -446,6 +500,7 @@ namespace DSPRE.Avalonia.ViewModels
             OwFlag = _ow.flag; OwScript = _ow.scriptNumber; OwOrientation = _ow.orientation; OwSight = _ow.sightRange;
             OwXRange = _ow.xRange; OwYRange = _ow.yRange;
             OnPropertyChanged(nameof(OwSpriteIndex)); OnPropertyChanged(nameof(OwMovementIndex)); OnPropertyChanged(nameof(OwOrientationIndex));
+            OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
 
             // Derive the Standard/Trainer/Item radio selection + locked-script dropdown index from the
             // raw type/scriptNumber (mirrors WinForms' overworldsListBox_SelectedIndexChanged, but uses
@@ -504,6 +559,7 @@ namespace DSPRE.Avalonia.ViewModels
             TrScript = _trig.scriptNumber; TrWidth = _trig.widthX; TrHeight = _trig.heightY;
             TrVarValue = _trig.expectedVarValue; TrVar = _trig.variableWatched;
             _suppress = false;
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
             RefreshMarkers();
         }
 
@@ -580,9 +636,9 @@ namespace DSPRE.Avalonia.ViewModels
         /// references it (<see cref="MapHeader.eventFileID"/>). This is the real ROM linkage
         /// the WinForms editor uses to pick the correct map + texture packs for an event file.
         /// </summary>
-        private static Dictionary<int, (ushort, byte)> BuildEventHeaderLookup()
+        private static Dictionary<int, (ushort, byte, ushort)> BuildEventHeaderLookup()
         {
-            var lookup = new Dictionary<int, (ushort, byte)>();
+            var lookup = new Dictionary<int, (ushort, byte, ushort)>();
             try
             {
                 int headerCount = GetHeaderCount();
@@ -593,7 +649,7 @@ namespace DSPRE.Avalonia.ViewModels
                         var header = MapHeader.GetMapHeader(h);
                         if (header == null) continue;
                         if (!lookup.ContainsKey(header.eventFileID))
-                            lookup[header.eventFileID] = (header.matrixID, header.areaDataID);
+                            lookup[header.eventFileID] = (header.matrixID, header.areaDataID, header.scriptFileID);
                     }
                     catch { /* skip bad header */ }
                 }
@@ -607,6 +663,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _matrix = null; _areaDataId = 0; _matrixId = -1;
             _collisionCache.Clear();
+            int pairedScriptFileId = -1;
             try
             {
                 if (_eventToHeader != null && _eventToHeader.TryGetValue(eventIndex, out var hdr))
@@ -614,11 +671,45 @@ namespace DSPRE.Avalonia.ViewModels
                     _matrixId = hdr.Item1;
                     _matrix = new GameMatrix(hdr.Item1);
                     _areaDataId = hdr.Item2;
+                    pairedScriptFileId = hdr.Item3;
                 }
             }
             catch (Exception ex) { AppLogger.Error("Matrix resolve failed: " + ex.Message); }
+            PopulateAvailableScripts(pairedScriptFileId);
             DisplayMap();
         }
+
+        // ── Scripts available to this event file (the header's paired script file) ────────
+        /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.scriptFileID"/>),
+        /// so Overworld/Trigger/Spawnable "Script" fields can be picked from a dropdown of what's actually
+        /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c> — the
+        /// number these events' <c>scriptNumber</c> fields reference — not necessarily a plain 0..N-1 run.</summary>
+        public ObservableCollection<string> AvailableScripts { get; } = new ObservableCollection<string>();
+        private readonly List<uint> _availableScriptIds = new List<uint>();
+
+        private void PopulateAvailableScripts(int scriptFileId)
+        {
+            AvailableScripts.Clear();
+            _availableScriptIds.Clear();
+            if (scriptFileId >= 0)
+            {
+                try
+                {
+                    var scriptFile = new ScriptFile(scriptFileId);
+                    foreach (var container in scriptFile.allScripts)
+                    {
+                        _availableScriptIds.Add(container.manualUserID);
+                        AvailableScripts.Add($"Script {container.manualUserID} ({container.commands?.Count ?? 0} cmds)");
+                    }
+                }
+                catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
+            }
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
+        }
+
+        private int IndexOfAvailableScript(decimal rawValue) => _availableScriptIds.IndexOf((uint)rawValue);
 
         private int _matrixId = -1;
 
