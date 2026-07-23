@@ -43,6 +43,7 @@
         <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
         <Separator/>
         <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
+        <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}"/>
         <Separator/>
         <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
       </MenuItem>

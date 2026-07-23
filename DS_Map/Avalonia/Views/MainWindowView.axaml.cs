@@ -426,6 +426,9 @@ namespace DSPRE.Avalonia.Views
         private void TradeEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTradeEditor();
 
+        private void StarterEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenStarterEditor();
+
         private void TrainerEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerEditor();
 

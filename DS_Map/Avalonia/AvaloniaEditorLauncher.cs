@@ -220,6 +220,14 @@ namespace DSPRE.Avalonia
             new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
+        public static void OpenStarterEditor()
+        {
+            if (!IsRomLoaded || BlockedForHge("The Starter Pokémon Editor") || !RomInfo.IsStarterEditorAvailable()) return;
+            // scripts: rival/tag-battle team patches + DP/Pt held item; personalPokeData: primary-type lookup for text patch.
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData });
+            new StarterEditorView().ShowManaged();
+        }
+
         // ── World / data editors ───────────────────────────────────────────────
         public static void OpenFlyWarpEditor()
         {
@@ -425,6 +433,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
             new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
+            new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },

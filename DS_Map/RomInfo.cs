@@ -66,6 +66,21 @@ namespace DSPRE
         public static uint pickupActivationDivisorOffset { get; private set; }
         public static uint pickupWeightTableOffset { get; private set; }
 
+        // Starter Pokémon table. DP/Pt: a fixed overlay offset (species IDs are 4-byte words, held item lives
+        // separately in a script file). HGSS: no fixed offset — species are found at runtime via
+        // starterArm9SearchSuffix (a byte-pattern search over arm9.bin), so starterOverlayNumber there only
+        // covers the starter-cries table (a separate table, still overlay-based on HGSS).
+        public static int starterOverlayNumber { get; private set; } = -1;
+        public static uint starterSpeciesOffset { get; private set; }
+        public static byte[] starterArm9SearchSuffix { get; private set; }
+        public static string starterGraphicsPrefix { get; private set; }        // DP/Pt only
+        public static string starterGraphicsPrefixInner { get; private set; }   // DP/Pt only
+        public static string starterCriesPrefix { get; private set; }           // HGSS only
+        public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
+        public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
+        public static int starterScreenTextNumber { get; private set; } = -1;
+        public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
+
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
 
@@ -339,6 +354,7 @@ namespace DSPRE
             SetNullEncounterID();
             SetPickupTableOffsets();
             SetItemTableOffset();
+            SetStarterOffsets();
 
             SetAbilityNamesTextNumber();
             SetAttackNamesTextNumber();
@@ -811,6 +827,90 @@ namespace DSPRE
                             pickupRareItemsOffset = 0x34A4C;
                             pickupActivationDivisorOffset = 0xC852;
                             pickupWeightTableOffset = 0x3518C;
+                            break;
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Offsets for the Starter Pokémon editor. Sourced from Universal Pokémon Randomizer FVX's
+        /// gen4_offsets.ini (its "(E)"/"(G)"/"(F)"/"(S)"/"(I)" ROM entries all CopyFrom the "(U)" entry with
+        /// zero Starter-key overrides, so English and every European language share identical offsets here;
+        /// Japanese has its own confirmed offsets). HGSS species aren't offset-based at all — see
+        /// <see cref="starterArm9SearchSuffix"/> — so only the cries-table overlay is set for that family.
+        /// </summary>
+        public static void SetStarterOffsets()
+        {
+            // Initialize to invalid values by default
+            starterOverlayNumber = -1;
+            starterSpeciesOffset = 0;
+            starterArm9SearchSuffix = null;
+            starterGraphicsPrefix = null;
+            starterGraphicsPrefixInner = null;
+            starterCriesPrefix = null;
+            starterHeldItemScriptFileID = -1;
+            starterHeldItemOffset = 0;
+            starterScreenTextNumber = -1;
+            starterPokedexSpeciesTextNumber = -1;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    starterOverlayNumber = 64;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 342;
+                    starterHeldItemOffset = 0x2B4;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x30;
+                            starterScreenTextNumber = 318;
+                            starterPokedexSpeciesTextNumber = 607;
+                            break;
+                        default: // English + EFIGS share identical offsets
+                            starterSpeciesOffset = 0x1B88;
+                            starterScreenTextNumber = 320;
+                            starterPokedexSpeciesTextNumber = 621;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    starterOverlayNumber = 78;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 427;
+                    starterHeldItemOffset = 0x460;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x1BAC;
+                            starterScreenTextNumber = 359;
+                            starterPokedexSpeciesTextNumber = 698;
+                            break;
+                        default: // English + EFIGS share identical offsets
+                            starterSpeciesOffset = 0x1BC0;
+                            starterScreenTextNumber = 360;
+                            starterPokedexSpeciesTextNumber = 711;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    // Species IDs are read/written straight in arm9.bin via this byte-pattern search (species
+                    // words start 13 bytes before the match) rather than a fixed offset — see StarterPokemonData.
+                    starterArm9SearchSuffix = new byte[] { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
+                    starterOverlayNumber = 61; // starter-cries table only (species table is in ARM9, above)
+                    starterCriesPrefix = "0004000C10BD0000000000000000000000E000000000000000E0000000000200";
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterScreenTextNumber = 188;
+                            break;
+                        default: // English + EFIGS share identical offsets
+                            starterScreenTextNumber = 190;
                             break;
                     }
                     break;
@@ -2337,6 +2437,15 @@ namespace DSPRE
         public static bool IsRockSmashItemTableAvailable()
         {
             return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+        }
+
+        /// <summary>
+        /// Checks if the Starter Pokémon editor is available for the current ROM. Offsets are known for
+        /// DP/Plat/HGSS in English and every European language (all share the "(U)" offsets) plus Japanese.
+        /// </summary>
+        public static bool IsStarterEditorAvailable()
+        {
+            return gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
         }
 
         /// <summary>

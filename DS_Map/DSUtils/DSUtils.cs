@@ -104,6 +104,28 @@ namespace DSPRE {
             }
             return buffer;
         }
+
+        /// <summary>Returns every offset in <paramref name="haystack"/> where <paramref name="needle"/> occurs
+        /// (naive scan; needles here are short fixed byte patterns, not large enough to need Boyer-Moore).</summary>
+        public static List<int> SearchBytes(byte[] haystack, byte[] needle) {
+            var matches = new List<int>();
+            if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length) {
+                return matches;
+            }
+
+            for (int i = 0; i <= haystack.Length - needle.Length; i++) {
+                bool isMatch = true;
+                for (int j = 0; j < needle.Length; j++) {
+                    if (haystack[i + j] != needle[j]) {
+                        isMatch = false;
+                        break;
+                    }
+                }
+                if (isMatch) matches.Add(i);
+            }
+            return matches;
+        }
+
         /// <summary>
         /// Resolves a bundled tool. Windows uses the .exe file; other platforms prefer an
         /// extensionless native binary and fall back to the .exe when no native binary exists.

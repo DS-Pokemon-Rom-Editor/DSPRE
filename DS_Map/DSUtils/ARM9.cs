@@ -1,4 +1,5 @@
 ﻿﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using static DSPRE.RomInfo;
@@ -54,6 +55,12 @@ namespace DSPRE {
 
         public static byte[] ReadBytes(uint startOffset, long numberOfBytes = 0) {
             return DSUtils.ReadFromFile(RomInfo.arm9Path, startOffset, numberOfBytes);
+        }
+
+        /// <summary>Returns every file offset in arm9.bin where <paramref name="needle"/> occurs. Caller must
+        /// ensure arm9 is decompressed first (see <see cref="CheckCompressionMark"/>/<see cref="Decompress(string)"/>).</summary>
+        public static List<int> SearchBytes(byte[] needle) {
+            return DSUtils.SearchBytes(ReadBytes(0), needle);
         }
         public static void WriteBytes(byte[] bytesToWrite, uint destOffset, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null) {
             DSUtils.WriteToFile(RomInfo.arm9Path, bytesToWrite, destOffset, indexFirstByteToWrite, indexLastByteToWrite);
