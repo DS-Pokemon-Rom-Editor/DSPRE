@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:gif="clr-namespace:Avalonia.Labs.Gif;assembly=Avalonia.Labs.Gif"
         x:Class="DSPRE.Avalonia.Views.HeaderFieldsView"
         x:DataType="vm:HeaderEditorViewModel">
   <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab.
@@ -57,28 +58,28 @@
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Music (Day)"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MusicDayValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MusicDayValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding MusicDay.Names}" SelectedIndex="{Binding MusicDayComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Music (Night)"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MusicNightValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MusicNightValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding MusicNight.Names}" SelectedIndex="{Binding MusicNightComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Weather"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Minimum="0" Maximum="255" Value="{Binding WeatherValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding WeatherValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding Weather.Names}" SelectedIndex="{Binding WeatherComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Camera angle"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Minimum="0" Maximum="255" Value="{Binding CameraValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding CameraValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding Camera.Names}" SelectedIndex="{Binding CameraComboIndex}"/>
               </Grid>
             </StackPanel>
@@ -184,7 +185,11 @@
         <GroupBox Header="Weather">
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
                   BorderThickness="1" Height="176">
-            <Image Source="{Binding WeatherImage}" Stretch="Uniform"/>
+            <Grid>
+              <Image Source="{Binding WeatherImage}" Stretch="Uniform" IsVisible="{Binding !WeatherIsAnimated}"/>
+              <gif:GifImage Source="{Binding WeatherGifSource}" Stretch="Uniform" StretchDirection="Both"
+                            IsVisible="{Binding WeatherIsAnimated}"/>
+            </Grid>
           </Border>
         </GroupBox>
         <GroupBox Header="Camera Angle">

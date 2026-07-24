@@ -13,6 +13,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Threading;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
+using global::Avalonia.Labs.Gif;
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Models;
 using DSPRE.Editors;
@@ -216,6 +217,13 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _weatherComboIndex, value) && !_suppress && value >= 0) WeatherValue = Weather.KeyAt(value); }
         }
         private Bitmap _weatherImage; public Bitmap WeatherImage { get => _weatherImage; set => Set(ref _weatherImage, value); }
+        private IGifSource _weatherGifSource;
+        public IGifSource WeatherGifSource
+        {
+            get => _weatherGifSource;
+            set { if (Set(ref _weatherGifSource, value)) OnPropertyChanged(nameof(WeatherIsAnimated)); }
+        }
+        public bool WeatherIsAnimated => _weatherGifSource != null;
 
         // ── Music day / night (combo + numeric) ──────────────────────────────────────
         private decimal _musicDayValue;
@@ -1014,7 +1022,8 @@ namespace DSPRE.Avalonia.ViewModels
                 : PokeDatabase.System.WeatherPics.hgssweatherImageDict;
             string name = null;
             foreach (var e in dict) if (Array.IndexOf(e.Key, (byte)_weatherValue) >= 0) { name = e.Value; break; }
-            WeatherImage = name != null ? ResImage(name) : null;
+            WeatherGifSource = name != null ? ResourceImages.GetGifSource(name) : null;
+            WeatherImage = WeatherGifSource == null && name != null ? ResImage(name) : null;
         }
         private void UpdateAreaIconImage()
         {
