@@ -3,154 +3,198 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         x:Class="DSPRE.Avalonia.Views.HeaderFieldsView"
         x:DataType="vm:HeaderEditorViewModel">
-  <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab. -->
-  <ScrollViewer Padding="8">
-    <StackPanel Spacing="8">
+  <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab.
+       Mirrors the WinForms layout: a dense two-column form of framed group boxes on the left,
+       a prominent preview rail (area icon / weather / camera) on the right. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.fieldlabel">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="Margin" Value="0,0,0,2"/>
+    </Style>
+    <Style Selector="TextBlock.inlinelabel">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+  </UserControl.Styles>
 
-      <!-- Internal name -->
-      <StackPanel Spacing="2">
-        <TextBlock Text="Internal name" FontWeight="Bold"/>
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBox Width="200" Text="{Binding InternalName}"/>
-          <TextBlock Text="{Binding InternalNameLen}" Foreground="{Binding InternalNameColor}" VerticalAlignment="Center"/>
-        </StackPanel>
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <Grid ColumnDefinitions="*,Auto" Margin="10">
+
+      <!-- ── Left: the form ── -->
+      <StackPanel Grid.Column="0" Spacing="10" Margin="0,0,10,0">
+
+        <!-- Location & area -->
+        <GroupBox Header="Location &amp; Area">
+          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Internal name"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBox Width="180" Text="{Binding InternalName}"/>
+                <TextBlock Text="{Binding InternalNameLen}" Foreground="{Binding InternalNameColor}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Location name"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Area settings"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaSettingsItems}" SelectedIndex="{Binding AreaSettingsIndex}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2" IsVisible="{Binding ShowAreaIcon}">
+              <TextBlock Classes="fieldlabel" Text="Area icon"/>
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaIconItems}" SelectedIndex="{Binding AreaIconIndex}"/>
+            </StackPanel>
+          </Grid>
+        </GroupBox>
+
+        <!-- Appearance & sound: fixed-width numeric + readable combo, no full-width dropdowns -->
+        <GroupBox Header="Appearance &amp; Sound">
+          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Music (Day)"/>
+              <Grid ColumnDefinitions="90,6,*">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MusicDayValue}"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding MusicDay.Names}" SelectedIndex="{Binding MusicDayComboIndex}"/>
+              </Grid>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Music (Night)"/>
+              <Grid ColumnDefinitions="90,6,*">
+                <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MusicNightValue}"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding MusicNight.Names}" SelectedIndex="{Binding MusicNightComboIndex}"/>
+              </Grid>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Weather"/>
+              <Grid ColumnDefinitions="90,6,*">
+                <NumericUpDown Minimum="0" Maximum="255" Value="{Binding WeatherValue}"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding Weather.Names}" SelectedIndex="{Binding WeatherComboIndex}"/>
+              </Grid>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Camera angle"/>
+              <Grid ColumnDefinitions="90,6,*">
+                <NumericUpDown Minimum="0" Maximum="255" Value="{Binding CameraValue}"/>
+                <ComboBox Grid.Column="2" ItemsSource="{Binding Camera.Names}" SelectedIndex="{Binding CameraComboIndex}"/>
+              </Grid>
+            </StackPanel>
+          </Grid>
+        </GroupBox>
+
+        <!-- Linked files. The "🔗 Open" buttons jump to the referenced file in its editor. -->
+        <GroupBox Header="Linked Files">
+          <Grid ColumnDefinitions="Auto,Auto,28,Auto,Auto" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="inlinelabel" Text="Matrix"/>
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MatrixId}"/>
+              <Button Content="🔗 Open" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="Open the linked Matrix"/>
+            </StackPanel>
+            <TextBlock Grid.Row="0" Grid.Column="3" Classes="inlinelabel" Text="Area Data"/>
+            <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding AreaDataId}"/>
+              <Button Content="🔗 Open" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="Open the linked Area Data"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="inlinelabel" Text="Script"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}"/>
+              <Button Content="🔗 Open" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Script"/>
+            </StackPanel>
+            <TextBlock Grid.Row="2" Grid.Column="3" Classes="inlinelabel" Text="Level Script"/>
+            <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}"/>
+              <Button Content="🔗 Open" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Level Script"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Classes="inlinelabel" Text="Event"/>
+            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding EventFileId}"/>
+              <Button Content="🔗 Open" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="Open the linked Events"/>
+            </StackPanel>
+            <TextBlock Grid.Row="4" Grid.Column="3" Classes="inlinelabel" Text="Text"/>
+            <StackPanel Grid.Row="4" Grid.Column="4" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}"/>
+              <Button Content="🔗 Open" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="Open the linked Text archive"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="6" Grid.Column="0" Classes="inlinelabel" Text="Wild Pokémon"/>
+            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <NumericUpDown Width="90" Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}"/>
+              <Button Content="🔗 Open" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="Open the linked wild encounters"/>
+            </StackPanel>
+            <TextBlock Grid.Row="6" Grid.Column="3" Classes="inlinelabel" Text="Battle BG"/>
+            <NumericUpDown Grid.Row="6" Grid.Column="4" Width="90" HorizontalAlignment="Left" Minimum="0" Maximum="255" Value="{Binding BattleBackground}"/>
+          </Grid>
+        </GroupBox>
+
+        <!-- Map setting flags (names match WinForms; flags 4-6 HGSS-only) -->
+        <GroupBox Header="Map Settings">
+          <WrapPanel>
+            <CheckBox Content="Bicycle"   IsChecked="{Binding Flag0}" Margin="0,0,16,0"/>
+            <CheckBox Content="Esc. Rope" IsChecked="{Binding Flag1}" Margin="0,0,16,0"/>
+            <CheckBox Content="Fly"       IsChecked="{Binding Flag2}" Margin="0,0,16,0"/>
+            <CheckBox Content="Run"       IsChecked="{Binding Flag3}" Margin="0,0,16,0"/>
+            <CheckBox Content="Flag 4" IsChecked="{Binding Flag4}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
+            <CheckBox Content="Flag 5" IsChecked="{Binding Flag5}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
+            <CheckBox Content="Flag 6" IsChecked="{Binding Flag6}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
+          </WrapPanel>
+        </GroupBox>
+
+        <!-- HGSS-only -->
+        <GroupBox Header="HGSS Settings" IsVisible="{Binding ShowHgssOnly}">
+          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="World map coordinates"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Classes="inlinelabel" Text="X" Margin="0,0,2,0"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="63" Value="{Binding WorldmapX}"/>
+                <TextBlock Classes="inlinelabel" Text="Y" Margin="8,0,2,0"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="63" Value="{Binding WorldmapY}"/>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Follow mode"/>
+              <ComboBox HorizontalAlignment="Left" Width="160" ItemsSource="{Binding FollowModeItems}" SelectedIndex="{Binding FollowModeIndex}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Region"/>
+              <StackPanel Orientation="Horizontal" Spacing="16">
+                <RadioButton Content="Johto" GroupName="region" IsChecked="{Binding JohtoFlag}"/>
+                <RadioButton Content="Kanto" GroupName="region" IsChecked="{Binding KantoFlag}"/>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </GroupBox>
+
       </StackPanel>
 
-      <!-- File / ID fields. Linked files get an inline "🔗 Open" button (like the old editor),
-           kept tight to the value it opens; a spacer column separates the two field pairs. -->
-      <HeaderedContentControl Header="IDs">
-        <Grid ColumnDefinitions="Auto,Auto,24,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-          <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding MatrixId}"/>
-            <Button Content="🔗 Open" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="Open the linked Matrix"/>
-          </StackPanel>
-          <TextBlock Grid.Row="0" Grid.Column="3" Text="Area Data" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="255" Value="{Binding AreaDataId}"/>
-            <Button Content="🔗 Open" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="Open the linked Area Data"/>
-          </StackPanel>
+      <!-- ── Right: preview rail. The images are DS-resolution (256x192) screenshots and
+           ~130x37 pixel banners, so they get big fixed frames instead of thumbnails. ── -->
+      <StackPanel Grid.Column="1" Width="260" Spacing="10">
+        <GroupBox Header="Area Icon" IsVisible="{Binding ShowAreaIcon}">
+          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+                  BorderThickness="1" Height="56" Padding="3">
+            <Image Source="{Binding AreaIconImage}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+        </GroupBox>
+        <GroupBox Header="Weather">
+          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+                  BorderThickness="1" Height="176">
+            <Image Source="{Binding WeatherImage}" Stretch="Uniform"/>
+          </Border>
+        </GroupBox>
+        <GroupBox Header="Camera Angle">
+          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+                  BorderThickness="1" Height="176">
+            <Image Source="{Binding CameraImage}" Stretch="Uniform"/>
+          </Border>
+        </GroupBox>
+      </StackPanel>
 
-          <TextBlock Grid.Row="1" Grid.Column="0" Text="Script" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}"/>
-            <Button Content="🔗 Open" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Script"/>
-          </StackPanel>
-          <TextBlock Grid.Row="1" Grid.Column="3" Text="Level Script" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}"/>
-            <Button Content="🔗 Open" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Level Script"/>
-          </StackPanel>
-
-          <TextBlock Grid.Row="2" Grid.Column="0" Text="Event" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding EventFileId}"/>
-            <Button Content="🔗 Open" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="Open the linked Events"/>
-          </StackPanel>
-          <TextBlock Grid.Row="2" Grid.Column="3" Text="Text" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}"/>
-            <Button Content="🔗 Open" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="Open the linked Text archive"/>
-          </StackPanel>
-
-          <TextBlock Grid.Row="3" Grid.Column="0" Text="Wild Pokémon" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="2">
-            <NumericUpDown Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}"/>
-            <Button Content="🔗 Open" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="Open the linked wild encounters"/>
-          </StackPanel>
-          <TextBlock Grid.Row="3" Grid.Column="3" Text="Battle BG" VerticalAlignment="Center" Margin="0,0,8,0"/>
-          <NumericUpDown Grid.Row="3" Grid.Column="4" Minimum="0" Maximum="255" Value="{Binding BattleBackground}" Margin="2"/>
-        </Grid>
-      </HeaderedContentControl>
-
-      <!-- Location / area -->
-      <HeaderedContentControl Header="Location &amp; Area">
-        <StackPanel Spacing="4">
-          <TextBlock Text="Location name"/>
-          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
-          <TextBlock Text="Area settings"/>
-          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaSettingsItems}" SelectedIndex="{Binding AreaSettingsIndex}"/>
-          <StackPanel IsVisible="{Binding ShowAreaIcon}" Spacing="4">
-            <TextBlock Text="Area icon"/>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <ComboBox Width="260" ItemsSource="{Binding AreaIconItems}" SelectedIndex="{Binding AreaIconIndex}"/>
-              <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="48" Height="48">
-                <Image Source="{Binding AreaIconImage}" Stretch="Uniform"/>
-              </Border>
-            </StackPanel>
-          </StackPanel>
-        </StackPanel>
-      </HeaderedContentControl>
-
-      <!-- Music -->
-      <HeaderedContentControl Header="Music">
-        <Grid ColumnDefinitions="60,*,90" RowDefinitions="Auto,Auto">
-          <TextBlock Grid.Row="0" Grid.Column="0" Text="Day" VerticalAlignment="Center"/>
-          <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="2" ItemsSource="{Binding MusicDay.Names}" SelectedIndex="{Binding MusicDayComboIndex}"/>
-          <NumericUpDown Grid.Row="0" Grid.Column="2" Minimum="0" Maximum="65535" Margin="2" Value="{Binding MusicDayValue}"/>
-          <TextBlock Grid.Row="1" Grid.Column="0" Text="Night" VerticalAlignment="Center"/>
-          <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="2" ItemsSource="{Binding MusicNight.Names}" SelectedIndex="{Binding MusicNightComboIndex}"/>
-          <NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="0" Maximum="65535" Margin="2" Value="{Binding MusicNightValue}"/>
-        </Grid>
-      </HeaderedContentControl>
-
-      <!-- Weather + Camera -->
-      <Grid ColumnDefinitions="*,*">
-        <HeaderedContentControl Grid.Column="0" Header="Weather" Margin="0,0,4,0">
-          <StackPanel Spacing="4">
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Weather.Names}" SelectedIndex="{Binding WeatherComboIndex}"/>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <NumericUpDown Width="100" Minimum="0" Maximum="255" Value="{Binding WeatherValue}"/>
-              <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="80" Height="48">
-                <Image Source="{Binding WeatherImage}" Stretch="Uniform"/>
-              </Border>
-            </StackPanel>
-          </StackPanel>
-        </HeaderedContentControl>
-        <HeaderedContentControl Grid.Column="1" Header="Camera" Margin="4,0,0,0">
-          <StackPanel Spacing="4">
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Camera.Names}" SelectedIndex="{Binding CameraComboIndex}"/>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <NumericUpDown Width="100" Minimum="0" Maximum="255" Value="{Binding CameraValue}"/>
-              <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="80" Height="48">
-                <Image Source="{Binding CameraImage}" Stretch="Uniform"/>
-              </Border>
-            </StackPanel>
-          </StackPanel>
-        </HeaderedContentControl>
-      </Grid>
-
-      <!-- Map setting flags (names match WinForms; flags 4-6 HGSS-only) -->
-      <HeaderedContentControl Header="Map settings (flags)">
-        <WrapPanel>
-          <CheckBox Content="Bicycle"   IsChecked="{Binding Flag0}" Margin="0,0,12,0"/>
-          <CheckBox Content="Esc. Rope" IsChecked="{Binding Flag1}" Margin="0,0,12,0"/>
-          <CheckBox Content="Fly"       IsChecked="{Binding Flag2}" Margin="0,0,12,0"/>
-          <CheckBox Content="Run"       IsChecked="{Binding Flag3}" Margin="0,0,12,0"/>
-          <CheckBox Content="Flag 4" IsChecked="{Binding Flag4}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,12,0"/>
-          <CheckBox Content="Flag 5" IsChecked="{Binding Flag5}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,12,0"/>
-          <CheckBox Content="Flag 6" IsChecked="{Binding Flag6}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,12,0"/>
-        </WrapPanel>
-      </HeaderedContentControl>
-
-      <!-- HGSS-only -->
-      <HeaderedContentControl Header="HGSS settings" IsVisible="{Binding ShowHgssOnly}">
-        <StackPanel Spacing="4">
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="World map X" VerticalAlignment="Center"/>
-            <NumericUpDown Width="100" Minimum="0" Maximum="63" Value="{Binding WorldmapX}"/>
-            <TextBlock Text="Y" VerticalAlignment="Center"/>
-            <NumericUpDown Width="100" Minimum="0" Maximum="63" Value="{Binding WorldmapY}"/>
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Follow mode" VerticalAlignment="Center"/>
-            <ComboBox Width="140" ItemsSource="{Binding FollowModeItems}" SelectedIndex="{Binding FollowModeIndex}"/>
-            <RadioButton Content="Johto" GroupName="region" IsChecked="{Binding JohtoFlag}"/>
-            <RadioButton Content="Kanto" GroupName="region" IsChecked="{Binding KantoFlag}"/>
-          </StackPanel>
-        </StackPanel>
-      </HeaderedContentControl>
-
-    </StackPanel>
+    </Grid>
   </ScrollViewer>
 </UserControl>
