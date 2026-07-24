@@ -41,16 +41,15 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
           <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
-          <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" VerticalAlignment="Center"
-                    ToolTip.Tip="Show collision painted on the actual map mesh (conforms to the surface). Uncheck for a flat plane you can raise."/>
+          <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
+                    ToolTip.Tip="Show collision painted on the actual map mesh (conforms to the surface). Uncheck for a flat plane you can raise. Needs an Overlay mode selected above; not available in 'This header' / 'Full matrix' view (always shown as a flat plane there)."/>
           <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
           <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
                   Value="{Binding OverlayHeight}" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"
                   ToolTip.Tip="Lift the flat permission plane off the map surface (in tiles)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"/>
-          <CheckBox Content="Interior buildings" IsChecked="{Binding InteriorBuildings}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
-                    ToolTip.Tip="Load buildings from the interior model set (HGSS)"/>
+          <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"
+                    ToolTip.Tip="Show real textures vs. a flat per-material colour view of the mesh"/>
           <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center"
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>

@@ -97,7 +97,7 @@
 		  <CheckBox Content="Invert rotate Y" IsChecked="{Binding CamInvertOrbitY}" Margin="0,0,18,0"/>
 		  <CheckBox Content="Invert zoom"     IsChecked="{Binding CamInvertZoom}"/>
 		</WrapPanel>
-		<TextBlock Text="In the 3D views: right-drag pans, left-drag rotates, mouse wheel zooms. Changes take effect after you click Save."
+		<TextBlock Text="In the 3D views: left-drag pans, right-drag rotates, mouse wheel zooms. Changes take effect after you click Save."
 				   FontSize="12" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
 	  </StackPanel>
 	</Border>

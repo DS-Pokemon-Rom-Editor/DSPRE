@@ -42,7 +42,7 @@ namespace DSPRE
         public float camOrbitSpeed { get; set; } = 1.0f;
         public float camZoomSpeed { get; set; } = 1.0f;
         public bool camInvertPanX { get; set; } = false;
-        public bool camInvertPanY { get; set; } = false;
+        public bool camInvertPanY { get; set; } = true;
         public bool camInvertOrbitX { get; set; } = false;
         public bool camInvertOrbitY { get; set; } = false;
         public bool camInvertZoom { get; set; } = false;

@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
+using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -20,49 +21,31 @@ namespace DSPRE.Avalonia.Views
     {
         private EventEditorViewModel VM => DataContext as EventEditorViewModel;
         private bool _setupDone;
-        private Point? _lastPointer;
-        private bool _panning;
-        private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
+        private Gl3DPointerNavigation _nav;
 
         public EventEditorView()
         {
             InitializeComponent();
 
-            // Left-drag orbits, right-drag pans, wheel zooms. In 3D edit mode a left-press grabs a
-            // gizmo axis (to drag the event) or picks the nearest event.
-            GlHost.PointerPressed += (s, e) =>
+            // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
+            // gizmo axis (to drag the event) or picks the nearest event. See Gl3DPointerNavigation.
+            _nav = new Gl3DPointerNavigation(GlHost, GlView)
             {
-                var pt = e.GetCurrentPoint(GlHost);
-                _panning = pt.Properties.IsRightButtonPressed || pt.Properties.IsMiddleButtonPressed;
-                _dragAxis = -1;
-                if (!_panning && VM != null && VM.EditMode3D)
+                IsEditModeActive = () => VM?.EditMode3D == true,
+                BeginGizmoDrag = () => VM?.BeginGizmoDrag(),
+                Pick = PickEvent,
+                NudgeAxis = (axis, normDelta) =>
                 {
-                    var pos = pt.Position;
-                    int axis = GlView.HitTestGizmoAxis((float)pos.X, (float)pos.Y);
-                    if (axis >= 0) { _dragAxis = axis; VM.BeginGizmoDrag(); }
-                    else PickEvent(pos);
-                }
-                _lastPointer = pt.Position;
-                e.Pointer.Capture(GlHost);
-            };
-            GlHost.PointerReleased += (s, e) => { _lastPointer = null; _panning = false; _dragAxis = -1; e.Pointer.Capture(null); };
-            GlHost.PointerMoved += (s, e) =>
-            {
-                if (_lastPointer is not Point last) return;
-                var p = e.GetPosition(GlHost);
-                if (_dragAxis >= 0 && VM != null)
-                {
-                    float normDelta = GlView.ScreenDragToAxis(_dragAxis, (float)(p.X - last.X), (float)(p.Y - last.Y));
+                    if (VM == null) return;
                     float scale = VM.ModelScale; if (scale <= 0) scale = 1f;
-                    VM.NudgeSelectedEventRaw(_dragAxis, normDelta / scale);
-                }
-                else if (_panning) GlView.PanByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-                else GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-                _lastPointer = p;
+                    VM.NudgeSelectedEventRaw(axis, normDelta / scale);
+                },
             };
-            GlHost.PointerWheelChanged += (s, e) => GlView.ZoomByWheel((float)e.Delta.Y);
 
-            KeyDown += (s, e) =>
+            // Arrow keys nudge the selected event / pan the camera, but only while the 3D
+            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click) —
+            // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
+            GlHost.KeyDown += (s, e) =>
             {
                 // In edit mode with an event selected, arrow keys nudge it one tile along X/Z; else pan.
                 if (VM != null && VM.EditMode3D && VM.HasSelectedEvent)

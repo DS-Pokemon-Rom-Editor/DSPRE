@@ -397,6 +397,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
         public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
+        /// <summary>The tile-boundary grid overlay is only built for small matrices (≤4 cells) — it's an
+        /// expensive per-tile collision scan that would otherwise repeat on every event add/move for a
+        /// large header, so bigger matrices skip it rather than pay that cost every refresh. The
+        /// checkbox is disabled instead of silently doing nothing so the limit is visible.</summary>
+        public bool GridToggleEnabled => _matrix != null && _matrix.width * _matrix.height <= 4;
 
         private bool _stitchGrid = true;
         public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value)) DisplayMap(); } }
@@ -675,6 +680,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
             }
             catch (Exception ex) { AppLogger.Error("Matrix resolve failed: " + ex.Message); }
+            OnPropertyChanged(nameof(GridToggleEnabled));
             PopulateAvailableScripts(pairedScriptFileId);
             DisplayMap();
         }

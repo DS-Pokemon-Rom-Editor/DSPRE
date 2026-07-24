@@ -56,6 +56,12 @@ namespace DSPRE.Avalonia.Gl
         private bool _showGizmos;
         public bool ShowGizmos { get => _showGizmos; set { _showGizmos = value; RequestNextFrameRendering(); } }
 
+        // Textured/flat toggle: every vertex already carries its material's diffuse colour
+        // (see NsbmdGeometry), so turning this off just skips binding the texture and falls back
+        // to that flat per-material colour instead of reloading the model.
+        private bool _showTextures = true;
+        public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
+
         // One-shot framebuffer capture: callback receives raw RGBA (bottom-up) + pixel width/height.
         private Action<byte[], int, int> _captureCb;
         /// <summary>Grabs the next rendered frame's pixels (for a debug screenshot). The callback runs on the
@@ -512,7 +518,7 @@ namespace DSPRE.Avalonia.Gl
                 _f.EnableVertexAttribArray(2);
                 _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
 
-                if (part.TextureId != 0)
+                if (part.TextureId != 0 && _showTextures)
                 {
                     _f.BindTexture(GlFunctions.GL_TEXTURE_2D, part.TextureId);
                     _f.Uniform1i(_hasTexLoc, 1);

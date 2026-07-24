@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -16,10 +17,7 @@ namespace DSPRE.Avalonia.Views
     {
         private MapEditorViewModel VM => DataContext as MapEditorViewModel;
         private bool _setupDone;
-        private Point? _lastPointer;
-        private bool _panning;
-        private bool _painting;       // left-drag painting collision/type onto tiles
-        private int _dragAxis = -1;   // gizmo axis being dragged (0=X,1=Y,2=Z), -1 = none
+        private Gl3DPointerNavigation _nav;
 
         public MapEditorView()
         {
@@ -29,49 +27,26 @@ namespace DSPRE.Avalonia.Views
             CollisionGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
             TypeGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
 
-            // Left-drag orbits, right-drag pans, wheel zooms (handled on the host Border).
-            // In 3D edit mode a left-press grabs a gizmo axis (to drag the building) or picks a building.
-            GlHost.PointerPressed += (s, e) =>
+            // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
+            // gizmo axis (to drag the building) or picks a building. See Gl3DPointerNavigation.
+            _nav = new Gl3DPointerNavigation(GlHost, GlView)
             {
-                var pt = e.GetCurrentPoint(GlHost);
-                _panning = pt.Properties.IsRightButtonPressed || pt.Properties.IsMiddleButtonPressed;
-                _dragAxis = -1; _painting = false;
-                if (VM != null && VM.PaintMode)
+                IsPaintModeActive = () => VM?.PaintMode == true,
+                PaintAt = PaintAt,
+                IsEditModeActive = () => VM?.EditMode3D == true,
+                Pick = pos => { int b = PickBuilding(pos); if (b >= 0 && VM != null) VM.SelectedBuildingIndex = b; },
+                NudgeAxis = (axis, normDelta) =>
                 {
-                    _panning = false;                                // camera is locked to Top while painting
-                    if (pt.Properties.IsLeftButtonPressed) { _painting = true; PaintAt(pt.Position); }
-                }
-                else if (!_panning && VM != null && VM.EditMode3D)
-                {
-                    var pos = pt.Position;
-                    int axis = GlView.HitTestGizmoAxis((float)pos.X, (float)pos.Y);
-                    if (axis >= 0) _dragAxis = axis;                 // grab the handle drag moves the building
-                    else { int b = PickBuilding(pos); if (b >= 0) VM.SelectedBuildingIndex = b; }
-                }
-                _lastPointer = pt.Position;
-                e.Pointer.Capture(GlHost);
-            };
-            GlHost.PointerReleased += (s, e) => { _lastPointer = null; _panning = false; _painting = false; _dragAxis = -1; e.Pointer.Capture(null); };
-            GlHost.PointerMoved += (s, e) =>
-            {
-                if (_lastPointer is not Point last) return;
-                var p = e.GetPosition(GlHost);
-                if (_painting) { PaintAt(p); _lastPointer = p; return; }
-                if (VM != null && VM.PaintMode) { _lastPointer = p; return; }   // camera locked while painting
-                if (_dragAxis >= 0 && VM != null)
-                {
-                    float normDelta = GlView.ScreenDragToAxis(_dragAxis, (float)(p.X - last.X), (float)(p.Y - last.Y));
+                    if (VM == null) return;
                     float scale = VM.ModelScale; if (scale <= 0) scale = 1f;
-                    VM.NudgeSelectedBuildingRaw(_dragAxis, normDelta / scale);
-                }
-                else if (_panning) GlView.PanByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-                else GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-                _lastPointer = p;
+                    VM.NudgeSelectedBuildingRaw(axis, normDelta / scale);
+                },
             };
-            GlHost.PointerWheelChanged += (s, e) => GlView.ZoomByWheel((float)e.Delta.Y);
 
-            // Arrow keys pan the matrix view.
-            KeyDown += OnKeyDown;
+            // Arrow keys pan the camera / nudge a selected building, but only while the 3D
+            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click) —
+            // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
+            GlHost.KeyDown += OnKeyDown;
 
             Loaded += OnLoadedSetup;
         }
@@ -144,6 +119,7 @@ namespace DSPRE.Avalonia.Views
                 vm.PaintModeChanged += (_, _) => { if (VM.PaintMode) GlView.SetOrientation(0f, 89f); };   // lock to Top
                 vm.PaintedTile += (_, _) => { CollisionGrid.SetData(VM.Collisions); TypeGrid.SetData(VM.Types); };
                 vm.PropertyChanged += OnVmPropertyChanged;
+                GlView.ShowTextures = vm.ShowTextures;
                 vm.EditModeChanged += (_, _) => RefreshGizmo();
                 vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
             }
@@ -200,6 +176,7 @@ namespace DSPRE.Avalonia.Views
         {
             if (e.PropertyName == nameof(MapEditorViewModel.CollisionPaintValue)) CollisionGrid.PaintValue = VM.CollisionPaintValue;
             else if (e.PropertyName == nameof(MapEditorViewModel.TypePaintValue)) TypeGrid.PaintValue = VM.TypePaintValue;
+            else if (e.PropertyName == nameof(MapEditorViewModel.ShowTextures)) GlView.ShowTextures = VM.ShowTextures;
         }
 
         private void Gizmos_Toggled(object sender, RoutedEventArgs e)

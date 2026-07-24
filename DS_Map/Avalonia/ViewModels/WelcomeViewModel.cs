@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels
                     "• Ctrl+Z / Ctrl+Y: undo and redo in the major editors.\n" +
                     "• Ctrl+S: save in most editors.\n" +
                     "• In dropdowns, type an entry's name to jump to it.\n" +
-                    "• In 3D views: left-drag orbits, right-drag pans, mouse wheel zooms.\n" +
+                    "• In 3D views: left-drag pans, right-drag orbits, mouse wheel zooms.\n" +
                     "• In the guided tour: Right or Enter for next, Left for back, Esc to skip."
             },
             new()

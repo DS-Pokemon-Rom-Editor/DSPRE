@@ -87,6 +87,7 @@ namespace DSPRE.Avalonia.ViewModels
                     OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView));
                     OnPropertyChanged(nameof(IsHeaderView)); OnPropertyChanged(nameof(CanEdit));
                     OnPropertyChanged(nameof(IsStitchedView));
+                    OnPropertyChanged(nameof(MeshToggleEnabled));
                     RefreshView();
                 }
             }
@@ -156,7 +157,16 @@ namespace DSPRE.Avalonia.ViewModels
         // span, so events/buildings map at exactly TileSize per tile and decorative overhang overlaps neighbours as on
         // hardware. (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
         private bool _stitchGrid = true;
-        public bool StitchGrid { get => _stitchGrid; set { if (Set(ref _stitchGrid, value) && IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview(); } }
+        public bool StitchGrid
+        {
+            get => _stitchGrid;
+            set
+            {
+                if (!Set(ref _stitchGrid, value)) return;
+                if (IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview();
+                else if (IsHeaderView) BuildHeaderPreview();   // was only rebuilding for Full Matrix — "This header" view never picked up the toggle
+            }
+        }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
 
         private int _selectedMatrix = -1;
@@ -210,11 +220,10 @@ namespace DSPRE.Avalonia.ViewModels
         public bool UseRawType { get => _useRawType; set { if (Set(ref _useRawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
         public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
 
-        // 3D preview options.
+        // 3D preview options. Pushed straight to NsbmdGlControl.ShowTextures by the view (no model
+        // rebuild needed) — see MapEditorView.OnVmPropertyChanged.
         private bool _showTextures = true;
-        public bool ShowTextures { get => _showTextures; set { if (Set(ref _showTextures, value) && _map != null) RefreshView(); } }
-        private bool _interiorBuildings;
-        public bool InteriorBuildings { get => _interiorBuildings; set { if (Set(ref _interiorBuildings, value) && _map != null) RefreshView(); } }
+        public bool ShowTextures { get => _showTextures; set => Set(ref _showTextures, value); }
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
@@ -222,13 +231,19 @@ namespace DSPRE.Avalonia.ViewModels
         // ── 3D permission overlay ──────────────────────────────────────────────────────
         public ObservableCollection<string> OverlayModes { get; } = new ObservableCollection<string> { "No overlay", "Collision", "Type" };
         private int _overlayModeIndex;
-        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
+        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); OnPropertyChanged(nameof(MeshToggleEnabled)); RebuildOverlay(); } } }
 
         // Mesh mode (default): the overlay is a re-coloured copy of the real ground mesh, conforming to the
         // surface. Plane mode: a flat tile grid the user can raise with OverlayHeight (for top-down editing).
         private bool _overlayAsMesh = true;
         public bool OverlayAsMesh { get => _overlayAsMesh; set { if (Set(ref _overlayAsMesh, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
         public bool ShowOverlayHeight => !_overlayAsMesh && _overlayModeIndex > 0;
+        /// <summary>"Mesh" only has a visible effect with an overlay mode selected (it re-colours the
+        /// overlay itself, which isn't drawn at all in "No overlay") AND for a single loaded map —
+        /// stitched ("This header" / "Full matrix") views always render the flat plane overlay instead
+        /// (the mesh-tint texture is keyed to one map's own tile grid and can't be shared across several
+        /// stitched maps), so the checkbox is disabled there rather than silently doing nothing.</summary>
+        public bool MeshToggleEnabled => _overlayModeIndex > 0 && !IsStitchedView;
 
         // Height (in tiles) to lift the flat PLANE overlay off the surface. Ignored in mesh mode, which
         // always matches the surface height.
@@ -1156,16 +1171,25 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 if (_map == null) return;
 
-                // Bind the map tileset textures (if a pack is selected and textures are on).
-                if (_showTextures && _mapTilesetIndex >= 0 && _map.mapModel?.models != null && _map.mapModel.models.Length > 0)
+                // Bind the map tileset textures (if a pack is selected). Always bound regardless of
+                // ShowTextures — that toggle is a pure display setting now (NsbmdGlControl.ShowTextures),
+                // not a build-time one, so the model always carries real textures to show/hide instantly.
+                if (_mapTilesetIndex >= 0 && _map.mapModel?.models != null && _map.mapModel.models.Length > 0)
                     BindNsbtx(_map.mapModel, Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, _mapTilesetIndex.ToString("D4")));
 
-                // Load building models + (optionally) bind building tileset, then collect transforms.
+                // Load building models + bind building tileset, then collect transforms. Interior vs.
+                // exterior building set is a fact of the map's own area data (same rule as the stitched
+                // matrix/header views in MatrixSceneBuilder), not a user preference.
                 var buildings = new List<(NSBMDModel model, float[] transform)>();
-                bool interior = _interiorBuildings && gameFamily == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels);
+                bool interior = false;
+                if (gameFamily == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels))
+                {
+                    try { if (AreaForMap(_selectedMapIndex) is byte aid) interior = new AreaData(aid).areaType == AreaData.TYPE_INDOOR; }
+                    catch { /* fall back to exterior */ }
+                }
                 string bdir = gameDirs[interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels].unpackedDir;
                 byte[] bldTex = null;
-                if (_showTextures && _buildingTilesetIndex > 0)
+                if (_buildingTilesetIndex > 0)
                 {
                     string tp = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, (_buildingTilesetIndex - 1).ToString("D4"));
                     if (File.Exists(tp)) bldTex = File.ReadAllBytes(tp);

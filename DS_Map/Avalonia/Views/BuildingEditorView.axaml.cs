@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -12,22 +13,14 @@ namespace DSPRE.Avalonia.Views
     {
         private BuildingEditorViewModel VM => DataContext as BuildingEditorViewModel;
         private bool _setupDone;
-        private Point? _lastPointer;
+        private Gl3DPointerNavigation _nav;
 
         public BuildingEditorView()
         {
             InitializeComponent();
 
-            GlHost.PointerPressed += (s, e) => { _lastPointer = e.GetPosition(GlHost); e.Pointer.Capture(GlHost); };
-            GlHost.PointerReleased += (s, e) => { _lastPointer = null; e.Pointer.Capture(null); };
-            GlHost.PointerMoved += (s, e) =>
-            {
-                if (_lastPointer is not Point last) return;
-                var p = e.GetPosition(GlHost);
-                GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-                _lastPointer = p;
-            };
-            GlHost.PointerWheelChanged += (s, e) => GlView.ZoomByWheel((float)e.Delta.Y);
+            // Left-drag pans, right-drag orbits, wheel zooms. See Gl3DPointerNavigation.
+            _nav = new Gl3DPointerNavigation(GlHost, GlView);
 
             Loaded += OnLoadedSetup;
         }

@@ -39,7 +39,7 @@
           <StackPanel Spacing="3">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-              <TextBlock Text="left-drag orbit · right-drag pan · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
             <WrapPanel Classes="toolbar">
               <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -47,7 +47,8 @@
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="12"/>
               <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="12"/>
               <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="12"/>
-              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" FontSize="12"/>
+              <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" IsEnabled="{Binding GridToggleEnabled}" FontSize="12"
+                        ToolTip.Tip="Highlights each map's out-of-bounds tile boundary. Only available for a matrix of 4 cells or fewer (an expensive per-tile scan on larger ones)."/>
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="12"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
@@ -152,8 +153,12 @@
                   <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
                   <TextBlock Text="X range / Y range" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwYRange}"/>
+                  <Grid ColumnDefinitions="72,*,72,*">
+                    <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
+                    <TextBlock Grid.Column="2" Text="Y range" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding OwYRange}"/>
+                  </Grid>
                 </StackPanel>
               </ScrollViewer>
             </Grid>
@@ -189,9 +194,11 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
-                  <TextBlock Text="Destination header / anchor / height" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Destination header" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
+                  <TextBlock Text="Anchor" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpAnchor}"/>
+                  <TextBlock Text="Height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="4294967295" Value="{Binding WarpHeight}"/>
                 </StackPanel>
               </ScrollViewer>
@@ -231,11 +238,19 @@
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptIndexOutOfRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
                   <TextBlock Text="Width / height" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrWidth}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrHeight}"/>
+                  <Grid ColumnDefinitions="72,*,72,*">
+                    <TextBlock Grid.Column="0" Text="Width" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding TrWidth}"/>
+                    <TextBlock Grid.Column="2" Text="Height" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TrHeight}"/>
+                  </Grid>
                   <TextBlock Text="Variable watched / expected value" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrVar}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrVarValue}"/>
+                  <Grid ColumnDefinitions="72,*,72,*">
+                    <TextBlock Grid.Column="0" Text="Variable" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding TrVar}"/>
+                    <TextBlock Grid.Column="2" Text="Expected" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TrVarValue}"/>
+                  </Grid>
                 </StackPanel>
               </ScrollViewer>
             </Grid>
@@ -274,8 +289,12 @@
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptIndexOutOfRange}"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpType}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpDir}"/>
+                  <Grid ColumnDefinitions="72,*,72,*">
+                    <TextBlock Grid.Column="0" Text="Type" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding SpType}"/>
+                    <TextBlock Grid.Column="2" Text="Direction" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding SpDir}"/>
+                  </Grid>
                 </StackPanel>
               </ScrollViewer>
             </Grid>

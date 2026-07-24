@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Views
 {
     public partial class GlTestView : Window
     {
-        private Point? _lastPointer;
+        private Gl3DPointerNavigation _nav;
         private NSBMD _currentNsbmd;
 
         public GlTestView()
@@ -22,12 +22,8 @@ namespace DSPRE.Avalonia.Views
             InitializeComponent();
 
             GlView.ErrorChanged += (_, _) => UpdateStatus();
-            // Pointer events are handled on the transparent host Border (hit-testable),
-            // not on the bare GL control.
-            GlHost.PointerPressed += OnPointerPressed;
-            GlHost.PointerMoved += OnPointerMoved;
-            GlHost.PointerReleased += OnPointerReleased;
-            GlHost.PointerWheelChanged += OnWheel;
+            // Left-drag pans, right-drag orbits, wheel zooms. See Gl3DPointerNavigation.
+            _nav = new Gl3DPointerNavigation(GlHost, GlView);
             UpdateStatus();
         }
 
@@ -37,29 +33,6 @@ namespace DSPRE.Avalonia.Views
                 ? "GL ready, rendering."
                 : "GL error: " + GlView.LastError;
         }
-
-        private void OnPointerPressed(object sender, PointerPressedEventArgs e)
-        {
-            _lastPointer = e.GetPosition(GlHost);
-            e.Pointer.Capture(GlHost);
-        }
-
-        private void OnPointerReleased(object sender, PointerReleasedEventArgs e)
-        {
-            _lastPointer = null;
-            e.Pointer.Capture(null);
-        }
-
-        private void OnPointerMoved(object sender, PointerEventArgs e)
-        {
-            if (_lastPointer is not Point last) return;
-            var p = e.GetPosition(GlHost);
-            GlView.OrbitByDrag((float)(p.X - last.X), (float)(p.Y - last.Y));
-            _lastPointer = p;
-        }
-
-        private void OnWheel(object sender, PointerWheelEventArgs e)
-            => GlView.ZoomByWheel((float)e.Delta.Y);
 
         private async void OpenNsbmd_Click(object sender, RoutedEventArgs e)
         {
