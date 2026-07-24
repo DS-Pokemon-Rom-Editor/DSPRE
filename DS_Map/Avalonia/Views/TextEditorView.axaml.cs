@@ -24,7 +24,12 @@ namespace DSPRE.Avalonia.Views
             DataContext = vm;
         }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
+        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        {
+            // TabControl raises Loaded again whenever this embedded tab is revisited. ROM loads call
+            // EnsureSetupAsync(owner) explicitly, so automatic attachment only needs to bootstrap once.
+            if (!_setupDone) await EnsureSetupAsync();
+        }
 
         /// <summary>
         /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
