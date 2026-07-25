@@ -85,7 +85,7 @@ namespace DSPRE.Editors.BtxEditor
                 string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
                 int w, h; uint colorLimit;
                 if (!OverworldSpriteTableExpansion.TryReadTextureInfo(path, out w, out h, out colorLimit)) continue;
-                allSlots.Add(new SlotOption { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, BaseLabel = "Reuse art from OW Entry " + kv.Key + " (slot #" + kv.Value.spriteID + ", shared)" });
+                allSlots.Add(new SlotOption { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, BaseLabel = "Existing art from OW Entry " + kv.Key + " (slot #" + kv.Value.spriteID + ")" });
             }
             RebuildSlotOptions();
 
@@ -96,6 +96,21 @@ namespace DSPRE.Editors.BtxEditor
 
             uint? suggested = OverworldSpriteTableExpansion.SuggestNewAppearanceId();
             if (suggested.HasValue) appearanceIdTextBox.Text = "0x" + suggested.Value.ToString("X");
+
+            UpdateSlotLabel();
+        }
+
+        /// <summary>With an image picked, the imported pixels always land in a brand-new mmodel
+        /// slot (see <see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>) — the slot
+        /// picked below is read-only, just a size/color-count template BTX0.Write needs, and is
+        /// never modified. Without an image, the picked slot IS the destination and its existing art
+        /// is shared on purpose (no write happens either way).</summary>
+        private void UpdateSlotLabel()
+        {
+            bool hasImage = pngPath != null || rawBtxPath != null;
+            slotLabel.Text = hasImage
+                ? "Format template (existing texture to copy dimensions/colors from)"
+                : "Texture slot (this entry's art)";
         }
 
         private void RebuildSlotOptions()
@@ -160,6 +175,7 @@ namespace DSPRE.Editors.BtxEditor
                     statusLabel.Text = "Could not read that image: " + ex.Message;
                 }
                 clearImageButton.Enabled = pngPath != null || rawBtxPath != null;
+                UpdateSlotLabel();
                 RebuildSlotOptions();
             }
         }
@@ -206,6 +222,7 @@ namespace DSPRE.Editors.BtxEditor
                     statusLabel.Text = "Could not read that file: " + ex.Message;
                 }
                 clearImageButton.Enabled = pngPath != null || rawBtxPath != null;
+                UpdateSlotLabel();
                 RebuildSlotOptions();
             }
         }
@@ -220,6 +237,7 @@ namespace DSPRE.Editors.BtxEditor
             imageInfoLabel.Text = "";
             statusLabel.Text = "";
             clearImageButton.Enabled = false;
+            UpdateSlotLabel();
             RebuildSlotOptions();
         }
 
@@ -242,16 +260,24 @@ namespace DSPRE.Editors.BtxEditor
                 return;
             }
 
+            // If an image was picked, the chosen slot is only a read-only structural template
+            // (BTX0.Write needs a matching width/height/color-budget donor to patch) — the actual
+            // pixels always land in a brand-new, independent mmodel slot so importing an image can
+            // never overwrite another overworld entry's texture. Without an image, the entry just
+            // points at the picked slot directly and shares that art on purpose (no write happens).
+            bool hasImage = rawBtxPath != null || pngPath != null;
+            uint mmodelMember = hasImage ? OverworldSpriteTableExpansion.AllocateNewMmodelSlot() : slot.Id;
+
             string error;
-            if (!OverworldSpriteTableExpansion.AddEntry(appearanceId, slot.Id, clone.Id, out error))
+            if (!OverworldSpriteTableExpansion.AddEntry(appearanceId, mmodelMember, clone.Id, out error))
             {
                 statusLabel.Text = error;
                 return;
             }
 
             string imageError = null;
-            if (rawBtxPath != null) imageError = StageRawBtx(slot.Id, rawBtxPath);
-            else if (pngPath != null) imageError = StagePng(slot.Id, pngPath);
+            if (rawBtxPath != null) imageError = StageRawBtx(slot.Id, mmodelMember, rawBtxPath);
+            else if (pngPath != null) imageError = StagePng(slot.Id, mmodelMember, pngPath);
 
             AddedAppearanceId = appearanceId;
 
@@ -264,26 +290,31 @@ namespace DSPRE.Editors.BtxEditor
             Close();
         }
 
-        private static string StagePng(uint mmodelMember, string pngPath)
+        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
+        /// read-only structural template (its bytes are never written back to that slot) and writes
+        /// the patched result into <paramref name="destMember"/>'s own (already-allocated,
+        /// independent) file. Returns null on success.</summary>
+        private static string StagePng(uint templateMember, uint destMember, string pngPath)
         {
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
-            if (!File.Exists(path)) return "Target texture slot file not found.";
+            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            string destPath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, destMember.ToString("D4"));
+            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
             try
             {
-                byte[] btxData = File.ReadAllBytes(path);
+                byte[] btxData = File.ReadAllBytes(templatePath); // fresh read every call, safe for BTX0.Write to mutate in place
                 using (var target = BTX0.Read(btxData))
                 using (var import = new Bitmap(pngPath))
                 {
-                    if (target == null) return "Target texture slot is unreadable.";
+                    if (target == null) return "Template texture slot is unreadable.";
                     if (import.Width != target.Width || import.Height != target.Height)
-                        return "Size mismatch. Existing slot: " + target.Width + "x" + target.Height + ", PNG: " + import.Width + "x" + import.Height;
+                        return "Size mismatch. Template slot: " + target.Width + "x" + target.Height + ", PNG: " + import.Width + "x" + import.Height;
 
                     uint colors = GetColorCount(import);
                     if (colors > BTX0.ColorCount)
                         return "Too many colors. Limit: " + BTX0.ColorCount + ", PNG: " + colors;
 
                     byte[] newData = BTX0.Write(btxData, import);
-                    File.WriteAllBytes(path, newData);
+                    File.WriteAllBytes(destPath, newData);
                     return null;
                 }
             }
@@ -293,22 +324,27 @@ namespace DSPRE.Editors.BtxEditor
             }
         }
 
-        private static string StageRawBtx(uint mmodelMember, string rawBtxPath)
+        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
+        /// read-only structural template (never modified) and copies <paramref name="rawBtxPath"/>'s
+        /// texture data pixel-perfect into <paramref name="destMember"/>'s own (already-allocated,
+        /// independent) file. Returns null on success.</summary>
+        private static string StageRawBtx(uint templateMember, uint destMember, string rawBtxPath)
         {
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
-            if (!File.Exists(path)) return "Target texture slot file not found.";
+            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            string destPath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, destMember.ToString("D4"));
+            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
             try
             {
                 byte[] sourceData = File.ReadAllBytes(rawBtxPath);
-                using (var target = BTX0.Read(File.ReadAllBytes(path)))
+                using (var target = BTX0.Read(File.ReadAllBytes(templatePath)))
                 using (var source = BTX0.Read(sourceData))
                 {
-                    if (target == null) return "Target texture slot is unreadable.";
+                    if (target == null) return "Template texture slot is unreadable.";
                     if (source == null) return "Source file isn't a texture DSPRE can read (BTX0, 16-color format).";
                     if (source.Width != target.Width || source.Height != target.Height)
-                        return "Size mismatch. Existing slot: " + target.Width + "x" + target.Height + ", source texture: " + source.Width + "x" + source.Height;
+                        return "Size mismatch. Template slot: " + target.Width + "x" + target.Height + ", source texture: " + source.Width + "x" + source.Height;
 
-                    File.WriteAllBytes(path, sourceData);
+                    File.WriteAllBytes(destPath, sourceData);
                     return null;
                 }
             }

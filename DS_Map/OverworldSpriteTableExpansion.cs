@@ -192,6 +192,28 @@ namespace DSPRE
             catch { return false; }
         }
 
+        /// <summary>Finds an mmodel NARC member number nobody's using yet, so a newly imported
+        /// texture can get its own genuinely new file instead of overwriting one that an existing
+        /// overworld entry (or another custom one) already points at. <c>Narc.FromFolder</c> packs
+        /// every numbered file present in the unpacked directory as a member at save time (see
+        /// Narc.cs), so simply writing a fresh highest-numbered file here is enough to grow the
+        /// NARC by one slot; nothing needs to be pre-reserved the way the table capacity is.</summary>
+        public static uint AllocateNewMmodelSlot()
+        {
+            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            long max = -1;
+            if (Directory.Exists(dir))
+            {
+                foreach (string f in Directory.GetFiles(dir))
+                {
+                    uint id;
+                    if (uint.TryParse(Path.GetFileName(f), out id) && id > max)
+                        max = id;
+                }
+            }
+            return (uint)(max + 1);
+        }
+
         // ── Render-state (table 1) read/write — available on every Platinum ROM, patched or not ──
 
         public static bool TryReadRenderState(uint appearanceId, out OwRenderState state)
