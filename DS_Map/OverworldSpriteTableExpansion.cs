@@ -10,7 +10,7 @@ namespace DSPRE
     /// <summary>
     /// Detects and reads/writes hzla's PlatPatches "overworld sprites" expansion patch
     /// (github.com/hzla/PlatPatches, <c>src/patches/overworld-sprites.js</c>). Platinum-only.
-    /// DSPRE never applies this patch itself — it only detects an already-patched ROM and, once
+    /// DSPRE never applies this patch itself; it only detects an already-patched ROM and, once
     /// detected, lets the Overworld Editor add/delete custom entries within the capacity the
     /// patch pre-reserved.
     ///
@@ -22,7 +22,7 @@ namespace DSPRE
     ///   0x18: u32 usedCustomCount
     ///   0x1C: u32 reserved (0)
     ///   0x20: table 0 (renderer behaviour, 8B/row), table 1 (render properties, 8B/row),
-    ///         table 2 (texture association, 8B/row — this is RomInfo.OverworldTable's source),
+    ///         table 2 (texture association, 8B/row, this is RomInfo.OverworldTable's source),
     ///         table 3 (animation metadata, 16B/row), each concatenated back-to-back. Every
     ///         table's slot is reserved at size (originalRowCount + capacity + 1) * entrySize so
     ///         re-patching with more custom entries never has to move a later table. Every row's
@@ -39,7 +39,7 @@ namespace DSPRE
 
         /// <summary>Byte distance from the vanilla render-properties table to the vanilla texture
         /// table in an *unpatched* ROM (259 render-properties rows, including the sentinel skipped
-        /// here since it's counted from row 0 of each table's own start) — derived from the
+        /// here since it's counted from row 0 of each table's own start). Derived from the
         /// source-confirmed struct sizes (see fieldobj_drawdata.c), not guessed. Needs verifying
         /// against a real ROM once this ships.</summary>
         private const long VanillaRenderPropsToTextureDelta = 259 * 8;
@@ -71,6 +71,7 @@ namespace DSPRE
         private static bool _detected;
         private static string _path;
         private static long _markerOffset = -1;
+        private static long _reservedEnd = -1;
         private static uint _capacity;
         private static uint _usedCount;
         private static TableLayout[] _tables;
@@ -78,6 +79,15 @@ namespace DSPRE
         public static bool IsApplied => _detected;
         public static uint UsedCount => _usedCount;
         public static uint Capacity => _capacity;
+
+        /// <summary>The full byte range this patch owns in <see cref="Filesystem.expArmPath"/> (marker
+        /// + header + all 4 tables, including their still-zero-filled unused capacity headroom).
+        /// Other synthetic-overlay writers that scan for "free" (zero) space — see
+        /// <see cref="TrainerClassTableExpansion.RepointByteArrayTable"/> — must skip this range even
+        /// where it reads as zero, since it's pre-reserved for future <see cref="AddEntry"/> calls,
+        /// not actually free. Returns null when the patch isn't detected.</summary>
+        public static (long Start, long End)? GetReservedByteRange() =>
+            _detected ? ((long Start, long End)?)(_markerOffset, _reservedEnd) : null;
 
         /// <summary>Re-scans the synthetic overlay for the expansion marker. Safe to call anytime
         /// after a ROM is loaded (no-op, returns false, for DP/HGSS). Updates the RomPatchState
@@ -139,6 +149,7 @@ namespace DSPRE
                 }
 
                 _tables = tables;
+                _reservedEnd = cursor;
                 _detected = true;
                 PushFlags();
                 return true;
@@ -189,7 +200,7 @@ namespace DSPRE
         }
 
         /// <summary>Raw bytes of an entry's row in the renderer-behaviour (index 0) or
-        /// animation-metadata (index 3) table — opaque, read-only, for informational display only.
+        /// animation-metadata (index 3) table. Opaque, read-only, for informational display only.
         /// Only available once the expansion patch is detected. Returns null if not found.</summary>
         public static byte[] ReadRawRow(int tableIndex, uint appearanceId)
         {
@@ -203,7 +214,7 @@ namespace DSPRE
             return row;
         }
 
-        // ── Render-state (table 1) read/write — available on every Platinum ROM, patched or not ──
+        // ── Render-state (table 1) read/write, available on every Platinum ROM, patched or not ──
 
         public static bool TryReadRenderState(uint appearanceId, out OwRenderState state)
         {
@@ -440,6 +451,27 @@ namespace DSPRE
                 return candidate;
             }
             return null;
+        }
+
+        /// <summary>Finds an mmodel NARC member number nobody's using yet, so a newly imported
+        /// texture can get its own genuinely new file instead of overwriting one that an existing
+        /// overworld entry (or another custom one) already points at. <c>Narc.FromFolder</c> packs
+        /// every numbered file present in the unpacked directory as a member at save time (see
+        /// Narc.cs), so simply writing a fresh highest-numbered file here is enough to grow the
+        /// NARC by one slot; nothing needs to be pre-reserved the way the table capacity is.</summary>
+        public static uint AllocateNewMmodelSlot()
+        {
+            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            long max = -1;
+            if (Directory.Exists(dir))
+            {
+                foreach (string f in Directory.GetFiles(dir))
+                {
+                    if (uint.TryParse(Path.GetFileName(f), out uint id) && id > max)
+                        max = id;
+                }
+            }
+            return (uint)(max + 1);
         }
 
         private static void WriteHeaderUsedCount(uint value) =>

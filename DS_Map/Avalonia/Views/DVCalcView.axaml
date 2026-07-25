@@ -31,7 +31,7 @@
       <ItemsControl ItemsSource="{Binding Slots}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:DVCalcSlotViewModel">
-            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,0,0,4" Background="#FCFCFC">
+            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,0,0,4" Background="{DynamicResource Editor.PanelBg}">
               <Grid ColumnDefinitions="180,110,110,80,60,*,Auto,Auto" >
                 <TextBlock Grid.Column="0" Text="{Binding PokeLabel}" VerticalAlignment="Center"/>
                 <ComboBox Grid.Column="1" Margin="2" ItemsSource="{Binding GenderOptions}"  SelectedIndex="{Binding GenderIndex}"  IsEnabled="{Binding FlagsEditable}"/>

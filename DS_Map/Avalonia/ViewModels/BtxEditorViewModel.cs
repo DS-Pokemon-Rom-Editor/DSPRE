@@ -72,8 +72,8 @@ namespace DSPRE.Avalonia.ViewModels
 
         public bool IsExpansionApplied => OverworldSpriteTableExpansion.IsApplied;
         public string ExpansionStatusText => IsExpansionApplied
-            ? $"Custom Overworld Sprites patch detected — {OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used."
-            : "Custom Overworld Sprites patch (hzla PlatPatches) not detected — Add/Delete are disabled. Render-state properties below are still editable.";
+            ? $"Custom Overworld Sprites patch detected. {OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used."
+            : "Custom Overworld Sprites patch (hzla PlatPatches) not detected. Add/Delete are disabled. Render-state properties below are still editable.";
 
         private bool _isSelectedEntryCustom;
         public bool IsSelectedEntryCustom { get => _isSelectedEntryCustom; private set => Set(ref _isSelectedEntryCustom, value); }
@@ -221,13 +221,21 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Add / Delete custom entries (expansion patch only) ───────────────────
         /// <summary>Adds a new custom overworld entry (called from the "Add Custom Entry…" dialog
-        /// once the user confirms it), optionally staging a chosen PNG onto the target mmodel
-        /// member's texture slot as an unsaved change (same Save/Save All flow as the regular
-        /// Import PNG button). Returns null on full success; if the table row was added but the
-        /// image import failed, still refreshes the list but returns a message saying so.</summary>
-        public string AddEntryWithImage(string appearanceIdText, uint mmodelMember, uint cloneFrom, string pngPath, string rawBtxPath)
+        /// once the user confirms it). If an image was picked, it is NEVER written into
+        /// <paramref name="templateMember"/> (the slot the user chose in the dropdown) — that slot
+        /// is only read as a structural template (matching width/height/color-count), which
+        /// <see cref="LibNDSFormats.BTX0.Write"/> requires. The actual pixels are written into a
+        /// brand-new mmodel NARC member (<see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>)
+        /// so no existing overworld's art is ever touched. Without an image, the entry just points at
+        /// <paramref name="templateMember"/> directly and shares that art on purpose, no write happens.
+        /// Returns null on full success; if the table row was added but the image import failed,
+        /// still refreshes the list but returns a message saying so.</summary>
+        public string AddEntryWithImage(string appearanceIdText, uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
         {
             if (!TryParseId(appearanceIdText, "Appearance ID", out uint appearanceId, out string error)) return error;
+
+            bool hasImage = rawBtxPath != null || pngPath != null;
+            uint mmodelMember = hasImage ? OverworldSpriteTableExpansion.AllocateNewMmodelSlot() : templateMember;
 
             if (!OverworldSpriteTableExpansion.AddEntry(appearanceId, mmodelMember, cloneFrom, out error))
                 return error;
@@ -235,8 +243,8 @@ namespace DSPRE.Avalonia.ViewModels
             RomInfo.ReadOWTable();
             LoadEntryList();
 
-            string imageError = rawBtxPath != null ? StageEntryRawBtx(appearanceId, mmodelMember, rawBtxPath)
-                : pngPath != null ? StageEntryPng(appearanceId, mmodelMember, pngPath)
+            string imageError = rawBtxPath != null ? StageEntryRawBtx(appearanceId, templateMember, rawBtxPath)
+                : pngPath != null ? StageEntryPng(appearanceId, templateMember, pngPath)
                 : null;
 
             SelectEntry(_owKeys.IndexOf(appearanceId));
@@ -246,25 +254,25 @@ namespace DSPRE.Avalonia.ViewModels
             return imageError != null ? $"Entry was added, but the image import failed: {imageError}" : null;
         }
 
-        /// <summary>Stages an already-BTX0-formatted texture file (e.g. extracted from another
-        /// ROM) straight onto an existing mmodel member as an unsaved change — a direct binary
-        /// copy, no PNG/palette conversion, so it's pixel-perfect as long as its dimensions match
-        /// the slot being replaced. Returns null on success.</summary>
-        private string StageEntryRawBtx(uint appearanceId, uint mmodelMember, string rawBtxPath)
+        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
+        /// read-only structural template (its bytes are never written back to that slot) and stages
+        /// a pixel-perfect copy of <paramref name="rawBtxPath"/>'s texture data for the new entry's
+        /// own (already-allocated, independent) mmodel member. Returns null on success.</summary>
+        private string StageEntryRawBtx(uint appearanceId, uint templateMember, string rawBtxPath)
         {
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
-            if (!File.Exists(path)) return "Target texture slot file not found.";
+            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
             try
             {
-                var target = BTX0.ReadRaw(File.ReadAllBytes(path));
-                if (target == null) return "Target texture slot is unreadable.";
+                var target = BTX0.ReadRaw(File.ReadAllBytes(templatePath));
+                if (target == null) return "Template texture slot is unreadable.";
 
                 byte[] sourceData = File.ReadAllBytes(rawBtxPath);
                 var source = BTX0.ReadRaw(sourceData);
                 if (source == null) return "Source file isn't a texture DSPRE can read (BTX0, 16-color format).";
 
                 if (source.Width != target.Width || source.Height != target.Height)
-                    return $"Size mismatch. Existing slot: {target.Width}×{target.Height}, source texture: {source.Width}×{source.Height}";
+                    return $"Size mismatch. Template slot: {target.Width}×{target.Height}, source texture: {source.Width}×{source.Height}";
 
                 _modifiedFiles[appearanceId] = sourceData;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -277,24 +285,25 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        /// <summary>Stages a PNG onto an existing mmodel member's texture slot as an unsaved
-        /// change, exactly like <see cref="ImportPng"/> but addressed by member id directly
-        /// (the new entry may not be the currently-selected one yet). Returns null on success.</summary>
-        private string StageEntryPng(uint appearanceId, uint mmodelMember, string pngPath)
+        /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
+        /// read-only structural template (its bytes are never written back to that slot, only cloned
+        /// into memory and patched there) and stages the patched result for the new entry's own
+        /// (already-allocated, independent) mmodel member. Returns null on success.</summary>
+        private string StageEntryPng(uint appearanceId, uint templateMember, string pngPath)
         {
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
-            if (!File.Exists(path)) return "Target texture slot file not found.";
+            string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
+            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
             try
             {
-                byte[] btxData = File.ReadAllBytes(path);
+                byte[] btxData = File.ReadAllBytes(templatePath); // fresh read every call, safe for BTX0.Write to mutate in place
                 RawImage import;
                 using (var fs = File.OpenRead(pngPath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
                 var current = BTX0.ReadRaw(btxData);
-                if (current == null) return "Target texture slot is unreadable.";
+                if (current == null) return "Template texture slot is unreadable.";
                 if (import.Width != current.Width || import.Height != current.Height)
-                    return $"Size mismatch. Existing slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+                    return $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
 
                 uint colors = CountColors(import);
                 if (colors > BTX0.ColorCount)

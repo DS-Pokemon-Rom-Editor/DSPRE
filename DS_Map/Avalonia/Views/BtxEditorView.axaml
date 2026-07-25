@@ -46,7 +46,7 @@
                    TextWrapping="Wrap"/>
       </StackPanel>
 
-      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="#F8F8F8">
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
         <Image Source="{Binding CurrentImage}"
                Stretch="None"
                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -83,7 +83,7 @@
 
           <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
             <TextBlock Text="Renderer / animation (read-only)" FontWeight="SemiBold"
-                       ToolTip.Tip="Opaque resource IDs and code pointers cloned from another entry — not safe to hand-edit, shown for reference when picking a clone source below."/>
+                       ToolTip.Tip="Opaque resource IDs and code pointers cloned from another entry, not safe to hand-edit, shown for reference when picking a clone source below."/>
             <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
           </StackPanel>
@@ -94,7 +94,7 @@
             <Button Content="Add Custom Entry…" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Requires the hzla PlatPatches overworld-sprites expansion patch, with a free custom slot."/>
             <Button Content="Delete Selected Entry" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}" HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Only available for custom entries the expansion patch added — original entries can't be removed."/>
+                    ToolTip.Tip="Only available for custom entries the expansion patch added. Original entries can't be removed."/>
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

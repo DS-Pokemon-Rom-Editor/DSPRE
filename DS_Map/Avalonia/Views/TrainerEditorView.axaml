@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
         x:Class="DSPRE.Avalonia.Views.TrainerEditorView"
         x:DataType="vm:TrainerEditorViewModel"
         Title="Trainer Editor"
@@ -11,35 +12,37 @@
     <vm:TrainerEditorViewModel/>
   </Design.DataContext>
 
-  <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
-        <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="+ Add Trainer" Click="AddTrainer_Click" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-        <Button Content="Search…"        Click="Search_Click"/>
-        <Button Content="Reorder party…" Click="Reorder_Click"/>
-        <Button Content="DV Calc…"       Click="DVCalc_Click"/>
-        <Button Content="Battle messages…" Click="BattleMessages_Click"/>
-        <Button Content="Trainer classes…" Click="TrainerClasses_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Export trainer…" Click="ExportTrainer_Click" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
-        <Button Content="Import trainer…" Click="ImportTrainer_Click" ToolTip.Tip="Load a .trf file into this trainer slot"/>
-        <Button Content="Export properties…" Click="ExportProperties_Click" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
-        <Button Content="Import properties…" Click="ImportProperties_Click" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
-        <Button Content="Export party…" Click="ExportParty_Click" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
-        <Button Content="Import party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
-      </WrapPanel>
-    </Border>
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
-    </Border>
+  <TabControl x:Name="MainTabs">
+    <TabItem Header="Trainers">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+                BorderThickness="0,0,0,1" Padding="6,4">
+          <WrapPanel Classes="toolbar">
+            <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+            <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+            <Button Content="+ Add Trainer" Click="AddTrainer_Click" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="Search…"        Click="Search_Click"/>
+            <Button Content="Reorder party…" Click="Reorder_Click"/>
+            <Button Content="DV Calc…"       Click="DVCalc_Click"/>
+            <Button Content="Battle messages…" Click="BattleMessages_Click"/>
+            <Button Content="Trainer classes…" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
+            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+            <Button Content="Export trainer…" Click="ExportTrainer_Click" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
+            <Button Content="Import trainer…" Click="ImportTrainer_Click" ToolTip.Tip="Load a .trf file into this trainer slot"/>
+            <Button Content="Export properties…" Click="ExportProperties_Click" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
+            <Button Content="Import properties…" Click="ImportProperties_Click" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
+            <Button Content="Export party…" Click="ExportParty_Click" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
+            <Button Content="Import party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
+          </WrapPanel>
+        </Border>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+                BorderThickness="0,1,0,0" Padding="8,3">
+          <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        </Border>
 
-    <Grid ColumnDefinitions="240,*">
+        <Grid ColumnDefinitions="240,*">
       <ListBox Grid.Column="0" Margin="4"
                ItemsSource="{Binding TrainerNames}"
                SelectedIndex="{Binding SelectedTrainerIndex}"/>
@@ -106,7 +109,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
                   <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
-                          CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="#FCFCFC">
+                          CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="{DynamicResource Editor.PanelBg}">
                     <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto">
                       <Border Grid.Column="0" Grid.RowSpan="3" Width="56" Height="56" VerticalAlignment="Top"
                               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
@@ -179,6 +182,12 @@
 
         </StackPanel>
       </ScrollViewer>
-    </Grid>
-  </DockPanel>
+        </Grid>
+      </DockPanel>
+    </TabItem>
+
+    <TabItem Header="Classes">
+      <views:TrainerClassesView x:Name="ClassesTabView"/>
+    </TabItem>
+  </TabControl>
 </Window>

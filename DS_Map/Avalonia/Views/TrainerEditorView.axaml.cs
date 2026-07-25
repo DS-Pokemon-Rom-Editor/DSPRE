@@ -29,6 +29,11 @@ namespace DSPRE.Avalonia.Views
             if (vm == null) return;
             _setupDone = true;
             await vm.SetupAsync(this);
+
+            // The Classes tab is a separate ViewModel (trainer classes aren't per-trainer data),
+            // give it its own instance now that the ROM/trainer data is actually loaded, starting
+            // on whichever class the current trainer uses.
+            ClassesTabView.DataContext = new TrainerClassesViewModel(vm.TrainerClassIndex);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
@@ -47,7 +52,9 @@ namespace DSPRE.Avalonia.Views
         private void TrainerClasses_Click(object sender, RoutedEventArgs e)
         {
             int classId = VM?.TrainerClassIndex ?? 0;
-            new TrainerClassesView(new TrainerClassesViewModel(classId)).Show();
+            if (ClassesTabView.DataContext is TrainerClassesViewModel classesVm)
+                classesVm.SelectedClassIndex = classId;
+            MainTabs.SelectedIndex = 1;
         }
 
         private async void ExportTrainer_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTrainerAsync());

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Controls;
+using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -13,8 +14,8 @@ namespace DSPRE.Avalonia.ViewModels
     /// <summary>
     /// Avalonia port of the trainer-class panel of the WinForms <c>TrainerEditor</c>: rename a trainer
     /// class and edit its "eye contact" encounter music (the SSEQ that plays when that class of trainer
-    /// spots the player) — a small ARM9-backed table, separate from any single trainer's own data, so it
-    /// gets its own popup rather than crowding the main Trainer Editor window.
+    /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
+    /// gets its own tab rather than crowding the main Trainer Editor window.
     /// </summary>
     public class TrainerClassesViewModel : INotifyPropertyChanged
     {
@@ -26,8 +27,10 @@ namespace DSPRE.Avalonia.ViewModels
 
         private bool _suppress;
         private readonly Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> _musicDict = new();
+        private readonly TrainerClassSpriteRenderer _spriteRenderer = new();
+        private int _spriteFrame;
 
-        /// <summary>Which file _musicDict's entryOffsets are relative to — the table may have been
+        /// <summary>Which file _musicDict's entryOffsets are relative to. The table may have been
         /// repointed into the synthetic overlay (e.g. by hand, following the "adding a new trainer
         /// class" community write-up). Mirrors TrainerEditor.cs's (WinForms) identical field.</summary>
         private bool _musicTableRepointed;
@@ -58,6 +61,25 @@ namespace DSPRE.Avalonia.ViewModels
 
         private bool _musicAltEnabled;
         public bool MusicAltEnabled { get => _musicAltEnabled; private set => Set(ref _musicAltEnabled, value); }
+
+        /// <summary>Gender/prize-multiplier and "Add Trainer Class" are only implemented for
+        /// Platinum (English), see TrainerClassTableExpansion's doc comment for why.</summary>
+        public bool IsExpansionSupported => TrainerClassTableExpansion.IsSupportedForCurrentRom;
+
+        private bool _genderPrizeMulLoaded;
+        public bool GenderPrizeMulLoaded { get => _genderPrizeMulLoaded; private set => Set(ref _genderPrizeMulLoaded, value); }
+
+        private int _genderIndex;
+        public int GenderIndex { get => _genderIndex; set => Set(ref _genderIndex, value); }
+
+        private int _prizeMultiplier;
+        public int PrizeMultiplier { get => _prizeMultiplier; set => Set(ref _prizeMultiplier, value); }
+
+        public bool CanEnableMusic => IsExpansionSupported && !MusicEnabled && _selectedIndex >= 0;
+
+        private Bitmap _spritePreview;
+        public Bitmap SpritePreview { get => _spritePreview; private set => Set(ref _spritePreview, value); }
+        public bool HasSpritePreview => _spritePreview != null;
 
         public TrainerClassesViewModel() { if (Design.IsDesignMode) ClassNames.Add("[000] Youngster"); }
 
@@ -126,7 +148,36 @@ namespace DSPRE.Avalonia.ViewModels
                 MusicAlt = 0;
             }
             MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
+
+            if (IsExpansionSupported)
+            {
+                GenderPrizeMulLoaded = TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _)
+                    & TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
+                GenderIndex = gender;
+                PrizeMultiplier = prizeMul;
+            }
+            else
+            {
+                GenderPrizeMulLoaded = false;
+            }
+
+            _spriteFrame = _spriteRenderer.Load(index);
+            RefreshSpritePreview();
+
+            OnPropertyChanged(nameof(CanEnableMusic));
             _suppress = false;
+        }
+
+        /// <summary>Re-renders the (bigger) class-sprite preview shown at the top of this tab. Call
+        /// after the sprite editor saves changes, since it edits the same NCGR/NCLR files on disk.</summary>
+        public void RefreshSpritePreview()
+        {
+            if (_selectedIndex < 0) { SpritePreview = null; OnPropertyChanged(nameof(HasSpritePreview)); return; }
+            _spriteRenderer.Load(_selectedIndex);
+            SpritePreview = _spriteRenderer.HasSprite
+                ? _spriteRenderer.Render(_spriteFrame, 144, 144)
+                : null;
+            OnPropertyChanged(nameof(HasSpritePreview));
         }
 
         public void Save()
@@ -145,6 +196,14 @@ namespace DSPRE.Avalonia.ViewModels
                 _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 
+            if (GenderPrizeMulLoaded)
+            {
+                TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out string genderErr);
+                TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out string prizeErr);
+                if (genderErr != null || prizeErr != null)
+                    _ = DialogHelper.ShowError($"Some fields failed to save:\n{genderErr}\n{prizeErr}".Trim(), "Trainer Classes");
+            }
+
             int savedIndex = _selectedIndex;
             var ta = new TextArchive(trainerClassMessageNumber);
             ta.messages[savedIndex] = ClassName;
@@ -152,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Replacing the currently-selected item's text can make the ListBox re-fire its selection
             // (some containers get regenerated), reentrantly resetting _selectedIndex to -1 through the
-            // SelectedClassIndex setter — _suppress only stops LoadClass from re-running, it doesn't stop
+            // SelectedClassIndex setter; _suppress only stops LoadClass from re-running, it doesn't stop
             // the field write. Restore the real index afterward rather than trusting it mid-call.
             _suppress = true;
             ClassNames[savedIndex] = $"[{savedIndex:D3}] {ClassName}";
@@ -162,6 +221,47 @@ namespace DSPRE.Avalonia.ViewModels
 
             AppEvents.RaiseNamesChanged();
             StatusText = $"Trainer class {savedIndex} saved.";
+        }
+
+        /// <summary>Adds an eye-contact music entry to the currently-selected class (which doesn't
+        /// have one yet) instead of it just staying permanently disabled.</summary>
+        public void EnableMusic(ushort musicMain, ushort musicNight)
+        {
+            if (!CanEnableMusic) return;
+            if (!TrainerClassTableExpansion.AddEncounterMusicEntry((byte)_selectedIndex, musicMain, musicNight, out string error))
+            {
+                _ = DialogHelper.ShowError(error, "Trainer Classes");
+                return;
+            }
+
+            _musicDict.Clear();
+            SetupEncounterMusicTable();
+            LoadClass(_selectedIndex);
+            StatusText = "Eye-contact music enabled for this class.";
+        }
+
+        /// <summary>Adds a whole new trainer class (name/description/gender/prize multiplier, plus
+        /// an optional initial music entry), then refreshes the list and selects it. Returns null on
+        /// success, or an error message.</summary>
+        public string AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,
+            bool addMusic, ushort musicMain, ushort musicNight)
+        {
+            if (!TrainerClassTableExpansion.AddTrainerClass(name, description, gender, prizeMultiplier, addMusic, musicMain, musicNight, out string error))
+                return error;
+
+            string[] names = GetTrainerClassNames();
+            _suppress = true;
+            ClassNames.Clear();
+            for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
+            _suppress = false;
+
+            _musicDict.Clear();
+            SetupEncounterMusicTable();
+
+            StatusText = $"{ClassNames.Count} trainer classes.";
+            AppEvents.RaiseNamesChanged();
+            SelectedClassIndex = ClassNames.Count - 1;
+            return null;
         }
     }
 }

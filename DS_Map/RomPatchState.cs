@@ -39,7 +39,7 @@ namespace DSPRE
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
 
         /// <summary>Whether the trainer-class "eye contact" encounter-music table
-        /// (sTrainerEncounterBGMs) has been repointed into the synthetic overlay — e.g. by hand,
+        /// (sTrainerEncounterBGMs) has been repointed into the synthetic overlay, e.g. by hand,
         /// following the community "adding a new trainer class" write-up. Both TrainerEditor.cs
         /// (WinForms) and TrainerClassesViewModel.cs (Avalonia) set this whenever they resolve the
         /// table's pointer, so reads/writes go to the right file instead of crashing/corrupting.</summary>

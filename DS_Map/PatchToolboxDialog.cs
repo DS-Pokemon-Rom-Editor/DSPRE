@@ -42,7 +42,7 @@ namespace DSPRE
         {
             InitializeComponent();
 
-            // This is the WinForms dialog — make sure the shared apply-logic uses WinForms prompts
+            // This is the WinForms dialog, make sure the shared apply-logic uses WinForms prompts
             // (the Avalonia toolbox swaps in native dialogs; the hooks are process-global statics).
             UseWinFormsPrompts();
 
@@ -608,7 +608,7 @@ namespace DSPRE
 
         // Moves the in-game ScrCommands table + count into the synthetic overlay. Apply-logic lives in
         // the shared PatchToolboxLogic (see ApplyScrcmdRepointPatch), so WinForms and Avalonia run
-        // identical code — including the synthetic-overlay offset picker.
+        // identical code, including the synthetic-overlay offset picker.
         private void applyCustomCommands(object sender, EventArgs e)
         {
             if (PatchToolboxLogic.ApplyScrcmdRepointPatch())
