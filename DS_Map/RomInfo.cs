@@ -108,6 +108,12 @@ namespace DSPRE
         public static int itemDescriptionsTextNumber { get; private set; }
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
+        /// <summary>Trainer-class description text archive. Only confirmed for Platinum
+        /// non-Japanese (619 name / 620 description, per a verified community write-up on adding a
+        /// new trainer class) — elsewhere this is the unverified "next archive after the name one"
+        /// convention, not independently confirmed. Only rely on it where that's been checked (see
+        /// TrainerClassTableExpansion's Platinum-English-only gate for "Add Trainer Class").</summary>
+        public static int trainerClassDescriptionMessageNumber { get; private set; }
         public static int trainerNamesMessageNumber { get; private set; }
         public static int moveDescriptionsTextNumbers { get; private set; }
         public static int moveNamesTextNumbers { get; private set; }
@@ -1572,6 +1578,8 @@ namespace DSPRE
                     }
                     break;
             }
+
+            trainerClassDescriptionMessageNumber = trainerClassMessageNumber + 1;
         }
         private static void SetMoveTextNumbers()
         {

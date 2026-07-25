@@ -122,12 +122,24 @@ namespace DSPRE.Editors
         private Timer trainerClassAnimTimer;
 
         Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> trainerClassEncounterMusicDict;
+
+        /// <summary>Which file trainerClassEncounterMusicDict's entryOffsets are relative to — the
+        /// table may have been repointed into the synthetic overlay (e.g. by hand, following the
+        /// "adding a new trainer class" community write-up); reading/writing it as if it were still
+        /// at its vanilla arm9.bin location corrupts data or crashes. Same pattern already used for
+        /// the VS-Trainer combo table in TableEditor.cs (PatchToolboxDialog.flag_TrainerClassBattleTableRepointed).</summary>
+        private bool trainerClassEncounterMusicRepointed;
+
         private void SetupTrainerClassEncounterMusicTable()
         {
             RomInfo.SetEncounterMusicTableOffsetToRAMAddress();
             trainerClassEncounterMusicDict = new Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)>();
 
-            uint encounterMusicTableTableStartAddress = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0) - ARM9.address;
+            uint encounterMusicTableTableStartAddress = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
+            trainerClassEncounterMusicRepointed = encounterMusicTableTableStartAddress >= RomInfo.synthOverlayLoadAddress;
+            RomPatchState.flag_TrainerEncounterBGMTableRepointed = trainerClassEncounterMusicRepointed;
+            encounterMusicTableTableStartAddress -= trainerClassEncounterMusicRepointed ? RomInfo.synthOverlayLoadAddress : ARM9.address;
+
             uint tableSizeOffset = 10;
             if (gameFamily == GameFamilies.HGSS)
             {
@@ -136,7 +148,8 @@ namespace DSPRE.Editors
             }
 
             byte tableEntriesCount = ARM9.ReadByte(RomInfo.encounterMusicTableOffsetToRAMAddress - tableSizeOffset);
-            using (ARM9.Reader ar = new ARM9.Reader(encounterMusicTableTableStartAddress))
+            string tablePath = trainerClassEncounterMusicRepointed ? Filesystem.expArmPath : RomInfo.arm9Path;
+            using (DSUtils.EasyReader ar = new DSUtils.EasyReader(tablePath, encounterMusicTableTableStartAddress))
             {
                 for (int i = 0; i < tableEntriesCount; i++)
                 {
@@ -1401,11 +1414,12 @@ namespace DSPRE.Editors
 
             if (trainerClassEncounterMusicDict.TryGetValue(b_selectedTrClass, out var dictEntry))
             {
-                ARM9.WriteBytes(BitConverter.GetBytes(eyeMusicID), dictEntry.entryOffset + 2);
+                string tablePath = trainerClassEncounterMusicRepointed ? Filesystem.expArmPath : RomInfo.arm9Path;
+                DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(eyeMusicID), dictEntry.entryOffset + 2);
 
                 if (gameFamily.Equals(GameFamilies.HGSS))
                 {
-                    ARM9.WriteBytes(BitConverter.GetBytes(altEyeMusicID), dictEntry.entryOffset + 4);
+                    DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(altEyeMusicID), dictEntry.entryOffset + 4);
                 }
 
                 trainerClassEncounterMusicDict[b_selectedTrClass] = (dictEntry.entryOffset, eyeMusicID, altEyeMusicID);

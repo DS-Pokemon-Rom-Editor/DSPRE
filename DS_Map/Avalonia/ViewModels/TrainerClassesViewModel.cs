@@ -27,6 +27,11 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _suppress;
         private readonly Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> _musicDict = new();
 
+        /// <summary>Which file _musicDict's entryOffsets are relative to — the table may have been
+        /// repointed into the synthetic overlay (e.g. by hand, following the "adding a new trainer
+        /// class" community write-up). Mirrors TrainerEditor.cs's (WinForms) identical field.</summary>
+        private bool _musicTableRepointed;
+
         public ObservableCollection<string> ClassNames { get; } = new();
 
         private string _statusText = "Not loaded";
@@ -82,12 +87,17 @@ namespace DSPRE.Avalonia.ViewModels
         {
             SetEncounterMusicTableOffsetToRAMAddress();
 
-            uint tableStart = BitConverter.ToUInt32(ARM9.ReadBytes(encounterMusicTableOffsetToRAMAddress, 4), 0) - ARM9.address;
+            uint tableStart = BitConverter.ToUInt32(ARM9.ReadBytes(encounterMusicTableOffsetToRAMAddress, 4), 0);
+            _musicTableRepointed = tableStart >= synthOverlayLoadAddress;
+            RomPatchState.flag_TrainerEncounterBGMTableRepointed = _musicTableRepointed;
+            tableStart -= _musicTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+
             uint tableSizeOffset = 10;
             if (gameFamily == GameFamilies.HGSS) tableSizeOffset += 2;
 
             byte entryCount = ARM9.ReadByte(encounterMusicTableOffsetToRAMAddress - tableSizeOffset);
-            using var reader = new ARM9.Reader(tableStart);
+            string tablePath = _musicTableRepointed ? Filesystem.expArmPath : arm9Path;
+            using var reader = new DSUtils.EasyReader(tablePath, tableStart);
             for (int i = 0; i < entryCount; i++)
             {
                 uint entryOffset = (uint)reader.BaseStream.Position;
@@ -128,9 +138,10 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 ushort main = (ushort)MusicMain;
                 ushort alt = (ushort)MusicAlt;
-                ARM9.WriteBytes(BitConverter.GetBytes(main), entry.entryOffset + 2);
+                string tablePath = _musicTableRepointed ? Filesystem.expArmPath : arm9Path;
+                DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(main), entry.entryOffset + 2);
                 if (gameFamily == GameFamilies.HGSS)
-                    ARM9.WriteBytes(BitConverter.GetBytes(alt), entry.entryOffset + 4);
+                    DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(alt), entry.entryOffset + 4);
                 _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 

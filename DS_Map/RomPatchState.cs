@@ -38,6 +38,13 @@ namespace DSPRE
         public static bool flag_PokemonBattleTableRepointed { get; set; } = false;
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
 
+        /// <summary>Whether the trainer-class "eye contact" encounter-music table
+        /// (sTrainerEncounterBGMs) has been repointed into the synthetic overlay — e.g. by hand,
+        /// following the community "adding a new trainer class" write-up. Both TrainerEditor.cs
+        /// (WinForms) and TrainerClassesViewModel.cs (Avalonia) set this whenever they resolve the
+        /// table's pointer, so reads/writes go to the right file instead of crashing/corrupting.</summary>
+        public static bool flag_TrainerEncounterBGMTableRepointed { get; set; } = false;
+
         /// <summary>Whether hzla's PlatPatches "overworld sprites" expansion (marker "OWTBLXPANDV1"
         /// in the synthetic-overlay file) has been detected on the loaded ROM. DSPRE only detects
         /// this patch, it never applies it. Platinum-only.</summary>
@@ -63,6 +70,7 @@ namespace DSPRE
             flag_TrainerClassBattleTableRepointed = false;
             flag_PokemonBattleTableRepointed = false;
             flag_TrainerNamesExpanded = false;
+            flag_TrainerEncounterBGMTableRepointed = false;
             flag_OverworldSpriteExpansionApplied = false;
             overworldExpansionUsedCount = 0;
             overworldExpansionCapacity = 0;

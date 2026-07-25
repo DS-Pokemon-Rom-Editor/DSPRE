@@ -26,6 +26,7 @@ namespace DSPRE
         public static bool flag_TrainerClassBattleTableRepointed { get => RomPatchState.flag_TrainerClassBattleTableRepointed; set => RomPatchState.flag_TrainerClassBattleTableRepointed = value; }
         public static bool flag_PokemonBattleTableRepointed { get => RomPatchState.flag_PokemonBattleTableRepointed; set => RomPatchState.flag_PokemonBattleTableRepointed = value; }
         public static bool flag_TrainerNamesExpanded { get => RomPatchState.flag_TrainerNamesExpanded; set => RomPatchState.flag_TrainerNamesExpanded = value; }
+        public static bool flag_TrainerEncounterBGMTableRepointed { get => RomPatchState.flag_TrainerEncounterBGMTableRepointed; set => RomPatchState.flag_TrainerEncounterBGMTableRepointed = value; }
 
         public static readonly int expandedTrainerNameLength = RomPatchState.expandedTrainerNameLength;
 

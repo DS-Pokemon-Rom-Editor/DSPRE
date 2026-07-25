@@ -1178,6 +1178,26 @@ namespace DSPRE
                     return PatchState.Applied;
                 }));
 
+            list.Add(Status("trainerClassTablesExpanded", "Trainer Class Tables Expanded (gender / prize money)",
+                "Whether the trainer-class gender and prize-money-multiplier tables have been repointed into the synthetic overlay, either by DSPRE's own \"Add Trainer Class\" or by hand (per the community write-up on adding a new trainer class). Platinum (English) only — these tables have no bounds checking, so DSPRE won't touch them anywhere else.",
+                () =>
+                {
+                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
+                    TrainerClassTableExpansion.Detect();
+                    bool applied = TrainerClassTableExpansion.IsGenderTableRepointed && TrainerClassTableExpansion.IsPrizeMulTableRepointed;
+                    if (!applied)
+                    {
+                        return Unsupported(TrainerClassTableExpansion.IsGenderTableRepointed || TrainerClassTableExpansion.IsPrizeMulTableRepointed
+                            ? "Only one of the two tables has been expanded so far — add a trainer class in the Trainer Editor to finish the other."
+                            : "Not detected — use \"Add Trainer Class\" in the Trainer Editor, or repoint by hand.");
+                    }
+                    return PatchState.Applied;
+                }));
+
+            list.Add(Status("trainerEncounterBgmRepointed", "Trainer Encounter Music Table Repointed",
+                "Whether the trainer-class \"eye contact\" encounter-music table has been repointed into the synthetic overlay (by hand, or by DSPRE's own \"Add Trainer Class\"). DSPRE's Trainer Editor already reads/writes this table correctly either way — this row is just visibility into which location is in use.",
+                () => TrainerClassTableExpansion.DetectMusicTableRepointed() ? PatchState.Applied : Unsupported("Not repointed — this ROM's trainer-class music table is still at its original location, which is completely normal.")));
+
             return list;
         }
 

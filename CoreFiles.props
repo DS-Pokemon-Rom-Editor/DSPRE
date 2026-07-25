@@ -28,6 +28,7 @@
     <CoreCompile Include="$(DsMapDir)RomPatchState.cs" />
     <CoreCompile Include="$(DsMapDir)PatchToolboxLogic.cs" />
     <CoreCompile Include="$(DsMapDir)OverworldSpriteTableExpansion.cs" />
+    <CoreCompile Include="$(DsMapDir)TrainerClassTableExpansion.cs" />
     <CoreCompile Include="$(DsMapDir)SystemShell.cs" />
     <CoreCompile Include="$(DsMapDir)HeaderLists.cs" />
     <CoreCompile Include="$(DsMapDir)CrashReporter.cs" />
