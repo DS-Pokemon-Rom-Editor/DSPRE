@@ -18,6 +18,12 @@ namespace DSPRE.Editors.BtxEditor
         // Track modified BTX files
         private Dictionary<ushort, byte[]> modifiedBTXFiles = new Dictionary<ushort, byte[]>();
 
+        // ── Overworld properties (render state + hzla expansion-patch add/delete) ────────────────
+        // Render state exists for every Platinum ROM; Add/Delete are only ever enabled once
+        // OverworldSpriteTableExpansion.Detect() finds hzla's PlatPatches expansion applied — the
+        // controls themselves aren't gated on game family, the underlying detection already is.
+        private bool loadingRenderState;
+
         #region IEditorWithUnsavedChanges Implementation
         public bool HasUnsavedChanges => modifiedBTXFiles.Count > 0;
         public string UnsavedChangesDescription => $"BTX Editor ({modifiedBTXFiles.Count} modified)";
@@ -32,17 +38,22 @@ namespace DSPRE.Editors.BtxEditor
             RomInfo.Set3DOverworldsDict();
             RomInfo.ReadOWTable();
             InitializeComponent();
-            overworldList.Items.Clear();
-
-            foreach (ushort key in RomInfo.OverworldTable.Keys)
-            {
-                overworldList.Items.Add("OW Entry " + key);
-            }
+            RefreshEntryList();
+            RefreshExpansionStatus();
 
             overworldList.SelectedIndex = 0;
 
             this.FormClosed += (s, e) => OpenEditorsRegistry.Unregister(this);
             this.FormClosing += BtxEditor_FormClosing;
+        }
+
+        private void RefreshEntryList()
+        {
+            overworldList.Items.Clear();
+            foreach (uint key in RomInfo.OverworldTable.Keys)
+            {
+                overworldList.Items.Add("OW Entry " + key);
+            }
         }
 
         private void overworldList_SelectedIndexChanged(object sender, EventArgs e)
@@ -60,6 +71,8 @@ namespace DSPRE.Editors.BtxEditor
             ushort overlayTableEntryID = (ushort)RomInfo.OverworldTable.Keys.ElementAt(selection);
             uint spriteID = RomInfo.OverworldTable[overlayTableEntryID].spriteID;
             string path = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir + "\\" + spriteID.ToString("D4");
+
+            LoadOverworldProperties(overlayTableEntryID);
 
             if (modifiedBTXFiles.TryGetValue(overlayTableEntryID, out byte[] modifiedData))
             {
@@ -236,6 +249,120 @@ namespace DSPRE.Editors.BtxEditor
                 isConfirmingExit = true;
             }
 
+        }
+
+        // ── Overworld properties (controls declared in BtxEditor.Designer.cs) ────────────────────
+
+        private void LoadOverworldProperties(uint key)
+        {
+            bool isCustom = OverworldSpriteTableExpansion.IsCustomEntry(key);
+            deleteEntryButton.Enabled = OverworldSpriteTableExpansion.IsApplied && isCustom;
+
+            loadingRenderState = true;
+            OverworldSpriteTableExpansion.OwRenderState state;
+            bool hasState = OverworldSpriteTableExpansion.TryReadRenderState(key, out state);
+            drawTypeCombo.Enabled = shadowTypeCombo.Enabled = footmarkTypeCombo.Enabled = reflectTypeCombo.Enabled = hasState;
+            if (hasState)
+            {
+                drawTypeCombo.SelectedIndex = state.DrawType;
+                shadowTypeCombo.SelectedIndex = state.ShadowType;
+                footmarkTypeCombo.SelectedIndex = state.FootmarkType;
+                reflectTypeCombo.SelectedIndex = state.ReflectType;
+            }
+            else
+            {
+                drawTypeCombo.SelectedIndex = shadowTypeCombo.SelectedIndex = footmarkTypeCombo.SelectedIndex = reflectTypeCombo.SelectedIndex = -1;
+            }
+            loadingRenderState = false;
+
+            if (OverworldSpriteTableExpansion.IsApplied)
+            {
+                rendererInfoLabel.Text = "Renderer: " + FormatRawRow(OverworldSpriteTableExpansion.ReadRawRow(0, key));
+                animationInfoLabel.Text = "Animation: " + FormatRawRow(OverworldSpriteTableExpansion.ReadRawRow(3, key));
+            }
+            else
+            {
+                rendererInfoLabel.Text = "";
+                animationInfoLabel.Text = "";
+            }
+        }
+
+        private static string FormatRawRow(byte[] row)
+        {
+            if (row == null) return "n/a";
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < row.Length; i++)
+            {
+                sb.Append(row[i].ToString("X2")).Append(' ');
+            }
+            return sb.ToString().TrimEnd();
+        }
+
+        private void RenderStateCombo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (loadingRenderState || overworldList.SelectedIndex < 0) return;
+
+            uint key = RomInfo.OverworldTable.Keys.ElementAt(overworldList.SelectedIndex);
+            var state = new OverworldSpriteTableExpansion.OwRenderState
+            {
+                DrawType = drawTypeCombo.SelectedIndex,
+                ShadowType = shadowTypeCombo.SelectedIndex,
+                FootmarkType = footmarkTypeCombo.SelectedIndex,
+                ReflectType = reflectTypeCombo.SelectedIndex,
+            };
+
+            string error;
+            if (!OverworldSpriteTableExpansion.TryWriteRenderState(key, state, out error))
+            {
+                MessageBox.Show(this, "Render-state write failed: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RefreshExpansionStatus()
+        {
+            bool applied = OverworldSpriteTableExpansion.Detect();
+            expansionStatusLabel.Text = applied
+                ? "Custom Overworld Sprites patch (hzla PlatPatches) detected - " + OverworldSpriteTableExpansion.UsedCount + "/" + OverworldSpriteTableExpansion.Capacity + " custom slots used."
+                : "Custom Overworld Sprites patch (hzla PlatPatches) not detected - Add/Delete disabled.";
+            addEntryButton.Enabled = applied && OverworldSpriteTableExpansion.UsedCount < OverworldSpriteTableExpansion.Capacity;
+        }
+
+        private void AddEntryButton_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new AddOverworldEntryForm())
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK || !dlg.AddedAppearanceId.HasValue) return;
+
+                RomInfo.ReadOWTable();
+                RefreshEntryList();
+
+                int idx = RomInfo.OverworldTable.Keys.ToList().IndexOf(dlg.AddedAppearanceId.Value);
+                if (idx >= 0) overworldList.SelectedIndex = idx;
+
+                RefreshExpansionStatus();
+            }
+        }
+
+        private void DeleteEntryButton_Click(object sender, EventArgs e)
+        {
+            if (overworldList.SelectedIndex < 0) return;
+            uint key = RomInfo.OverworldTable.Keys.ElementAt(overworldList.SelectedIndex);
+
+            DialogResult confirm = MessageBox.Show(this, "Delete this custom overworld entry? This cannot be undone.", "Confirm delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes) return;
+
+            string error;
+            if (!OverworldSpriteTableExpansion.DeleteEntry(key, out error))
+            {
+                MessageBox.Show(this, "Could not delete entry: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            RomInfo.ReadOWTable();
+            RefreshEntryList();
+            if (overworldList.Items.Count > 0) overworldList.SelectedIndex = 0;
+
+            RefreshExpansionStatus();
         }
 
     }

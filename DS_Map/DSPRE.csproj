@@ -211,6 +211,13 @@
     <Compile Include="Editors\BtxEditor\BtxExitConfirmation.Designer.cs">
       <DependentUpon>BtxExitConfirmation.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\BtxEditor\AddOverworldEntryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\BtxEditor\AddOverworldEntryForm.Designer.cs">
+      <DependentUpon>AddOverworldEntryForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OverworldSpriteTableExpansion.cs" />
     <Compile Include="Editors\CameraEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -661,6 +668,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\BtxEditor\BtxEditor.resx">
       <DependentUpon>BtxEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Editors\BtxEditor\AddOverworldEntryForm.resx">
+      <DependentUpon>AddOverworldEntryForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\BtxEditor\BtxExitConfirmation.resx">
       <DependentUpon>BtxExitConfirmation.cs</DependentUpon>

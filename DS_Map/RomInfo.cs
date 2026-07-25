@@ -2167,6 +2167,14 @@ namespace DSPRE
             OverworldTable = new SortedDictionary<uint, (uint spriteID, ushort properties)>();
             switch (gameFamily)
             {
+                case GameFamilies.Plat when OverworldSpriteTableExpansion.Detect():
+                    // hzla's PlatPatches "overworld sprites" expansion is applied: the vanilla,
+                    // fixed-offset table read below is stale (the game now reads the relocated,
+                    // expanded copy instead). Read that one instead — it's a strict superset of
+                    // the vanilla entries plus whatever custom ones were added.
+                    OverworldTable = OverworldSpriteTableExpansion.ReadTextureTable();
+                    break;
+
                 case GameFamilies.DP:
                 case GameFamilies.Plat:
                     using (BinaryReader idReader = new BinaryReader(new FileStream(OWtablePath, FileMode.Open)))
