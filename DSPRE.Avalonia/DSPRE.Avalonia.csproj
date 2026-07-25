@@ -61,6 +61,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.0" />
     <PackageReference Include="AvaloniaEdit.TextMate" Version="12.0.0" />
+    <PackageReference Include="Avalonia.Labs.Gif" Version="12.0.2" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <!-- Real sound-effect playback (NAudioOutput). Its actual output device is Windows-only, guarded at
          runtime via OperatingSystem.IsWindows() so a Linux build/run just stays silent instead of throwing. -->

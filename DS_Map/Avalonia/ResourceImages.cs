@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using global::Avalonia.Labs.Gif;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace DSPRE.Avalonia
@@ -26,8 +27,10 @@ namespace DSPRE.Avalonia
         };
 
         private static Dictionary<string, Uri> _index;
+        private static Dictionary<string, Uri> _gifIndex;
         private static readonly Dictionary<string, AvaloniaBitmap> _bitmapCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, RawImage> _rawCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, IGifSource> _gifSourceCache = new(StringComparer.OrdinalIgnoreCase);
 
         private static Dictionary<string, Uri> Index
         {
@@ -61,6 +64,36 @@ namespace DSPRE.Avalonia
             return null;
         }
 
+        // GIF-only counterpart to Index/Resolve: the static index prefers .png on basename
+        // collisions (e.g. hgssfog.png), but for animation the .gif is the whole point.
+        private static Dictionary<string, Uri> GifIndex
+        {
+            get
+            {
+                if (_gifIndex != null) return _gifIndex;
+                var idx = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
+                foreach (Uri uri in AssetLoader.GetAssets(new Uri(AssetRoot), null))
+                {
+                    string file = Uri.UnescapeDataString(uri.AbsolutePath);
+                    if (!file.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) continue;
+                    idx[Path.GetFileNameWithoutExtension(file)] = uri;
+                }
+                _gifIndex = idx;
+                return idx;
+            }
+        }
+
+        private static Uri ResolveGif(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            if (Aliases.TryGetValue(name, out string alias)) name = alias;
+            if (GifIndex.TryGetValue(name, out Uri uri)) return uri;
+            if (name.Length >= 2 && char.IsDigit(name[name.Length - 1]) && !char.IsDigit(name[name.Length - 2])
+                && GifIndex.TryGetValue(name.Substring(0, name.Length - 1) + "0" + name[name.Length - 1], out uri))
+                return uri;
+            return null;
+        }
+
         /// <summary>Loads the asset as an Avalonia bitmap (for Image.Source bindings). Null if unknown.</summary>
         public static AvaloniaBitmap GetBitmap(string name)
         {
@@ -80,6 +113,23 @@ namespace DSPRE.Avalonia
             }
             _bitmapCache[name] = bmp;
             return bmp;
+        }
+
+        /// <summary>Loads a GIF asset for Avalonia.Labs.Gif. Null when the named asset is static.</summary>
+        public static IGifSource GetGifSource(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            if (_gifSourceCache.TryGetValue(name, out IGifSource cached)) return cached;
+
+            IGifSource source = null;
+            Uri uri = ResolveGif(name);
+            if (uri != null)
+            {
+                try { source = GifStreamSource.FromUri(uri); }
+                catch (Exception ex) { AppLogger.Error($"Resource gif '{name}' failed to decode: {ex.Message}"); }
+            }
+            _gifSourceCache[name] = source;
+            return source;
         }
 
         /// <summary>Loads the asset as a <see cref="RawImage"/> (for pixel-level use, e.g. GL upload). Null if unknown.</summary>

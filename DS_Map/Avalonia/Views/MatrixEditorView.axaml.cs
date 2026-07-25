@@ -47,7 +47,10 @@ namespace DSPRE.Avalonia.Views
             new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).Show();
         }
 
-        private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
+        private async void OnLoadedSetup(object sender, RoutedEventArgs e)
+        {
+            if (!_setupDone) await EnsureSetupAsync();
+        }
 
         /// <summary>
         /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
