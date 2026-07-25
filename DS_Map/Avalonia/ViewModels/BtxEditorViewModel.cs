@@ -66,6 +66,41 @@ namespace DSPRE.Avalonia.ViewModels
         public void SaveChanges() => SaveAll();
         public void DiscardChanges() { _modifiedFiles.Clear(); OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(ModifiedCount)); }
 
+        // ── Platinum overworld properties (render state + expansion patch add/delete) ──────────
+        // Everything in this section is Platinum-only. HGSS/DP keep the plain texture browser above.
+        public bool IsPlatinum => RomInfo.gameFamily == GameFamilies.Plat;
+
+        public bool IsExpansionApplied => OverworldSpriteTableExpansion.IsApplied;
+        public string ExpansionStatusText => IsExpansionApplied
+            ? $"Custom Overworld Sprites patch detected — {OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used."
+            : "Custom Overworld Sprites patch (hzla PlatPatches) not detected — Add/Delete are disabled. Render-state properties below are still editable.";
+
+        private bool _isSelectedEntryCustom;
+        public bool IsSelectedEntryCustom { get => _isSelectedEntryCustom; private set => Set(ref _isSelectedEntryCustom, value); }
+
+        public bool CanAddEntry => IsExpansionApplied && OverworldSpriteTableExpansion.UsedCount < OverworldSpriteTableExpansion.Capacity;
+        public bool CanDeleteSelected => IsExpansionApplied && HasSelectedEntry && IsSelectedEntryCustom;
+
+        public string[] DrawTypeOptions { get; } = { "None", "Billboard", "3D model" };
+        public string[] ShadowTypeOptions { get; } = { "None", "On" };
+        public string[] FootmarkTypeOptions { get; } = { "None", "Normal (2-leg)", "Cycle (bike)" };
+        public string[] ReflectTypeOptions { get; } = { "None", "On (billboard reflection)" };
+
+        private bool _hasRenderState;
+        public bool HasRenderState { get => _hasRenderState; private set => Set(ref _hasRenderState, value); }
+
+        private bool _loadingRenderState;
+        private int _drawTypeIndex, _shadowTypeIndex, _footmarkTypeIndex, _reflectTypeIndex;
+        public int DrawTypeIndex { get => _drawTypeIndex; set { if (Set(ref _drawTypeIndex, value)) CommitRenderState(); } }
+        public int ShadowTypeIndex { get => _shadowTypeIndex; set { if (Set(ref _shadowTypeIndex, value)) CommitRenderState(); } }
+        public int FootmarkTypeIndex { get => _footmarkTypeIndex; set { if (Set(ref _footmarkTypeIndex, value)) CommitRenderState(); } }
+        public int ReflectTypeIndex { get => _reflectTypeIndex; set { if (Set(ref _reflectTypeIndex, value)) CommitRenderState(); } }
+
+        private string _rendererInfoText;
+        public string RendererInfoText { get => _rendererInfoText; private set => Set(ref _rendererInfoText, value); }
+        private string _animationInfoText;
+        public string AnimationInfoText { get => _animationInfoText; private set => Set(ref _animationInfoText, value); }
+
         // ── Design-time constructor ────────────────────────────────────────────
         public BtxEditorViewModel()
         {
@@ -78,10 +113,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Runtime constructor ────────────────────────────────────────────────
         public BtxEditorViewModel(bool _)
         {
-            _owKeys = RomInfo.OverworldTable.Keys.ToList();
-            foreach (var key in _owKeys)
-                OwEntries.Add($"OW Entry {key}");
-
+            LoadEntryList();
             if (OwEntries.Count > 0)
             {
                 _selectedIndex = 0;
@@ -89,10 +121,20 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        private void LoadEntryList()
+        {
+            _owKeys = RomInfo.OverworldTable.Keys.ToList();
+            OwEntries.Clear();
+            foreach (var key in _owKeys)
+                OwEntries.Add(IsPlatinum && OverworldSpriteTableExpansion.IsCustomEntry(key)
+                    ? $"OW Entry {key} (custom)"
+                    : $"OW Entry {key}");
+        }
+
         // ── Load entry ─────────────────────────────────────────────────────────
         private void LoadEntry(int index)
         {
-            if (index < 0 || index >= _owKeys.Count) { CurrentImage = null; _btxData = null; return; }
+            if (index < 0 || index >= _owKeys.Count) { CurrentImage = null; _btxData = null; ClearOverworldProperties(); return; }
 
             uint key    = _owKeys[index];
             uint sprite = RomInfo.OverworldTable[key].spriteID;
@@ -107,12 +149,207 @@ namespace DSPRE.Avalonia.ViewModels
                 _btxData = null;
                 CurrentImage = null;
                 StatusText = "File not found";
+                LoadOverworldProperties(key);
                 return;
             }
 
             RefreshImage();
+            LoadOverworldProperties(key);
         }
 
+        private void ClearOverworldProperties()
+        {
+            HasRenderState = false;
+            IsSelectedEntryCustom = false;
+            RendererInfoText = null;
+            AnimationInfoText = null;
+            OnPropertyChanged(nameof(CanDeleteSelected));
+        }
+
+        private void LoadOverworldProperties(uint key)
+        {
+            if (!IsPlatinum) { ClearOverworldProperties(); return; }
+
+            IsSelectedEntryCustom = OverworldSpriteTableExpansion.IsCustomEntry(key);
+
+            _loadingRenderState = true;
+            if (OverworldSpriteTableExpansion.TryReadRenderState(key, out var state))
+            {
+                DrawTypeIndex = state.DrawType;
+                ShadowTypeIndex = state.ShadowType;
+                FootmarkTypeIndex = state.FootmarkType;
+                ReflectTypeIndex = state.ReflectType;
+                HasRenderState = true;
+            }
+            else
+            {
+                HasRenderState = false;
+            }
+            _loadingRenderState = false;
+
+            if (OverworldSpriteTableExpansion.IsApplied)
+            {
+                RendererInfoText = FormatRawRow(OverworldSpriteTableExpansion.ReadRawRow(0, key));
+                AnimationInfoText = FormatRawRow(OverworldSpriteTableExpansion.ReadRawRow(3, key));
+            }
+            else
+            {
+                RendererInfoText = null;
+                AnimationInfoText = null;
+            }
+
+            OnPropertyChanged(nameof(CanDeleteSelected));
+        }
+
+        private static string FormatRawRow(byte[] row) =>
+            row == null ? "n/a" : string.Join(" ", row.Select(b => b.ToString("X2")));
+
+        private void CommitRenderState()
+        {
+            if (_loadingRenderState || !HasRenderState || !HasSelectedEntry) return;
+            uint key = _owKeys[_selectedIndex];
+            var state = new OverworldSpriteTableExpansion.OwRenderState
+            {
+                DrawType = _drawTypeIndex,
+                ShadowType = _shadowTypeIndex,
+                FootmarkType = _footmarkTypeIndex,
+                ReflectType = _reflectTypeIndex,
+            };
+            if (!OverworldSpriteTableExpansion.TryWriteRenderState(key, state, out string error))
+                StatusText = "Render-state write failed: " + error;
+        }
+
+        // ── Add / Delete custom entries (expansion patch only) ───────────────────
+        /// <summary>Adds a new custom overworld entry (called from the "Add Custom Entry…" dialog
+        /// once the user confirms it), optionally staging a chosen PNG onto the target mmodel
+        /// member's texture slot as an unsaved change (same Save/Save All flow as the regular
+        /// Import PNG button). Returns null on full success; if the table row was added but the
+        /// image import failed, still refreshes the list but returns a message saying so.</summary>
+        public string AddEntryWithImage(string appearanceIdText, uint mmodelMember, uint cloneFrom, string pngPath, string rawBtxPath)
+        {
+            if (!TryParseId(appearanceIdText, "Appearance ID", out uint appearanceId, out string error)) return error;
+
+            if (!OverworldSpriteTableExpansion.AddEntry(appearanceId, mmodelMember, cloneFrom, out error))
+                return error;
+
+            RomInfo.ReadOWTable();
+            LoadEntryList();
+
+            string imageError = rawBtxPath != null ? StageEntryRawBtx(appearanceId, mmodelMember, rawBtxPath)
+                : pngPath != null ? StageEntryPng(appearanceId, mmodelMember, pngPath)
+                : null;
+
+            SelectEntry(_owKeys.IndexOf(appearanceId));
+            OnPropertyChanged(nameof(ExpansionStatusText));
+            OnPropertyChanged(nameof(CanAddEntry));
+
+            return imageError != null ? $"Entry was added, but the image import failed: {imageError}" : null;
+        }
+
+        /// <summary>Stages an already-BTX0-formatted texture file (e.g. extracted from another
+        /// ROM) straight onto an existing mmodel member as an unsaved change — a direct binary
+        /// copy, no PNG/palette conversion, so it's pixel-perfect as long as its dimensions match
+        /// the slot being replaced. Returns null on success.</summary>
+        private string StageEntryRawBtx(uint appearanceId, uint mmodelMember, string rawBtxPath)
+        {
+            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
+            if (!File.Exists(path)) return "Target texture slot file not found.";
+            try
+            {
+                var target = BTX0.ReadRaw(File.ReadAllBytes(path));
+                if (target == null) return "Target texture slot is unreadable.";
+
+                byte[] sourceData = File.ReadAllBytes(rawBtxPath);
+                var source = BTX0.ReadRaw(sourceData);
+                if (source == null) return "Source file isn't a texture DSPRE can read (BTX0, 16-color format).";
+
+                if (source.Width != target.Width || source.Height != target.Height)
+                    return $"Size mismatch. Existing slot: {target.Width}×{target.Height}, source texture: {source.Width}×{source.Height}";
+
+                _modifiedFiles[appearanceId] = sourceData;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                OnPropertyChanged(nameof(ModifiedCount));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        /// <summary>Stages a PNG onto an existing mmodel member's texture slot as an unsaved
+        /// change, exactly like <see cref="ImportPng"/> but addressed by member id directly
+        /// (the new entry may not be the currently-selected one yet). Returns null on success.</summary>
+        private string StageEntryPng(uint appearanceId, uint mmodelMember, string pngPath)
+        {
+            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, mmodelMember.ToString("D4"));
+            if (!File.Exists(path)) return "Target texture slot file not found.";
+            try
+            {
+                byte[] btxData = File.ReadAllBytes(path);
+                RawImage import;
+                using (var fs = File.OpenRead(pngPath))
+                    import = ImageConverter.DecodeRawImage(fs);
+                if (import == null) return "Image could not be decoded.";
+                var current = BTX0.ReadRaw(btxData);
+                if (current == null) return "Target texture slot is unreadable.";
+                if (import.Width != current.Width || import.Height != current.Height)
+                    return $"Size mismatch. Existing slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+
+                uint colors = CountColors(import);
+                if (colors > BTX0.ColorCount)
+                    return $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}";
+
+                _modifiedFiles[appearanceId] = BTX0.Write(btxData, import);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                OnPropertyChanged(nameof(ModifiedCount));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        /// Returns null on success, error message on failure.
+        public string DeleteSelectedEntry()
+        {
+            if (!HasSelectedEntry) return "No entry selected.";
+            uint key = _owKeys[_selectedIndex];
+            if (!OverworldSpriteTableExpansion.DeleteEntry(key, out string error)) return error;
+
+            RomInfo.ReadOWTable();
+            LoadEntryList();
+            SelectEntry(OwEntries.Count > 0 ? 0 : -1);
+            OnPropertyChanged(nameof(ExpansionStatusText));
+            OnPropertyChanged(nameof(CanAddEntry));
+            return null;
+        }
+
+        /// <summary>Selects an entry and always reloads its data, unlike the SelectedIndex
+        /// property setter, which skips the reload when the index number happens not to have
+        /// changed even though the underlying entry at that index has (e.g. after Add/Delete
+        /// reshuffles the list).</summary>
+        private void SelectEntry(int index)
+        {
+            _selectedIndex = index;
+            OnPropertyChanged(nameof(SelectedIndex));
+            OnPropertyChanged(nameof(HasSelectedEntry));
+            LoadEntry(index);
+        }
+
+        private static bool TryParseId(string text, string label, out uint value, out string error)
+        {
+            value = 0; error = null;
+            text = (text ?? "").Trim();
+            bool ok = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+                ? uint.TryParse(text.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out value)
+                : uint.TryParse(text, out value);
+            if (!ok) error = $"{label}: \"{text}\" is not a valid number (decimal or 0x hex).";
+            return ok;
+        }
+
+        // ── Refresh image ──────────────────────────────────────────────────────
         private void RefreshImage()
         {
             if (_btxData == null) { CurrentImage = null; return; }
@@ -144,13 +381,13 @@ namespace DSPRE.Avalonia.ViewModels
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
                 var current = BTX0.ReadRaw(_btxData);
-                if (current == null) return "Current BTX file is unreadable.";
+                if (current == null) return "This entry's texture file isn't a readable image (it may be a 3D model, not a flat texture).";
                 if (import.Width != current.Width || import.Height != current.Height)
-                    return $"Size mismatch. BTX: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+                    return $"Size mismatch. Existing texture: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
 
                 uint colors = CountColors(import);
                 if (colors > BTX0.ColorCount)
-                    return $"Too many colors. BTX limit: {BTX0.ColorCount}, PNG: {colors}";
+                    return $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}";
 
                 byte[] newData = BTX0.Write(_btxData, import);
                 _btxData = newData;

@@ -282,7 +282,7 @@ namespace DSPRE
             string expandedCheckPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
             if (!File.Exists(expandedCheckPath) || new FileInfo(expandedCheckPath).Length < 0x16000)
             {
-                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                ShowError("Apply the ARM9 expansion patch first parser proprement le— the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
                 return false;
             }
 
@@ -1167,6 +1167,17 @@ namespace DSPRE
                     return PatchState.Available;
                 }));
 
+            list.Add(Status("owSpriteExpansion", "Custom Overworld Sprites (hzla PlatPatches)",
+                "Detects hzla's PlatPatches \"overworld sprites\" expansion (github.com/hzla/PlatPatches), which relocates and expands the field-object tables to allow custom overworld appearance IDs. DSPRE only detects this patch — it is applied externally by that tool, not by DSPRE.",
+                () =>
+                {
+                    if (RomInfo.gameFamily != GameFamilies.Plat) return Unsupported("Platinum only");
+                    if (!OverworldSpriteTableExpansion.Detect())
+                        return Unsupported("Not detected: apply via hzla's PlatPatches tool (github.com/hzla/PlatPatches); DSPRE does not apply this patch itself.");
+                    _reason_text = $"{OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used";
+                    return PatchState.Applied;
+                }));
+
             return list;
         }
 
@@ -1189,7 +1200,9 @@ namespace DSPRE
             {
                 _reason_text = null;
                 info.State = probe();
-                info.Reason = info.State == PatchState.Unsupported ? (_reason_text ?? "Unsupported") : null;
+                // A probe can set _reason_text itself (e.g. via Unsupported(), or directly for an
+                // optional Applied-state note); Unsupported falls back to a generic label if it didn't.
+                info.Reason = _reason_text ?? (info.State == PatchState.Unsupported ? "Unsupported" : null);
             }
             catch (Exception ex)
             {

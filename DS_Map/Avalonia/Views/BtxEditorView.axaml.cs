@@ -67,5 +67,35 @@ namespace DSPRE.Avalonia.Views
             string path = VM?.GetCurrentFilePath();
             if (path != null) SystemShell.RevealInFileManager(path);
         }
+
+        private async void AddEntry_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+
+            var dlgVm = new AddOverworldEntryViewModel();
+            var dlg = new AddOverworldEntryView(dlgVm);
+            await dlg.ShowDialog(this);
+            if (!dlgVm.Confirmed) return;
+
+            if (dlgVm.SelectedSlot == null || dlgVm.SelectedCloneSource == null)
+            {
+                await DialogHelper.ShowError("Choose a texture slot and a clone source.");
+                return;
+            }
+
+            string error = VM.AddEntryWithImage(dlgVm.AppearanceIdText, dlgVm.SelectedSlot.Id, dlgVm.SelectedCloneSource.Id, dlgVm.PngPath, dlgVm.RawBtxPath);
+            if (error != null)
+                await DialogHelper.ShowError($"Could not add entry: {error}");
+        }
+
+        private async void DeleteEntry_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await DialogHelper.AskYesNo("Delete this custom overworld entry? This cannot be undone.", "Confirm delete", this))
+                return;
+
+            string error = VM?.DeleteSelectedEntry();
+            if (error != null)
+                await DialogHelper.ShowError($"Could not delete entry: {error}");
+        }
     }
 }

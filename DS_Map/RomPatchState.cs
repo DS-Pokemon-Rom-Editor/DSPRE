@@ -38,6 +38,13 @@ namespace DSPRE
         public static bool flag_PokemonBattleTableRepointed { get; set; } = false;
         public static bool flag_TrainerNamesExpanded { get; set; } = false;
 
+        /// <summary>Whether hzla's PlatPatches "overworld sprites" expansion (marker "OWTBLXPANDV1"
+        /// in the synthetic-overlay file) has been detected on the loaded ROM. DSPRE only detects
+        /// this patch, it never applies it. Platinum-only.</summary>
+        public static bool flag_OverworldSpriteExpansionApplied { get; set; } = false;
+        public static uint overworldExpansionUsedCount { get; set; } = 0;
+        public static uint overworldExpansionCapacity { get; set; } = 0;
+
         public static readonly int expandedTrainerNameLength = 12;
 
         /// <summary>
@@ -56,6 +63,9 @@ namespace DSPRE
             flag_TrainerClassBattleTableRepointed = false;
             flag_PokemonBattleTableRepointed = false;
             flag_TrainerNamesExpanded = false;
+            flag_OverworldSpriteExpansionApplied = false;
+            overworldExpansionUsedCount = 0;
+            overworldExpansionCapacity = 0;
 
             // The static field initializer only runs once, so re-evaluate when the game family changes.
             try
