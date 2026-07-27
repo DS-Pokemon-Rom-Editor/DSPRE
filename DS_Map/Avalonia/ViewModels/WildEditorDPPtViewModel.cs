@@ -1,21 +1,67 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using global::Avalonia.Media;
+using global::Avalonia.Media.Imaging;
 using DSPRE.ROMFiles;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
 {
+    internal sealed class PokemonIconCache : IDisposable
+    {
+        private const int IconSize = 32;
+        private readonly Dictionary<int, Bitmap> _icons = new();
+
+        public Bitmap Get(int species)
+        {
+            if (species <= 0) return null;
+            if (_icons.TryGetValue(species, out Bitmap icon)) return icon;
+
+            try
+            {
+                var raw = DSUtils.GetPokePicRaw(species, IconSize, IconSize);
+                icon = ImageConverter.ToAvaloniaBitmap(raw);
+            }
+            catch
+            {
+                icon = null;
+            }
+
+            _icons[species] = icon;
+            return icon;
+        }
+
+        public void Dispose()
+        {
+            foreach (Bitmap icon in _icons.Values)
+                icon?.Dispose();
+            _icons.Clear();
+        }
+    }
+
     public class WildEncounterRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        private readonly Func<int, IImage> _iconLoader;
+
+        public WildEncounterRow() : this(Array.Empty<string>(), null) { }
+        public WildEncounterRow(IEnumerable<string> pokemonNames, Func<int, IImage> iconLoader)
+        {
+            PokemonNames = pokemonNames ?? Array.Empty<string>();
+            _iconLoader = iconLoader;
+        }
+
+        public IEnumerable<string> PokemonNames { get; }
 
         public string Label { get; set; }
         public string RateLabel { get; set; }
@@ -24,7 +70,24 @@ namespace DSPRE.Avalonia.ViewModels
         public int PokemonIndex
         {
             get => _pokemonIndex;
-            set { if (_pokemonIndex != value) { _pokemonIndex = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_pokemonIndex == value) return;
+                _pokemonIndex = value;
+                OnPropertyChanged();
+                UpdateIcon();
+            }
+        }
+
+        private IImage _pokemonIcon;
+        public IImage PokemonIcon => _pokemonIcon;
+
+        private void UpdateIcon()
+        {
+            IImage icon = _iconLoader?.Invoke(_pokemonIndex);
+            if (ReferenceEquals(_pokemonIcon, icon)) return;
+            _pokemonIcon = icon;
+            OnPropertyChanged(nameof(PokemonIcon));
         }
 
         private int _level;
@@ -160,6 +223,7 @@ namespace DSPRE.Avalonia.ViewModels
         // Snapshot = the encounter file's bytes. Grid edits live in the row VMs (only synced to _current at
         // save), so Snapshot() syncs rows → _current first (sync-then-snapshot), like the Trade editor.
         private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private readonly PokemonIconCache _pokemonIcons = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -207,13 +271,14 @@ namespace DSPRE.Avalonia.ViewModels
                                          SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows,
                                          SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
                 foreach (var row in coll)
-                    row.PropertyChanged += (_, _) => { if (!_loading) SetDirty(); };
+                    row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon)) SetDirty(); };
         }
 
         // ── Constructor ───────────────────────────────────────────────────
         public WildEditorDPPtViewModel(string dirPath, string[] pokemonNames, int encToOpen, int totalHeaders)
         {
             _dirPath = dirPath;
+            SetMonIconsPalTableAddress();
 
             foreach (var n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
@@ -239,25 +304,25 @@ namespace DSPRE.Avalonia.ViewModels
 
             string[] walkLabels = { "20%", "20%", "10%", "10%", "10%", "10%", "5%", "5%", "4%", "4%", "1%", "1%" };
             for (int i = 0; i < 12; i++)
-                WalkingRows.Add(new WildEncounterRow { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 5 });
+                WalkingRows.Add(new WildEncounterRow(PokemonNames, null) { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 5 });
             for (int i = 0; i < 2; i++)
             {
-                DayRows.Add(new WildEncounterRow    { Label = $"Day {i + 1}",    PokemonIndex = i % PokemonNames.Count, Level = 10 });
-                NightRows.Add(new WildEncounterRow  { Label = $"Night {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 10 });
-                SwarmRows.Add(new WildEncounterRow  { Label = $"Swarm {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 15 });
-                RadarRows.Add(new WildEncounterRow  { Label = $"Radar {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 20 });
-                RubyRows.Add(new WildEncounterRow   { Label = $"Ruby {i + 1}",   PokemonIndex = i % PokemonNames.Count, Level = 20 });
-                SapphireRows.Add(new WildEncounterRow { Label = $"Sapphire {i + 1}", PokemonIndex = i % PokemonNames.Count, Level = 20 });
-                EmeraldRows.Add(new WildEncounterRow  { Label = $"Emerald {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 20 });
-                FireRedRows.Add(new WildEncounterRow  { Label = $"FR {i + 1}",        PokemonIndex = i % PokemonNames.Count, Level = 20 });
-                LeafGreenRows.Add(new WildEncounterRow { Label = $"LG {i + 1}",       PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                DayRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Day {i + 1}",    PokemonIndex = i % PokemonNames.Count, Level = 10 });
+                NightRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Night {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 10 });
+                SwarmRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Swarm {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 15 });
+                RadarRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Radar {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                RubyRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Ruby {i + 1}",   PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                SapphireRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Sapphire {i + 1}", PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                EmeraldRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Emerald {i + 1}",  PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                FireRedRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"FR {i + 1}",        PokemonIndex = i % PokemonNames.Count, Level = 20 });
+                LeafGreenRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"LG {i + 1}",       PokemonIndex = i % PokemonNames.Count, Level = 20 });
             }
             for (int i = 0; i < 5; i++)
             {
-                SurfRows.Add(new WildEncounterRow     { Label = $"Surf {i + 1}",     PokemonIndex = i % PokemonNames.Count, MinLevel = 20, MaxLevel = 30 });
-                OldRodRows.Add(new WildEncounterRow   { Label = $"Old Rod {i + 1}",  PokemonIndex = i % PokemonNames.Count, MinLevel = 5,  MaxLevel = 10 });
-                GoodRodRows.Add(new WildEncounterRow  { Label = $"Good Rod {i + 1}", PokemonIndex = i % PokemonNames.Count, MinLevel = 10, MaxLevel = 20 });
-                SuperRodRows.Add(new WildEncounterRow { Label = $"Super Rod {i + 1}",PokemonIndex = i % PokemonNames.Count, MinLevel = 30, MaxLevel = 40 });
+                SurfRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Surf {i + 1}",     PokemonIndex = i % PokemonNames.Count, MinLevel = 20, MaxLevel = 30 });
+                OldRodRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Old Rod {i + 1}",  PokemonIndex = i % PokemonNames.Count, MinLevel = 5,  MaxLevel = 10 });
+                GoodRodRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Good Rod {i + 1}", PokemonIndex = i % PokemonNames.Count, MinLevel = 10, MaxLevel = 20 });
+                SuperRodRows.Add(new WildEncounterRow(PokemonNames, null) { Label = $"Super Rod {i + 1}",PokemonIndex = i % PokemonNames.Count, MinLevel = 30, MaxLevel = 40 });
             }
         }
 
@@ -278,8 +343,11 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Private helpers ───────────────────────────────────────────────
         private void OnNamesChanged(object sender, System.EventArgs e)
             => DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, DSPRE.RomInfo.GetPokemonNames());
-        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
-        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+        public void Detach()
+        {
+            AppEvents.NamesChanged -= OnNamesChanged;
+            _pokemonIcons.Dispose();
+        }
 
         private void SetDirty() { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Wild Pokémon Editor (DPPt)"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { _dirty = false; Title = "Wild Pokémon Editor (DPPt)";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -422,13 +490,13 @@ namespace DSPRE.Avalonia.ViewModels
             LoadFile(_selectedEncounterIndex);
         }
 
-        private static void SyncRows(
+        private void SyncRows(
             ObservableCollection<WildEncounterRow> rows, int count,
             Func<int, string> labelFn, Func<int, int> pokeFn, Func<int, int> lvlFn,
             Func<int, int> minFn, Func<int, int> maxFn, bool hasMinMax)
         {
             while (rows.Count > count) rows.RemoveAt(rows.Count - 1);
-            while (rows.Count < count) rows.Add(new WildEncounterRow());
+            while (rows.Count < count) rows.Add(new WildEncounterRow(PokemonNames, _pokemonIcons.Get));
             for (int i = 0; i < count; i++)
             {
                 rows[i].Label        = labelFn(i);
