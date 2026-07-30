@@ -1,4 +1,4 @@
-﻿using DSPRE.Editors.BtxEditor;
+using DSPRE.Editors.BtxEditor;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using MKDS_Course_Editor.Export3DTools;
@@ -948,29 +948,19 @@ namespace DSPRE.Editors
         }
         private void openEventsButton_Click(object sender, EventArgs e)
         {
-            EditorPanels.eventEditor.SetupEventEditor(_parent);
+            // Pass the current header context so Movement Editor can resolve
+            // the correct associated Script File when multiple headers share
+            // the same Event File.
+            ushort? preferredHeaderId = currentHeader != null ? (ushort?)currentHeader.ID : null;
+            EditorPanels.eventEditor.OpenEventEditor(_parent, (int)eventFileUpDown.Value, preferredHeaderId);
 
             Helpers.DisableHandlers();
-
             if (matrixUpDown.Value != 0)
             {
                 EditorPanels.eventEditor.eventAreaDataUpDown.Value = areaDataUpDown.Value; // Use Area Data for textures if matrix is not 0
             }
-
             EditorPanels.eventEditor.eventMatrixUpDown.Value = matrixUpDown.Value; // Open the right matrix in event editor
-            EditorPanels.eventEditor.selectEventComboBox.SelectedIndex = (int)eventFileUpDown.Value; // Select event file
-            if (EditorPanels.PopoutRegistry.TryGetHost(EditorPanels.eventEditor, out var host))
-            {
-                host.Focus();
-            }
-            else
-            {
-                _parent.mainTabControl.SelectedTab = EditorPanels.eventEditorTabPage;
-            }
-
             Helpers.EnableHandlers();
-
-            EditorPanels.eventEditor.selectEventComboBox_SelectedIndexChanged(null, null);
         }
         private void openMatrixButton_Click(object sender, EventArgs e)
         {

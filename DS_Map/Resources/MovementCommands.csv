@@ -1,0 +1,108 @@
+DSPRE Commands	Function	Notes
+Delay1	Event waits for 1 frame	Equivalent to ~0.033 seconds (1/30s).
+Delay15	Event waits for 15 frames	Equivalent to 0.5 seconds (15/30s).
+Delay16	Event waits for 16 frames	Equivalent to ~0.533 seconds (16/30s).
+Delay2	Event waits for 2 frames	Equivalent to ~0.067 seconds (2/30s).
+Delay32	Event waits for 32 frames	Equivalent to ~1.067 seconds (32/30s).
+Delay4	Event waits for 4 frames	Equivalent to ~0.133 seconds (4/30s).
+Delay8	Event waits for 8 frames	Equivalent to ~0.267 seconds (8/30s).
+EmoteDoubleExclamation	Shows a double exclamation mark above the event's head.	
+EmoteExclamation	Shows an exclamation mark above the event's head. Used commonly to indicate that the event is surprised or has noticed something.	
+EmoteExclamation2	Shows an exclamation mark above the event's head. Duplicate of EmoteExclamation (0x004B).	
+End	Action end marker. Used to indicate the end of a movement sequence.	
+FaceEast	Event faces right	
+FaceNorth	Event faces up	
+FaceSouth	Event faces down	
+FaceWest	Event faces left	
+JumpEast16	Event faces right and jumps eastwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpEast8	Event faces right and jumps eastwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpFarEast	Event faces right and jumps 2 tiles eastwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second; 16 frames in total.
+JumpFarNorth	Event faces up and jumps 2 tiles northwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second; 16 frames in total.
+JumpFarSouth	Event faces down and jumps 2 tiles southwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second; 16 frames in total.
+JumpFarWest	Event faces left and jumps 2 tiles westwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second; 16 frames in total.
+JumpNorth8	Event faces up and jumps northwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpOnSpotEast16	Event faces right and jumps on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpOnSpotEast8	Event faces right and jumps on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpOnSpotNorth16	Event faces up and jumps on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpOnSpotNorth8	Event faces up and jumps on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpOnSpotSouth16	Event faces down and jumps on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpOnSpotSouth8	Event faces down and jumps on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpOnSpotWest16	Event faces left and jumps on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpOnSpotWest8	Event faces left and jumps on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpSouth8	Event faces down and jumps southwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+JumpVeryFarEast	Event faces right and jumps 3 tiles eastwards at 1 tile per 4 frames	Equivalent to 10 tiles per second. 12 frames in total.
+JumpVeryFarWest	Event faces left and jumps 3 tiles westwards at 1 tile per 4 frames	Equivalent to 10 tiles per second. 12 frames in total.
+JumpWest16	Event faces left and jumps westwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+JumpWest8	Event faces left and jumps westwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second.
+LockDir	Prevents event from changing direction. It can still move, but it will always face the same direction.	
+NurseJoyBow	Nurse Joy bows. Used in the Pokémon Center.	
+PauseAnimation	Disables event's animation. It can still move, but it will not animate.	
+PlayerGive		
+PlayerReceive		
+ReleaseDir	Allows event to change direction again.	
+ResumeAnimation	Resumes event's animation.	
+RevealTrainer	Used by the ninja boys when popping out of the ground.	
+RunEast	Event faces right and walks eastwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second. Walk animation isn't triggered.
+RunNorth	Event faces up and walks northwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second. Walk animation isn't triggered.
+RunSouth	Event faces down and walks southwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second. Walk animation isn't triggered.
+RunWest	Event faces left and walks westwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second. Walk animation isn't triggered.
+SetInvisible	Makes event invisible. It can still be interacted with and will still have collision.	
+SetVisible	Makes event visible.	
+TeleportDown	Makes overworld fall from the sky. No rotation involved.	
+TeleportUp	Makes overworld ascend to the sky. No rotation involved.	
+WalkEast1	Event faces right and walks eastwards at 1 tile per frame	Equivalent to 30 tiles per second. Walk animation isn't triggered.
+WalkEast16	Event faces right and moves eastwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkEast2	Event faces right and moves eastwards at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkEast3	Event faces right and walks eastwards at 1 tile per 3 frames	Equivalent to 10 tiles per second.
+WalkEast32	Event faces right and moves eastwards at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkEast4	Event faces right and moves eastwards at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkEast6	Event faces right and walks eastwards at 1 tile per 6 frames	Equivalent to 5 tiles per second.
+WalkEast7	Event faces right and moves eastwards at 1 tile per 7 frames	Equivalent to 4.29 tiles per second.
+WalkEast8	Event faces right and moves eastwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkNorth1	Event faces up and walks nothwards at 1 tile per frame	Equivalent to 30 tiles per second. Walk animation isn't triggered.
+WalkNorth16	Event faces up and moves northwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkNorth2	Event faces up and moves northwards at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkNorth3	Event faces up and walks northwards at 1 tile per 3 frames	Equivalent to 10 tiles per second.
+WalkNorth32	Event faces up and moves northwards at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkNorth4	Event faces up and moves northwards at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkNorth6	Event faces up and walks northwards at 1 tile per 6 frames	Equivalent to 5 tiles per second.
+WalkNorth7	Event faces up and moves northwards at 1 tile per 7 frames	Equivalent to 4.29 tiles per second.
+WalkNorth8	Event faces up and moves northwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkOnSpotEast16	Event faces right and moves on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkOnSpotEast2	Event faces right and moves on the spot at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkOnSpotEast32	Event faces right and moves on the spot at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkOnSpotEast4	Event faces right and moves on the spot at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkOnSpotEast8	Event faces right and moves on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkOnSpotNorth16	Event faces up and moves on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkOnSpotNorth2	Event faces up and moves on the spot at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkOnSpotNorth32	Event faces up and moves on the spot at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkOnSpotNorth4	Event faces up and moves on the spot at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkOnSpotNorth8	Event faces up and moves on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkOnSpotSouth16	Event faces down and moves on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkOnSpotSouth2	Event faces down and moves on the spot at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkOnSpotSouth32	Event faces down and moves on the spot at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkOnSpotSouth4	Event faces down and moves on the spot at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkOnSpotSouth8	Event faces down and moves on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkOnSpotWest16	Event faces left and moves on the spot at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkOnSpotWest2	Event faces left and moves on the spot at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkOnSpotWest32	Event faces left and moves on the spot at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkOnSpotWest4	Event faces left and moves on the spot at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkOnSpotWest8	Event faces left and moves on the spot at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkSouth1	Event faces down and walks southwards at 1 tile per frame	Equivalent to 30 tiles per second. Walk animation isn't triggered.
+WalkSouth16	Event faces down and moves southwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkSouth2	Event faces down and moves southwards at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkSouth3	Event faces down and walks southwards at 1 tile per 3 frames	Equivalent to 10 tiles per second.
+WalkSouth32	Event faces down and moves southwards at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkSouth4	Event faces down and moves southwards at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkSouth6	Event faces down and walks southwards at 1 tile per 6 frames	Equivalent to 5 tiles per second.
+WalkSouth7	Event faces down and moves southwards at 1 tile per 7 frames	Equivalent to 4.29 tiles per second.
+WalkSouth8	Event faces down and moves southwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.
+WalkWest1	Event faces left and walks westwards at 1 tile per frame	Equivalent to 30 tiles per second. Walk animation isn't triggered.
+WalkWest16	Event faces left and moves westwards at 1 tile per 16 frames	Equivalent to 1.875 tiles per second.
+WalkWest2	Event faces left and moves westwards at 1 tile per 2 frames	Equivalent to 15 tiles per second.
+WalkWest3	Event faces left and walks westwards at 1 tile per 3 frames	Equivalent to 10 tiles per second.
+WalkWest32	Event faces left and moves westwards at 1 tile per 32 frames	Equivalent to 0.94 tiles per second.
+WalkWest4	Event faces left and moves westwards at 1 tile per 4 frames	Equivalent to 7.5 tiles per second.
+WalkWest6	Event faces right and walks westwards at 1 tile per 6 frames	Equivalent to 5 tiles per second.
+WalkWest7	Event faces left and moves westwards at 1 tile per 7 frames	Equivalent to 4.29 tiles per second.
+WalkWest8	Event faces left and moves westwards at 1 tile per 8 frames	Equivalent to 3.75 tiles per second. This should be taken as the standard speed.

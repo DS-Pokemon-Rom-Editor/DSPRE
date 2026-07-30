@@ -110,6 +110,24 @@ namespace DSPRE
         public Dictionary<ushort /*scriptFile*/, List<ushort> /*headers*/> scriptToHeaders = new Dictionary<ushort, List<ushort>>();
 
         /// <summary>
+        /// Loads a ScriptFile by ID. Uses ScriptFile's internal caching when reading from disk.
+        /// </summary>
+        public ScriptFile GetOrLoadScriptFile(int scriptFileId)
+        {
+            return new ScriptFile(scriptFileId);
+        }
+
+        /// <summary>
+        /// Notifies the application that a script file was modified by another editor (e.g. Movement Editor).
+        /// Invalidates cache and refreshes Script Editor if it has that file open.
+        /// </summary>
+        public void NotifyScriptFileSessionUpdated(int scriptFileId)
+        {
+            ScriptFile.InvalidatePlaintextCacheForFile(scriptFileId);
+            EditorPanels.scriptEditor.NotifyScriptFileModifiedExternally(scriptFileId);
+        }
+
+        /// <summary>
         /// Opens the Script Editor and navigates to a specific script number within a script file.
         /// </summary>
         /// <param name="scriptFileID">The script file ID to open</param>
