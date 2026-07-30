@@ -127,11 +127,17 @@
                     <RadioButton GroupName="OwKind" Content="Trainer" IsChecked="{Binding OwIsTrainer}"/>
                   </StackPanel>
 
-                  <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisible}" Margin="0,4,0,0">
+                  <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleVanilla}" Margin="0,4,0,0">
                     <TextBlock Text="Item" FontWeight="Bold"/>
                     <ComboBox ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a known item (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwItemIndexOutOfRange}"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleHGE}" Margin="0,4,0,0">
+                    <TextBlock Text="Item ID" FontWeight="Bold"
+                               ToolTip.Tip="HG Engine reads the item straight from this event's data (script is locked to 7000), instead of picking one of many per-item scripts."/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwItemIdHGE}"/>
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwTrainerFieldsVisible}" Margin="0,4,0,0">

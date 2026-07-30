@@ -90,7 +90,15 @@ namespace DSPRE.Avalonia.ViewModels
         // user isn't stuck looking at a value they can't change from either the dropdown or the field.
         public bool OwScriptEnabled => _owKind == OwKind.Normal || OwTrainerIndexOutOfRange || OwItemIndexOutOfRange;
         public bool OwTrainerFieldsVisible => _owKind == OwKind.Trainer;
-        public bool OwItemFieldsVisible => _owKind == OwKind.Item;
+
+        /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.isHGE"/>) uses a
+        /// single generic item script (always exactly 7000) whose behavior reads the item ID straight
+        /// out of the event's own param0/sightRange field, instead of vanilla's one-script-per-item
+        /// scheme (script = 7000 + dropdown index). So the Item panel shows a different control
+        /// depending on which engine the loaded ROM actually runs.</summary>
+        public bool IsHGE => RomInfo.isHGE;
+        public bool OwItemFieldsVisibleVanilla => _owKind == OwKind.Item && !IsHGE;
+        public bool OwItemFieldsVisibleHGE => _owKind == OwKind.Item && IsHGE;
 
         public ObservableCollection<string> OwTrainerEntries { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> OwItemEntries { get; } = new ObservableCollection<string>();
@@ -123,11 +131,31 @@ namespace DSPRE.Avalonia.ViewModels
 
         public bool OwItemIndexOutOfRange => _owKind == OwKind.Item && (_owItemIndex < 0 || _owItemIndex >= OwItemEntries.Count);
 
+        /// <summary>HG Engine only: the item ID for this event, read/written straight to the same
+        /// underlying field as <see cref="OwSight"/> (param0), see <see cref="IsHGE"/>. Also keeps
+        /// OwSight's own cached backing field in sync so it doesn't show a stale value if the user
+        /// later switches this event back to Standard/Trainer kind.</summary>
+        public decimal OwItemIdHGE
+        {
+            get => _ow?.sightRange ?? 0;
+            set
+            {
+                if (_ow == null || _suppress || _owKind != OwKind.Item) return;
+                _ow.sightRange = (ushort)value;
+                _owSight = value;
+                ForceOwScript(7000); // always exactly 7000 under HG Engine, never 7000+index
+                OnPropertyChanged(nameof(OwItemIdHGE));
+                OnPropertyChanged(nameof(OwSight));
+            }
+        }
+
         private void RaiseOwKindChanged()
         {
             OnPropertyChanged(nameof(OwIsNormal)); OnPropertyChanged(nameof(OwIsTrainer)); OnPropertyChanged(nameof(OwIsItem));
-            OnPropertyChanged(nameof(OwTrainerFieldsVisible)); OnPropertyChanged(nameof(OwItemFieldsVisible));
+            OnPropertyChanged(nameof(OwTrainerFieldsVisible));
+            OnPropertyChanged(nameof(OwItemFieldsVisibleVanilla)); OnPropertyChanged(nameof(OwItemFieldsVisibleHGE));
             OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
+            OnPropertyChanged(nameof(OwItemIdHGE));
             OnPropertyChanged(nameof(OwScriptEnabled));
         }
 
@@ -166,7 +194,12 @@ namespace DSPRE.Avalonia.ViewModels
                     break;
                 case OwKind.Item:
                     _ow.type = (ushort)Overworld.OwType.ITEM;
-                    if (_owItemIndex < 0 && OwItemEntries.Count > 0) OwItemIndex = 0;
+                    if (IsHGE)
+                    {
+                        // Item ID lives in sightRange/param0, already whatever it was, just lock the script.
+                        ForceOwScript(7000);
+                    }
+                    else if (_owItemIndex < 0 && OwItemEntries.Count > 0) OwItemIndex = 0;
                     else ForceOwScript((ushort)(7000 + Math.Max(_owItemIndex, 0)));
                     break;
                 case OwKind.Trainer:
@@ -184,6 +217,7 @@ namespace DSPRE.Avalonia.ViewModels
             catch (Exception ex) { AppLogger.Error("PopulateOwTrainerEntries: " + ex.Message); }
 
             OwItemEntries.Clear();
+            if (IsHGE) return; // HG Engine uses a direct Item ID input (OwItemIdHGE) instead of this dropdown.
             try
             {
                 string[] itemNames = RomInfo.GetItemNames();
