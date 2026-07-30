@@ -131,9 +131,9 @@ namespace DSPRE.Editors
 
             Gl.glScalef(scaleFactor * building.width, scaleFactor * building.height, scaleFactor * building.length);
             Gl.glTranslatef(fullXcoord * translateFactor / building.width, fullYcoord * translateFactor / building.height, fullZcoord * translateFactor / building.length);
-            Gl.glRotatef(Building.U16ToDeg(building.xRotation), 1, 0, 0);
-            Gl.glRotatef(Building.U16ToDeg(building.yRotation), 0, 1, 0);
             Gl.glRotatef(Building.U16ToDeg(building.zRotation), 0, 0, 1);
+            Gl.glRotatef(Building.U16ToDeg(building.yRotation), 0, 1, 0);
+            Gl.glRotatef(Building.U16ToDeg(building.xRotation), 1, 0, 0);
         }
         private void SetupRenderer(float ang, float dist, float elev, float perspective, int width, int height)
         {

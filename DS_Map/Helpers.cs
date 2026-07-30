@@ -669,9 +669,9 @@ namespace DSPRE
 
             Gl.glScalef(scaleFactor * building.width, scaleFactor * building.height, scaleFactor * building.length);
             Gl.glTranslatef(fullXcoord * translateFactor / building.width, fullYcoord * translateFactor / building.height, fullZcoord * translateFactor / building.length);
-            Gl.glRotatef(Building.U16ToDeg(building.xRotation), 1, 0, 0);
-            Gl.glRotatef(Building.U16ToDeg(building.yRotation), 0, 1, 0);
             Gl.glRotatef(Building.U16ToDeg(building.zRotation), 0, 0, 1);
+            Gl.glRotatef(Building.U16ToDeg(building.yRotation), 0, 1, 0);
+            Gl.glRotatef(Building.U16ToDeg(building.xRotation), 1, 0, 0);
         }
 
         public static Image GetPokePic(int species, int w, int h, PaletteBase paletteBase, ImageBase imageBase, SpriteBase spriteBase)
