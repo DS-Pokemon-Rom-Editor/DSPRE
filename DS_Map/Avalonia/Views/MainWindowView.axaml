@@ -70,6 +70,7 @@
         <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
         <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click"/>
         <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}"/>
+        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}"/>
         <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click"/>
         <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>

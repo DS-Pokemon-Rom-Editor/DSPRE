@@ -207,6 +207,7 @@ namespace DSPRE
             battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
             battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX) — a/0/0/9 = ARC_BATT_BG_PLANM
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
+            titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
 
             synthOverlay,
             dynamicHeaders,
@@ -2333,7 +2334,8 @@ namespace DSPRE
 
                         [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9",
 
-                        [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0"
+                        [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0",
+                        [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6"
                     };
 
                     //Encounter archive is different for SS
@@ -2490,6 +2492,29 @@ namespace DSPRE
             return gameFamily == GameFamilies.HGSS &&
                 (gameLanguage == GameLanguages.English || gameLanguage == GameLanguages.Spanish);
         }
+
+        public static bool IsTitleScreenEditorAvailable() => gameFamily == GameFamilies.HGSS;
+
+        /// <summary>
+        /// Member indices of the title logo/palette/background inside a/0/4/6 for a specific game version.
+        /// That archive carries both HeartGold's and SoulSilver's sets in the same file, so both are always
+        /// editable regardless of which one the loaded ROM actually is. The logo and background are each
+        /// backed by a real NSCR (confirmed against titledemo.naix): logoNscr is shared between HeartGold
+        /// and SoulSilver, backgroundNscr is per-version like the NCGR/NCLR pair.
+        /// </summary>
+        public static (int logo, int palette, int background, int logoNscr, int backgroundNscr) TitleScreenMembersFor(GameVersions version) =>
+            version == GameVersions.HeartGold ? (3, 4, 34, 0, 35) : (1, 2, 36, 0, 37);
+
+        /// <summary>Same as <see cref="TitleScreenMembersFor"/>, defaulting to the currently loaded ROM's version.</summary>
+        public static (int logo, int palette, int background, int logoNscr, int backgroundNscr) TitleScreenMembers =>
+            TitleScreenMembersFor(gameVersion);
+
+        /// <summary>
+        /// Member indices of the title screen's copyright text strip inside a/0/4/6. Unlike the logo and
+        /// background, there is only one copy in the archive (confirmed via titledemo.naix's single
+        /// title_cpright_* entry), shared between HeartGold and SoulSilver, with its own dedicated palette.
+        /// </summary>
+        public static (int ncgr, int nclr, int nscr) TitleScreenCopyrightMembers => (15, 16, 17);
 
         /// <summary>
         /// Checks if the Starter Pokémon editor is available for the current ROM. Offsets are known for

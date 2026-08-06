@@ -1,0 +1,156 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+		x:Class="DSPRE.Avalonia.Views.TitleScreenEditorView"
+		x:DataType="vm:TitleScreenEditorViewModel"
+		Title="Title Screen Editor"
+		Width="1180" Height="760" MinWidth="500" MinHeight="380"
+		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:TitleScreenEditorViewModel/>
+  </Design.DataContext>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+  <StackPanel Margin="12" Spacing="12">
+
+	<TextBlock Text="{Binding StatusText}" Foreground="OrangeRed"/>
+
+	<!-- Row 1: the Background/Logo/Palette cards live inside each TabItem's own Content (duplicated
+	     markup, identical bindings), rather than below a content-less TabControl, so there's no empty
+	     tab body left over between the tab strip and the cards. -->
+	<Border BorderBrush="Gray" BorderThickness="1">
+	  <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+		<TabItem Header="HeartGold">
+		  <StackPanel Orientation="Horizontal" Spacing="12" Margin="10">
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Background" FontWeight="Bold"/>
+				<Border Background="#181818" HorizontalAlignment="Left">
+				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
+				</Border>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import PNG…" Click="ImportBackground_Click"/>
+				  <Button Content="Export PNG…" Click="ExportBackground_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Logo" FontWeight="Bold"/>
+				<Border Background="#181818" HorizontalAlignment="Left">
+				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
+				</Border>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import PNG…" Click="ImportLogo_Click"/>
+				  <Button Content="Export PNG…" Click="ExportLogo_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Palette (advanced)" FontWeight="Bold"/>
+				<TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+						   Text="Importing the logo or background rebuilds their shared palette automatically. Use these only to hand-edit the raw NCLR file directly."/>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import NCLR…" Click="ImportPalette_Click"/>
+				  <Button Content="Export NCLR…" Click="ExportPalette_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+		  </StackPanel>
+		</TabItem>
+
+		<TabItem Header="SoulSilver">
+		  <StackPanel Orientation="Horizontal" Spacing="12" Margin="10">
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Background" FontWeight="Bold"/>
+				<Border Background="#181818" HorizontalAlignment="Left">
+				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
+				</Border>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import PNG…" Click="ImportBackground_Click"/>
+				  <Button Content="Export PNG…" Click="ExportBackground_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Logo" FontWeight="Bold"/>
+				<Border Background="#181818" HorizontalAlignment="Left">
+				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
+				</Border>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import PNG…" Click="ImportLogo_Click"/>
+				  <Button Content="Export PNG…" Click="ExportLogo_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			  <StackPanel Spacing="8">
+				<TextBlock Text="Palette (advanced)" FontWeight="Bold"/>
+				<TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+						   Text="Importing the logo or background rebuilds their shared palette automatically. Use these only to hand-edit the raw NCLR file directly."/>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+				  <Button Content="Import NCLR…" Click="ImportPalette_Click"/>
+				  <Button Content="Export NCLR…" Click="ExportPalette_Click"/>
+				</StackPanel>
+			  </StackPanel>
+			</Border>
+
+		  </StackPanel>
+		</TabItem>
+	  </TabControl>
+	</Border>
+
+	<!-- Row 2: Copyright (bottom left) + Preview (bottom right), Revert Changes centered between them -->
+	<Grid ColumnDefinitions="280,*,420">
+
+	  <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="0,0,12,0">
+		<StackPanel Spacing="8">
+		  <TextBlock Text="Copyright Text" FontWeight="Bold"/>
+		  <Border Background="#181818" HorizontalAlignment="Left">
+			<Image Source="{Binding CopyrightPreview}" Width="256" Height="192" Stretch="Uniform"/>
+		  </Border>
+		  <StackPanel Orientation="Horizontal" Spacing="6">
+			<Button Content="Import PNG…" Click="ImportCopyright_Click"/>
+			<Button Content="Export PNG…" Click="ExportCopyright_Click"/>
+		  </StackPanel>
+		</StackPanel>
+	  </Border>
+
+	  <Button Grid.Column="1" Content="Revert Changes" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"
+			  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+	  <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="12,0,0,0">
+		<StackPanel Spacing="8">
+		  <TextBlock Text="Preview (background + logo + copyright text)" FontWeight="Bold"/>
+		  <Border Background="#181818" HorizontalAlignment="Center" Width="384" Height="288" ClipToBounds="True">
+			<Grid>
+			  <Image Source="{Binding BackgroundPreview}" Width="384" Height="288" Stretch="Uniform"/>
+			  <Image x:Name="LogoOverlay" Source="{Binding LogoPreview}" Width="384" Height="288" Stretch="Uniform">
+				<Image.RenderTransform>
+				  <TranslateTransform/>
+				</Image.RenderTransform>
+			  </Image>
+			  <Image Source="{Binding CopyrightPreview}" Width="384" Height="288" Stretch="Uniform"/>
+			</Grid>
+		  </Border>
+		  <Button Content="▶ Play Intro" Click="PlayIntro_Click" HorizontalAlignment="Left"/>
+		  <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+					 Text="Recreation of the logo animation, not 100% accurate to what the game does."/>
+		</StackPanel>
+	  </Border>
+
+	</Grid>
+
+  </StackPanel>
+  </ScrollViewer>
+</Window>

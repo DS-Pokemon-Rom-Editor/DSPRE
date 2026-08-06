@@ -475,6 +475,9 @@ namespace DSPRE.Avalonia.Views
         private void DungeonCutinEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenDungeonCutinEditor();
 
+        private void TitleScreenEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTitleScreenEditor();
+
         private void OverlayEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverlayEditor();
 

@@ -241,6 +241,12 @@ namespace DSPRE.Avalonia
             new DungeonCutinEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
         }
 
+        public static void OpenTitleScreenEditor()
+        {
+            if (!IsRomLoaded || !RomInfo.IsTitleScreenEditorAvailable()) return;
+            new TitleScreenEditorView().ShowManaged();
+        }
+
         public static void OpenSpawnEditor()
         {
             if (!IsRomLoaded) return;
