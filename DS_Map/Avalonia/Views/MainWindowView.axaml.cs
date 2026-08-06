@@ -472,6 +472,9 @@ namespace DSPRE.Avalonia.Views
         private void FlyWarpEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenFlyWarpEditor();
 
+        private void DungeonCutinEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenDungeonCutinEditor();
+
         private void OverlayEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverlayEditor();
 

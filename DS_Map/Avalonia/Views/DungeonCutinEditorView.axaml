@@ -1,0 +1,125 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+		x:Class="DSPRE.Avalonia.Views.DungeonCutinEditorView"
+		x:DataType="vm:DungeonCutinEditorViewModel"
+		Title="{Binding Title}"
+		Width="1100" Height="700" MinWidth="800" MinHeight="500"
+		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:DungeonCutinEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="8" LastChildFill="True">
+
+	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+	  <Button Content="Export CSV…" Click="Export_Click"/>
+	  <Button Content="Import CSV…" Click="Import_Click"/>
+	  <Button Content="Save Changes" Click="Save_Click"/>
+	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
+	</StackPanel>
+
+	<ListBox DockPanel.Dock="Left" Width="220" Margin="0,0,8,0"
+			 ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}">
+	  <ListBox.ItemTemplate>
+		<DataTemplate x:DataType="vm:DungeonCutinRow">
+		  <TextBlock Text="{Binding RowLabel}"/>
+		</DataTemplate>
+	  </ListBox.ItemTemplate>
+	</ListBox>
+
+	<ScrollViewer>
+	  <StackPanel Spacing="10" Margin="0,0,4,0">
+
+		<Border BorderBrush="Gray" BorderThickness="1" Padding="10">
+		  <StackPanel Spacing="8">
+			<TextBlock Text="Location" FontWeight="Bold"/>
+			<StackPanel Orientation="Horizontal" Spacing="16">
+			  <StackPanel Spacing="2">
+				<TextBlock Text="Zone"/>
+				<ComboBox ItemsSource="{Binding Headers}" SelectedIndex="{Binding SelectedRow.HeaderIndex}" Width="240"/>
+			  </StackPanel>
+			  <StackPanel Spacing="2">
+				<TextBlock Text="Wipe Type"/>
+				<TextBox Text="{Binding SelectedRow.WipeType}" Width="80"/>
+			  </StackPanel>
+			  <StackPanel Spacing="2">
+				<TextBlock Text="Name (Message ID)"/>
+				<TextBox Text="{Binding SelectedRow.NameMessageId}" Width="120"/>
+			  </StackPanel>
+			</StackPanel>
+		  </StackPanel>
+		</Border>
+
+		<UniformGrid Columns="2" IsVisible="{Binding GraphicsAvailable}">
+
+		  <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="4">
+			<StackPanel Spacing="8">
+			  <TextBlock Text="Morning" FontWeight="Bold"/>
+			  <Image Source="{Binding MorningPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
+			  <StackPanel Orientation="Horizontal" Spacing="6">
+				<Button Content="Import…" Click="ImportMorning_Click"/>
+				<Button Content="Export…" Click="ExportMorning_Click"/>
+			  </StackPanel>
+			  <StackPanel Orientation="Horizontal" Spacing="10">
+				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.MorningPaletteId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Tiles"/><TextBox Text="{Binding SelectedRow.MorningTilesId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Screen"/><TextBox Text="{Binding SelectedRow.MorningScreenId}" Width="70"/></StackPanel>
+			  </StackPanel>
+			</StackPanel>
+		  </Border>
+
+		  <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="4">
+			<StackPanel Spacing="8">
+			  <TextBlock Text="Noon" FontWeight="Bold"/>
+			  <Image Source="{Binding NoonPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
+			  <StackPanel Orientation="Horizontal" Spacing="6">
+				<Button Content="Import…" Click="ImportNoon_Click"/>
+				<Button Content="Export…" Click="ExportNoon_Click"/>
+			  </StackPanel>
+			  <StackPanel Orientation="Horizontal" Spacing="10">
+				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.NoonPaletteId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Tiles"/><TextBox Text="{Binding SelectedRow.NoonTilesId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Screen"/><TextBox Text="{Binding SelectedRow.NoonScreenId}" Width="70"/></StackPanel>
+			  </StackPanel>
+			</StackPanel>
+		  </Border>
+
+		  <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="4">
+			<StackPanel Spacing="8">
+			  <TextBlock Text="Evening" FontWeight="Bold"/>
+			  <Image Source="{Binding EveningPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
+			  <StackPanel Orientation="Horizontal" Spacing="6">
+				<Button Content="Import…" Click="ImportEvening_Click"/>
+				<Button Content="Export…" Click="ExportEvening_Click"/>
+			  </StackPanel>
+			  <StackPanel Orientation="Horizontal" Spacing="10">
+				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.EveningPaletteId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Tiles"/><TextBox Text="{Binding SelectedRow.EveningTilesId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Screen"/><TextBox Text="{Binding SelectedRow.EveningScreenId}" Width="70"/></StackPanel>
+			  </StackPanel>
+			</StackPanel>
+		  </Border>
+
+		  <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="4">
+			<StackPanel Spacing="8">
+			  <TextBlock Text="Night" FontWeight="Bold"/>
+			  <Image Source="{Binding NightPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
+			  <StackPanel Orientation="Horizontal" Spacing="6">
+				<Button Content="Import…" Click="ImportNight_Click"/>
+				<Button Content="Export…" Click="ExportNight_Click"/>
+			  </StackPanel>
+			  <StackPanel Orientation="Horizontal" Spacing="10">
+				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.NightPaletteId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Tiles"/><TextBox Text="{Binding SelectedRow.NightTilesId}" Width="70"/></StackPanel>
+				<StackPanel Spacing="2"><TextBlock Text="Screen"/><TextBox Text="{Binding SelectedRow.NightScreenId}" Width="70"/></StackPanel>
+			  </StackPanel>
+			</StackPanel>
+		  </Border>
+
+		</UniformGrid>
+
+	  </StackPanel>
+	</ScrollViewer>
+  </DockPanel>
+</Window>

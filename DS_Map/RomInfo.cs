@@ -86,6 +86,7 @@ namespace DSPRE
 
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
+        public static uint dungeonCutinTableOffsetToRAMAddress { get; internal set; }
 
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
@@ -205,6 +206,7 @@ namespace DSPRE
             battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
             battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
             battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX) — a/0/0/9 = ARC_BATT_BG_PLANM
+            dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
 
             synthOverlay,
             dynamicHeaders,
@@ -1193,6 +1195,21 @@ namespace DSPRE
                             conditionalMusicTableOffsetToRAMAddress = 0x66238;
                             break;
                     }
+                    break;
+            }
+        }
+
+        public static void SetDungeonCutinTableOffsetToRAMAddress()
+        {
+            if (gameFamily != GameFamilies.HGSS) return;
+            switch (gameLanguage)
+            {
+                case GameLanguages.Spanish:
+                    dungeonCutinTableOffsetToRAMAddress = gameVersion == GameVersions.HeartGold ? (uint)0x6A37C : 0x6A384;
+                    break;
+
+                case GameLanguages.English:
+                    dungeonCutinTableOffsetToRAMAddress = 0x6A384;
                     break;
             }
         }
@@ -2314,7 +2331,9 @@ namespace DSPRE
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",
 
-                        [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9"
+                        [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9",
+
+                        [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0"
                     };
 
                     //Encounter archive is different for SS
@@ -2459,6 +2478,17 @@ namespace DSPRE
         public static bool IsRockSmashItemTableAvailable()
         {
             return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+        }
+
+        /// <summary>
+        /// HGSS only (Diamond/Pearl/Platinum have no equivalent system), English and Spanish only,
+        /// the only revisions with confirmed offsets. Same gating convention as
+        /// <see cref="IsHiddenItemsEditorAvailable"/> and <see cref="IsRockSmashItemTableAvailable"/>.
+        /// </summary>
+        public static bool IsDungeonCutinEditorAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS &&
+                (gameLanguage == GameLanguages.English || gameLanguage == GameLanguages.Spanish);
         }
 
         /// <summary>

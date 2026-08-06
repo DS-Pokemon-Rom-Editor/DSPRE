@@ -235,6 +235,12 @@ namespace DSPRE.Avalonia
             new FlyEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
         }
 
+        public static void OpenDungeonCutinEditor()
+        {
+            if (!IsRomLoaded || !RomInfo.IsDungeonCutinEditorAvailable()) return;
+            new DungeonCutinEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
+        }
+
         public static void OpenSpawnEditor()
         {
             if (!IsRomLoaded) return;
