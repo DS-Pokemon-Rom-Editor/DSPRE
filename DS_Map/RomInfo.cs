@@ -208,6 +208,7 @@ namespace DSPRE
             battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX) — a/0/0/9 = ARC_BATT_BG_PLANM
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
             titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
+            trainerCardGraphics,    // HGSS + Platinum only. Trainer card face/back + trainer-pose art.
 
             synthOverlay,
             dynamicHeaders,
@@ -2219,6 +2220,7 @@ namespace DSPRE
                         [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
                         [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\pl_batt_bg.narc",
                         [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\pl_batt_obj.narc",
+                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2335,7 +2337,8 @@ namespace DSPRE
                         [DirNames.eggMoves] = $@"{dataFolderName}\a\2\2\9",
 
                         [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0",
-                        [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6"
+                        [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6",
+                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\a\0\4\9"
                     };
 
                     //Encounter archive is different for SS
@@ -2515,6 +2518,23 @@ namespace DSPRE
         /// title_cpright_* entry), shared between HeartGold and SoulSilver, with its own dedicated palette.
         /// </summary>
         public static (int ncgr, int nclr, int nscr) TitleScreenCopyrightMembers => (15, 16, 17);
+
+        public static bool IsTrainerCardEditorAvailable() =>
+            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
+
+        // Shared NCGR + front/back NSCR; rankPalettes are the 7 selectable NCLRs (Normal/Bronze/Kap/
+        // Silver/Gold/Black/no-Pokédex). HGSS and Platinum are separate archives, not shared.
+        public static (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) TrainerCardMembers =>
+            gameFamily == GameFamilies.Plat
+                ? (27, 35, 36, new[] { 0, 1, 2, 3, 4, 5, 6 })
+                : (41, 47, 48, new[] { 0, 1, 2, 3, 4, 5, 6 });
+
+        public static readonly string[] TrainerCardRankNames =
+            { "Normal", "Bronze", "Kap", "Silver", "Gold", "Black", "No Pokédex" };
+
+        // Shared NCGR + one NSCR per gender; always uses rankPalettes[0] (Normal), matching the game.
+        public static (int ncgr, int maleNscr, int femaleNscr) TrainerCardTrainerMembers =>
+            gameFamily == GameFamilies.Plat ? (31, 40, 41) : (44, 54, 55);
 
         /// <summary>
         /// Checks if the Starter Pokémon editor is available for the current ROM. Offsets are known for
