@@ -432,6 +432,9 @@ namespace DSPRE.Avalonia.Views
         private void TrainerEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerEditor();
 
+        private void TrainerSpriteEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTrainerSpriteEditor();
+
         private void TextEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTextEditor();
 
@@ -477,6 +480,9 @@ namespace DSPRE.Avalonia.Views
 
         private void TitleScreenEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTitleScreenEditor();
+
+        private void TrainerCardEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTrainerCardEditor();
 
         private void OverlayEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverlayEditor();

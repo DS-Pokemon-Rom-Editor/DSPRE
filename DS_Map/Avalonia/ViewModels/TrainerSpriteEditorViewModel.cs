@@ -107,6 +107,13 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<FrameThumbnailViewModel> FrameThumbnails { get; } = new();
         public bool HasFrames => FrameThumbnails.Count > 0;
 
+        public ObservableCollection<string> ClassNames { get; } = new();
+        public int SelectedClassIndex
+        {
+            get => _trClassID;
+            set { if (Set(ref _trClassID, value)) Load(value); }
+        }
+
         public ObservableCollection<PaletteSwatchViewModel> PaletteSwatches { get; } = new();
 
         private int _selectedSwatchIndex;
@@ -143,6 +150,8 @@ namespace DSPRE.Avalonia.ViewModels
 
         public TrainerSpriteEditorViewModel(int trClassID)
         {
+            string[] names = GetTrainerClassNames();
+            for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
             Load(trClassID);
         }
 

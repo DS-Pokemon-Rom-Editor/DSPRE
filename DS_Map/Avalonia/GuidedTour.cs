@@ -130,8 +130,15 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("PokemonMenu"),
                     Title = "The Pokémon menu",
                     Body = "Edit the creatures themselves here: species stats and learnsets (Pokémon " +
-                           "Editor), move data, TM/HM assignments, egg moves, in-game trades, and every " +
-                           "trainer's party in the Trainer Editor."
+                           "Editor), move data, TM/HM assignments, egg moves, in-game trades, and wild " +
+                           "encounters (grass/surf, special encounters, headbutt trees)."
+                },
+                new Step
+                {
+                    Target = () => main.FindControl<Control>("TrainersMenu"),
+                    Title = "The Trainers menu",
+                    Body = "Everyone the player battles: parties and properties in the Trainer Editor, " +
+                           "and each trainer class's overworld sprite in the Trainer Sprite Editor."
                 },
                 new Step
                 {
@@ -153,8 +160,15 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("WorldMenu"),
                     Title = "The World menu",
                     Body = "Edit world structure here: the same map tools you just toured as tabs, plus " +
-                           "extras like the Building and Camera editors, overworld sprites, fly/spawn " +
-                           "points, special encounters and the Advanced Header Search."
+                           "extras like the Building and Camera editors, fly/spawn points and the " +
+                           "Advanced Header Search."
+                },
+                new Step
+                {
+                    Target = () => main.FindControl<Control>("GraphicsMenu"),
+                    Title = "The Graphics menu",
+                    Body = "Standalone art editors: the title screen, dungeon cutin splashes, the " +
+                           "trainer card, overworld sprites and NSBTX textures."
                 },
                 new Step
                 {

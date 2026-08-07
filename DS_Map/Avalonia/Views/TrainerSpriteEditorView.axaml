@@ -12,6 +12,11 @@
   </Design.DataContext>
 
   <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+      <TextBlock Text="Class:" VerticalAlignment="Center"/>
+      <ComboBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
+    </StackPanel>
+
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3" Margin="0,8,0,0">
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>

@@ -45,7 +45,15 @@
         <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
         <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}"/>
         <Separator/>
-        <MenuItem Header="Trainer Editor…"    Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
+        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
+        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
+        <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding IsHgssRom}"
+                  ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
+      </MenuItem>
+
+      <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Trainer Editor…"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
+        <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}"/>
       </MenuItem>
 
       <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -69,18 +77,18 @@
         <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
         <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
         <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click"/>
-        <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}"/>
-        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}"/>
         <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click"/>
-        <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
-        <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
         <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
-        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
         <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click"/>
         <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click"/>
-        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
-        <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding IsHgssRom}"
-                  ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
+      </MenuItem>
+
+      <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}"/>
+        <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}"/>
+        <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsEnabled="{Binding CanUseTrainerCardEditor}"/>
+        <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
+        <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Tools" x:Name="ToolsMenu">

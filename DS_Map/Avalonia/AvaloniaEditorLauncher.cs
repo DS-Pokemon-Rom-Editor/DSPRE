@@ -220,6 +220,13 @@ namespace DSPRE.Avalonia
             new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
+        public static void OpenTrainerSpriteEditor(int initialClassIndex = 0)
+        {
+            if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor")) return;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
+            new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
+        }
+
         public static void OpenStarterEditor()
         {
             if (!IsRomLoaded || BlockedForHge("The Starter Pokémon Editor") || !RomInfo.IsStarterEditorAvailable()) return;
@@ -245,6 +252,12 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded || !RomInfo.IsTitleScreenEditorAvailable()) return;
             new TitleScreenEditorView().ShowManaged();
+        }
+
+        public static void OpenTrainerCardEditor()
+        {
+            if (!IsRomLoaded || !RomInfo.IsTrainerCardEditorAvailable()) return;
+            new TrainerCardEditorView().ShowManaged();
         }
 
         public static void OpenSpawnEditor()
@@ -447,6 +460,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
+            new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },
             new() { Name = "Level Script Editor",   Run = () => OpenLevelScriptEditor() },

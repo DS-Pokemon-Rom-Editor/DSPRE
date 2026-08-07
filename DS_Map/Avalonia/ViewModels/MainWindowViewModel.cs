@@ -36,9 +36,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool CanUseMoveEditor    => IsRomLoaded && !isHGE;
         public bool CanUseItemEditor    => IsRomLoaded && !isHGE;
         public bool CanUseTrainerEditor => IsRomLoaded && !isHGE;
+        public bool CanUseTrainerSpriteEditor => IsRomLoaded && !isHGE;
         public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
         public bool CanUseDungeonCutinEditor => IsRomLoaded && RomInfo.IsDungeonCutinEditorAvailable();
         public bool CanUseTitleScreenEditor => IsRomLoaded && RomInfo.IsTitleScreenEditorAvailable();
+        public bool CanUseTrainerCardEditor => IsRomLoaded && RomInfo.IsTrainerCardEditorAvailable();
         public bool CanUseWildEditors   => IsRomLoaded && !isHGE;
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
         // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
@@ -90,9 +92,11 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
+            OnPropertyChanged(nameof(CanUseTrainerSpriteEditor));
             OnPropertyChanged(nameof(CanUseStarterEditor));
             OnPropertyChanged(nameof(CanUseDungeonCutinEditor));
             OnPropertyChanged(nameof(CanUseTitleScreenEditor));
+            OnPropertyChanged(nameof(CanUseTrainerCardEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(IsHgssRom));
             OnPropertyChanged(nameof(CanUseMiscTables));
