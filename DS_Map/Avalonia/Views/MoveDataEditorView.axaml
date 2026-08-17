@@ -28,6 +28,10 @@
 
   <DockPanel LastChildFill="True" Margin="10">
 
+	<Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
+	  <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
+	</Border>
+
 	<!-- Move selector bar -->
 	<Border DockPanel.Dock="Top" Margin="0,0,0,8">
 	  <StackPanel Orientation="Horizontal" Spacing="8">
@@ -48,6 +52,8 @@
 		<Button Content="Export CSV"   Click="Export_Click"  Width="110"/>
 		<Button Content="Import CSV"   Click="Import_Click"  Width="110"/>
 		<Button Content="Save Move"    Click="Save_Click"    Width="110" IsDefault="True"/>
+		<Button Content="+ Add New Move…" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
+				ToolTip.Tip="Mint a brand new move in the linked hg-engine checkout"/>
 	  </StackPanel>
 	</Border>
 

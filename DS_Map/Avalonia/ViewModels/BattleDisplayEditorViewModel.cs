@@ -2,6 +2,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
+using DSPRE.HgEngine;
 using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
@@ -144,7 +145,15 @@ namespace DSPRE.Avalonia.ViewModels
         private readonly PokemonSpriteEditorViewModel _sprites;
 
         // The send-out sheet is two 80×80 frames; we loop them so the preview animates like the game.
+        // Vanilla (non-hg-engine): both driven off the shared pokeAnim AnimSteps loop (front == back).
         private int _frame;   // 0 or 1
+
+        // hg-engine: frame-cycling comes from data/SpriteOffsets.c's .frontFrames/.backFrames instead,
+        // with independent sequences for front and back.
+        private System.Collections.Generic.List<(int Frame, int Duration)> _hgeFrontSteps, _hgeBackSteps;
+        private int _hgeFrontFrame, _hgeBackFrame;
+        private int _hgeFrontStepIndex = -1, _hgeFrontCountdown, _hgeBackStepIndex = -1, _hgeBackCountdown;
+
         private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
 
         // Display mode: "separate" shows one gender (the GenderIndex pick); "unified" shows Male + Female
@@ -171,12 +180,14 @@ namespace DSPRE.Avalonia.ViewModels
         private Bitmap Front(bool female)
         {
             var s = _sprites; if (s == null) return null;
-            return female ? Pick(s.BattleFrontF, s.BattleFrontM, _frame) : Pick(s.BattleFrontM, s.BattleFrontF, _frame);
+            int frame = HgEngineProject.IsActive ? _hgeFrontFrame : _frame;
+            return female ? Pick(s.BattleFrontF, s.BattleFrontM, frame) : Pick(s.BattleFrontM, s.BattleFrontF, frame);
         }
         private Bitmap Back(bool female)
         {
             var s = _sprites; if (s == null) return null;
-            return female ? Pick(s.BattleBackF, s.BattleBackM, _frame) : Pick(s.BattleBackM, s.BattleBackF, _frame);
+            int frame = HgEngineProject.IsActive ? _hgeBackFrame : _frame;
+            return female ? Pick(s.BattleBackF, s.BattleBackM, frame) : Pick(s.BattleBackM, s.BattleBackF, frame);
         }
 
         // Gender-selected (separate display) + explicit per-gender (unified side-by-side display).
@@ -460,6 +471,9 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
             AnimSteps.Clear(); AnimBack.Clear();
             if (!IsAvailable || id < 0) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+
+            if (HgEngineProject.IsActive) { LoadAnimFromHgeSource(id); return; }
+
             EnsureAnimNarc();
             var r = _animNarc?.GetRecord(id);
             if (r == null || r.Length < ANIM_REC_LEN) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
@@ -477,9 +491,40 @@ namespace DSPRE.Avalonia.ViewModels
             RestartAnimPreview();
         }
 
+        // AnimSteps stays empty: idle-frame cycling is populated separately in LoadSpriteDataFromHgeSource.
+        private void LoadAnimFromHgeSource(int id)
+        {
+            if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+            if (!block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, out _animFrontProg)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+            block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, out _animFrontWait);
+            block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, out int backProg);
+            block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, out int backWait);
+            AddBackStep(backProg, backWait);
+
+            OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait)); OnPropertyChanged(nameof(CanAddAnimStep));
+            HasAnimData = true;
+            RefreshProgramScript();
+            RestartAnimPreview();
+        }
+
         private void SaveAnim()
         {
-            if (_animNarc == null || !_hasAnimData) return;
+            if (!_hasAnimData) return;
+
+            if (HgEngineProject.IsActive)
+            {
+                var fields = new[]
+                {
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _animFrontProg.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, _animFrontWait.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, (AnimBack.Count > 0 ? AnimBack[0].Number : 0).ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, (AnimBack.Count > 0 ? AnimBack[0].Wait : 0).ToString()),
+                };
+                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentId, fields, out _, out _);
+                return;
+            }
+
+            if (_animNarc == null) return;
             var r = _animNarc.GetRecord(_currentId);
             if (r == null || r.Length < ANIM_REC_LEN) return;
             r[0] = (byte)_animFrontProg; r[1] = (byte)_animFrontWait;
@@ -796,11 +841,14 @@ namespace DSPRE.Avalonia.ViewModels
         private void LoadSpriteData(int id)
         {
             HasSpriteData = false; HasMovementType = false; HasHeights = false;
+            _hgeFrontSteps = null; _hgeBackSteps = null;
             if (!IsAvailable || id < 0) return;
-            EnsureSource();
-            if (_src == null) return;
             try
             {
+                if (HgEngineProject.IsActive) { LoadSpriteDataFromHgeSource(id); return; }
+
+                EnsureSource();
+                if (_src == null) return;
                 if (!_src.TryLoad(id, out BattleRec rec)) return;
                 _spriteY = rec.FrontY; _shadowX = rec.ShadowX; _shadowSize = rec.ShadowSize; _movementType = rec.Movement;
                 _backHeightF = rec.BackF; _backHeightM = rec.BackM; _frontHeightF = rec.FrontF; _frontHeightM = rec.FrontM;
@@ -814,9 +862,52 @@ namespace DSPRE.Avalonia.ViewModels
             catch { HasSpriteData = false; }
         }
 
+        // Heights come from data/HeightTable.c, a separate file from the sprite-offset block above.
+        private void LoadSpriteDataFromHgeSource(int id)
+        {
+            if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) return;
+            if (!block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, out int movement)) return;
+            if (!block.TryGetInt(new[] { FieldPathSegment.Field("spriteYOffset") }, out int spriteY)) return;
+            if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowXOffset") }, out int shadowX)) return;
+            if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowSize") }, out int shadowSize)) return;
+
+            _hgeFrontSteps = HgEngineSpriteOffsets.ReadFrameSteps(block, "frontFrames");
+            _hgeBackSteps = HgEngineSpriteOffsets.ReadFrameSteps(block, "backFrames");
+
+            _spriteY = spriteY; _shadowX = shadowX; _shadowSize = shadowSize; _movementType = movement;
+
+            bool hasHeights = HgEngineHeightTable.TryGet(id, out int femaleBack, out int maleBack, out int femaleFront, out int maleFront);
+            _backHeightF = hasHeights ? femaleBack : 0; _backHeightM = hasHeights ? maleBack : 0;
+            _frontHeightF = hasHeights ? femaleFront : 0; _frontHeightM = hasHeights ? maleFront : 0;
+            _oFrontHeightM = _frontHeightM; _oFrontHeightF = _frontHeightF; _oBackHeightM = _backHeightM; _oBackHeightF = _backHeightF;
+
+            OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize)); OnPropertyChanged(nameof(MovementType));
+            OnPropertyChanged(nameof(FrontHeightM)); OnPropertyChanged(nameof(FrontHeightF)); OnPropertyChanged(nameof(BackHeightM)); OnPropertyChanged(nameof(BackHeightF));
+            OnPropertyChanged(nameof(FrontHeightUnified)); OnPropertyChanged(nameof(BackHeightUnified));
+            HasMovementType = true; HasHeights = hasHeights;
+            HasSpriteData = true;
+        }
+
         private void SaveSpriteData()
         {
-            if (!IsAvailable || _src == null || !_hasSpriteData) return;
+            if (!IsAvailable || !_hasSpriteData) return;
+
+            if (HgEngineProject.IsActive)
+            {
+                var fields = new[]
+                {
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _movementType.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("spriteYOffset") }, _spriteY.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowXOffset") }, _shadowX.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowSize") }, _shadowSize.ToString()),
+                };
+                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentId, fields, out _, out _);
+                if (_hasHeights)
+                    HgEngineHeightTable.TrySet(_currentId, _backHeightF, _backHeightM, _frontHeightF, _frontHeightM, out _);
+                return;
+            }
+
+            if (_src == null) return;
             var rec = new BattleRec
             {
                 FrontY = _spriteY,
@@ -1046,7 +1137,12 @@ namespace DSPRE.Avalonia.ViewModels
         public void Detach() => _animTimer?.Stop();
 
         private int _patIndex = -1, _patCountdown;
-        private void RestartAnimPreview() { _patIndex = -1; _patCountdown = 0; }
+        private void RestartAnimPreview()
+        {
+            _patIndex = -1; _patCountdown = 0;
+            _hgeFrontStepIndex = -1; _hgeFrontCountdown = 0;
+            _hgeBackStepIndex = -1; _hgeBackCountdown = 0;
+        }
         private bool _framePaused;
         public bool FramePaused { get => _framePaused; set => Set(ref _framePaused, value); }
 
@@ -1054,6 +1150,14 @@ namespace DSPRE.Avalonia.ViewModels
         {
             TickProgramAnim();   // program-animation motion (independent of the frame/pattern loop)
             if (_framePaused) return;   // frame (pattern) loop paused for inspection
+
+            if (HgEngineProject.IsActive)
+            {
+                TickHgeFrames(_hgeFrontSteps, ref _hgeFrontStepIndex, ref _hgeFrontCountdown, ref _hgeFrontFrame);
+                TickHgeFrames(_hgeBackSteps, ref _hgeBackStepIndex, ref _hgeBackCountdown, ref _hgeBackFrame);
+                return;
+            }
+
             if (AnimSteps.Count == 0)
             {
                 if (_frame != 0) { _frame = 0; RaiseSprites(); }   // no pattern data → static first frame
@@ -1068,6 +1172,23 @@ namespace DSPRE.Avalonia.ViewModels
             if (newFrame != _frame) { _frame = newFrame; RaiseSprites(); }
         }
 
+        // No steps means no real animation for this species; stay on frame 0.
+        private void TickHgeFrames(System.Collections.Generic.List<(int Frame, int Duration)> steps, ref int stepIndex, ref int countdown, ref int frame)
+        {
+            if (steps == null || steps.Count == 0)
+            {
+                if (frame != 0) { frame = 0; RaiseSprites(); }
+                return;
+            }
+            if (--countdown > 0) return;
+            stepIndex = (stepIndex + 1) % steps.Count;
+            var step = steps[stepIndex];
+            countdown = Math.Max(1, step.Duration);
+            int max = MaxFrameIndex;
+            int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
+            if (newFrame != frame) { frame = newFrame; RaiseSprites(); }
+        }
+
         public void LoadMon(int id)
         {
             _loading = true;
@@ -1075,7 +1196,13 @@ namespace DSPRE.Avalonia.ViewModels
             _pendingIconGraphic = null;   // drop any unsaved icon-graphic import from the previous mon
             try
             {
-                int pal = (IsAvailable && id >= 0) ? DSPRE.DSUtils.GetMonIconPaletteId(id) : 0;
+                int pal = 0;
+                if (IsAvailable && id >= 0)
+                {
+                    // monIconPalTableAddress is a vanilla-only ARM9 offset; hg-engine uses IconPaletteTable.c instead.
+                    if (!(HgEngineProject.IsActive && HgEngineIconPalette.TryGetPaletteId(id, out pal)))
+                        pal = DSPRE.DSUtils.GetMonIconPaletteId(id);
+                }
                 _partyPaletteIndex = (pal >= 0 && pal < PartyPalettes.Count) ? pal : 0;
             }
             catch { _partyPaletteIndex = 0; }
@@ -1099,7 +1226,10 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _currentId < 0) return;
             try
             {
-                DSPRE.DSUtils.SetMonIconPaletteId(_currentId, (byte)_partyPaletteIndex);
+                if (HgEngineProject.IsActive)
+                    HgEngineIconPalette.TrySetPaletteId(_currentId, _partyPaletteIndex, out _);
+                else
+                    DSPRE.DSUtils.SetMonIconPaletteId(_currentId, (byte)_partyPaletteIndex);
                 if (_pendingIconGraphic != null)
                 {
                     DSPRE.DSUtils.SetMonIconGraphic(_currentId, _partyPaletteIndex, _pendingIconGraphic);

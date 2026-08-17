@@ -8,6 +8,7 @@ using global::Avalonia.Controls;
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -142,7 +143,20 @@ namespace DSPRE.Avalonia.ViewModels
         {
             try
             {
-                _file = new HeadbuttEncounterFile((ushort)index);
+                // Headbutt isn't one of DSPRE's owned domains for the packed NARC, so the vanilla read
+                // would show a stale packed-ROM snapshot rather than the checkout's real data/Headbutt.c.
+                if (HgEngineProject.IsActive)
+                {
+                    if (!HgEngineHeadbutt.TryLoad(index, out _file, out string err))
+                    {
+                        _file = new HeadbuttEncounterFile();
+                        AppLogger.Error($"hg-engine headbutt read failed (file {index}): {err}");
+                    }
+                }
+                else
+                {
+                    _file = new HeadbuttEncounterFile((ushort)index);
+                }
                 NormalEncounters.Clear();
                 for (int i = 0; i < _file.normalEncounters.Count; i++)
                     NormalEncounters.Add(new HeadbuttEncRow($"Normal {i + 1}", _file.normalEncounters[i], Species, Dirty));
@@ -476,7 +490,17 @@ namespace DSPRE.Avalonia.ViewModels
             if (_file == null || _selFile < 0) return;
             try
             {
-                if (_file.SaveToFile(_selFile)) { SetClean(); StatusText = $"Saved headbutt file {_selFile}."; }
+                bool ok;
+                if (HgEngineProject.IsActive)
+                {
+                    ok = HgEngineHeadbutt.TrySave(_selFile, _file, out string err);
+                    if (!ok) AppLogger.Error($"hg-engine headbutt write failed (file {_selFile}): {err}");
+                }
+                else
+                {
+                    ok = _file.SaveToFile(_selFile);
+                }
+                if (ok) { SetClean(); StatusText = $"Saved headbutt file {_selFile}."; }
                 else StatusText = "Save failed (see log).";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt Editor"); }

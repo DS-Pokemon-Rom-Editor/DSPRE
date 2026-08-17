@@ -44,6 +44,44 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>
+        /// Loads an hg-engine icon.png (data/graphics/sprites/&lt;name&gt;/icon.png), which is a
+        /// vertical N-frame bounce-animation strip with no real alpha channel — crops to the first
+        /// Width×Width frame and color-keys the corner pixel to transparent.
+        /// </summary>
+        public static AvaloniaBitmap LoadHgeIconFirstFrame(string pngPath)
+        {
+            using var fs = System.IO.File.OpenRead(pngPath);
+            var raw = DecodeRawImage(fs);
+            if (raw == null) return null;
+
+            int frameHeight = raw.Width;
+            DSPRE.RawImage frame;
+            if (frameHeight <= 0 || raw.Height <= frameHeight || raw.Height % frameHeight != 0)
+            {
+                frame = raw;
+            }
+            else
+            {
+                frame = new DSPRE.RawImage(raw.Width, frameHeight);
+                Array.Copy(raw.Bgra, 0, frame.Bgra, 0, frame.Bgra.Length);
+            }
+
+            ApplyCornerColorKeyTransparency(frame);
+            return ToAvaloniaBitmap(frame);
+        }
+
+        private static void ApplyCornerColorKeyTransparency(DSPRE.RawImage img)
+        {
+            if (img.IsEmpty) return;
+            byte[] px = img.Bgra;
+            byte keyB = px[0], keyG = px[1], keyR = px[2];
+            for (int i = 0; i < px.Length; i += 4)
+            {
+                if (px[i] == keyB && px[i + 1] == keyG && px[i + 2] == keyR) px[i + 3] = 0;
+            }
+        }
+
+        /// <summary>
         /// Decodes an encoded image stream (PNG/GIF/…) to a <see cref="DSPRE.RawImage"/> via Avalonia's
         /// codecs — the cross-platform replacement for <c>new System.Drawing.Bitmap(stream)</c>.
         /// Returns null on an unexpected pixel format.

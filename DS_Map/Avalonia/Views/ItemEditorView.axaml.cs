@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views
             DataContext = vm;
             InitializeComponent();
             this.FindControl<Button>("SaveAllButton").Click += (_, _) => VM?.SaveChanges();
+            this.FindControl<Button>("AddItemButton").Click += async (_, _) => { if (VM != null) await VM.AddNewItemAsync(this); };
             EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
         }
 

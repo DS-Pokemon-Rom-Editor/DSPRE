@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DSPRE.Avalonia.ViewModels;
 using DSPRE.Avalonia.Views;
+using DSPRE.HgEngine;
 using DSPRE.Resources;
 using static DSPRE.RomInfo;
 
@@ -25,12 +26,18 @@ namespace DSPRE.Avalonia
 
         /// <summary>Guard for editors whose data hg-engine owns/overwrites (mon, move, item,
         /// trainer, encounter data). The menu items are greyed out too, but this is the real
-        /// chokepoint: it also covers the Ctrl+P palette and the header-tree context menu.</summary>
-        private static bool BlockedForHge(string editorName)
+        /// chokepoint: it also covers the Ctrl+P palette and the header-tree context menu.
+        /// Editors covering one of the 5 domains DSPRE can now read/write straight from a linked
+        /// hg-engine checkout (<paramref name="ownedDomain"/>) are unblocked once that link is active;
+        /// everything else stays blocked, since DSPRE would otherwise write to a ROM copy hg-engine's
+        /// next build silently overwrites.</summary>
+        private static bool BlockedForHge(string editorName, HgEngineDomain? ownedDomain = null)
         {
             if (!RomInfo.isHGE) return false;
+            if (ownedDomain.HasValue && HgEngineProject.IsActive) return false;
             AppMessages.Info(editorName + " is disabled for hg-engine ROMs: hg-engine manages this " +
-                "data itself and would overwrite any changes made here on its next build.",
+                "data itself and would overwrite any changes made here on its next build." +
+                (ownedDomain.HasValue ? " Link your hg-engine checkout (File > Link hg-engine checkout…) to edit it from source instead." : ""),
                 "Not available with hg-engine");
             return true;
         }
@@ -38,7 +45,7 @@ namespace DSPRE.Avalonia
         // ── Pokémon-related editors ────────────────────────────────────────────
         public static void OpenPokemonEditor(int initialMon = 1)
         {
-            if (!IsRomLoaded || BlockedForHge("The Pokémon Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Pokémon Editor", HgEngineDomain.Species)) return;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.personalPokeData, DirNames.learnsets,
@@ -60,9 +67,19 @@ namespace DSPRE.Avalonia
             new PokemonEditorView(vm).ShowManaged();
         }
 
+        /// <summary>hg-engine-only: which form species exist per base Pokémon (data/PokeFormDataTbl.c).
+        /// No packed-ROM equivalent, so unlike the other 5 domains this needs neither a narc unpack nor
+        /// isHGE/BlockedForHge gating — it simply doesn't exist without a linked, active checkout.</summary>
+        public static void OpenHgEngineFormEditor()
+        {
+            if (!IsRomLoaded || !HgEngineProject.IsActive) return;
+            var vm = new HgEngineFormEditorViewModel(GetPokemonNames());
+            new HgEngineFormEditorView(vm).ShowManaged();
+        }
+
         public static void OpenMoveDataEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded || BlockedForHge("The Move Data Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Move Data Editor", HgEngineDomain.Moves)) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
             var view = new MoveDataEditorView();
             if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
@@ -104,7 +121,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenItemEditor(int initialIndex = 1)
         {
-            if (!IsRomLoaded || BlockedForHge("The Item Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Item Editor", HgEngineDomain.Items)) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
             var vm = new ItemEditorViewModel(GetItemNames());
@@ -174,7 +191,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenWildEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded || BlockedForHge("The Wild Pokémon Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Wild Pokémon Editor", HgEngineDomain.Encounters)) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
             string path = gameDirs[DirNames.encounters].unpackedDir;
             string[] names = GetPokemonNames();
@@ -214,7 +231,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTrainerEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded || BlockedForHge("The Trainer Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Trainer Editor", HgEngineDomain.Trainers)) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics });
             new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
@@ -358,6 +375,12 @@ namespace DSPRE.Avalonia
             new SettingsWindowView().ShowManaged();
         }
 
+        public static void OpenHgEngineLink()
+        {
+            if (!IsRomLoaded) return;
+            new HgEngineLinkView().ShowManaged();
+        }
+
         public static void OpenLabelEditor()
         {
             // Needs a ROM for project-scoped overrides (workDir); global scope works regardless.
@@ -451,6 +474,7 @@ namespace DSPRE.Avalonia
         public static List<CommandItem> BuildCommands() => new()
         {
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => OpenPokemonEditor() },
+            new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },

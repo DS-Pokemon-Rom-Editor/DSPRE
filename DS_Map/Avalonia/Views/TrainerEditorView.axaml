@@ -37,17 +37,21 @@
             <Button Content="Import party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
           </WrapPanel>
         </Border>
+        <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
+          <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
+        </Border>
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
                 BorderThickness="0,1,0,0" Padding="8,3">
           <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
         </Border>
 
+        <Panel>
         <Grid ColumnDefinitions="240,*">
       <ListBox Grid.Column="0" Margin="4"
                ItemsSource="{Binding TrainerNames}"
                SelectedIndex="{Binding SelectedTrainerIndex}"/>
 
-      <ScrollViewer Grid.Column="1" Padding="8">
+      <ScrollViewer Grid.Column="1" Padding="8,8,8,24">
         <StackPanel Spacing="8">
 
           <!-- Properties -->
@@ -65,9 +69,13 @@
                         ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
 
               <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
-                <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}"/>
-                <CheckBox Content="Custom moves"  IsChecked="{Binding ChooseMoves}"/>
-                <CheckBox Content="Held items"    IsChecked="{Binding ChooseItems}"/>
+                <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsHgeActive}">
+                  <TextBlock Text="Battle type" VerticalAlignment="Center"/>
+                  <ComboBox Width="180" ItemsSource="{Binding BattleTypeOptions}" SelectedIndex="{Binding BattleTypeIndex}"/>
+                </StackPanel>
+                <CheckBox Content="Custom moves"  IsChecked="{Binding ChooseMoves}" IsVisible="{Binding !IsHgeActive}"/>
+                <CheckBox Content="Held items"    IsChecked="{Binding ChooseItems}" IsVisible="{Binding !IsHgeActive}"/>
                 <TextBlock Text="Party size" VerticalAlignment="Center"/>
                 <NumericUpDown Width="90" Minimum="1" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasClassSprite}">
@@ -76,6 +84,23 @@
                 </StackPanel>
               </StackPanel>
             </Grid>
+          </HeaderedContentControl>
+
+          <!-- Trainer data type (hg-engine only): the real TRAINER_DATA_TYPE_* flags, dynamically named
+               from the linked checkout's include/trainer_data.h. Each one gates the matching party-mon
+               field(s) below (see TrainerPartyMonViewModel's Hge*Enabled properties). -->
+          <HeaderedContentControl Header="Trainer data type" IsVisible="{Binding IsHgeActive}">
+            <ItemsControl ItemsSource="{Binding TrainerDataTypeFlags}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AiFlagViewModel">
+                  <!-- Nested TextBlock, not Content=, so leading "_" in flag names isn't eaten as a mnemonic. -->
+                  <CheckBox IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0">
+                    <TextBlock Text="{Binding Label}"/>
+                  </CheckBox>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </HeaderedContentControl>
 
           <!-- Held items -->
@@ -91,13 +116,18 @@
             </ItemsControl>
           </HeaderedContentControl>
 
-          <!-- AI flags -->
+          <!-- AI flags: dynamically named from trainer_data.h's real F_* bits when hg-engine is active
+               (repopulated in code — see TrainerEditorViewModel.SetupAsync); the same static, generic
+               labels as before otherwise. -->
           <HeaderedContentControl Header="AI flags">
             <ItemsControl ItemsSource="{Binding AiFlags}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AiFlagViewModel">
-                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="150" Margin="0,0,4,0"/>
+                  <!-- Nested TextBlock, not Content=, so leading "_" in flag names isn't eaten as a mnemonic. -->
+                  <CheckBox IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0">
+                    <TextBlock Text="{Binding Label}"/>
+                  </CheckBox>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -105,12 +135,15 @@
 
           <!-- Party -->
           <HeaderedContentControl Header="Party">
+            <!-- Non-virtualizing panel: the default VirtualizingStackPanel mismeasures cards whose
+                 Expander changes height. -->
             <ItemsControl ItemsSource="{Binding Party}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
                   <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                           CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="{DynamicResource Editor.PanelBg}">
-                    <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto">
+                    <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
                       <Border Grid.Column="0" Grid.RowSpan="3" Width="56" Height="56" VerticalAlignment="Top"
                               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
                         <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
@@ -173,6 +206,97 @@
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
                         </StackPanel>
                       </WrapPanel>
+
+                      <Expander Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="Advanced"
+                                IsVisible="{Binding HgeAdvancedVisible}" Margin="0,4,0,0" IsExpanded="False">
+                        <StackPanel Spacing="6" Margin="0,4,0,0">
+                          <WrapPanel>
+                            <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeExplicitAbilityEnabled}">
+                              <TextBlock Text="Explicit ability" FontSize="10"/>
+                              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AllAbilityNames}" SelectedIndex="{Binding HgeExtras.AbilityId}"/>
+                            </StackPanel>
+                            <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeBallEnabled}">
+                              <TextBlock Text="Catch ball" FontSize="10"/>
+                              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HgeExtras.BallId}"/>
+                            </StackPanel>
+                            <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeNatureEnabled}">
+                              <TextBlock Text="Nature" FontSize="10"/>
+                              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding HgeExtras.NatureNames}" SelectedIndex="{Binding HgeExtras.NatureIndex}"/>
+                            </StackPanel>
+                            <StackPanel Width="100" VerticalAlignment="Bottom" IsEnabled="{Binding HgeShinyLockEnabled}">
+                              <CheckBox Content="Shiny lock" IsChecked="{Binding HgeExtras.ShinyLocked}"/>
+                            </StackPanel>
+                          </WrapPanel>
+
+                          <StackPanel IsEnabled="{Binding HgeIvEvEnabled}">
+                            <TextBlock Text="Explicit IVs" FontSize="10"/>
+                            <WrapPanel>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="HP"      Value="{Binding HgeExtras.SetIvs.Hp}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="Attack"  Value="{Binding HgeExtras.SetIvs.Attack}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="Defense" Value="{Binding HgeExtras.SetIvs.Defense}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="Speed"   Value="{Binding HgeExtras.SetIvs.Speed}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="31" ToolTip.Tip="Sp. Atk" Value="{Binding HgeExtras.SetIvs.SpAttack}"/>
+                              <NumericUpDown Width="70" Minimum="0" Maximum="31" ToolTip.Tip="Sp. Def" Value="{Binding HgeExtras.SetIvs.SpDefense}"/>
+                            </WrapPanel>
+                            <TextBlock Text="Explicit EVs" FontSize="10" Margin="0,4,0,0"/>
+                            <WrapPanel>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="255" ToolTip.Tip="HP"      Value="{Binding HgeExtras.SetEvs.Hp}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="255" ToolTip.Tip="Attack"  Value="{Binding HgeExtras.SetEvs.Attack}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="255" ToolTip.Tip="Defense" Value="{Binding HgeExtras.SetEvs.Defense}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="255" ToolTip.Tip="Speed"   Value="{Binding HgeExtras.SetEvs.Speed}"/>
+                              <NumericUpDown Width="70" Margin="0,0,4,0" Minimum="0" Maximum="255" ToolTip.Tip="Sp. Atk" Value="{Binding HgeExtras.SetEvs.SpAttack}"/>
+                              <NumericUpDown Width="70" Minimum="0" Maximum="255" ToolTip.Tip="Sp. Def" Value="{Binding HgeExtras.SetEvs.SpDefense}"/>
+                            </WrapPanel>
+                          </StackPanel>
+
+                          <StackPanel IsEnabled="{Binding HgeAdditionalFlagsEnabled}">
+                            <TextBlock Text="Additional flags (each independently gates its own value)" FontSize="10"/>
+                            <WrapPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Status" IsChecked="{Binding HgeExtras.ExtraStatusEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="255" IsEnabled="{Binding HgeExtras.ExtraStatusEnabled}" Value="{Binding HgeExtras.ExtraStatus}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="HP" IsChecked="{Binding HgeExtras.ExtraHpEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraHpEnabled}" Value="{Binding HgeExtras.ExtraHp}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Attack" IsChecked="{Binding HgeExtras.ExtraAttackEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraAttackEnabled}" Value="{Binding HgeExtras.ExtraAttack}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Defense" IsChecked="{Binding HgeExtras.ExtraDefenseEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraDefenseEnabled}" Value="{Binding HgeExtras.ExtraDefense}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Speed" IsChecked="{Binding HgeExtras.ExtraSpeedEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraSpeedEnabled}" Value="{Binding HgeExtras.ExtraSpeed}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Sp. Atk" IsChecked="{Binding HgeExtras.ExtraSpAtkEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraSpAtkEnabled}" Value="{Binding HgeExtras.ExtraSpAtk}"/>
+                              </StackPanel>
+                              <StackPanel Width="110" Margin="0,0,6,0">
+                                <CheckBox Content="Sp. Def" IsChecked="{Binding HgeExtras.ExtraSpDefEnabled}"/>
+                                <NumericUpDown Minimum="0" Maximum="999" IsEnabled="{Binding HgeExtras.ExtraSpDefEnabled}" Value="{Binding HgeExtras.ExtraSpDef}"/>
+                              </StackPanel>
+                              <StackPanel Width="230" Margin="0,0,6,0">
+                                <CheckBox Content="PP counts (move 1-4)" IsChecked="{Binding HgeExtras.ExtraPpCountsEnabled}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="4" IsEnabled="{Binding HgeExtras.ExtraPpCountsEnabled}">
+                                  <NumericUpDown Width="54" Minimum="0" Maximum="40" Value="{Binding HgeExtras.ExtraPp1}"/>
+                                  <NumericUpDown Width="54" Minimum="0" Maximum="40" Value="{Binding HgeExtras.ExtraPp2}"/>
+                                  <NumericUpDown Width="54" Minimum="0" Maximum="40" Value="{Binding HgeExtras.ExtraPp3}"/>
+                                  <NumericUpDown Width="54" Minimum="0" Maximum="40" Value="{Binding HgeExtras.ExtraPp4}"/>
+                                </StackPanel>
+                              </StackPanel>
+                              <StackPanel Width="180">
+                                <CheckBox Content="Nickname" IsChecked="{Binding HgeExtras.ExtraNicknameEnabled}"/>
+                                <TextBox IsEnabled="{Binding HgeExtras.ExtraNicknameEnabled}" Text="{Binding HgeExtras.ExtraNickname}" MaxLength="10"/>
+                              </StackPanel>
+                            </WrapPanel>
+                          </StackPanel>
+                        </StackPanel>
+                      </Expander>
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -180,9 +304,19 @@
             </ItemsControl>
           </HeaderedContentControl>
 
+          <!-- Fixed spacer: guarantees scroll room past the last party card. -->
+          <Border Height="320"/>
+
         </StackPanel>
       </ScrollViewer>
         </Grid>
+        <Border IsVisible="{Binding IsLoading}" Background="#A0000000" ZIndex="100">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="260">
+            <TextBlock Text="{Binding StatusText}" FontSize="16" HorizontalAlignment="Center" Foreground="White"/>
+            <ProgressBar IsIndeterminate="True"/>
+          </StackPanel>
+        </Border>
+        </Panel>
       </DockPanel>
     </TabItem>
 

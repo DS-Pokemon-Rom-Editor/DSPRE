@@ -12,6 +12,7 @@
   <ItemGroup>
     <CoreCompile Include="$(DsMapDir)ROMFiles\**\*.cs" />
     <CoreCompile Include="$(DsMapDir)DSUtils\**\*.cs" />
+    <CoreCompile Include="$(DsMapDir)HgEngine\**\*.cs" />
     <CoreCompile Include="$(DsMapDir)LibNDSFormats\**\*.cs" />
     <CoreCompile Include="$(DsMapDir)Script\**\*.cs" />
     <CoreCompile Include="$(DsMapDir)Resources\CharMaps\**\*.cs" />

@@ -1977,7 +1977,12 @@ namespace DSPRE
 
         public static string[] GetTrainerClassNames() => new TextArchive(trainerClassMessageNumber).messages.ToArray();
 
-        public static string[] GetItemNames() => new TextArchive(itemNamesTextNumber).messages.ToArray();
+        public static string[] GetItemNames()
+        {
+            string[] names = new TextArchive(itemNamesTextNumber).messages.ToArray();
+            HgEngine.HgEngineCustomLabel.ApplyItemLabel(names);
+            return names;
+        }
 
         public static string[] GetItemNames(int startIndex = 0, int? count = null)
         {
@@ -1985,11 +1990,22 @@ namespace DSPRE
             return itemNames.messages.GetRange(startIndex, count == null ? itemNames.messages.Count - 1 : (int)count).ToArray();
         }
 
-        public static string[] GetPokemonNames() => new TextArchive(pokemonNamesTextNumbers[0]).messages.ToArray();
+        public static string[] GetPokemonNames()
+        {
+            string[] names = new TextArchive(pokemonNamesTextNumbers[0]).messages.ToArray();
+            HgEngine.HgEngineFormNames.ApplyFallback(names);
+            HgEngine.HgEngineCustomLabel.ApplySpeciesLabel(names);
+            return names;
+        }
 
         public static string[] GetAbilityNames() => new TextArchive(abilityNamesTextNumber).messages.ToArray();
 
-        public static string[] GetAttackNames() => new TextArchive(attackNamesTextNumber).messages.ToArray();
+        public static string[] GetAttackNames()
+        {
+            string[] names = new TextArchive(attackNamesTextNumber).messages.ToArray();
+            HgEngine.HgEngineCustomLabel.ApplyMoveLabel(names);
+            return names;
+        }
 
         public static string[] GetTypeNames() => new TextArchive(typesTextNumber).messages.ToArray();
 

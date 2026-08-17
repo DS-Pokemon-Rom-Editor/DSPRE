@@ -52,8 +52,8 @@
     <HeaderedContentControl Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-          <Button Content="Add slot"    Click="AddObject_Click"/>
-          <Button Content="Remove slot" Click="RemoveObject_Click"/>
+          <Button Content="Add slot"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Remove slot" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
         </StackPanel>
         <ListBox DockPanel.Dock="Top" Height="90"
                  ItemsSource="{Binding ObjectItems}" SelectedIndex="{Binding ObjectIndex}"/>

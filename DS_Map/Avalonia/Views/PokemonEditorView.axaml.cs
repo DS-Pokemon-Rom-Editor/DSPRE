@@ -31,6 +31,9 @@ namespace DSPRE.Avalonia.Views
         private void Close_Click(object sender, RoutedEventArgs e)
             => Close();
 
+        private async void AddSpecies_Click(object sender, RoutedEventArgs e)
+            => await ViewModel.AddNewFakemonAsync(this);
+
         private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
 

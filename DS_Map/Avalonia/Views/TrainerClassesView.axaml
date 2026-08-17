@@ -31,6 +31,8 @@
                       Background="{DynamicResource Editor.PanelBg}">
                 <Image Source="{Binding SpritePreview}" Stretch="Uniform" IsVisible="{Binding HasSpritePreview}"/>
               </Border>
+              <Button Content="{Binding PlayButtonText}" Click="TogglePlay_Click" HorizontalAlignment="Stretch"
+                      IsEnabled="{Binding CanPlayAnimation}" ToolTip.Tip="Play this class's real battle-intro animation."/>
               <Button Content="Edit Sprite…" Click="EditSprite_Click" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Paint the sprite the way it actually looks (a full pixel canvas composed from this class's animation cells), pick colors from its real palette, or import a matching PNG."/>
             </StackPanel>
@@ -41,16 +43,16 @@
             </StackPanel>
           </Grid>
 
-          <StackPanel Spacing="2" IsVisible="{Binding IsExpansionSupported}">
-            <TextBlock Text="Gender" ToolTip.Tip="Used for DV/nature calculations. Platinum (English) only."/>
+          <StackPanel Spacing="2" IsVisible="{Binding ShowGenderPrize}">
+            <TextBlock Text="Gender" ToolTip.Tip="Used for DV/nature calculations."/>
             <ComboBox SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch">
               <ComboBoxItem>Male</ComboBoxItem>
               <ComboBoxItem>Female</ComboBoxItem>
             </ComboBox>
           </StackPanel>
 
-          <StackPanel Spacing="2" IsVisible="{Binding IsExpansionSupported}">
-            <TextBlock Text="Prize money multiplier" ToolTip.Tip="Platinum (English) only."/>
+          <StackPanel Spacing="2" IsVisible="{Binding ShowGenderPrize}">
+            <TextBlock Text="Prize money multiplier"/>
             <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding PrizeMultiplier}"/>
           </StackPanel>
 

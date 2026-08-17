@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using DSPRE.Resources;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
@@ -41,6 +42,10 @@ namespace DSPRE.Avalonia.ViewModels
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
+
+        // ─── hg-engine source banner ──────────────────────────────────────────────
+        public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
+        public bool ShowHgEngineBanner => HgEngineBanner != null;
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
@@ -263,9 +268,77 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_currentFile == null) return;
             _currentFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
+            WriteHgEngineSource();
             _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             SetClean();
             RaiseUndoState();
+        }
+
+        // Curated v1 scope: every MoveData field this editor already exposes. .battle.flags is a bit-OR'd
+        // combo in hg-engine's source (FLAG_CONTACT | FLAG_PROTECT | ...) — TryGetFlagsExpression
+        // decomposes it back into that same "NAME | NAME | ..." form; only a combination with a bit no
+        // FLAG_* name covers falls back to a raw number (compiles to the same bits either way).
+        private void WriteHgEngineSource()
+        {
+            if (!HgEngineProject.IsActive || _currentFile == null) return;
+
+            string EffectSymbol(int effect) =>
+                HgEngineSymbolTable.Load("include/constants/move_effects.h")?.TryGetNameWithPrefix(effect, "MOVE_EFFECT_", out string n) == true ? n : effect.ToString();
+            string SplitSymbol(int split) =>
+                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(split, "SPLIT_", out string n) == true ? n : split.ToString();
+            string TypeSymbol(int type) =>
+                HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix(type, "TYPE_", out string n) == true ? n : type.ToString();
+            string RangeSymbol(int range) =>
+                HgEngineSymbolTable.Load("include/constants/battle_constants.h")?.TryGetNameWithPrefix(range, "RANGE_", out string n) == true ? n : range.ToString();
+            string FlagsSymbol(int flags) =>
+                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetFlagsExpression(flags, "FLAG_", out string n) == true ? n : flags.ToString();
+            string AppealSymbol(int appeal) =>
+                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(appeal, "APPEAL_", out string n) == true ? n : appeal.ToString();
+            string ContestSymbol(int contest) =>
+                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(contest, "CONTEST_", out string n) == true ? n : contest.ToString();
+
+            var fields = new List<HgEngineFieldWrite>
+            {
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("effect") }, EffectSymbol(_currentFile.battleeffect)),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("split") }, SplitSymbol((int)_currentFile.split)),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("power") }, _currentFile.damage.ToString()),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("type") }, TypeSymbol((int)_currentFile.movetype)),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("accuracy") }, _currentFile.accuracy.ToString()),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("pp") }, _currentFile.pp.ToString()),
+                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("effectChance") }, _currentFile.sideEffectProbability.ToString()),
+                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("target") }, RangeSymbol(_currentFile.target)),
+                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("priority") }, _currentFile.priority.ToString()),
+                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("flags") }, FlagsSymbol(_currentFile.flagField)),
+                new(new[] { FieldPathSegment.Field("contest"), FieldPathSegment.Field("appeal") }, AppealSymbol(_currentFile.contestAppeal)),
+                new(new[] { FieldPathSegment.Field("contest"), FieldPathSegment.Field("contestType") }, ContestSymbol((int)_currentFile.contestConditionType)),
+            };
+
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Moves, _currentId, fields, out var unresolved, out string error))
+            { AppLogger.Error($"hg-engine write failed for move {_currentId}: {error}"); return; }
+
+            if (unresolved.Count > 0)
+                AppLogger.Info($"hg-engine write for move {_currentId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+        }
+
+        /// <summary>hg-engine-only: mints a brand new move (define + Moves.c entry + name) and jumps
+        /// straight to editing it.</summary>
+        public async Task AddNewMoveAsync(Window owner)
+        {
+            if (!HgEngineProject.IsActive) return;
+            string name = await DialogHelper.PromptText("New move's display name:", "Add New Move", owner: owner);
+            if (name == null) return;
+
+            if (!HgEngineMoveExpansion.TryAddMove(name, out int newMoveId, out string error))
+            {
+                await DialogHelper.ShowError($"Could not add the move:\n{error}", "Add New Move", owner);
+                return;
+            }
+
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+            AppEvents.RaiseNamesChanged();
+
+            SelectedMoveIndex = newMoveId;
         }
 
         public async Task ExportCommand(Window owner)

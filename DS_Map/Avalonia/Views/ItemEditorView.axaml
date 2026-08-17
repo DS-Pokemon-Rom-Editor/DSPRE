@@ -30,7 +30,12 @@
                 <Separator Width="12"/>
                 <Button x:Name="SaveAllButton">💾 Save All</Button>
                 <Button x:Name="ExportButton" Click="Export_Click">📤 Export…</Button>
+                <Button x:Name="AddItemButton" Content="+ Add New Item…" IsVisible="{Binding ShowHgEngineBanner}"
+                        ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
             </StackPanel>
+        </Border>
+        <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
+            <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
         </Border>
 
         <!-- ── Main Content ── -->
@@ -45,9 +50,15 @@
                         <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
                                 Width="64" Height="64" HorizontalAlignment="Left"
                                 CornerRadius="4">
-                            <Image Source="{Binding ItemIcon}" Width="32" Height="32"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Stretch="None"/>
+                            <Panel>
+                                <Image Source="{Binding ItemIcon}" Width="32" Height="32"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Stretch="None"/>
+                                <TextBlock Text="n/a" FontSize="10" Opacity="0.6"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           IsVisible="{Binding IconUnavailable}"
+                                           ToolTip.Tip="No icon graphics found for this item at its expected slot in the loaded ROM — likely a brand-new custom item that hasn't been compiled into a ROM yet"/>
+                            </Panel>
                         </Border>
 
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
@@ -195,20 +206,23 @@
                         <TabControl>
                             <!-- Status Heals tab -->
                             <TabItem Header="Status Heals">
-                                <WrapPanel Margin="4" ItemWidth="160">
-                                    <CheckBox IsChecked="{Binding SlpHeal}"   Margin="2">Sleep Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding PsnHeal}"   Margin="2">Poison Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding BrnHeal}"   Margin="2">Burn Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding FrzHeal}"   Margin="2">Freeze Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding PrzHeal}"   Margin="2">Paralysis Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding CfsHeal}"   Margin="2">Confusion Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding InfHeal}"   Margin="2">Infatuation Heal</CheckBox>
-                                    <CheckBox IsChecked="{Binding GuardSpec}" Margin="2">Guard Spec (Mist)</CheckBox>
-                                    <CheckBox IsChecked="{Binding Revive}"    Margin="2">Revive (50% HP)</CheckBox>
-                                    <CheckBox IsChecked="{Binding ReviveAll}" Margin="2">Revive All</CheckBox>
-                                    <CheckBox IsChecked="{Binding LevelUp}"   Margin="2">Level Up</CheckBox>
-                                    <CheckBox IsChecked="{Binding Evolve}"    Margin="2">Evolve</CheckBox>
-                                </WrapPanel>
+                                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+                                      Margin="4" ColumnSpacing="16" RowSpacing="4">
+                                    <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding SlpHeal}">Sleep Heal</CheckBox>
+                                    <CheckBox Grid.Row="1" Grid.Column="0" IsChecked="{Binding PsnHeal}">Poison Heal</CheckBox>
+                                    <CheckBox Grid.Row="2" Grid.Column="0" IsChecked="{Binding BrnHeal}">Burn Heal</CheckBox>
+                                    <CheckBox Grid.Row="3" Grid.Column="0" IsChecked="{Binding FrzHeal}">Freeze Heal</CheckBox>
+
+                                    <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding PrzHeal}">Paralysis Heal</CheckBox>
+                                    <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding CfsHeal}">Confusion Heal</CheckBox>
+                                    <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding InfHeal}">Infatuation Heal</CheckBox>
+                                    <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding GuardSpec}">Guard Spec (Mist)</CheckBox>
+
+                                    <CheckBox Grid.Row="0" Grid.Column="2" IsChecked="{Binding Revive}">Revive (50% HP)</CheckBox>
+                                    <CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding ReviveAll}">Revive All</CheckBox>
+                                    <CheckBox Grid.Row="2" Grid.Column="2" IsChecked="{Binding LevelUp}">Level Up</CheckBox>
+                                    <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding Evolve}">Evolve</CheckBox>
+                                </Grid>
                             </TabItem>
 
                             <!-- Stat Stages tab -->

@@ -24,9 +24,14 @@ namespace DSPRE.Avalonia
         /// <summary>The game banner (icon / titles) was edited — the main window refreshes its icon.</summary>
         public static event EventHandler BannerChanged;
 
+        /// <summary>The linked hg-engine checkout (or its enabled state) changed — the menu re-checks
+        /// which of the 5 source-backed editors are unblocked.</summary>
+        public static event EventHandler HgEngineLinkChanged;
+
         public static void RaiseNamesChanged() => NamesChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseLabelsChanged() => LabelsChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseBannerChanged() => BannerChanged?.Invoke(null, EventArgs.Empty);
+        public static void RaiseHgEngineLinkChanged() => HgEngineLinkChanged?.Invoke(null, EventArgs.Empty);
     }
 }

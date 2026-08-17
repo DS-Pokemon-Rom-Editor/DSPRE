@@ -31,11 +31,18 @@
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
+        <MenuItem Header="Link hg-engine checkout…" Click="LinkHgEngine_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Edit Species/Trainers/Items/Moves/Encounters straight from a linked hg-engine WSL checkout's source"/>
+        <MenuItem Header="Compile ROM…" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
+                  ToolTip.Tip="Runs the linked hg-engine checkout's real `make` build (data domains + ASM hooks) and produces test.nds"/>
+        <Separator/>
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}"/>
+        <MenuItem Header="Form Editor (hg-engine)…" Click="HgEngineFormEditor_Click" IsEnabled="{Binding CanUseHgEngineFormEditor}"
+                  ToolTip.Tip="Which form species (Mega/regional/Gmax/etc.) exist per base Pokémon, from the linked checkout's PokeFormDataTbl.c"/>
         <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}"/>
         <MenuItem Header="Move Animations &amp; Battle Scripts…" Click="BattleScriptEditor_Click"
                   ToolTip.Tip="Edit move animations (WEST) and battle-effect scripts, with a live animation preview"/>
@@ -46,7 +53,7 @@
         <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}"/>
         <Separator/>
         <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
-        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
+        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"/>
         <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding IsHgssRom}"
                   ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
       </MenuItem>

@@ -19,6 +19,15 @@ namespace DSPRE.ROMFiles {
         public BindingList<HeadbuttTreeGroup> normalTreeGroups;
         public BindingList<HeadbuttTreeGroup> specialTreeGroups;
 
+        /// <summary>Builds an empty, in-memory file with no backing path (e.g. for a source-backed
+        /// hg-engine read that populates the lists itself instead of parsing a NARC file).</summary>
+        public HeadbuttEncounterFile() {
+            normalEncounters = new List<HeadbuttEncounter>();
+            specialEncounters = new List<HeadbuttEncounter>();
+            normalTreeGroups = new BindingList<HeadbuttTreeGroup>();
+            specialTreeGroups = new BindingList<HeadbuttTreeGroup>();
+        }
+
         public HeadbuttEncounterFile(ushort id) {
             this.ID = id;
             string path = Filesystem.GetHeadbuttPath(id);

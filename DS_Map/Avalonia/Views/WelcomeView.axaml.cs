@@ -47,6 +47,19 @@ namespace DSPRE.Avalonia.Views
             if (main != null) await main.OpenFolderInteractiveAsync();
         }
 
+        private async void LinkHgEngine_Click(object sender, RoutedEventArgs e)
+        {
+            if (_main == null || !AvaloniaEditorLauncher.IsRomLoaded)
+            {
+                await DialogHelper.ShowInfo(
+                    "Open a ROM project first (Open ROM or Open extracted folder), then link its hg-engine checkout from here or File > Link hg-engine checkout…",
+                    "Open a project first");
+                return;
+            }
+            Close();
+            AvaloniaEditorLauncher.OpenHgEngineLink();
+        }
+
         private async void Recent_DoubleTapped(object sender, TappedEventArgs e)
         {
             if (RecentList.SelectedItem is not string path) return;

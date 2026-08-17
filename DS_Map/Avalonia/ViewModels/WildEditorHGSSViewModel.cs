@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
@@ -18,6 +20,10 @@ namespace DSPRE.Avalonia.ViewModels
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
+
+        // ─── hg-engine source banner ──────────────────────────────────────────────
+        public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
+        public bool ShowHgEngineBanner => HgEngineBanner != null;
 
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────
         private bool _dirty;
@@ -200,9 +206,69 @@ namespace DSPRE.Avalonia.ViewModels
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
             _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: true);
+            WriteHgEngineSource();
             SetClean();
             _history.MarkSaved();
             RaiseUndoState();
+        }
+
+        // Curated v1 scope: every EncounterFileHGSS field this editor already exposes. Water/rod slots
+        // are undesignated "{ min, max, SPECIES_X }" structs in hg-engine's source (no field names at
+        // all) — At(0)/At(1)/At(2) locate them positionally, the same mechanism used for named fields.
+        private void WriteHgEngineSource()
+        {
+            if (!HgEngineProject.IsActive || _current == null) return;
+
+            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            string SpeciesSymbol(int id) => species?.TryGetNameWithPrefix(id, "SPECIES_", out string n) == true ? n : id.ToString();
+
+            var fields = new List<HgEngineFieldWrite>
+            {
+                new(new[] { FieldPathSegment.Field("rateWalk") }, _current.walkingRate.ToString()),
+                new(new[] { FieldPathSegment.Field("rateSurf") }, _current.surfRate.ToString()),
+                new(new[] { FieldPathSegment.Field("rateRockSmash") }, _current.rockSmashRate.ToString()),
+                new(new[] { FieldPathSegment.Field("rateOldRod") }, _current.oldRodRate.ToString()),
+                new(new[] { FieldPathSegment.Field("rateGoodRod") }, _current.goodRodRate.ToString()),
+                new(new[] { FieldPathSegment.Field("rateSuperRod") }, _current.superRodRate.ToString()),
+                new(new[] { FieldPathSegment.Field("landSwarm") }, SpeciesSymbol(_current.swarmPokemon[0])),
+                new(new[] { FieldPathSegment.Field("surfSwarm") }, SpeciesSymbol(_current.swarmPokemon[1])),
+                new(new[] { FieldPathSegment.Field("nightFish") }, SpeciesSymbol(_current.swarmPokemon[2])),
+                new(new[] { FieldPathSegment.Field("fishSwarm") }, SpeciesSymbol(_current.swarmPokemon[3])),
+            };
+
+            for (int i = 0; i < 12; i++)
+            {
+                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("levels"), FieldPathSegment.At(i) }, _current.walkingLevels[i].ToString()));
+                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesMorning"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.morningPokemon[i])));
+                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesDay"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.dayPokemon[i])));
+                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesNight"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.nightPokemon[i])));
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                fields.Add(new(new[] { FieldPathSegment.Field("hoennSoundSpecies"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.hoennMusicPokemon[i])));
+                fields.Add(new(new[] { FieldPathSegment.Field("sinnohSoundSpecies"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.sinnohMusicPokemon[i])));
+                AddSlot("rockSmashSlots", i, _current.rockSmashMinLevels[i], _current.rockSmashMaxLevels[i], _current.rockSmashPokemon[i]);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                AddSlot("surfSlots", i, _current.surfMinLevels[i], _current.surfMaxLevels[i], _current.surfPokemon[i]);
+                AddSlot("oldRodSlots", i, _current.oldRodMinLevels[i], _current.oldRodMaxLevels[i], _current.oldRodPokemon[i]);
+                AddSlot("goodRodSlots", i, _current.goodRodMinLevels[i], _current.goodRodMaxLevels[i], _current.goodRodPokemon[i]);
+                AddSlot("superRodSlots", i, _current.superRodMinLevels[i], _current.superRodMaxLevels[i], _current.superRodPokemon[i]);
+            }
+
+            void AddSlot(string arrayName, int i, byte min, byte max, ushort speciesId)
+            {
+                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(0) }, min.ToString()));
+                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(1) }, max.ToString()));
+                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(2) }, SpeciesSymbol(speciesId)));
+            }
+
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Encounters, _selectedEncounterIndex, fields, out var unresolved, out string error))
+            { AppLogger.Error($"hg-engine write failed for encounter table {_selectedEncounterIndex}: {error}"); return; }
+
+            if (unresolved.Count > 0)
+                AppLogger.Info($"hg-engine write for encounter table {_selectedEncounterIndex}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
         }
 
 

@@ -21,6 +21,15 @@ namespace DSPRE.Avalonia.ViewModels
         internal string[] MoveNames;
         internal string[] PokemonNames;
 
+        // Set by the parent VM when hg-engine is linked: MethodIndex then indexes into the real EVO_*
+        // names read from the checkout instead of DSPRE's vanilla EvolutionMethod enum + LabelStore.
+        internal bool UseHgEngineNames;
+        internal string[] HgMethodNames;
+
+        // hg-engine's target field packs a form override into its high bits (see HgEngineEvolutions).
+        // No UI exposes changing this; it's only round-tripped so an existing one is never silently lost.
+        internal int HgTargetFormId;
+
         private int _methodIndex;
         public int MethodIndex
         {
@@ -61,9 +70,29 @@ namespace DSPRE.Avalonia.ViewModels
         // The param's MEANING comes from the customisable LabelStore attribute (Tools ▸ Edit Dropdown
         // Labels ▸ Evolution Methods ▸ Parameter), defaulting to EvolutionFile.evoDescriptions. This lets a
         // ROM hack repurpose/add methods AND say what their parameter is (level / item / move / species…).
-        private EvolutionParamMeaning Meaning => _methodIndex < 0
-            ? EvolutionParamMeaning.Ignored
-            : (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", _methodIndex);
+        // hg-engine mode has no equivalent per-index customisation store (the method list itself is read
+        // live from the checkout, not user-curated), so it infers a meaning from the real EVO_* name instead.
+        private EvolutionParamMeaning Meaning
+        {
+            get
+            {
+                if (_methodIndex < 0) return EvolutionParamMeaning.Ignored;
+                if (UseHgEngineNames) return MeaningFromHgEngineName();
+                return (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", _methodIndex);
+            }
+        }
+
+        private EvolutionParamMeaning MeaningFromHgEngineName()
+        {
+            string name = HgMethodNames != null && _methodIndex < HgMethodNames.Length ? HgMethodNames[_methodIndex] : null;
+            if (string.IsNullOrEmpty(name) || name == "EVO_NONE") return EvolutionParamMeaning.Ignored;
+            if (name.Contains("LEVEL")) return EvolutionParamMeaning.FromLevel;
+            if (name.Contains("ITEM") || name.Contains("STONE")) return EvolutionParamMeaning.ItemName;
+            if (name.Contains("MOVE")) return EvolutionParamMeaning.MoveName;
+            if (name.Contains("PARTY_MON") || name.Contains("TRADE_SPECIFIC_MON")) return EvolutionParamMeaning.PokemonName;
+            if (name.Contains("BEAUTY")) return EvolutionParamMeaning.BeautyValue;
+            return EvolutionParamMeaning.CustomNumber;
+        }
 
         /// <summary>The target-species dropdown is disabled for a CustomNumber method — its parameter is a
         /// raw value and the evolution target is handled by the hack's own code, not a picked species.</summary>
@@ -163,9 +192,36 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> MethodNames { get; } = new();
         public ObservableCollection<string> PokemonNames { get; } = new();
 
-        /// <summary>Evolution-method labels come from the customisable LabelStore (Tools ▸ Edit Dropdown
-        /// Labels) so a ROM hack can rename/add methods. Renames keep indices stable; combos refresh in place.</summary>
-        private void ReloadMethodNames() => DSPRE.Avalonia.Data.LabelStore.Sync(MethodNames, "evolution_methods");
+        private bool UseHgEngineSource => DSPRE.HgEngine.HgEngineProject.IsActive;
+        private System.Collections.Generic.List<(string Name, int Value)> _hgMethodOptions = new();
+        private string[] _hgMethodNamesArray = System.Array.Empty<string>();
+
+        /// <summary>Vanilla: labels come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels) so
+        /// a ROM hack can rename/add methods, indices kept stable, combos refresh in place. hg-engine:
+        /// the real EVO_* names are read live from the linked checkout and rebuilt outright instead,
+        /// since that list isn't user-curated.</summary>
+        private void ReloadMethodNames()
+        {
+            if (UseHgEngineSource)
+            {
+                _hgMethodOptions = DSPRE.HgEngine.HgEngineEvolutions.GetMethodOptions();
+                _hgMethodNamesArray = new string[_hgMethodOptions.Count];
+                for (int i = 0; i < _hgMethodOptions.Count; i++) _hgMethodNamesArray[i] = _hgMethodOptions[i].Name;
+
+                MethodNames.Clear();
+                foreach (var opt in _hgMethodOptions) MethodNames.Add(opt.Name);
+            }
+            else
+            {
+                DSPRE.Avalonia.Data.LabelStore.Sync(MethodNames, "evolution_methods");
+            }
+
+            foreach (var row in EvoRows)
+            {
+                row.UseHgEngineNames = UseHgEngineSource;
+                row.HgMethodNames = _hgMethodNamesArray;
+            }
+        }
 
         private void OnLabelsChanged(object sender, EventArgs e)
         {
@@ -268,6 +324,8 @@ namespace DSPRE.Avalonia.ViewModels
                     ItemNames    = itemNames,
                     MoveNames    = moveNames,
                     PokemonNames = pokemonNames,
+                    UseHgEngineNames = UseHgEngineSource,
+                    HgMethodNames    = _hgMethodNamesArray,
                     MethodIndex  = 0,
                     TargetIndex  = 0,
                     Param        = 0
@@ -284,17 +342,44 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 _currentId = id;
-                _current = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
-                if (_current.data == null)
-                    _current.data = new EvolutionData[EvolutionFile.numEvolutions];
 
-                for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+                if (UseHgEngineSource)
                 {
-                    var row = EvoRows[i];
-                    var d = i < _current.data.Length ? _current.data[i] : default;
-                    row.MethodIndex = (int)d.method;
-                    row.Param       = d.param;
-                    row.TargetIndex = d.target >= 0 ? d.target : 0;
+                    // Evolutions isn't synced from a packed NARC, so the vanilla read path below would
+                    // show stale ROM data instead of the checkout's real data/Evolutions.c.
+                    DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvolutionFile.numEvolutions, out var hgEntries, out _);
+                    for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+                    {
+                        var row = EvoRows[i];
+                        if (i < hgEntries.Count)
+                        {
+                            var e = hgEntries[i];
+                            int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
+                            row.MethodIndex = idx >= 0 ? idx : 0;
+                            row.Param       = e.Param;
+                            row.TargetIndex = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count ? e.TargetSpeciesId : 0;
+                            row.HgTargetFormId = e.TargetFormId;
+                        }
+                        else
+                        {
+                            row.MethodIndex = 0; row.Param = 0; row.TargetIndex = 0; row.HgTargetFormId = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    _current = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
+                    if (_current.data == null)
+                        _current.data = new EvolutionData[EvolutionFile.numEvolutions];
+
+                    for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+                    {
+                        var row = EvoRows[i];
+                        var d = i < _current.data.Length ? _current.data[i] : default;
+                        row.MethodIndex = (int)d.method;
+                        row.Param       = d.param;
+                        row.TargetIndex = d.target >= 0 ? d.target : 0;
+                    }
                 }
 
                 _dirty = false;
@@ -310,26 +395,43 @@ namespace DSPRE.Avalonia.ViewModels
         // ─── Save ─────────────────────────────────────────────────────────────────
         public void Save()
         {
-            if (_currentId < 0 || _current == null) return;
+            if (_currentId < 0) return;
 
-            var newFile = new EvolutionFile();
-            var data = new System.Collections.Generic.List<EvolutionData>();
-
-            foreach (var row in EvoRows)
+            if (UseHgEngineSource)
             {
-                var method = (EvolutionMethod)row.MethodIndex;
-                var ed = new EvolutionData
+                var uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
+                foreach (var row in EvoRows)
                 {
-                    method = method,
-                    param  = (short)row.Param,
-                    target = (short)row.TargetIndex
-                };
-                if (ed.isValid()) data.Add(ed);
+                    string methodName = row.MethodIndex >= 0 && row.MethodIndex < _hgMethodOptions.Count
+                        ? _hgMethodOptions[row.MethodIndex].Name : "EVO_NONE";
+                    uiEntries.Add((methodName, row.Param, row.TargetIndex, row.HgTargetFormId));
+                }
+                if (!DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(_currentId, uiEntries, out string error))
+                    AppLogger.Error($"hg-engine evolutions write failed for species {_currentId}: {error}");
+            }
+            else
+            {
+                if (_current == null) return;
+                var newFile = new EvolutionFile();
+                var data = new System.Collections.Generic.List<EvolutionData>();
+
+                foreach (var row in EvoRows)
+                {
+                    var method = (EvolutionMethod)row.MethodIndex;
+                    var ed = new EvolutionData
+                    {
+                        method = method,
+                        param  = (short)row.Param,
+                        target = (short)row.TargetIndex
+                    };
+                    if (ed.isValid()) data.Add(ed);
+                }
+
+                newFile.data = data.ToArray();
+                newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
+                _current = newFile;
             }
 
-            newFile.data = data.ToArray();
-            newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
-            _current = newFile;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _history.MarkSaved();

@@ -49,6 +49,9 @@
         <Button Content="🛠 Repair all" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
       </StackPanel>
     </Border>
+    <Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
+      <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
+    </Border>
     <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>

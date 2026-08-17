@@ -1,3 +1,4 @@
+using DSPRE.HgEngine;
 using Ekona.Images;
 using Images;
 using LibNDSFormats.NSBMD;
@@ -899,7 +900,10 @@ namespace DSPRE {
         public static void TryUnpackNarcs(List<DirNames> IDs) {
             if (gameDirs == null || gameDirs.Count == 0) {
                 return;
-            }    
+            }
+            // hg-engine-owned domains are always rebuilt fresh from source (cheap: 0.5-3s each), never
+            // read from the packed ROM's NARC — see HgEngineSync.
+            IDs = HgEngineSync.SyncOwnedAndReturnRemaining(IDs);
             Parallel.ForEach(IDs, id => {
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
                     DirectoryInfo di = new DirectoryInfo(paths.unpackedPath);
@@ -920,6 +924,7 @@ namespace DSPRE {
             });
         }
         public static void ForceUnpackNarcs(List<DirNames> IDs) {
+            IDs = HgEngineSync.SyncOwnedAndReturnRemaining(IDs);
             Parallel.ForEach(IDs, id => {
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
 

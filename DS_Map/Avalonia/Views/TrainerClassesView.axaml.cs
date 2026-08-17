@@ -20,6 +20,8 @@ namespace DSPRE.Avalonia.Views
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
 
+        private void TogglePlay_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
+
         // Creates the entry with music = 0/0; the Main/Alt fields become editable immediately
         // afterward so the user can set the real values before clicking Save.
         private void EnableMusic_Click(object sender, RoutedEventArgs e) => VM?.EnableMusic(0, 0);

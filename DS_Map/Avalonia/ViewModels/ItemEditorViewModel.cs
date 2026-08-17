@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using DSPRE;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using Images;
 using System;
@@ -11,6 +12,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using static DSPRE.ROMFiles.ItemData;
 using static DSPRE.RomInfo;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
@@ -27,6 +29,10 @@ namespace DSPRE.Avalonia.ViewModels
             if (EqualityComparer<T>.Default.Equals(f, v)) return false;
             f = v; OnPropertyChanged(n); return true;
         }
+
+        // ─── hg-engine source banner ──────────────────────────────────────────────
+        public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
+        public bool ShowHgEngineBanner => HgEngineBanner != null;
 
         // ── Design-time constructor ──────────────────────────────────────────
         public ItemEditorViewModel()
@@ -149,7 +155,12 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         private AvaBitmap _itemIcon;
-        public AvaBitmap ItemIcon { get => _itemIcon; private set => Set(ref _itemIcon, value); }
+        public AvaBitmap ItemIcon
+        {
+            get => _itemIcon;
+            private set { if (Set(ref _itemIcon, value)) OnPropertyChanged(nameof(IconUnavailable)); }
+        }
+        public bool IconUnavailable => ItemIcon == null && RomInfo.isHGE;
 
         // ── Hold Effect ──────────────────────────────────────────────────────
         private int _holdEffectIndex;
@@ -386,6 +397,32 @@ namespace DSPRE.Avalonia.ViewModels
             _currentData?.SaveToFileExplorePath($"itemdata_{_itemDataId:D4}", showSuccessMessage: true);
         }
 
+        /// <summary>hg-engine-only: mints a brand new item (define + itemdata.c entry + name) and jumps
+        /// straight to editing it.</summary>
+        public async Task AddNewItemAsync(Window owner)
+        {
+            if (!HgEngineProject.IsActive) return;
+            string name = await DialogHelper.PromptText("New item's display name:", "Add New Item", owner: owner);
+            if (name == null) return;
+
+            if (!HgEngineItemExpansion.TryAddItem(name, out int newItemId, out string error))
+            {
+                await DialogHelper.ShowError($"Could not add the item:\n{error}", "Add New Item", owner);
+                return;
+            }
+
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
+
+            // In-place update (ListSync), not Clear+Add — Clear briefly empties the collection, which
+            // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the assignment below.
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, RomInfo.GetItemNames());
+            MaxItemIndex = ItemNames.Count - 1;
+            OnPropertyChanged(nameof(MaxItemIndex));
+            AppEvents.RaiseNamesChanged();
+
+            SelectedItemIndex = newItemId;
+        }
+
         // RecordUndoSnapshot runs BEFORE the dirty-flag short-circuit, so EVERY edit is captured (not just the first).
         private void SetDataDirty()  { RecordUndoSnapshot(); if (_dataDirty)  return; _dataDirty  = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetEntryDirty() { RecordUndoSnapshot(); if (_entryDirty) return; _entryDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -594,6 +631,27 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Helpers ───────────────────────────────────────────────────────────
         private static ItemNarcTableEntry ReadTableEntry(int index)
         {
+            // RomInfo.itemTableOffset is a hardcoded per-vanilla-ROM-version ARM9 RAM address for the
+            // item -> (itemData, icon, palette, agb) indirection table — meaningless on hg-engine's
+            // recompiled ARM9. hg-engine's own data/itemdata/itemdata.c is a flat array indexed directly
+            // by item id with no such indirection, so item data itself is read directly by id here.
+            // Icon/palette DO have a real, deterministic mapping too, but NOT "same slot for both": hg-
+            // engine's data/graphics/itemgra.mk emits one NCGR+NCLR pair per item into $(BUILD)/a018,
+            // named "<id+2>-00.NCGR"/"<id+2>-01.NCLR" (a leftover of the vanilla dump script's own
+            // numbering) — but the final a018.narc is packed by naturally-sorted filename order, headed
+            // by two fixed files (0000.NANR, 0001.NCER). So each item contributes two CONSECUTIVE narc
+            // members, image then palette: image slot = 2*id + 2, palette slot = 2*id + 3. Confirmed
+            // against the real checkout end to end (id 0 "none": slots 2/3; id 1 ITEM_MASTER_BALL:
+            // slots 4/5 — verified by magic bytes, RGCN then RLCN — through the real item range). A
+            // brand-new item added but not yet compiled into a ROM simply won't have slots yet and falls
+            // back to "n/a" like before (see UpdateIcon).
+            if (RomInfo.isHGE)
+            {
+                uint imageSlot = (uint)(2 * index + 2);
+                uint paletteSlot = imageSlot + 1;
+                return new ItemNarcTableEntry { itemData = (uint)index, itemIcon = imageSlot, itemPalette = paletteSlot, itemAGB = 0 };
+            }
+
             uint offset = RomInfo.itemTableOffset;
             return new ItemNarcTableEntry
             {
@@ -606,6 +664,15 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void SaveTableEntry()
         {
+            if (RomInfo.isHGE)
+            {
+                // Nothing reliable to write back to: see ReadTableEntry. Item data itself still saves
+                // normally (SaveItemData, keyed directly by item id).
+                _entryDirty = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                return;
+            }
+
             uint offset = (uint)(_selectedItemIndex * 8);
             uint base_  = RomInfo.itemTableOffset;
             ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemData),    base_ + offset);
@@ -619,13 +686,69 @@ namespace DSPRE.Avalonia.ViewModels
         private void SaveItemData()
         {
             _currentData?.SaveToFileDefaultDir((int)_currentEntry.itemData, false);
+            WriteHgEngineSource();
             _dataDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // Curated v1 scope: every top-level ITEMDATA field this editor already exposes, except price
+        // (hg-engine's source sets it via an ITEM_PRICE(n) macro call, not a plain ".price = n" — the
+        // anchored patcher can't locate a field spelled as a macro argument, so it's reported unresolved
+        // and left untouched rather than guessed) and the nested .partyUseParam sub-fields (30+ fields
+        // whose hg-engine names don't line up 1:1 with this editor's ItemData.PartyUseParam property
+        // names — left for a later pass rather than risking a wrong mapping).
+        private void WriteHgEngineSource()
+        {
+            if (!HgEngineProject.IsActive || _currentData == null) return;
+
+            string TypeSymbol(int type) =>
+                HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix(type, "TYPE_", out string n) == true ? n : type.ToString();
+            // item.h packs ITEM_*/POCKET_*/BATTLE_POCKET_* into one flat namespace, so a plain by-value
+            // lookup can return a same-valued name from the wrong family — filter by prefix (see
+            // TryGetNameWithPrefix's doc comment for the live bug this fixes).
+            string PocketSymbol(int pocket) =>
+                HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetNameWithPrefix(pocket, "POCKET_", out string n) == true ? n : pocket.ToString();
+            // battlePocket is itself a bit-OR of up to 5 checkboxes (Poké Balls/Battle Items/HP Restore/
+            // Status Healers/PP Restore) — TryGetFlagsExpression handles both the common single-pocket
+            // case and any combination, falling back to a raw number only if some bit isn't covered.
+            string BattlePocketSymbol(int pocket) =>
+                HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetFlagsExpression(pocket, "BATTLE_POCKET_", out string n) == true ? n : pocket.ToString();
+            string Bool(bool b) => b ? "TRUE" : "FALSE";
+
+            var fields = new List<HgEngineFieldWrite>
+            {
+                new(new[] { FieldPathSegment.Field("holdEffect") }, ((int)_currentData.holdEffect).ToString()),
+                new(new[] { FieldPathSegment.Field("holdEffectParam") }, _currentData.HoldEffectParam.ToString()),
+                new(new[] { FieldPathSegment.Field("pluckEffect") }, _currentData.PluckEffect.ToString()),
+                new(new[] { FieldPathSegment.Field("flingEffect") }, _currentData.FlingEffect.ToString()),
+                new(new[] { FieldPathSegment.Field("flingPower") }, _currentData.FlingPower.ToString()),
+                new(new[] { FieldPathSegment.Field("naturalGiftPower") }, _currentData.NaturalGiftPower.ToString()),
+                new(new[] { FieldPathSegment.Field("naturalGiftType") }, TypeSymbol((int)_currentData.naturalGiftType)),
+                new(new[] { FieldPathSegment.Field("prevent_toss") }, Bool(_currentData.PreventToss)),
+                new(new[] { FieldPathSegment.Field("selectable") }, Bool(_currentData.Selectable)),
+                new(new[] { FieldPathSegment.Field("fieldPocket") }, PocketSymbol((int)_currentData.fieldPocket)),
+                new(new[] { FieldPathSegment.Field("battlePocket") }, BattlePocketSymbol((int)_currentData.battlePocket)),
+                new(new[] { FieldPathSegment.Field("fieldUseFunc") }, ((int)_currentData.fieldUseFunc).ToString()),
+                new(new[] { FieldPathSegment.Field("battleUseFunc") }, ((int)_currentData.battleUseFunc).ToString()),
+                new(new[] { FieldPathSegment.Field("partyUse") }, _currentData.PartyUse.ToString()),
+            };
+
+            int itemId = (int)_currentEntry.itemData;
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Items, itemId, fields, out var unresolved, out string error))
+            { AppLogger.Error($"hg-engine write failed for item {itemId}: {error}"); return; }
+
+            if (unresolved.Count > 0)
+                AppLogger.Info($"hg-engine write for item {itemId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
         }
 
         private void UpdateIcon()
         {
             if (Design.IsDesignMode) return;
+            if (_currentEntry.itemIcon == uint.MaxValue || _currentEntry.itemPalette == uint.MaxValue)
+            {
+                ItemIcon = null;   // hg-engine: no reliable icon/palette index for this item, see ReadTableEntry
+                return;
+            }
             try
             {
                 string dir     = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
@@ -637,7 +760,7 @@ namespace DSPRE.Avalonia.ViewModels
                 var raw     = sprite.Get_RawImage(image, palette, 0, image.Width, image.Height, trans: true, currOAM: -1, draw_index: null);
                 ItemIcon = ImageConverter.ToAvaloniaBitmap(raw);
             }
-            catch { ItemIcon = null; }
+            catch (Exception ex) { AppLogger.Error("UpdateIcon: " + ex); ItemIcon = null; }
         }
 
         private void PopulateIconPaletteDropdowns()

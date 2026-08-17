@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Controls;
 using DSPRE.Avalonia;
+using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
@@ -31,17 +32,31 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Per-editor availability (bound by menu items so unsupported editors are
         //    greyed out instead of carrying "(HGSS)"-style labels or failing silently).
         //    hg-engine ROMs: HGE owns/overwrites mon, move, item, trainer and encounter
-        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list).
-        public bool CanUsePokemonEditor => IsRomLoaded && !isHGE;
-        public bool CanUseMoveEditor    => IsRomLoaded && !isHGE;
-        public bool CanUseItemEditor    => IsRomLoaded && !isHGE;
-        public bool CanUseTrainerEditor => IsRomLoaded && !isHGE;
+        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list) —
+        //    UNLESS a source checkout is linked (HgEngineProject.IsActive), in which case
+        //    the 5 covered domains read/write straight from source instead.
+        private static bool HgAllows => !isHGE || HgEngineProject.IsActive;
+        public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
+        // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
+        // itself rather than the isHGE/HgAllows gate the other 5 domains use.
+        public bool CanUseHgEngineFormEditor => IsRomLoaded && HgEngineProject.IsActive;
+        public bool CanUseMoveEditor    => IsRomLoaded && HgAllows;
+        public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
+        public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
         public bool CanUseTrainerSpriteEditor => IsRomLoaded && !isHGE;
         public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
         public bool CanUseDungeonCutinEditor => IsRomLoaded && RomInfo.IsDungeonCutinEditorAvailable();
         public bool CanUseTitleScreenEditor => IsRomLoaded && RomInfo.IsTitleScreenEditorAvailable();
         public bool CanUseTrainerCardEditor => IsRomLoaded && RomInfo.IsTrainerCardEditorAvailable();
-        public bool CanUseWildEditors   => IsRomLoaded && !isHGE;
+        public bool CanUseWildEditors   => IsRomLoaded && HgAllows;
+        // Special Encounters (Safari/Great Marsh-style tables) isn't one of the 5 hg-engine domains
+        // DSPRE can read/write from source yet, so it stays blocked regardless of the link — unlike
+        // CanUseWildEditors, which covers the actual wild-encounter table hg-engine does own.
+        public bool CanUseSpecialEncountersEditor => IsRomLoaded && !isHGE;
+        public bool IsHgEngineLinked    => HgEngineProject.IsActive;
+        // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
+        // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
+        public bool CanCompileRom       => IsRomLoaded && HgEngineProject.IsActive;
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
         // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
         // are Plat+HGSS — nothing in it exists on DP.
@@ -86,9 +101,11 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Re-evaluate ROM-dependent state after a ROM is loaded/closed (enables the editor menus + title).</summary>
         public void RefreshRomState()
         {
+            HgEngineProject.Refresh();
             OnPropertyChanged(nameof(IsRomLoaded));
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(CanUsePokemonEditor));
+            OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
@@ -98,9 +115,26 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(CanUseTitleScreenEditor));
             OnPropertyChanged(nameof(CanUseTrainerCardEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
+            OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
             OnPropertyChanged(nameof(IsHgssRom));
             OnPropertyChanged(nameof(CanUseMiscTables));
+            OnPropertyChanged(nameof(IsHgEngineLinked));
+            OnPropertyChanged(nameof(CanCompileRom));
             RefreshRecents();
+        }
+
+        /// <summary>Called after the hg-engine link/enable state changes (Link dialog), to refresh the
+        /// menu without a full ROM-state pass.</summary>
+        public void RefreshHgEngineState()
+        {
+            OnPropertyChanged(nameof(IsHgEngineLinked));
+            OnPropertyChanged(nameof(CanUsePokemonEditor));
+            OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
+            OnPropertyChanged(nameof(CanUseMoveEditor));
+            OnPropertyChanged(nameof(CanUseItemEditor));
+            OnPropertyChanged(nameof(CanUseTrainerEditor));
+            OnPropertyChanged(nameof(CanUseWildEditors));
+            OnPropertyChanged(nameof(CanCompileRom));
         }
 
         // ── Recent projects for the pre-ROM empty state ────────────────────────

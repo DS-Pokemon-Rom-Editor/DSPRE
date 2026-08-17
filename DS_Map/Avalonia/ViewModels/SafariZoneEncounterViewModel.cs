@@ -97,12 +97,22 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        private bool UseHgEngineSource => DSPRE.HgEngine.HgEngineProject.IsActive;
+
         private void LoadFile(int id)
         {
             try
             {
-                _file = new SafariZoneEncounterFile(id);
-                BindGroups();
+                if (UseHgEngineSource)
+                {
+                    _file = null;
+                    BindGroupsFromHgEngine(id);
+                }
+                else
+                {
+                    _file = new SafariZoneEncounterFile(id);
+                    BindGroups();
+                }
                 SetClean();
             }
             catch (Exception ex)
@@ -120,12 +130,53 @@ namespace DSPRE.Avalonia.ViewModels
             SuperRodVM.SetData(_file.superRodEncounterGroup);
         }
 
+        // hg-engine isn't one of DSPRE's owned domains for the packed-ROM narc, so the vanilla read above
+        // would show a stale packed-ROM snapshot rather than the checkout's real data/SafariEncounters.c.
+        private void BindGroupsFromHgEngine(int areaId)
+        {
+            BindOne(GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land);
+            BindOne(SurfVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf);
+            BindOne(OldRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod);
+            BindOne(GoodRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod);
+            BindOne(SuperRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod);
+
+            void BindOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
+            {
+                vm.CanEditObjectSlotCount = false;
+                if (DSPRE.HgEngine.HgEngineSafariEncounters.TryLoadGroup(areaId, type, out var group, out string error))
+                    vm.SetData(group);
+                else
+                {
+                    AppLogger.Error($"hg-engine safari zone read failed ({type}, area {areaId}): {error}");
+                    vm.SetData(new SafariZoneEncounterGroup());
+                }
+            }
+        }
+
         // ── Save / import ──────────────────────────────────────────────────────────
         public void Save()
         {
+            if (UseHgEngineSource)
+            {
+                SaveOne(GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land);
+                SaveOne(SurfVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf);
+                SaveOne(OldRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod);
+                SaveOne(GoodRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod);
+                SaveOne(SuperRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod);
+                SetClean();
+                return;
+            }
             if (_file == null) return;
             _file.SaveToFile();
             SetClean();
+        }
+
+        private void SaveOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
+        {
+            var group = vm.CurrentGroup;
+            if (group == null) return;
+            if (!DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroup(_selectedFileIndex, type, group, out string error))
+                AppLogger.Error($"hg-engine safari zone write failed ({type}, area {_selectedFileIndex}): {error}");
         }
 
         public async Task SaveAsAsync()

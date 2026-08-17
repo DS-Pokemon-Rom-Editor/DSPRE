@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -23,6 +25,10 @@ namespace DSPRE.Avalonia.ViewModels
             if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(f, v)) return false;
             f = v; OnPropertyChanged(n); return true;
         }
+        // ─── hg-engine source banner ──────────────────────────────────────────────
+        public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
+        public bool ShowHgEngineBanner => HgEngineBanner != null;
+
         // ─── Shared lists ─────────────────────────────────────────────────────────
         public ObservableCollection<string> PokemonNames { get; } = new();
 
@@ -158,13 +164,26 @@ namespace DSPRE.Avalonia.ViewModels
         // ─── Load (sync all sub-VMs) ──────────────────────────────────────────────
         private void LoadMon(int id)
         {
-            // Update icon
-            try
+            // Update icon. hg-engine doesn't keep icons in personal.narc at all — each species' icon is
+            // a source PNG in the checkout (data/graphics/sprites/<name>/icon.png) — so load that
+            // directly rather than through the vanilla NCGR/NCLR/ARM9-palette-table pipeline, which
+            // relies on a hardcoded byte offset that's meaningless against hg-engine's recompiled ARM9
+            // (see HgEnginePokemonIcons for the full story).
+            MonIconBitmap = null;
+            if (id > 0 && HgEngineProject.IsActive && HgEnginePokemonIcons.TryGetIconPath(id, out string iconPath))
             {
-                var gdiImg = id > 0 ? DSPRE.DSUtils.GetPokePicRaw(id, 40, 40) : null;
-                MonIconBitmap = gdiImg != null ? ImageConverter.ToAvaloniaBitmap(gdiImg) : null;
+                try { MonIconBitmap = ImageConverter.LoadHgeIconFirstFrame(iconPath); }
+                catch { MonIconBitmap = null; }
             }
-            catch { MonIconBitmap = null; }
+            else if (id > 0 && !HgEngineProject.IsActive)
+            {
+                try
+                {
+                    var gdiImg = DSPRE.DSUtils.GetPokePicRaw(id, 40, 40);
+                    MonIconBitmap = gdiImg != null ? ImageConverter.ToAvaloniaBitmap(gdiImg) : null;
+                }
+                catch { MonIconBitmap = null; }
+            }
 
             // Update title
             string name = (id >= 0 && id < PokemonNames.Count) ? PokemonNames[id] : $"#{id}";
@@ -208,6 +227,36 @@ namespace DSPRE.Avalonia.ViewModels
 
             // TODO: SpriteVM is NOT saved here (see SaveAll). Its HasUnsavedChanges is included in this VM's dirty aggregation, so an unsaved sprite import makes SaveAllAsync return false via !HasUnsavedChanges.
             return !HasUnsavedChanges;
+        }
+
+        /// <summary>hg-engine-only: mints a brand new base species ("fakemon" — a new form of an
+        /// existing species is a separate, much higher-risk operation not supported here yet) and jumps
+        /// straight to editing it.</summary>
+        public async Task AddNewFakemonAsync(Window owner)
+        {
+            if (!HgEngineProject.IsActive) return;
+            string name = await DialogHelper.PromptText("New species' display name:", "Add New Pokémon", owner: owner);
+            if (name == null) return;
+
+            if (!HgEngineSpeciesExpansion.TryAddFakemon(name, out int newSpeciesId, out string error))
+            {
+                await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", owner);
+                return;
+            }
+
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> {
+                RomInfo.DirNames.personalPokeData, RomInfo.DirNames.learnsets, RomInfo.DirNames.evolutions });
+
+            // In-place update (ListSync), not Clear+Add — Clear briefly empties the collection, which
+            // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the assignment below.
+            string[] refreshed = RomInfo.GetPokemonNames();
+            var decorated = new string[refreshed.Length];
+            for (int i = 0; i < refreshed.Length; i++) decorated[i] = $"{i:D3} {refreshed[i]}";
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, decorated);
+            OnPropertyChanged(nameof(MaxMonIndex));
+            AppEvents.RaiseNamesChanged();
+
+            SelectedMonIndex = newSpeciesId;
         }
 
         private async System.Threading.Tasks.Task ConfirmDiscardAsync(int pendingIndex)

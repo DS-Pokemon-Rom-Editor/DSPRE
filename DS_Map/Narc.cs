@@ -140,6 +140,16 @@ namespace NarcAPI {
             bw.Close();
         }
 
+        public int ElementCount => Elements.Length;
+
+        public byte[] GetElementBytes(int index) {
+            var stream = Elements[index];
+            byte[] buffer = new byte[stream.Length];
+            stream.Seek(0, SeekOrigin.Begin);
+            stream.Read(buffer, 0, buffer.Length);
+            return buffer;
+        }
+
         public void ExtractToFolder(String dirPath, string extension = null) {
             if ( string.IsNullOrWhiteSpace(dirPath) ) {
                 AppMessages.Error("Dir path + \"" + dirPath + "\" is invalid.", "Can't create directory");

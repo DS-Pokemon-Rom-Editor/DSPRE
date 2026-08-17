@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
@@ -388,7 +389,10 @@ namespace DSPRE.Avalonia.ViewModels
         public string SelectedScriptLabel =>
             _selectedHiddenItem != null ? $"Use in spawnable: 8{_selectedHiddenItem.ScriptID:D3}" : "";
 
-        public string HiddenEntryCount => $"Entries: {HiddenItems.Count} / {_hiddenMaxCapacity}";
+        // hg-engine's table is a plain C array with no fixed capacity, unlike vanilla's ARM9-reserved buffer.
+        public string HiddenEntryCount => HgEngineProject.IsActive
+            ? $"Entries: {HiddenItems.Count}"
+            : $"Entries: {HiddenItems.Count} / {_hiddenMaxCapacity}";
 
         // ── Rock Smash (HGSS) ────────────────────────────────────────────────────
         // Per-header odds/table (data/a/2/5/3): available for any HGSS ROM, any language.
@@ -456,7 +460,7 @@ namespace DSPRE.Avalonia.ViewModels
             _headerNames = headerNames?.ToArray() ?? Array.Empty<string>();
 
             ShowPickupTab           = RomInfo.pickupTableOverlayNumber != -1;
-            ShowHiddenItemsTab      = RomInfo.IsHiddenItemsEditorAvailable();
+            ShowHiddenItemsTab      = RomInfo.IsHiddenItemsEditorAvailable() || HgEngineProject.IsActive;
             ShowRockSmashTab        = RomInfo.IsRockSmashEditorAvailable();
             ShowRockSmashItemTables = RomInfo.IsRockSmashItemTableAvailable();
 
@@ -468,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
             if (ShowHiddenItemsTab)
             {
-                if (ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
+                if (!HgEngineProject.IsActive && ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
                 LoadHiddenItems();
             }
             if (ShowRockSmashTab)
@@ -596,9 +600,28 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Hidden items load ─────────────────────────────────────────────────
+        // Hidden Items isn't one of DSPRE's owned domains for the packed ROM, so the vanilla ARM9-offset
+        // read below would show a stale packed-ROM snapshot rather than the checkout's real
+        // data/HiddenItems.c when hg-engine is linked.
         private void LoadHiddenItems()
         {
             HiddenItems.Clear();
+
+            if (HgEngineProject.IsActive)
+            {
+                if (HgEngineHiddenItems.TryLoad(out var entries, out string err))
+                {
+                    foreach (var e in entries)
+                        HiddenItems.Add(new HiddenItemRowVM((ushort)e.ItemId, (ushort)e.Quantity, (ushort)e.Index, _rawItemNames));
+                }
+                else
+                {
+                    AppLogger.Error($"hg-engine hidden items read failed: {err}");
+                }
+                if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
+                OnPropertyChanged(nameof(HiddenEntryCount));
+                return;
+            }
 
             byte[] lenData = ARM9.ReadBytes(HIDDEN_TABLE_LEN_OFFSET, 1);
             int tableLen = lenData[0];
@@ -634,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public void AddHiddenItem()
         {
-            if (HiddenItems.Count >= _hiddenMaxCapacity) return;
+            if (!HgEngineProject.IsActive && HiddenItems.Count >= _hiddenMaxCapacity) return;
             var used = new HashSet<ushort>(HiddenItems.Select(h => h.ScriptID));
             ushort sid = 95;
             while (used.Contains(sid) && sid < 256) sid++;
@@ -738,6 +761,19 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void SaveHiddenItems()
         {
+            if (HgEngineProject.IsActive)
+            {
+                var entries = new List<HgEngineHiddenItems.Entry>(HiddenItems.Count);
+                foreach (var e in HiddenItems)
+                    entries.Add(new HgEngineHiddenItems.Entry { ItemId = e.ItemID, Quantity = e.Amount, Index = e.ScriptID });
+                if (!HgEngineHiddenItems.TrySave(entries, out string err))
+                    AppLogger.Error($"hg-engine hidden items write failed: {err}");
+
+                _hiddenDirty = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                return;
+            }
+
             int tableLen = HiddenItems.Count;
             byte[] table = new byte[_hiddenMaxCapacity * HIDDEN_ENTRY_SIZE];
 

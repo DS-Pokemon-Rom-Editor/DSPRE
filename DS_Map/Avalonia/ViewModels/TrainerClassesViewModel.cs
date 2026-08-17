@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using global::Avalonia.Controls;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -29,6 +30,32 @@ namespace DSPRE.Avalonia.ViewModels
         private readonly Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> _musicDict = new();
         private readonly TrainerClassSpriteRenderer _spriteRenderer = new();
         private int _spriteFrame;
+
+        private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
+        private int _playCountdown;
+        private bool _isPlaying;
+        public bool IsPlaying { get => _isPlaying; private set { if (Set(ref _isPlaying, value)) OnPropertyChanged(nameof(PlayButtonText)); } }
+        public string PlayButtonText => IsPlaying ? "⏹ Stop" : "▶ Play animation";
+        public bool CanPlayAnimation => _spriteRenderer.FrameCount > 1;
+
+        public void TogglePlay()
+        {
+            if (IsPlaying) { IsPlaying = false; _spriteFrame = _spriteRenderer.DefaultFrame; RefreshSpritePreview(); return; }
+            if (!CanPlayAnimation) return;
+            _spriteFrame = 0;
+            _playCountdown = _spriteRenderer.GetFrameDuration(0);
+            IsPlaying = true;
+            RefreshSpritePreview();
+        }
+
+        private void AnimTick()
+        {
+            if (!IsPlaying) return;
+            if (--_playCountdown > 0) return;
+            _spriteFrame = (_spriteFrame + 1) % Math.Max(1, _spriteRenderer.FrameCount);
+            _playCountdown = _spriteRenderer.GetFrameDuration(_spriteFrame);
+            RefreshSpritePreview();
+        }
 
         /// <summary>Which file _musicDict's entryOffsets are relative to. The table may have been
         /// repointed into the synthetic overlay (e.g. by hand, following the "adding a new trainer
@@ -62,9 +89,12 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _musicAltEnabled;
         public bool MusicAltEnabled { get => _musicAltEnabled; private set => Set(ref _musicAltEnabled, value); }
 
-        /// <summary>Gender/prize-multiplier and "Add Trainer Class" are only implemented for
-        /// Platinum (English), see TrainerClassTableExpansion's doc comment for why.</summary>
+        /// <summary>"Add Trainer Class" is only implemented for Platinum (English), see
+        /// TrainerClassTableExpansion's doc comment for why.</summary>
         public bool IsExpansionSupported => TrainerClassTableExpansion.IsSupportedForCurrentRom;
+
+        /// <summary>Gender/prize-multiplier editing: Platinum (English) via TrainerClassTableExpansion, or hg-engine via source.</summary>
+        public bool ShowGenderPrize => IsExpansionSupported || HgEngineProject.IsActive;
 
         private bool _genderPrizeMulLoaded;
         public bool GenderPrizeMulLoaded { get => _genderPrizeMulLoaded; private set => Set(ref _genderPrizeMulLoaded, value); }
@@ -85,12 +115,20 @@ namespace DSPRE.Avalonia.ViewModels
 
         public TrainerClassesViewModel(int initialClass)
         {
+            _animTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
+            _animTimer.Tick += (_, _) => AnimTick();
+            _animTimer.Start();
             try
             {
                 string[] names = GetTrainerClassNames();
                 for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
 
-                SetupEncounterMusicTable();
+                // The eye-contact encounter-music table is found via a hardcoded vanilla ARM9 RAM
+                // address (RomInfo.encounterMusicTableOffsetToRAMAddress) — meaningless on an hg-engine
+                // ROM, whose ARM9 is a different compiled binary with no such table at that address.
+                // Reading it there returns garbage that then overruns the file when treated as an entry
+                // count, so this feature simply doesn't exist for hg-engine ROMs (mirrors IsExpansionSupported).
+                if (!isHGE) SetupEncounterMusicTable();
 
                 StatusText = $"{ClassNames.Count} trainer classes.";
                 if (ClassNames.Count > 0)
@@ -149,7 +187,14 @@ namespace DSPRE.Avalonia.ViewModels
             }
             MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
 
-            if (IsExpansionSupported)
+            if (HgEngineProject.IsActive)
+            {
+                GenderPrizeMulLoaded = HgEngineTrainerClassTables.TryGetGender(index, out int hgeGender)
+                    & HgEngineTrainerClassTables.TryGetPrizeMultiplier(index, out int hgePrize);
+                GenderIndex = hgeGender;
+                PrizeMultiplier = hgePrize;
+            }
+            else if (IsExpansionSupported)
             {
                 GenderPrizeMulLoaded = TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _)
                     & TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
@@ -161,10 +206,13 @@ namespace DSPRE.Avalonia.ViewModels
                 GenderPrizeMulLoaded = false;
             }
 
-            _spriteFrame = _spriteRenderer.Load(index);
+            IsPlaying = false;
+            _spriteRenderer.Load(index);
+            _spriteFrame = _spriteRenderer.DefaultFrame;
             RefreshSpritePreview();
 
             OnPropertyChanged(nameof(CanEnableMusic));
+            OnPropertyChanged(nameof(CanPlayAnimation));
             _suppress = false;
         }
 
@@ -196,7 +244,14 @@ namespace DSPRE.Avalonia.ViewModels
                 _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 
-            if (GenderPrizeMulLoaded)
+            if (HgEngineProject.IsActive)
+            {
+                HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out string hgeGenderErr);
+                HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out string hgePrizeErr);
+                if (hgeGenderErr != null || hgePrizeErr != null)
+                    _ = DialogHelper.ShowError($"Some fields failed to save:\n{hgeGenderErr}\n{hgePrizeErr}".Trim(), "Trainer Classes");
+            }
+            else if (GenderPrizeMulLoaded)
             {
                 TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out string genderErr);
                 TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out string prizeErr);

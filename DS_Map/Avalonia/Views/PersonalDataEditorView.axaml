@@ -96,8 +96,8 @@
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Catch Rate:"      Classes="label"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding CatchRate}"      Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base Exp:"        Classes="label" Margin="12,0,6,0"/>
-                <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BaseExp}"        Minimum="0" Maximum="255"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base Exp:"        Classes="label" Margin="12,0,6,0" IsVisible="{Binding !ShowHgEngineExtras}"/>
+                <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BaseExp}"        Minimum="0" Maximum="255" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Base Friendship:" Classes="label"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding BaseFriendship}" Minimum="0" Maximum="255"/>
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="Escape Rate:"     Classes="label" Margin="12,0,6,0"/>
@@ -145,6 +145,60 @@
             <ListBox ItemsSource="{Binding AddableMachines}" SelectedIndex="{Binding SelectedAddableMachineIndex}"/>
           </DockPanel>
         </Grid>
+      </TabItem>
+      <TabItem Header="hg-engine" IsVisible="{Binding ShowHgEngineExtras}">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="8" Margin="8">
+            <GroupBox Header="Breeding / Dex">
+              <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" Margin="4">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Hidden Ability:"  Classes="label"/>
+                <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding HgHiddenAbilityIndex}"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base Exp:"        Classes="label" Margin="12,0,6,0"/>
+                <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding HgBaseExp}" Minimum="0" Maximum="65535"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Baby Pokémon:"    Classes="label"/>
+                <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HgBabyMonIndex}"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex #:"  Classes="label" Margin="12,0,6,0"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding HgRegionalDexNumber}" Minimum="0" Maximum="65535"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon Palette:"    Classes="label"/>
+                <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding IconPaletteOptions}" SelectedIndex="{Binding HgIconPaletteIndex}"/>
+              </Grid>
+            </GroupBox>
+            <GroupBox Header="Overworld Follower">
+              <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Size (0=small, 1=big):" Classes="label"/>
+                <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding HgFollowerSize}" Minimum="0" Maximum="1"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Bounce Speed:" Classes="label" Margin="12,0,6,0"/>
+                <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding FollowerBounceOptions}" SelectedIndex="{Binding HgFollowerBounceIndex}"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="OW Female Form:" Classes="label"
+                           ToolTip.Tip="Raw C expression from SpeciesToOWFormFemale.c (e.g. FALSE, or OW_FEMALE_MASK | SPECIES_X_OVERWORLD_FEMALE)."/>
+                <TextBox   Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding HgOwFemaleFormExpression}"/>
+              </Grid>
+            </GroupBox>
+            <GroupBox Header="Overworld Follower">
+              <StackPanel Spacing="6" Margin="4">
+                <TextBlock Text="{Binding OwStatusText}" FontStyle="Italic"/>
+                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding OwHasEntry}">
+                  <Image Source="{Binding OwFollowerPreview}" Width="64" Height="64" Stretch="Uniform"
+                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                         RenderOptions.BitmapInterpolationMode="None"/>
+                  <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="Size Class:" Classes="label"/>
+                      <ComboBox ItemsSource="{Binding OwSizeClassOptions}" SelectedIndex="{Binding OwSizeClassIndex}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding OwNeedsTemplate}">
+                      <TextBlock Text="Template species:" Classes="label"
+                                 ToolTip.Tip="No sprite sheet exists for this species yet. Pick an existing species to clone its animation metadata from; only the artwork is replaced."/>
+                      <ComboBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding OwTemplateSpeciesIndex}" MinWidth="200"/>
+                    </StackPanel>
+                    <Button Content="Import Sprite Sheet…" Click="ImportOwSprite_Click"/>
+                  </StackPanel>
+                </StackPanel>
+                <Button Content="Create Overworld Follower Entry" Click="CreateOwEntry_Click" IsVisible="{Binding !OwHasEntry}"/>
+              </StackPanel>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
       </TabItem>
     </TabControl>
   </DockPanel>

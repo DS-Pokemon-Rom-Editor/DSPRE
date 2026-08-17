@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using Ekona.Images;
 using Images;
 using System;
@@ -9,14 +10,18 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
 {
     public enum SpriteEditTool { Pencil, Eyedropper }
 
-    /// <summary>One swatch in the palette strip, a fixed existing palette color, not editable in v1.</summary>
+    /// <summary>One swatch in the palette strip, a fixed existing palette color, not editable.</summary>
     public class PaletteSwatchViewModel
     {
         public int Index { get; }
@@ -36,6 +41,89 @@ namespace DSPRE.Avalonia.ViewModels
         public FrameThumbnailViewModel(int index, Bitmap image) { Index = index; Image = image; }
     }
 
+    /// <summary>One selectable "pose" in a frame's pose picker: an NCER cell, labeled and thumbnailed the
+    /// same way the Sprite tab's own frame strip is.</summary>
+    public class AnimCellChoiceViewModel
+    {
+        public int Index { get; }
+        public string Label { get; }
+        public Bitmap Thumbnail { get; }
+        public AnimCellChoiceViewModel(int index, string label, Bitmap thumbnail) { Index = index; Label = label; Thumbnail = thumbnail; }
+    }
+
+    /// <summary>One row in the frame list: a played pose + how long it holds. Edits write straight into
+    /// the underlying <see cref="AnimFrameDataJson"/> and notify the owner so it can re-serialize
+    /// AnimJsonText and refresh the thumbnail.</summary>
+    public class AnimFrameRowViewModel : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string n = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        private readonly AnimFrameDataJson _model;
+        private readonly Action _onChanged;
+        private readonly Func<int, Bitmap> _renderThumbnail;
+
+        public AnimFrameRowViewModel(AnimFrameDataJson model, Action onChanged, Func<int, Bitmap> renderThumbnail)
+        {
+            _model = model;
+            _onChanged = onChanged;
+            _renderThumbnail = renderThumbnail;
+            _thumbnail = renderThumbnail(model.CellIndex);
+        }
+
+        public AnimFrameDataJson Model => _model;
+
+        /// <summary>60fps game ticks, hg-engine's own unit; DelayMs is the friendlier readout.</summary>
+        public int Delay
+        {
+            get => _model.FrameDelay;
+            set
+            {
+                int clamped = Math.Max(1, value);
+                if (_model.FrameDelay == clamped) return;
+                _model.FrameDelay = clamped;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(DelayMs));
+                _onChanged();
+            }
+        }
+
+        public double DelayMs => Math.Round(Delay * 1000.0 / 60.0);
+
+        public int CellIndex
+        {
+            get => _model.CellIndex;
+            set
+            {
+                if (_model.CellIndex == value) return;
+                _model.CellIndex = value;
+                OnPropertyChanged();
+                Thumbnail = _renderThumbnail(value);
+                _onChanged();
+            }
+        }
+
+        private Bitmap _thumbnail;
+        public Bitmap Thumbnail { get => _thumbnail; private set { _thumbnail = value; OnPropertyChanged(); } }
+    }
+
+    /// <summary>One entry in the sequence picker (hg-engine calls a sequence an "animation": idle pose,
+    /// walk cycle, battle dance, etc). A class usually has 1-2.</summary>
+    public class AnimSequenceChoiceViewModel
+    {
+        public AnimSequenceJson Model { get; }
+        public int Index { get; }
+        public string DisplayName { get; }
+        public AnimSequenceChoiceViewModel(AnimSequenceJson model, int index)
+        {
+            Model = model;
+            Index = index;
+            int n = model.FrameData.Count;
+            DisplayName = $"Sequence {index} ({n} frame{(n == 1 ? "" : "s")})";
+        }
+    }
+
     /// <summary>
     /// Pixel-level editor for a trainer class's sprite.
     ///
@@ -53,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels
     ///
     /// DP trainer classes have no NCER at all (no per-class animation), so there's no cell
     /// geometry to hit-test against, and editing falls back to the flat NCGR tile sheet directly
-    /// (<see cref="_flatIndices"/> path), same as this editor's original v1 implementation.
+    /// (<see cref="_flatIndices"/> path).
     /// </summary>
     public class TrainerSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -73,8 +161,22 @@ namespace DSPRE.Avalonia.ViewModels
 
         private PaletteBase _pal;
         private ImageBase _tile;
-        private SpriteBase _sprite; // null on DP (no NCER), flat-sheet fallback mode
+        private SpriteBase _sprite; // null on DP (no NCER), flat-sheet fallback mode; also null when _jsonBanks is used
         private string _tilesPath;
+
+        // hg-engine path: cell geometry read from *_cell.json instead of the compiled narc, same nitrogfx
+        // bug as TrainerClassSpriteRenderer works around (see HgEngineTrainerGraphicsSource). Only the
+        // geometry source changes; painted pixels still go into _tile/_pal as before.
+        private Bank[] _jsonBanks;
+        private uint _jsonBlockSize;
+
+        private int BankCount => _jsonBanks?.Length ?? _sprite?.Banks.Length ?? 0;
+        private Bank GetBank(int i) => _jsonBanks != null ? _jsonBanks[i] : _sprite.Banks[i];
+        private uint BlockSize => _jsonBanks != null ? _jsonBlockSize : (_sprite?.BlockSize ?? 0);
+        private DSPRE.RawImage GetCompositedRawImage(int bankIndex, int width, int height, int[] drawIndex) =>
+            _jsonBanks != null
+                ? Actions.Get_RawImage(_jsonBanks[bankIndex], _jsonBlockSize, _tile, _pal, width, height, true, -1, 1, drawIndex)
+                : _sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: drawIndex);
 
         // ── Mode A: composited cell editing (Plat/HGSS) ─────────────────────────
         private sealed class EditCell
@@ -93,11 +195,11 @@ namespace DSPRE.Avalonia.ViewModels
         private int[] _flatIndices;
         private int _flatWidth, _flatHeight;
 
-        public bool IsFlatSheetMode => _sprite == null;
+        public bool IsFlatSheetMode => _sprite == null && _jsonBanks == null;
 
         public int ZoomFactor { get; private set; } = 4;
 
-        public int FrameCount => _sprite?.Banks.Length ?? 0;
+        public int FrameCount => BankCount;
         public int SelectedFrameIndex
         {
             get => _selectedFrameIndex;
@@ -129,14 +231,395 @@ namespace DSPRE.Avalonia.ViewModels
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
         private bool _dirty;
-        public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }
+        public bool HasUnsavedChanges
+        {
+            get => _dirty || AnimJsonDirty;
+            private set => Set(ref _dirty, value);
+        }
         public string UnsavedChangesDescription => $"Trainer Class Sprite Editor (class {_trClassID})";
-        public void SaveChanges() => Save();
+        public void SaveChanges()
+        {
+            Save();
+            if (AnimJsonDirty) SaveAnimJson();
+        }
 
         /// <summary>Edits are applied straight into the in-memory <see cref="_tile"/>/<see cref="_flatIndices"/>
         /// buffers as you paint (there's no separate undo buffer), so discarding just means throwing all of
         /// that away and re-reading the class fresh from disk.</summary>
         public void DiscardChanges() => Load(_trClassID);
+
+        // ── Animations tab: NNN_anim.json read/written straight from the linked hg-engine checkout's
+        // source (this is the raw-text half; the structured sequence/frame editor further down keeps
+        // this text in sync both ways).
+        private string _animJsonPath;
+
+        private string _animJsonText = "";
+        public string AnimJsonText
+        {
+            get => _animJsonText;
+            set
+            {
+                if (!Set(ref _animJsonText, value)) return;
+                AnimJsonDirty = true;
+                if (!_syncingAnimText) TryRebuildAnimModelFromText();
+            }
+        }
+
+        private bool _animJsonDirty;
+        public bool AnimJsonDirty
+        {
+            get => _animJsonDirty;
+            private set { if (Set(ref _animJsonDirty, value)) OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
+
+        private string _animJsonStatusText = "";
+        public string AnimJsonStatusText { get => _animJsonStatusText; private set => Set(ref _animJsonStatusText, value); }
+
+        public bool CanEditAnimJson => HgEngineProject.IsActive;
+        public bool HasAnimJsonFile => _animJsonPath != null && File.Exists(_animJsonPath);
+
+        private void SetAnimJsonTextSilent(string text)
+        {
+            _animJsonText = text;
+            OnPropertyChanged(nameof(AnimJsonText));
+            TryRebuildAnimModelFromText();
+        }
+
+        private void LoadAnimJson(int trClassID)
+        {
+            _animJsonPath = HgEngineProject.IsActive
+                ? Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", "trainer_gfx", $"{trClassID:D3}_anim.json")
+                : null;
+            OnPropertyChanged(nameof(CanEditAnimJson));
+            OnPropertyChanged(nameof(HasAnimJsonFile));
+
+            if (_animJsonPath == null)
+            {
+                SetAnimJsonTextSilent("");
+                AnimJsonStatusText = "Link an hg-engine checkout to edit this class's animation JSON.";
+            }
+            else if (File.Exists(_animJsonPath))
+            {
+                try
+                {
+                    SetAnimJsonTextSilent(File.ReadAllText(_animJsonPath));
+                    AnimJsonStatusText = _animJsonPath;
+                }
+                catch (Exception ex)
+                {
+                    SetAnimJsonTextSilent("");
+                    AnimJsonStatusText = "Failed to read: " + ex.Message;
+                }
+            }
+            else
+            {
+                SetAnimJsonTextSilent("");
+                AnimJsonStatusText = $"No {trClassID:D3}_anim.json yet for this class.";
+            }
+            AnimJsonDirty = false;
+        }
+
+        /// <summary>Returns null on success, error message on failure. Validates the text parses as JSON
+        /// before writing.</summary>
+        public string SaveAnimJson()
+        {
+            if (_animJsonPath == null) return "No hg-engine checkout linked.";
+            try
+            {
+                using (JsonDocument.Parse(AnimJsonText)) { }
+            }
+            catch (JsonException ex)
+            {
+                return "Invalid JSON: " + ex.Message;
+            }
+            try
+            {
+                File.WriteAllText(_animJsonPath, AnimJsonText);
+                AnimJsonDirty = false;
+                AnimJsonStatusText = "Saved: " + _animJsonPath;
+                OnPropertyChanged(nameof(HasAnimJsonFile));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        /// <summary>Seeds a minimal, valid single-pose anim.json (matching the shape hg-engine's own
+        /// single-frame classes use) for a class that doesn't have one yet.</summary>
+        public string CreateAnimJson()
+        {
+            if (_animJsonPath == null) return "No hg-engine checkout linked.";
+            const string template = """
+                {
+                	"labelEnabled":	true,
+                	"uaatEnabled":	false,
+                	"sequenceCount":	1,
+                	"frameCount":	1,
+                	"sequences":	[{
+                			"frameCount":	1,
+                			"loopStartFrame":	0,
+                			"animationElement":	0,
+                			"animationType":	1,
+                			"playbackMode":	2,
+                			"frameData":	[{
+                					"frameDelay":	4,
+                					"resultId":	0
+                				}]
+                		}],
+                	"animationResults":	[{
+                			"resultType":	0,
+                			"index":	0
+                		}],
+                	"resultCount":	1,
+                	"labels":	["CellAnime0"],
+                	"labelCount":	1
+                }
+                """;
+            try
+            {
+                File.WriteAllText(_animJsonPath, template);
+                SetAnimJsonTextSilent(template);
+                AnimJsonDirty = false;
+                AnimJsonStatusText = "Created: " + _animJsonPath;
+                OnPropertyChanged(nameof(HasAnimJsonFile));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        // ── Structured animation editor: sequences/frames built from AnimJsonText, kept in sync with it
+        // both ways, like the Battle Script editor's Cards/Text tabs.
+        private AnimJsonRoot _animRoot;
+        private bool _syncingAnimText;   // guards the structured-model <-> AnimJsonText echo loop
+
+        public ObservableCollection<AnimSequenceChoiceViewModel> AnimSequenceChoices { get; } = new();
+
+        private AnimSequenceChoiceViewModel _selectedAnimSequence;
+        public AnimSequenceChoiceViewModel SelectedAnimSequence
+        {
+            get => _selectedAnimSequence;
+            set
+            {
+                if (!Set(ref _selectedAnimSequence, value)) return;
+                OnPropertyChanged(nameof(HasSelectedAnimSequence));
+                StopAnimPreview();
+                RebuildAnimFrameRows();
+            }
+        }
+        public bool HasSelectedAnimSequence => SelectedAnimSequence != null;
+
+        public ObservableCollection<AnimFrameRowViewModel> AnimFrameRows { get; } = new();
+        public bool HasAnimFrameRows => AnimFrameRows.Count > 0;
+
+        public ObservableCollection<AnimCellChoiceViewModel> AnimCellChoices { get; } = new();
+
+        private string _animModelStatusText = "";
+        public string AnimModelStatusText { get => _animModelStatusText; private set => Set(ref _animModelStatusText, value); }
+
+        private bool _animPreviewPlaying;
+        public bool AnimPreviewPlaying { get => _animPreviewPlaying; private set => Set(ref _animPreviewPlaying, value); }
+
+        private Bitmap _animPreviewBitmap;
+        public Bitmap AnimPreviewBitmap { get => _animPreviewBitmap; private set => Set(ref _animPreviewBitmap, value); }
+
+        private int _animPreviewFrameNumber;
+        public int AnimPreviewFrameNumber { get => _animPreviewFrameNumber; private set => Set(ref _animPreviewFrameNumber, value); }
+
+        private CancellationTokenSource _animPreviewCts;
+
+        private void RebuildAnimCellChoices()
+        {
+            AnimCellChoices.Clear();
+            for (int i = 0; i < BankCount; i++)
+            {
+                string name = GetBank(i).name;
+                string label = string.IsNullOrWhiteSpace(name) ? $"Cell {i}" : $"{name} ({i})";
+                AnimCellChoices.Add(new AnimCellChoiceViewModel(i, label, RenderAnimCellThumbnail(i)));
+            }
+        }
+
+        private Bitmap RenderAnimCellThumbnail(int cellIndex, int size = 72)
+        {
+            if (BankCount == 0 || cellIndex < 0 || cellIndex >= BankCount || _tile == null || _pal == null) return null;
+            try
+            {
+                var raw = GetCompositedRawImage(cellIndex, size, size, null);
+                return ImageConverter.ToAvaloniaBitmap(raw);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Re-parses AnimJsonText into the structured model. On a parse error, leaves whatever
+        /// structure is already showing untouched (so a mid-typo keystroke in the JSON tab doesn't blank
+        /// the Editor tab) and surfaces the error in <see cref="AnimModelStatusText"/> instead.</summary>
+        private void TryRebuildAnimModelFromText()
+        {
+            if (string.IsNullOrWhiteSpace(AnimJsonText))
+            {
+                _animRoot = null;
+                AnimSequenceChoices.Clear();
+                AnimFrameRows.Clear();
+                OnPropertyChanged(nameof(HasAnimFrameRows));
+                AnimModelStatusText = "";
+                return;
+            }
+            try
+            {
+                _animRoot = AnimJsonRoot.Parse(AnimJsonText);
+                AnimModelStatusText = "";
+            }
+            catch (Exception ex)
+            {
+                AnimModelStatusText = "JSON has an error, showing the last valid structure: " + ex.Message;
+                return; // keep whatever AnimSequenceChoices/AnimFrameRows already have
+            }
+
+            int keepIndex = SelectedAnimSequence?.Index ?? 0;
+            AnimSequenceChoices.Clear();
+            for (int i = 0; i < (_animRoot?.Sequences.Count ?? 0); i++)
+                AnimSequenceChoices.Add(new AnimSequenceChoiceViewModel(_animRoot.Sequences[i], i));
+
+            var restore = AnimSequenceChoices.FirstOrDefault(s => s.Index == keepIndex) ?? AnimSequenceChoices.FirstOrDefault();
+            if (!ReferenceEquals(restore, _selectedAnimSequence))
+                SelectedAnimSequence = restore;   // triggers RebuildAnimFrameRows via the setter
+            else
+                RebuildAnimFrameRows();            // same selection, but its frames may have changed
+        }
+
+        private void RebuildAnimFrameRows()
+        {
+            AnimFrameRows.Clear();
+            if (SelectedAnimSequence != null)
+            {
+                foreach (var frame in SelectedAnimSequence.Model.FrameData)
+                    AnimFrameRows.Add(new AnimFrameRowViewModel(frame, SyncAnimModelToText, i => RenderAnimCellThumbnail(i)));
+            }
+            OnPropertyChanged(nameof(HasAnimFrameRows));
+        }
+
+        /// <summary>Called whenever a frame/sequence edit mutates <see cref="_animRoot"/>; re-serializes
+        /// it back into AnimJsonText without re-triggering a model rebuild.</summary>
+        private void SyncAnimModelToText()
+        {
+            if (_animRoot == null) return;
+            _syncingAnimText = true;
+            AnimJsonText = _animRoot.Serialize();
+            _syncingAnimText = false;
+
+            // Sequence picker labels show frame counts, so rebuild them after any add/remove.
+            int keepIndex = SelectedAnimSequence?.Index ?? 0;
+            AnimSequenceChoices.Clear();
+            for (int i = 0; i < _animRoot.Sequences.Count; i++)
+                AnimSequenceChoices.Add(new AnimSequenceChoiceViewModel(_animRoot.Sequences[i], i));
+            var restore = AnimSequenceChoices.FirstOrDefault(s => s.Index == keepIndex) ?? AnimSequenceChoices.FirstOrDefault();
+            if (!ReferenceEquals(restore, _selectedAnimSequence)) _selectedAnimSequence = restore;
+            OnPropertyChanged(nameof(SelectedAnimSequence));
+            OnPropertyChanged(nameof(HasSelectedAnimSequence));
+        }
+
+        public void AddAnimFrame()
+        {
+            if (SelectedAnimSequence == null) return;
+            StopAnimPreview();
+            int copyFrom = AnimFrameRows.Count > 0 ? SelectedAnimSequence.Model.FrameData[^1].CellIndex : 0;
+            SelectedAnimSequence.Model.FrameData.Add(new AnimFrameDataJson { FrameDelay = 4, CellIndex = copyFrom });
+            RebuildAnimFrameRows();
+            SyncAnimModelToText();
+        }
+
+        /// <summary>Returns an error message if the removal was refused (every sequence needs at least
+        /// one frame), null on success.</summary>
+        public string RemoveAnimFrame(AnimFrameRowViewModel row)
+        {
+            if (SelectedAnimSequence == null || row == null) return null;
+            if (SelectedAnimSequence.Model.FrameData.Count <= 1)
+                return "A sequence needs at least one frame. Remove the whole sequence instead if you don't want it.";
+            StopAnimPreview();
+            SelectedAnimSequence.Model.FrameData.Remove(row.Model);
+            RebuildAnimFrameRows();
+            SyncAnimModelToText();
+            return null;
+        }
+
+        public void MoveAnimFrame(AnimFrameRowViewModel row, int direction)
+        {
+            if (SelectedAnimSequence == null || row == null) return;
+            var list = SelectedAnimSequence.Model.FrameData;
+            int i = list.IndexOf(row.Model);
+            int j = i + direction;
+            if (i < 0 || j < 0 || j >= list.Count) return;
+            StopAnimPreview();
+            (list[i], list[j]) = (list[j], list[i]);
+            RebuildAnimFrameRows();
+            SyncAnimModelToText();
+        }
+
+        public void AddAnimSequence()
+        {
+            if (_animRoot == null) return;
+            StopAnimPreview();
+            var seq = new AnimSequenceJson
+            {
+                AnimationType = 1,
+                PlaybackMode = 2,
+                FrameData = { new AnimFrameDataJson { FrameDelay = 4, CellIndex = 0 } },
+            };
+            _animRoot.Sequences.Add(seq);
+            SyncAnimModelToText();
+            SelectedAnimSequence = AnimSequenceChoices.LastOrDefault();
+        }
+
+        /// <summary>Returns an error message if the removal was refused (the file needs at least one
+        /// sequence), null on success.</summary>
+        public string RemoveAnimSequence()
+        {
+            if (_animRoot == null || SelectedAnimSequence == null) return null;
+            if (_animRoot.Sequences.Count <= 1)
+                return "This file needs at least one sequence.";
+            StopAnimPreview();
+            _animRoot.Sequences.Remove(SelectedAnimSequence.Model);
+            SyncAnimModelToText();
+            return null;
+        }
+
+        public void StopAnimPreview()
+        {
+            _animPreviewCts?.Cancel();
+            _animPreviewCts = null;
+            AnimPreviewPlaying = false;
+        }
+
+        /// <summary>Plays the selected sequence's frames once, in real per-frame timing, and stops on the
+        /// last frame. Deliberately not a loop.</summary>
+        public async Task PlayAnimPreviewOnceAsync()
+        {
+            if (SelectedAnimSequence == null || AnimFrameRows.Count == 0) return;
+            StopAnimPreview();
+            var cts = new CancellationTokenSource();
+            _animPreviewCts = cts;
+            AnimPreviewPlaying = true;
+            try
+            {
+                for (int i = 0; i < AnimFrameRows.Count; i++)
+                {
+                    var row = AnimFrameRows[i];
+                    AnimPreviewBitmap = row.Thumbnail;
+                    AnimPreviewFrameNumber = i + 1;
+                    int ms = Math.Max(16, (int)(row.Delay * 1000.0 / 60.0));
+                    await Task.Delay(ms, cts.Token);
+                }
+            }
+            catch (OperationCanceledException) { /* user stopped or switched away, not an error */ }
+            finally
+            {
+                if (ReferenceEquals(_animPreviewCts, cts)) { _animPreviewCts = null; AnimPreviewPlaying = false; }
+            }
+        }
 
         private int _trClassID;
         public bool Loaded => _tile != null;
@@ -173,15 +656,36 @@ namespace DSPRE.Avalonia.ViewModels
                 _tilesPath = Path.Combine(dir, tilesFilename);
                 _tile = new NCGR(_tilesPath, tilesFileID, tilesFilename);
 
-                _sprite = null;
+                _sprite = null; _jsonBanks = null;
                 if (RomInfo.gameFamily != GameFamilies.DP)
                 {
-                    int spriteFileID = trClassID * 5 + 2;
-                    string spriteFilename = spriteFileID.ToString("D4");
-                    _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
+                    if (HgEngineProject.IsActive)
+                    {
+                        string trainerGfxDir = Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", "trainer_gfx");
+                        string cellPath = Path.Combine(trainerGfxDir, $"{trClassID:D3}_cell.json");
+                        if (File.Exists(cellPath))
+                        {
+                            if (HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out var banks, out var blockSize, out string cellError))
+                            {
+                                _jsonBanks = banks;
+                                _jsonBlockSize = blockSize;
+                            }
+                            else
+                            {
+                                AppLogger.Error("TrainerSpriteEditorViewModel: " + cellError);
+                            }
+                        }
+                    }
+
+                    if (_jsonBanks == null)
+                    {
+                        int spriteFileID = trClassID * 5 + 2;
+                        string spriteFilename = spriteFileID.ToString("D4");
+                        _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
+                    }
                 }
 
-                if (_sprite != null && _sprite.Banks.Length > 0)
+                if (BankCount > 0)
                 {
                     ZoomFactor = 4;
                     BuildFrameThumbnails();
@@ -207,6 +711,9 @@ namespace DSPRE.Avalonia.ViewModels
                 OnPropertyChanged(nameof(IsFlatSheetMode));
                 OnPropertyChanged(nameof(FrameCount));
                 HasUnsavedChanges = false;
+                StopAnimPreview();
+                RebuildAnimCellChoices();
+                LoadAnimJson(trClassID);
                 return null;
             }
             catch (Exception ex)
@@ -221,9 +728,9 @@ namespace DSPRE.Avalonia.ViewModels
         private void BuildFrameThumbnails()
         {
             FrameThumbnails.Clear();
-            for (int i = 0; i < _sprite.Banks.Length; i++)
+            for (int i = 0; i < BankCount; i++)
             {
-                var raw = _sprite.Get_RawImage(_tile, _pal, i, 64, 64, trans: true, currOAM: -1, draw_index: null);
+                var raw = GetCompositedRawImage(i, 64, 64, null);
                 var bmp = ImageConverter.ToAvaloniaBitmap(raw);
                 if (bmp != null) FrameThumbnails.Add(new FrameThumbnailViewModel(i, bmp));
             }
@@ -233,17 +740,17 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Mode A: per-frame cell geometry + composited canvas ────────────────
         private void LoadFrame(int frameIndex)
         {
-            if (_sprite == null || frameIndex < 0 || frameIndex >= _sprite.Banks.Length) return;
+            if (BankCount == 0 || frameIndex < 0 || frameIndex >= BankCount) return;
 
             _cells.Clear();
-            var bank = _sprite.Banks[frameIndex];
+            var bank = GetBank(frameIndex);
             int bpp = _tile.BPP;
             foreach (var oam in bank.oams)
             {
                 if (oam.width == 0 || oam.height == 0) continue;
 
                 uint tileOffset = oam.obj2.tileOffset;
-                tileOffset <<= (byte)_sprite.BlockSize;
+                tileOffset <<= (byte)BlockSize;
                 int byteStart = (int)(tileOffset * 0x20) + (int)bank.data_offset;
                 int byteLen = oam.width * oam.height * bpp / 8;
                 if (byteStart < 0 || byteLen <= 0 || byteStart + byteLen > _tile.Tiles.Length)
@@ -277,8 +784,8 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void RebuildCompositedCanvas()
         {
-            if (_sprite == null || _tile == null || _pal == null) return;
-            var raw = _sprite.Get_RawImage(_tile, _pal, _selectedFrameIndex, CanvasSize, CanvasSize, trans: true, currOAM: -1, draw_index: null);
+            if (BankCount == 0 || _tile == null || _pal == null) return;
+            var raw = GetCompositedRawImage(_selectedFrameIndex, CanvasSize, CanvasSize, null);
             CanvasBitmap = ImageConverter.ToAvaloniaBitmap(ZoomRaw(raw, ZoomFactor));
         }
 
@@ -403,7 +910,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Pointer interaction (canvas coordinates, already un-zoomed by the view) ────────────────
         public void HandlePointer(int x, int y)
         {
-            if (_sprite != null) HandlePointerComposited(x, y);
+            if (BankCount > 0) HandlePointerComposited(x, y);
             else HandlePointerFlat(x, y);
         }
 
@@ -469,7 +976,7 @@ namespace DSPRE.Avalonia.ViewModels
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
 
-                return _sprite != null ? ImportPngComposited(import) : ImportPngFlat(import);
+                return BankCount > 0 ? ImportPngComposited(import) : ImportPngFlat(import);
             }
             catch (Exception ex)
             {
@@ -562,9 +1069,9 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 DSPRE.RawImage raw;
-                if (_sprite != null)
+                if (BankCount > 0)
                 {
-                    raw = _sprite.Get_RawImage(_tile, _pal, _selectedFrameIndex, CanvasSize, CanvasSize, trans: true, currOAM: -1, draw_index: null);
+                    raw = GetCompositedRawImage(_selectedFrameIndex, CanvasSize, CanvasSize, null);
                 }
                 else
                 {
@@ -595,7 +1102,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (_tile == null) return "No sprite loaded.";
             try
             {
-                if (_sprite == null)
+                if (BankCount == 0)
                 {
                     // Composited-mode edits are already written in place into _tile.Tiles by
                     // EncodeCell as they happen; the flat-sheet fallback packs on save instead.
@@ -609,7 +1116,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                 _tile.Write(_tilesPath, _pal);
 
-                if (_sprite != null) BuildFrameThumbnails();
+                if (BankCount > 0) BuildFrameThumbnails();
 
                 HasUnsavedChanges = false;
                 StatusText = "Saved.";

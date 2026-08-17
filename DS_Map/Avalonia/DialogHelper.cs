@@ -48,6 +48,75 @@ namespace DSPRE.Avalonia
         public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
             => ShowMsg(message, title, MsgButtons.YesNoCancel);
 
+        /// <summary>Prompts for a single line of free text. Returns null if cancelled or closed without
+        /// confirming; an empty string is a valid (non-null) confirmed answer.</summary>
+        public static async Task<string> PromptText(string message, string title = "Enter a value", string defaultValue = "", Window owner = null)
+        {
+            var tcs = new TaskCompletionSource<string>();
+
+            var win = new Window
+            {
+                Title = title,
+                Width = 420,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                SizeToContent = SizeToContent.Height,
+            };
+
+            var msgText = new TextBlock
+            {
+                Text = message,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
+            };
+
+            var input = new TextBox
+            {
+                Text = defaultValue,
+                Margin = new global::Avalonia.Thickness(16, 0, 16, 12),
+            };
+
+            var btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
+                Spacing = 6,
+            };
+
+            var okBtn = new Button { Content = "OK", MinWidth = 72, IsDefault = true };
+            okBtn.Click += (_, _) => { tcs.TrySetResult(input.Text ?? ""); win.Close(); };
+            var cancelBtn = new Button { Content = "Cancel", MinWidth = 72, IsCancel = true };
+            cancelBtn.Click += (_, _) => { tcs.TrySetResult(null); win.Close(); };
+            btnRow.Children.Add(okBtn);
+            btnRow.Children.Add(cancelBtn);
+
+            win.Closed += (_, _) => tcs.TrySetResult(null);
+
+            var root = new StackPanel();
+            root.Children.Add(msgText);
+            root.Children.Add(input);
+            root.Children.Add(btnRow);
+            win.Content = root;
+
+            if (owner == null)
+            {
+                var app = global::Avalonia.Application.Current?.ApplicationLifetime
+                    as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+                owner = app?.MainWindow;
+            }
+
+            input.AttachedToVisualTree += (_, _) => input.Focus();
+
+            if (owner != null)
+                await win.ShowDialog(owner);
+            else
+                win.Show();
+
+            string result = await tcs.Task;
+            return result?.Trim();
+        }
+
         // ----------------------------------------------------------------
         // File Dialogs  (requires the owning Window)
         // ----------------------------------------------------------------

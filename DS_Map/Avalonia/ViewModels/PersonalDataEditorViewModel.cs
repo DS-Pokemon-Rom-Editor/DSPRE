@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using DSPRE.Resources;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
@@ -124,6 +125,251 @@ namespace DSPRE.Avalonia.ViewModels
 
         private Bitmap _monIconBitmap;
         public Bitmap MonIconBitmap { get => _monIconBitmap; private set => Set(ref _monIconBitmap, value); }
+
+        // ── hg-engine standalone data fields ────────────────────────────────────
+        // Each lives in its own data/*.c file outside PokemonPersonalData/Species.c, so each write goes
+        // straight to disk immediately rather than batching into SaveCommand's WriteHgEngineSource.
+        public bool ShowHgEngineExtras => DSPRE.HgEngine.HgEngineProject.IsActive;
+        public ObservableCollection<string> IconPaletteOptions { get; } = new() { "Palette 0", "Palette 1", "Palette 2" };
+        public ObservableCollection<string> FollowerBounceOptions { get; } = new();
+        private List<(string Name, int Value)> _followerBounceValues = new();
+
+        private int _hgHiddenAbilityIndex;
+        public int HgHiddenAbilityIndex
+        {
+            get => _hgHiddenAbilityIndex;
+            set
+            {
+                if (!Set(ref _hgHiddenAbilityIndex, value) || _loading || _current == null) return;
+                if (!HgEngineHiddenAbility.TrySetAbilityId(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine hidden ability write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private int _hgBaseExp;
+        public int HgBaseExp
+        {
+            get => _hgBaseExp;
+            set
+            {
+                if (!Set(ref _hgBaseExp, value) || _loading || _current == null) return;
+                if (!HgEngineBaseExperience.TrySetBaseExp(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine base experience write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private int _hgBabyMonIndex;
+        public int HgBabyMonIndex
+        {
+            get => _hgBabyMonIndex;
+            set
+            {
+                if (!Set(ref _hgBabyMonIndex, value) || _loading || _current == null) return;
+                if (!HgEngineBabyMon.TrySetBabySpecies(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine baby species write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private int _hgRegionalDexNumber;
+        public int HgRegionalDexNumber
+        {
+            get => _hgRegionalDexNumber;
+            set
+            {
+                if (!Set(ref _hgRegionalDexNumber, value) || _loading || _current == null) return;
+                if (!HgEngineRegionalDex.TrySetDexNumber(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine regional dex write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private int _hgIconPaletteIndex;
+        public int HgIconPaletteIndex
+        {
+            get => _hgIconPaletteIndex;
+            set
+            {
+                if (!Set(ref _hgIconPaletteIndex, value) || _loading || _current == null) return;
+                if (!HgEngineIconPalette.TrySetPaletteId(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine icon palette write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private int _hgFollowerSize;
+        public int HgFollowerSize
+        {
+            get => _hgFollowerSize;
+            set { if (Set(ref _hgFollowerSize, value) && !_loading && _current != null) WriteFollowerProperties(); }
+        }
+
+        private int _hgFollowerBounceIndex;
+        public int HgFollowerBounceIndex
+        {
+            get => _hgFollowerBounceIndex;
+            set { if (Set(ref _hgFollowerBounceIndex, value) && !_loading && _current != null) WriteFollowerProperties(); }
+        }
+
+        private void WriteFollowerProperties()
+        {
+            int bounceValue = _hgFollowerBounceIndex >= 0 && _hgFollowerBounceIndex < _followerBounceValues.Count
+                ? _followerBounceValues[_hgFollowerBounceIndex].Value : 0;
+            if (!HgEngineFollowerProperties.TrySet(_currentId, _hgFollowerSize, bounceValue, out string error))
+                AppLogger.Error($"hg-engine follower properties write failed for species {_currentId}: {error}");
+        }
+
+        private string _hgOwFemaleFormExpression = "FALSE";
+        public string HgOwFemaleFormExpression
+        {
+            get => _hgOwFemaleFormExpression;
+            set
+            {
+                if (!Set(ref _hgOwFemaleFormExpression, value) || _loading || _current == null) return;
+                if (!HgEngineSpeciesOwFormFemale.TrySetRawExpression(_currentId, value, out string error))
+                    AppLogger.Error($"hg-engine OW female form write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private void LoadHgEngineExtras()
+        {
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive) return;
+
+            _hgHiddenAbilityIndex = HgEngineHiddenAbility.TryGetAbilityId(_currentId, out int ha) ? ha : 0;
+            OnPropertyChanged(nameof(HgHiddenAbilityIndex));
+
+            _hgBaseExp = HgEngineBaseExperience.TryGetBaseExp(_currentId, out int be) ? be : 0;
+            OnPropertyChanged(nameof(HgBaseExp));
+
+            _hgBabyMonIndex = HgEngineBabyMon.TryGetBabySpecies(_currentId, out int baby) ? baby : 0;
+            OnPropertyChanged(nameof(HgBabyMonIndex));
+
+            _hgRegionalDexNumber = HgEngineRegionalDex.TryGetDexNumber(_currentId, out int dex) ? dex : 0;
+            OnPropertyChanged(nameof(HgRegionalDexNumber));
+
+            _hgIconPaletteIndex = HgEngineIconPalette.TryGetPaletteId(_currentId, out int pal) ? pal : 0;
+            OnPropertyChanged(nameof(HgIconPaletteIndex));
+
+            FollowerBounceOptions.Clear();
+            _followerBounceValues = HgEngineFollowerProperties.GetBounceOptions();
+            foreach (var opt in _followerBounceValues) FollowerBounceOptions.Add(opt.Name);
+            HgEngineFollowerProperties.TryGet(_currentId, out int size, out int bounce, out _, out _);
+            _hgFollowerSize = size; OnPropertyChanged(nameof(HgFollowerSize));
+            _hgFollowerBounceIndex = _followerBounceValues.FindIndex(o => o.Value == bounce);
+            if (_hgFollowerBounceIndex < 0) _hgFollowerBounceIndex = 0;
+            OnPropertyChanged(nameof(HgFollowerBounceIndex));
+
+            _hgOwFemaleFormExpression = HgEngineSpeciesOwFormFemale.TryGetRawExpression(_currentId, out string expr) ? expr : "FALSE";
+            OnPropertyChanged(nameof(HgOwFemaleFormExpression));
+
+            LoadOwFollower();
+        }
+
+        // ── Overworld follower sprite ─────────────────────────────────────────
+        private int _owGfxIndex = -1;
+        private bool _owHasSpriteFiles;
+        private List<string> _owSizeClassValues = new();
+
+        public ObservableCollection<string> OwSizeClassOptions { get; } = new();
+
+        private bool _owHasEntry;
+        public bool OwHasEntry { get => _owHasEntry; private set => Set(ref _owHasEntry, value); }
+
+        private string _owStatusText = "";
+        public string OwStatusText { get => _owStatusText; private set => Set(ref _owStatusText, value); }
+
+        private Bitmap _owFollowerPreview;
+        public Bitmap OwFollowerPreview { get => _owFollowerPreview; private set => Set(ref _owFollowerPreview, value); }
+
+        // Only shown/needed when this species' sprite files don't exist yet: cloning metadata from an
+        // existing entry is the only supported way to create them (see HgEngineOverworldFollowerSprite).
+        public bool OwNeedsTemplate => _owHasEntry && !_owHasSpriteFiles;
+
+        private int _owTemplateSpeciesIndex = -1;
+        public int OwTemplateSpeciesIndex { get => _owTemplateSpeciesIndex; set => Set(ref _owTemplateSpeciesIndex, value); }
+
+        private int _owSizeClassIndex = -1;
+        public int OwSizeClassIndex
+        {
+            get => _owSizeClassIndex;
+            set
+            {
+                if (!Set(ref _owSizeClassIndex, value) || _loading || _current == null || !_owHasEntry) return;
+                if (value < 0 || value >= _owSizeClassValues.Count) return;
+                if (!HgEngineOverworldFollowerSprite.TrySetSizeClass(_currentId, _owSizeClassValues[value], out string error))
+                    AppLogger.Error($"hg-engine OW follower size class write failed for species {_currentId}: {error}");
+            }
+        }
+
+        private void LoadOwFollower()
+        {
+            OwFollowerPreview = null;
+            _owHasSpriteFiles = false;
+
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive)
+            {
+                OwHasEntry = false;
+                OwStatusText = "";
+                OnPropertyChanged(nameof(OwNeedsTemplate));
+                return;
+            }
+
+            if (!HgEngineOverworldFollowerSprite.TryGetAssignment(_currentId, out _owGfxIndex, out string sizeClass, out _))
+            {
+                OwHasEntry = false;
+                OwStatusText = "No overworld follower entry for this species yet.";
+                OnPropertyChanged(nameof(OwNeedsTemplate));
+                return;
+            }
+
+            OwHasEntry = true;
+            _owSizeClassValues = HgEngineOverworldFollowerSprite.GetSizeClassOptions();
+            OwSizeClassOptions.Clear();
+            foreach (var s in _owSizeClassValues) OwSizeClassOptions.Add(s);
+            _owSizeClassIndex = _owSizeClassValues.IndexOf(sizeClass);
+            OnPropertyChanged(nameof(OwSizeClassIndex));
+
+            string pngPath = HgEngineOverworldFollowerSprite.TryGetSpritePngPath(_owGfxIndex);
+            _owHasSpriteFiles = pngPath != null;
+            if (pngPath != null)
+            {
+                try
+                {
+                    using var fs = File.OpenRead(pngPath);
+                    var raw = DSPRE.Avalonia.ImageConverter.DecodeRawImage(fs);
+                    OwFollowerPreview = raw != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw) : null;
+                }
+                catch { OwFollowerPreview = null; }
+            }
+            OwStatusText = $"Overworld gfx #{_owGfxIndex}" + (_owHasSpriteFiles ? "" : " (no sprite art yet, import one below)");
+            OnPropertyChanged(nameof(OwNeedsTemplate));
+        }
+
+        public void CreateOwFollowerEntry()
+        {
+            if (_current == null) return;
+            if (!HgEngineOverworldFollowerSprite.TryEnsureEntry(_currentId, out _, out string error))
+            { AppLogger.Error($"hg-engine OW follower entry create failed for species {_currentId}: {error}"); return; }
+            LoadOwFollower();
+        }
+
+        public void ImportOwFollowerSprite(string pngSourcePath)
+        {
+            if (_current == null || _owGfxIndex < 0) return;
+
+            int? templateGfxIndex = null;
+            if (OwNeedsTemplate)
+            {
+                if (_owTemplateSpeciesIndex < 0 || _owTemplateSpeciesIndex >= PokemonNames.Count)
+                { AppLogger.Error("hg-engine OW follower sprite import: pick a template species first."); return; }
+                if (!HgEngineOverworldFollowerSprite.TryGetAssignment(_owTemplateSpeciesIndex, out int templateGfx, out _, out string templateErr))
+                { AppLogger.Error($"hg-engine OW follower sprite import: template species has no assignment ({templateErr})."); return; }
+                templateGfxIndex = templateGfx;
+            }
+
+            string label = _currentId < PokemonNames.Count ? PokemonNames[_currentId] : _currentId.ToString();
+            if (!HgEngineOverworldFollowerSprite.TryImportSprite(_owGfxIndex, pngSourcePath, templateGfxIndex, label, out string error))
+            { AppLogger.Error($"hg-engine OW follower sprite import failed for species {_currentId}: {error}"); return; }
+
+            LoadOwFollower();
+        }
 
         // ── Private state ─────────────────────────────────────────────────────
         private PokemonPersonalData _current;
@@ -289,9 +535,47 @@ namespace DSPRE.Avalonia.ViewModels
             if (_current == null) return;
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
             WriteHatchResult(_currentId, HatchResultIndex);
+            WriteHgEngineSource();
             _history.MarkSaved();
             SetClean();
             RaiseUndoState();
+        }
+
+        /// <summary>Writes the curated Species fields (base stats, types, abilities) back to
+        /// data/Species.c when hg-engine is linked+active. Best-effort: a field the current source
+        /// doesn't declare (e.g. an EV yield that's 0 and so absent from the initializer) is logged and
+        /// left alone rather than guessed at — every other field in the same call still gets written.</summary>
+        private void WriteHgEngineSource()
+        {
+            if (!HgEngineProject.IsActive) return;
+
+            string TypeSymbol(PokemonType t) =>
+                HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix((int)t, "TYPE_", out string n) == true ? n : ((int)t).ToString();
+            string AbilitySymbol(int a) =>
+                HgEngineSymbolTable.Load("include/constants/ability.h")?.TryGetNameWithPrefix(a, "ABILITY_", out string n) == true ? n : a.ToString();
+
+            var fields = new List<HgEngineFieldWrite>
+            {
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("hp") }, _current.baseHP.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("attack") }, _current.baseAtk.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("defense") }, _current.baseDef.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("spAttack") }, _current.baseSpAtk.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("spDefense") }, _current.baseSpDef.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("baseStats"), FieldPathSegment.Field("speed") }, _current.baseSpeed.ToString()),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("types"), FieldPathSegment.At(0) }, TypeSymbol(_current.type1)),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("types"), FieldPathSegment.At(1) }, TypeSymbol(_current.type2)),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("abilities"), FieldPathSegment.At(0) }, AbilitySymbol(_current.firstAbility)),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("abilities"), FieldPathSegment.At(1) }, AbilitySymbol(_current.secondAbility)),
+                new(new[] { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field("catchRate") }, _current.catchRate.ToString()),
+            };
+
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Species, _currentId, fields, out var unresolved, out string error))
+            {
+                AppLogger.Error($"hg-engine write failed for species {_currentId}: {error}");
+                return;
+            }
+            if (unresolved.Count > 0)
+                AppLogger.Info($"hg-engine write for species {_currentId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
         }
 
         public async Task ExportCommand(Window owner)
@@ -433,6 +717,7 @@ namespace DSPRE.Avalonia.ViewModels
             _current   = new PokemonPersonalData(id);
 
             PopulateFromCurrent();
+            LoadHgEngineExtras();
             _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             // Load sprite icon

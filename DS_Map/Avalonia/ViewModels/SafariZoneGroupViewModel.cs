@@ -28,6 +28,13 @@ namespace DSPRE.Avalonia.ViewModels
 
         private bool _suppress;
         private SafariZoneEncounterGroup _group;
+        internal SafariZoneEncounterGroup CurrentGroup => _group;
+
+        // hg-engine's bonus/"object" slot count is a fixed per-rod-type #define, not user-addable like
+        // vanilla's. The parent VM sets this false when hg-engine is active so the in-memory list can't
+        // drift out of sync with the real fixed-size array it gets written into.
+        private bool _canEditObjectSlotCount = true;
+        public bool CanEditObjectSlotCount { get => _canEditObjectSlotCount; set => Set(ref _canEditObjectSlotCount, value); }
 
         public ObservableCollection<string> SpeciesNames { get; }
         public ObservableCollection<string> ObjectTypeNames { get; } = new ObservableCollection<string>();
@@ -199,7 +206,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Add / remove object slot (keeps all six lists + requirements in sync) ─────
         public void AddObjectSlot()
         {
-            if (_group == null) return;
+            if (_group == null || !_canEditObjectSlotCount) return;
             _group.MorningEncountersObject.Add(new SafariZoneEncounter());
             _group.DayEncountersObject.Add(new SafariZoneEncounter());
             _group.NightEncountersObject.Add(new SafariZoneEncounter());
@@ -213,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public void RemoveObjectSlot()
         {
-            if (_group == null || _group.ObjectRequirements.Count == 0) return;
+            if (_group == null || !_canEditObjectSlotCount || _group.ObjectRequirements.Count == 0) return;
             int last = _group.ObjectRequirements.Count - 1;
             _group.MorningEncountersObject.RemoveAt(last);
             _group.DayEncountersObject.RemoveAt(last);
