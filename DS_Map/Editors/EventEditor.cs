@@ -417,6 +417,30 @@ namespace DSPRE.Editors
             g.DrawRectangle(eventPen, (ow.xMapPosition) * (tileSize + 1) - 8, (ow.yMapPosition - 1) * (tileSize + 1), 34, 34);
             g.DrawRectangle(eventPen, (ow.xMapPosition) * (tileSize + 1) - 9, (ow.yMapPosition - 1) * (tileSize + 1) - 1, 36, 36);
         }
+
+        private Bitmap CaptureEventMapBackground()
+        {
+            try
+            {
+                eventOpenGlControl.MakeCurrent();
+                Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
+                return Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+            }
+            finally
+            {
+                HideEventRenderSurface();
+            }
+        }
+
+        private void HideEventRenderSurface()
+        {
+            // Tao's native OpenGL child window can escape WinForms z-order under Wine.
+            // The Event Editor only needs it as a framebuffer; the PictureBox is the interactive surface.
+            eventOpenGlControl.Visible = false;
+            eventOpenGlControl.SendToBack();
+            eventPictureBox.BringToFront();
+        }
+
         private void DisplayEventMap(bool readGraphicsFromHeader = true)
         {
             /* Determine map file to open and open it in BinaryReader, unless map is VOID */
@@ -487,8 +511,7 @@ namespace DSPRE.Editors
                     Helpers.MW_LoadModelTextures(eventMapFile.buildings[i].NSBMDFile, RomInfo.gameDirs[DirNames.buildingTextures].unpackedDir, areaData.buildingsTileset); // Load building textures                
                 }
 
-                    Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
-                eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+                eventPictureBox.BackgroundImage = CaptureEventMapBackground();
 
             }
             eventPictureBox.Invalidate();
@@ -3112,6 +3135,7 @@ namespace DSPRE.Editors
         private void eventOpenGlControl_Load(object sender, EventArgs e)
         {
             eventOpenGlControl.InitializeContexts();
+            HideEventRenderSurface();
         }
 
         private void screenshotButton_Click(object sender, EventArgs e)
@@ -3127,8 +3151,7 @@ namespace DSPRE.Editors
             }
 
 
-            Helpers.RenderMap(ref eventMapRenderer, ref eventBuildingsRenderer, ref eventMapFile, 0f, 115.0f, 90f, 4f, eventOpenGlControl.Width, eventOpenGlControl.Height, true, true);
-            eventPictureBox.BackgroundImage = Helpers.GrabMapScreenshot(eventOpenGlControl.Width, eventOpenGlControl.Height);
+            eventPictureBox.BackgroundImage = CaptureEventMapBackground();
 
             int newW = 512, newH = 512;
             Bitmap newImage = new Bitmap(newW, newH);
