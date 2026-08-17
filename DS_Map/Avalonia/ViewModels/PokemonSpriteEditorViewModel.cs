@@ -2,7 +2,9 @@ using Avalonia.Controls;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.Editors.Utils;
+using NarcAPI;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -64,6 +66,22 @@ namespace DSPRE.Avalonia.ViewModels
 
         private string _statusText = "";
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
+
+        // --- Mono-gender / genderless sprite gap ---------------------------------------
+        // Gen 4 stores 6 files per species: 4 battle sprites (slots 0-3) + 2 palettes. A species that
+        // can currently only be one gender (or is genderless) has its "other" gender's back+front slots
+        // stored as small placeholder .bin stubs instead of real 6448-byte RGCN sprites, since the game
+        // never needs them. If the user later widens that species' gender ratio (Personal Data editor),
+        // those slots stay empty and the game shows garbage/crashes. This offers a one-click fix: clone
+        // the existing gender's sprites into the missing slots (byte-identical duplicates, editable
+        // afterward like any other sprite) — the same fix the community has long done by hand in Tinke.
+        private bool _canAddOppositeGenderSprites;
+        public bool CanAddOppositeGenderSprites { get => _canAddOppositeGenderSprites; private set => Set(ref _canAddOppositeGenderSprites, value); }
+
+        private string _addOppositeGenderLabel = "";
+        public string AddOppositeGenderLabel { get => _addOppositeGenderLabel; private set => Set(ref _addOppositeGenderLabel, value); }
+
+        private bool _missingGenderIsFemale;
 
         // --- Internal state ----------------------------------------------------------
         private int _currentId = -1;
@@ -484,16 +502,19 @@ namespace DSPRE.Avalonia.ViewModels
 
                 // Load 4 sprites
                 var rawBmps = new byte[4][];
+                var hasRealSprite = new bool[4];
                 for (int i = 0; i < 4; i++)
                 {
                     int idx = baseOffset + i;
-                    if (idx < narc.fe.Length && narc.fe[idx].Size == 6448)
+                    hasRealSprite[i] = idx < narc.fe.Length && narc.fe[idx].Size == 6448;
+                    if (hasRealSprite[i])
                     {
                         narc.OpenEntry(idx);
                         rawBmps[i] = MakeImage(narc.fs);
                         narc.Close();
                     }
                 }
+                UpdateOppositeGenderGap(hasRealSprite);
 
                 // Load palettes
                 uint[] normalPal = null, shinyPal = null;
@@ -735,7 +756,94 @@ namespace DSPRE.Avalonia.ViewModels
             _rawSprites = new byte[4][];
             for (int i = 0; i < _replacementSprites.Length; i++) _replacementSprites[i] = null;
             _normalPal = null; _shinyPal = null;
+            CanAddOppositeGenderSprites = false;
+            AddOppositeGenderLabel = "";
         }
+
+        // Slots: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront. A species can add the missing
+        // gender's sprites only when that gender's back+front are BOTH placeholders and the other
+        // gender's back+front are BOTH real — anything else (already has all 4, or a partial/corrupt
+        // set) is left alone rather than guessed at.
+        private void UpdateOppositeGenderGap(bool[] hasRealSprite)
+        {
+            bool femaleReal = hasRealSprite[0] && hasRealSprite[2];
+            bool femaleMissing = !hasRealSprite[0] && !hasRealSprite[2];
+            bool maleReal = hasRealSprite[1] && hasRealSprite[3];
+            bool maleMissing = !hasRealSprite[1] && !hasRealSprite[3];
+
+            if (maleReal && femaleMissing)
+            {
+                _missingGenderIsFemale = true;
+                CanAddOppositeGenderSprites = true;
+                AddOppositeGenderLabel = "Add Female Sprites (copy from Male)";
+            }
+            else if (femaleReal && maleMissing)
+            {
+                _missingGenderIsFemale = false;
+                CanAddOppositeGenderSprites = true;
+                AddOppositeGenderLabel = "Add Male Sprites (copy from Female)";
+            }
+            else
+            {
+                CanAddOppositeGenderSprites = false;
+                AddOppositeGenderLabel = "";
+            }
+        }
+
+        /// <summary>
+        /// Clones the existing gender's back+front sprites into the currently-missing gender's slots,
+        /// so the species has graphics for both genders (needed before its gender ratio can be widened
+        /// in the Personal Data editor). The clones are byte-identical to the source until the user
+        /// re-imports something different over them. Writes straight to the packed NARC (via an
+        /// unpack/copy/repack round trip, since the placeholder slot is a different size than a real
+        /// sprite entry) so the fix is immediately visible without requiring a full ROM save.
+        /// </summary>
+        public async Task AddOppositeGenderSprites(Window owner)
+        {
+            if (!CanAddOppositeGenderSprites || _currentId <= 0) return;
+
+            string missingGender = _missingGenderIsFemale ? "female" : "male";
+            string sourceGender = _missingGenderIsFemale ? "male" : "female";
+            bool confirmed = await DialogHelper.AskYesNo(
+                $"This Pokémon has no {missingGender} sprites. This will duplicate its {sourceGender} " +
+                "back and front sprites into the missing slots, so a gender ratio change won't leave it " +
+                "with blank graphics. The duplicates look identical to the existing sprites until you " +
+                "import something different over them.\n\nContinue?",
+                "Add Opposite Gender Sprites", owner);
+            if (!confirmed) return;
+
+            try
+            {
+                DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonBattleSprites });
+                string unpackedDir = RomInfo.gameDirs[DirNames.pokemonBattleSprites].unpackedDir;
+                string packedPath  = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
+
+                int baseOffset = _currentId * 6;
+                int srcBack  = baseOffset + (_missingGenderIsFemale ? 1 : 0);
+                int srcFront = baseOffset + (_missingGenderIsFemale ? 3 : 2);
+                int dstBack  = baseOffset + (_missingGenderIsFemale ? 0 : 1);
+                int dstFront = baseOffset + (_missingGenderIsFemale ? 2 : 3);
+
+                CopyEntryFile(unpackedDir, srcBack, dstBack);
+                CopyEntryFile(unpackedDir, srcFront, dstFront);
+
+                // Re-sync the packed NARC immediately (rather than waiting for the next full "Save ROM"),
+                // since every other read in this editor — LoadMon included — goes through the packed file.
+                Narc.FromFolder(unpackedDir).Save(packedPath);
+
+                StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites). " +
+                    "Use Import to give them their own look.";
+                LoadMon(_currentId);
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Failed to add {missingGender} sprites: {ex.Message}";
+            }
+        }
+
+        private static void CopyEntryFile(string unpackedDir, int srcIdx, int dstIdx)
+            => File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
+                          Path.Combine(unpackedDir, dstIdx.ToString("D4")), overwrite: true);
 
         // --- Ported from PokemonSpriteEditor: MakeImage / ReadPalette ----------------
 

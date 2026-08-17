@@ -47,6 +47,10 @@
                   ItemsSource="{Binding AlternateFormNames}"
                   SelectedIndex="{Binding SelectedFormIndex}"
                   MinWidth="220"/>
+        <Button Content="{Binding AddOppositeGenderLabel}"
+                Click="AddOppositeGenderSprites_Click"
+                IsVisible="{Binding CanAddOppositeGenderSprites}"
+                ToolTip.Tip="This species is missing sprites for one gender (needed if you widen its gender ratio in the Personal Data editor). Duplicates the existing gender's sprites into the empty slots."/>
       </StackPanel>
     </Border>
 

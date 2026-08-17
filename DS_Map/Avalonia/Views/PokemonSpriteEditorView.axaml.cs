@@ -35,5 +35,9 @@ namespace DSPRE.Avalonia.Views
         // --- Alternate forms toggle --------------------------------------------------
         private void ToggleAlternateForms_Click(object sender, RoutedEventArgs e)
             => VM.ToggleAlternateFormsMode();
+
+        // --- Mono-gender / genderless sprite gap -------------------------------------
+        private async void AddOppositeGenderSprites_Click(object sender, RoutedEventArgs e)
+            => await VM.AddOppositeGenderSprites(OwnerWindow);
     }
 }
