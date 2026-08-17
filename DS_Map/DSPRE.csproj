@@ -306,6 +306,9 @@
     <Compile Include="Editors\PokemonSpriteEditor.Designer.cs">
       <DependentUpon>PokemonSpriteEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\BattleDisplayEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\SafariZoneEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1011,6 +1014,7 @@
     <None Include="Resources\Graphics\Program Icons\enumToListIcon.png" />
     <Content Include="Resources\Graphics\Program Icons\IconItem.png" />
     <Content Include="Resources\Graphics\Program Icons\IconPokeball.png" />
+    <Content Include="Resources\Graphics\Battle\battle_background.png" />
     <Content Include="Resources\Graphics\Program Icons\IconPokeballNot.png" />
     <None Include="Resources\Graphics\Program Icons\listbasedRenameIcon.png" />
     <Content Include="Resources\Graphics\Program Icons\loadColorTable.png" />

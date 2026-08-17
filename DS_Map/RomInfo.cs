@@ -202,6 +202,14 @@ namespace DSPRE
             trainerTextTable,
 
             eggMoves,
+
+            // Battle Display: sprite Y, shadow X/size, per-gender heights.
+            pokemonSpriteOffsets,   // combined per-mon record: HGSS /a/1/8/0 (89 B/mon), Plat pl_poke_data.narc; last 3 bytes are sprite Y/shadow X/shadow size
+            pokeYofs,               // DP /poketool/pokegra/poke_yofs.narc, signed front-sprite Y, 1 B/mon
+            pokeShadowOfx,          // DP /poketool/pokegra/poke_shadow_ofx.narc, signed shadow X, 1 B/mon
+            pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc, shadow size, 1 B/mon
+            pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front)
+            pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc, 2 files/form (back, front; both genders)
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -1979,6 +1987,12 @@ namespace DSPRE
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\otherpoke.narc",
 
+                        [DirNames.pokeYofs] = $@"{dataFolderName}\poketool\pokegra\poke_yofs.narc",
+                        [DirNames.pokeShadowOfx] = $@"{dataFolderName}\poketool\pokegra\poke_shadow_ofx.narc",
+                        [DirNames.pokeShadow] = $@"{dataFolderName}\poketool\pokegra\poke_shadow.narc",
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
+                        [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
+
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
@@ -2015,6 +2029,10 @@ namespace DSPRE
 
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pl_pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pl_otherpoke.narc",
+
+                        [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\poketool\poke_edit\pl_poke_data.narc",
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
+                        [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2071,6 +2089,8 @@ namespace DSPRE
                         [DirNames.personalPokeData] = $@"{dataFolderName}\a\0\0\2",
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\a\0\0\4",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
+
+                        [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

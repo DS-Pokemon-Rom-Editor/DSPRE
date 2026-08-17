@@ -3,7 +3,6 @@ using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
@@ -103,11 +102,7 @@ namespace DSPRE {
             Helpers.EnableHandlers();            
         }
 
-        public string GetDSPREVersion() 
-        {
-            return "" + Assembly.GetExecutingAssembly().GetName().Version.Major + "." + Assembly.GetExecutingAssembly().GetName().Version.Minor +
-                "." + Assembly.GetExecutingAssembly().GetName().Version.Build;
-        }
+        public string GetDSPREVersion() => Helpers.GetDSPREVersion();
 
         public void SetupControls() 
         {

@@ -42,13 +42,13 @@ jobs:
         shell: bash
         run: |
           dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
-          
+          major=$(echo "$dotnet_version" | cut -d. -f1)
+          minor=$(echo "$dotnet_version" | cut -d. -f2)
+
           if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
-              major=$(echo "$dotnet_version" | sed -E 's/^([0-9]+)\..*$/\1/')
-              minor=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.([0-9]+)\..*$/\1/')
               patch=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.([0-9]+)\..*$/\1/')
               revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
-              
+
               if [ "$revision" -eq "0" ]; then
                   # Main release: 1.14.3.0 -> 1.14.3
                   semver_version="${major}.${minor}.${patch}"
@@ -60,36 +60,40 @@ jobs:
           else
               semver_version="$dotnet_version"
           fi
-          
+
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
-          echo "dotnet_version=v$dotnet_version" >> $GITHUB_OUTPUT
+          echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
+          # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
+          echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
+          echo "release_tag=v$dotnet_version" >> $GITHUB_OUTPUT
       - name: Debug Output
         run: |
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
           echo "SemVer version: ${{ steps.get_version.outputs.semver_version }}"
           echo "DotNet version: ${{ steps.get_version.outputs.dotnet_version }}"
+          echo "Release tag: ${{ steps.get_version.outputs.release_tag }}"
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Clone Database Repository
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
 
       - name: Restore NuGet packages
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Build DSPRE
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Copy output manually
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           mkdir -p publish
           cp -r DS_Map/bin/${{env.BUILD_CONFIGURATION}}/* publish/
@@ -99,16 +103,30 @@ jobs:
           ls publish/
 
       - name: Create Velopack Release
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
             dotnet tool install -g vpk
             vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
-            
+
             # First, check if we need to delete existing Velopack release for same base version
             echo "Checking for existing Velopack releases with same base version..."
-            
+
             # Use the correct syntax for vpk pack
             vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
-            
+
             # Upload to GitHub releases
-            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --token ${{ secrets.GH_TOKEN }}
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --token ${{ secrets.GH_TOKEN }}
+
+      - name: Attach changelog to release notes
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # vpk upload has no --releaseNotes flag, so attach it separately.
+          notes_file="Changelogs/CHANGELOG_${{ steps.get_version.outputs.major_minor }}_User.md"
+          if [ -f "$notes_file" ]; then
+            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file "$notes_file"
+          else
+            echo "No changelog at $notes_file for this version yet, release published without notes."
+          fi

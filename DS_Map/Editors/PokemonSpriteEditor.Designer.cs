@@ -29,6 +29,7 @@ partial class PokemonSpriteEditor {
             this.MakeShiny = new System.Windows.Forms.Button();
             this.OpenOther = new System.Windows.Forms.Button();
             this.SaveChanges = new System.Windows.Forms.Button();
+            this.AddOppositeGenderButton = new System.Windows.Forms.Button();
             this.lblMale = new System.Windows.Forms.Label();
             this.lblFemale = new System.Windows.Forms.Label();
             this.BackN = new System.Windows.Forms.Label();
@@ -111,7 +112,17 @@ partial class PokemonSpriteEditor {
             this.SaveChanges.TabIndex = 13;
             this.SaveChanges.Text = "Save Changes";
             this.SaveChanges.Click += new System.EventHandler(this.SaveChanges_Click);
-            // 
+            //
+            // AddOppositeGenderButton
+            //
+            this.AddOppositeGenderButton.Location = new System.Drawing.Point(8, 34);
+            this.AddOppositeGenderButton.Name = "AddOppositeGenderButton";
+            this.AddOppositeGenderButton.Size = new System.Drawing.Size(220, 25);
+            this.AddOppositeGenderButton.TabIndex = 14;
+            this.AddOppositeGenderButton.Text = "Add Opposite Gender Sprites";
+            this.AddOppositeGenderButton.Visible = false;
+            this.AddOppositeGenderButton.Click += new System.EventHandler(this.AddOppositeGenderButton_Click);
+            //
             // lblMale
             // 
             this.lblMale.Location = new System.Drawing.Point(564, 36);
@@ -330,6 +341,7 @@ partial class PokemonSpriteEditor {
             this.Controls.Add(this.MakeShiny);
             this.Controls.Add(this.OpenOther);
             this.Controls.Add(this.SaveChanges);
+            this.Controls.Add(this.AddOppositeGenderButton);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.Name = "PokemonSpriteEditor";
@@ -355,6 +367,7 @@ partial class PokemonSpriteEditor {
         private System.Windows.Forms.Button MakeShiny;
         private System.Windows.Forms.Button OpenOther;
         private System.Windows.Forms.Button SaveChanges;
+        private System.Windows.Forms.Button AddOppositeGenderButton;
         private System.Windows.Forms.Label lblMale;
         private System.Windows.Forms.Label lblFemale;
         private System.Windows.Forms.Label BackN;
