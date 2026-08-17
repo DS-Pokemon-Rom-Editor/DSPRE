@@ -17,6 +17,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Windows.Forms;
 using Tao.OpenGl;
 using Velopack;
@@ -222,9 +223,7 @@ namespace DSPRE
             public int Revision { get; set; }
         }
 
-        /// <summary>
-        /// Fetch changelog from GitHub for a specific tag
-        /// </summary>
+        /// <summary>Fetch changelog from GitHub for a specific tag.</summary>
         private static string FetchChangelogForTag(string tag)
         {
             try
@@ -244,18 +243,20 @@ namespace DSPRE
                     if (response.IsSuccessStatusCode)
                     {
                         string json = response.Content.ReadAsStringAsync().Result;
-
-                        int bodyStart = json.IndexOf("\"body\":\"") + 8;
-                        if (bodyStart > 8)
+                        using (JsonDocument doc = JsonDocument.Parse(json))
                         {
-                            int bodyEnd = json.IndexOf("\",\"", bodyStart);
-                            if (bodyEnd > bodyStart)
+                            JsonElement bodyElement;
+                            if (doc.RootElement.TryGetProperty("body", out bodyElement)
+                                && bodyElement.ValueKind == JsonValueKind.String)
                             {
-                                string body = json.Substring(bodyStart, bodyEnd - bodyStart);
-                                // Unescape JSON
-                                return System.Text.RegularExpressions.Regex.Unescape(body);
+                                string body = bodyElement.GetString();
+                                return string.IsNullOrWhiteSpace(body) ? "Changelog not available." : body;
                             }
                         }
+                    }
+                    else
+                    {
+                        AppLogger.Warn($"Changelog fetch for tag '{tag}' returned {(int)response.StatusCode} {response.StatusCode}.");
                     }
                 }
             }
@@ -436,10 +437,16 @@ namespace DSPRE
             disableHandlers = false;
         }
 
+        /// <summary>
+        /// Human-readable DSPRE version, trimmed to the parts that matter: "2.1" for 2.1.0.0,
+        /// "2.1.3" if Build is set, "2.1.3.5" if Revision is too.
+        /// </summary>
         public static string GetDSPREVersion()
         {
-            return "" + Assembly.GetExecutingAssembly().GetName().Version.Major + "." + Assembly.GetExecutingAssembly().GetName().Version.Minor +
-                "." + Assembly.GetExecutingAssembly().GetName().Version.Build + "." + Assembly.GetExecutingAssembly().GetName().Version.Revision;
+            System.Version v = Assembly.GetExecutingAssembly().GetName().Version;
+            if (v.Revision > 0) return $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+            if (v.Build > 0) return $"{v.Major}.{v.Minor}.{v.Build}";
+            return $"{v.Major}.{v.Minor}";
         }
 
         public static void statusLabelMessage(string msg = "Ready")

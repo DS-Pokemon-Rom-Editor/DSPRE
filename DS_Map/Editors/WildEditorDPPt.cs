@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 using static DSPRE.RomInfo;
 
@@ -122,11 +121,7 @@ namespace DSPRE {
             Helpers.EnableHandlers();            
         }
 
-        public string GetDSPREVersion()
-        {
-            return "" + Assembly.GetExecutingAssembly().GetName().Version.Major + "." + Assembly.GetExecutingAssembly().GetName().Version.Minor +
-                "." + Assembly.GetExecutingAssembly().GetName().Version.Build;
-        }
+        public string GetDSPREVersion() => Helpers.GetDSPREVersion();
 
         // Listing them all like this is more work, but it is easier to read and maintain.
         private void AddPokemonNamesBinding(string[] names)

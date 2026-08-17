@@ -1,5 +1,7 @@
 ﻿using DSPRE.Editors.Utils;
+using NarcAPI;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -425,7 +427,8 @@ namespace DSPRE.Editors {
         private SpriteSet currentSprites;
         private int currentLoadedId;
         private bool isLoadingOtherForms = false;
-        
+        private bool missingGenderIsFemale;
+
         public bool dirty = false;
         #endregion
 
@@ -551,26 +554,104 @@ namespace DSPRE.Editors {
         
         private void LoadMainSprites(int selectedIndex) {
             int baseOffset = selectedIndex * 6;
-            
+            bool[] hasRealSprite = new bool[4];
+
             for (int i = 0; i < 4; i++) {
-                if (narcReader.fe[baseOffset + i].Size == 6448) {
+                hasRealSprite[i] = narcReader.fe[baseOffset + i].Size == 6448;
+                if (hasRealSprite[i]) {
                     narcReader.OpenEntry(baseOffset + i);
                     currentSprites.Sprites[i] = MakeImage(narcReader.fs);
                     narcReader.Close();
                 }
             }
-            
+
             if (narcReader.fe[baseOffset + 4].Size == 72) {
                 narcReader.OpenEntry(baseOffset + 4);
                 currentSprites.Normal = SetPal(narcReader.fs);
                 narcReader.Close();
             }
-            
+
             if (narcReader.fe[baseOffset + 5].Size == 72) {
                 narcReader.OpenEntry(baseOffset + 5);
                 currentSprites.Shiny = SetPal(narcReader.fs);
                 narcReader.Close();
             }
+
+            UpdateOppositeGenderGap(hasRealSprite);
+        }
+
+        // Slots: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront.
+        private void UpdateOppositeGenderGap(bool[] hasRealSprite) {
+            bool femaleReal = hasRealSprite[0] && hasRealSprite[2];
+            bool femaleMissing = !hasRealSprite[0] && !hasRealSprite[2];
+            bool maleReal = hasRealSprite[1] && hasRealSprite[3];
+            bool maleMissing = !hasRealSprite[1] && !hasRealSprite[3];
+
+            if (maleReal && femaleMissing) {
+                missingGenderIsFemale = true;
+                AddOppositeGenderButton.Text = "Add Female Sprites (copy from Male)";
+                AddOppositeGenderButton.Visible = true;
+            } else if (femaleReal && maleMissing) {
+                missingGenderIsFemale = false;
+                AddOppositeGenderButton.Text = "Add Male Sprites (copy from Female)";
+                AddOppositeGenderButton.Visible = true;
+            } else {
+                AddOppositeGenderButton.Visible = false;
+            }
+        }
+
+        private void AddOppositeGenderButton_Click(object sender, EventArgs e) {
+            if (!AddOppositeGenderButton.Visible || isLoadingOtherForms) {
+                return;
+            }
+
+            string missingGender = missingGenderIsFemale ? "female" : "male";
+            string sourceGender = missingGenderIsFemale ? "male" : "female";
+            DialogResult confirm = MessageBox.Show(
+                $"This Pokémon has no {missingGender} sprites. This will duplicate its {sourceGender} " +
+                "back and front sprites into the missing slots, so a gender ratio change won't leave it " +
+                "with blank graphics. The duplicates look identical to the existing sprites until you " +
+                "import something different over them.\n\nContinue?",
+                "Add Opposite Gender Sprites", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) {
+                return;
+            }
+
+            try {
+                narcReader.Close();
+
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonBattleSprites });
+                string unpackedDir = RomInfo.gameDirs[DirNames.pokemonBattleSprites].unpackedDir;
+                string packedPath = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
+
+                int baseOffset = currentLoadedId * 6;
+                int srcBack  = baseOffset + (missingGenderIsFemale ? 1 : 0);
+                int srcFront = baseOffset + (missingGenderIsFemale ? 3 : 2);
+                int dstBack  = baseOffset + (missingGenderIsFemale ? 0 : 1);
+                int dstFront = baseOffset + (missingGenderIsFemale ? 2 : 3);
+
+                CopyEntryFile(unpackedDir, srcBack, dstBack);
+                CopyEntryFile(unpackedDir, srcFront, dstFront);
+
+                // Re-sync the packed NARC immediately (rather than waiting for the next full ROM save),
+                // since every other read/write in this editor goes through the packed file directly.
+                Narc.FromFolder(unpackedDir).Save(packedPath);
+
+                narcReader = new NarcReader(packedPath);
+                ChangeLoadedFile(currentLoadedId);
+
+                MessageBox.Show($"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites).\n" +
+                    "Use Load Sprite Set to give them their own look.", "Add Opposite Gender Sprites");
+            } catch (Exception ex) {
+                MessageBox.Show($"Failed to add {missingGender} sprites: {ex.Message}", "Add Opposite Gender Sprites",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                narcReader = new NarcReader(RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir);
+            }
+        }
+
+        private static void CopyEntryFile(string unpackedDir, int srcIdx, int dstIdx) {
+            File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
+                      Path.Combine(unpackedDir, dstIdx.ToString("D4")), true);
         }
         
         private void LoadOtherFormSprites(int selectedIndex) {
@@ -1038,7 +1119,11 @@ namespace DSPRE.Editors {
             ShinyPalette.Visible = false;
             BasePalette.Enabled = false;
             ShinyPalette.Enabled = false;
-            
+
+            // Forms mode doesn't recompute this (LoadOtherFormSprites, not LoadMainSprites); hide it
+            // until we're back in main-sprites mode, where LoadMainSprites recalculates it.
+            AddOppositeGenderButton.Visible = false;
+
             LoadSprites();
             
             Helpers.EnableHandlers();
@@ -1190,7 +1275,7 @@ namespace DSPRE.Editors {
         #endregion
 
         #region Binary Operations
-        private Bitmap MakeImage(FileStream fs) {
+        private static Bitmap MakeImage(FileStream fs) {
             fs.Seek(48L, SeekOrigin.Current);
             BinaryReader binaryReader = new BinaryReader(fs);
             
@@ -1250,7 +1335,7 @@ namespace DSPRE.Editors {
             return resultBitmap;
         }
 
-        private ColorPalette SetPal(FileStream fs) {
+        private static ColorPalette SetPal(FileStream fs) {
             fs.Seek(40L, SeekOrigin.Current);
             
             ushort[] array = new ushort[16];
@@ -1270,6 +1355,62 @@ namespace DSPRE.Editors {
             }
             
             return palette;
+        }
+
+        // Battle Display support: static, id-keyed methods (not instance methods off currentSprites),
+        // since the Battle Display tab has its own species selector and needs its own sprite data.
+        // Slot order: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront.
+
+        /// <summary>Decodes a species' 4 battle-sprite slots + normal palette. Null entries mean that
+        /// slot has no data (e.g. the missing gender on a mono-gender species).</summary>
+        public static Bitmap[] LoadBattleSpritesFor(int id) {
+            var sprites = new Bitmap[4];
+            try {
+                var narc = new NarcReader(RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir);
+                int baseOffset = id * 6;
+
+                ColorPalette normalPal = null;
+                if (baseOffset + 4 < narc.fe.Length && narc.fe[baseOffset + 4].Size == 72) {
+                    narc.OpenEntry(baseOffset + 4);
+                    normalPal = SetPal(narc.fs);
+                    narc.Close();
+                }
+                if (normalPal == null) return sprites;
+
+                for (int i = 0; i < 4; i++) {
+                    if (baseOffset + i < narc.fe.Length && narc.fe[baseOffset + i].Size == 6448) {
+                        narc.OpenEntry(baseOffset + i);
+                        sprites[i] = MakeImage(narc.fs);
+                        narc.Close();
+                        sprites[i].Palette = normalPal;
+                    }
+                }
+            } catch { }
+            return sprites;
+        }
+
+        /// <summary>Number of 80px-wide frames in a decoded battle-sprite slot (1 if null/single-width).</summary>
+        public static int GetBattleFrameCount(Bitmap slot) => slot == null ? 1 : Math.Max(1, slot.Width / 80);
+
+        /// <summary>Crops the given frame (0-based, 80px wide) out of a decoded battle-sprite slot
+        /// (see <see cref="LoadBattleSpritesFor"/>), with palette index 0 made transparent. Returns null
+        /// if the slot has no data.</summary>
+        public static Bitmap CropBattleFrame(Bitmap slot, int frame) {
+            if (slot == null) return null;
+
+            int frameCount = Math.Max(1, slot.Width / 80);
+            if (frame < 0 || frame >= frameCount) frame = 0;
+            int x0 = frame * 80;
+
+            Color key = slot.Palette.Entries[0];
+            var outBmp = new Bitmap(80, slot.Height, PixelFormat.Format32bppArgb);
+            for (int y = 0; y < slot.Height; y++) {
+                for (int x = 0; x < 80; x++) {
+                    Color c = slot.GetPixel(x0 + x, y);
+                    outBmp.SetPixel(x, y, (c.R == key.R && c.G == key.G && c.B == key.B) ? Color.Transparent : c);
+                }
+            }
+            return outBmp;
         }
 
         private void LoadSprites() {

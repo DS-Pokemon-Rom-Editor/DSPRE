@@ -30,6 +30,7 @@
             this.learnsetPage = new System.Windows.Forms.TabPage();
             this.evoPage = new System.Windows.Forms.TabPage();
             this.spritePage = new System.Windows.Forms.TabPage();
+            this.battleDisplayPage = new System.Windows.Forms.TabPage();
             this.syncChangesCheckbox = new System.Windows.Forms.CheckBox();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
@@ -47,6 +48,7 @@
             this.tabControl.Controls.Add(this.learnsetPage);
             this.tabControl.Controls.Add(this.evoPage);
             this.tabControl.Controls.Add(this.spritePage);
+            this.tabControl.Controls.Add(this.battleDisplayPage);
             this.tabControl.Location = new System.Drawing.Point(0, 26);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
@@ -92,6 +94,16 @@
             this.spritePage.TabIndex = 3;
             this.spritePage.Text = "Sprite Editor";
             this.spritePage.UseVisualStyleBackColor = true;
+            //
+            // battleDisplayPage
+            //
+            this.battleDisplayPage.Location = new System.Drawing.Point(4, 22);
+            this.battleDisplayPage.Name = "battleDisplayPage";
+            this.battleDisplayPage.Padding = new System.Windows.Forms.Padding(3);
+            this.battleDisplayPage.Size = new System.Drawing.Size(1024, 817);
+            this.battleDisplayPage.TabIndex = 4;
+            this.battleDisplayPage.Text = "Battle Display";
+            this.battleDisplayPage.UseVisualStyleBackColor = true;
             // 
             // syncChangesCheckbox
             // 
@@ -143,6 +155,7 @@
         private System.Windows.Forms.CheckBox syncChangesCheckbox;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
         private System.Windows.Forms.TabPage spritePage;
+        private System.Windows.Forms.TabPage battleDisplayPage;
         private System.Windows.Forms.ToolTip toolTip1;
     }
 }

@@ -677,8 +677,150 @@ namespace DSPRE {
             });
         }
 
-        public static Image GetPokePic(int species, int w, int h) {
-            PaletteBase paletteBase;
+        public static Image GetPokePic(int species, int w, int h, int paletteIdOverride = -1) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled, out _);
+            try {
+                return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
+            } catch (FormatException) {
+                return Properties.Resources.IconPokeball;
+            }
+        }
+
+        // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF sentinel, so ImageBase's auto-detected
+        // Width/Height is garbage for icons. Read/write raw 8x8 tile blocks directly instead, at the
+        // real Gen4 icon width (32px = 4 tiles); height comes from the tile count.
+        private const int MonIconTileSize = 8;
+        private const int MonIconTilesWide = 4;
+        private const int MonIconWidth = MonIconTilesWide * MonIconTileSize;   // 32
+
+        /// <summary>The icon's raw graphic at its real dimensions, rendered with the currently-assigned
+        /// (or overridden) palette bank.</summary>
+        public static Bitmap GetMonIconGraphicBitmap(int species, int paletteIdOverride = -1) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _, out _);
+            return DecodeMonIconTiles(imageBase, paletteBase.Palette[0]);
+        }
+
+        private static Bitmap DecodeMonIconTiles(ImageBase imageBase, Color[] palette) {
+            byte[] tiles = imageBase.Tiles;
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;   // 32 bytes/tile @ 4bpp
+            int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            int h = tilesTall * MonIconTileSize;
+
+            var bmp = new Bitmap(MonIconWidth, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            int pos = 0;   // increments once per pixel, tile-sequential order (matches how bytes are laid out)
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            int byteIndex = pos / 2;
+                            int idx = 0;
+                            if (byteIndex < tiles.Length)
+                            {
+                                byte packed = tiles[byteIndex];
+                                idx = (pos % 2 == 0) ? (packed & 0x0F) : ((packed & 0xF0) >> 4);
+                            }
+                            pos++;
+                            Color c = idx < palette.Length ? palette[idx] : Color.Black;
+                            bmp.SetPixel(tx * MonIconTileSize + x, ty * MonIconTileSize + y,
+                                idx == 0 ? Color.Transparent : Color.FromArgb(255, c.R, c.G, c.B));
+                        }
+            return bmp;
+        }
+
+        private static string ValidateMonIconGraphicCore(ImageBase imageBase, Bitmap newImage) {
+            if (newImage == null || newImage.Width == 0 || newImage.Height == 0) return "The image is empty.";
+            if (imageBase.FormatColor != Ekona.Images.ColorFormat.colors16)
+                return "This icon isn't a 16-color image; graphic editing isn't supported for this format.";
+
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
+            int totalTiles = tileBytes > 0 ? imageBase.Tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            int expectedH = tilesTall * MonIconTileSize;
+            if (newImage.Width != MonIconWidth || newImage.Height != expectedH)
+                return $"Size mismatch: this icon is {MonIconWidth}×{expectedH}, the image is {newImage.Width}×{newImage.Height}.";
+            return null;
+        }
+
+        /// <summary>Checks whether <paramref name="newImage"/> could replace a species' icon graphic
+        /// (right pixel dimensions, 16-color format) without writing anything. Returns null if OK, else
+        /// a user-facing error string.</summary>
+        public static string ValidateMonIconGraphic(int species, Bitmap newImage) {
+            LoadMonIconParts(species, -1, out ImageBase imageBase, out _, out _, out _, out _);
+            return ValidateMonIconGraphicCore(imageBase, newImage);
+        }
+
+        /// <summary>
+        /// Replaces a species' icon graphic (NCGR tile data) with <paramref name="newImage"/>, which must
+        /// be the exact pixel dimensions the icon already is (see <see cref="ValidateMonIconGraphic"/>).
+        /// Quantizes onto the icon's currently-assigned (or overridden) 16-color palette bank via
+        /// nearest-RGB match; pixels with alpha &lt; 128 map to palette index 0 (the conventional
+        /// transparent slot). Writes the NCGR back to disk immediately. Returns null on success, or a
+        /// user-facing error string.
+        /// </summary>
+        public static string SetMonIconGraphic(int species, int paletteIdOverride, Bitmap newImage) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _, out _);
+
+            string error = ValidateMonIconGraphicCore(imageBase, newImage);
+            if (error != null) return error;
+
+            // LoadMonIconParts already swapped the selected bank into slot 0 for rendering.
+            Color[] palette = paletteBase.Palette[0];
+            byte[] newTiles = EncodeMonIconTiles(imageBase, palette, newImage);
+
+            imageBase.Set_Tiles(newTiles);   // tile bytes only, doesn't touch the bogus auto-detected Width/Height
+
+            string path = Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, imageBase.FileName);
+            imageBase.Write(path, paletteBase);
+            return null;
+        }
+
+        private static byte[] EncodeMonIconTiles(ImageBase imageBase, Color[] palette, Bitmap newImage) {
+            byte[] newTiles = new byte[imageBase.Tiles.Length];
+            int tilesTall = newImage.Height / MonIconTileSize;
+
+            int pos = 0;   // exact inverse traversal of DecodeMonIconTiles
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            Color px = newImage.GetPixel(tx * MonIconTileSize + x, ty * MonIconTileSize + y);
+                            byte idx = px.A < 128 ? (byte)0 : NearestPaletteIndex(palette, px.R, px.G, px.B);
+
+                            int byteIndex = pos / 2;
+                            if (byteIndex < newTiles.Length)
+                            {
+                                if (pos % 2 == 0) newTiles[byteIndex] = (byte)((newTiles[byteIndex] & 0xF0) | (idx & 0x0F));
+                                else newTiles[byteIndex] = (byte)((newTiles[byteIndex] & 0x0F) | ((idx & 0x0F) << 4));
+                            }
+                            pos++;
+                        }
+            return newTiles;
+        }
+
+        private static byte NearestPaletteIndex(Color[] palette, byte r, byte g, byte b) {
+            int best = 0, bestDist = int.MaxValue;
+            for (int i = 0; i < palette.Length; i++) {
+                int dr = palette[i].R - r, dg = palette[i].G - g, db = palette[i].B - b;
+                int dist = dr * dr + dg * dg + db * db;
+                if (dist < bestDist) { bestDist = dist; best = i; }
+            }
+            return (byte)best;
+        }
+
+        /// <summary>The palette bank (0-2) this species' icon is actually assigned to, read from the
+        /// ARM9/overlay icon-palette table.</summary>
+        public static int GetMonIconPaletteId(int species) {
+            LoadMonIconParts(species, -1, out _, out _, out _, out _, out int paletteId);
+            return paletteId;
+        }
+
+        // Loads the mon-icon NCLR/NCGR/NCER + enabled-OAM list. Shared by GetPokePic and the icon-graphic
+        // editing methods above.
+        private static void LoadMonIconParts(int species, int paletteIdOverride,
+            out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled, out int resolvedPaletteId) {
             bool fiveDigits = false; // some extreme future proofing
             string filename = "0000";
 
@@ -690,29 +832,33 @@ namespace DSPRE {
                 fiveDigits = true;
             }
 
-            // read arm9 table to grab pal ID
+            // Palette id: caller override (preview/edit) or the value stored in the ARM9 table.
             int paletteId = 0;
-            string iconTablePath;
-
-            int iconPalTableOffsetFromFileStart;
-            if (RomInfo.isHGE) {
-                // if overlay 129 exists, read it from there
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
-                iconTablePath = OverlayUtils.GetPath(129);
-            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
-                // if there is a synthetic overlay, read it from there
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
-                iconTablePath = Filesystem.expArmPath;
+            if (paletteIdOverride >= 0) {
+                paletteId = paletteIdOverride;
             } else {
-                // default handling
-                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
-                iconTablePath = RomInfo.arm9Path;
+                string iconTablePath;
+                int iconPalTableOffsetFromFileStart;
+                if (RomInfo.isHGE) {
+                    // if overlay 129 exists, read it from there
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
+                    iconTablePath = OverlayUtils.GetPath(129);
+                } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+                    // if there is a synthetic overlay, read it from there
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
+                    iconTablePath = Filesystem.expArmPath;
+                } else {
+                    // default handling
+                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
+                    iconTablePath = RomInfo.arm9Path;
+                }
+
+                using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
+                    paletteId = idReader.ReadByte();
+                }
             }
 
-            using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
-                paletteId = idReader.ReadByte();
-            }
-
+            resolvedPaletteId = paletteId;
             if (paletteId != 0) {
                 paletteBase.Palette[0] = paletteBase.Palette[paletteId]; // update pal 0 to be the new pal
             }
@@ -720,25 +866,18 @@ namespace DSPRE {
             // grab tiles
             int spriteFileID = species + 7;
             string spriteFilename = spriteFileID.ToString("D" + (fiveDigits ? "5" : "4"));
-            ImageBase imageBase = new NCGR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + spriteFilename, spriteFileID, spriteFilename);
+            imageBase = new NCGR(gameDirs[DirNames.monIcons].unpackedDir + "\\" + spriteFilename, spriteFileID, spriteFilename);
 
             // grab sprite
             int ncerFileId = 2;
             string ncerFileName = ncerFileId.ToString("D" + (fiveDigits ? "5" : "4"));
-            SpriteBase spriteBase = new NCER(gameDirs[DirNames.monIcons].unpackedDir + "\\" + ncerFileName, 2, ncerFileName);
+            spriteBase = new NCER(gameDirs[DirNames.monIcons].unpackedDir + "\\" + ncerFileName, 2, ncerFileName);
 
             // copy this from the trainer
             int bank0OAMcount = spriteBase.Banks[0].oams.Length;
-            int[] OAMenabled = new int[bank0OAMcount];
+            OAMenabled = new int[bank0OAMcount];
             for (int i = 0; i < OAMenabled.Length; i++) {
                 OAMenabled[i] = i;
-            }
-
-            // finally compose image
-            try {
-                return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
-            } catch (FormatException) {
-                return Properties.Resources.IconPokeball;
             }
         }
     }

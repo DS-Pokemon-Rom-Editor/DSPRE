@@ -9,13 +9,15 @@ namespace DSPRE
         LearnsetEditor learnsetEditor;
         EvolutionsEditor evoEditor;
         PokemonSpriteEditor spriteEditor;
+        BattleDisplayEditor battleDisplayEditor;
 
         #region IEditorWithUnsavedChanges Implementation
         public bool HasUnsavedChanges =>
             (personalEditor?.HasUnsavedChanges ?? false) ||
             (learnsetEditor?.HasUnsavedChanges ?? false) ||
             (evoEditor?.HasUnsavedChanges ?? false) ||
-            (spriteEditor?.HasUnsavedChanges ?? false);
+            (spriteEditor?.HasUnsavedChanges ?? false) ||
+            (battleDisplayEditor?.HasUnsavedChanges ?? false);
 
         public string UnsavedChangesDescription {
             get {
@@ -28,6 +30,8 @@ namespace DSPRE
                     descriptions.Add(evoEditor.UnsavedChangesDescription);
                 if (spriteEditor?.HasUnsavedChanges ?? false)
                     descriptions.Add(spriteEditor.UnsavedChangesDescription);
+                if (battleDisplayEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(battleDisplayEditor.UnsavedChangesDescription);
                 return descriptions.Count > 0 ? string.Join(", ", descriptions) : "Pokemon Editor";
             }
         }
@@ -41,6 +45,8 @@ namespace DSPRE
                 evoEditor.SaveChanges();
             if (spriteEditor?.HasUnsavedChanges ?? false)
                 ((IEditorWithUnsavedChanges)spriteEditor).SaveChanges();
+            if (battleDisplayEditor?.HasUnsavedChanges ?? false)
+                ((IEditorWithUnsavedChanges)battleDisplayEditor).SaveChanges();
         }
 
         public void DiscardChanges() {
@@ -48,6 +54,7 @@ namespace DSPRE
             learnsetEditor?.DiscardChanges();
             evoEditor?.DiscardChanges();
             spriteEditor?.DiscardChanges();
+            battleDisplayEditor?.DiscardChanges();
         }
         #endregion
 
@@ -78,6 +85,11 @@ namespace DSPRE
             spriteEditor.TopLevel = false;
             spriteEditor.Show();
             spritePage.Controls.Add(spriteEditor);
+
+            battleDisplayEditor = new BattleDisplayEditor(battleDisplayPage, this);
+            battleDisplayEditor.TopLevel = false;
+            battleDisplayEditor.Show();
+            battleDisplayPage.Controls.Add(battleDisplayEditor);
 
             toolTip1.SetToolTip(syncChangesCheckbox, "When this CheckBox is marked, mon selection will be synchronized accross all tabs below.");
         }
@@ -123,6 +135,15 @@ namespace DSPRE
                     spriteEditor.ChangeLoadedFile(sender.SelectedIndex);
                 }
             }
+            if (battleDisplayEditor.CheckDiscardChanges())
+            {
+                // SelectedIndex may be out of bounds
+                if (sender.SelectedIndex < battleDisplayEditor.IndexBox.Items.Count)
+                {
+                    battleDisplayEditor.IndexBox.SelectedIndex = sender.SelectedIndex;
+                    battleDisplayEditor.ChangeLoadedFile(sender.SelectedIndex);
+                }
+            }
             Helpers.RestoreDisableHandler();
         }
 
@@ -166,12 +187,21 @@ namespace DSPRE
                     spriteEditor.ChangeLoadedFile((int)sender.Value);
                 }
             }
+            if (battleDisplayEditor.CheckDiscardChanges())
+            {
+                // SelectedIndex may be out of bounds
+                if ((int)sender.Value < battleDisplayEditor.IndexBox.Items.Count)
+                {
+                    battleDisplayEditor.IndexBox.SelectedIndex = (int)sender.Value;
+                    battleDisplayEditor.ChangeLoadedFile((int)sender.Value);
+                }
+            }
             Helpers.RestoreDisableHandler();
         }
 
         public void UpdateTabPageNames()
         {
-            if (personalEditor == null || learnsetEditor == null || evoEditor == null || spriteEditor == null)
+            if (personalEditor == null || learnsetEditor == null || evoEditor == null || spriteEditor == null || battleDisplayEditor == null)
             {
                 return;
             }
@@ -180,6 +210,7 @@ namespace DSPRE
             learnsetPage.Text = learnsetEditor.Text;
             evoPage.Text = evoEditor.Text;
             spritePage.Text = spriteEditor.Text;
+            battleDisplayPage.Text = battleDisplayEditor.Text;
         }
 
         public bool GetSyncChangesCheckbox()
@@ -189,12 +220,12 @@ namespace DSPRE
 
         private void PokemonEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (personalEditor == null || learnsetEditor == null || evoEditor == null || spriteEditor == null)
+            if (personalEditor == null || learnsetEditor == null || evoEditor == null || spriteEditor == null || battleDisplayEditor == null)
             {
                 return;
             }
 
-            if (personalEditor.dirty || learnsetEditor.dirty || evoEditor.dirty || spriteEditor.dirty)
+            if (personalEditor.dirty || learnsetEditor.dirty || evoEditor.dirty || spriteEditor.dirty || battleDisplayEditor.dirty)
             {
                 DialogResult result = MessageBox.Show("There are unsaved changes. Closing the editor will discard them!", "Unsaved Changes", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
 
