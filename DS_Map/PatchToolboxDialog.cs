@@ -770,6 +770,46 @@ namespace DSPRE
             }
         }
 
+        private void ItemSentenceCasePatchButton_Click(object sender, EventArgs e)
+        {
+            DialogResult d;
+            d = MessageBox.Show("Confirming this process will apply the following changes:\n\n" +
+                "- Every Item name will be converted to Sentence Case, including names you've renamed yourself.\n" +
+                "- Any other text (trainer dialogue, script text, etc) mentioning a renamed Item will be updated to match." + "\n\n" +
+                "Do you wish to continue?",
+                "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (d == DialogResult.Yes)
+            {
+                var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
+
+                TextArchive itemNames = new TextArchive(RomInfo.itemNamesTextNumber);
+                for (int i = 1; i < itemNames.messages.Count; i++)
+                {
+                    string current = itemNames.messages[i];
+                    if (string.IsNullOrEmpty(current))
+                    {
+                        continue;
+                    }
+
+                    string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                    if (sentenceCased != current)
+                    {
+                        itemNames.messages[i] = sentenceCased;
+                        renamePairs.Add((current, sentenceCased, false));
+                    }
+                }
+                itemNames.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
+
+                int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+                MessageBox.Show($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("No changes have been made.", "Operation canceled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
         private void BDHCAMPatchButton_Click(object sender, EventArgs e)
         {
             BDHCAMPatchData data = new BDHCAMPatchData();

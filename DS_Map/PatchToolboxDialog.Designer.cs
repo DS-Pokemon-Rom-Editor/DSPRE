@@ -70,6 +70,9 @@ namespace DSPRE
             this.expandTrainerNamesTextLBL = new System.Windows.Forms.Label();
             this.expandTrainerNamesLBL = new System.Windows.Forms.Label();
             this.expandTrainerNamesButton = new System.Windows.Forms.Button();
+            this.itemSentenceCaseTextLBL = new System.Windows.Forms.Label();
+            this.itemSentenceCaseLBL = new System.Windows.Forms.Label();
+            this.itemSentenceCaseButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.arm9patchCB)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.buildingRotationCB)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.BDHCamCB)).BeginInit();
@@ -504,13 +507,45 @@ namespace DSPRE
             this.expandTrainerNamesButton.Text = "Apply Patch";
             this.expandTrainerNamesButton.UseVisualStyleBackColor = true;
             this.expandTrainerNamesButton.Click += new System.EventHandler(this.expandTrainerNamesButton_Click);
-            // 
+            //
+            // itemSentenceCaseLBL
+            //
+            this.itemSentenceCaseLBL.AutoSize = true;
+            this.itemSentenceCaseLBL.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.itemSentenceCaseLBL.Location = new System.Drawing.Point(481, 390);
+            this.itemSentenceCaseLBL.Name = "itemSentenceCaseLBL";
+            this.itemSentenceCaseLBL.Size = new System.Drawing.Size(213, 13);
+            this.itemSentenceCaseLBL.TabIndex = 44;
+            this.itemSentenceCaseLBL.Text = "Convert Item names to Sentence Case";
+            //
+            // itemSentenceCaseTextLBL
+            //
+            this.itemSentenceCaseTextLBL.Location = new System.Drawing.Point(481, 405);
+            this.itemSentenceCaseTextLBL.Name = "itemSentenceCaseTextLBL";
+            this.itemSentenceCaseTextLBL.Size = new System.Drawing.Size(288, 49);
+            this.itemSentenceCaseTextLBL.TabIndex = 45;
+            this.itemSentenceCaseTextLBL.Text = "POTION, ANTIDOTE, BURN HEAL...\r\nbecome\r\nPotion, Antidote, Burn Heal...\r\n";
+            this.itemSentenceCaseTextLBL.UseMnemonic = false;
+            //
+            // itemSentenceCaseButton
+            //
+            this.itemSentenceCaseButton.Location = new System.Drawing.Point(829, 397);
+            this.itemSentenceCaseButton.Name = "itemSentenceCaseButton";
+            this.itemSentenceCaseButton.Size = new System.Drawing.Size(100, 50);
+            this.itemSentenceCaseButton.TabIndex = 46;
+            this.itemSentenceCaseButton.Text = "Apply Patch";
+            this.itemSentenceCaseButton.UseVisualStyleBackColor = true;
+            this.itemSentenceCaseButton.Click += new System.EventHandler(this.ItemSentenceCasePatchButton_Click);
+            //
             // PatchToolboxDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(950, 513);
+            this.Controls.Add(this.itemSentenceCaseButton);
+            this.Controls.Add(this.itemSentenceCaseTextLBL);
+            this.Controls.Add(this.itemSentenceCaseLBL);
             this.Controls.Add(this.expandTrainerNamesCB);
             this.Controls.Add(this.expandTrainerNamesTextLBL);
             this.Controls.Add(this.expandTrainerNamesLBL);
@@ -617,5 +652,8 @@ namespace DSPRE
         private System.Windows.Forms.Label expandTrainerNamesTextLBL;
         private System.Windows.Forms.Label expandTrainerNamesLBL;
         private System.Windows.Forms.Button expandTrainerNamesButton;
+        private System.Windows.Forms.Label itemSentenceCaseTextLBL;
+        private System.Windows.Forms.Label itemSentenceCaseLBL;
+        private System.Windows.Forms.Button itemSentenceCaseButton;
     }
 }
