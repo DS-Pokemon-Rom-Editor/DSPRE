@@ -71,10 +71,12 @@ jobs:
           else
               semver_version="$dotnet_version"
               display_version="$dotnet_version"
+              patch=0
           fi
 
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
           echo "display_version=$display_version" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
           echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
           # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
           # It has to stay the full 4-part version (not display_version) because Helpers.FetchChangelogForTag
@@ -140,9 +142,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # vpk upload has no --releaseNotes flag, so attach it separately.
-          notes_file="Changelogs/CHANGELOG_${{ steps.get_version.outputs.major_minor }}_User.md"
-          if [ -f "$notes_file" ]; then
-            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file "$notes_file"
-          else
+          major_minor="${{ steps.get_version.outputs.major_minor }}"
+          patch="${{ steps.get_version.outputs.patch }}"
+          notes_file="Changelogs/CHANGELOG_${major_minor}_User.md"
+
+          if [ ! -f "$notes_file" ]; then
             echo "No changelog at $notes_file for this version yet, release published without notes."
+            exit 0
+          fi
+
+          # A patch release (2.1.1, 2.1.2, ...) gets just its own "## major.minor.patch" section, not the
+          # whole file: the in-app update dialog is a plain, non-scrolling message box, and the full
+          # changelog for a minor version is too long to read there.
+          heading="## ${major_minor}.${patch}"
+          if [ "$patch" != "0" ] && grep -qF "$heading" "$notes_file"; then
+            awk -v heading="$heading" '
+              $0 == heading { found=1; print; next }
+              found && /^---/ { exit }
+              found { print }
+            ' "$notes_file" > patch_notes.md
+            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file patch_notes.md
+          else
+            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file "$notes_file"
           fi
