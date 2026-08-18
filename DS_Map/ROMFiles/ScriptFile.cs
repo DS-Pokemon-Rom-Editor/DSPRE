@@ -473,7 +473,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        private void RenumberContainers()
+        public void RenumberContainers()
         {
             // Maps to store OldID -> NewID
             Dictionary<uint, uint> scriptMap = new Dictionary<uint, uint>();

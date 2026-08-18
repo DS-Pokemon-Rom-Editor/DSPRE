@@ -21,6 +21,31 @@ namespace DSPRE {
         public const int ERR_OVERLAY_NOTFOUND = -1;
         public const int ERR_OVERLAY_ALREADY_UNCOMPRESSED = -2;
 
+        // Anything longer than the 3-command "give item" template is the shared execution routine, not a pickable entry.
+        public static bool IsGroundItemScriptEntry(DSPRE.ROMFiles.ScriptCommandContainer container) {
+            return container.commands != null && container.commands.Count <= 4
+                && container.commands.Count >= 2
+                && container.commands[0].cmdParams != null && container.commands[0].cmdParams.Count >= 2
+                && container.commands[1].cmdParams != null && container.commands[1].cmdParams.Count >= 2;
+        }
+
+        public static List<(int scriptIndex, int itemId, int quantity)> GetGroundItemScriptEntries(DSPRE.ROMFiles.ScriptFile itemScript) {
+            var result = new List<(int scriptIndex, int itemId, int quantity)>();
+
+            for (int i = 0; i < itemScript.allScripts.Count; i++) {
+                var container = itemScript.allScripts[i];
+                if (!IsGroundItemScriptEntry(container)) {
+                    continue;
+                }
+
+                int itemId = BitConverter.ToUInt16(container.commands[0].cmdParams[1], 0);
+                int quantity = BitConverter.ToUInt16(container.commands[1].cmdParams[1], 0);
+                result.Add((i, itemId, quantity));
+            }
+
+            return result;
+        }
+
         public static int ReplaceTextEverywhere(string searchString, string replaceString, bool caseSensitive) {
             return ReplaceTextEverywhere(new[] { (searchString, replaceString, caseSensitive) });
         }
