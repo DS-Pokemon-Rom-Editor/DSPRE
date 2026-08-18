@@ -58,13 +58,27 @@ jobs:
                   incremented_patch=$((patch + 1))
                   semver_version="${major}.${minor}.${incremented_patch}-rev${revision}"
               fi
+
+              # Same trim rule as Helpers.GetDSPREVersion() in C#: drop trailing zero components, so the
+              # release name reads "DSPRE 2.1" instead of "DSPRE 2.1.0.0".
+              if [ "$revision" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}.${revision}"
+              elif [ "$patch" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}"
+              else
+                  display_version="${major}.${minor}"
+              fi
           else
               semver_version="$dotnet_version"
+              display_version="$dotnet_version"
           fi
 
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
+          echo "display_version=$display_version" >> $GITHUB_OUTPUT
           echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
           # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
+          # It has to stay the full 4-part version (not display_version) because Helpers.FetchChangelogForTag
+          # rebuilds this same tag from the Velopack version on the C# side and expects that exact format.
           echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
           echo "release_tag=v$dotnet_version" >> $GITHUB_OUTPUT
       - name: Debug Output
@@ -72,6 +86,7 @@ jobs:
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
           echo "SemVer version: ${{ steps.get_version.outputs.semver_version }}"
           echo "DotNet version: ${{ steps.get_version.outputs.dotnet_version }}"
+          echo "Display version: ${{ steps.get_version.outputs.display_version }}"
           echo "Release tag: ${{ steps.get_version.outputs.release_tag }}"
 
       - name: Add MSBuild to PATH
@@ -116,7 +131,7 @@ jobs:
             vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
 
             # Upload to GitHub releases
-            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --token ${{ secrets.GH_TOKEN }}
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.display_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --token ${{ secrets.GH_TOKEN }}
 
       - name: Attach changelog to release notes
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
