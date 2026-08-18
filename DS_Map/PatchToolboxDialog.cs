@@ -71,7 +71,14 @@ namespace DSPRE
         {
             InitializeComponent();
 
-            CheckStandardizedItems();
+            if (RomInfo.isHGE)
+            {
+                DisableStandardizeItemsPatch("Unsupported");
+            }
+            else
+            {
+                CheckStandardizedItems();
+            }
 
             if (ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
             {
