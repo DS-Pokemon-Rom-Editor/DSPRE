@@ -543,28 +543,20 @@ namespace DSPRE.Editors
                     currentTextArchive = new TextArchive(cur);
                     bool found = false;
 
-                    if (caseSensitiveTextReplaceCheckbox.Checked)
+                    // Advancing past each replacement instead of rescanning from 0 avoids looping forever when replaceString matches searchString.
+                    StringComparison comparison = caseSensitiveTextReplaceCheckbox.Checked ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                    for (int j = 0; j < currentTextArchive.messages.Count; j++)
                     {
-                        for (int j = 0; j < currentTextArchive.messages.Count; j++)
+                        string text = currentTextArchive.messages[j];
+                        int searchFrom = 0;
+                        int posFound;
+                        while ((posFound = text.IndexOf(searchString, searchFrom, comparison)) >= 0)
                         {
-                            while (currentTextArchive.messages[j].IndexOf(searchString) >= 0)
-                            {
-                                currentTextArchive.messages[j] = currentTextArchive.messages[j].Replace(searchString, replaceString);
-                                found = true;
-                            }
+                            text = text.Substring(0, posFound) + replaceString + text.Substring(posFound + searchString.Length);
+                            searchFrom = posFound + replaceString.Length;
+                            found = true;
                         }
-                    }
-                    else
-                    {
-                        for (int j = 0; j < currentTextArchive.messages.Count; j++)
-                        {
-                            int posFound;
-                            while ((posFound = currentTextArchive.messages[j].IndexOf(searchString, StringComparison.InvariantCultureIgnoreCase)) >= 0)
-                            {
-                                currentTextArchive.messages[j] = currentTextArchive.messages[j].Substring(0, posFound) + replaceString + currentTextArchive.messages[j].Substring(posFound + searchString.Length);
-                                found = true;
-                            }
-                        }
+                        currentTextArchive.messages[j] = text;
                     }
 
                     textSearchProgressBar.Value = cur;

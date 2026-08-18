@@ -724,28 +724,38 @@ namespace DSPRE
         {
             DialogResult d;
             d = MessageBox.Show("Confirming this process will apply the following changes:\n\n" +
-                "- Every Pokémon name will be converted to Sentence Case." + "\n\n" +
+                "- Every Pokémon name will be converted to Sentence Case, including names you've renamed yourself.\n" +
+                "- Any other text (trainer dialogue, item descriptions, etc) mentioning a renamed Pokémon will be updated to match." + "\n\n" +
                 "Do you wish to continue?",
                 "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (d == DialogResult.Yes)
             {
-                Parallel.ForEach(RomInfo.pokemonNamesTextNumbers, ID =>
+                var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
+
+                foreach (int ID in RomInfo.pokemonNamesTextNumbers)
                 {
                     TextArchive pokeName = new TextArchive(ID);
-                    Parallel.For(1, pokeName.messages.Count, i =>
+                    for (int i = 1; i < pokeName.messages.Count; i++)
                     {
-                        if (pokeName.messages[i].Length <= 1)
+                        string current = pokeName.messages[i];
+                        if (string.IsNullOrEmpty(current))
                         {
-                            i++;
+                            continue;
                         }
 
-                        pokeName.messages[i] = pokeName.messages[i].Replace(PokeDatabase.System.pokeNames[(ushort)i].ToUpper(), PokeDatabase.System.pokeNames[(ushort)i]);
-                    });
+                        string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                        if (sentenceCased != current)
+                        {
+                            pokeName.messages[i] = sentenceCased;
+                            renamePairs.Add((current, sentenceCased, false));
+                        }
+                    }
                     pokeName.SaveToExpandedDir(ID, showSuccessMessage: false);
-                });
-                //sentenceCaseCB.Visible = true;
-                MessageBox.Show("Pokémon names have been converted to Sentence Case.", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+                MessageBox.Show($"Pokémon names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {

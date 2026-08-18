@@ -21,6 +21,48 @@ namespace DSPRE {
         public const int ERR_OVERLAY_NOTFOUND = -1;
         public const int ERR_OVERLAY_ALREADY_UNCOMPRESSED = -2;
 
+        public static int ReplaceTextEverywhere(string searchString, string replaceString, bool caseSensitive) {
+            return ReplaceTextEverywhere(new[] { (searchString, replaceString, caseSensitive) });
+        }
+
+        // Advancing past each replacement instead of rescanning from 0 avoids looping forever when a replacement matches its own search text.
+        public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements) {
+            var pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
+            if (pairs.Count == 0) {
+                return 0;
+            }
+
+            int archiveCount = Helpers.romInfo.GetTextArchivesCount();
+            int archivesChanged = 0;
+
+            for (int i = 0; i < archiveCount; i++) {
+                var archive = new DSPRE.ROMFiles.TextArchive(i);
+                bool changed = false;
+
+                for (int j = 0; j < archive.messages.Count; j++) {
+                    string text = archive.messages[j];
+                    foreach (var pair in pairs) {
+                        StringComparison comparison = pair.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                        int searchFrom = 0;
+                        int posFound;
+                        while ((posFound = text.IndexOf(pair.searchString, searchFrom, comparison)) >= 0) {
+                            text = text.Substring(0, posFound) + pair.replaceString + text.Substring(posFound + pair.searchString.Length);
+                            searchFrom = posFound + pair.replaceString.Length;
+                            changed = true;
+                        }
+                    }
+                    archive.messages[j] = text;
+                }
+
+                if (changed) {
+                    archive.SaveToExpandedDir(i, showSuccessMessage: false);
+                    archivesChanged++;
+                }
+            }
+
+            return archivesChanged;
+        }
+
         public const string backupSuffix = ".backup";
 
         public static readonly string NDSRomFilter = "NDS File (*.nds)|*.nds";

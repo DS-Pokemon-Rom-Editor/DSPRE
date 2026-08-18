@@ -683,10 +683,12 @@ namespace DSPRE {
                         var textArchive = new ROMFiles.TextArchive(moveNamesTextArchiveId);
 
                         int renamedCount = 0;
+                        var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
                         foreach (var rename in renames) {
                             if (rename.MoveId >= 0 && rename.MoveId < textArchive.messages.Count) {
                                 string newName = useTitleCase ? ToTitleCase(rename.CsvName) : rename.CsvName;
                                 textArchive.messages[rename.MoveId] = newName;
+                                renamePairs.Add((rename.RomName, newName, false));
 
                                 // Also update local array for immediate UI refresh
                                 if (rename.MoveId < fileNames.Length) {
@@ -700,6 +702,9 @@ namespace DSPRE {
                         // Save the text archive
                         textArchive.SaveToExpandedDir(moveNamesTextArchiveId, showSuccessMessage: false);
 
+                        // Also fix up every other place these names appear (trainer text, item descriptions, etc).
+                        int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+
                         // Refresh the combo box
                         disableHandlers = true;
                         int currentIndex = moveNameInputComboBox.SelectedIndex;
@@ -708,7 +713,7 @@ namespace DSPRE {
                         moveNameInputComboBox.SelectedIndex = currentIndex;
                         disableHandlers = false;
 
-                        MessageBox.Show($"Successfully renamed {renamedCount} move(s) in ROM.",
+                        MessageBox.Show($"Successfully renamed {renamedCount} move(s) in ROM.\nOther text banks updated: {archivesUpdated}",
                             "Rename Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     } catch (Exception ex) {
                         AppLogger.Error($"Failed to apply move renames: {ex.Message}");
