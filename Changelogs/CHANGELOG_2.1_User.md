@@ -4,6 +4,16 @@
 
 ---
 
+## 2.1.1
+- Fixed a crash when leaving certain dropdowns bound to a fixed list, such as Trainer Editor party
+  moves/items, Wild Encounter species, and Personal Data fields.
+- Battle Display: fixed showing the wrong Pokémon's sprite.
+- Battle Display: fixed the party icon always showing palette 0 instead of the palette the ROM actually
+  has assigned.
+- Battle Display: auto-picks the gender that actually has sprite data for mono-gender species.
+
+---
+
 ## New Editors / Features
 
 ### Pokémon Sprite Editor: Add Opposite Gender Sprites
