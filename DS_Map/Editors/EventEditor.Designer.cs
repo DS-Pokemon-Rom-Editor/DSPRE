@@ -1197,7 +1197,7 @@
             // 
             // itemsSelectorHelpBtn
             // 
-            this.itemsSelectorHelpBtn.Image = global::DSPRE.Properties.Resources.questionMark;
+            this.itemsSelectorHelpBtn.Image = global::DSPRE.Properties.Resources.addIcon;
             this.itemsSelectorHelpBtn.Location = new System.Drawing.Point(194, 67);
             this.itemsSelectorHelpBtn.Name = "itemsSelectorHelpBtn";
             this.itemsSelectorHelpBtn.Size = new System.Drawing.Size(28, 29);

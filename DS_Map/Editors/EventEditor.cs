@@ -114,10 +114,31 @@ namespace DSPRE.Editors
         #region Subroutines
         private void itemsSelectorHelpBtn_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("This selector allows you to pick a preset Ground Item script from the game data.\n" +
-                "Unlike in previous DSPRE versions, you can now change the Ground Item to be obtained even if you decided not to apply the Standardize Items patch from the Patch Toolbox.\n\n" +
-                "However, some items are unavailable by default. The aforementioned patch can neutralize this limitation.\n\n",
-                "About Ground Items", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            int previousScriptNumber = selectedEvent is Overworld ow ? ow.scriptNumber : -1;
+
+            using (OverworldItemScriptsEditor editor = new OverworldItemScriptsEditor())
+            {
+                editor.ShowDialog();
+            }
+
+            string[] itemNames = RomInfo.GetItemNames();
+            RefreshItemComboBox(itemNames);
+
+            if (previousScriptNumber >= 0)
+            {
+                owItemComboBox.SelectedIndex = Math.Max(previousScriptNumber - 7000, 0);
+            }
+        }
+
+        // Populates owItemComboBox from the item script file's ground-item entries (index N maps to scriptNumber 7000+N).
+        public void RefreshItemComboBox(string[] itemNames)
+        {
+            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            owItemComboBox.Items.Clear();
+            foreach (var entry in DSUtils.GetGroundItemScriptEntries(itemScript))
+            {
+                owItemComboBox.Items.Add(entry.quantity + "x " + itemNames[entry.itemId]);
+            }
         }
         private void CenterEventViewOnEntities()
         {
@@ -896,16 +917,7 @@ namespace DSPRE.Editors
             }
             else
             {
-                ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-                owItemComboBox.Items.Clear();
-                foreach (ScriptCommandContainer cont in itemScript.allScripts)
-                {
-                    if (cont.commands.Count > 4)
-                    {
-                        continue;
-                    }
-                    owItemComboBox.Items.Add(BitConverter.ToUInt16(cont.commands[1].cmdParams[1], 0) + "x " + itemNames[BitConverter.ToUInt16(cont.commands[0].cmdParams[1], 0)]);
-                }
+                RefreshItemComboBox(itemNames);
             }
 
             /* Add ow movement list to box */

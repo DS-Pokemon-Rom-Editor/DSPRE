@@ -309,6 +309,9 @@
     <Compile Include="Editors\BattleDisplayEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\OverworldItemScriptsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\SafariZoneEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>

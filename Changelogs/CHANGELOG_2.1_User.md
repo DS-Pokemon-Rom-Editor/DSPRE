@@ -4,6 +4,23 @@
 
 ---
 
+## 2.1.3
+- Removed the fuzzy-search dropdown filtering added in 2.1. It caused real bugs (crashes, wrong item/species
+  picked), so dropdowns are back to standard, native search-as-you-type behavior.
+- Fixed a crash and an infinite loop in the Text Editor's Search and Replace when replacing a name with a
+  version of itself that only differs by letter case, e.g. "PIKABLU" to "Pikablu".
+- The Patch Toolbox's Sentence Case patch now works on Pokémon names you've renamed yourself, not just
+  unmodified vanilla names, and also fixes that name everywhere else it appears in the game's text.
+- Event Editor: added a way to manage the list of ground items Overworld Item events can use. Add or remove
+  item + quantity entries, search items by name, quantity capped at 99. Entries still referenced by an
+  Overworld event can't be removed.
+- Patch Toolbox: the Standardize Items patch is now disabled for hg-engine ROMs, same as the other patches
+  it doesn't support.
+- Patch Toolbox: new "Convert Item names to Sentence Case" patch, same as the existing Pokémon one. Works on
+  items you've renamed yourself too, and fixes that name everywhere else it appears in the game's text.
+
+---
+
 ## 2.1.2
 - Fixed a crash and a wrong-Pokémon-loaded bug when picking a match from a fuzzy-search dropdown (e.g.
   Pokémon Editor's species field).

@@ -1970,6 +1970,7 @@ namespace DSPRE.Editors
                 bool useTitleCase = chkUseTitleCase.Checked;
                 bool pokemonNamesChanged = false;
                 bool moveNamesChanged = false;
+                var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
 
                 // Apply Pokemon name renames
                 if (chkPokemonRenames.CheckedItems.Count > 0)
@@ -1982,6 +1983,7 @@ namespace DSPRE.Editors
                         {
                             string newName = useTitleCase ? ToTitleCase(mismatch.CsvName) : mismatch.CsvName;
                             pokemonNameArchive.messages[mismatch.Id] = newName;
+                            renamePairs.Add((mismatch.RomName, newName, false));
                             pokemonNamesChanged = true;
                         }
                     }
@@ -2003,6 +2005,7 @@ namespace DSPRE.Editors
                         {
                             string newName = useTitleCase ? ToTitleCase(mismatch.CsvName) : mismatch.CsvName;
                             moveNameArchive.messages[mismatch.Id] = newName;
+                            renamePairs.Add((mismatch.RomName, newName, false));
                             moveNamesChanged = true;
                         }
                     }
@@ -2013,12 +2016,16 @@ namespace DSPRE.Editors
                     }
                 }
 
+                // Also fix up every other place these names appear (trainer text, item descriptions, etc).
+                int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+
                 if (pokemonNamesChanged || moveNamesChanged)
                 {
                     MessageBox.Show(
                         $"Name changes applied:\n" +
                         $"- Pokemon names: {chkPokemonRenames.CheckedItems.Count}\n" +
-                        $"- Move names: {chkMoveRenames.CheckedItems.Count}",
+                        $"- Move names: {chkMoveRenames.CheckedItems.Count}\n" +
+                        $"- Other text banks updated: {archivesUpdated}",
                         "Names Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
