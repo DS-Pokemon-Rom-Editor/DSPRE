@@ -21,9 +21,7 @@ namespace DSPRE {
             AutoCompleteMode = AutoCompleteMode.None;
         }
 
-        /// <summary>Snapshots the current (full) Items list as the fuzzy-search source. Call after any
-        /// bulk repopulation of Items (Items.Clear() + Add/AddRange loop) so search isn't left stale.
-        /// Also refreshed automatically the next time the dropdown opens.</summary>
+        /// <summary>Snapshots Items as the fuzzy-search source. Call after repopulating Items.</summary>
         public void RefreshMasterList() {
             master = Items.Cast<object>().ToList();
         }
@@ -40,9 +38,6 @@ namespace DSPRE {
                 }
             }
 
-            // Other code reads Items.Count directly, so always restore the full list here. Skipped for
-            // data-bound combos: WinForms forbids mutating Items when DataSource is set, and the binding
-            // already keeps Items in sync on its own (see OnDataSourceChanged).
             if (DataSource == null) SetItems(master);
 
             if (index == -1) {
@@ -57,10 +52,18 @@ namespace DSPRE {
             if (DataSource != null) return;
             filtering = true;
             try {
+                string text = Text;
+                int selStart = SelectionStart;
+                int selLen = SelectionLength;
+
                 BeginUpdate();
                 Items.Clear();
                 if (items.Count > 0) Items.AddRange(items.ToArray());
                 EndUpdate();
+
+                // Items.Clear()/AddRange resets the caret to the start.
+                if (Text != text) Text = text;
+                Select(selStart, selLen);
             } finally { filtering = false; }
         }
 
@@ -108,8 +111,6 @@ namespace DSPRE {
         protected override void OnDataSourceChanged(EventArgs e) {
             base.OnDataSourceChanged(e);
             if (DataSource != null) {
-                // Items-based filtering can't work on a data-bound combo (WinForms forbids mutating
-                // Items when DataSource is set), so fall back to the native prefix autocomplete.
                 base.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
                 base.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             }
@@ -120,10 +121,21 @@ namespace DSPRE {
             Filter(Text);
         }
 
+        private bool correctingSelection;
+
         protected override void OnSelectedIndexChanged(EventArgs e) {
-            // Items.Clear() (used by SetItems to narrow/restore the dropdown) resets SelectedIndex to
-            // -1, which would otherwise spuriously fire this event mid-typing.
             if (filtering) return;
+
+            // SelectedIndex is a position in the narrowed dropdown here, not the master list callers expect.
+            if (!correctingSelection && master.Count > 0 && Items.Count != master.Count && SelectedIndex >= 0) {
+                object picked = SelectedItem;
+                SetItems(master);
+                correctingSelection = true;
+                try { SelectedIndex = master.IndexOf(picked); }
+                finally { correctingSelection = false; }
+                return;
+            }
+
             base.OnSelectedIndexChanged(e);
         }
 
@@ -145,8 +157,7 @@ namespace DSPRE {
             set { base.DropDownStyle = ComboBoxStyle.DropDown; }
         }
 
-        // Keeps WinForms' own AutoComplete off regardless of what Designer.cs sets, same trick as
-        // DropDownStyle above. Data-bound combos are the exception: see OnDataSourceChanged.
+        // Same trick as DropDownStyle above. Data-bound combos are the exception, see OnDataSourceChanged.
         [Browsable(false)]
         public new AutoCompleteMode AutoCompleteMode {
             get { return base.AutoCompleteMode; }
