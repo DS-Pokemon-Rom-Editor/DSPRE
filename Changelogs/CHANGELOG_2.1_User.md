@@ -4,6 +4,13 @@
 
 ---
 
+## 2.1.2
+- Fixed a crash and a wrong-Pokémon-loaded bug when picking a match from a fuzzy-search dropdown (e.g.
+  Pokémon Editor's species field).
+- Fixed the NSBTX Editor's Area Data light type list being in the wrong order for Diamond/Pearl.
+
+---
+
 ## 2.1.1
 - Fixed a crash when leaving certain dropdowns bound to a fixed list, such as Trainer Editor party
   moves/items, Wild Encounter species, and Personal Data fields.
