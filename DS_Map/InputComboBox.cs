@@ -40,8 +40,10 @@ namespace DSPRE {
                 }
             }
 
-            // Other code reads Items.Count directly, so always restore the full list here.
-            SetItems(master);
+            // Other code reads Items.Count directly, so always restore the full list here. Skipped for
+            // data-bound combos: WinForms forbids mutating Items when DataSource is set, and the binding
+            // already keeps Items in sync on its own (see OnDataSourceChanged).
+            if (DataSource == null) SetItems(master);
 
             if (index == -1) {
                 this.BackColor = Color.IndianRed;
@@ -52,6 +54,7 @@ namespace DSPRE {
         }
 
         private void SetItems(List<object> items) {
+            if (DataSource != null) return;
             filtering = true;
             try {
                 BeginUpdate();
@@ -62,6 +65,7 @@ namespace DSPRE {
         }
 
         private void Filter(string query) {
+            if (DataSource != null) return;   // native AutoComplete handles this; see OnDataSourceChanged
             if (master.Count == 0 && Items.Count > 0) RefreshMasterList();
 
             List<object> matches = string.IsNullOrWhiteSpace(query)
@@ -91,12 +95,23 @@ namespace DSPRE {
 
         protected override void OnDropDown(EventArgs e) {
             base.OnDropDown(e);
+            if (DataSource != null) return;   // native AutoComplete handles this; see OnDataSourceChanged
             // Always resync from Items, since a caller may have repopulated it since the last filter.
             if (!filtering) {
                 RefreshMasterList();
             }
             if (string.IsNullOrEmpty(Text)) {
                 SetItems(master);
+            }
+        }
+
+        protected override void OnDataSourceChanged(EventArgs e) {
+            base.OnDataSourceChanged(e);
+            if (DataSource != null) {
+                // Items-based filtering can't work on a data-bound combo (WinForms forbids mutating
+                // Items when DataSource is set), so fall back to the native prefix autocomplete.
+                base.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+                base.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             }
         }
 
@@ -130,11 +145,12 @@ namespace DSPRE {
             set { base.DropDownStyle = ComboBoxStyle.DropDown; }
         }
 
-        // Keeps WinForms' own AutoComplete off regardless of what Designer.cs sets, same trick as DropDownStyle above.
+        // Keeps WinForms' own AutoComplete off regardless of what Designer.cs sets, same trick as
+        // DropDownStyle above. Data-bound combos are the exception: see OnDataSourceChanged.
         [Browsable(false)]
         public new AutoCompleteMode AutoCompleteMode {
-            get { return System.Windows.Forms.AutoCompleteMode.None; }
-            set { base.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.None; }
+            get { return base.AutoCompleteMode; }
+            set { base.AutoCompleteMode = DataSource != null ? value : System.Windows.Forms.AutoCompleteMode.None; }
         }
     }
 }
