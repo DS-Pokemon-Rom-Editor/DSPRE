@@ -157,6 +157,9 @@
     <Compile Include="Editors\LearnsetLimitWarningForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\TmHmBulkEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\OpenEditorsRegistry.cs" />
     <Compile Include="Editors\PickupTableEditor.cs">
       <SubType>UserControl</SubType>
