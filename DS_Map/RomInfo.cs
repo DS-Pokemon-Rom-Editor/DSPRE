@@ -2294,6 +2294,7 @@ namespace DSPRE
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\a\0\0\4",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\a\0\0\5",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\a\1\1\1",   // Pokeanm.narc (28 B/mon POKE_ANM_DATA table)
                         [DirNames.pokeAnimDefs] = $@"{dataFolderName}\a\0\9\0",   // PAST program-animation scripts (poke_anm equivalent)
                         [DirNames.wazaSeq] = $@"{dataFolderName}\a\0\0\0",   // move-sequence scripts (waza_seq)

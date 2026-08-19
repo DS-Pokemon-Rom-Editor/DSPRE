@@ -831,6 +831,29 @@ namespace DSPRE.Avalonia.ViewModels
                 // since every other read in this editor — LoadMon included — goes through the packed file.
                 Narc.FromFolder(unpackedDir).Save(packedPath);
 
+                // Sprites alone aren't enough: without height data too, the new gender renders at the wrong Y.
+                try
+                {
+                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokeHeight });
+                    string heightDir = RomInfo.gameDirs[DirNames.pokeHeight].unpackedDir;
+                    string heightPackedPath = RomInfo.gameDirs[DirNames.pokeHeight].packedDir;
+
+                    const int FB = 0, MB = 1, FF = 2, MF = 3;
+                    int heightBase = _currentId * 4;
+                    int srcBackH = heightBase + (_missingGenderIsFemale ? MB : FB);
+                    int srcFrontH = heightBase + (_missingGenderIsFemale ? MF : FF);
+                    int dstBackH = heightBase + (_missingGenderIsFemale ? FB : MB);
+                    int dstFrontH = heightBase + (_missingGenderIsFemale ? FF : MF);
+
+                    CopyEntryFile(heightDir, srcBackH, dstBackH);
+                    CopyEntryFile(heightDir, srcFrontH, dstFrontH);
+                    Narc.FromFolder(heightDir).Save(heightPackedPath);
+                }
+                catch (Exception heightEx)
+                {
+                    AppLogger.Error($"Failed to copy battle-sprite height data for opposite gender: {heightEx.Message}");
+                }
+
                 StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites). " +
                     "Use Import to give them their own look.";
                 LoadMon(_currentId);

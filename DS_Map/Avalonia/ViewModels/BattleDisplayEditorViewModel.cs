@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 _src = gameFamily switch
                 {
-                    GameFamilies.HGSS => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: false),
+                    GameFamilies.HGSS => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true),
                     GameFamilies.Plat => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true),
                     GameFamilies.DP => new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow),
                     _ => null,
@@ -1002,15 +1002,18 @@ namespace DSPRE.Avalonia.ViewModels
             private readonly OffsetNarc _n = new OffsetNarc(DirNames.pokeHeight, 1);
             public void Invalidate() => _n.Invalidate();
 
+            // Single-gender species leave the unused slots empty; don't fail the whole load over that.
             public bool TryLoad(int id, out int backF, out int backM, out int frontF, out int frontM)
             {
-                backF = backM = frontF = frontM = 0;
                 var a = _n.GetRecord(id * 4 + FB); var b = _n.GetRecord(id * 4 + MB);
                 var c = _n.GetRecord(id * 4 + FF); var d = _n.GetRecord(id * 4 + MF);
-                if (a == null || b == null || c == null || d == null || a.Length < 1 || b.Length < 1 || c.Length < 1 || d.Length < 1) return false;
+                if (a == null && b == null && c == null && d == null) { backF = backM = frontF = frontM = 0; return false; }
                 // Signed: in practice these read as signed offsets (e.g. 0xE0 = −32), so reading them unsigned
                 // pushed sprites far off-screen by an amount that scaled per-mon.
-                backF = (sbyte)a[0]; backM = (sbyte)b[0]; frontF = (sbyte)c[0]; frontM = (sbyte)d[0];
+                backF = (a != null && a.Length >= 1) ? (sbyte)a[0] : 0;
+                backM = (b != null && b.Length >= 1) ? (sbyte)b[0] : 0;
+                frontF = (c != null && c.Length >= 1) ? (sbyte)c[0] : 0;
+                frontM = (d != null && d.Length >= 1) ? (sbyte)d[0] : 0;
                 return true;
             }
 

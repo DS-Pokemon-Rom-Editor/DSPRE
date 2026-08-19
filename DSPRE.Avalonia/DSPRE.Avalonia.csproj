@@ -18,8 +18,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Keep in sync with DS_Map\Properties\AssemblyInfo.cs (AppInfo.GetDSPREVersion shows this). -->
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
     <!-- Avalonia views intentionally have no parameterless constructor (require ViewModel) -->
     <NoWarn>$(NoWarn);AVLN3001</NoWarn>
