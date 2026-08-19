@@ -637,6 +637,26 @@ namespace DSPRE.Editors {
                 // since every other read/write in this editor goes through the packed file directly.
                 Narc.FromFolder(unpackedDir).Save(packedPath);
 
+                // Height wasn't copied before, only sprites, so the new gender rendered at the wrong Y.
+                try {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokeHeight });
+                    string heightDir = RomInfo.gameDirs[DirNames.pokeHeight].unpackedDir;
+                    string heightPackedPath = RomInfo.gameDirs[DirNames.pokeHeight].packedDir;
+
+                    const int FB = 0, MB = 1, FF = 2, MF = 3;
+                    int heightBase = currentLoadedId * 4;
+                    int srcBackH = heightBase + (missingGenderIsFemale ? MB : FB);
+                    int srcFrontH = heightBase + (missingGenderIsFemale ? MF : FF);
+                    int dstBackH = heightBase + (missingGenderIsFemale ? FB : MB);
+                    int dstFrontH = heightBase + (missingGenderIsFemale ? FF : MF);
+
+                    CopyEntryFile(heightDir, srcBackH, dstBackH);
+                    CopyEntryFile(heightDir, srcFrontH, dstFrontH);
+                    Narc.FromFolder(heightDir).Save(heightPackedPath);
+                } catch (Exception heightEx) {
+                    AppLogger.Error($"Failed to copy battle-sprite height data for opposite gender: {heightEx.Message}");
+                }
+
                 narcReader = new NarcReader(packedPath);
                 ChangeLoadedFile(currentLoadedId);
 

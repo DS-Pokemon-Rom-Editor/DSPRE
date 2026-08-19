@@ -99,12 +99,15 @@ namespace DSPRE.Editors {
             private const int FB = 0, MB = 1, FF = 2, MF = 3;
             private readonly OffsetNarc _n = new OffsetNarc(DirNames.pokeHeight, 1);
 
+            // Single-gender species leave the unused slots empty; don't fail the whole load over that.
             public bool TryLoad(int id, out int backF, out int backM, out int frontF, out int frontM) {
-                backF = backM = frontF = frontM = 0;
                 var a = _n.GetRecord(id * 4 + FB); var b = _n.GetRecord(id * 4 + MB);
                 var c = _n.GetRecord(id * 4 + FF); var d = _n.GetRecord(id * 4 + MF);
-                if (a == null || b == null || c == null || d == null || a.Length < 1 || b.Length < 1 || c.Length < 1 || d.Length < 1) return false;
-                backF = (sbyte)a[0]; backM = (sbyte)b[0]; frontF = (sbyte)c[0]; frontM = (sbyte)d[0];
+                if (a == null && b == null && c == null && d == null) { backF = backM = frontF = frontM = 0; return false; }
+                backF = (a != null && a.Length >= 1) ? (sbyte)a[0] : 0;
+                backM = (b != null && b.Length >= 1) ? (sbyte)b[0] : 0;
+                frontF = (c != null && c.Length >= 1) ? (sbyte)c[0] : 0;
+                frontM = (d != null && d.Length >= 1) ? (sbyte)d[0] : 0;
                 return true;
             }
 
@@ -181,7 +184,7 @@ namespace DSPRE.Editors {
             _srcTried = true;
             try {
                 switch (RomInfo.gameFamily) {
-                    case GameFamilies.HGSS: _src = new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: false); break;
+                    case GameFamilies.HGSS: _src = new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true); break;
                     case GameFamilies.Plat: _src = new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true); break;
                     case GameFamilies.DP: _src = new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow); break;
                     default: _src = null; break;
@@ -300,7 +303,12 @@ namespace DSPRE.Editors {
 
             bool en = hasSpriteData;
             spriteYNumeric.Enabled = shadowXNumeric.Enabled = shadowSizeCombo.Enabled = en;
-            frontHeightMNumeric.Enabled = frontHeightFNumeric.Enabled = backHeightMNumeric.Enabled = backHeightFNumeric.Enabled = en;
+
+            // Both genders' height fields stay visible regardless of sprite presence; only editable per gender.
+            bool maleHasSprites = battleSprites[1] != null || battleSprites[3] != null;
+            bool femaleHasSprites = battleSprites[0] != null || battleSprites[2] != null;
+            frontHeightMNumeric.Enabled = backHeightMNumeric.Enabled = en && maleHasSprites;
+            frontHeightFNumeric.Enabled = backHeightFNumeric.Enabled = en && femaleHasSprites;
             noDataLabel.Visible = !en;
 
             partyPaletteCombo.SelectedIndex = partyPaletteIndex;
