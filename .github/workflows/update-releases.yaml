@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   SOLUTION_FILE_PATH: DS_Map.sln
@@ -42,13 +43,13 @@ jobs:
         shell: bash
         run: |
           dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
-          
+          major=$(echo "$dotnet_version" | cut -d. -f1)
+          minor=$(echo "$dotnet_version" | cut -d. -f2)
+
           if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
-              major=$(echo "$dotnet_version" | sed -E 's/^([0-9]+)\..*$/\1/')
-              minor=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.([0-9]+)\..*$/\1/')
               patch=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.([0-9]+)\..*$/\1/')
               revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
-              
+
               if [ "$revision" -eq "0" ]; then
                   # Main release: 1.14.3.0 -> 1.14.3
                   semver_version="${major}.${minor}.${patch}"
@@ -57,39 +58,60 @@ jobs:
                   incremented_patch=$((patch + 1))
                   semver_version="${major}.${minor}.${incremented_patch}-rev${revision}"
               fi
+
+              # Same trim rule as AppInfo.GetDSPREVersion() in C#: drop trailing zero components, so the
+              # release name reads "DSPRE 2.1" instead of "DSPRE 2.1.0.0".
+              if [ "$revision" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}.${revision}"
+              elif [ "$patch" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}"
+              else
+                  display_version="${major}.${minor}"
+              fi
           else
               semver_version="$dotnet_version"
+              display_version="$dotnet_version"
+              patch=0
           fi
-          
+
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
-          echo "dotnet_version=v$dotnet_version" >> $GITHUB_OUTPUT
+          echo "display_version=$display_version" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
+          echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
+          # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
+          # It has to stay the full 4-part version (not display_version) because Helpers.FetchChangelogForTag
+          # rebuilds this same tag from the Velopack version on the C# side and expects that exact format.
+          echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
+          echo "release_tag=v$dotnet_version" >> $GITHUB_OUTPUT
       - name: Debug Output
         run: |
           echo "Latest tag from Linux job: ${{ needs.get_latest_tag.outputs.latest_tag }}"
           echo "SemVer version: ${{ steps.get_version.outputs.semver_version }}"
           echo "DotNet version: ${{ steps.get_version.outputs.dotnet_version }}"
+          echo "Display version: ${{ steps.get_version.outputs.display_version }}"
+          echo "Release tag: ${{ steps.get_version.outputs.release_tag }}"
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Clone Database Repository
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
 
       - name: Restore NuGet packages
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Build DSPRE
         working-directory: ${{env.GITHUB_WORKSPACE}}
         run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Copy output manually
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           mkdir -p publish
           cp -r DS_Map/bin/${{env.BUILD_CONFIGURATION}}/* publish/
@@ -99,7 +121,7 @@ jobs:
           ls publish/
 
       - name: Create Velopack Release
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
             dotnet tool install -g vpk
             vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GH_TOKEN }}
@@ -111,7 +133,38 @@ jobs:
             vpk pack --packDir publish --mainExe DSPRE.exe -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel win
 
             # Upload to GitHub releases
-            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --token ${{ secrets.GH_TOKEN }}
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.display_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --token ${{ secrets.GH_TOKEN }}
+
+      - name: Attach changelog to release notes
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # vpk upload has no --releaseNotes flag, so attach it separately.
+          major_minor="${{ steps.get_version.outputs.major_minor }}"
+          patch="${{ steps.get_version.outputs.patch }}"
+          notes_file="Changelogs/CHANGELOG_${major_minor}_User.md"
+
+          if [ ! -f "$notes_file" ]; then
+            echo "No changelog at $notes_file for this version yet, release published without notes."
+            exit 0
+          fi
+
+          # A patch release (2.1.1, 2.1.2, ...) gets just its own "## major.minor.patch" section, not the
+          # whole file: the in-app update dialog is a plain, non-scrolling message box, and the full
+          # changelog for a minor version is too long to read there.
+          heading="## ${major_minor}.${patch}"
+          if [ "$patch" != "0" ] && grep -qF "$heading" "$notes_file"; then
+            awk -v heading="$heading" '
+              $0 == heading { found=1; print; next }
+              found && /^---/ { exit }
+              found { print }
+            ' "$notes_file" > patch_notes.md
+            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file patch_notes.md
+          else
+            gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file "$notes_file"
+          fi
 
   deploy_linux_to_github_releases:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
@@ -129,10 +182,10 @@ jobs:
         shell: bash
         run: |
           dotnet_version=$(grep -oE '\[assembly: AssemblyVersion\("([0-9\.]+)"\)\]' DS_Map/Properties/AssemblyInfo.cs | sed -E 's/.*AssemblyVersion\("([0-9\.]+)"\).*/\1/')
+          major=$(echo "$dotnet_version" | cut -d. -f1)
+          minor=$(echo "$dotnet_version" | cut -d. -f2)
 
           if echo "$dotnet_version" | grep -q '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$'; then
-              major=$(echo "$dotnet_version" | sed -E 's/^([0-9]+)\..*$/\1/')
-              minor=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.([0-9]+)\..*$/\1/')
               patch=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.([0-9]+)\..*$/\1/')
               revision=$(echo "$dotnet_version" | sed -E 's/^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$/\1/')
 
@@ -142,41 +195,52 @@ jobs:
                   incremented_patch=$((patch + 1))
                   semver_version="${major}.${minor}.${incremented_patch}-rev${revision}"
               fi
+
+              if [ "$revision" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}.${revision}"
+              elif [ "$patch" != "0" ]; then
+                  display_version="${major}.${minor}.${patch}"
+              else
+                  display_version="${major}.${minor}"
+              fi
           else
               semver_version="$dotnet_version"
+              display_version="$dotnet_version"
           fi
 
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
-          echo "dotnet_version=v$dotnet_version" >> $GITHUB_OUTPUT
+          echo "display_version=$display_version" >> $GITHUB_OUTPUT
+          echo "dotnet_version=$dotnet_version" >> $GITHUB_OUTPUT
+          echo "release_tag=v$dotnet_version" >> $GITHUB_OUTPUT
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
       - name: Install AppImage build dependency
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
       - name: Clone Database Repository
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
 
       - name: Clone ds-rom Repository
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
 
       - name: Publish DSPRE.Avalonia (linux-x64)
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -c Release -r linux-x64 --self-contained true -o publish-linux
 
       - name: Build dsrom (Linux)
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
           mkdir -p publish-linux/Tools
@@ -187,13 +251,13 @@ jobs:
       # names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
 
       - name: Bundle Databases
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
           mkdir -p publish-linux/databases
           rsync -a --exclude='.git/objects/pack' databases/ publish-linux/databases/
 
       - name: Create Velopack Release (Linux)
-        if: ${{ needs.get_latest_tag.outputs.latest_tag != format('v{0}', steps.get_version.outputs.dotnet_version) }}
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
             dotnet tool install -g vpk
             # Fetch previous linux-channel packages for delta generation (absent on the first Linux release).
@@ -202,4 +266,4 @@ jobs:
             vpk pack --packDir publish-linux --mainExe DSPRE.Avalonia -u DSPRE -v ${{ steps.get_version.outputs.semver_version }} --channel linux
 
             # Attaches the AppImage + linux update feed to the same release the Windows job created.
-            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.dotnet_version }}" --tag v${{ steps.get_version.outputs.dotnet_version }} --channel linux --token ${{ secrets.GH_TOKEN }}
+            vpk upload github --publish --repoUrl https://github.com/${{ github.repository }} --releaseName "DSPRE ${{ steps.get_version.outputs.display_version }}" --tag ${{ steps.get_version.outputs.release_tag }} --channel linux --token ${{ secrets.GH_TOKEN }}
