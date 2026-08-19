@@ -39,7 +39,7 @@ namespace DSPRE.Editors
             this.label3 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
-            this.comboBoxPokemon = new System.Windows.Forms.ComboBox();
+            this.comboBoxPokemon = new DSPRE.InputComboBox();
             this.listBoxTreeGroups = new DSPRE.ListBox2();
             this.listBoxTrees = new DSPRE.ListBox2();
             this.listBoxEncounters = new DSPRE.ListBox2();
@@ -239,6 +239,6 @@ namespace DSPRE.Editors
     private System.Windows.Forms.Label label3;
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.Label label4;
-    public System.Windows.Forms.ComboBox comboBoxPokemon;
+    public DSPRE.InputComboBox comboBoxPokemon;
   }
 }

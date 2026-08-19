@@ -55,6 +55,7 @@ namespace DSPRE.Editors {
 
         private void comboBoxPokemon_SelectedIndexChanged(object sender, EventArgs e) {
             if (Helpers.HandlersDisabled) { return; }
+            if (comboBoxPokemon.SelectedIndex < 0) { return; }
             HeadbuttEncounter headbuttEncounter = (HeadbuttEncounter)listBoxEncounters.SelectedItem;
             if (headbuttEncounter == null) { return; }
             headbuttEncounter.pokemonID = (ushort)comboBoxPokemon.SelectedIndex;

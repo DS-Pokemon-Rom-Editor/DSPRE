@@ -969,6 +969,10 @@ namespace DSPRE.Editors {
                 return;
             }
             int selectedIndex = IndexBox.SelectedIndex;
+            if (selectedIndex < 0) {
+                MessageBox.Show("No valid Pokémon selected. Fix it before saving.", "Invalid Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             // If editing main sprites, files are organized as groups of 6 entries per pokemon
             if (!isLoadingOtherForms) {
@@ -1548,9 +1552,7 @@ namespace DSPRE.Editors {
             }
         }
 
-        // A shorter-than-16 palette (imported PNG using fewer distinct colors) must never be stored as
-        // currentSprites.Normal/Shiny: LoadImages() applies that same palette to every direction/gender
-        // slot, including ones whose pixel data still points at indices this palette doesn't define.
+        // LoadImages() applies this palette to every direction/gender slot, so it must always be 16 entries.
         private ColorPalette PadPaletteTo16(ColorPalette pal) {
             if (pal.Entries.Length >= 16) {
                 return pal;
@@ -1576,8 +1578,7 @@ namespace DSPRE.Editors {
             
             ushort[] array = new ushort[16];
             for (int i = 0; i < 16; i++) {
-                // An imported PNG using fewer than 16 distinct colors gets a palette with fewer
-                // than 16 entries; treat the rest as unused/black rather than indexing out of range.
+                // A palette shorter than 16 entries would index out of range past this point.
                 Color c = i < palette.Entries.Length ? palette.Entries[i] : Color.Black;
                 array[i] = (ushort)(((c.R >> 3) & 0x1F) |
                                     (((c.G >> 3) & 0x1F) << 5) |

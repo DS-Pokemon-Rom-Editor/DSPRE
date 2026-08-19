@@ -278,8 +278,7 @@ namespace DSPRE.Editors.Utils
                 if (NotFound[i])
                     maxsize++;
             }
-            // Combined color count doesn't fit in the parent's slots (e.g. a full reskin with all-new
-            // colors); the caller falls back to replacing the palette outright instead of merging.
+            // Doesn't fit; caller falls back to replacing the palette outright instead of merging.
             if (maxsize > parent.Entries.Length)
             {
                 return null;

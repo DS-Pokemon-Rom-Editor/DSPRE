@@ -671,6 +671,11 @@ namespace DSPRE.Editors
             if (CheckDiscardChanges())
             {
                 int newId = itemNameInputComboBox.SelectedIndex;
+                if (newId < 0)
+                {
+                    Helpers.EnableHandlers();
+                    return;
+                }
                 itemIDNumericUpDown.Value = newId;
                 AppLogger.Debug("ItemEditor: itemNameInputComboBox_SelectedIndexChanged: newId = " + newId);                
                 ChangeLoadedFile(newId);

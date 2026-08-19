@@ -31,7 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.machineListBox = new System.Windows.Forms.ListBox();
             this.TMListLabel = new System.Windows.Forms.Label();
-            this.moveComboBox = new System.Windows.Forms.ComboBox();
+            this.moveComboBox = new DSPRE.InputComboBox();
             this.saveButton = new System.Windows.Forms.Button();
             this.moveLabel = new System.Windows.Forms.Label();
             this.paletteLabel = new System.Windows.Forms.Label();
@@ -194,7 +194,7 @@
 
         private System.Windows.Forms.ListBox machineListBox;
         private System.Windows.Forms.Label TMListLabel;
-        private System.Windows.Forms.ComboBox moveComboBox;
+        private DSPRE.InputComboBox moveComboBox;
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.Label moveLabel;
         private System.Windows.Forms.Label paletteLabel;

@@ -41,7 +41,7 @@
             this.replaceMonButton = new System.Windows.Forms.Button();
             this.addMonButton = new System.Windows.Forms.Button();
             this.monLabel = new System.Windows.Forms.Label();
-            this.monComboBox = new System.Windows.Forms.ComboBox();
+            this.monComboBox = new DSPRE.InputComboBox();
             this.monSearchTextBox = new System.Windows.Forms.TextBox();
             this.searchMonButton = new System.Windows.Forms.Button();
             this.monSearchGroupBox = new System.Windows.Forms.GroupBox();
@@ -58,14 +58,14 @@
             this.replaceMoveButton = new System.Windows.Forms.Button();
             this.addMoveButton = new System.Windows.Forms.Button();
             this.moveLabel = new System.Windows.Forms.Label();
-            this.moveComboBox = new System.Windows.Forms.ComboBox();
+            this.moveComboBox = new DSPRE.InputComboBox();
             this.bulkEditGroupBox = new System.Windows.Forms.GroupBox();
             this.bulkEditTableLayoutPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.deleteAllComboBox = new System.Windows.Forms.ComboBox();
+            this.deleteAllComboBox = new DSPRE.InputComboBox();
             this.deleteAllLabel = new System.Windows.Forms.Label();
             this.replaceAllLabel = new System.Windows.Forms.Label();
-            this.replaceeComboBox = new System.Windows.Forms.ComboBox();
-            this.replacerComboBox = new System.Windows.Forms.ComboBox();
+            this.replaceeComboBox = new DSPRE.InputComboBox();
+            this.replacerComboBox = new DSPRE.InputComboBox();
             this.withLabel = new System.Windows.Forms.Label();
             this.bulkReplaceButton = new System.Windows.Forms.Button();
             this.deleteAllButton = new System.Windows.Forms.Button();
@@ -261,7 +261,6 @@
             // monComboBox
             // 
             this.monComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.monComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
             this.editMonTableLayoutPanel.SetColumnSpan(this.monComboBox, 2);
             this.monComboBox.FormattingEnabled = true;
             this.monComboBox.Location = new System.Drawing.Point(87, 9);
@@ -489,7 +488,6 @@
             // moveComboBox
             // 
             this.moveComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.moveComboBox.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
             this.editMoveTableLayoutPanel.SetColumnSpan(this.moveComboBox, 2);
             this.moveComboBox.FormattingEnabled = true;
             this.moveComboBox.Location = new System.Drawing.Point(87, 9);
@@ -717,7 +715,7 @@
         private System.Windows.Forms.ListBox eggMoveListBox;
         private System.Windows.Forms.TableLayoutPanel editMoveTableLayoutPanel;
         private System.Windows.Forms.Label moveLabel;
-        private System.Windows.Forms.ComboBox moveComboBox;
+        private DSPRE.InputComboBox moveComboBox;
         private System.Windows.Forms.Button addMoveButton;
         private System.Windows.Forms.Button replaceMoveButton;
         private System.Windows.Forms.Button deleteMoveButton;
@@ -735,7 +733,7 @@
         private System.Windows.Forms.Button replaceMonButton;
         private System.Windows.Forms.Button addMonButton;
         private System.Windows.Forms.Label monLabel;
-        private System.Windows.Forms.ComboBox monComboBox;
+        private DSPRE.InputComboBox monComboBox;
         private System.Windows.Forms.ListBox monListBox;
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Button saveDataButton;
@@ -746,11 +744,11 @@
         private System.Windows.Forms.GroupBox bulkEditGroupBox;
         private System.Windows.Forms.TableLayoutPanel bulkEditTableLayoutPanel;
         private System.Windows.Forms.Label replaceAllLabel;
-        private System.Windows.Forms.ComboBox replaceeComboBox;
-        private System.Windows.Forms.ComboBox replacerComboBox;
+        private DSPRE.InputComboBox replaceeComboBox;
+        private DSPRE.InputComboBox replacerComboBox;
         private System.Windows.Forms.Label withLabel;
         private System.Windows.Forms.Button bulkReplaceButton;
-        private System.Windows.Forms.ComboBox deleteAllComboBox;
+        private DSPRE.InputComboBox deleteAllComboBox;
         private System.Windows.Forms.Label deleteAllLabel;
         private System.Windows.Forms.Button deleteAllButton;
         private System.Windows.Forms.Button importButton;

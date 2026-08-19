@@ -1051,6 +1051,16 @@ namespace DSPRE.Editors
 
         private void trainerSaveCurrentButton_Click(object sender, EventArgs e)
         {
+            for (int i = 0; i < partyCountUpDown.Value; i++)
+            {
+                if (partyPokemonComboboxList[i].SelectedIndex < 0)
+                {
+                    MessageBox.Show($"Party slot {i + 1} doesn't have a valid Pokémon selected. Fix it before saving.",
+                        "Invalid Party Data", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             currentTrainerFile.trp.partyCount = (byte)partyCountUpDown.Value;
             currentTrainerFile.trp.chooseMoves = trainerMovesCheckBox.Checked;
             currentTrainerFile.trp.chooseItems = trainerItemsCheckBox.Checked;

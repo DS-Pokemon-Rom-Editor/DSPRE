@@ -28,7 +28,7 @@ namespace DSPRE.Editors {
             this.groupBoxDetails = new System.Windows.Forms.GroupBox();
             this.pictureBoxPokemon = new System.Windows.Forms.PictureBox();
             this.labelSpecies = new System.Windows.Forms.Label();
-            this.comboBoxSpecies = new System.Windows.Forms.ComboBox();
+            this.comboBoxSpecies = new DSPRE.InputComboBox();
             this.labelMinLevel = new System.Windows.Forms.Label();
             this.numericUpDownMinLevel = new System.Windows.Forms.NumericUpDown();
             this.labelMaxLevel = new System.Windows.Forms.Label();
@@ -490,7 +490,7 @@ namespace DSPRE.Editors {
         private System.Windows.Forms.GroupBox groupBoxDetails;
         private System.Windows.Forms.PictureBox pictureBoxPokemon;
         private System.Windows.Forms.Label labelSpecies;
-        private System.Windows.Forms.ComboBox comboBoxSpecies;
+        private DSPRE.InputComboBox comboBoxSpecies;
         private System.Windows.Forms.Label labelMinLevel;
         private System.Windows.Forms.NumericUpDown numericUpDownMinLevel;
         private System.Windows.Forms.Label labelMaxLevel;

@@ -18,22 +18,36 @@ namespace DSPRE {
         // Kept as a no-op for callers from the fuzzy-search experiment; native AutoComplete needs no refresh.
         public void RefreshMasterList() { }
 
-        private void UpdateText() {
+        private bool UpdateText() {
             string input = Text;
             int index = FindStringExact(input.Trim());
             if (index == -1) {
                 this.BackColor = Color.IndianRed;
-            } else {
-                this.BackColor = normalColor;
-                SelectedIndex = index;
+                return false;
             }
+            this.BackColor = normalColor;
+            SelectedIndex = index;
+            return true;
         }
         protected override void OnKeyDown(KeyEventArgs e) {
-            base.OnKeyDown(e);
-
             if (e.KeyCode == Keys.Enter) {
-                UpdateText();
+                // Eat Enter on no match so it can't fall through to a default button with a stale selection.
+                if (!UpdateText()) {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    return;
+                }
             }
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnKeyPress(KeyPressEventArgs e) {
+            // Typing while the dropdown is open does native list-navigation, not text entry, so Enter
+            // afterward can't see what was typed. Closing it first routes typing through AutoComplete.
+            if (DroppedDown && !char.IsControl(e.KeyChar)) {
+                DroppedDown = false;
+            }
+            base.OnKeyPress(e);
         }
         protected override void OnLeave(EventArgs e) {
             base.OnLeave(e);

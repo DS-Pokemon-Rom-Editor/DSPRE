@@ -244,14 +244,14 @@ namespace DSPRE.Editors
         private void SaveTradeToFile()
         {
             Helpers.DisableHandlers();
-            curTradeData.species = speciesComboBox.SelectedIndex;
+            if (speciesComboBox.SelectedIndex >= 0) curTradeData.species = speciesComboBox.SelectedIndex;
             curTradeData.hpIV = (int)hpIVNumericUpDown.Value;
             curTradeData.atkIV = (int)atkIVNumericUpDown.Value;
             curTradeData.defIV = (int)defIVNumericUpDown.Value;
             curTradeData.speedIV = (int)speIVNumericUpDown.Value;
             curTradeData.spAtkIV = (int)spaIVNumericUpDown.Value;
             curTradeData.spDefIV = (int)spdIVNumericUpDown.Value;
-            curTradeData.ability = abilityComboBox.SelectedIndex;
+            if (abilityComboBox.SelectedIndex >= 0) curTradeData.ability = abilityComboBox.SelectedIndex;
             curTradeData.otID = (int)otIDNumericUpDown.Value;
             curTradeData.cool = (int)coolNumericUpDown.Value;
             curTradeData.beauty = (int)beautyNumericUpDown.Value;
@@ -259,11 +259,11 @@ namespace DSPRE.Editors
             curTradeData.smart = (int)smartNumericUpDown.Value;
             curTradeData.tough = (int)toughNumericUpDown.Value;
             curTradeData.pid = (int)pidNumericUpDown.Value;
-            curTradeData.heldItem = heldItemComboBox.SelectedIndex;
+            if (heldItemComboBox.SelectedIndex >= 0) curTradeData.heldItem = heldItemComboBox.SelectedIndex;
             curTradeData.otGender = otGenderComboBox.SelectedIndex;
             curTradeData.sheen = (int)sheenNumericUpDown.Value;
             curTradeData.language = langComboBox.SelectedIndex;
-            curTradeData.requestedSpecies = requestedComboBox.SelectedIndex;
+            if (requestedComboBox.SelectedIndex >= 0) curTradeData.requestedSpecies = requestedComboBox.SelectedIndex;
 
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {

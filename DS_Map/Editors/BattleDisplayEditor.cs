@@ -537,6 +537,7 @@ namespace DSPRE.Editors {
 
         private void IndexBox_SelectedIndexChanged(object sender, EventArgs e) {
             if (Helpers.HandlersDisabled) return;
+            if (IndexBox.SelectedIndex < 0) return;
             parentEditor.TrySyncIndices((ComboBox)sender);
             Helpers.DisableHandlers();
             if (CheckDiscardChanges()) ChangeLoadedFile(IndexBox.SelectedIndex);

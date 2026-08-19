@@ -46,6 +46,11 @@ namespace DSPRE.ROMFiles
 
         public static bool hasMoreThanOneGender(int pokemonID, SpeciesFile[] pokemonSpecies)
         {
+            if (pokemonID < 0 || pokemonID >= pokemonSpecies.Length)
+            {
+                return false;
+            }
+
             switch (pokemonSpecies[pokemonID].GenderRatioMaleToFemale)
             {
                 case GENDER_RATIO_MALE:
