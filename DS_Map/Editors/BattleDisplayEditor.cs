@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Windows.Forms;
+using DSPRE.Editors.Utils;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Editors {
@@ -193,6 +194,33 @@ namespace DSPRE.Editors {
         }
         #endregion
 
+        #region Arena: real ROM backdrop + ground platforms (always Lawn terrain, preview-only, not editable)
+        private bool _arenaTried;
+        private bool _hasArenaGraphics;
+        private Bitmap _arenaBackdrop;
+        private BattleGroundRenderer.GroundImage _groundMine, _groundEnemy, _gaugeMine, _gaugeEnemy;
+
+        // Species-independent, built once per ROM load.
+        private void EnsureArena() {
+            if (_arenaTried) return;
+            _arenaTried = true;
+            try {
+                var ground = new BattleGroundRenderer();
+                var (mine, enemy) = ground.Build(BattleGroundRenderer.LawnTerrainId);
+                int bg = BattleGroundRenderer.BackdropForTerrain(BattleGroundRenderer.LawnTerrainId);
+                Bitmap backdrop = bg >= 0 ? new BattleBgRenderer().BuildBackdrop(bg) : null;
+
+                bool ok = mine != null && enemy != null && backdrop != null;
+                if (ok) {
+                    _groundMine = mine; _groundEnemy = enemy; _arenaBackdrop = backdrop;
+                    _gaugeMine = ground.BuildGauge(player: true);
+                    _gaugeEnemy = ground.BuildGauge(player: false);
+                }
+                _hasArenaGraphics = ok;
+            } catch { _hasArenaGraphics = false; }
+        }
+        #endregion
+
         #region Loaded state
         private bool loading;
         private bool hasSpriteData, hasMovementType, hasHeights;
@@ -200,6 +228,7 @@ namespace DSPRE.Editors {
         private int frontHeightM, frontHeightF, backHeightM, backHeightF;
         private int oFrontHeightM, oFrontHeightF, oBackHeightM, oBackHeightF;   // baseline at load, for the delta preview
         private int frameIndex = 0;
+        private int iconFrameIndex = 0;
         private int partyPaletteIndex = 0;
         private Bitmap pendingIconGraphic;   // staged import, written on Save
         // This tab's own decoded battle sprites for currentLoadedId. Slots: 0=FBack, 1=MBack, 2=FFront, 3=MFront.
@@ -216,6 +245,7 @@ namespace DSPRE.Editors {
             this.FormBorderStyle = FormBorderStyle.None;
             this.Size = parent.Size;
             this.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
+            this.FormClosed += (s, e) => { animateTimer.Stop(); iconAnimateTimer.Stop(); };
 
             Helpers.DisableHandlers();
             IndexBox.Items.Clear();
@@ -271,6 +301,7 @@ namespace DSPRE.Editors {
                 }
 
                 pendingIconGraphic = null;
+                iconFrameIndex = 0;
                 partyPaletteIndex = Math.Max(0, Math.Min(2, DSUtils.GetMonIconPaletteId(id)));
 
                 battleSprites = PokemonSpriteEditor.LoadBattleSpritesFor(id);
@@ -319,12 +350,24 @@ namespace DSPRE.Editors {
             frameNumeric.Value = frameIndex;
         }
 
+        private const int IconFrameSize = 32;
         private void RefreshIconPreview() {
-            if (currentLoadedId <= 0) { iconPreviewBox.Image = null; return; }
+            if (currentLoadedId <= 0) { iconPreviewBox.Image = null; iconFrameNumeric.Maximum = 0; return; }
             try {
-                iconPreviewBox.Image = pendingIconGraphic != null
-                    ? (Image)pendingIconGraphic
-                    : DSUtils.GetPokePic(currentLoadedId, 64, 64, partyPaletteIndex);
+                Bitmap full = pendingIconGraphic != null
+                    ? pendingIconGraphic
+                    : DSUtils.GetMonIconGraphicBitmap(currentLoadedId, partyPaletteIndex);
+
+                int frameCount = Math.Max(1, full.Height / IconFrameSize);
+                iconFrameNumeric.Maximum = frameCount - 1;
+                iconFrameNumeric.Enabled = frameCount > 1;
+                if (iconFrameIndex >= frameCount) iconFrameIndex = 0;
+                iconFrameNumeric.Value = iconFrameIndex;
+
+                int top = iconFrameIndex * IconFrameSize;
+                iconPreviewBox.Image = (frameCount > 1 && top + IconFrameSize <= full.Height)
+                    ? full.Clone(new Rectangle(0, top, full.Width, IconFrameSize), full.PixelFormat)
+                    : (Image)full;
             } catch { iconPreviewBox.Image = null; }
         }
 
@@ -335,7 +378,15 @@ namespace DSPRE.Editors {
             Graphics g = e.Graphics;
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
 
-            g.DrawImage(Properties.Resources.BattleBackground, 0, 0, 256 * Scale, 192 * Scale);
+            EnsureArena();
+
+            if (_hasArenaGraphics) {
+                g.DrawImage(_arenaBackdrop, 0, 0, 256 * Scale, 192 * Scale);
+                DrawGround(g, _groundMine);
+                DrawGround(g, _groundEnemy);
+            } else {
+                g.DrawImage(Properties.Resources.BattleBackground, 0, 0, 256 * Scale, 192 * Scale);
+            }
 
             if (!hasSpriteData) return;
 
@@ -360,6 +411,32 @@ namespace DSPRE.Editors {
 
             if (enemy != null) g.DrawImage(enemy, 152 * Scale, (float)(enemyTop * Scale), 80 * Scale, 80 * Scale);
             if (player != null) g.DrawImage(player, 23 * Scale, (float)(playerTop * Scale), 80 * Scale, 80 * Scale);
+
+            if (_hasArenaGraphics) {
+                string name = (currentLoadedId >= 0 && currentLoadedId < pokenames.Length) ? pokenames[currentLoadedId] : "";
+                DrawGauge(g, _gaugeEnemy, name);
+                DrawGauge(g, _gaugeMine, name);
+            }
+        }
+
+        private void DrawGround(Graphics g, BattleGroundRenderer.GroundImage ground) {
+            if (ground?.Image == null) return;
+            g.DrawImage(ground.Image, ground.Left * Scale, ground.Top * Scale, ground.Image.Width * Scale, ground.Image.Height * Scale);
+        }
+
+        private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 9.5f, FontStyle.Bold);
+        private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName) {
+            if (gauge?.Image == null) return;
+            g.DrawImage(gauge.Image, gauge.Left * Scale, gauge.Top * Scale, gauge.Image.Width * Scale, gauge.Image.Height * Scale);
+            if (string.IsNullOrEmpty(speciesName)) return;
+
+            // Anchor off the gauge's real screen center, not the render canvas' corner.
+            int centerX = gauge.Left + gauge.Image.Width / 2, centerY = gauge.Top + gauge.Image.Height / 2;
+            float textX = (centerX - 34) * Scale, textY = (centerY - 8) * Scale;
+            string label = $"{speciesName} Lv5";
+            Color textColor = RomInfo.gameFamily == GameFamilies.Plat ? Color.White : Color.FromArgb(235, 40, 40, 40);
+            using (Brush fg = new SolidBrush(textColor))
+                g.DrawString(label, GaugeFont, fg, textX, textY);
         }
 
         private void SaveChangesInternal() {
@@ -400,10 +477,15 @@ namespace DSPRE.Editors {
         private GroupBox movementGroup, heightsGroup;
         private NumericUpDown frontHeightMNumeric, frontHeightFNumeric, backHeightMNumeric, backHeightFNumeric;
         private NumericUpDown frameNumeric;
+        private NumericUpDown iconFrameNumeric;
         private RadioButton genderMaleRadio, genderFemaleRadio;
         private PictureBox iconPreviewBox;
         private Panel previewPanel;
         private Label noDataLabel;
+        private Button animateButton;
+        private readonly Timer animateTimer = new Timer { Interval = 250 };
+        private Button iconAnimateButton;
+        private readonly Timer iconAnimateTimer = new Timer { Interval = 250 };
 
         private void BuildUi() {
             SuspendLayout();
@@ -427,7 +509,7 @@ namespace DSPRE.Editors {
 
             // Left column: live preview + gender/frame picker.
             var leftPanel = new Panel { Dock = DockStyle.Fill };
-            previewPanel = new Panel {
+            previewPanel = new DoubleBufferedPanel {
                 Size = new Size(256 * Scale, 192 * Scale),
                 BorderStyle = BorderStyle.FixedSingle,
                 Top = 0, Left = 0,
@@ -443,10 +525,15 @@ namespace DSPRE.Editors {
             frameNumeric.ValueChanged += (s, e) => { if (loading) return; frameIndex = (int)frameNumeric.Value; RefreshPreview(); };
             noDataLabel = new Label { Text = "No battle-sprite position data for this entry.", AutoSize = true, ForeColor = Color.OrangeRed, Visible = false };
 
+            animateButton = new Button { Text = "Animate", AutoSize = true, Margin = new Padding(12, 3, 3, 3) };
+            animateButton.Click += AnimateButton_Click;
+            animateTimer.Tick += AnimateTimer_Tick;
+
             frameBar.Controls.Add(genderMaleRadio);
             frameBar.Controls.Add(genderFemaleRadio);
             frameBar.Controls.Add(new Label { Text = "  Frame:", AutoSize = true, Margin = new Padding(12, 4, 3, 3) });
             frameBar.Controls.Add(frameNumeric);
+            frameBar.Controls.Add(animateButton);
 
             leftPanel.Controls.Add(previewPanel);
             leftPanel.Controls.Add(frameBar);
@@ -499,6 +586,8 @@ namespace DSPRE.Editors {
             partyPaletteCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 100 };
             partyPaletteCombo.Items.AddRange(new object[] { "Palette 0", "Palette 1", "Palette 2" });
             partyPaletteCombo.SelectedIndexChanged += (s, e) => { if (loading) return; partyPaletteIndex = partyPaletteCombo.SelectedIndex; SetDirty(true); RefreshIconPreview(); };
+            iconFrameNumeric = new NumericUpDown { Minimum = 0, Maximum = 0, Width = 50 };
+            iconFrameNumeric.ValueChanged += (s, e) => { if (loading) return; iconFrameIndex = (int)iconFrameNumeric.Value; RefreshIconPreview(); };
             var iconButtons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
             var importBtn = new Button { Text = "Import PNG", AutoSize = true };
             importBtn.Click += ImportIconButton_Click;
@@ -507,11 +596,24 @@ namespace DSPRE.Editors {
             iconButtons.Controls.Add(importBtn);
             iconButtons.Controls.Add(exportBtn);
 
+            var paletteRow = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
+            paletteRow.Controls.Add(new Label { Text = "Palette bank:", AutoSize = true, Margin = new Padding(3, 6, 3, 3) });
+            paletteRow.Controls.Add(partyPaletteCombo);
+
+            iconAnimateButton = new Button { Text = "Animate", AutoSize = true, Margin = new Padding(6, 3, 3, 3) };
+            iconAnimateButton.Click += IconAnimateButton_Click;
+            iconAnimateTimer.Tick += IconAnimateTimer_Tick;
+
+            var frameRow = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
+            frameRow.Controls.Add(new Label { Text = "Frame:", AutoSize = true, Margin = new Padding(3, 6, 3, 3) });
+            frameRow.Controls.Add(iconFrameNumeric);
+            frameRow.Controls.Add(iconAnimateButton);
+
             iconLayout.Controls.Add(iconPreviewBox, 0, 0);
-            iconLayout.SetRowSpan(iconPreviewBox, 2);
-            iconLayout.Controls.Add(new Label { Text = "Palette bank:", AutoSize = true, Margin = new Padding(3, 6, 3, 3) }, 1, 0);
-            iconLayout.Controls.Add(partyPaletteCombo, 1, 0);
-            iconLayout.Controls.Add(iconButtons, 1, 1);
+            iconLayout.SetRowSpan(iconPreviewBox, 3);
+            iconLayout.Controls.Add(paletteRow, 1, 0);
+            iconLayout.Controls.Add(frameRow, 1, 1);
+            iconLayout.Controls.Add(iconButtons, 1, 2);
             iconGroup.Controls.Add(iconLayout);
 
             rightPanel.Controls.Add(posGroup);
@@ -544,6 +646,38 @@ namespace DSPRE.Editors {
             Helpers.EnableHandlers();
         }
 
+        private void AnimateButton_Click(object sender, EventArgs e) {
+            if (animateTimer.Enabled) {
+                animateTimer.Stop();
+                animateButton.Text = "Animate";
+            } else {
+                animateTimer.Start();
+                animateButton.Text = "Stop";
+            }
+        }
+
+        private void AnimateTimer_Tick(object sender, EventArgs e) {
+            int maxFrame = Math.Max(0, (int)frameNumeric.Maximum);
+            frameIndex = maxFrame > 0 ? (frameIndex + 1) % (maxFrame + 1) : 0;
+            frameNumeric.Value = frameIndex;
+        }
+
+        private void IconAnimateButton_Click(object sender, EventArgs e) {
+            if (iconAnimateTimer.Enabled) {
+                iconAnimateTimer.Stop();
+                iconAnimateButton.Text = "Animate";
+            } else {
+                iconAnimateTimer.Start();
+                iconAnimateButton.Text = "Stop";
+            }
+        }
+
+        private void IconAnimateTimer_Tick(object sender, EventArgs e) {
+            int maxIconFrame = Math.Max(0, (int)iconFrameNumeric.Maximum);
+            iconFrameIndex = maxIconFrame > 0 ? (iconFrameIndex + 1) % (maxIconFrame + 1) : 0;
+            iconFrameNumeric.Value = iconFrameIndex;
+        }
+
         private void ImportIconButton_Click(object sender, EventArgs e) {
             using (OpenFileDialog ofd = new OpenFileDialog { Filter = "PNG Image|*.png", Title = "Import Icon Graphic" }) {
                 if (ofd.ShowDialog() != DialogResult.OK) return;
@@ -574,5 +708,13 @@ namespace DSPRE.Editors {
             }
         }
         #endregion
+    }
+
+    // Plain Panel repaints unbuffered; every Invalidate() (each animate tick) visibly flashes.
+    internal sealed class DoubleBufferedPanel : Panel {
+        public DoubleBufferedPanel() {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        }
     }
 }

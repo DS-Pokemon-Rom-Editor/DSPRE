@@ -273,6 +273,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Editors\Utils\IndexedBitmapHandler.cs" />
+    <Compile Include="Editors\Utils\NitroBgCodec.cs" />
+    <Compile Include="Editors\Utils\EntryNarc.cs" />
+    <Compile Include="Editors\Utils\BattleGroundRenderer.cs" />
+    <Compile Include="Editors\Utils\BattleBgRenderer.cs" />
     <Compile Include="Editors\ItemEditor.cs">
       <SubType>Form</SubType>
     </Compile>
