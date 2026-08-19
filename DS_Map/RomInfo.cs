@@ -2091,6 +2091,7 @@ namespace DSPRE
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
 
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
+                        [DirNames.pokeHeight] = $@"{dataFolderName}\a\0\0\5",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

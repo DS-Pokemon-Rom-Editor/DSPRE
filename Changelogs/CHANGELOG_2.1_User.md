@@ -4,6 +4,18 @@
 
 ---
 
+## 2.1.4
+- Battle Display: HeartGold/SoulSilver now reads and edits per-gender battle-sprite height, same as
+  Diamond/Pearl/Platinum. It was previously always locked to one shared position for both genders, which
+  wasn't accurate to how the game actually renders them.
+- Battle Display: both genders' height fields stay visible even when a species only has a real sprite for
+  one, instead of hiding the whole panel. Only the gender with an actual sprite is editable.
+- Pokémon Sprite Editor: "Add Opposite Gender Sprites" now also copies the new gender's battle-sprite
+  height, not just the sprite graphics, so it doesn't end up rendered at a different Y position than the
+  gender it was copied from.
+
+---
+
 ## 2.1.3
 - Removed the fuzzy-search dropdown filtering added in 2.1. It caused real bugs (crashes, wrong item/species
   picked), so dropdowns are back to standard, native search-as-you-type behavior.
