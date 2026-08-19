@@ -4,6 +4,42 @@
 
 ---
 
+## 2.1.5
+- New TM/HM Bulk Editor (Pokémon Editor, TM/HM panel): edit machine compatibility for many Pokémon at
+  once instead of one at a time. Two views: by Pokémon (select individual species or whole evolution
+  families, then toggle a TM/HM for all of them at once) and by TM/HM (pick one machine and see/toggle
+  who learns it across the whole dex). Includes a family Sync action (Union or Intersection) and a
+  "Copy Compatibility To..." dialog for copying one species' whole machine list onto others.
+- Learnset Bulk Editor: "Copy Learnset to Other Pokemon" no longer requires selecting the source
+  Pokémon's row in the grid beforehand. It opens a dialog where you pick both the source and the
+  target(s) directly.
+- Fixed both bulk editors' "copy to" dialogs needing two clicks (select the row, then click the
+  checkbox) to check a target Pokémon; one click now does it.
+- Pokémon Sprite Editor: fixed a crash when saving after importing a PNG with fewer than 16 colors, or
+  after choosing "Use PaletteMatch" to merge a new image into the existing palette. Both cases could
+  also silently corrupt other sprites sharing that palette (wrong colors, or a sprite turning solid
+  black or fully transparent) even when the save itself didn't crash.
+- Fixed a long-standing issue where fields you can type a search into (species, moves, items, trainer
+  classes, and similar) behaved inconsistently if you opened the dropdown list before typing: most
+  editors selected nothing even when you typed the exact name, a few (Item Editor, Safari Zone Editor,
+  Headbutt Editor) crashed outright, and a couple (TM Editor, Egg Move Editor) silently picked the wrong
+  entry. Also added a warning instead of a crash (or, for Trade Editor, silently saving bad data) when
+  saving with one of these fields left unresolved, in the Trainer Editor party list, Trade Editor, and
+  Pokémon Sprite Editor.
+- The crash report dialog now actually shows the file path it saved the report to; it used to show a
+  blank line there.
+- Battle Display:
+  - The party icon preview has a Frame selector now, so you can check both animation frames instead of
+    only ever seeing the first one.
+  - Added Animate buttons for the battle sprite and the party icon (separate from each other) so you can
+    watch them cycle frames instead of stepping through manually.
+  - The preview now shows a real background, ground platform, and HP bar pulled from the ROM instead of
+    a generic placeholder image, so height adjustments have real scenery to judge against. It's always
+    the "Lawn" terrain for now, not selectable. Known rough edge: we know this still looks a bit ugly
+    (text sizing/placement, overall polish) and plan to keep improving it.
+
+---
+
 ## 2.1.4
 - Battle Display: HeartGold/SoulSilver now reads and edits per-gender battle-sprite height, same as
   Diamond/Pearl/Platinum. It was previously always locked to one shared position for both genders, which

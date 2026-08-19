@@ -210,6 +210,9 @@ namespace DSPRE
             pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc, shadow size, 1 B/mon
             pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front)
             pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc, 2 files/form (back, front; both genders)
+
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -1993,6 +1996,8 @@ namespace DSPRE
                         [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
                         [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
 
+                        [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\batt_bg.narc",
+
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
@@ -2033,6 +2038,9 @@ namespace DSPRE
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\poketool\poke_edit\pl_poke_data.narc",
                         [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
                         [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
+
+                        [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\pl_batt_bg.narc",
+                        [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\pl_batt_obj.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2092,6 +2100,9 @@ namespace DSPRE
 
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
                         [DirNames.pokeHeight] = $@"{dataFolderName}\a\0\0\5",
+
+                        [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",
+                        [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

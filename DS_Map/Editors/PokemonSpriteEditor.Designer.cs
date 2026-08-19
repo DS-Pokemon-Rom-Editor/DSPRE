@@ -38,7 +38,7 @@ partial class PokemonSpriteEditor {
             this.FrontS = new System.Windows.Forms.Label();
             this.lblNormal = new System.Windows.Forms.Label();
             this.lblShiny = new System.Windows.Forms.Label();
-            this.IndexBox = new System.Windows.Forms.ComboBox();
+            this.IndexBox = new DSPRE.InputComboBox();
             this.BasePalette = new System.Windows.Forms.ComboBox();
             this.ShinyPalette = new System.Windows.Forms.ComboBox();
             this.SaveBox = new System.Windows.Forms.ComboBox();
@@ -387,7 +387,7 @@ partial class PokemonSpriteEditor {
         private System.Windows.Forms.PictureBox femaleBackShinyPic;
         private System.Windows.Forms.PictureBox maleFrontShinyPic;
         private System.Windows.Forms.PictureBox femaleFrontShinyPic;
-        public System.Windows.Forms.ComboBox IndexBox;
+        public DSPRE.InputComboBox IndexBox;
         #endregion
     }
 }

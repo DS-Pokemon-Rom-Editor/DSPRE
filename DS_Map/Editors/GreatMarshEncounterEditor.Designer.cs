@@ -25,7 +25,7 @@ namespace DSPRE.Editors {
             this.groupBoxDetails = new System.Windows.Forms.GroupBox();
             this.pictureBoxPokemon = new System.Windows.Forms.PictureBox();
             this.labelSpecies = new System.Windows.Forms.Label();
-            this.comboBoxSpecies = new System.Windows.Forms.ComboBox();
+            this.comboBoxSpecies = new DSPRE.InputComboBox();
             this.labelSlotInfo = new System.Windows.Forms.Label();
             this.buttonSystemHelp = new System.Windows.Forms.Button();
             this.buttonSave = new System.Windows.Forms.Button();
@@ -289,7 +289,7 @@ namespace DSPRE.Editors {
         private System.Windows.Forms.GroupBox groupBoxDetails;
         private System.Windows.Forms.PictureBox pictureBoxPokemon;
         private System.Windows.Forms.Label labelSpecies;
-        private System.Windows.Forms.ComboBox comboBoxSpecies;
+        private DSPRE.InputComboBox comboBoxSpecies;
         private System.Windows.Forms.Label labelSlotInfo;
         private System.Windows.Forms.Button buttonSystemHelp;
         private System.Windows.Forms.Button buttonSave;

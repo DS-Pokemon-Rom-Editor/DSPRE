@@ -278,6 +278,11 @@ namespace DSPRE.Editors.Utils
                 if (NotFound[i])
                     maxsize++;
             }
+            // Doesn't fit; caller falls back to replacing the palette outright instead of merging.
+            if (maxsize > parent.Entries.Length)
+            {
+                return null;
+            }
             for (int i = 0; i < maxsize; i++)
             {
                 if ((i < used.Length) && (used[i]))

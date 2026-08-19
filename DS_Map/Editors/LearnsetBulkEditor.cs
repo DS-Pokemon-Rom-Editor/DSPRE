@@ -476,22 +476,20 @@ namespace DSPRE.Editors
 
         private void CopyLearnsetToOthers()
         {
-            var sourcePokemon = GetSingleSelectedPokemonId();
-            if (sourcePokemon == -1)
-            {
-                MessageBox.Show("Please select exactly one Pokemon row to copy FROM.", "Selection Error",
-                              MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            // Pre-fill the source from whatever's selected in the grid (e.g. a right-clicked row),
+            // but the dialog's own combo box is always there so a prior grid selection is never required.
+            int preselectedSource = GetSingleSelectedPokemonId();
 
-            using (var form = new SelectPokemonForm(pokemonNames, "Select Pokemon to copy learnset TO:"))
+            using (var form = new CopyLearnsetForm(pokemonNames, preselectedSource))
             {
-                if (form.ShowDialog() == DialogResult.OK && form.SelectedPokemonIds.Any())
+                if (form.ShowDialog() == DialogResult.OK && form.SelectedTargetIds.Any())
                 {
+                    int sourcePokemon = form.SelectedSourceId;
                     var sourceMoves = learnsetData.Where(x => x.PokemonID == sourcePokemon).ToList();
+                    var targetIds = form.SelectedTargetIds.Where(id => id != sourcePokemon).ToList();
 
                     // Remove existing moves from target Pokemon
-                    foreach (var targetId in form.SelectedPokemonIds)
+                    foreach (var targetId in targetIds)
                     {
                         var existingMoves = learnsetData.Where(x => x.PokemonID == targetId).ToList();
                         foreach (var move in existingMoves)
@@ -525,7 +523,7 @@ namespace DSPRE.Editors
                         learnsetData.Add(entry);
                     }
 
-                    UpdateStatus($"Copied learnset from {pokemonNames[sourcePokemon]} to {form.SelectedPokemonIds.Count} Pokemon.");
+                    UpdateStatus($"Copied learnset from {pokemonNames[sourcePokemon]} to {targetIds.Count} Pokemon.");
                     SetDirty();
                 }
             }
@@ -1101,59 +1099,59 @@ namespace DSPRE.Editors
         }
     }
 
-    public class SelectPokemonForm : Form
+    public class CopyLearnsetForm : Form
     {
-        private CheckedListBox checkedListBox;
+        private ComboBox sourceCombo;
+        private CheckedListBox targetList;
         private Button btnOK;
         private Button btnCancel;
 
-        public List<int> SelectedPokemonIds =>
-            checkedListBox.CheckedIndices.Cast<int>().ToList();
+        public int SelectedSourceId => sourceCombo.SelectedIndex;
+        public List<int> SelectedTargetIds => targetList.CheckedIndices.Cast<int>().ToList();
 
-        public SelectPokemonForm(string[] pokemonNames, string title)
+        public CopyLearnsetForm(string[] pokemonNames, int preselectedSourceId)
         {
-            InitializeComponent(pokemonNames, title);
+            InitializeComponent(pokemonNames, preselectedSourceId);
         }
 
-        private void InitializeComponent(string[] pokemonNames, string title)
+        private void InitializeComponent(string[] pokemonNames, int preselectedSourceId)
         {
-            this.Size = new Size(300, 500);
-            this.Text = title;
+            this.Size = new Size(380, 620);
+            this.Text = "Copy Learnset";
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterParent;
+            this.MinimizeBox = false;
+            this.MaximizeBox = false;
 
-            var tableLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2
-            };
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(8) };
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
 
-            checkedListBox = new CheckedListBox
-            {
-                Dock = DockStyle.Fill
-            };
+            layout.Controls.Add(new Label { Text = "Copy the learnset FROM:", AutoSize = true, Margin = new Padding(0, 0, 0, 2) }, 0, 0);
 
-            foreach (var item in pokemonNames.Select((name, idx) => $"{idx:000} - {name}"))
-            {
-                checkedListBox.Items.Add(item);
-            }
+            var items = pokemonNames.Select((name, idx) => $"{idx:000} - {name}").ToArray();
 
-            var buttonPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.RightToLeft
-            };
+            sourceCombo = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
+            sourceCombo.Items.AddRange(items);
+            sourceCombo.SelectedIndex = preselectedSourceId >= 0 && preselectedSourceId < sourceCombo.Items.Count ? preselectedSourceId : 0;
+            layout.Controls.Add(sourceCombo, 0, 1);
+
+            layout.Controls.Add(new Label { Text = "Copy TO (check one or more):", AutoSize = true, Margin = new Padding(0, 8, 0, 2) }, 0, 2);
+
+            targetList = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true };
+            targetList.Items.AddRange(items);
+            layout.Controls.Add(targetList, 0, 3);
+
+            var buttonPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
             btnCancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
             btnOK = new Button { Text = "OK", DialogResult = DialogResult.OK };
             buttonPanel.Controls.AddRange(new Control[] { btnOK, btnCancel });
+            layout.Controls.Add(buttonPanel, 0, 4);
 
-            tableLayout.Controls.Add(checkedListBox, 0, 0);
-            tableLayout.Controls.Add(buttonPanel, 0, 1);
-
-            this.Controls.Add(tableLayout);
+            this.Controls.Add(layout);
             this.AcceptButton = btnOK;
             this.CancelButton = btnCancel;
         }

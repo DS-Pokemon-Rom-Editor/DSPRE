@@ -42,6 +42,7 @@
             this.addableMachinesListBox = new System.Windows.Forms.ListBox();
             this.addedMachinesListBox = new System.Windows.Forms.ListBox();
             this.addMachineButton = new System.Windows.Forms.Button();
+            this.tmHmBulkEditorButton = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
@@ -356,17 +357,19 @@
             this.tableLayoutPanel11.Controls.Add(this.addMachineButton, 1, 1);
             this.tableLayoutPanel11.Controls.Add(this.label10, 0, 0);
             this.tableLayoutPanel11.Controls.Add(this.label11, 2, 0);
+            this.tableLayoutPanel11.Controls.Add(this.tmHmBulkEditorButton, 0, 6);
+            this.tableLayoutPanel11.SetColumnSpan(this.tmHmBulkEditorButton, 3);
             this.tableLayoutPanel11.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel11.Location = new System.Drawing.Point(4, 17);
             this.tableLayoutPanel11.Name = "tableLayoutPanel11";
-            this.tableLayoutPanel11.RowCount = 6;
+            this.tableLayoutPanel11.RowCount = 7;
             this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 7F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 72F));
-            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 10F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel11.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34F));
             this.tableLayoutPanel11.Size = new System.Drawing.Size(442, 450);
             this.tableLayoutPanel11.TabIndex = 0;
             // 
@@ -433,6 +436,15 @@
             this.addMachineButton.Text = "Enable >>";
             this.addMachineButton.UseVisualStyleBackColor = true;
             this.addMachineButton.Click += new System.EventHandler(this.addMachineButton_Click);
+            //
+            // tmHmBulkEditorButton
+            //
+            this.tmHmBulkEditorButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tmHmBulkEditorButton.Name = "tmHmBulkEditorButton";
+            this.tmHmBulkEditorButton.TabIndex = 6;
+            this.tmHmBulkEditorButton.Text = "Bulk Editor...";
+            this.tmHmBulkEditorButton.UseVisualStyleBackColor = true;
+            this.tmHmBulkEditorButton.Click += new System.EventHandler(this.tmHmBulkEditorButton_Click);
             // 
             // label10
             // 
@@ -1589,6 +1601,7 @@
         private System.Windows.Forms.Button removeAllMachinesButton;
         private System.Windows.Forms.Button addAllMachinesButton;
         private System.Windows.Forms.Button removeMachineButton;
+        private System.Windows.Forms.Button tmHmBulkEditorButton;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel7;
         private System.Windows.Forms.NumericUpDown baseSpeedNumericUpDown;

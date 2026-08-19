@@ -54,7 +54,7 @@ namespace DSPRE
             }
 
             DialogResult result = MessageBox.Show(
-                   $"An unexpected error occurred and the application crashed.\n\nA crash report was saved here:\n\n\nClick OK to open the folder.",
+                   $"An unexpected error occurred and the application crashed.\n\nA crash report was saved here:\n\n{filePath}\n\nClick OK to open the folder.",
                    "Application Error",
                    MessageBoxButtons.OKCancel,
                    MessageBoxIcon.Error

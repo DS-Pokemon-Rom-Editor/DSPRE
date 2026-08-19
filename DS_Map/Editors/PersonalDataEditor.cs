@@ -436,6 +436,14 @@ namespace DSPRE {
             RebuildMachinesListBoxes();
             setDirty(true);
         }
+        private void tmHmBulkEditorButton_Click(object sender, EventArgs e) {
+            using (var bulkEditor = new TmHmBulkEditor(fileNames, machineMoveNames)) {
+                if (bulkEditor.ShowDialog() == DialogResult.OK) {
+                    ChangeLoadedFile(currentLoadedId);
+                }
+            }
+        }
+
         private void saveDataButton_Click(object sender, EventArgs e) {
             currentLoadedFile.SaveToFileDefaultDir(currentLoadedId, true);
             WriteHatchResult(currentLoadedId);

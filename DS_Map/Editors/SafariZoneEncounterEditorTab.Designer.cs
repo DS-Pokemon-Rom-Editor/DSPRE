@@ -30,9 +30,9 @@ namespace DSPRE.Editors
     private void InitializeComponent()
     {
       this.numericUpDownLevel = new System.Windows.Forms.NumericUpDown();
-      this.comboBoxPokemon = new System.Windows.Forms.ComboBox();
+      this.comboBoxPokemon = new DSPRE.InputComboBox();
       this.numericUpDownLevelObject = new System.Windows.Forms.NumericUpDown();
-      this.comboBoxPokemonObject = new System.Windows.Forms.ComboBox();
+      this.comboBoxPokemonObject = new DSPRE.InputComboBox();
       this.label2 = new System.Windows.Forms.Label();
       this.label1 = new System.Windows.Forms.Label();
       this.label3 = new System.Windows.Forms.Label();
@@ -204,10 +204,10 @@ namespace DSPRE.Editors
 
     public ListBox2 listBoxEncounters;
     public System.Windows.Forms.NumericUpDown numericUpDownLevel;
-    public System.Windows.Forms.ComboBox comboBoxPokemon;
+    public DSPRE.InputComboBox comboBoxPokemon;
     public ListBox2 listBoxEncountersObject;
     public System.Windows.Forms.NumericUpDown numericUpDownLevelObject;
-    public System.Windows.Forms.ComboBox comboBoxPokemonObject;
+    public DSPRE.InputComboBox comboBoxPokemonObject;
     private System.Windows.Forms.Label label2;
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.Label label3;

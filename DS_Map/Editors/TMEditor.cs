@@ -387,6 +387,8 @@ namespace DSPRE
                 return;
 
             int selectedMoveId = moveComboBox.SelectedIndex;
+            if (selectedMoveId < 0)
+                return;
             curMachineMoves[selectedTMIndex] = selectedMoveId;
 
             // Update the listbox entry

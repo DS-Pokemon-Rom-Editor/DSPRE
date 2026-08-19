@@ -32,7 +32,7 @@
             this.itemIDNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.holdEffectComboBox = new System.Windows.Forms.ComboBox();
             this.fieldPocketComboBox = new System.Windows.Forms.ComboBox();
-            this.itemNameInputComboBox = new System.Windows.Forms.ComboBox();
+            this.itemNameInputComboBox = new DSPRE.InputComboBox();
             this.priceNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.holdFlowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
@@ -1535,7 +1535,7 @@
         private System.Windows.Forms.NumericUpDown itemIDNumericUpDown;
         private System.Windows.Forms.ComboBox holdEffectComboBox;
         private System.Windows.Forms.ComboBox fieldPocketComboBox;
-        private System.Windows.Forms.ComboBox itemNameInputComboBox;
+        private DSPRE.InputComboBox itemNameInputComboBox;
         private System.Windows.Forms.NumericUpDown priceNumericUpDown;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Label holdEffectLabel;

@@ -922,7 +922,7 @@ namespace DSPRE.Editors {
                     }
                     
                     ColorPalette temp = handler.AlternatePalette(currentSprites.Sprites[index % 4], image);
-                    currentSprites.Shiny = temp ?? image.Palette;
+                    currentSprites.Shiny = PadPaletteTo16(temp ?? image.Palette);
                 } else {
                     // Loading normal sprite
                     image = CheckSize(image, openFileDialog.FileName, spriteTypeNames[index], index);
@@ -930,21 +930,30 @@ namespace DSPRE.Editors {
                         OpenPngs.Enabled = true;
                         return;
                     }
-                    
+
                     bool match = handler.PaletteEquals(currentSprites.Normal, image);
                     if (!match) {
                         DialogResult result = MessageBox.Show(
-                            "Image's palette does not match the current palette. Use PaletteMatch?", 
-                            "Palette mismatch", 
+                            "Image's palette does not match the current palette. Use PaletteMatch?",
+                            "Palette mismatch",
                             MessageBoxButtons.YesNo);
-                            
+
                         if (result == DialogResult.Yes) {
-                            image = handler.PaletteMatch(currentSprites.Normal, image, usedEntries);
-                            usedEntries = handler.IsUsed(image, usedEntries);
+                            Bitmap matched = handler.PaletteMatch(currentSprites.Normal, image, usedEntries);
+                            if (matched == null) {
+                                MessageBox.Show(
+                                    "This image's colors don't fit alongside the existing palette (16 colors max combined). " +
+                                    "Replacing the whole palette with this image's own colors instead.",
+                                    "Palette Match", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                usedEntries = handler.IsUsed(image);
+                            } else {
+                                image = matched;
+                                usedEntries = handler.IsUsed(image, usedEntries);
+                            }
                         } else {
                             usedEntries = handler.IsUsed(image);
                         }
-                        currentSprites.Normal = image.Palette;
+                        currentSprites.Normal = PadPaletteTo16(image.Palette);
                     }
                     currentSprites.Sprites[index] = image;
                 }
@@ -960,6 +969,10 @@ namespace DSPRE.Editors {
                 return;
             }
             int selectedIndex = IndexBox.SelectedIndex;
+            if (selectedIndex < 0) {
+                MessageBox.Show("No valid Pokémon selected. Fix it before saving.", "Invalid Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             // If editing main sprites, files are organized as groups of 6 entries per pokemon
             if (!isLoadingOtherForms) {
@@ -1248,7 +1261,7 @@ namespace DSPRE.Editors {
                 
                 ColorPalette temp = handler.AlternatePalette(baseImage, shinyImage);
                 if (temp != null) {
-                    currentSprites.Shiny = temp;
+                    currentSprites.Shiny = PadPaletteTo16(temp);
                 } else {
                     MessageBox.Show("Failed!", "Failed");
                 }
@@ -1539,6 +1552,20 @@ namespace DSPRE.Editors {
             }
         }
 
+        // LoadImages() applies this palette to every direction/gender slot, so it must always be 16 entries.
+        private ColorPalette PadPaletteTo16(ColorPalette pal) {
+            if (pal.Entries.Length >= 16) {
+                return pal;
+            }
+            using (Bitmap temp = new Bitmap(1, 1, PixelFormat.Format8bppIndexed)) {
+                ColorPalette padded = temp.Palette;
+                for (int i = 0; i < 16; i++) {
+                    padded.Entries[i] = i < pal.Entries.Length ? pal.Entries[i] : Color.Black;
+                }
+                return padded;
+            }
+        }
+
         private void SavePal(FileStream fs, ColorPalette palette) {
             byte[] buffer = new byte[40] {
                 82, 76, 67, 78, 255, 254, 0, 1, 72, 0, 0, 0, 16, 0, 1, 0,
@@ -1551,9 +1578,11 @@ namespace DSPRE.Editors {
             
             ushort[] array = new ushort[16];
             for (int i = 0; i < 16; i++) {
-                array[i] = (ushort)(((palette.Entries[i].R >> 3) & 0x1F) | 
-                                    (((palette.Entries[i].G >> 3) & 0x1F) << 5) | 
-                                    (((palette.Entries[i].B >> 3) & 0x1F) << 10));
+                // A palette shorter than 16 entries would index out of range past this point.
+                Color c = i < palette.Entries.Length ? palette.Entries[i] : Color.Black;
+                array[i] = (ushort)(((c.R >> 3) & 0x1F) |
+                                    (((c.G >> 3) & 0x1F) << 5) |
+                                    (((c.B >> 3) & 0x1F) << 10));
             }
             
             for (int j = 0; j < 16; j++) {

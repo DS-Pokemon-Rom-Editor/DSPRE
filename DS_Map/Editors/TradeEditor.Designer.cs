@@ -39,7 +39,7 @@
             this.nicknameLabel = new System.Windows.Forms.Label();
             this.otNameLabel = new System.Windows.Forms.Label();
             this.tradeDataGroupBox = new System.Windows.Forms.GroupBox();
-            this.requestedComboBox = new System.Windows.Forms.ComboBox();
+            this.requestedComboBox = new DSPRE.InputComboBox();
             this.requestedLabel = new System.Windows.Forms.Label();
             this.otGenderComboBox = new System.Windows.Forms.ComboBox();
             this.otGenderLabel = new System.Windows.Forms.Label();
@@ -47,7 +47,7 @@
             this.otIDLabel = new System.Windows.Forms.Label();
             this.monDataGroupBox = new System.Windows.Forms.GroupBox();
             this.monDataPanel = new System.Windows.Forms.Panel();
-            this.abilityComboBox = new System.Windows.Forms.ComboBox();
+            this.abilityComboBox = new DSPRE.InputComboBox();
             this.abilityLabel = new System.Windows.Forms.Label();
             this.unknownNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.unknownLabel = new System.Windows.Forms.Label();
@@ -55,7 +55,7 @@
             this.pidLabel = new System.Windows.Forms.Label();
             this.langComboBox = new System.Windows.Forms.ComboBox();
             this.langLabel = new System.Windows.Forms.Label();
-            this.heldItemComboBox = new System.Windows.Forms.ComboBox();
+            this.heldItemComboBox = new DSPRE.InputComboBox();
             this.heldItemLabel = new System.Windows.Forms.Label();
             this.contestGroupBox = new System.Windows.Forms.GroupBox();
             this.toughNumericUpDown = new System.Windows.Forms.NumericUpDown();
@@ -83,7 +83,7 @@
             this.defIVLabel = new System.Windows.Forms.Label();
             this.atkIVLabel = new System.Windows.Forms.Label();
             this.hpIVLabel = new System.Windows.Forms.Label();
-            this.speciesComboBox = new System.Windows.Forms.ComboBox();
+            this.speciesComboBox = new DSPRE.InputComboBox();
             this.speciesLabel = new System.Windows.Forms.Label();
             this.tradeIDNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.tradeIDLabel = new System.Windows.Forms.Label();
@@ -777,7 +777,7 @@
         private System.Windows.Forms.GroupBox tradeDataGroupBox;
         private System.Windows.Forms.GroupBox textDataGroupBox;
         private System.Windows.Forms.Label speciesLabel;
-        private System.Windows.Forms.ComboBox speciesComboBox;
+        private DSPRE.InputComboBox speciesComboBox;
         private System.Windows.Forms.Panel monDataPanel;
         private System.Windows.Forms.GroupBox IVGroupBox;
         private System.Windows.Forms.Label speIVLabel;
@@ -805,7 +805,7 @@
         private System.Windows.Forms.Label beautyLabel;
         private System.Windows.Forms.Label coolLabel;
         private System.Windows.Forms.Label sheenLabel;
-        private System.Windows.Forms.ComboBox heldItemComboBox;
+        private DSPRE.InputComboBox heldItemComboBox;
         private System.Windows.Forms.Label heldItemLabel;
         private System.Windows.Forms.GroupBox monDataGroupBox;
         private System.Windows.Forms.ComboBox langComboBox;
@@ -818,9 +818,9 @@
         private System.Windows.Forms.Label pidLabel;
         private System.Windows.Forms.NumericUpDown unknownNumericUpDown;
         private System.Windows.Forms.Label unknownLabel;
-        private System.Windows.Forms.ComboBox abilityComboBox;
+        private DSPRE.InputComboBox abilityComboBox;
         private System.Windows.Forms.Label abilityLabel;
-        private System.Windows.Forms.ComboBox requestedComboBox;
+        private DSPRE.InputComboBox requestedComboBox;
         private System.Windows.Forms.Label requestedLabel;
         private System.Windows.Forms.ToolTip toolTip;
         private System.Windows.Forms.Button saveTradeButton;

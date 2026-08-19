@@ -27,6 +27,7 @@ namespace DSPRE.Editors {
 
     private void comboBoxPokemon_SelectedIndexChanged(object sender, EventArgs e) {
       if (Helpers.HandlersDisabled){ return; }
+      if (comboBoxPokemon.SelectedIndex < 0){ return; }
       SafariZoneEncounter safariZoneEncounter = (SafariZoneEncounter)listBoxEncounters.SelectedItem;
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.pokemonID = (ushort)comboBoxPokemon.SelectedIndex;
@@ -56,6 +57,7 @@ namespace DSPRE.Editors {
     private void comboBoxPokemonObject_SelectedIndexChanged(object sender, EventArgs e)
     {
       if (Helpers.HandlersDisabled){ return; }
+      if (comboBoxPokemonObject.SelectedIndex < 0){ return; }
       SafariZoneEncounter safariZoneEncounter = (SafariZoneEncounter)listBoxEncountersObject.SelectedItem;
       if (safariZoneEncounter == null){ return; }
       safariZoneEncounter.pokemonID = (ushort)comboBoxPokemonObject.SelectedIndex;
