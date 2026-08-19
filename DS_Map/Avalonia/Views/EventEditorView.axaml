@@ -129,7 +129,10 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleVanilla}" Margin="0,4,0,0">
                     <TextBlock Text="Item" FontWeight="Bold"/>
-                    <ComboBox ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <ComboBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
+                      <Button Grid.Column="1" Content="Manage…" Click="ManageGroundItems_Click" Margin="4,0,0,0"/>
+                    </Grid>
                     <TextBlock Text="Script number doesn't match a known item (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwItemIndexOutOfRange}"/>
                   </StackPanel>
@@ -150,11 +153,15 @@
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                   </StackPanel>
 
-                  <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
-                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptIndexOutOfRange}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
+                  <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
+                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
+                    <TextBlock Text="{Binding OwScriptCommonInfo}"
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptHasCommonInfo}"/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
+                  </StackPanel>
 
                   <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>

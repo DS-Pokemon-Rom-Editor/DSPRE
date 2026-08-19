@@ -42,6 +42,8 @@
           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerTypes}" SelectedIndex="{Binding TriggerTypeIndex}"/>
           <TextBlock Text="Script ID to run" FontSize="12"/>
           <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewScriptId}"/>
+          <TextBlock Text="{Binding NewScriptCommonInfo}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                     IsVisible="{Binding NewScriptHasCommonInfo}"/>
           <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
             <TextBlock Text="Variable to watch" FontSize="12"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewVariable}"/>

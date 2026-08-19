@@ -47,9 +47,34 @@ namespace DSPRE.Avalonia.ViewModels
         public bool IsVariableType => _typeIndex == 0;
 
         private decimal _newScriptId, _newVariable, _newValue;
-        public decimal NewScriptId { get => _newScriptId; set => Set(ref _newScriptId, value); }
+        public decimal NewScriptId
+        {
+            get => _newScriptId;
+            set { if (Set(ref _newScriptId, value)) { OnPropertyChanged(nameof(NewScriptCommonInfo)); OnPropertyChanged(nameof(NewScriptHasCommonInfo)); } }
+        }
         public decimal NewVariable { get => _newVariable; set => Set(ref _newVariable, value); }
         public decimal NewValue { get => _newValue; set => Set(ref _newValue, value); }
+
+        /// <summary>A script number of 2000+ on Platinum/HGSS may be a "common"/global script rather than
+        /// a plain local one in the current file (see <see cref="CommonScriptId"/>); surfaced here so
+        /// adding a trigger with such a number isn't a silent surprise.</summary>
+        public string NewScriptCommonInfo
+        {
+            get
+            {
+                var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_newScriptId);
+                switch (result.Kind)
+                {
+                    case CommonScriptId.Kind.Resolved:
+                        return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
+                    case CommonScriptId.Kind.Discrepancy:
+                        return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
+                    default:
+                        return null;
+                }
+            }
+        }
+        public bool NewScriptHasCommonInfo => !string.IsNullOrEmpty(NewScriptCommonInfo);
 
         private bool _padding;
         public bool WordAlignmentPadding { get => _padding; set => Set(ref _padding, value); }

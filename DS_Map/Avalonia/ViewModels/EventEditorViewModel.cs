@@ -89,6 +89,12 @@ namespace DSPRE.Avalonia.ViewModels
         // doesn't resolve to any entry in that list (out-of-range/hand-edited data), unlock it so the
         // user isn't stuck looking at a value they can't change from either the dropdown or the field.
         public bool OwScriptEnabled => _owKind == OwKind.Normal || OwTrainerIndexOutOfRange || OwItemIndexOutOfRange;
+
+        // Item mode already shows the resolved item/quantity in its own dropdown, so the raw Script
+        // fields would just be redundant clutter there; hide them entirely instead of graying them out.
+        // Still shown if the item index doesn't resolve, so there's a way to see/edit the raw number.
+        public bool OwScriptSectionVisible => _owKind != OwKind.Item || OwItemIndexOutOfRange;
+
         public bool OwTrainerFieldsVisible => _owKind == OwKind.Trainer;
 
         /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.isHGE"/>) uses a
@@ -157,6 +163,10 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
             OnPropertyChanged(nameof(OwItemIdHGE));
             OnPropertyChanged(nameof(OwScriptEnabled));
+            OnPropertyChanged(nameof(OwScriptSectionVisible));
+            OnPropertyChanged(nameof(OwScriptCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
         /// <summary>Sets OwScript's model value + observable field directly, bypassing the property's equality guard
@@ -216,6 +226,11 @@ namespace DSPRE.Avalonia.ViewModels
             try { foreach (string name in TrainerNames.GetAll()) OwTrainerEntries.Add(name); }
             catch (Exception ex) { AppLogger.Error("PopulateOwTrainerEntries: " + ex.Message); }
 
+            PopulateOwItemEntries();
+        }
+
+        private void PopulateOwItemEntries()
+        {
             OwItemEntries.Clear();
             if (IsHGE) return; // HG Engine uses a direct Item ID input (OwItemIdHGE) instead of this dropdown.
             try
@@ -228,17 +243,29 @@ namespace DSPRE.Avalonia.ViewModels
                 else
                 {
                     var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-                    foreach (var cont in itemScript.allScripts)
+                    foreach (var entry in DSUtils.GetGroundItemScriptEntries(itemScript))
                     {
-                        if (cont.commands.Count > 4) continue;
-                        ushort qty = BitConverter.ToUInt16(cont.commands[1].cmdParams[1], 0);
-                        ushort itemId = BitConverter.ToUInt16(cont.commands[0].cmdParams[1], 0);
-                        string name = itemId < itemNames.Length ? itemNames[itemId] : ("Item " + itemId);
-                        OwItemEntries.Add(qty + "x " + name);
+                        string name = entry.itemId < itemNames.Length ? itemNames[entry.itemId] : ("Item " + entry.itemId);
+                        OwItemEntries.Add(entry.quantity + "x " + name);
                     }
                 }
             }
             catch (Exception ex) { AppLogger.Error("PopulateOwItemEntries: " + ex.Message); }
+        }
+
+        /// <summary>Re-reads the ground-item script entries after they've been added/removed via the
+        /// Manage Ground Items dialog, and re-syncs the current selection to the (possibly shifted)
+        /// index for the event's own scriptNumber.</summary>
+        public void RefreshOwItemEntries()
+        {
+            PopulateOwItemEntries();
+            if (_ow == null || _owKind != OwKind.Item || IsHGE) return;
+
+            int itemIdx = _ow.scriptNumber - 7000;
+            _owItemIndex = (itemIdx >= 0 && itemIdx < OwItemEntries.Count) ? itemIdx : -1;
+            OnPropertyChanged(nameof(OwItemIndex));
+            OnPropertyChanged(nameof(OwItemIndexOutOfRange));
+            OnPropertyChanged(nameof(OwScriptSectionVisible));
         }
 
         private string _statusText = "Not loaded";
@@ -316,6 +343,9 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     _ow.scriptNumber = (ushort)value; Dirty();
                     OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
+                    OnPropertyChanged(nameof(OwScriptCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
                 }
             }
         }
@@ -325,6 +355,32 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (value >= 0 && value < _availableScriptIds.Count) OwScript = _availableScriptIds[value]; }
         }
         public bool OwScriptIndexOutOfRange => _ow != null && OwScriptIndex < 0;
+
+        /// <summary>When the raw Script number for a Standard-type event isn't found in the header's own
+        /// paired script file, it may still be a valid "common"/global script (see <see cref="CommonScriptId"/>)
+        /// rather than a real error. Non-null only in that case, so the UI can show something useful
+        /// instead of a plain "doesn't match" warning.</summary>
+        public string OwScriptCommonInfo
+        {
+            get
+            {
+                if (_ow == null || _owKind != OwKind.Normal || !OwScriptIndexOutOfRange) return null;
+
+                var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
+                switch (result.Kind)
+                {
+                    case CommonScriptId.Kind.Resolved:
+                        return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
+                    case CommonScriptId.Kind.Discrepancy:
+                        return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
+                    default:
+                        return null;
+                }
+            }
+        }
+
+        public bool OwScriptHasCommonInfo => !string.IsNullOrEmpty(OwScriptCommonInfo);
+        public bool OwScriptGenericWarningVisible => OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
         public decimal OwOrientation
         {
             get => _owOrient;
@@ -747,9 +803,19 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
             OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(OwScriptCommonInfo));
+            OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+            OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
-        private int IndexOfAvailableScript(decimal rawValue) => _availableScriptIds.IndexOf((uint)rawValue);
+        // Raw script number 0 conventionally means "the first script in this file", not "none" — a
+        // script file's own manualUserID numbering starts at 1, so there's no script literally numbered
+        // 0 to match against directly.
+        private int IndexOfAvailableScript(decimal rawValue)
+        {
+            if (rawValue == 0 && _availableScriptIds.Count > 0) return 0;
+            return _availableScriptIds.IndexOf((uint)rawValue);
+        }
 
         private int _matrixId = -1;
 

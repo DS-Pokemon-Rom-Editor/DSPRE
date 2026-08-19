@@ -149,6 +149,19 @@ namespace DSPRE.Avalonia.Views
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
 
+        private async void ManageGroundItems_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+
+            var dlgVm = new GroundItemScriptsViewModel();
+            var dlg = new GroundItemScriptsView(dlgVm);
+            var owner = TopLevel.GetTopLevel(this) as Window;
+            if (owner != null) await dlg.ShowDialog(owner);
+            else dlg.Show();
+
+            if (dlgVm.Changed) VM.RefreshOwItemEntries();
+        }
+
         // Diagnostic dump: text report (matrix layout, per-cell map placements, event world positions)
         // + a PNG of the current render, written to a user-chosen folder, for diagnosing stitching issues.
         private async void ExportDebug_Click(object sender, RoutedEventArgs e)

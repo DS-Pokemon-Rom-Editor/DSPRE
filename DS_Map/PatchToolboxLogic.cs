@@ -238,32 +238,80 @@ namespace DSPRE
 
         // ── Patch apply-methods ──────────────────────────────────────────────────────────────────
 
-        /// <summary>Convert every Pokémon name to Sentence Case. Always supported.</summary>
+        /// <summary>Convert every Pokémon name to Sentence Case, including names the user renamed themselves. Always supported.</summary>
         public static bool ApplySentenceCasePatch()
         {
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
-                "- Every Pokémon name will be converted to Sentence Case." + "\n\n" +
+                "- Every Pokémon name will be converted to Sentence Case, including names you've renamed yourself.\n" +
+                "- Any other text (trainer dialogue, item descriptions, etc) mentioning a renamed Pokémon will be updated to match." + "\n\n" +
                 "Do you wish to continue?", "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
             }
 
-            Parallel.ForEach(RomInfo.pokemonNamesTextNumbers, ID =>
+            var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
+
+            foreach (int ID in RomInfo.pokemonNamesTextNumbers)
             {
                 TextArchive pokeName = new TextArchive(ID);
-                Parallel.For(1, pokeName.messages.Count, i =>
+                for (int i = 1; i < pokeName.messages.Count; i++)
                 {
-                    if (pokeName.messages[i].Length <= 1)
+                    string current = pokeName.messages[i];
+                    if (string.IsNullOrEmpty(current))
                     {
-                        i++;
+                        continue;
                     }
 
-                    pokeName.messages[i] = pokeName.messages[i].Replace(PokeDatabase.System.pokeNames[(ushort)i].ToUpper(), PokeDatabase.System.pokeNames[(ushort)i]);
-                });
+                    string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                    if (sentenceCased != current)
+                    {
+                        pokeName.messages[i] = sentenceCased;
+                        renamePairs.Add((current, sentenceCased, false));
+                    }
+                }
                 pokeName.SaveToExpandedDir(ID, showSuccessMessage: false);
-            });
-            ShowInfo("Pokémon names have been converted to Sentence Case.", "Operation successful");
+            }
+
+            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+            ShowInfo($"Pokémon names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
+            return true;
+        }
+
+        /// <summary>Convert every Item name to Sentence Case, including names the user renamed themselves. Always supported.</summary>
+        public static bool ApplyItemSentenceCasePatch()
+        {
+            if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
+                "- Every Item name will be converted to Sentence Case, including names you've renamed yourself.\n" +
+                "- Any other text (trainer dialogue, script text, etc) mentioning a renamed Item will be updated to match." + "\n\n" +
+                "Do you wish to continue?", "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            var renamePairs = new List<(string searchString, string replaceString, bool caseSensitive)>();
+
+            TextArchive itemNames = new TextArchive(RomInfo.itemNamesTextNumber);
+            for (int i = 1; i < itemNames.messages.Count; i++)
+            {
+                string current = itemNames.messages[i];
+                if (string.IsNullOrEmpty(current))
+                {
+                    continue;
+                }
+
+                string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                if (sentenceCased != current)
+                {
+                    itemNames.messages[i] = sentenceCased;
+                    renamePairs.Add((current, sentenceCased, false));
+                }
+            }
+            itemNames.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
+
+            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+            ShowInfo($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
             return true;
         }
 
@@ -468,9 +516,15 @@ namespace DSPRE
             return true;
         }
 
-        /// <summary>Rearrange item scripts to ascending index order and fix ground-item references.</summary>
+        /// <summary>Rearrange item scripts to ascending index order and fix ground-item references. Not supported on hg-engine ROMs.</summary>
         public static bool ApplyItemStandardizePatch()
         {
+            if (RomInfo.isHGE)
+            {
+                ShowError("This patch isn't supported on hg-engine ROMs.", "Unsupported");
+                return false;
+            }
+
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
                 "- Item scripts will be rearranged to follow the natural, ascending index order.\n\n" +
                 "- Any unsaved change to the current Event File will be discarded.\n\n", "Confirm to proceed"))
@@ -1076,13 +1130,18 @@ namespace DSPRE
             var list = new List<PatchInfo>();
 
             list.Add(Status("sentenceCase", "Sentence-case Pokémon names",
-                "Convert every Pokémon name from ALL-CAPS to Sentence Case.",
+                "Convert every Pokémon name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
+                () => PatchState.Available));   // no reliable applied-detection
+
+            list.Add(Status("itemSentenceCase", "Sentence-case Item names",
+                "Convert every Item name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
 
             list.Add(Status("itemStandardize", "Standardize item numbers",
                 "Rearrange item scripts into ascending index order and fix ground-item references.",
                 () =>
                 {
+                    if (RomInfo.isHGE) return Unsupported("Unsupported on hg-engine ROMs");
                     DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
                     bool applied = RomPatchState.flag_standardizedItems || CheckScriptsStandardizedItemNumbers();
                     return applied ? PatchState.Applied : PatchState.Available;
@@ -1238,6 +1297,7 @@ namespace DSPRE
             switch (key)
             {
                 case "sentenceCase": return ApplySentenceCasePatch();
+                case "itemSentenceCase": return ApplyItemSentenceCasePatch();
                 case "itemStandardize": return ApplyItemStandardizePatch();
                 case "arm9": return ApplyARM9ExpansionPatch();
                 case "bdhcam": return ApplyBDHCamPatch();   // caller re-queries statuses afterwards

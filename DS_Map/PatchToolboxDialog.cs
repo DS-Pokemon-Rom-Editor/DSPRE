@@ -46,7 +46,14 @@ namespace DSPRE
             // (the Avalonia toolbox swaps in native dialogs; the hooks are process-global statics).
             UseWinFormsPrompts();
 
-            CheckStandardizedItems();
+            if (RomInfo.isHGE)
+            {
+                DisableStandardizeItemsPatch("Unsupported");
+            }
+            else
+            {
+                CheckStandardizedItems();
+            }
 
             if (ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
             {
@@ -516,6 +523,11 @@ namespace DSPRE
         {
             // Apply-logic lives in the shared static PatchToolboxLogic so the Avalonia toolbox runs identical code.
             PatchToolboxLogic.ApplySentenceCasePatch();
+        }
+
+        private void ItemSentenceCasePatchButton_Click(object sender, EventArgs e)
+        {
+            PatchToolboxLogic.ApplyItemSentenceCasePatch();
         }
 
         private void BDHCAMPatchButton_Click(object sender, EventArgs e)

@@ -21,6 +21,74 @@ namespace DSPRE {
         public const int ERR_OVERLAY_ALREADY_UNCOMPRESSED = -2;
         public const int ERR_TOOL_UNAVAILABLE = -3;
 
+        public static int ReplaceTextEverywhere(string searchString, string replaceString, bool caseSensitive) {
+            return ReplaceTextEverywhere(new[] { (searchString, replaceString, caseSensitive) });
+        }
+
+        // Advancing past each replacement instead of rescanning from 0 avoids looping forever when a
+        // replacement text itself matches its own search text, e.g. renaming "PIKABLU" to "Pikablu".
+        public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements) {
+            var pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
+            if (pairs.Count == 0) {
+                return 0;
+            }
+
+            int archiveCount = Filesystem.GetTextArchivesCount();
+            int archivesChanged = 0;
+
+            for (int i = 0; i < archiveCount; i++) {
+                var archive = new DSPRE.ROMFiles.TextArchive(i);
+                bool changed = false;
+
+                for (int j = 0; j < archive.messages.Count; j++) {
+                    string text = archive.messages[j];
+                    foreach (var pair in pairs) {
+                        StringComparison comparison = pair.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                        int searchFrom = 0;
+                        int posFound;
+                        while ((posFound = text.IndexOf(pair.searchString, searchFrom, comparison)) >= 0) {
+                            text = text.Substring(0, posFound) + pair.replaceString + text.Substring(posFound + pair.searchString.Length);
+                            searchFrom = posFound + pair.replaceString.Length;
+                            changed = true;
+                        }
+                    }
+                    archive.messages[j] = text;
+                }
+
+                if (changed) {
+                    archive.SaveToExpandedDir(i, showSuccessMessage: false);
+                    archivesChanged++;
+                }
+            }
+
+            return archivesChanged;
+        }
+
+        // Anything longer than the 3-command "give item" template is the shared execution routine, not a pickable entry.
+        public static bool IsGroundItemScriptEntry(DSPRE.ROMFiles.ScriptCommandContainer container) {
+            return container.commands != null && container.commands.Count <= 4
+                && container.commands.Count >= 2
+                && container.commands[0].cmdParams != null && container.commands[0].cmdParams.Count >= 2
+                && container.commands[1].cmdParams != null && container.commands[1].cmdParams.Count >= 2;
+        }
+
+        public static List<(int scriptIndex, int itemId, int quantity)> GetGroundItemScriptEntries(DSPRE.ROMFiles.ScriptFile itemScript) {
+            var result = new List<(int scriptIndex, int itemId, int quantity)>();
+
+            for (int i = 0; i < itemScript.allScripts.Count; i++) {
+                var container = itemScript.allScripts[i];
+                if (!IsGroundItemScriptEntry(container)) {
+                    continue;
+                }
+
+                int itemId = BitConverter.ToUInt16(container.commands[0].cmdParams[1], 0);
+                int quantity = BitConverter.ToUInt16(container.commands[1].cmdParams[1], 0);
+                result.Add((i, itemId, quantity));
+            }
+
+            return result;
+        }
+
         public const string backupSuffix = ".backup";
 
         public static readonly string NDSRomFilter = "NDS File (*.nds)|*.nds";
