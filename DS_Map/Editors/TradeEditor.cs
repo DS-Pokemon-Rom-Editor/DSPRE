@@ -260,9 +260,9 @@ namespace DSPRE.Editors
             curTradeData.tough = (int)toughNumericUpDown.Value;
             curTradeData.pid = (int)pidNumericUpDown.Value;
             if (heldItemComboBox.SelectedIndex >= 0) curTradeData.heldItem = heldItemComboBox.SelectedIndex;
-            curTradeData.otGender = otGenderComboBox.SelectedIndex;
+            if (otGenderComboBox.SelectedIndex >= 0) curTradeData.otGender = otGenderComboBox.SelectedIndex;
             curTradeData.sheen = (int)sheenNumericUpDown.Value;
-            curTradeData.language = langComboBox.SelectedIndex;
+            if (langComboBox.SelectedIndex >= 0) curTradeData.language = langComboBox.SelectedIndex;
             if (requestedComboBox.SelectedIndex >= 0) curTradeData.requestedSpecies = requestedComboBox.SelectedIndex;
 
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)

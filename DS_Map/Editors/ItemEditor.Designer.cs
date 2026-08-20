@@ -30,8 +30,8 @@
         {
             this.components = new System.ComponentModel.Container();
             this.itemIDNumericUpDown = new System.Windows.Forms.NumericUpDown();
-            this.holdEffectComboBox = new System.Windows.Forms.ComboBox();
-            this.fieldPocketComboBox = new System.Windows.Forms.ComboBox();
+            this.holdEffectComboBox = new DSPRE.InputComboBox();
+            this.fieldPocketComboBox = new DSPRE.InputComboBox();
             this.itemNameInputComboBox = new DSPRE.InputComboBox();
             this.priceNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
@@ -60,7 +60,7 @@
             this.flingEffectLabel = new System.Windows.Forms.Label();
             this.naturalGiftPowerLabel = new System.Windows.Forms.Label();
             this.naturalGiftTypeLabel = new System.Windows.Forms.Label();
-            this.naturalGiftTypeComboBox = new System.Windows.Forms.ComboBox();
+            this.naturalGiftTypeComboBox = new DSPRE.InputComboBox();
             this.checksFlowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.checksGroupBox = new System.Windows.Forms.GroupBox();
             this.partyUseCheckBox = new System.Windows.Forms.CheckBox();
@@ -71,9 +71,9 @@
             this.priceLabel = new System.Windows.Forms.Label();
             this.functionsFlowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.functionsGroupBox = new System.Windows.Forms.GroupBox();
-            this.battleFunctionComboBox = new System.Windows.Forms.ComboBox();
+            this.battleFunctionComboBox = new DSPRE.InputComboBox();
             this.fieldFunctionLabel = new System.Windows.Forms.Label();
-            this.fieldFunctionComboBox = new System.Windows.Forms.ComboBox();
+            this.fieldFunctionComboBox = new DSPRE.InputComboBox();
             this.battleFunctionLabel = new System.Windows.Forms.Label();
             this.itemParamsTabControl = new System.Windows.Forms.TabControl();
             this.statusHealtTabPage = new System.Windows.Forms.TabPage();
@@ -136,9 +136,9 @@
             this.itemEditorSelectedPictureFlowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.itemTableEntryGroupBox = new System.Windows.Forms.GroupBox();
             this.itemDataLabel = new System.Windows.Forms.Label();
-            this.paletteComboBox = new System.Windows.Forms.ComboBox();
+            this.paletteComboBox = new DSPRE.InputComboBox();
             this.itemDataNumericUpDown = new System.Windows.Forms.NumericUpDown();
-            this.imageComboBox = new System.Windows.Forms.ComboBox();
+            this.imageComboBox = new DSPRE.InputComboBox();
             this.paletteLabel = new System.Windows.Forms.Label();
             this.imageLabel = new System.Windows.Forms.Label();
             this.itemEditorSelectedPictureBox = new System.Windows.Forms.PictureBox();
@@ -1533,8 +1533,8 @@
         #endregion
 
         private System.Windows.Forms.NumericUpDown itemIDNumericUpDown;
-        private System.Windows.Forms.ComboBox holdEffectComboBox;
-        private System.Windows.Forms.ComboBox fieldPocketComboBox;
+        private DSPRE.InputComboBox holdEffectComboBox;
+        private DSPRE.InputComboBox fieldPocketComboBox;
         private DSPRE.InputComboBox itemNameInputComboBox;
         private System.Windows.Forms.NumericUpDown priceNumericUpDown;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
@@ -1552,7 +1552,7 @@
         private System.Windows.Forms.FlowLayoutPanel moveRelatedFlowLayoutPanel;
         private System.Windows.Forms.GroupBox moveRelatedGroupBox;
         private System.Windows.Forms.Label naturalGiftTypeLabel;
-        private System.Windows.Forms.ComboBox naturalGiftTypeComboBox;
+        private DSPRE.InputComboBox naturalGiftTypeComboBox;
         private System.Windows.Forms.Label flingEffectLabel;
         private System.Windows.Forms.Label naturalGiftPowerLabel;
         private System.Windows.Forms.NumericUpDown flingPowerNumericUpDown;
@@ -1569,9 +1569,9 @@
         private System.Windows.Forms.GroupBox priceGroupBox;
         private System.Windows.Forms.FlowLayoutPanel functionsFlowLayoutPanel;
         private System.Windows.Forms.GroupBox functionsGroupBox;
-        private System.Windows.Forms.ComboBox battleFunctionComboBox;
+        private DSPRE.InputComboBox battleFunctionComboBox;
         private System.Windows.Forms.Label fieldFunctionLabel;
-        private System.Windows.Forms.ComboBox fieldFunctionComboBox;
+        private DSPRE.InputComboBox fieldFunctionComboBox;
         private System.Windows.Forms.Label battleFunctionLabel;
         private System.Windows.Forms.CheckBox partyUseCheckBox;
         private System.Windows.Forms.TabControl itemParamsTabControl;
@@ -1638,8 +1638,8 @@
         private System.Windows.Forms.GroupBox itemTableEntryGroupBox;
         private System.Windows.Forms.Label paletteLabel;
         private System.Windows.Forms.Label imageLabel;
-        private System.Windows.Forms.ComboBox paletteComboBox;
-        private System.Windows.Forms.ComboBox imageComboBox;
+        private DSPRE.InputComboBox paletteComboBox;
+        private DSPRE.InputComboBox imageComboBox;
         private System.Windows.Forms.Button saveItemButton;
         private System.Windows.Forms.CheckBox pokeBallsBattlePocketCheck;
         private System.Windows.Forms.CheckBox statusHealersBattlePocketCheck;

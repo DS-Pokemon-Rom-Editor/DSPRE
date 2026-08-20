@@ -717,6 +717,7 @@ namespace DSPRE.Editors
                 return;
             }
 
+            if (holdEffectComboBox.SelectedIndex < 0) return;
             currentLoadedItemData.holdEffect = (HoldEffect)holdEffectComboBox.SelectedIndex;
             SetItemDataDirty(true);
         }
@@ -728,6 +729,7 @@ namespace DSPRE.Editors
                 return;
             }
 
+            if (fieldPocketComboBox.SelectedIndex < 0) return;
             currentLoadedItemData.fieldPocket = (FieldPocket)fieldPocketComboBox.SelectedIndex;
             SetItemDataDirty(true);
         }
@@ -762,6 +764,7 @@ namespace DSPRE.Editors
                 return;
             }
 
+            if (naturalGiftTypeComboBox.SelectedItem == null) return;
             currentLoadedItemData.naturalGiftType = (NaturalGiftType)Enum.Parse(typeof(NaturalGiftType), (string)naturalGiftTypeComboBox.SelectedItem);
             SetItemDataDirty(true);
 
@@ -840,6 +843,7 @@ namespace DSPRE.Editors
                 return;
             }
 
+            if (fieldFunctionComboBox.SelectedItem == null) return;
             string selectedValue = fieldFunctionComboBox.SelectedItem.ToString();
             if (selectedValue.StartsWith("Unknown ("))
             {
@@ -864,6 +868,7 @@ namespace DSPRE.Editors
                 return;
             }
 
+            if (battleFunctionComboBox.SelectedItem == null) return;
             string selectedValue = battleFunctionComboBox.SelectedItem.ToString();
             if (selectedValue.StartsWith("Unknown ("))
             {
