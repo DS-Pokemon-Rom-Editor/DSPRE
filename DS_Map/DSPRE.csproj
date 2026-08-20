@@ -129,6 +129,10 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Editors\GreatMarshEncounterEditor.Designer.cs" />
+    <Compile Include="Editors\TrophyGardenEncounterEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Editors\TrophyGardenEncounterEditor.Designer.cs" />
     <Compile Include="Editors\HiddenItemsEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -491,6 +495,7 @@
     <Compile Include="ROMFiles\BugContestEncounterFile.cs" />
     <Compile Include="ROMFiles\EvolutionFile.cs" />
     <Compile Include="ROMFiles\GreatMarshEncounterFile.cs" />
+    <Compile Include="ROMFiles\TrophyGardenEncounterFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
