@@ -4,6 +4,32 @@
 
 ---
 
+## 2.1.6
+- More fixes for the dropdown search issue from 2.1.5: Item Editor's hold effect, field pocket, natural
+  gift type, battle function, field function, palette, and image fields now behave consistently too, and
+  a few of them (natural gift type, field function, battle function) could crash outright when left empty;
+  that's fixed. Same fix applied to Trade Editor's OT gender and language fields, and the Overworld
+  Sprite Editor's overworld list.
+- Fixed the Egg Move Editor's Bulk Edit fields (Replace All, Delete All, "with"): typing part of a move
+  name would show a matching suggestion, but pressing Enter or Tab didn't actually select it, it just
+  marked the field as invalid.
+- Fixed a bug where sprites changed in the Pokémon Sprite Editor could get silently reverted back to
+  their old appearance the next time you saved the whole ROM.
+- New Trophy Garden editor (Diamond/Pearl/Platinum, Wild Encounters tab): edit the 16 Pokémon Mr.
+  Backlot can offer as the Trophy Garden's daily changing Pokémon.
+- New Battle Tower Editor (Other Editors menu, Diamond/Pearl/Platinum/HeartGold/SoulSilver): edit Battle
+  Tower trainers (class, name, messages, and which Pokémon sets they can randomly use) and the Pokémon
+  sets themselves (species, moves, item, nature, EVs, form), plus buttons to add brand new trainers and
+  Pokémon sets rather than only editing existing ones.
+- Fixed the Locate button doing nothing in the Great Marsh, Trophy Garden, and Battle Tower editors.
+- Header Editor (HeartGold/SoulSilver): the three unlabeled "Flag ?" checkboxes now say what they
+  actually do, outgoing Pokegear calls, incoming Pokegear calls, and radio signal, since it turns out
+  DSPRE was already reading and saving them correctly, they just never had real names. Also added a new
+  field, the Mom's Call message offset, which was already being read and saved too but had no way to
+  see or change it.
+
+---
+
 ## 2.1.5
 - New TM/HM Bulk Editor (Pokémon Editor, TM/HM panel): edit machine compatibility for many Pokémon at
   once instead of one at a time. Two views: by Pokémon (select individual species or whole evolution
