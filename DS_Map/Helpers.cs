@@ -474,6 +474,10 @@ namespace DSPRE
             {
                 Process.Start("explorer.exe", "/select" + "," + "\"" + path + "\"");
             }
+            else if (Directory.Exists(path))
+            {
+                Process.Start("explorer.exe", "\"" + path + "\"");
+            }
         }
 
         public static void OpenFileWithDefaultApp(string path)

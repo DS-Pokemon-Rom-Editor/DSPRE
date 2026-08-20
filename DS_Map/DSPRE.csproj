@@ -133,6 +133,12 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Editors\TrophyGardenEncounterEditor.Designer.cs" />
+    <Compile Include="Editors\BattleTowerEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\BattleTowerEditor.Designer.cs">
+      <DependentUpon>BattleTowerEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\HiddenItemsEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -496,6 +502,8 @@
     <Compile Include="ROMFiles\EvolutionFile.cs" />
     <Compile Include="ROMFiles\GreatMarshEncounterFile.cs" />
     <Compile Include="ROMFiles\TrophyGardenEncounterFile.cs" />
+    <Compile Include="ROMFiles\BattleTowerPokemonSetFile.cs" />
+    <Compile Include="ROMFiles\BattleTowerTrainerFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
@@ -653,6 +661,9 @@
     <Compile Include="Editors\\TrainerEditor\\TrainerSearch.Designer.cs">
       <DependentUpon>TrainerSearch.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="Editors\BattleTowerEditor.resx">
+      <DependentUpon>BattleTowerEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Editors\BugContestEncounterEditor.resx">
       <DependentUpon>BugContestEncounterEditor.cs</DependentUpon>
     </EmbeddedResource>
