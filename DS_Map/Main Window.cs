@@ -2315,9 +2315,15 @@ namespace DSPRE
         }
 
         private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
+        {
             EggMoveEditor eggMoveEditor = new EggMoveEditor();
             eggMoveEditor.ShowDialog();
+        }
+
+        private void battleTowerEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            BattleTowerEditor battleTowerEditor = new BattleTowerEditor();
+            battleTowerEditor.ShowDialog();
         }
 
         private void researchHelperToolStripMenuItem_Click(object sender, EventArgs e)

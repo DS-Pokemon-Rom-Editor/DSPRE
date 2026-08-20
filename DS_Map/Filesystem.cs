@@ -27,6 +27,12 @@ namespace DSPRE {
         public static string safariZone => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.safariZone)
             ? RomInfo.gameDirs[RomInfo.DirNames.safariZone].unpackedDir
             : null;
+        public static string battleTowerTrainers => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerTrainers)
+            ? RomInfo.gameDirs[RomInfo.DirNames.battleTowerTrainers].unpackedDir
+            : null;
+        public static string battleTowerPokemon => RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerPokemon)
+            ? RomInfo.gameDirs[RomInfo.DirNames.battleTowerPokemon].unpackedDir
+            : null;
         public static string monIcons => RomInfo.gameDirs[RomInfo.DirNames.monIcons].unpackedDir;
         public static string synthOverlay => RomInfo.gameDirs[RomInfo.DirNames.synthOverlay].unpackedDir;
         public static string interiorBuildingModels => RomInfo.gameDirs[RomInfo.DirNames.interiorBuildingModels].unpackedDir;

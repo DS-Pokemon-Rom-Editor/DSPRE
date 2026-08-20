@@ -19,8 +19,13 @@ namespace DSPRE {
         public void RefreshMasterList() { }
 
         private bool UpdateText() {
-            string input = Text;
-            int index = FindStringExact(input.Trim());
+            string input = Text.Trim();
+            int index = FindStringExact(input);
+            // Exact match fails for a partial string the autocomplete popup suggested but never
+            // committed into Text (e.g. "Swo" vs "Swords Dance"); fall back to a prefix match.
+            if (index == -1 && input.Length > 0) {
+                index = FindString(input);
+            }
             if (index == -1) {
                 this.BackColor = Color.IndianRed;
                 return false;

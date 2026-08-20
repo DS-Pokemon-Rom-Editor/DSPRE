@@ -14,7 +14,7 @@ namespace DSPRE.ROMFiles {
        0x8  //  ushort:     Text Archive number
        0xA  //  ushort:     Day music track number
        0xC  //  ushort:     Night music track number
-       0xE  //  ushort:     Wild Pokémon file number
+       0xE  //  ushort:     Wild Pokï¿½mon file number
        0x10 //  ushort:     Event file number
 
        * D/P:
@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles {
 
     /* ---------------------- HEADER DATA STRUCTURE (HGSS):----------------------------
         
-       0x0  //  byte:       Wild Pokémon file number
+       0x0  //  byte:       Wild Pokï¿½mon file number
        0x1  //  byte:       Area data value
        0x2  //  byte:       ?
        0x3  //  byte:       ?
@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles {
        0x13 //  byte:       Map name textbox type value
        0x14 //  byte:       Weather value
        0x15 //  byte:       Camera value
-       0x16 //  byte:       Follow mode (for the Pokémon following hero)
+       0x16 //  byte:       Follow mode (for the Pokï¿½mon following hero)
        0x17 //  byte:       Bitwise permission flags:
 
         DPPT
@@ -69,19 +69,18 @@ namespace DSPRE.ROMFiles {
        -----------------    8: Battle BG b1
 
         HGSS
-       -----------------    1: ?
-       -----------------    2: ?
-       -----------------    3: ?
-       -----------------    4: Allow Fly 
-       -----------------    5: Allow Esc. Rope
-       -----------------    6: ?
-       -----------------    7: Allow Bicycle
-       -----------------    8: ?
+       -----------------    1: Allow Bicycle
+       -----------------    2: Allow Running (unused)
+       -----------------    3: Allow Esc. Rope
+       -----------------    4: Allow Fly
+       -----------------    5: Allow outgoing Pokegear calls
+       -----------------    6: Allow incoming Pokegear calls
+       -----------------    7: Allow Pokegear radio signal
 
     ----------------------------------------------------------------------------------*/
 
     /// <summary>
-    /// General class to store common map header data across all Gen IV Pokémon NDS games
+    /// General class to store common map header data across all Gen IV Pokï¿½mon NDS games
     /// </summary>
     public abstract class MapHeader : RomFile {
         /*System*/
@@ -210,7 +209,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon D and P
+    /// Class to store map header data from Pokï¿½mon D and P
     /// </summary>
     public class HeaderDP : MapHeader {
         #region Fields (5)
@@ -272,7 +271,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon Plat
+    /// Class to store map header data from Pokï¿½mon Plat
     /// </summary>
     public class HeaderPt : MapHeader {
         #region Fields (5)
@@ -341,7 +340,7 @@ namespace DSPRE.ROMFiles {
     }
 
     /// <summary>
-    /// Class to store map header data from Pokémon HG and SS
+    /// Class to store map header data from Pokï¿½mon HG and SS
     /// </summary>
     public class HeaderHGSS : MapHeader {
         #region Fields (7)
@@ -350,7 +349,7 @@ namespace DSPRE.ROMFiles {
         public byte locationName { get; set; }
         public byte locationType { get; set; }  //4 bits only
         public byte unknown0 { get; set; } //4 bits only
-        public byte unknown1 { get; set; } //4 bits only
+        public byte momCallIntroParam { get; set; } //4 bits only, offset into Mom's Pokegear call intro message
         public byte worldmapX { get; set; } //6 bits only
         public byte worldmapY { get; set; } //6 bits only
         public bool kantoFlag { get; set; }
@@ -380,7 +379,7 @@ namespace DSPRE.ROMFiles {
                     
                     byte areaProperties = reader.ReadByte();
                     areaIcon = (byte)(areaProperties & 0b_1111); //get 4 bits
-                    unknown1 = (byte)((areaProperties >> 4) & 0b_1111); //get 4 bits after the first 4
+                    momCallIntroParam = (byte)((areaProperties >> 4) & 0b_1111); //get 4 bits after the first 4
 
                     uint last32 = reader.ReadUInt32();
                     kantoFlag = (last32 & 0b_1) == 1; //get 1 bit
@@ -419,7 +418,7 @@ namespace DSPRE.ROMFiles {
                 writer.Write(eventFileID);
                 writer.Write(locationName);
 
-                byte areaProperties = (byte)((areaIcon & 0b_1111) + ((unknown1 & 0b_1111) << 4));
+                byte areaProperties = (byte)((areaIcon & 0b_1111) + ((momCallIntroParam & 0b_1111) << 4));
                 writer.Write(areaProperties);
 
                 uint last32 = (uint)(((weatherID & 0b_1111_111) << 1) +

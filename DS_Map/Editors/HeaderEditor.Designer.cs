@@ -136,6 +136,8 @@
             this.battleBackgroundLabel = new System.Windows.Forms.Label();
             this.copyFlagsButton = new System.Windows.Forms.Button();
             this.battleBackgroundUpDown = new System.Windows.Forms.NumericUpDown();
+            this.momCallIntroParamLabel = new System.Windows.Forms.Label();
+            this.momCallIntroParamUpDown = new System.Windows.Forms.NumericUpDown();
             this.flag3CheckBox = new System.Windows.Forms.CheckBox();
             this.flag2CheckBox = new System.Windows.Forms.CheckBox();
             this.flag1CheckBox = new System.Windows.Forms.CheckBox();
@@ -171,6 +173,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.scriptFileUpDown)).BeginInit();
             this.flagsGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.battleBackgroundUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.momCallIntroParamUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cameraPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.weatherPictureBox)).BeginInit();
             this.SuspendLayout();
@@ -1305,6 +1308,8 @@
             this.flagsGroupBox.Controls.Add(this.battleBackgroundLabel);
             this.flagsGroupBox.Controls.Add(this.copyFlagsButton);
             this.flagsGroupBox.Controls.Add(this.battleBackgroundUpDown);
+            this.flagsGroupBox.Controls.Add(this.momCallIntroParamLabel);
+            this.flagsGroupBox.Controls.Add(this.momCallIntroParamUpDown);
             this.flagsGroupBox.Controls.Add(this.flag3CheckBox);
             this.flagsGroupBox.Controls.Add(this.flag2CheckBox);
             this.flagsGroupBox.Controls.Add(this.flag1CheckBox);
@@ -1314,7 +1319,7 @@
             this.flagsGroupBox.Controls.Add(this.flag4CheckBox);
             this.flagsGroupBox.Location = new System.Drawing.Point(328, 468);
             this.flagsGroupBox.Name = "flagsGroupBox";
-            this.flagsGroupBox.Size = new System.Drawing.Size(281, 136);
+            this.flagsGroupBox.Size = new System.Drawing.Size(281, 166);
             this.flagsGroupBox.TabIndex = 32;
             this.flagsGroupBox.TabStop = false;
             this.flagsGroupBox.Text = "Map Settings";
@@ -1413,7 +1418,31 @@
             this.battleBackgroundUpDown.Size = new System.Drawing.Size(75, 20);
             this.battleBackgroundUpDown.TabIndex = 36;
             this.battleBackgroundUpDown.ValueChanged += new System.EventHandler(this.battleBackgroundUpDown_ValueChanged);
-            // 
+            //
+            // momCallIntroParamLabel
+            //
+            this.momCallIntroParamLabel.AutoSize = true;
+            this.momCallIntroParamLabel.Location = new System.Drawing.Point(151, 126);
+            this.momCallIntroParamLabel.Name = "momCallIntroParamLabel";
+            this.momCallIntroParamLabel.Size = new System.Drawing.Size(78, 13);
+            this.momCallIntroParamLabel.TabIndex = 61;
+            this.momCallIntroParamLabel.Text = "Mom Call Msg";
+            this.momCallIntroParamLabel.Visible = false;
+            //
+            // momCallIntroParamUpDown
+            //
+            this.momCallIntroParamUpDown.Location = new System.Drawing.Point(154, 141);
+            this.momCallIntroParamUpDown.Maximum = new decimal(new int[] {
+            15,
+            0,
+            0,
+            0});
+            this.momCallIntroParamUpDown.Name = "momCallIntroParamUpDown";
+            this.momCallIntroParamUpDown.Size = new System.Drawing.Size(75, 20);
+            this.momCallIntroParamUpDown.TabIndex = 62;
+            this.momCallIntroParamUpDown.Visible = false;
+            this.momCallIntroParamUpDown.ValueChanged += new System.EventHandler(this.momCallIntroParamUpDown_ValueChanged);
+            //
             // flag3CheckBox
             // 
             this.flag3CheckBox.AutoSize = true;
@@ -1588,6 +1617,7 @@
             this.flagsGroupBox.ResumeLayout(false);
             this.flagsGroupBox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.battleBackgroundUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.momCallIntroParamUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cameraPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.weatherPictureBox)).EndInit();
             this.ResumeLayout(false);
@@ -1700,6 +1730,8 @@
         private System.Windows.Forms.Label battleBackgroundLabel;
         private System.Windows.Forms.Button copyFlagsButton;
         private System.Windows.Forms.NumericUpDown battleBackgroundUpDown;
+        private System.Windows.Forms.Label momCallIntroParamLabel;
+        private System.Windows.Forms.NumericUpDown momCallIntroParamUpDown;
         private System.Windows.Forms.CheckBox flag3CheckBox;
         private System.Windows.Forms.CheckBox flag2CheckBox;
         private System.Windows.Forms.CheckBox flag1CheckBox;

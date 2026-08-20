@@ -13,7 +13,8 @@ namespace DSPRE.Editors
         // Aggregate dirty state from child editors based on game family
         if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
           return (honeyTreeEncounterEditor?.HasUnsavedChanges ?? false) ||
-                 (greatMarshEncounterEditor?.HasUnsavedChanges ?? false);
+                 (greatMarshEncounterEditor?.HasUnsavedChanges ?? false) ||
+                 (trophyGardenEncounterEditor?.HasUnsavedChanges ?? false);
         } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
           return (headbuttEncounterEditor?.HasUnsavedChanges ?? false) ||
                  (safariZoneEditor?.HasUnsavedChanges ?? false) ||
@@ -31,6 +32,8 @@ namespace DSPRE.Editors
             descriptions.Add(honeyTreeEncounterEditor.UnsavedChangesDescription);
           if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
             descriptions.Add(greatMarshEncounterEditor.UnsavedChangesDescription);
+          if (trophyGardenEncounterEditor?.HasUnsavedChanges ?? false)
+            descriptions.Add(trophyGardenEncounterEditor.UnsavedChangesDescription);
         } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
           if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
             descriptions.Add(headbuttEncounterEditor.UnsavedChangesDescription);
@@ -50,6 +53,8 @@ namespace DSPRE.Editors
           honeyTreeEncounterEditor.SaveChanges();
         if (greatMarshEncounterEditor?.HasUnsavedChanges ?? false)
           greatMarshEncounterEditor.SaveChanges();
+        if (trophyGardenEncounterEditor?.HasUnsavedChanges ?? false)
+          trophyGardenEncounterEditor.SaveChanges();
       } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
         if (headbuttEncounterEditor?.HasUnsavedChanges ?? false)
           headbuttEncounterEditor.SaveChanges();
@@ -65,6 +70,7 @@ namespace DSPRE.Editors
       if (RomInfo.gameFamily == RomInfo.GameFamilies.DP || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
         honeyTreeEncounterEditor?.DiscardChanges();
         greatMarshEncounterEditor?.DiscardChanges();
+        trophyGardenEncounterEditor?.DiscardChanges();
       } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
         headbuttEncounterEditor?.DiscardChanges();
         safariZoneEditor?.DiscardChanges();
@@ -116,6 +122,9 @@ namespace DSPRE.Editors
                 if (!tabControl.TabPages.Contains(tabPageGreatMarshEditor)) {
                     tabControl.TabPages.Add(tabPageGreatMarshEditor);
                 }
+                if (!tabControl.TabPages.Contains(tabPageTrophyGardenEditor)) {
+                    tabControl.TabPages.Add(tabPageTrophyGardenEditor);
+                }
             } else if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) {
                 // Remove DPPt-only tabs
                 if (tabControl.TabPages.Contains(tabPageHoneyTreeEditor)) {
@@ -123,6 +132,9 @@ namespace DSPRE.Editors
                 }
                 if (tabControl.TabPages.Contains(tabPageGreatMarshEditor)) {
                     tabControl.TabPages.Remove(tabPageGreatMarshEditor);
+                }
+                if (tabControl.TabPages.Contains(tabPageTrophyGardenEditor)) {
+                    tabControl.TabPages.Remove(tabPageTrophyGardenEditor);
                 }
                 // Ensure HGSS tabs are present
                 if (!tabControl.TabPages.Contains(tabPageHeadbuttEditor)) {
@@ -151,6 +163,8 @@ namespace DSPRE.Editors
             tabPageHoneyTreeEditor_Enter(null, null);
         } else if (tab == tabPageGreatMarshEditor) {
             tabPageGreatMarshEditor_Enter(null, null);
+        } else if (tab == tabPageTrophyGardenEditor) {
+            tabPageTrophyGardenEditor_Enter(null, null);
         }
     }
 
@@ -183,6 +197,12 @@ namespace DSPRE.Editors
     {
       if (Helpers.HandlersDisabled) return;
       greatMarshEncounterEditor.SetupGreatMarshEncounterEditor();
+    }
+
+    private void tabPageTrophyGardenEditor_Enter(object sender, System.EventArgs e)
+    {
+      if (Helpers.HandlersDisabled) return;
+      trophyGardenEncounterEditor.SetupTrophyGardenEncounterEditor();
     }
   }
 }

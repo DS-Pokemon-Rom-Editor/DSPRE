@@ -29,7 +29,7 @@ namespace DSPRE.Editors.BtxEditor
         private void InitializeComponent()
         {
             this.label1 = new System.Windows.Forms.Label();
-            this.overworldList = new System.Windows.Forms.ComboBox();
+            this.overworldList = new DSPRE.InputComboBox();
             this.overworldPictureBox = new System.Windows.Forms.PictureBox();
             this.showBtxFileButton = new System.Windows.Forms.Button();
             this.exportImagePng = new System.Windows.Forms.Button();
@@ -367,7 +367,7 @@ namespace DSPRE.Editors.BtxEditor
         #endregion
 
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.ComboBox overworldList;
+        private DSPRE.InputComboBox overworldList;
         private System.Windows.Forms.PictureBox overworldPictureBox;
         private System.Windows.Forms.Button showBtxFileButton;
         private System.Windows.Forms.Button exportImagePng;

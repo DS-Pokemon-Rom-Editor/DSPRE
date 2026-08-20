@@ -41,7 +41,7 @@
             this.tradeDataGroupBox = new System.Windows.Forms.GroupBox();
             this.requestedComboBox = new DSPRE.InputComboBox();
             this.requestedLabel = new System.Windows.Forms.Label();
-            this.otGenderComboBox = new System.Windows.Forms.ComboBox();
+            this.otGenderComboBox = new DSPRE.InputComboBox();
             this.otGenderLabel = new System.Windows.Forms.Label();
             this.otIDNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.otIDLabel = new System.Windows.Forms.Label();
@@ -53,7 +53,7 @@
             this.unknownLabel = new System.Windows.Forms.Label();
             this.pidNumericUpDown = new System.Windows.Forms.NumericUpDown();
             this.pidLabel = new System.Windows.Forms.Label();
-            this.langComboBox = new System.Windows.Forms.ComboBox();
+            this.langComboBox = new DSPRE.InputComboBox();
             this.langLabel = new System.Windows.Forms.Label();
             this.heldItemComboBox = new DSPRE.InputComboBox();
             this.heldItemLabel = new System.Windows.Forms.Label();
@@ -808,12 +808,12 @@
         private DSPRE.InputComboBox heldItemComboBox;
         private System.Windows.Forms.Label heldItemLabel;
         private System.Windows.Forms.GroupBox monDataGroupBox;
-        private System.Windows.Forms.ComboBox langComboBox;
+        private DSPRE.InputComboBox langComboBox;
         private System.Windows.Forms.Label langLabel;
         private System.Windows.Forms.NumericUpDown otIDNumericUpDown;
         private System.Windows.Forms.Label otIDLabel;
         private System.Windows.Forms.Label otGenderLabel;
-        private System.Windows.Forms.ComboBox otGenderComboBox;
+        private DSPRE.InputComboBox otGenderComboBox;
         private System.Windows.Forms.NumericUpDown pidNumericUpDown;
         private System.Windows.Forms.Label pidLabel;
         private System.Windows.Forms.NumericUpDown unknownNumericUpDown;

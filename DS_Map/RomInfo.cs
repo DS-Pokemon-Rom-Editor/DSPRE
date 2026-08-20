@@ -90,6 +90,8 @@ namespace DSPRE
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
         public static int trainerNamesMessageNumber { get; private set; }
+        public static int battleTowerTrainerNamesMessageNumber { get; private set; }
+        public static int battleTowerTrainerMessagesNumber { get; private set; }
         public static int moveDescriptionsTextNumbers { get; private set; }
         public static int moveNamesTextNumbers { get; private set; }
         public static int locationNamesTextNumber { get; private set; }
@@ -181,6 +183,8 @@ namespace DSPRE
             encounterExtended,
             headbutt,
             safariZone,
+            battleTowerTrainers,
+            battleTowerPokemon,
 
             trainerProperties,
             trainerParty,
@@ -327,6 +331,7 @@ namespace DSPRE
             SetLocationNamesTextNumber();
             SetTrainerNamesMessageNumber();
             SetTrainerClassMessageNumber();
+            SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
             SetMoveTextNumbers();
@@ -1448,6 +1453,27 @@ namespace DSPRE
                     break;
             }
         }
+        // US-version text archive numbers only; not yet confirmed for other localizations.
+        private static void SetBattleTowerTextNumbers()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    battleTowerTrainerNamesMessageNumber = 16;
+                    battleTowerTrainerMessagesNumber = 555;
+                    break;
+
+                case GameFamilies.Plat:
+                    battleTowerTrainerNamesMessageNumber = 21;
+                    battleTowerTrainerMessagesNumber = 614;
+                    break;
+
+                case GameFamilies.HGSS:
+                    battleTowerTrainerNamesMessageNumber = 27;
+                    battleTowerTrainerMessagesNumber = 724;
+                    break;
+            }
+        }
         private static void SetMoveTextNumbers()
         {
             switch (gameFamily)
@@ -1987,6 +2013,9 @@ namespace DSPRE
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_tower\btdtr.narc",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_tower\btdpm.narc",
+
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\otherpoke.narc",
 
@@ -2073,6 +2102,9 @@ namespace DSPRE
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdtr.narc",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdpm.narc",
+
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\pl_item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
@@ -2103,6 +2135,9 @@ namespace DSPRE
 
                         [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",
                         [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",
+
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\a\2\0\2",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\a\2\0\3",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
