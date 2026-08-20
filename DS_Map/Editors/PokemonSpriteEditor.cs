@@ -673,6 +673,20 @@ namespace DSPRE.Editors {
             File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
                       Path.Combine(unpackedDir, dstIdx.ToString("D4")), true);
         }
+
+        // Keeps a stale unpacked folder from overwriting this edit on the next Save ROM.
+        private void SyncUnpackedEntryIfPresent(DirNames dir, int entryIndex) {
+            if (!RomInfo.gameDirs.ContainsKey(dir)) return;
+            string unpackedDir = RomInfo.gameDirs[dir].unpackedDir;
+            string entryPath = Path.Combine(unpackedDir, entryIndex.ToString("D4"));
+            if (!File.Exists(entryPath)) return;
+
+            narcReader.OpenEntry(entryIndex);
+            byte[] data = new byte[narcReader.fe[entryIndex].Size];
+            narcReader.fs.Read(data, 0, data.Length);
+            narcReader.Close();
+            File.WriteAllBytes(entryPath, data);
+        }
         
         private void LoadOtherFormSprites(int selectedIndex) {
             if (currentFormData == null || selectedIndex >= currentFormData.Length) {
@@ -984,6 +998,7 @@ namespace DSPRE.Editors {
                         narcReader.OpenEntry(baseOffset + i);
                         SaveBin(narcReader.fs, currentSprites.Sprites[i]);
                         narcReader.Close();
+                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, baseOffset + i);
                     }
                 }
 
@@ -991,12 +1006,14 @@ namespace DSPRE.Editors {
                     narcReader.OpenEntry(baseOffset + 4);
                     SavePal(narcReader.fs, currentSprites.Normal);
                     narcReader.Close();
+                    SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, baseOffset + 4);
                 }
 
                 if (narcReader.fe[baseOffset + 5].Size == 72 && currentSprites.Shiny != null) {
                     narcReader.OpenEntry(baseOffset + 5);
                     SavePal(narcReader.fs, currentSprites.Shiny);
                     narcReader.Close();
+                    SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, baseOffset + 5);
                 }
             }
             else {
@@ -1015,6 +1032,7 @@ namespace DSPRE.Editors {
                         // Some forms store a single image used for both back slots; write using Sprites[0] which was loaded
                         SaveBin(narcReader.fs, currentSprites.Sprites[0]);
                         narcReader.Close();
+                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.BackSpriteIndex);
                     }
                 }
 
@@ -1024,6 +1042,7 @@ namespace DSPRE.Editors {
                         narcReader.OpenEntry(form.FrontSpriteIndex);
                         SaveBin(narcReader.fs, currentSprites.Sprites[2]);
                         narcReader.Close();
+                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.FrontSpriteIndex);
                     }
                 }
 
@@ -1033,6 +1052,7 @@ namespace DSPRE.Editors {
                         narcReader.OpenEntry(form.NormalPaletteIndex);
                         SavePal(narcReader.fs, currentSprites.Normal);
                         narcReader.Close();
+                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.NormalPaletteIndex);
                     }
                 }
 
@@ -1042,6 +1062,7 @@ namespace DSPRE.Editors {
                         narcReader.OpenEntry(form.ShinyPaletteIndex);
                         SavePal(narcReader.fs, currentSprites.Shiny);
                         narcReader.Close();
+                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.ShinyPaletteIndex);
                     }
                 }
             }
