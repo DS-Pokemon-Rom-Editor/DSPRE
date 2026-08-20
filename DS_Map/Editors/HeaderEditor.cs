@@ -23,6 +23,7 @@ namespace DSPRE.Editors
     {
         public bool isHeaderEditorReady { get; set; } = false;
         MainProgram _parent;
+        private readonly ToolTip toolTip1 = new ToolTip();
 
         public HeaderEditor()
         {
@@ -148,9 +149,16 @@ namespace DSPRE.Editors
                     flag6CheckBox.Visible = true;
                     flag5CheckBox.Visible = true;
                     flag4CheckBox.Visible = true;
-                    flag6CheckBox.Text = "Flag ?";
-                    flag5CheckBox.Text = "Flag ?";
-                    flag4CheckBox.Text = "Flag ?";
+                    flag4CheckBox.Text = "Out Calls";
+                    flag5CheckBox.Text = "In Calls";
+                    flag6CheckBox.Text = "Radio";
+                    toolTip1.SetToolTip(flag4CheckBox, "Whether the player can make outgoing Pokegear phone calls on this map.");
+                    toolTip1.SetToolTip(flag5CheckBox, "Whether the player can receive incoming Pokegear phone calls on this map.");
+                    toolTip1.SetToolTip(flag6CheckBox, "Whether the player can pick up Pokegear radio signal on this map.");
+
+                    momCallIntroParamLabel.Visible = true;
+                    momCallIntroParamUpDown.Visible = true;
+                    toolTip1.SetToolTip(momCallIntroParamUpDown, "Which intro line Mom uses when called from this map (offset added to her base call message).");
 
                     worldmapCoordsGroupBox.Enabled = true;
                     break;
@@ -408,6 +416,18 @@ namespace DSPRE.Editors
             }
         }
 
+        private void momCallIntroParamUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            if (Helpers.HandlersDisabled || currentHeader == null)
+            {
+                return;
+            }
+            if (RomInfo.gameFamily == GameFamilies.HGSS)
+            {
+                ((HeaderHGSS)currentHeader).momCallIntroParam = (byte)momCallIntroParamUpDown.Value;
+            }
+        }
+
         private void kantoRadioButton_CheckedChanged(object sender, EventArgs e)
         {
             if (Helpers.HandlersDisabled || currentHeader == null)
@@ -541,6 +561,7 @@ namespace DSPRE.Editors
                             worldmapXCoordUpDown.Value = h.worldmapX;
                             worldmapYCoordUpDown.Value = h.worldmapY;
                             followModeComboBox.SelectedIndex = h.followMode;
+                            momCallIntroParamUpDown.Value = h.momCallIntroParam;
                             kantoRadioButton.Checked = h.kantoFlag;
                             johtoRadioButton.Checked = !h.kantoFlag;
                             break;
