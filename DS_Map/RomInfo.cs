@@ -68,6 +68,15 @@ namespace DSPRE
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
 
+        // sTrainerClassGender/sTrainerClassPrizeMul, Platinum/English only.
+        public static uint trainerClassGenderTablePointerOffset { get; private set; }
+        public static uint trainerClassGenderTableVanillaOffset { get; private set; }
+        public static int trainerClassGenderTableVanillaCount { get; private set; }
+        public static int trainerClassPrizeMulOverlayNumber { get; private set; }
+        public static uint trainerClassPrizeMulTablePointerOffset { get; private set; }
+        public static uint trainerClassPrizeMulTableVanillaOffset { get; private set; }
+        public static int trainerClassPrizeMulTableVanillaCount { get; private set; }
+
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
@@ -89,6 +98,7 @@ namespace DSPRE
         public static int itemDescriptionsTextNumber { get; private set; }
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
+        public static int trainerClassDescriptionMessageNumber { get; private set; }
         public static int trainerNamesMessageNumber { get; private set; }
         public static int battleTowerTrainerNamesMessageNumber { get; private set; }
         public static int battleTowerTrainerMessagesNumber { get; private set; }
@@ -331,6 +341,7 @@ namespace DSPRE
             SetLocationNamesTextNumber();
             SetTrainerNamesMessageNumber();
             SetTrainerClassMessageNumber();
+            SetTrainerClassTableExpansionOffsets();
             SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
@@ -1442,6 +1453,10 @@ namespace DSPRE
 
                 case GameFamilies.Plat:
                     trainerClassMessageNumber = 619;
+                    if (gameLanguage.Equals(GameLanguages.English))
+                    {
+                        trainerClassDescriptionMessageNumber = 620;
+                    }
                     break;
 
                 default:
@@ -1453,6 +1468,22 @@ namespace DSPRE
                     break;
             }
         }
+
+        private static void SetTrainerClassTableExpansionOffsets()
+        {
+            if (gameFamily == GameFamilies.Plat && gameLanguage == GameLanguages.English)
+            {
+                trainerClassGenderTablePointerOffset = 0x793B4;
+                trainerClassGenderTableVanillaOffset = 0xF0714;
+                trainerClassGenderTableVanillaCount = 0x69;
+
+                trainerClassPrizeMulOverlayNumber = 16;
+                trainerClassPrizeMulTablePointerOffset = 0x816C;
+                trainerClassPrizeMulTableVanillaOffset = 0x359E0;
+                trainerClassPrizeMulTableVanillaCount = 0x69;
+            }
+        }
+
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
         {
