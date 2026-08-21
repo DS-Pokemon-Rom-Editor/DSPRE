@@ -4,6 +4,20 @@
 
 ---
 
+## 2.1.7
+- Fixed a crash in the Pokémon Sprite Editor when importing a front and back sprite whose PNGs declare a
+  different number of palette colors (even if the actual colors are otherwise compatible), and use
+  Palette Match on them. This could also cause Palette Match to wrongly claim the colors didn't fit at
+  all when they actually did.
+- Battle Display: the four height fields (front/back, male/female) allowed negative values, but they're
+  actually unsigned in the ROM, so a negative value would just wrap around into a huge, wrong height.
+  Now correctly limited to 0-255.
+- Fixed a crash in the Trainer Editor's DV Calculator for Platinum ROMs that add new trainer classes by
+  repointing the trainer-class gender table. The eye-contact music table
+  was already handled correctly for these ROMs.
+
+---
+
 ## 2.1.6
 - More fixes for the dropdown search issue from 2.1.5: Item Editor's hold effect, field pocket, natural
   gift type, battle function, field function, palette, and image fields now behave consistently too, and
