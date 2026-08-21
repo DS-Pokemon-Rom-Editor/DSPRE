@@ -267,7 +267,7 @@ namespace DSPRE.Editors.Utils
             int maxsize = 0;
             for (int i = 0; i < parent.Entries.Length; i++)
             {
-                if (used[i])
+                if (i < used.Length && used[i])
                 {
                     newPalette.Entries[i] = parent.Entries[i];
                     maxsize++;
