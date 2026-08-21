@@ -94,7 +94,7 @@ namespace DSPRE.Editors {
             }
         }
 
-        /// <summary>height.narc (DP + Platinum): 4 signed 1-byte values per mon, file order F-back,
+        /// <summary>height.narc (DP + Platinum): 4 unsigned 1-byte values per mon, file order F-back,
         /// M-back, F-front, M-front, so mon N's slot s is the (N*4 + s)th file.</summary>
         private sealed class HeightNarc {
             private const int FB = 0, MB = 1, FF = 2, MF = 3;
@@ -105,10 +105,10 @@ namespace DSPRE.Editors {
                 var a = _n.GetRecord(id * 4 + FB); var b = _n.GetRecord(id * 4 + MB);
                 var c = _n.GetRecord(id * 4 + FF); var d = _n.GetRecord(id * 4 + MF);
                 if (a == null && b == null && c == null && d == null) { backF = backM = frontF = frontM = 0; return false; }
-                backF = (a != null && a.Length >= 1) ? (sbyte)a[0] : 0;
-                backM = (b != null && b.Length >= 1) ? (sbyte)b[0] : 0;
-                frontF = (c != null && c.Length >= 1) ? (sbyte)c[0] : 0;
-                frontM = (d != null && d.Length >= 1) ? (sbyte)d[0] : 0;
+                backF = (a != null && a.Length >= 1) ? a[0] : 0;
+                backM = (b != null && b.Length >= 1) ? b[0] : 0;
+                frontF = (c != null && c.Length >= 1) ? c[0] : 0;
+                frontM = (d != null && d.Length >= 1) ? d[0] : 0;
                 return true;
             }
 
@@ -326,10 +326,10 @@ namespace DSPRE.Editors {
             movementTypeNumeric.Value = ClampDec(movementType, 0, 255);
             movementGroup.Visible = hasMovementType;
 
-            frontHeightMNumeric.Value = ClampDec(frontHeightM, -128, 127);
-            frontHeightFNumeric.Value = ClampDec(frontHeightF, -128, 127);
-            backHeightMNumeric.Value = ClampDec(backHeightM, -128, 127);
-            backHeightFNumeric.Value = ClampDec(backHeightF, -128, 127);
+            frontHeightMNumeric.Value = ClampDec(frontHeightM, 0, 255);
+            frontHeightFNumeric.Value = ClampDec(frontHeightF, 0, 255);
+            backHeightMNumeric.Value = ClampDec(backHeightM, 0, 255);
+            backHeightFNumeric.Value = ClampDec(backHeightF, 0, 255);
             heightsGroup.Visible = hasHeights;
 
             bool en = hasSpriteData;
@@ -566,13 +566,13 @@ namespace DSPRE.Editors {
 
             heightsGroup = new GroupBox { Text = "Per-Gender Sprite Heights", AutoSize = true, Width = 320 };
             var heightsGrid = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Padding = new Padding(6) };
-            frontHeightMNumeric = new NumericUpDown { Minimum = -128, Maximum = 127, Width = 70 };
+            frontHeightMNumeric = new NumericUpDown { Minimum = 0, Maximum = 255, Width = 70 };
             frontHeightMNumeric.ValueChanged += (s, e) => { if (loading) return; frontHeightM = (int)frontHeightMNumeric.Value; SetDirty(true); RefreshPreview(); };
-            frontHeightFNumeric = new NumericUpDown { Minimum = -128, Maximum = 127, Width = 70 };
+            frontHeightFNumeric = new NumericUpDown { Minimum = 0, Maximum = 255, Width = 70 };
             frontHeightFNumeric.ValueChanged += (s, e) => { if (loading) return; frontHeightF = (int)frontHeightFNumeric.Value; SetDirty(true); RefreshPreview(); };
-            backHeightMNumeric = new NumericUpDown { Minimum = -128, Maximum = 127, Width = 70 };
+            backHeightMNumeric = new NumericUpDown { Minimum = 0, Maximum = 255, Width = 70 };
             backHeightMNumeric.ValueChanged += (s, e) => { if (loading) return; backHeightM = (int)backHeightMNumeric.Value; SetDirty(true); RefreshPreview(); };
-            backHeightFNumeric = new NumericUpDown { Minimum = -128, Maximum = 127, Width = 70 };
+            backHeightFNumeric = new NumericUpDown { Minimum = 0, Maximum = 255, Width = 70 };
             backHeightFNumeric.ValueChanged += (s, e) => { if (loading) return; backHeightF = (int)backHeightFNumeric.Value; SetDirty(true); RefreshPreview(); };
             AddRow(heightsGrid, "Front height (Male)", frontHeightMNumeric);
             AddRow(heightsGrid, "Front height (Female)", frontHeightFNumeric);

@@ -71,6 +71,7 @@ namespace DSPRE
         private static bool _detected;
         private static string _path;
         private static long _markerOffset = -1;
+        private static long _reservedEnd = -1;
         private static uint _capacity;
         private static uint _usedCount;
         private static TableLayout[] _tables;
@@ -79,12 +80,16 @@ namespace DSPRE
         public static uint UsedCount => _usedCount;
         public static uint Capacity => _capacity;
 
+        public static (long Start, long End)? GetReservedByteRange() =>
+            _detected ? ((long Start, long End)?)(_markerOffset, _reservedEnd) : null;
+
         /// <summary>Re-scans the synthetic overlay for the expansion marker. Safe to call anytime
         /// after a ROM is loaded (no-op, returns false, for DP/HGSS).</summary>
         public static bool Detect()
         {
             _detected = false;
             _markerOffset = -1;
+            _reservedEnd = -1;
             _tables = null;
 
             if (RomInfo.gameFamily != GameFamilies.Plat)
@@ -119,6 +124,7 @@ namespace DSPRE
                 }
 
                 _tables = tables;
+                _reservedEnd = cursor;
                 _detected = true;
                 return true;
             }

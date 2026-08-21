@@ -540,7 +540,8 @@ namespace DSPRE.Editors {
             Helpers.EnableHandlers();
             
             currentSprites = new SpriteSet();
-            
+            usedEntries = null;
+
             if (!isLoadingOtherForms) {
                 LoadMainSprites(toLoad);
             } else {
@@ -1470,12 +1471,7 @@ namespace DSPRE.Editors {
         private void LoadSprites() {
             if (!isLoadingOtherForms) {
                 narcReader = new NarcReader(RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir);
-                usedEntries = new bool[narcReader.fe.Length];
-                
-                for (int i = 0; i < narcReader.fe.Length; i++) {
-                    usedEntries[i] = (narcReader.fe[i].Size > 0);
-                }
-                
+
                 IndexBox.Items.Clear();
                 for (int i = 0; i < pokenames.Length; i++) {
                     IndexBox.Items.Add($"{i:D3} {pokenames[i]}");
@@ -1501,12 +1497,7 @@ namespace DSPRE.Editors {
                 }
                 
                 narcReader = new NarcReader(RomInfo.gameDirs[DirNames.otherPokemonBattleSprites].packedDir);
-                usedEntries = new bool[narcReader.fe.Length];
-                
-                for (int i = 0; i < narcReader.fe.Length; i++) {
-                    usedEntries[i] = (narcReader.fe[i].Size > 0);
-                }
-                
+
                 IndexBox.Items.Clear();
                 for (int i = 0; i < currentFormData.Length; i++) {
                     IndexBox.Items.Add($"{i:D3} {currentFormData[i].Name}");
