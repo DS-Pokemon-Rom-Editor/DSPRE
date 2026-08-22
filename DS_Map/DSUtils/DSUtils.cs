@@ -773,6 +773,28 @@ namespace DSPRE {
             }
         }
 
+        public static Image GetItemPic(int itemId, int w, int h) {
+            try {
+                uint entryOffset = (uint)(RomInfo.itemTableOffset + itemId * 8);
+                int itemIconId = ARM9.ReadWordLE(entryOffset + 2);
+                int itemPaletteId = ARM9.ReadWordLE(entryOffset + 4);
+                string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
+
+                string paletteFilename = itemPaletteId.ToString("D4");
+                var itemPalette = new NCLR(itemIconsDir + "\\" + paletteFilename, itemPaletteId, paletteFilename);
+
+                string spriteFilename = itemIconId.ToString("D4");
+                ImageBase imageBase = new NCGR(itemIconsDir + "\\" + spriteFilename, itemIconId, spriteFilename);
+
+                string ncerFileName = "0001"; // the only NCER in the itemIcons NARC
+                SpriteBase spriteBase = new NCER(itemIconsDir + "\\" + ncerFileName, 2, ncerFileName);
+
+                return spriteBase.Get_Image(imageBase, itemPalette, 0, w, h, false, false, false, true, true, -1);
+            } catch (Exception) {
+                return Properties.Resources.IconItem;
+            }
+        }
+
         // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF sentinel, so ImageBase's auto-detected
         // Width/Height is garbage for icons. Read/write raw 8x8 tile blocks directly instead, at the
         // real Gen4 icon width (32px = 4 tiles); height comes from the tile count.
