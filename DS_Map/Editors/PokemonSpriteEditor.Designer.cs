@@ -314,6 +314,7 @@ partial class PokemonSpriteEditor {
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScroll = true;
             this.ClientSize = new System.Drawing.Size(763, 761);
             this.Controls.Add(this.femaleFrontShinyPic);
             this.Controls.Add(this.maleFrontShinyPic);

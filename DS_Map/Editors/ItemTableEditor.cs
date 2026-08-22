@@ -14,7 +14,8 @@ namespace DSPRE.Editors
             {
                 // Aggregate dirty state from child editors
                 return (pickupTableEditor?.HasUnsavedChanges ?? false) ||
-                       (hiddenItemsEditor?.HasUnsavedChanges ?? false);
+                       (hiddenItemsEditor?.HasUnsavedChanges ?? false) ||
+                       (rockSmashEditor?.HasUnsavedChanges ?? false);
             }
         }
 
@@ -27,6 +28,8 @@ namespace DSPRE.Editors
                     descriptions.Add(pickupTableEditor.UnsavedChangesDescription);
                 if (hiddenItemsEditor?.HasUnsavedChanges ?? false)
                     descriptions.Add(hiddenItemsEditor.UnsavedChangesDescription);
+                if (rockSmashEditor?.HasUnsavedChanges ?? false)
+                    descriptions.Add(rockSmashEditor.UnsavedChangesDescription);
                 return descriptions.Count > 0 ? string.Join(", ", descriptions) : "Item Table Editor";
             }
         }
@@ -38,6 +41,8 @@ namespace DSPRE.Editors
                 pickupTableEditor.SaveChanges();
             if (hiddenItemsEditor?.HasUnsavedChanges ?? false)
                 hiddenItemsEditor.SaveChanges();
+            if (rockSmashEditor?.HasUnsavedChanges ?? false)
+                rockSmashEditor.SaveChanges();
         }
 
         public void DiscardChanges()
@@ -45,6 +50,7 @@ namespace DSPRE.Editors
             // Discard changes in all child editors
             pickupTableEditor?.DiscardChanges();
             hiddenItemsEditor?.DiscardChanges();
+            rockSmashEditor?.DiscardChanges();
         }
         #endregion
 
@@ -77,6 +83,15 @@ namespace DSPRE.Editors
                 }
             }
 
+            // Hide Rock Smash tab if not supported for this ROM version
+            if (!RomInfo.IsRockSmashEditorAvailable())
+            {
+                if (tabControl.TabPages.Contains(tabPageRockSmash))
+                {
+                    tabControl.TabPages.Remove(tabPageRockSmash);
+                }
+            }
+
             // Select the first tab
             if (tabControl.TabPages.Count > 0)
             {
@@ -94,6 +109,10 @@ namespace DSPRE.Editors
             else if (tab == tabPageHiddenItems)
             {
                 tabPageHiddenItems_Enter(null, null);
+            }
+            else if (tab == tabPageRockSmash)
+            {
+                tabPageRockSmash_Enter(null, null);
             }
         }
 
@@ -113,6 +132,14 @@ namespace DSPRE.Editors
             }
         }
 
+        private void tabPageRockSmash_Enter(object sender, EventArgs e)
+        {
+            if (rockSmashEditor != null)
+            {
+                rockSmashEditor.SetupRockSmashEditor();
+            }
+        }
+
         private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (tabControl.SelectedTab != null)
@@ -129,6 +156,7 @@ namespace DSPRE.Editors
                 itemTableEditorIsReady = false;
                 pickupTableEditor?.Reset();
                 hiddenItemsEditor?.Reset();
+                rockSmashEditor?.Reset();
 
                 // Re-add pickup tab if it was removed (for ROM switching scenarios)
                 if (!tabControl.TabPages.Contains(tabPagePickup))
@@ -142,6 +170,12 @@ namespace DSPRE.Editors
                 {
                     // Add it back at index 1
                     tabControl.TabPages.Insert(1, tabPageHiddenItems);
+                }
+
+                // Re-add Rock Smash tab if it was removed (for ROM switching scenarios)
+                if (!tabControl.TabPages.Contains(tabPageRockSmash))
+                {
+                    tabControl.TabPages.Insert(2, tabPageRockSmash);
                 }
 
                 // Reset to first tab

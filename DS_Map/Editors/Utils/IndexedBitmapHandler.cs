@@ -209,7 +209,7 @@ namespace DSPRE.Editors.Utils
             return temp;
         }
 
-        public ColorPalette AlternatePalette(Bitmap parent, Bitmap child)
+        public ColorPalette AlternatePalette(Bitmap parent, Bitmap child, ColorPalette existing = null)
         {
             Bitmap temp = new Bitmap(1, 1, parent.PixelFormat);
             ColorPalette newPalette = temp.Palette;
@@ -218,6 +218,14 @@ namespace DSPRE.Editors.Utils
             byte[] ChildArray = GetArray(child);
             if (ParentArray.Length != ChildArray.Length)
                 return null;
+            // A slot only used by the other pose (e.g. back uses it but this front image doesn't)
+            // can't be resolved from this parent/child pair alone, so seed with whatever was
+            // already known for it instead of leaving it at the bitmap's raw default palette.
+            if (existing != null)
+            {
+                for (int i = 0; i < newPalette.Entries.Length && i < existing.Entries.Length; i++)
+                    newPalette.Entries[i] = existing.Entries[i];
+            }
             for (int i = 0; i < ChildPalette.Entries.Length; i++)
             {
                 for (int j = 0; j < ParentArray.Length; j++)

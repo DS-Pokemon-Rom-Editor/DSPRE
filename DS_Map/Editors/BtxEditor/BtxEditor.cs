@@ -18,9 +18,9 @@ namespace DSPRE.Editors.BtxEditor
         // Track modified BTX files
         private Dictionary<ushort, byte[]> modifiedBTXFiles = new Dictionary<ushort, byte[]>();
 
-        // ── Overworld properties (render state + hzla expansion-patch add/delete) ────────────────
+        // Overworld properties: render state + hzla expansion-patch add/delete.
         // Render state exists for every Platinum ROM; Add/Delete are only ever enabled once
-        // OverworldSpriteTableExpansion.Detect() finds hzla's PlatPatches expansion applied — the
+        // OverworldSpriteTableExpansion.Detect() finds hzla's PlatPatches expansion applied. The
         // controls themselves aren't gated on game family, the underlying detection already is.
         private bool loadingRenderState;
 
@@ -251,7 +251,7 @@ namespace DSPRE.Editors.BtxEditor
 
         }
 
-        // ── Overworld properties (controls declared in BtxEditor.Designer.cs) ────────────────────
+        // Overworld properties: controls declared in BtxEditor.Designer.cs.
 
         private void LoadOverworldProperties(uint key)
         {

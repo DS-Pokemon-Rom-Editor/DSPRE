@@ -139,11 +139,23 @@
     <Compile Include="Editors\BattleTowerEditor.Designer.cs">
       <DependentUpon>BattleTowerEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\StarterEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\StarterEditor.Designer.cs">
+      <DependentUpon>StarterEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\HiddenItemsEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Editors\HiddenItemsEditor.Designer.cs">
       <DependentUpon>HiddenItemsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Editors\RockSmashEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Editors\RockSmashEditor.Designer.cs">
+      <DependentUpon>RockSmashEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="Editors\HoneyTreeEncounterEditor.cs">
       <SubType>UserControl</SubType>
@@ -507,6 +519,8 @@
     <Compile Include="ROMFiles\BattleTowerTrainerFile.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
+    <Compile Include="ROMFiles\RockSmashData.cs" />
+    <Compile Include="ROMFiles\StarterPokemonData.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
     <Compile Include="ROMFiles\HeadbuttTree.cs" />
     <Compile Include="ROMFiles\HeadbuttTreeGroup.cs" />
@@ -680,6 +694,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\PickupTableEditor.resx">
       <DependentUpon>PickupTableEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Editors\RockSmashEditor.resx">
+      <DependentUpon>RockSmashEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Editors\TMEditor.resx">
       <DependentUpon>TMEditor.cs</DependentUpon>

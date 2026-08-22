@@ -15,7 +15,7 @@ namespace DSPRE.Editors.BtxEditor
     /// <see cref="OverworldSpriteTableExpansion"/> has detected hzla's PlatPatches expansion patch
     /// on the loaded Platinum ROM. Both the texture slot and the clone-source are picked from real
     /// existing data (never typed as a raw internal number), and once an image is picked, the
-    /// texture-slot list is re-sorted with any slot that actually fits it marked and pushed first —
+    /// texture-slot list is re-sorted with any slot that actually fits it marked and pushed first.
     /// DSPRE can't create a brand-new texture slot, only reuse an existing one at its own exact
     /// size/colour budget.
     /// </summary>
@@ -52,7 +52,7 @@ namespace DSPRE.Editors.BtxEditor
         }
 
         // mmodel.narc holds a mix of file types (flat billboard textures AND full 3D models for
-        // "3D model" draw-type overworlds) — an "unused" member number is not necessarily a
+        // "3D model" draw-type overworlds), so an "unused" member number is not necessarily a
         // texture at all. Only offer/measure ones BTX0 can actually read.
         private const int MaxUnusedSlotCandidatesToScan = 400;
         private const int MaxUnusedSlotOptions = 60;
@@ -101,7 +101,7 @@ namespace DSPRE.Editors.BtxEditor
         }
 
         /// <summary>With an image picked, the imported pixels always land in a brand-new mmodel
-        /// slot (see <see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>) — the slot
+        /// slot (see <see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>). The slot
         /// picked below is read-only, just a size/color-count template BTX0.Write needs, and is
         /// never modified. Without an image, the picked slot IS the destination and its existing art
         /// is shared on purpose (no write happens either way).</summary>
@@ -183,7 +183,7 @@ namespace DSPRE.Editors.BtxEditor
         private void ChooseRawBtxButton_Click(object sender, EventArgs e)
         {
             // Raw NSBTX/BTX0 dumps (e.g. extracted from another ROM) commonly have no file
-            // extension at all, so no filter here — any file can be picked and it's validated as
+            // extension at all, so no filter here, any file can be picked and it's validated as
             // a real BTX0 texture right after selection.
             using (var dlg = new OpenFileDialog { Title = "Choose a raw texture file (BTX0)", Filter = "All files (*.*)|*.*" })
             {
@@ -261,7 +261,7 @@ namespace DSPRE.Editors.BtxEditor
             }
 
             // If an image was picked, the chosen slot is only a read-only structural template
-            // (BTX0.Write needs a matching width/height/color-budget donor to patch) — the actual
+            // (BTX0.Write needs a matching width/height/color-budget donor to patch). The actual
             // pixels always land in a brand-new, independent mmodel slot so importing an image can
             // never overwrite another overworld entry's texture. Without an image, the entry just
             // points at the picked slot directly and shares that art on purpose (no write happens).

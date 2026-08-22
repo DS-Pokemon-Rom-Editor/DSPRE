@@ -141,6 +141,26 @@ namespace DSPRE {
             }
             return buffer;
         }
+
+        public static List<int> SearchBytes(byte[] haystack, byte[] needle) {
+            var matches = new List<int>();
+            if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length) {
+                return matches;
+            }
+
+            for (int i = 0; i <= haystack.Length - needle.Length; i++) {
+                bool isMatch = true;
+                for (int j = 0; j < needle.Length; j++) {
+                    if (haystack[i + j] != needle[j]) {
+                        isMatch = false;
+                        break;
+                    }
+                }
+                if (isMatch) matches.Add(i);
+            }
+            return matches;
+        }
+
         public static Process CreateDecompressProcess(string path) {
             Process decompress = new Process();
             decompress.StartInfo.FileName = @"Tools\blz.exe";
@@ -750,6 +770,28 @@ namespace DSPRE {
                 return spriteBase.Get_Image(imageBase, paletteBase, 0, w, h, false, false, false, true, true, -1, OAMenabled);
             } catch (FormatException) {
                 return Properties.Resources.IconPokeball;
+            }
+        }
+
+        public static Image GetItemPic(int itemId, int w, int h) {
+            try {
+                uint entryOffset = (uint)(RomInfo.itemTableOffset + itemId * 8);
+                int itemIconId = ARM9.ReadWordLE(entryOffset + 2);
+                int itemPaletteId = ARM9.ReadWordLE(entryOffset + 4);
+                string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
+
+                string paletteFilename = itemPaletteId.ToString("D4");
+                var itemPalette = new NCLR(itemIconsDir + "\\" + paletteFilename, itemPaletteId, paletteFilename);
+
+                string spriteFilename = itemIconId.ToString("D4");
+                ImageBase imageBase = new NCGR(itemIconsDir + "\\" + spriteFilename, itemIconId, spriteFilename);
+
+                string ncerFileName = "0001"; // the only NCER in the itemIcons NARC
+                SpriteBase spriteBase = new NCER(itemIconsDir + "\\" + ncerFileName, 2, ncerFileName);
+
+                return spriteBase.Get_Image(imageBase, itemPalette, 0, w, h, false, false, false, true, true, -1);
+            } catch (Exception) {
+                return Properties.Resources.IconItem;
             }
         }
 

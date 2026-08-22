@@ -77,6 +77,41 @@ namespace DSPRE
         public static uint trainerClassPrizeMulTableVanillaOffset { get; private set; }
         public static int trainerClassPrizeMulTableVanillaCount { get; private set; }
 
+        public static uint flyTableOffset { get; private set; }
+        public static int flyTableSize { get; private set; }
+
+        // Hidden Items table, HeartGold/SoulSilver English only.
+        public static uint hiddenItemsTableLengthOffset { get; private set; }
+        public static uint hiddenItemsMaxCapacityOffset { get; private set; }
+        public static uint hiddenItemsTableOffset { get; private set; }
+
+        // Rock Smash item-drop tables (ov001.bin), HGSS English only.
+        public static int rockSmashItemTableOverlayNumber { get; private set; }
+        public static uint rockSmashItemTableRuinsOfAlphOffset { get; private set; }
+        public static uint rockSmashItemTableDefaultOffset { get; private set; }
+        public static uint rockSmashItemTableCliffCaveOffset { get; private set; }
+
+        // Starter Pokemon editor. DP/Pt keep starters in a fixed word-table in an overlay; HGSS bakes them
+        // straight into ARM9, found via starterArm9SearchSuffix instead of a fixed offset.
+        public static int starterOverlayNumber { get; private set; } = -1;
+        public static uint starterSpeciesOffset { get; private set; }
+        public static byte[] starterArm9SearchSuffix { get; private set; }
+        public static string starterGraphicsPrefix { get; private set; }        // DP/Pt only
+        public static string starterGraphicsPrefixInner { get; private set; }   // DP/Pt only
+        public static string starterCriesPrefix { get; private set; }           // HGSS only
+        public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
+        public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
+        public static int starterScreenTextNumber { get; private set; } = -1;
+        public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
+
+        // HGSS starter held item + level, HeartGold English only. Fixed offset tried first, the search
+        // suffix is a fallback for when a modified ROM shifted it. Level is derived from the held item
+        // offset (same subroutine, fixed distance), validated before being trusted.
+        public static uint starterHeldItemOffsetHGSS { get; private set; }
+        public static byte[] starterHeldItemArm9SearchSuffix { get; private set; }
+        public static int starterLevelOffsetFromHeldItem { get; private set; }
+        public static byte[] starterLevelValidationSuffix { get; private set; }
+
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
@@ -192,6 +227,7 @@ namespace DSPRE
             encounters,
             encounterExtended,
             headbutt,
+            rockSmash,
             safariZone,
             battleTowerTrainers,
             battleTowerPokemon,
@@ -225,8 +261,8 @@ namespace DSPRE
             pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front)
             pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc, 2 files/form (back, front; both genders)
 
-            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
-            battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs, pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -342,6 +378,10 @@ namespace DSPRE
             SetTrainerNamesMessageNumber();
             SetTrainerClassMessageNumber();
             SetTrainerClassTableExpansionOffsets();
+            SetFlyTableOffsets();
+            SetHiddenItemsTableOffsets();
+            SetRockSmashItemTableOffsets();
+            SetStarterOffsets();
             SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
@@ -1471,16 +1511,221 @@ namespace DSPRE
 
         private static void SetTrainerClassTableExpansionOffsets()
         {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    trainerClassGenderTableVanillaCount = 98;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xF8010; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xF9F7C; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xF8054; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xF8024; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xF7FC8; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xF8060; break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    trainerClassGenderTableVanillaCount = 105;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xF0714; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xEFDA4; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xF079C; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xF076C; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xF0730; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xF07A8; break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    trainerClassGenderTableVanillaCount = 128;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xFFB90; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xFF310; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xFFB74; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xFFB44; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xFFB08; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xFFB78; break;
+                    }
+                    break;
+            }
+
+            // Repointed-table pointer + prize multiplier: only known for Platinum/English (Yako's guide).
+            // Every other version/language: offset not known.
             if (gameFamily == GameFamilies.Plat && gameLanguage == GameLanguages.English)
             {
                 trainerClassGenderTablePointerOffset = 0x793B4;
-                trainerClassGenderTableVanillaOffset = 0xF0714;
-                trainerClassGenderTableVanillaCount = 0x69;
 
                 trainerClassPrizeMulOverlayNumber = 16;
                 trainerClassPrizeMulTablePointerOffset = 0x816C;
                 trainerClassPrizeMulTableVanillaOffset = 0x359E0;
                 trainerClassPrizeMulTableVanillaCount = 0x69;
+            }
+        }
+
+        private static void SetFlyTableOffsets()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    flyTableSize = 20;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xF41D0; break;
+                        case GameLanguages.English: flyTableOffset = 0xF2224; break;
+                        case GameLanguages.French: flyTableOffset = 0xF2264; break;
+                        case GameLanguages.German: flyTableOffset = 0xF2234; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xF21D8; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xF2270; break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    flyTableSize = 20;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xE8E88; break;
+                        case GameLanguages.English: flyTableOffset = 0xE97B4; break;
+                        case GameLanguages.French: flyTableOffset = 0xE983C; break;
+                        case GameLanguages.German: flyTableOffset = 0xE980C; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xE97D0; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xE9848; break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    flyTableSize = 30;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xF9630; break;
+                        case GameLanguages.English: flyTableOffset = 0xF9E80; break;
+                        case GameLanguages.French: flyTableOffset = 0xF9E64; break;
+                        case GameLanguages.German: flyTableOffset = 0xF9E34; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xF9DF8; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xF9E68; break;
+                    }
+                    break;
+            }
+        }
+
+        // Only known for HeartGold/SoulSilver English so far; every other version/language: offset not known.
+        private static void SetHiddenItemsTableOffsets()
+        {
+            if (gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English)
+            {
+                hiddenItemsTableLengthOffset = 0x405E4;
+                hiddenItemsMaxCapacityOffset = 0x405E8;
+                hiddenItemsTableOffset = 0xFA558;
+            }
+        }
+
+        // Only known for HeartGold/SoulSilver English so far; every other version/language: offset not known.
+        private static void SetRockSmashItemTableOffsets()
+        {
+            if (gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English)
+            {
+                rockSmashItemTableOverlayNumber = 1;
+                rockSmashItemTableRuinsOfAlphOffset = 0x23D04;
+                rockSmashItemTableDefaultOffset = 0x23D14;
+                rockSmashItemTableCliffCaveOffset = 0x23D24;
+            }
+        }
+
+        // English + EFIGS share identical offsets (per UPR-FVX's gen4_offsets.ini, every non-Japanese ROM
+        // entry CopyFroms the English one with no Starter-key overrides); Japanese has its own confirmed
+        // offsets. HGSS species aren't offset-based at all, see starterArm9SearchSuffix, so only the
+        // cries-table overlay is set for that family.
+        private static void SetStarterOffsets()
+        {
+            starterOverlayNumber = -1;
+            starterSpeciesOffset = 0;
+            starterArm9SearchSuffix = null;
+            starterGraphicsPrefix = null;
+            starterGraphicsPrefixInner = null;
+            starterCriesPrefix = null;
+            starterHeldItemScriptFileID = -1;
+            starterHeldItemOffset = 0;
+            starterScreenTextNumber = -1;
+            starterPokedexSpeciesTextNumber = -1;
+            starterHeldItemOffsetHGSS = 0;
+            starterHeldItemArm9SearchSuffix = null;
+            starterLevelOffsetFromHeldItem = 0;
+            starterLevelValidationSuffix = null;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    starterOverlayNumber = 64;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 342;
+                    starterHeldItemOffset = 0x2B4;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x30;
+                            starterScreenTextNumber = 318;
+                            starterPokedexSpeciesTextNumber = 607;
+                            break;
+                        default:
+                            starterSpeciesOffset = 0x1B88;
+                            starterScreenTextNumber = 320;
+                            starterPokedexSpeciesTextNumber = 621;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    starterOverlayNumber = 78;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 427;
+                    starterHeldItemOffset = 0x460;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x1BAC;
+                            starterScreenTextNumber = 359;
+                            starterPokedexSpeciesTextNumber = 698;
+                            break;
+                        default:
+                            starterSpeciesOffset = 0x1BC0;
+                            starterScreenTextNumber = 360;
+                            starterPokedexSpeciesTextNumber = 711;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    // Species IDs are read/written straight in arm9.bin via this byte-pattern search (species
+                    // words start 13 bytes before the match) rather than a fixed offset, see StarterPokemonData.
+                    starterArm9SearchSuffix = new byte[] { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
+                    starterOverlayNumber = 61; // starter-cries table only, species table is in ARM9 above
+                    starterCriesPrefix = "0004000C10BD0000000000000000000000E000000000000000E0000000000200";
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterScreenTextNumber = 188;
+                            break;
+                        default:
+                            starterScreenTextNumber = 190;
+                            break;
+                    }
+
+                    // Only confirmed on HeartGold (English); not yet verified on SoulSilver.
+                    if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
+                    {
+                        starterHeldItemOffsetHGSS = 0x960FE;
+                        starterHeldItemArm9SearchSuffix = new byte[] {
+                            0x20, 0x09, 0x90, 0x60, 0x19, 0x06, 0x21, 0x09, 0xAA, 0xD8, 0xF7, 0x9A, 0xFD, 0x06, 0x98, 0xEC, 0x35
+                        };
+                        starterLevelOffsetFromHeldItem = -28; // vanilla: level 0x960E2, held item 0x960FE
+                        starterLevelValidationSuffix = new byte[] { 0x22, 0x20 };
+                    }
+                    break;
             }
         }
 
@@ -2205,6 +2450,7 @@ namespace DSPRE
 
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
+                        [DirNames.rockSmash] = $@"{dataFolderName}\a\2\5\3", //both versions use the same folder with different data
 
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",
@@ -2266,9 +2512,9 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.Plat when OverworldSpriteTableExpansion.Detect():
-                    // hzla's PlatPatches "overworld sprites" expansion is applied: the vanilla,
+                    // hzla's PlatPatches "overworld sprites" expansion is applied, so the vanilla
                     // fixed-offset table read below is stale (the game now reads the relocated,
-                    // expanded copy instead). Read that one instead — it's a strict superset of
+                    // expanded copy instead). Read that one instead, it's a strict superset of
                     // the vanilla entries plus whatever custom ones were added.
                     OverworldTable = OverworldSpriteTableExpansion.ReadTextureTable();
                     break;
@@ -2333,6 +2579,25 @@ namespace DSPRE
         {
             // Hidden items is only available for HeartGold US
             return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
+        }
+
+        // Rock Smash per-header odds/table is plain NARC data (data/a/2/5/3), so it works for HGSS
+        // regardless of language.
+        public static bool IsRockSmashEditorAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS;
+        }
+
+        // The 3 hardcoded item-drop tables in ov001.bin only have confirmed offsets for English.
+        public static bool IsRockSmashItemTableAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+        }
+
+        // Starter held item + level on HGSS, only confirmed on HeartGold English so far.
+        public static bool IsHgssStarterExtrasAvailable()
+        {
+            return starterHeldItemArm9SearchSuffix != null;
         }
 
         /// <summary>
