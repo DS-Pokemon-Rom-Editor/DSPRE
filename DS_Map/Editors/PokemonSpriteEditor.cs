@@ -424,6 +424,7 @@ namespace DSPRE.Editors {
         private NarcReader narcReader;
         private PictureBox[,] displayPictureBoxes;
         private bool[] usedEntries;
+        private bool shinyImported;
         private SpriteSet currentSprites;
         private int currentLoadedId;
         private bool isLoadingOtherForms = false;
@@ -541,6 +542,7 @@ namespace DSPRE.Editors {
             
             currentSprites = new SpriteSet();
             usedEntries = null;
+            shinyImported = false;
 
             if (!isLoadingOtherForms) {
                 LoadMainSprites(toLoad);
@@ -935,9 +937,17 @@ namespace DSPRE.Editors {
                         OpenPngs.Enabled = true;
                         return;
                     }
-                    
-                    ColorPalette temp = handler.AlternatePalette(currentSprites.Sprites[index % 4], image);
-                    currentSprites.Shiny = PadPaletteTo16(temp ?? image.Palette);
+
+                    if (!shinyImported) {
+                        // First shiny image for this species this session: just take its colors.
+                        currentSprites.Shiny = PadPaletteTo16(image.Palette);
+                    } else {
+                        // A later pose (e.g. back after front) needs to share the same palette as
+                        // the one already imported, so merge instead of overwriting it.
+                        ColorPalette merged = handler.AlternatePalette(currentSprites.Sprites[index % 4], image, currentSprites.Shiny);
+                        currentSprites.Shiny = PadPaletteTo16(merged ?? image.Palette);
+                    }
+                    shinyImported = true;
                 } else {
                     // Loading normal sprite
                     image = CheckSize(image, openFileDialog.FileName, spriteTypeNames[index], index);
@@ -948,12 +958,12 @@ namespace DSPRE.Editors {
 
                     bool match = handler.PaletteEquals(currentSprites.Normal, image);
                     if (!match) {
-                        DialogResult result = MessageBox.Show(
-                            "Image's palette does not match the current palette. Use PaletteMatch?",
-                            "Palette mismatch",
-                            MessageBoxButtons.YesNo);
-
-                        if (result == DialogResult.Yes) {
+                        if (usedEntries == null) {
+                            // First normal image for this species this session: just take its colors.
+                            usedEntries = handler.IsUsed(image);
+                        } else {
+                            // A later pose needs to share the same palette as the one already
+                            // imported, so merge instead of overwriting it.
                             Bitmap matched = handler.PaletteMatch(currentSprites.Normal, image, usedEntries);
                             if (matched == null) {
                                 MessageBox.Show(
@@ -965,8 +975,6 @@ namespace DSPRE.Editors {
                                 image = matched;
                                 usedEntries = handler.IsUsed(image, usedEntries);
                             }
-                        } else {
-                            usedEntries = handler.IsUsed(image);
                         }
                         currentSprites.Normal = PadPaletteTo16(image.Palette);
                     }
@@ -1243,8 +1251,9 @@ namespace DSPRE.Editors {
                 temp = handler.Resize(temp, 8, 8, 8, 8);
                 temp = handler.Concat(temp, temp);
                 sprites.Shiny = handler.AlternatePalette(sprites.Sprites[2], temp);
-                
+
                 currentSprites = sprites;
+                shinyImported = true;
             }
             
             OpenPngs.Enabled = true;
@@ -1281,9 +1290,10 @@ namespace DSPRE.Editors {
                 Bitmap shinyImage = new Bitmap(openFileDialog.FileName);
                 IndexedBitmapHandler handler = new IndexedBitmapHandler();
                 
-                ColorPalette temp = handler.AlternatePalette(baseImage, shinyImage);
+                ColorPalette temp = handler.AlternatePalette(baseImage, shinyImage, shinyImported ? currentSprites.Shiny : null);
                 if (temp != null) {
                     currentSprites.Shiny = PadPaletteTo16(temp);
+                    shinyImported = true;
                 } else {
                     MessageBox.Show("Failed!", "Failed");
                 }
