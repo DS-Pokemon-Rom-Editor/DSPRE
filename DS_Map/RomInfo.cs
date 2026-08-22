@@ -85,6 +85,12 @@ namespace DSPRE
         public static uint hiddenItemsMaxCapacityOffset { get; private set; }
         public static uint hiddenItemsTableOffset { get; private set; }
 
+        // Rock Smash item-drop tables (ov001.bin), HGSS English only.
+        public static int rockSmashItemTableOverlayNumber { get; private set; }
+        public static uint rockSmashItemTableRuinsOfAlphOffset { get; private set; }
+        public static uint rockSmashItemTableDefaultOffset { get; private set; }
+        public static uint rockSmashItemTableCliffCaveOffset { get; private set; }
+
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
@@ -200,6 +206,7 @@ namespace DSPRE
             encounters,
             encounterExtended,
             headbutt,
+            rockSmash,
             safariZone,
             battleTowerTrainers,
             battleTowerPokemon,
@@ -352,6 +359,7 @@ namespace DSPRE
             SetTrainerClassTableExpansionOffsets();
             SetFlyTableOffsets();
             SetHiddenItemsTableOffsets();
+            SetRockSmashItemTableOffsets();
             SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
@@ -1592,6 +1600,18 @@ namespace DSPRE
             }
         }
 
+        // Only known for HeartGold/SoulSilver English so far; every other version/language: offset not known.
+        private static void SetRockSmashItemTableOffsets()
+        {
+            if (gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English)
+            {
+                rockSmashItemTableOverlayNumber = 1;
+                rockSmashItemTableRuinsOfAlphOffset = 0x23D04;
+                rockSmashItemTableDefaultOffset = 0x23D14;
+                rockSmashItemTableCliffCaveOffset = 0x23D24;
+            }
+        }
+
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
         {
@@ -2313,6 +2333,7 @@ namespace DSPRE
 
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
+                        [DirNames.rockSmash] = $@"{dataFolderName}\a\2\5\3", //both versions use the same folder with different data
 
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",
@@ -2441,6 +2462,19 @@ namespace DSPRE
         {
             // Hidden items is only available for HeartGold US
             return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
+        }
+
+        // Rock Smash per-header odds/table is plain NARC data (data/a/2/5/3), so it works for HGSS
+        // regardless of language.
+        public static bool IsRockSmashEditorAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS;
+        }
+
+        // The 3 hardcoded item-drop tables in ov001.bin only have confirmed offsets for English.
+        public static bool IsRockSmashItemTableAvailable()
+        {
+            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
         }
 
         /// <summary>

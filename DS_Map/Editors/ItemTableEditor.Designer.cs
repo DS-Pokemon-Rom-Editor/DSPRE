@@ -33,15 +33,19 @@ namespace DSPRE.Editors
             this.pickupTableEditor = new DSPRE.Editors.PickupTableEditor();
             this.tabPageHiddenItems = new System.Windows.Forms.TabPage();
             this.hiddenItemsEditor = new DSPRE.Editors.HiddenItemsEditor();
+            this.tabPageRockSmash = new System.Windows.Forms.TabPage();
+            this.rockSmashEditor = new DSPRE.Editors.RockSmashEditor();
             this.tabControl.SuspendLayout();
             this.tabPagePickup.SuspendLayout();
             this.tabPageHiddenItems.SuspendLayout();
+            this.tabPageRockSmash.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // tabControl
-            // 
+            //
             this.tabControl.Controls.Add(this.tabPagePickup);
             this.tabControl.Controls.Add(this.tabPageHiddenItems);
+            this.tabControl.Controls.Add(this.tabPageRockSmash);
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
@@ -89,9 +93,29 @@ namespace DSPRE.Editors
             this.hiddenItemsEditor.Name = "hiddenItemsEditor";
             this.hiddenItemsEditor.Size = new System.Drawing.Size(1010, 618);
             this.hiddenItemsEditor.TabIndex = 0;
-            // 
+            //
+            // tabPageRockSmash
+            //
+            this.tabPageRockSmash.Controls.Add(this.rockSmashEditor);
+            this.tabPageRockSmash.Location = new System.Drawing.Point(4, 22);
+            this.tabPageRockSmash.Name = "tabPageRockSmash";
+            this.tabPageRockSmash.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageRockSmash.Size = new System.Drawing.Size(1016, 624);
+            this.tabPageRockSmash.TabIndex = 2;
+            this.tabPageRockSmash.Text = "Rock Smash";
+            this.tabPageRockSmash.UseVisualStyleBackColor = true;
+            this.tabPageRockSmash.Enter += new System.EventHandler(this.tabPageRockSmash_Enter);
+            //
+            // rockSmashEditor
+            //
+            this.rockSmashEditor.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.rockSmashEditor.Location = new System.Drawing.Point(3, 3);
+            this.rockSmashEditor.Name = "rockSmashEditor";
+            this.rockSmashEditor.Size = new System.Drawing.Size(1010, 618);
+            this.rockSmashEditor.TabIndex = 0;
+            //
             // ItemTableEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.tabControl);
@@ -100,6 +124,7 @@ namespace DSPRE.Editors
             this.tabControl.ResumeLayout(false);
             this.tabPagePickup.ResumeLayout(false);
             this.tabPageHiddenItems.ResumeLayout(false);
+            this.tabPageRockSmash.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -111,5 +136,7 @@ namespace DSPRE.Editors
         private PickupTableEditor pickupTableEditor;
         private System.Windows.Forms.TabPage tabPageHiddenItems;
         private HiddenItemsEditor hiddenItemsEditor;
+        private System.Windows.Forms.TabPage tabPageRockSmash;
+        private RockSmashEditor rockSmashEditor;
     }
 }
