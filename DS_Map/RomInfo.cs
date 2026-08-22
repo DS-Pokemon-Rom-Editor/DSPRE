@@ -77,6 +77,14 @@ namespace DSPRE
         public static uint trainerClassPrizeMulTableVanillaOffset { get; private set; }
         public static int trainerClassPrizeMulTableVanillaCount { get; private set; }
 
+        public static uint flyTableOffset { get; private set; }
+        public static int flyTableSize { get; private set; }
+
+        // Hidden Items table, HeartGold/SoulSilver English only.
+        public static uint hiddenItemsTableLengthOffset { get; private set; }
+        public static uint hiddenItemsMaxCapacityOffset { get; private set; }
+        public static uint hiddenItemsTableOffset { get; private set; }
+
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
@@ -225,8 +233,8 @@ namespace DSPRE
             pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front)
             pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc, 2 files/form (back, front; both genders)
 
-            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
-            battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs, pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -342,6 +350,8 @@ namespace DSPRE
             SetTrainerNamesMessageNumber();
             SetTrainerClassMessageNumber();
             SetTrainerClassTableExpansionOffsets();
+            SetFlyTableOffsets();
+            SetHiddenItemsTableOffsets();
             SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
@@ -1471,16 +1481,114 @@ namespace DSPRE
 
         private static void SetTrainerClassTableExpansionOffsets()
         {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    trainerClassGenderTableVanillaCount = 98;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xF8010; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xF9F7C; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xF8054; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xF8024; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xF7FC8; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xF8060; break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    trainerClassGenderTableVanillaCount = 105;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xF0714; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xEFDA4; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xF079C; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xF076C; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xF0730; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xF07A8; break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    trainerClassGenderTableVanillaCount = 128;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.English: trainerClassGenderTableVanillaOffset = 0xFFB90; break;
+                        case GameLanguages.Japanese: trainerClassGenderTableVanillaOffset = 0xFF310; break;
+                        case GameLanguages.French: trainerClassGenderTableVanillaOffset = 0xFFB74; break;
+                        case GameLanguages.German: trainerClassGenderTableVanillaOffset = 0xFFB44; break;
+                        case GameLanguages.Italian: trainerClassGenderTableVanillaOffset = 0xFFB08; break;
+                        case GameLanguages.Spanish: trainerClassGenderTableVanillaOffset = 0xFFB78; break;
+                    }
+                    break;
+            }
+
+            // Repointed-table pointer + prize multiplier: only known for Platinum/English (Yako's guide).
+            // Every other version/language: offset not known.
             if (gameFamily == GameFamilies.Plat && gameLanguage == GameLanguages.English)
             {
                 trainerClassGenderTablePointerOffset = 0x793B4;
-                trainerClassGenderTableVanillaOffset = 0xF0714;
-                trainerClassGenderTableVanillaCount = 0x69;
 
                 trainerClassPrizeMulOverlayNumber = 16;
                 trainerClassPrizeMulTablePointerOffset = 0x816C;
                 trainerClassPrizeMulTableVanillaOffset = 0x359E0;
                 trainerClassPrizeMulTableVanillaCount = 0x69;
+            }
+        }
+
+        private static void SetFlyTableOffsets()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    flyTableSize = 20;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xF41D0; break;
+                        case GameLanguages.English: flyTableOffset = 0xF2224; break;
+                        case GameLanguages.French: flyTableOffset = 0xF2264; break;
+                        case GameLanguages.German: flyTableOffset = 0xF2234; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xF21D8; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xF2270; break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    flyTableSize = 20;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xE8E88; break;
+                        case GameLanguages.English: flyTableOffset = 0xE97B4; break;
+                        case GameLanguages.French: flyTableOffset = 0xE983C; break;
+                        case GameLanguages.German: flyTableOffset = 0xE980C; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xE97D0; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xE9848; break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    flyTableSize = 30;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese: flyTableOffset = 0xF9630; break;
+                        case GameLanguages.English: flyTableOffset = 0xF9E80; break;
+                        case GameLanguages.French: flyTableOffset = 0xF9E64; break;
+                        case GameLanguages.German: flyTableOffset = 0xF9E34; break;
+                        case GameLanguages.Italian: flyTableOffset = 0xF9DF8; break;
+                        case GameLanguages.Spanish: flyTableOffset = 0xF9E68; break;
+                    }
+                    break;
+            }
+        }
+
+        // Only known for HeartGold/SoulSilver English so far; every other version/language: offset not known.
+        private static void SetHiddenItemsTableOffsets()
+        {
+            if (gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English)
+            {
+                hiddenItemsTableLengthOffset = 0x405E4;
+                hiddenItemsMaxCapacityOffset = 0x405E8;
+                hiddenItemsTableOffset = 0xFA558;
             }
         }
 
@@ -2266,9 +2374,9 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.Plat when OverworldSpriteTableExpansion.Detect():
-                    // hzla's PlatPatches "overworld sprites" expansion is applied: the vanilla,
+                    // hzla's PlatPatches "overworld sprites" expansion is applied, so the vanilla
                     // fixed-offset table read below is stale (the game now reads the relocated,
-                    // expanded copy instead). Read that one instead — it's a strict superset of
+                    // expanded copy instead). Read that one instead, it's a strict superset of
                     // the vanilla entries plus whatever custom ones were added.
                     OverworldTable = OverworldSpriteTableExpansion.ReadTextureTable();
                     break;

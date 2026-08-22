@@ -9,12 +9,6 @@ namespace DSPRE.Editors
 {
     public partial class HiddenItemsEditor : UserControl, IEditorWithUnsavedChanges
     {
-        // ARM9 offsets for HeartGold US
-        private const int POINTER_OFFSET_1 = 0x405A8;
-        private const int POINTER_OFFSET_2 = 0x40610;
-        private const int TABLE_LENGTH_OFFSET_1 = 0x405E4;
-        private const int TABLE_LENGTH_OFFSET_2 = 0x405E8;
-        private const int TABLE_OFFSET = 0xFA558;
         private const int ENTRY_SIZE = 8; // 8 bytes per entry
         private const int MAX_ENTRIES = 256; // Vanilla limit
 
@@ -126,11 +120,11 @@ namespace DSPRE.Editors
             hiddenItems.Clear();
 
             // Read the current table length from ARM9 (1 byte)
-            byte[] lengthData = ARM9.ReadBytes(TABLE_LENGTH_OFFSET_1, 1);
+            byte[] lengthData = ARM9.ReadBytes(RomInfo.hiddenItemsTableLengthOffset, 1);
             int tableLength = lengthData[0];
 
             // Read the max capacity from ARM9 (1 byte)
-            byte[] maxCapacityData = ARM9.ReadBytes(TABLE_LENGTH_OFFSET_2, 1);
+            byte[] maxCapacityData = ARM9.ReadBytes(RomInfo.hiddenItemsMaxCapacityOffset, 1);
             maxCapacity = maxCapacityData[0];
 
             // Sanity check: table length should be reasonable
@@ -142,7 +136,7 @@ namespace DSPRE.Editors
             }
 
             // Read the table from ARM9
-            byte[] tableData = ARM9.ReadBytes(TABLE_OFFSET, tableLength * ENTRY_SIZE);
+            byte[] tableData = ARM9.ReadBytes(RomInfo.hiddenItemsTableOffset, tableLength * ENTRY_SIZE);
 
             // Parse entries (stop at first entry with ItemID = 0 OR at table length)
             for (int i = 0; i < tableLength; i++)
@@ -287,7 +281,7 @@ namespace DSPRE.Editors
             if (hiddenItems.Count >= maxCapacity)
             {
                 MessageBox.Show($"Maximum number of entries ({maxCapacity}) reached.\n\n" +
-                    "This limit is defined in the ROM at offset 0x405E8.", 
+                    $"This limit is defined in the ROM at offset 0x{RomInfo.hiddenItemsMaxCapacityOffset:X}.",
                     "Cannot Add", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -370,12 +364,11 @@ namespace DSPRE.Editors
                 // Fill remaining with zeros (already done by array initialization)
 
                 // Write to ARM9
-                ARM9.WriteBytes(tableData, TABLE_OFFSET);
+                ARM9.WriteBytes(tableData, RomInfo.hiddenItemsTableOffset);
 
-                // Write current table length (1 byte) to the count offset only
-                // Do NOT write to TABLE_LENGTH_OFFSET_2 - that's the max capacity
+                // Write current table length (1 byte) to the count offset only, not the max capacity offset
                 byte tableLength = (byte)hiddenItems.Count;
-                ARM9.WriteBytes(new byte[] { tableLength }, TABLE_LENGTH_OFFSET_1);
+                ARM9.WriteBytes(new byte[] { tableLength }, RomInfo.hiddenItemsTableLengthOffset);
 
                 SetClean();
                 MessageBox.Show($"Hidden items table saved successfully!\n\n" +

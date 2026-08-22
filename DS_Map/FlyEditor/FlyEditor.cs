@@ -10,27 +10,6 @@ namespace DSPRE.Editors
 {
     public partial class FlyEditor : Form, IEditorWithUnsavedChanges
     {
-        private const uint DPjpOffset = 0xF41D0;
-        private const uint DPusOffset = 0xF2224;
-        private const uint DPfrOffset = 0xF2264;
-        private const uint DPdeOffset = 0xF2234;
-        private const uint DPitOffset = 0xF21D8;
-        private const uint DPspOffset = 0xF2270;
-        private const int DiamondPearlTableSize = 20;
-        private const uint HGSSjpOffset = 0xF9630;
-        private const uint HGSSusOffset = 0xF9E80;
-        private const uint HGSSfrOffset = 0xF9E64;
-        private const uint HGSSdeOffset = 0xF9E34;
-        private const uint HGSSitOffset = 0xF9DF8;
-        private const uint HGSSspOffset = 0xF9E68;
-        private const int HeartGoldSoulSilverTableSize = 30;
-        private const uint PTjpOffset = 0xE8E88;
-        private const uint PTusOffset = 0xE97B4;
-        private const uint PTfrOffset = 0xE983C;
-        private const uint PTdeOffset = 0xE980C;
-        private const uint PTitOffset = 0xE97D0;
-        private const uint PTspOffset = 0xE9848;
-        private const int PlatinumTableSize = 20;
         private static GameFamilies GameFamily;
         private static GameLanguages GameLanguage;
         private List<string> Headers;
@@ -77,75 +56,9 @@ namespace DSPRE.Editors
             BeginPopulateFlyTableData();
         }
 
-        private static uint FlyTableOffset
-        {
-            get
-            {
-                switch (GameFamily)
-                {
-                    case GameFamilies.DP:
-                        switch (GameLanguage)
-                        {
-                            case GameLanguages.Japanese: return DPjpOffset;
-                            case GameLanguages.English: return DPusOffset;
-                            case GameLanguages.French: return DPfrOffset;
-                            case GameLanguages.German: return DPdeOffset;
-                            case GameLanguages.Italian: return DPitOffset;
-                            case GameLanguages.Spanish: return DPspOffset;
-                            default: throw new ArgumentOutOfRangeException(nameof(GameLanguages), "Unknown language for Diamond/Pearl");
-                        }
+        private static uint FlyTableOffset => RomInfo.flyTableOffset;
 
-                    case GameFamilies.Plat:
-                        switch (GameLanguage)
-                        {
-                            case GameLanguages.Japanese: return PTjpOffset;
-                            case GameLanguages.English: return PTusOffset;
-                            case GameLanguages.French: return PTfrOffset;
-                            case GameLanguages.German: return PTdeOffset;
-                            case GameLanguages.Italian: return PTitOffset;
-                            case GameLanguages.Spanish: return PTspOffset;
-                            default: throw new ArgumentOutOfRangeException(nameof(GameLanguages), "Unknown language for Platinum");
-                        }
-
-                    case GameFamilies.HGSS:
-                        switch (GameLanguage)
-                        {
-                            case GameLanguages.Japanese: return HGSSjpOffset;
-                            case GameLanguages.English: return HGSSusOffset;
-                            case GameLanguages.French: return HGSSfrOffset;
-                            case GameLanguages.German: return HGSSdeOffset;
-                            case GameLanguages.Italian: return HGSSitOffset;
-                            case GameLanguages.Spanish: return HGSSspOffset;
-                            default: throw new ArgumentOutOfRangeException(nameof(GameLanguages), "Unknown language for HG/SS");
-                        }
-
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(GameFamily), "Unknown game family/language.");
-                }
-            }
-        }
-
-
-        private static int TableSize
-        {
-            get
-            {
-                switch (GameFamily)
-                {
-                    case GameFamilies.DP:
-                        return DiamondPearlTableSize;
-
-                    case GameFamilies.Plat:
-                        return PlatinumTableSize;
-
-                    case GameFamilies.HGSS:
-                        return HeartGoldSoulSilverTableSize;
-
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(GameFamily), "Unknown game family");
-                }
-            }
-        }
+        private static int TableSize => RomInfo.flyTableSize;
 
         public async void BeginPopulateFlyTableData()
         {

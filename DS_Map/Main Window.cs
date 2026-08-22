@@ -1475,7 +1475,7 @@ namespace DSPRE
             // DSPRE script editors are not usable.
             if (RomInfo.hasRotomProject)
             {
-                AppLogger.Info("Rotom project detected — disabling DSPRE script editors.");
+                AppLogger.Info("Rotom project detected, disabling DSPRE script editors.");
                 EditorPanels.scriptEditorTabPage.Parent = null;
                 EditorPanels.levelScriptEditorTabPage.Parent = null;
             }
