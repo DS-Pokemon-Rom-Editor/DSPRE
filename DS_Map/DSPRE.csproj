@@ -139,6 +139,12 @@
     <Compile Include="Editors\BattleTowerEditor.Designer.cs">
       <DependentUpon>BattleTowerEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Editors\StarterEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\StarterEditor.Designer.cs">
+      <DependentUpon>StarterEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Editors\HiddenItemsEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -514,6 +520,7 @@
     <Compile Include="ROMFiles\HeadbuttEncounter.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterFile.cs" />
     <Compile Include="ROMFiles\RockSmashData.cs" />
+    <Compile Include="ROMFiles\StarterPokemonData.cs" />
     <Compile Include="ROMFiles\HeadbuttEncounterMap.cs" />
     <Compile Include="ROMFiles\HeadbuttTree.cs" />
     <Compile Include="ROMFiles\HeadbuttTreeGroup.cs" />

@@ -120,6 +120,7 @@
             this.tMEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.eggMoveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.battleTowerEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.starterEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -1006,7 +1007,8 @@
             this.tradeEditorToolStripMenuItem,
             this.tMEditorToolStripMenuItem,
             this.eggMoveEditorToolStripMenuItem,
-            this.battleTowerEditorToolStripMenuItem});
+            this.battleTowerEditorToolStripMenuItem,
+            this.starterEditorToolStripMenuItem});
             this.otherEditorsToolStripMenuItem.Enabled = false;
             this.otherEditorsToolStripMenuItem.Name = "otherEditorsToolStripMenuItem";
             this.otherEditorsToolStripMenuItem.Size = new System.Drawing.Size(88, 20);
@@ -1095,6 +1097,13 @@
             this.battleTowerEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.battleTowerEditorToolStripMenuItem.Text = "Battle Tower Editor";
             this.battleTowerEditorToolStripMenuItem.Click += new System.EventHandler(this.battleTowerEditorToolStripMenuItem_Click);
+            //
+            // starterEditorToolStripMenuItem
+            //
+            this.starterEditorToolStripMenuItem.Name = "starterEditorToolStripMenuItem";
+            this.starterEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.starterEditorToolStripMenuItem.Text = "Starter Pokemon Editor";
+            this.starterEditorToolStripMenuItem.Click += new System.EventHandler(this.starterEditorToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem1
             // 
@@ -1747,6 +1756,7 @@
         private System.Windows.Forms.ToolStripMenuItem tMEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem battleTowerEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem starterEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem researchHelperToolStripMenuItem;
     }

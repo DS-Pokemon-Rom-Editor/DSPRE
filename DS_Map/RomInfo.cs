@@ -91,6 +91,27 @@ namespace DSPRE
         public static uint rockSmashItemTableDefaultOffset { get; private set; }
         public static uint rockSmashItemTableCliffCaveOffset { get; private set; }
 
+        // Starter Pokemon editor. DP/Pt keep starters in a fixed word-table in an overlay; HGSS bakes them
+        // straight into ARM9, found via starterArm9SearchSuffix instead of a fixed offset.
+        public static int starterOverlayNumber { get; private set; } = -1;
+        public static uint starterSpeciesOffset { get; private set; }
+        public static byte[] starterArm9SearchSuffix { get; private set; }
+        public static string starterGraphicsPrefix { get; private set; }        // DP/Pt only
+        public static string starterGraphicsPrefixInner { get; private set; }   // DP/Pt only
+        public static string starterCriesPrefix { get; private set; }           // HGSS only
+        public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
+        public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
+        public static int starterScreenTextNumber { get; private set; } = -1;
+        public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
+
+        // HGSS starter held item + level, HeartGold English only. Fixed offset tried first, the search
+        // suffix is a fallback for when a modified ROM shifted it. Level is derived from the held item
+        // offset (same subroutine, fixed distance), validated before being trusted.
+        public static uint starterHeldItemOffsetHGSS { get; private set; }
+        public static byte[] starterHeldItemArm9SearchSuffix { get; private set; }
+        public static int starterLevelOffsetFromHeldItem { get; private set; }
+        public static byte[] starterLevelValidationSuffix { get; private set; }
+
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
@@ -360,6 +381,7 @@ namespace DSPRE
             SetFlyTableOffsets();
             SetHiddenItemsTableOffsets();
             SetRockSmashItemTableOffsets();
+            SetStarterOffsets();
             SetBattleTowerTextNumbers();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
@@ -1612,6 +1634,101 @@ namespace DSPRE
             }
         }
 
+        // English + EFIGS share identical offsets (per UPR-FVX's gen4_offsets.ini, every non-Japanese ROM
+        // entry CopyFroms the English one with no Starter-key overrides); Japanese has its own confirmed
+        // offsets. HGSS species aren't offset-based at all, see starterArm9SearchSuffix, so only the
+        // cries-table overlay is set for that family.
+        private static void SetStarterOffsets()
+        {
+            starterOverlayNumber = -1;
+            starterSpeciesOffset = 0;
+            starterArm9SearchSuffix = null;
+            starterGraphicsPrefix = null;
+            starterGraphicsPrefixInner = null;
+            starterCriesPrefix = null;
+            starterHeldItemScriptFileID = -1;
+            starterHeldItemOffset = 0;
+            starterScreenTextNumber = -1;
+            starterPokedexSpeciesTextNumber = -1;
+            starterHeldItemOffsetHGSS = 0;
+            starterHeldItemArm9SearchSuffix = null;
+            starterLevelOffsetFromHeldItem = 0;
+            starterLevelValidationSuffix = null;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    starterOverlayNumber = 64;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 342;
+                    starterHeldItemOffset = 0x2B4;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x30;
+                            starterScreenTextNumber = 318;
+                            starterPokedexSpeciesTextNumber = 607;
+                            break;
+                        default:
+                            starterSpeciesOffset = 0x1B88;
+                            starterScreenTextNumber = 320;
+                            starterPokedexSpeciesTextNumber = 621;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    starterOverlayNumber = 78;
+                    starterGraphicsPrefix = "000222402104120C";
+                    starterGraphicsPrefixInner = "0290039002200002";
+                    starterHeldItemScriptFileID = 427;
+                    starterHeldItemOffset = 0x460;
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterSpeciesOffset = 0x1BAC;
+                            starterScreenTextNumber = 359;
+                            starterPokedexSpeciesTextNumber = 698;
+                            break;
+                        default:
+                            starterSpeciesOffset = 0x1BC0;
+                            starterScreenTextNumber = 360;
+                            starterPokedexSpeciesTextNumber = 711;
+                            break;
+                    }
+                    break;
+
+                case GameFamilies.HGSS:
+                    // Species IDs are read/written straight in arm9.bin via this byte-pattern search (species
+                    // words start 13 bytes before the match) rather than a fixed offset, see StarterPokemonData.
+                    starterArm9SearchSuffix = new byte[] { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
+                    starterOverlayNumber = 61; // starter-cries table only, species table is in ARM9 above
+                    starterCriesPrefix = "0004000C10BD0000000000000000000000E000000000000000E0000000000200";
+                    switch (gameLanguage)
+                    {
+                        case GameLanguages.Japanese:
+                            starterScreenTextNumber = 188;
+                            break;
+                        default:
+                            starterScreenTextNumber = 190;
+                            break;
+                    }
+
+                    // Only confirmed on HeartGold (English); not yet verified on SoulSilver.
+                    if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
+                    {
+                        starterHeldItemOffsetHGSS = 0x960FE;
+                        starterHeldItemArm9SearchSuffix = new byte[] {
+                            0x20, 0x09, 0x90, 0x60, 0x19, 0x06, 0x21, 0x09, 0xAA, 0xD8, 0xF7, 0x9A, 0xFD, 0x06, 0x98, 0xEC, 0x35
+                        };
+                        starterLevelOffsetFromHeldItem = -28; // vanilla: level 0x960E2, held item 0x960FE
+                        starterLevelValidationSuffix = new byte[] { 0x22, 0x20 };
+                    }
+                    break;
+            }
+        }
+
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
         {
@@ -2475,6 +2592,12 @@ namespace DSPRE
         public static bool IsRockSmashItemTableAvailable()
         {
             return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+        }
+
+        // Starter held item + level on HGSS, only confirmed on HeartGold English so far.
+        public static bool IsHgssStarterExtrasAvailable()
+        {
+            return starterHeldItemArm9SearchSuffix != null;
         }
 
         /// <summary>

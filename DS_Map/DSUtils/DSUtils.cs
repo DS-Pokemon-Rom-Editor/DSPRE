@@ -141,6 +141,26 @@ namespace DSPRE {
             }
             return buffer;
         }
+
+        public static List<int> SearchBytes(byte[] haystack, byte[] needle) {
+            var matches = new List<int>();
+            if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length) {
+                return matches;
+            }
+
+            for (int i = 0; i <= haystack.Length - needle.Length; i++) {
+                bool isMatch = true;
+                for (int j = 0; j < needle.Length; j++) {
+                    if (haystack[i + j] != needle[j]) {
+                        isMatch = false;
+                        break;
+                    }
+                }
+                if (isMatch) matches.Add(i);
+            }
+            return matches;
+        }
+
         public static Process CreateDecompressProcess(string path) {
             Process decompress = new Process();
             decompress.StartInfo.FileName = @"Tools\blz.exe";
