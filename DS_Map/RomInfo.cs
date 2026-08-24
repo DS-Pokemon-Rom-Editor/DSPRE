@@ -327,6 +327,7 @@ namespace DSPRE
             }
 
             romID = id;
+            isHGE = false;
             if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
             {
                 string ov129path = OverlayUtils.GetPath(129);
@@ -2585,13 +2586,13 @@ namespace DSPRE
         // regardless of language.
         public static bool IsRockSmashEditorAvailable()
         {
-            return gameFamily == GameFamilies.HGSS;
+            return gameFamily == GameFamilies.HGSS && !isHGE;
         }
 
         // The 3 hardcoded item-drop tables in ov001.bin only have confirmed offsets for English.
         public static bool IsRockSmashItemTableAvailable()
         {
-            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English && !isHGE;
         }
 
         // Starter held item + level on HGSS, only confirmed on HeartGold English so far.

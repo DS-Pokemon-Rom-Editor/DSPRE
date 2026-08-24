@@ -185,6 +185,9 @@
     <Compile Include="Editors\TrainerFlagBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\VsSeekerRematchEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\OpenEditorsRegistry.cs" />
     <Compile Include="Editors\PickupTableEditor.cs">
       <SubType>UserControl</SubType>
@@ -246,6 +249,7 @@
       <DependentUpon>AddOverworldEntryForm.cs</DependentUpon>
     </Compile>
     <Compile Include="OverworldSpriteTableExpansion.cs" />
+    <Compile Include="VsSeekerRematchTable.cs" />
     <Compile Include="TrainerClassTableExpansion.cs" />
     <Compile Include="Editors\CameraEditor.cs">
       <SubType>UserControl</SubType>

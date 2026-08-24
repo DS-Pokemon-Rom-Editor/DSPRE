@@ -227,9 +227,6 @@ namespace DSPRE
             return (uint)(max + 1);
         }
 
-        // -- Render-state (table 1) read/write, available on every Platinum ROM, patched or not, and
-        // on Diamond/Pearl English ROMs (patched, or vanilla via the source-verified offsets below) --
-
         public static bool TryReadRenderState(uint appearanceId, out OwRenderState state)
         {
             state = default(OwRenderState);

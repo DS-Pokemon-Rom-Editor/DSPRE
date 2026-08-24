@@ -747,11 +747,6 @@ namespace DSPRE.Editors
         {
             SetupEventEditor(parent);
 
-            if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
-            {
-                selectEventComboBox.SelectedIndex = eventFileID;
-            }
-
             if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))
             {
                 host.Focus();
@@ -759,6 +754,15 @@ namespace DSPRE.Editors
             else
             {
                 EditorPanels.mainTabControl.SelectedTab = EditorPanels.eventEditorTabPage;
+            }
+
+            if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
+            {
+                // Tab must be visible first: the map reload screenshots eventOpenGlControl, which is blank while hidden.
+                Helpers.DisableHandlers();
+                selectEventComboBox.SelectedIndex = eventFileID;
+                Helpers.EnableHandlers();
+                ChangeLoadedEventFile(eventFileID, 0);
             }
         }
 
@@ -2135,6 +2139,11 @@ namespace DSPRE.Editors
         private void owSightRangeUpDown_ValueChanged(object sender, EventArgs e)
         {
             int selection = overworldsListBox.SelectedIndex;
+            if (Helpers.HandlersDisabled || selection < 0)
+            {
+                return;
+            }
+
             currentEvFile.overworlds[selection].sightRange = (ushort)owSightRangeUpDown.Value;
             SetDirty();
         }

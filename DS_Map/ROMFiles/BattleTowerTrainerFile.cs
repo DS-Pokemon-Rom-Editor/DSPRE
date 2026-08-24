@@ -210,7 +210,7 @@ namespace DSPRE.ROMFiles {
         }
 
         public static bool IsAvailable() {
-            return RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerTrainers);
+            return !RomInfo.isHGE && RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.battleTowerTrainers);
         }
     }
 }

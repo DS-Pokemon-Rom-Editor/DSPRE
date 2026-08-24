@@ -18,7 +18,6 @@ namespace DSPRE
         private List<LevelScriptFileStats> allLevelScriptStats = new List<LevelScriptFileStats>();
         private List<VariableUsageResult> allVariableUsageResults = new List<VariableUsageResult>();
 
-        // Cached data for variable search
         private List<ScriptFile> cachedScriptFiles = new List<ScriptFile>();
         private List<LevelScriptFile> cachedLevelScriptFiles = new List<LevelScriptFile>();
         private List<EventFile> cachedEventFiles = new List<EventFile>();
@@ -37,7 +36,6 @@ namespace DSPRE
 
         private void MainTabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Data is loaded once on form load, no need for lazy loading
         }
 
         #region Unified Data Loading
@@ -54,7 +52,6 @@ namespace DSPRE
             cachedEventFiles.Clear();
             dataLoaded = false;
 
-            // Ensure NARCs are unpacked
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { 
                 RomInfo.DirNames.scripts, 
                 RomInfo.DirNames.eventFiles 
@@ -71,7 +68,6 @@ namespace DSPRE
 
                 int progress = 0;
 
-                // Load script files
                 for (int i = 0; i < scriptCount; i++)
                 {
                     try
@@ -80,7 +76,6 @@ namespace DSPRE
 
                         if (scriptFile.isLevelScript)
                         {
-                            // It's a level script - load as LevelScriptFile too
                             try
                             {
                                 LevelScriptFile levelScript = new LevelScriptFile(i);
@@ -131,7 +126,6 @@ namespace DSPRE
                         }
                         else
                         {
-                            // It's a regular script
                             cachedScriptFiles.Add(scriptFile);
 
                             int scriptsCount = scriptFile.allScripts?.Count ?? 0;
@@ -159,7 +153,6 @@ namespace DSPRE
                     Application.DoEvents();
                 }
 
-                // Load event files
                 for (int i = 0; i < eventCount; i++)
                 {
                     try
@@ -182,12 +175,12 @@ namespace DSPRE
 
             dataLoaded = true;
 
-            // Populate the DataGridViews
             PopulateScriptsDataGridView(allScriptStats);
             PopulateLevelScriptsDataGridView(allLevelScriptStats);
 
-            // Populate the ID Watcher script file dropdown
             PopulateIdWatcherScriptFileComboBox();
+
+            PopulateTrainerWatchComboBox();
 
             statusLabel.Text = $"Ready - {allScriptStats.Count} scripts, {allLevelScriptStats.Count} level scripts, {cachedEventFiles.Count} events loaded";
         }
@@ -235,7 +228,6 @@ namespace DSPRE
                 int searchValue = (int)lsSearchValueNumericUpDown.Value;
                 List<LevelScriptFileStats> filteredStats = new List<LevelScriptFileStats>();
 
-                // Determine which column to search
                 Func<LevelScriptFileStats, int> columnSelector;
                 string columnName;
                 if (lsIdRadioButton.Checked)
@@ -269,7 +261,6 @@ namespace DSPRE
                     columnName = "Variable Value";
                 }
 
-                // Determine comparison type
                 Func<int, int, bool> comparison;
                 string comparisonName;
                 if (lsEqualsRadioButton.Checked)
@@ -288,7 +279,6 @@ namespace DSPRE
                     comparisonName = "<=";
                 }
 
-                // Apply filter
                 foreach (var stat in allLevelScriptStats)
                 {
                     int columnValue = columnSelector(stat);
@@ -312,13 +302,10 @@ namespace DSPRE
                 if (e.RowIndex < 0)
                     return;
 
-                // Get the level script ID from the selected row
                 int levelScriptId = (int)levelScriptsDataGridView.Rows[e.RowIndex].Cells[0].Value;
 
-                // If Shift is held, navigate to the Level Script Editor
                 if (Control.ModifierKeys.HasFlag(Keys.Shift))
                 {
-                    // Get reference to MainProgram
                     var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
                     if (mainProgram != null)
                     {
@@ -332,7 +319,6 @@ namespace DSPRE
                 }
                 else
                 {
-                    // Copy to clipboard for easy reference
                     Clipboard.SetText(levelScriptId.ToString());
                     statusLabel.Text = $"Level Script ID {levelScriptId} copied to clipboard (Shift+double-click to open in editor)";
                 }
@@ -357,7 +343,6 @@ namespace DSPRE
             int searchValue = (int)searchValueNumericUpDown.Value;
             List<ScriptFileStats> filteredStats = new List<ScriptFileStats>();
 
-            // Determine which column to search
             Func<ScriptFileStats, int> columnSelector;
             string columnName;
             if (idRadioButton.Checked)
@@ -386,7 +371,6 @@ namespace DSPRE
                 columnName = "Actions";
             }
 
-            // Determine comparison type
             Func<int, int, bool> comparison;
             string comparisonName;
             if (equalsRadioButton.Checked)
@@ -405,7 +389,6 @@ namespace DSPRE
                 comparisonName = "<=";
             }
 
-            // Apply filter
             foreach (var stat in allScriptStats)
             {
                 int columnValue = columnSelector(stat);
@@ -429,13 +412,10 @@ namespace DSPRE
             if (e.RowIndex < 0)
                 return;
 
-            // Get the script ID from the selected row
             int scriptId = (int)scriptsDataGridView.Rows[e.RowIndex].Cells[0].Value;
 
-                        // If Shift is held, navigate to the Script Editor
                         if (Control.ModifierKeys.HasFlag(Keys.Shift))
                         {
-                            // Get reference to MainProgram
                             var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
                             if (mainProgram != null)
                             {
@@ -449,7 +429,6 @@ namespace DSPRE
                         }
                         else
                         {
-                            // Copy to clipboard for easy reference
                             Clipboard.SetText(scriptId.ToString());
                             statusLabel.Text = $"Script ID {scriptId} copied to clipboard (Shift+double-click to open in editor)";
                         }
@@ -487,13 +466,11 @@ namespace DSPRE
                             return;
                         }
 
-                        // Parse the variable number based on mode
                         int variableNumber;
                         bool parseSuccess;
 
                         if (varHexRadioButton.Checked)
                         {
-                            // Hex mode - strip 0x prefix if present
                             string hexValue = searchText;
                             if (hexValue.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
                                 hexValue.StartsWith("0X", StringComparison.OrdinalIgnoreCase))
@@ -504,7 +481,6 @@ namespace DSPRE
                         }
                         else
                         {
-                            // Decimal mode
                             parseSuccess = int.TryParse(searchText, out variableNumber);
                         }
 
@@ -520,7 +496,6 @@ namespace DSPRE
                         allVariableUsageResults.Clear();
                         variablesDataGridView.Rows.Clear();
 
-                        // Search in Scripts
                         foreach (var scriptFile in cachedScriptFiles)
                         {
                             int usageCount = CountVariableInScriptFile(scriptFile, variableNumber);
@@ -535,7 +510,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Search in Level Scripts
                         foreach (var levelScript in cachedLevelScriptFiles)
                         {
                             int usageCount = CountVariableInLevelScript(levelScript, variableNumber);
@@ -550,7 +524,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Search in Events
                         foreach (var eventFile in cachedEventFiles)
                         {
                             int usageCount = CountVariableInEventFile(eventFile, variableNumber);
@@ -565,7 +538,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Populate results
                         PopulateVariablesDataGridView(allVariableUsageResults);
                         statusLabel.Text = $"Found {allVariableUsageResults.Count} files using variable {variableNumber} (0x{variableNumber:X})";
                     }
@@ -574,10 +546,8 @@ namespace DSPRE
                     {
                         int count = 0;
 
-                        // Get command info dict for parameter type checking
                         var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
 
-                        // Check all scripts
                         if (scriptFile.allScripts != null)
                         {
                             foreach (var script in scriptFile.allScripts)
@@ -586,7 +556,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Check all functions
                         if (scriptFile.allFunctions != null)
                         {
                             foreach (var func in scriptFile.allFunctions)
@@ -617,15 +586,13 @@ namespace DSPRE
                             {
                                 byte[] paramData = cmd.cmdParams[i];
 
-                                // Check if this parameter is a Variable type
                                 ScriptParameter.ParameterType paramType = ScriptParameter.ParameterType.Integer;
                                 if (paramTypes != null && i < paramTypes.Count)
                                 {
                                     paramType = paramTypes[i];
                                 }
 
-                                // For Variable or Flex types, check the value
-                                if (paramType == ScriptParameter.ParameterType.Variable || 
+                                if (paramType == ScriptParameter.ParameterType.Variable ||
                                     paramType == ScriptParameter.ParameterType.Flex)
                                 {
                                     int paramValue = GetParamValue(paramData);
@@ -634,11 +601,9 @@ namespace DSPRE
                                         count++;
                                     }
                                 }
-                                // Also check raw values that match variable range (variables are typically 0x4000+)
                                 else if (paramData.Length >= 2)
                                 {
                                     int paramValue = GetParamValue(paramData);
-                                    // Check if it's in variable range and matches
                                     if (paramValue >= 0x4000 && paramValue == variableNumber)
                                     {
                                         count++;
@@ -682,7 +647,6 @@ namespace DSPRE
                     {
                         int count = 0;
 
-                        // Check triggers for variableWatched
                         if (eventFile.triggers != null)
                         {
                             foreach (var trigger in eventFile.triggers)
@@ -853,7 +817,6 @@ namespace DSPRE
                             return;
                         }
 
-                        // Parse the flag number based on mode
                         int flagNumber;
                         bool parseSuccess;
 
@@ -884,7 +847,6 @@ namespace DSPRE
                         allFlagUsageResults.Clear();
                         flagWatcherDataGridView.Rows.Clear();
 
-                        // Search in Event files (Overworld flags)
                         for (int eventIndex = 0; eventIndex < cachedEventFiles.Count; eventIndex++)
                         {
                             var eventFile = cachedEventFiles[eventIndex];
@@ -908,7 +870,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Search in Scripts for flag-related commands
                         foreach (var scriptFile in cachedScriptFiles)
                         {
                             int usageCount = CountFlagInScriptFile(scriptFile, flagNumber);
@@ -925,7 +886,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Populate results
                         PopulateFlagDataGridView(allFlagUsageResults);
                         statusLabel.Text = $"Found {allFlagUsageResults.Count} results for flag {flagNumber} (0x{flagNumber:X})";
                     }
@@ -934,7 +894,6 @@ namespace DSPRE
                     {
                         int count = 0;
 
-                        // Check all scripts
                         if (scriptFile.allScripts != null)
                         {
                             foreach (var script in scriptFile.allScripts)
@@ -943,7 +902,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Check all functions
                         if (scriptFile.allFunctions != null)
                         {
                             foreach (var func in scriptFile.allFunctions)
@@ -960,19 +918,15 @@ namespace DSPRE
                         int count = 0;
                         if (commands == null) return 0;
 
-                        // Flag-related command names commonly include: SetFlag, ClearFlag, CheckFlag, etc.
-                        // We check command parameters that might be flag values (typically small numbers < 0x1000)
                         foreach (var cmd in commands)
                         {
                             if (cmd.cmdParams == null) continue;
 
-                            // Check each parameter for matching flag value
                             foreach (var paramData in cmd.cmdParams)
                             {
                                 if (paramData.Length >= 2)
                                 {
                                     int paramValue = GetParamValue(paramData);
-                                    // Flags are typically in lower range (not in variable range 0x4000+)
                                     if (paramValue == flagNumber && paramValue < 0x4000)
                                     {
                                         count++;
@@ -1007,7 +961,6 @@ namespace DSPRE
                             switch (fileType)
                             {
                                 case "Event":
-                                    // Find the result to get the event index
                                     var result = allFlagUsageResults.FirstOrDefault(r => 
                                         r.FileType == "Event" && r.FileID == fileId);
                                     if (result != null && result.EventIndex >= 0)
@@ -1138,6 +1091,219 @@ namespace DSPRE
 
                     #endregion
 
+                    #region Trainer Watcher Tab
+
+                    private List<TrainerUsageResult> trainerUsageResults = new List<TrainerUsageResult>();
+
+                    /// <summary>
+                    /// Data class to hold trainer usage search results
+                    /// </summary>
+                    private class TrainerUsageResult
+                    {
+                        public int SourceId { get; set; } // event file ID, script file ID, or -1 for Vs. Seeker rows
+                        public string Type { get; set; }
+                        public int Index { get; set; }
+                        public string Details { get; set; }
+                    }
+
+                    private void PopulateTrainerWatchComboBox()
+                    {
+                        trainerWatchComboBox.Items.Clear();
+                        trainerWatchComboBox.Items.AddRange(Helpers.GetTrainerNames());
+                        if (trainerWatchComboBox.Items.Count > 0)
+                        {
+                            trainerWatchComboBox.SelectedIndex = 0;
+                        }
+                    }
+
+                    private void trainerWatchSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchTrainerUsage();
+                    }
+
+                    private void trainerWatchClearButton_Click(object sender, EventArgs e)
+                    {
+                        trainerWatcherDataGridView.Rows.Clear();
+                        trainerUsageResults.Clear();
+                        statusLabel.Text = "Trainer Watcher search cleared";
+                    }
+
+                    private void SearchTrainerUsage()
+                    {
+                        if (!dataLoaded)
+                        {
+                            MessageBox.Show("Please wait for data to finish loading.", "Data Not Ready", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        if (trainerWatchComboBox.SelectedIndex < 0)
+                        {
+                            MessageBox.Show("Please select a trainer.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        int trainerId = trainerWatchComboBox.SelectedIndex;
+
+                        statusLabel.Text = $"Searching for Trainer {trainerId} usage...";
+                        Application.DoEvents();
+
+                        trainerUsageResults.Clear();
+                        trainerWatcherDataGridView.Rows.Clear();
+
+                        var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+                        foreach (var scriptFile in cachedScriptFiles)
+                        {
+                            ScanContainersForTrainerParameter(scriptFile.allScripts, commandInfoDict, trainerId, scriptFile.fileID, "Script Command");
+                            ScanContainersForTrainerParameter(scriptFile.allFunctions, commandInfoDict, trainerId, scriptFile.fileID, "Function Command");
+                        }
+
+                        // Mirrors EventEditor.NavigateToOverworldTarget's decode formula.
+                        foreach (var eventFile in cachedEventFiles)
+                        {
+                            if (eventFile.overworlds == null) continue;
+
+                            for (int i = 0; i < eventFile.overworlds.Count; i++)
+                            {
+                                var ow = eventFile.overworlds[i];
+                                if (ow.type != (ushort)Overworld.OwType.TRAINER) continue;
+
+                                bool isPartner = ow.scriptNumber >= 4999;
+                                int decodedId = ow.scriptNumber - (isPartner ? 4999 : 2999);
+                                if (decodedId > RomInfo.trainerFunnyScriptNumber - 1) decodedId--;
+
+                                if (decodedId != trainerId) continue;
+
+                                trainerUsageResults.Add(new TrainerUsageResult
+                                {
+                                    SourceId = eventFile.ID,
+                                    Type = isPartner ? "Overworld (Partner)" : "Overworld",
+                                    Index = i,
+                                    Details = ow.ToString()
+                                });
+                            }
+                        }
+
+                        if (VsSeekerRematchTable.IsSupported)
+                        {
+                            var rows = VsSeekerRematchTable.ReadAll();
+                            for (int r = 0; r < rows.Count; r++)
+                            {
+                                var row = rows[r];
+                                if (row.EncounterTrainerId == trainerId)
+                                {
+                                    trainerUsageResults.Add(new TrainerUsageResult
+                                    {
+                                        SourceId = -1,
+                                        Type = "Vs. Seeker Encounter",
+                                        Index = r,
+                                        Details = $"Row {r}: owns this rematch chain"
+                                    });
+                                }
+                                for (int s = 0; s < row.RematchTrainerIds.Length; s++)
+                                {
+                                    if (row.RematchTrainerIds[s] != trainerId) continue;
+
+                                    trainerUsageResults.Add(new TrainerUsageResult
+                                    {
+                                        SourceId = -1,
+                                        Type = $"Vs. Seeker Rematch {(char)('A' + s)}",
+                                        Index = r,
+                                        Details = $"Row {r}: rematch {(char)('A' + s)} for encounter trainer {row.EncounterTrainerId}"
+                                    });
+                                }
+                            }
+                        }
+
+                        PopulateTrainerWatcherDataGridView(trainerUsageResults);
+                        statusLabel.Text = $"Found {trainerUsageResults.Count} use(s) of Trainer {trainerId}";
+                    }
+
+                    private void ScanContainersForTrainerParameter(List<ScriptCommandContainer> containers, Dictionary<ushort, ScriptCommandInfo> commandInfoDict, int trainerId, int sourceFileId, string typeLabel)
+                    {
+                        if (containers == null) return;
+
+                        foreach (var container in containers)
+                        {
+                            if (container.commands == null) continue;
+
+                            foreach (var cmd in container.commands)
+                            {
+                                if (cmd.id == null || cmd.cmdParams == null) continue;
+
+                                ScriptCommandInfo cmdInfo;
+                                if (!commandInfoDict.TryGetValue(cmd.id.Value, out cmdInfo) || cmdInfo.ParameterTypes == null) continue;
+
+                                for (int i = 0; i < cmd.cmdParams.Count && i < cmdInfo.ParameterTypes.Count; i++)
+                                {
+                                    if (cmdInfo.ParameterTypes[i] != ScriptParameter.ParameterType.Trainer) continue;
+                                    if (GetParamValue(cmd.cmdParams[i]) != trainerId) continue;
+
+                                    trainerUsageResults.Add(new TrainerUsageResult
+                                    {
+                                        SourceId = sourceFileId,
+                                        Type = typeLabel,
+                                        Index = (int)container.manualUserID,
+                                        Details = $"{cmdInfo.Name} (param {i})"
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    private void PopulateTrainerWatcherDataGridView(IList<TrainerUsageResult> results)
+                    {
+                        trainerWatcherDataGridView.Rows.Clear();
+
+                        foreach (var result in results)
+                        {
+                            trainerWatcherDataGridView.Rows.Add(result.SourceId, result.Type, result.Index, result.Details);
+                        }
+                    }
+
+                    private void trainerWatcherDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        int sourceId = (int)trainerWatcherDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        string type = (string)trainerWatcherDataGridView.Rows[e.RowIndex].Cells[1].Value;
+                        int index = (int)trainerWatcherDataGridView.Rows[e.RowIndex].Cells[2].Value;
+
+                        if (type.StartsWith("Vs. Seeker"))
+                        {
+                            using (var editor = new DSPRE.Editors.VsSeekerRematchEditor(index))
+                            {
+                                editor.ShowDialog();
+                            }
+                            statusLabel.Text = "Opened Vs. Seeker Rematch Editor";
+                            return;
+                        }
+
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                        if (mainProgram == null)
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                            return;
+                        }
+
+                        if (type.StartsWith("Overworld"))
+                        {
+                            EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, sourceId, index);
+                            statusLabel.Text = $"Opened Event File {sourceId}, Overworld {index}";
+                        }
+                        else if (type == "Script Command")
+                        {
+                            EditorPanels.scriptEditor.OpenScriptEditorAndNavigate(mainProgram, sourceId, index);
+                            statusLabel.Text = $"Opened Script File {sourceId}, Script {index}";
+                        }
+                        else if (type == "Function Command")
+                        {
+                            EditorPanels.scriptEditor.OpenScriptEditor(mainProgram, sourceId);
+                            statusLabel.Text = $"Opened Script File {sourceId} (see Function {index})";
+                        }
+                    }
+
+                    #endregion
+
                     #region Script Watcher Tab
 
                     private List<ScriptFileReferenceResult> scriptFileReferenceResults = new List<ScriptFileReferenceResult>();
@@ -1167,14 +1333,12 @@ namespace DSPRE
 
                         if (idWatcherScriptFileComboBox.SelectedIndex < 0) return;
 
-                        // Parse the script file ID from the selected item
                         string selectedText = idWatcherScriptFileComboBox.SelectedItem.ToString();
                         int colonIndex = selectedText.IndexOf(':');
                         if (colonIndex > 0 && int.TryParse(selectedText.Substring(0, colonIndex), out int scriptFileId))
                         {
                             if (scriptFileIdToScript.TryGetValue(scriptFileId, out ScriptFile scriptFile))
                             {
-                                // Add all scripts from this file
                                 if (scriptFile.allScripts != null)
                                 {
                                     for (int i = 0; i < scriptFile.allScripts.Count; i++)
@@ -1191,7 +1355,6 @@ namespace DSPRE
                         }
                     }
 
-                    // File Watcher - search what headers/events use a specific script file
                     private void fileWatcherSearchButton_Click(object sender, EventArgs e)
                     {
                         SearchScriptFileReferences();
@@ -1207,7 +1370,6 @@ namespace DSPRE
                         scriptFileReferenceResults.Clear();
                         fileWatcherDataGridView.Rows.Clear();
 
-                        // Search in headers
                         int headerCount = RomInfo.GetHeaderCount();
                         for (ushort i = 0; i < headerCount; i++)
                         {
@@ -1242,7 +1404,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Populate results
                         PopulateFileWatcherDataGridView(scriptFileReferenceResults);
                         statusLabel.Text = $"Found {scriptFileReferenceResults.Count} references to script file {searchScriptFileId}";
                     }
@@ -1279,7 +1440,6 @@ namespace DSPRE
                         }
                     }
 
-                    // ID Watcher - search where a specific script ID is used in event files
                     private void idWatcherSearchButton_Click(object sender, EventArgs e)
                     {
                         SearchScriptIdUsage();
@@ -1293,7 +1453,6 @@ namespace DSPRE
                             return;
                         }
 
-                        // Parse the script file ID
                         string selectedFileText = idWatcherScriptFileComboBox.SelectedItem.ToString();
                         int colonIndex = selectedFileText.IndexOf(':');
                         if (colonIndex <= 0 || !int.TryParse(selectedFileText.Substring(0, colonIndex), out int scriptFileId))
@@ -1310,7 +1469,6 @@ namespace DSPRE
                         scriptIdUsageResults.Clear();
                         idWatcherDataGridView.Rows.Clear();
 
-                        // First, find which event files and level scripts are associated with headers that use this script file
                         HashSet<int> associatedEventFileIds = new HashSet<int>();
                         HashSet<int> associatedLevelScriptIds = new HashSet<int>();
                         int headerCount = RomInfo.GetHeaderCount();
@@ -1329,13 +1487,11 @@ namespace DSPRE
                             catch { }
                         }
 
-                        // Now search those event files for uses of this script ID
                         foreach (var eventFile in cachedEventFiles)
                         {
                             if (!associatedEventFileIds.Contains(eventFile.ID))
                                 continue;
 
-                            // Check overworlds
                             if (eventFile.overworlds != null)
                             {
                                 for (int i = 0; i < eventFile.overworlds.Count; i++)
@@ -1354,7 +1510,6 @@ namespace DSPRE
                                 }
                             }
 
-                            // Check spawnables
                             if (eventFile.spawnables != null)
                             {
                                 for (int i = 0; i < eventFile.spawnables.Count; i++)
@@ -1373,7 +1528,6 @@ namespace DSPRE
                                 }
                             }
 
-                            // Check triggers
                             if (eventFile.triggers != null)
                             {
                                 for (int i = 0; i < eventFile.triggers.Count; i++)
@@ -1393,7 +1547,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Level scripts reference a script number the same way overworlds/spawnables/triggers do, so check those too.
                         foreach (var levelScript in cachedLevelScriptFiles)
                         {
                             if (!associatedLevelScriptIds.Contains(levelScript.ID) || levelScript.bufferSet == null)
@@ -1415,7 +1568,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Common scripts aren't tied to any header's own scriptFileID, so scan every event file too.
                         int commonScriptHits = 0;
                         foreach (var eventFile in cachedEventFiles)
                         {
@@ -1480,7 +1632,6 @@ namespace DSPRE
                             }
                         }
 
-                        // scriptTriggered is a "script to run" number just like scriptNumber, so it can be a Common Script too.
                         foreach (var levelScript in cachedLevelScriptFiles)
                         {
                             if (levelScript.bufferSet == null) continue;
@@ -1503,8 +1654,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Scripts invoke Common Scripts with the dedicated "CommonScript" command, so scan every
-                        // script and function for it. Actions are movement bytecode and can't contain it.
                         var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
                         ushort? commonScriptCmdId = null;
                         foreach (var kvp in commandInfoDict)
@@ -1525,7 +1674,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Populate results
                         PopulateIdWatcherDataGridView(scriptIdUsageResults);
                         statusLabel.Text = $"Found {scriptIdUsageResults.Count} uses of Script {scriptId} in Script File {scriptFileId}" +
                             (commonScriptHits > 0 ? $" ({commonScriptHits} via Common Script references)" : "");
@@ -1689,13 +1837,10 @@ namespace DSPRE
                                 return;
                             }
 
-                            // Populate header info
                             PopulateHeaderInfoDataGridView(currentSearchedHeader);
 
-                            // Search for warps leading to this header (incoming)
                             SearchWarpsToHeader(headerId);
 
-                            // Search for warps from this header's event file (outgoing)
                             SearchWarpsFromHeader(currentSearchedHeader);
 
                             statusLabel.Text = $"Header {headerId} loaded - {headerWarpResults.Count} incoming, {headerOutgoingWarpResults.Count} outgoing warps";
@@ -1711,7 +1856,6 @@ namespace DSPRE
                     {
                         headerInfoDataGridView.Rows.Clear();
 
-                        // Add all header properties as rows
                         headerInfoDataGridView.Rows.Add("Header ID", header.ID);
                         headerInfoDataGridView.Rows.Add("Script File ID", header.scriptFileID);
                         headerInfoDataGridView.Rows.Add("Level Script ID", header.levelScriptID);
@@ -1733,7 +1877,6 @@ namespace DSPRE
                         headerWarpResults.Clear();
                         headerWarpsDataGridView.Rows.Clear();
 
-                        // Search all cached event files for warps pointing to this header
                         foreach (var eventFile in cachedEventFiles)
                         {
                             if (eventFile.warps == null) continue;
@@ -1754,7 +1897,6 @@ namespace DSPRE
                             }
                         }
 
-                        // Populate the warps grid
                         foreach (var result in headerWarpResults)
                         {
                             headerWarpsDataGridView.Rows.Add(result.EventFileID, result.WarpIndex, result.Position, result.Anchor);
@@ -1766,14 +1908,12 @@ namespace DSPRE
                         headerOutgoingWarpResults.Clear();
                         headerOutgoingWarpsDataGridView.Rows.Clear();
 
-                        // Find the event file for this header
                         var eventFile = cachedEventFiles.FirstOrDefault(e => e.ID == header.eventFileID);
                         if (eventFile == null || eventFile.warps == null)
                         {
                             return;
                         }
 
-                        // Get all warps from this header's event file
                         for (int i = 0; i < eventFile.warps.Count; i++)
                         {
                             var warp = eventFile.warps[i];
@@ -1786,7 +1926,6 @@ namespace DSPRE
                             });
                         }
 
-                        // Populate the outgoing warps grid
                         foreach (var result in headerOutgoingWarpResults)
                         {
                             headerOutgoingWarpsDataGridView.Rows.Add(result.WarpIndex, result.Position, result.DestHeader, result.DestAnchor);
@@ -1846,7 +1985,6 @@ namespace DSPRE
 
                         if (shiftHeld)
                         {
-                            // Shift+Double-click: Open Event Editor
                             var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
                             if (mainProgram != null)
                             {
@@ -1860,7 +1998,6 @@ namespace DSPRE
                         }
                         else
                         {
-                            // Double-click: Navigate to the source header (header that uses this event file)
                             int? sourceHeader = FindHeaderByEventFileId(eventFileId);
                             if (sourceHeader.HasValue)
                             {
@@ -1888,7 +2025,6 @@ namespace DSPRE
 
                         if (shiftHeld)
                         {
-                            // Shift+Double-click: Open Event Editor with this header's event file
                             var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
                             if (mainProgram != null)
                             {
@@ -1902,7 +2038,6 @@ namespace DSPRE
                         }
                         else
                         {
-                            // Double-click: Navigate to the destination header
                             int previousHeader = currentSearchedHeader.ID;
                             headerIdNumericUpDown.Value = destHeader;
                             SearchHeaderInfo();
@@ -1930,7 +2065,6 @@ namespace DSPRE
                             }
                             catch
                             {
-                                // Skip invalid headers
                             }
                         }
                         return null;
