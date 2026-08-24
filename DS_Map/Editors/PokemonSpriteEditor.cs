@@ -425,6 +425,7 @@ namespace DSPRE.Editors {
         private PictureBox[,] displayPictureBoxes;
         private bool[] usedEntries;
         private bool shinyImported;
+        private bool[] shinyResolved;
         private SpriteSet currentSprites;
         private int currentLoadedId;
         private bool isLoadingOtherForms = false;
@@ -543,6 +544,7 @@ namespace DSPRE.Editors {
             currentSprites = new SpriteSet();
             usedEntries = null;
             shinyImported = false;
+            shinyResolved = new bool[16];
 
             if (!isLoadingOtherForms) {
                 LoadMainSprites(toLoad);
@@ -938,14 +940,23 @@ namespace DSPRE.Editors {
                         return;
                     }
 
-                    if (!shinyImported) {
-                        // First shiny image for this species this session: just take its colors.
+                    // Sprites[] holds one pixel-index bitmap per pose that LoadImages renders for BOTH
+                    // Normal and Shiny (it just swaps .Palette), so a shiny color has to land at the
+                    // exact slot number that pose's own pixel data already uses for it, derived
+                    // positionally against Sprites[], never taken from this file's own local palette
+                    // numbering (two separately-exported images can number the same colors differently).
+                    Bitmap parent = currentSprites.Sprites[index % 4];
+                    bool[] resolved = null;
+                    ColorPalette candidate = parent == null ? null : handler.AlternatePalette(parent, image, out resolved);
+                    if (candidate == null) {
                         currentSprites.Shiny = PadPaletteTo16(image.Palette);
+                        shinyResolved = PadBoolTo16(handler.IsUsed(image));
                     } else {
-                        // A later pose (e.g. back after front) needs to share the same palette as
-                        // the one already imported, so merge instead of overwriting it.
-                        ColorPalette merged = handler.AlternatePalette(currentSprites.Sprites[index % 4], image, currentSprites.Shiny);
-                        currentSprites.Shiny = PadPaletteTo16(merged ?? image.Palette);
+                        currentSprites.Shiny = handler.MergeByIndex(currentSprites.Shiny, shinyResolved, candidate, resolved);
+                        bool[] padResolved = PadBoolTo16(resolved);
+                        for (int i = 0; i < 16; i++) {
+                            shinyResolved[i] = shinyResolved[i] || padResolved[i];
+                        }
                     }
                     shinyImported = true;
                 } else {
@@ -1250,7 +1261,9 @@ namespace DSPRE.Editors {
                 temp = handler.ShrinkPalette(tiles[1], used);
                 temp = handler.Resize(temp, 8, 8, 8, 8);
                 temp = handler.Concat(temp, temp);
-                sprites.Shiny = handler.AlternatePalette(sprites.Sprites[2], temp);
+                ColorPalette shinyCandidate = handler.AlternatePalette(sprites.Sprites[2], temp, out bool[] shinyCandidateResolved);
+                sprites.Shiny = PadPaletteTo16(shinyCandidate);
+                shinyResolved = PadBoolTo16(shinyCandidateResolved);
 
                 currentSprites = sprites;
                 shinyImported = true;
@@ -1290,12 +1303,16 @@ namespace DSPRE.Editors {
                 Bitmap shinyImage = new Bitmap(openFileDialog.FileName);
                 IndexedBitmapHandler handler = new IndexedBitmapHandler();
                 
-                ColorPalette temp = handler.AlternatePalette(baseImage, shinyImage, shinyImported ? currentSprites.Shiny : null);
-                if (temp != null) {
-                    currentSprites.Shiny = PadPaletteTo16(temp);
-                    shinyImported = true;
-                } else {
+                ColorPalette candidate = handler.AlternatePalette(baseImage, shinyImage, out bool[] resolved);
+                if (candidate == null) {
                     MessageBox.Show("Failed!", "Failed");
+                } else {
+                    currentSprites.Shiny = handler.MergeByIndex(currentSprites.Shiny, shinyResolved, candidate, resolved);
+                    bool[] padResolved = PadBoolTo16(resolved);
+                    for (int i = 0; i < 16; i++) {
+                        shinyResolved[i] = shinyResolved[i] || padResolved[i];
+                    }
+                    shinyImported = true;
                 }
             }
             
@@ -1586,6 +1603,14 @@ namespace DSPRE.Editors {
                 }
                 return padded;
             }
+        }
+
+        private bool[] PadBoolTo16(bool[] used) {
+            bool[] padded = new bool[16];
+            for (int i = 0; i < 16; i++) {
+                padded[i] = i < used.Length && used[i];
+            }
+            return padded;
         }
 
         private void SavePal(FileStream fs, ColorPalette palette) {
