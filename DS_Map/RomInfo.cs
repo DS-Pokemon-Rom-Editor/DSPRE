@@ -323,6 +323,7 @@ namespace DSPRE
             }
 
             romID = id;
+            isHGE = false;
             if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
             {
                 string ov129path = OverlayUtils.GetPath(129);

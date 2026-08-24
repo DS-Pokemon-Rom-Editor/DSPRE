@@ -37,6 +37,41 @@ namespace DSPRE
         private const uint VanillaPrizeMulTableOverlayOffset = 0x359E0;
         private const int VanillaPrizeMulTableCount = 0x69;
 
+        // Prize multiplier is also known for DP/HGSS English, but neither has a known repoint
+        // pointer (pointerOffset 0 below means "always read/write the vanilla table directly").
+        // HGSS stores u16 {classId, multiplier} pairs instead of a plain byte array, so vanillaCount
+        // means "pairs" there, not bytes.
+        public static bool IsPrizeMulSupportedForCurrentRom => TryGetPrizeMulTableInfo(out _, out _, out _, out _, out _);
+
+        private static bool TryGetPrizeMulTableInfo(out int overlayNumber, out uint pointerOffset, out uint vanillaOffset, out int vanillaCount, out bool isPaired)
+        {
+            overlayNumber = 0; pointerOffset = 0; vanillaOffset = 0; vanillaCount = 0; isPaired = false;
+            if (RomInfo.gameLanguage != GameLanguages.English) return false;
+
+            switch (RomInfo.gameFamily)
+            {
+                case GameFamilies.Plat:
+                    overlayNumber = PrizeMulOverlayNumber;
+                    pointerOffset = PrizeMulTablePointerOverlayOffset;
+                    vanillaOffset = VanillaPrizeMulTableOverlayOffset;
+                    vanillaCount = VanillaPrizeMulTableCount;
+                    return true;
+                case GameFamilies.DP:
+                    overlayNumber = 11;
+                    vanillaOffset = 0x32960;
+                    vanillaCount = 0x62;
+                    return true;
+                case GameFamilies.HGSS:
+                    overlayNumber = 12;
+                    vanillaOffset = 0x34C04;
+                    vanillaCount = 129;
+                    isPaired = true;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         // sTrainerEncounterBGMs' offsets are already tracked (all languages) by
         // RomInfo.SetEncounterMusicTableOffsetToRAMAddress()/encounterMusicTableOffsetToRAMAddress,
         // and its repoint-aware read/write already exists; only "append a new entry" is new here.
@@ -157,10 +192,30 @@ namespace DSPRE
         {
             multiplier = 0;
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
-            if (!TryResolveByteTable(ov16Path, PrizeMulTablePointerOverlayOffset, ov16Path, VanillaPrizeMulTableOverlayOffset, VanillaPrizeMulTableCount, out byte[] table, out error))
+            if (!TryGetPrizeMulTableInfo(out int overlayNumber, out uint pointerOffset, out uint vanillaOffset, out int vanillaCount, out bool isPaired))
+            {
+                error = "Prize multiplier isn't known for this game/language.";
                 return false;
+            }
+
+            EnsureOverlayDecompressed(overlayNumber);
+            string ovPath = OverlayUtils.GetPath(overlayNumber);
+
+            if (isPaired)
+                return TryReadPairedPrizeMul(ovPath, vanillaOffset, vanillaCount, classId, out multiplier, out error);
+
+            byte[] table;
+            if (pointerOffset == 0)
+            {
+                // No known repoint pointer for this family: the vanilla table is always the real one.
+                try { table = DSUtils.ReadFromFile(ovPath, vanillaOffset, vanillaCount); }
+                catch (Exception ex) { error = ex.Message; return false; }
+            }
+            else if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out table, out error))
+            {
+                return false;
+            }
+
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
             multiplier = table[classId];
             return true;
@@ -169,22 +224,89 @@ namespace DSPRE
         public static bool TryWritePrizeMul(int classId, byte multiplier, out string error)
         {
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
-            if (!TryResolveByteTable(ov16Path, PrizeMulTablePointerOverlayOffset, ov16Path, VanillaPrizeMulTableOverlayOffset, VanillaPrizeMulTableCount, out byte[] table, out error))
-                return false;
-            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
-
-            uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(ov16Path, PrizeMulTablePointerOverlayOffset, 4), 0);
-            if (ptr < RomInfo.synthOverlayLoadAddress)
+            if (!TryGetPrizeMulTableInfo(out int overlayNumber, out uint pointerOffset, out uint vanillaOffset, out int vanillaCount, out bool isPaired))
             {
-                error = "The prize-multiplier table hasn't been expanded yet. Add a trainer class first (or repoint it by hand).";
+                error = "Prize multiplier isn't known for this game/language.";
                 return false;
             }
 
-            long start = ptr - RomInfo.synthOverlayLoadAddress;
-            DSUtils.WriteToFile(Filesystem.expArmPath, new[] { multiplier }, (uint)(start + classId));
+            EnsureOverlayDecompressed(overlayNumber);
+            string ovPath = OverlayUtils.GetPath(overlayNumber);
+
+            if (isPaired)
+                return TryWritePairedPrizeMul(ovPath, vanillaOffset, vanillaCount, classId, multiplier, out error);
+
+            if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out byte[] table, out error))
+                return false;
+            if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
+
+            bool repointed = false;
+            if (pointerOffset != 0)
+            {
+                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(ovPath, pointerOffset, 4), 0);
+                repointed = ptr >= RomInfo.synthOverlayLoadAddress;
+                if (repointed)
+                {
+                    long start = ptr - RomInfo.synthOverlayLoadAddress;
+                    DSUtils.WriteToFile(Filesystem.expArmPath, new[] { multiplier }, (uint)(start + classId));
+                    return true;
+                }
+            }
+
+            // Not repointed (or this family has no known repoint pointer): the vanilla table is the real one.
+            DSUtils.WriteToFile(ovPath, new[] { multiplier }, (uint)(vanillaOffset + classId));
             return true;
+        }
+
+        // HGSS stores {u16 classId, u16 multiplier} pairs rather than a plain array indexed by class,
+        // so entries are matched by their classId field instead of by position.
+        private static bool TryReadPairedPrizeMul(string ovPath, uint vanillaOffset, int pairCount, int classId, out byte multiplier, out string error)
+        {
+            multiplier = 0;
+            error = null;
+            try
+            {
+                byte[] data = DSUtils.ReadFromFile(ovPath, vanillaOffset, pairCount * 4);
+                for (int i = 0; i < pairCount; i++)
+                {
+                    if (BitConverter.ToUInt16(data, i * 4) == classId)
+                    {
+                        multiplier = (byte)BitConverter.ToUInt16(data, i * 4 + 2);
+                        return true;
+                    }
+                }
+                error = "No prize-multiplier entry found for this class.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryWritePairedPrizeMul(string ovPath, uint vanillaOffset, int pairCount, int classId, byte multiplier, out string error)
+        {
+            error = null;
+            try
+            {
+                byte[] data = DSUtils.ReadFromFile(ovPath, vanillaOffset, pairCount * 4);
+                for (int i = 0; i < pairCount; i++)
+                {
+                    if (BitConverter.ToUInt16(data, i * 4) != classId) continue;
+
+                    uint offset = (uint)(vanillaOffset + i * 4 + 2);
+                    DSUtils.WriteToFile(ovPath, BitConverter.GetBytes((ushort)multiplier), offset);
+                    return true;
+                }
+                error = "No prize-multiplier entry found for this class.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
         }
 
         // ── Add a whole new trainer class ─────────────────────────────────────────────────────────

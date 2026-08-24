@@ -9,7 +9,8 @@ namespace DSPRE
 {
     /// <summary>
     /// Detects and reads/writes hzla's PlatPatches "overworld sprites" expansion patch
-    /// (github.com/hzla/PlatPatches, <c>src/patches/overworld-sprites.js</c>). Platinum-only.
+    /// (github.com/hzla/PlatPatches, <c>src/patches/overworld-sprites.js</c>). Platinum and
+    /// Diamond/Pearl (the tables share the same structure per hzla's README and Platinum decomp).
     /// DSPRE never applies this patch itself; it only detects an already-patched ROM and, once
     /// detected, lets the Overworld Editor add/delete custom entries within the capacity the
     /// patch pre-reserved.
@@ -38,12 +39,18 @@ namespace DSPRE
         private const int RenderPropsTableIndex = 1;
 
         /// <summary>Byte distance from the vanilla render-properties table to the vanilla texture
-        /// table in an *unpatched* ROM (259 render-properties rows, including the sentinel skipped
-        /// here since it's counted from row 0 of each table's own start). Derived from the
+        /// table in an *unpatched* Platinum ROM (259 render-properties rows, including the sentinel
+        /// skipped here since it's counted from row 0 of each table's own start). Derived from the
         /// source-confirmed struct sizes (see fieldobj_drawdata.c), not guessed. Needs verifying
         /// against a real ROM once this ships.</summary>
-        private const long VanillaRenderPropsToTextureDelta = 259 * 8;
-        private const int VanillaRenderPropsRowCount = 259;
+        private const long VanillaRenderPropsToTextureDeltaPlat = 259 * 8;
+        private const int VanillaRenderPropsRowCountPlat = 259;
+
+        /// <summary>Same, for Diamond/Pearl English: render-properties table at Overlay 5 0x225BC,
+        /// texture table at 0x22BCC (the latter matches RomInfo.OWTableOffset for DP English), so the
+        /// delta is the render-properties table's own size (193 entries + 1 terminator row).</summary>
+        private const long VanillaRenderPropsToTextureDeltaDP = 194 * 8;
+        private const int VanillaRenderPropsRowCountDP = 193;
 
         public struct OwRenderState
         {
@@ -90,7 +97,7 @@ namespace DSPRE
             _detected ? ((long Start, long End)?)(_markerOffset, _reservedEnd) : null;
 
         /// <summary>Re-scans the synthetic overlay for the expansion marker. Safe to call anytime
-        /// after a ROM is loaded (no-op, returns false, for DP/HGSS). Updates the RomPatchState
+        /// after a ROM is loaded (no-op, returns false, for HGSS). Updates the RomPatchState
         /// flags/counts as a side effect.</summary>
         public static bool Detect()
         {
@@ -98,7 +105,7 @@ namespace DSPRE
             _markerOffset = -1;
             _tables = null;
 
-            if (RomInfo.gameFamily != GameFamilies.Plat)
+            if (RomInfo.gameFamily != GameFamilies.Plat && RomInfo.gameFamily != GameFamilies.DP)
             {
                 PushFlags();
                 return false;
@@ -219,7 +226,6 @@ namespace DSPRE
         public static bool TryReadRenderState(uint appearanceId, out OwRenderState state)
         {
             state = default;
-            if (RomInfo.gameFamily != GameFamilies.Plat) return false;
 
             SimpleTable t = GetRenderStateTable();
             if (t.Path == null || !File.Exists(t.Path)) return false;
@@ -239,16 +245,11 @@ namespace DSPRE
         public static bool TryWriteRenderState(uint appearanceId, OwRenderState state, out string error)
         {
             error = null;
-            if (RomInfo.gameFamily != GameFamilies.Plat)
-            {
-                error = "Overworld render-state editing is only implemented for Platinum.";
-                return false;
-            }
 
             SimpleTable t = GetRenderStateTable();
             if (t.Path == null || !File.Exists(t.Path))
             {
-                error = "The render-state table could not be located.";
+                error = "Overworld render-state editing isn't supported for this game/language.";
                 return false;
             }
 
@@ -276,15 +277,32 @@ namespace DSPRE
             }
 
             // Vanilla: table 1 sits a fixed byte distance before table 2 in the same overlay-5 file
-            // DSPRE already resolves for the texture table (RomInfo.OWtablePath / OWTableOffset)
-            // see VanillaRenderPropsToTextureDelta.
-            return new SimpleTable
+            // DSPRE already resolves for the texture table (RomInfo.OWtablePath / OWTableOffset).
+            if (RomInfo.gameFamily == GameFamilies.Plat)
             {
-                Path = RomInfo.OWtablePath,
-                Start = RomInfo.OWTableOffset - VanillaRenderPropsToTextureDelta,
-                EntrySize = 8,
-                RowCount = VanillaRenderPropsRowCount,
-            };
+                return new SimpleTable
+                {
+                    Path = RomInfo.OWtablePath,
+                    Start = RomInfo.OWTableOffset - VanillaRenderPropsToTextureDeltaPlat,
+                    EntrySize = 8,
+                    RowCount = VanillaRenderPropsRowCountPlat,
+                };
+            }
+
+            // The vanilla DP offsets below are only verified for English; other languages fall through
+            // to the "unsupported" SimpleTable (Path == null) rather than risk reading the wrong table.
+            if (RomInfo.gameFamily == GameFamilies.DP && RomInfo.gameLanguage == GameLanguages.English)
+            {
+                return new SimpleTable
+                {
+                    Path = RomInfo.OWtablePath,
+                    Start = RomInfo.OWTableOffset - VanillaRenderPropsToTextureDeltaDP,
+                    EntrySize = 8,
+                    RowCount = VanillaRenderPropsRowCountDP,
+                };
+            }
+
+            return new SimpleTable();
         }
 
         private static OwRenderState UnpackRenderState(uint bits) => new OwRenderState

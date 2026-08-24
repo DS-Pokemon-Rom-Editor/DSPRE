@@ -93,11 +93,19 @@ namespace DSPRE.Avalonia.ViewModels
         /// TrainerClassTableExpansion's doc comment for why.</summary>
         public bool IsExpansionSupported => TrainerClassTableExpansion.IsSupportedForCurrentRom;
 
-        /// <summary>Gender/prize-multiplier editing: Platinum (English) via TrainerClassTableExpansion, or hg-engine via source.</summary>
-        public bool ShowGenderPrize => IsExpansionSupported || HgEngineProject.IsActive;
+        /// <summary>Gender editing: only known for Platinum (English) via TrainerClassTableExpansion, or hg-engine via source.</summary>
+        public bool ShowGender => IsExpansionSupported || HgEngineProject.IsActive;
 
-        private bool _genderPrizeMulLoaded;
-        public bool GenderPrizeMulLoaded { get => _genderPrizeMulLoaded; private set => Set(ref _genderPrizeMulLoaded, value); }
+        /// <summary>Prize-multiplier editing: known for Plat/DP/HGSS (English) via TrainerClassTableExpansion,
+        /// or hg-engine via source. Wider than <see cref="ShowGender"/> since the gender table's offsets
+        /// are only confirmed for Platinum.</summary>
+        public bool ShowPrizeMul => TrainerClassTableExpansion.IsPrizeMulSupportedForCurrentRom || HgEngineProject.IsActive;
+
+        private bool _genderLoaded;
+        public bool GenderLoaded { get => _genderLoaded; private set => Set(ref _genderLoaded, value); }
+
+        private bool _prizeMulLoaded;
+        public bool PrizeMulLoaded { get => _prizeMulLoaded; private set => Set(ref _prizeMulLoaded, value); }
 
         private int _genderIndex;
         public int GenderIndex { get => _genderIndex; set => Set(ref _genderIndex, value); }
@@ -189,21 +197,19 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (HgEngineProject.IsActive)
             {
-                GenderPrizeMulLoaded = HgEngineTrainerClassTables.TryGetGender(index, out int hgeGender)
-                    & HgEngineTrainerClassTables.TryGetPrizeMultiplier(index, out int hgePrize);
-                GenderIndex = hgeGender;
-                PrizeMultiplier = hgePrize;
-            }
-            else if (IsExpansionSupported)
-            {
-                GenderPrizeMulLoaded = TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _)
-                    & TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
-                GenderIndex = gender;
-                PrizeMultiplier = prizeMul;
+                GenderLoaded = HgEngineTrainerClassTables.TryGetGender(index, out int hgeGender);
+                if (GenderLoaded) GenderIndex = hgeGender;
+
+                PrizeMulLoaded = HgEngineTrainerClassTables.TryGetPrizeMultiplier(index, out int hgePrize);
+                if (PrizeMulLoaded) PrizeMultiplier = hgePrize;
             }
             else
             {
-                GenderPrizeMulLoaded = false;
+                GenderLoaded = IsExpansionSupported && TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _);
+                if (GenderLoaded) GenderIndex = gender;
+
+                PrizeMulLoaded = TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
+                if (PrizeMulLoaded) PrizeMultiplier = prizeMul;
             }
 
             IsPlaying = false;
@@ -246,15 +252,17 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (HgEngineProject.IsActive)
             {
-                HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out string hgeGenderErr);
-                HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out string hgePrizeErr);
+                string hgeGenderErr = null, hgePrizeErr = null;
+                if (GenderLoaded) HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out hgeGenderErr);
+                if (PrizeMulLoaded) HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out hgePrizeErr);
                 if (hgeGenderErr != null || hgePrizeErr != null)
                     _ = DialogHelper.ShowError($"Some fields failed to save:\n{hgeGenderErr}\n{hgePrizeErr}".Trim(), "Trainer Classes");
             }
-            else if (GenderPrizeMulLoaded)
+            else
             {
-                TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out string genderErr);
-                TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out string prizeErr);
+                string genderErr = null, prizeErr = null;
+                if (GenderLoaded) TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out genderErr);
+                if (PrizeMulLoaded) TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out prizeErr);
                 if (genderErr != null || prizeErr != null)
                     _ = DialogHelper.ShowError($"Some fields failed to save:\n{genderErr}\n{prizeErr}".Trim(), "Trainer Classes");
             }

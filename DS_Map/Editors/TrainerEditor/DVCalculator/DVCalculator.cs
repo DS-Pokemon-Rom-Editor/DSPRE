@@ -225,6 +225,11 @@ namespace DSPRE
 
             public static bool GetTrainerClassGender(int trainerClassID)
             {
+                if (TrainerClassTableExpansion.TryReadGender(trainerClassID, out byte gender, out _))
+                {
+                    return gender != 1;
+                }
+
                 if (!tableLoaded)
                 {
                     ReadTrainerClassGenderTable();

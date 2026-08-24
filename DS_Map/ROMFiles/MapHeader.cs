@@ -68,14 +68,13 @@ namespace DSPRE.ROMFiles {
        -----------------    8: Battle BG b1
 
         HGSS
-       -----------------    1: ?
-       -----------------    2: ?
-       -----------------    3: ?
-       -----------------    4: Allow Fly 
-       -----------------    5: Allow Esc. Rope
-       -----------------    6: ?
-       -----------------    7: Allow Bicycle
-       -----------------    8: ?
+       -----------------    1: Allow Bicycle
+       -----------------    2: Allow Running (unused)
+       -----------------    3: Allow Esc. Rope
+       -----------------    4: Allow Fly
+       -----------------    5: Allow outgoing Pokegear calls
+       -----------------    6: Allow incoming Pokegear calls
+       -----------------    7: Allow Pokegear radio signal
 
     ----------------------------------------------------------------------------------*/
 
@@ -398,7 +397,7 @@ namespace DSPRE.ROMFiles {
         public byte locationName { get; set; }
         public byte locationType { get; set; }  //4 bits only
         public byte unknown0 { get; set; } //4 bits only
-        public byte unknown1 { get; set; } //4 bits only
+        public byte momCallIntroParam { get; set; } //4 bits only, offset into Mom's Pokegear call intro message
         public byte worldmapX { get; set; } //6 bits only
         public byte worldmapY { get; set; } //6 bits only
         public bool kantoFlag { get; set; }
@@ -428,7 +427,7 @@ namespace DSPRE.ROMFiles {
                     
                     byte areaProperties = reader.ReadByte();
                     areaIcon = (byte)(areaProperties & 0b_1111); //get 4 bits
-                    unknown1 = (byte)((areaProperties >> 4) & 0b_1111); //get 4 bits after the first 4
+                    momCallIntroParam = (byte)((areaProperties >> 4) & 0b_1111); //get 4 bits after the first 4
 
                     uint last32 = reader.ReadUInt32();
                     kantoFlag = (last32 & 0b_1) == 1; //get 1 bit
@@ -467,7 +466,7 @@ namespace DSPRE.ROMFiles {
                 writer.Write(eventFileID);
                 writer.Write(locationName);
 
-                byte areaProperties = (byte)((areaIcon & 0b_1111) + ((unknown1 & 0b_1111) << 4));
+                byte areaProperties = (byte)((areaIcon & 0b_1111) + ((momCallIntroParam & 0b_1111) << 4));
                 writer.Write(areaProperties);
 
                 uint last32 = (uint)(((weatherID & 0b_1111_111) << 1) +

@@ -290,6 +290,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── HGSS-only ─────────────────────────────────────────────────────────────────
         private decimal _worldmapX; public decimal WorldmapX { get => _worldmapX; set { if (Set(ref _worldmapX, value)) ApplyHgss(h => h.worldmapX = (byte)value); } }
         private decimal _worldmapY; public decimal WorldmapY { get => _worldmapY; set { if (Set(ref _worldmapY, value)) ApplyHgss(h => h.worldmapY = (byte)value); } }
+        private decimal _momCallIntroParam; public decimal MomCallIntroParam { get => _momCallIntroParam; set { if (Set(ref _momCallIntroParam, value)) ApplyHgss(h => h.momCallIntroParam = (byte)value); } }
         private int _followModeIndex = -1;
         public int FollowModeIndex { get => _followModeIndex; set { if (Set(ref _followModeIndex, value)) ApplyHgss(h => h.followMode = (byte)Math.Max(0, value)); } }
         private bool _kantoFlag;
@@ -894,10 +895,19 @@ namespace DSPRE.Avalonia.ViewModels
                         AreaSettingsIndex = h.locationType;
                         WorldmapX = h.worldmapX;
                         WorldmapY = h.worldmapY;
+                        MomCallIntroParam = h.momCallIntroParam;
                         FollowModeIndex = h.followMode;
                         KantoFlag = h.kantoFlag;
                         break;
                 }
+
+                // IsHgss/IsDp/ShowHgssOnly are computed straight off the static gameFamily, so Avalonia's
+                // binding never re-evaluates them on its own once the view is already visible; without
+                // this, HGSS-only fields (Out Calls/In Calls/Radio, Mom's Call, world map, follow mode)
+                // silently never show up even on a real HGSS ROM.
+                OnPropertyChanged(nameof(IsHgss));
+                OnPropertyChanged(nameof(IsDp));
+                OnPropertyChanged(nameof(ShowHgssOnly));
 
                 LoadFlags();
                 SyncCameraCombo(); UpdateCameraImage();

@@ -43,7 +43,7 @@
             </StackPanel>
           </Grid>
 
-          <StackPanel Spacing="2" IsVisible="{Binding ShowGenderPrize}">
+          <StackPanel Spacing="2" IsVisible="{Binding ShowGender}">
             <TextBlock Text="Gender" ToolTip.Tip="Used for DV/nature calculations."/>
             <ComboBox SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch">
               <ComboBoxItem>Male</ComboBoxItem>
@@ -51,7 +51,7 @@
             </ComboBox>
           </StackPanel>
 
-          <StackPanel Spacing="2" IsVisible="{Binding ShowGenderPrize}">
+          <StackPanel Spacing="2" IsVisible="{Binding ShowPrizeMul}">
             <TextBlock Text="Prize money multiplier"/>
             <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding PrizeMultiplier}"/>
           </StackPanel>

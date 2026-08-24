@@ -32,6 +32,7 @@
     <CoreCompile Include="$(DsMapDir)CommonScriptId.cs" />
     <CoreCompile Include="$(DsMapDir)OverworldSpriteTableExpansion.cs" />
     <CoreCompile Include="$(DsMapDir)TrainerClassTableExpansion.cs" />
+    <CoreCompile Include="$(DsMapDir)VsSeekerRematchTable.cs" />
     <CoreCompile Include="$(DsMapDir)SystemShell.cs" />
     <CoreCompile Include="$(DsMapDir)HeaderLists.cs" />
     <CoreCompile Include="$(DsMapDir)CrashReporter.cs" />

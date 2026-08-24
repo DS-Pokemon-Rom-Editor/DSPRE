@@ -139,15 +139,15 @@
             <CheckBox Content="Esc. Rope" IsChecked="{Binding Flag1}" Margin="0,0,16,0"/>
             <CheckBox Content="Fly"       IsChecked="{Binding Flag2}" Margin="0,0,16,0"/>
             <CheckBox Content="Run"       IsChecked="{Binding Flag3}" Margin="0,0,16,0"/>
-            <CheckBox Content="Flag 4" IsChecked="{Binding Flag4}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
-            <CheckBox Content="Flag 5" IsChecked="{Binding Flag5}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
-            <CheckBox Content="Flag 6" IsChecked="{Binding Flag6}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0"/>
+            <CheckBox Content="Out Calls" IsChecked="{Binding Flag4}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0" ToolTip.Tip="Whether the player can make outgoing Pokegear phone calls on this map."/>
+            <CheckBox Content="In Calls" IsChecked="{Binding Flag5}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0" ToolTip.Tip="Whether the player can receive incoming Pokegear phone calls on this map."/>
+            <CheckBox Content="Radio" IsChecked="{Binding Flag6}" IsVisible="{Binding ShowHgssOnly}" Margin="0,0,16,0" ToolTip.Tip="Whether the player can pick up Pokegear radio signal on this map."/>
           </WrapPanel>
         </GroupBox>
 
         <!-- HGSS-only -->
         <GroupBox Header="HGSS Settings" IsVisible="{Binding ShowHgssOnly}">
-          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
+          <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto,8,Auto">
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="World map coordinates"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
@@ -161,7 +161,11 @@
               <TextBlock Classes="fieldlabel" Text="Follow mode"/>
               <ComboBox HorizontalAlignment="Left" Width="160" ItemsSource="{Binding FollowModeItems}" SelectedIndex="{Binding FollowModeIndex}"/>
             </StackPanel>
-            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Spacing="2">
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
+              <TextBlock Classes="fieldlabel" Text="Mom's Call" ToolTip.Tip="Which intro line Mom uses when called from this map (offset added to her base call message)."/>
+              <NumericUpDown Width="90" HorizontalAlignment="Left" Minimum="0" Maximum="15" Value="{Binding MomCallIntroParam}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Region"/>
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <RadioButton Content="Johto" GroupName="region" IsChecked="{Binding JohtoFlag}"/>
