@@ -1273,6 +1273,18 @@ namespace DSPRE.Editors
 
             eyeContactMusicAltLabel.Enabled = encounterSSEQAltUpDown.Enabled = (encounterSSEQMainUpDown.Enabled && gameFamily == GameFamilies.HGSS);
             encounterSSEQAltUpDown.Value = output.musicN != null ? (ushort)output.musicN : 0;
+
+            if (TrainerClassTableExpansion.IsPrizeMulSupportedForCurrentRom && TrainerClassTableExpansion.TryReadPrizeMul(selection, out byte prizeMul, out _))
+            {
+                prizeMulLabel.Enabled = prizeMulUpDown.Enabled = true;
+                prizeMulUpDown.Value = prizeMul;
+            }
+            else
+            {
+                prizeMulLabel.Enabled = prizeMulUpDown.Enabled = false;
+                prizeMulUpDown.Value = 0;
+            }
+
             currentTrainerFile.trp.trainerClass = (byte)selection;
         }
 
@@ -1419,6 +1431,14 @@ namespace DSPRE.Editors
                 }
 
                 trainerClassEncounterMusicDict[b_selectedTrClass] = (dictEntry.entryOffset, eyeMusicID, altEyeMusicID);
+            }
+
+            if (TrainerClassTableExpansion.IsPrizeMulSupportedForCurrentRom)
+            {
+                if (!TrainerClassTableExpansion.TryWritePrizeMul(selectedTrClass, (byte)prizeMulUpDown.Value, out string prizeMulError))
+                {
+                    MessageBox.Show("Prize Multiplier wasn't saved: " + prizeMulError, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
 
             string newName = trainerClassNameTextbox.Text;

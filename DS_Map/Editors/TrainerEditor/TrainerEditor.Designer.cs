@@ -178,6 +178,8 @@
             this.partyPokemon3ComboBox = new DSPRE.InputComboBox();
             this.groupBox27 = new System.Windows.Forms.GroupBox();
             this.encounterSSEQMainUpDown = new System.Windows.Forms.NumericUpDown();
+            this.prizeMulLabel = new System.Windows.Forms.Label();
+            this.prizeMulUpDown = new System.Windows.Forms.NumericUpDown();
             this.trainerClassFrameMaxLabel = new System.Windows.Forms.Label();
             this.label40 = new System.Windows.Forms.Label();
             this.trClassFramePreviewUpDown = new System.Windows.Forms.NumericUpDown();
@@ -256,6 +258,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.partyPokemon3PictureBox)).BeginInit();
             this.groupBox27.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.encounterSSEQMainUpDown)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.prizeMulUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trClassFramePreviewUpDown)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trainerClassPicBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.partyCountUpDown)).BeginInit();
@@ -2039,13 +2042,36 @@
             this.groupBox27.Controls.Add(this.trainerClassNameTextbox);
             this.groupBox27.Controls.Add(this.label17);
             this.groupBox27.Controls.Add(this.trainerClassPicBox);
+            this.groupBox27.Controls.Add(this.prizeMulLabel);
+            this.groupBox27.Controls.Add(this.prizeMulUpDown);
             this.groupBox27.Location = new System.Drawing.Point(20, 494);
             this.groupBox27.Name = "groupBox27";
-            this.groupBox27.Size = new System.Drawing.Size(414, 123);
+            this.groupBox27.Size = new System.Drawing.Size(414, 155);
             this.groupBox27.TabIndex = 51;
             this.groupBox27.TabStop = false;
             this.groupBox27.Text = "Trainer Class Editor";
-            // 
+            //
+            // prizeMulLabel
+            //
+            this.prizeMulLabel.AutoSize = true;
+            this.prizeMulLabel.Location = new System.Drawing.Point(9, 117);
+            this.prizeMulLabel.Name = "prizeMulLabel";
+            this.prizeMulLabel.Size = new System.Drawing.Size(84, 13);
+            this.prizeMulLabel.TabIndex = 52;
+            this.prizeMulLabel.Text = "Prize Multiplier";
+            //
+            // prizeMulUpDown
+            //
+            this.prizeMulUpDown.Location = new System.Drawing.Point(9, 133);
+            this.prizeMulUpDown.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.prizeMulUpDown.Name = "prizeMulUpDown";
+            this.prizeMulUpDown.Size = new System.Drawing.Size(81, 20);
+            this.prizeMulUpDown.TabIndex = 53;
+            //
             // encounterSSEQMainUpDown
             // 
             this.encounterSSEQMainUpDown.Location = new System.Drawing.Point(146, 93);
@@ -2438,6 +2464,7 @@
             this.groupBox27.ResumeLayout(false);
             this.groupBox27.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.encounterSSEQMainUpDown)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.prizeMulUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trClassFramePreviewUpDown)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trainerClassPicBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.partyCountUpDown)).EndInit();
@@ -2553,6 +2580,8 @@
         private System.Windows.Forms.Label eyeContactMusicAltLabel;
         private System.Windows.Forms.NumericUpDown encounterSSEQAltUpDown;
         private System.Windows.Forms.Label eyeContactMusicLabel;
+        private System.Windows.Forms.Label prizeMulLabel;
+        private System.Windows.Forms.NumericUpDown prizeMulUpDown;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel4;
         private System.Windows.Forms.Button exportTrainerButton;
         private System.Windows.Forms.Button importTrainerButton;

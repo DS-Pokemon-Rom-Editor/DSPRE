@@ -68,14 +68,17 @@ namespace DSPRE
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
 
-        // sTrainerClassGender/sTrainerClassPrizeMul, Platinum/English only.
+        // sTrainerClassGender, Platinum/English only (repoint pointer for adding new classes).
         public static uint trainerClassGenderTablePointerOffset { get; private set; }
         public static uint trainerClassGenderTableVanillaOffset { get; private set; }
         public static int trainerClassGenderTableVanillaCount { get; private set; }
+        // sTrainerClassPrizeMul. Plat/DP store one byte per class; HGSS stores u16 {classId, multiplier}
+        // pairs instead, so trainerClassPrizeMulTableVanillaCount means "pairs" there, not bytes.
         public static int trainerClassPrizeMulOverlayNumber { get; private set; }
         public static uint trainerClassPrizeMulTablePointerOffset { get; private set; }
         public static uint trainerClassPrizeMulTableVanillaOffset { get; private set; }
         public static int trainerClassPrizeMulTableVanillaCount { get; private set; }
+        public static bool trainerClassPrizeMulTableIsPaired { get; private set; }
 
         public static uint flyTableOffset { get; private set; }
         public static int flyTableSize { get; private set; }
@@ -1554,8 +1557,9 @@ namespace DSPRE
                     break;
             }
 
-            // Repointed-table pointer + prize multiplier: only known for Platinum/English (Yako's guide).
-            // Every other version/language: offset not known.
+            // Gender-table repoint pointer (for adding new classes, Yako's guide): only known for
+            // Platinum/English. Prize-multiplier vanilla tables: known for Plat/DP/HGSS English, but
+            // only Platinum's has a known repoint pointer.
             if (gameFamily == GameFamilies.Plat && gameLanguage == GameLanguages.English)
             {
                 trainerClassGenderTablePointerOffset = 0x793B4;
@@ -1564,6 +1568,23 @@ namespace DSPRE
                 trainerClassPrizeMulTablePointerOffset = 0x816C;
                 trainerClassPrizeMulTableVanillaOffset = 0x359E0;
                 trainerClassPrizeMulTableVanillaCount = 0x69;
+                trainerClassPrizeMulTableIsPaired = false;
+            }
+            else if (gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.English)
+            {
+                trainerClassPrizeMulOverlayNumber = 11;
+                trainerClassPrizeMulTablePointerOffset = 0;
+                trainerClassPrizeMulTableVanillaOffset = 0x32960;
+                trainerClassPrizeMulTableVanillaCount = 0x62;
+                trainerClassPrizeMulTableIsPaired = false;
+            }
+            else if (gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English)
+            {
+                trainerClassPrizeMulOverlayNumber = 12;
+                trainerClassPrizeMulTablePointerOffset = 0;
+                trainerClassPrizeMulTableVanillaOffset = 0x34C04;
+                trainerClassPrizeMulTableVanillaCount = 129;
+                trainerClassPrizeMulTableIsPaired = true;
             }
         }
 
