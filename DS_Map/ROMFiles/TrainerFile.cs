@@ -204,8 +204,10 @@ namespace DSPRE.ROMFiles {
 
         public Party(bool readFirstByte, int maxPoke, Stream partyData, TrainerProperties traipr) {
             using (BinaryReader reader = new BinaryReader(partyData)) {
+                this.trp = traipr;
+                this.content = new PartyPokemon[maxPoke];
+                int i = 0;
                 try {
-                    this.trp = traipr;
                     if (readFirstByte) {
                         byte flags = reader.ReadByte();
 
@@ -224,8 +226,7 @@ namespace DSPRE.ROMFiles {
                     }
 
                     int endval = Math.Min((int)(partyData.Length - 1 / dividend), trp.partyCount);
-                    this.content = new PartyPokemon[maxPoke];
-                    for (int i = 0; i < endval; i++) {
+                    for (; i < endval; i++) {
                         byte difficulty = reader.ReadByte();
                         GenderAndAbilityFlags genderAndAbilityFlags = (GenderAndAbilityFlags)reader.ReadByte();
                         ushort level = reader.ReadUInt16();
@@ -255,11 +256,13 @@ namespace DSPRE.ROMFiles {
                             content[i] = new PartyPokemon(difficulty, level, pokemon, heldItem, moves); // Diamond and Pearl apparently dont save ball capsule data in enemy trainer pokedata!!!
 
                     }
-                    for (int i = endval; i < maxPoke; i++) {
-                        content[i] = new PartyPokemon();
-                    };
                 } catch (EndOfStreamException) {
                     MessageBox.Show("There was a problem reading the party data of this " + this.GetType().Name + ".", "Read Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+                // content[] must never have a null entry, so fill whatever wasn't read (past partyCount, or from wherever the stream ran out).
+                for (; i < maxPoke; i++) {
+                    content[i] = new PartyPokemon();
                 }
             }
         }
