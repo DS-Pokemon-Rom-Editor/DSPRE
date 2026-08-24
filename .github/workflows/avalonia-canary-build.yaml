@@ -1,0 +1,173 @@
+name: DSPRE Avalonia Canary Build
+
+on:
+  push:
+    branches:
+      - feature/avalonia
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build-windows:
+    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone Database Repository
+        run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+      - name: Clone ds-rom Repository
+        run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
+
+      - name: Publish DSPRE.Avalonia (win-x64)
+        run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64
+
+      - name: Build dsrom.exe
+        run: |
+          cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+          New-Item -ItemType Directory -Force -Path "DSPRE.Avalonia/bin/publish/win-x64/Tools" | Out-Null
+          Copy-Item -Path "ds-rom/target/release/dsrom.exe" -Destination "DSPRE.Avalonia/bin/publish/win-x64/Tools/dsrom.exe" -Force
+
+      - name: Bundle Databases
+        run: |
+          mkdir "DSPRE.Avalonia/bin/publish/win-x64/databases"
+          robocopy databases "DSPRE.Avalonia/bin/publish/win-x64/databases" /E /XD "databases\.git\objects\pack"
+          if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
+
+      - name: Zip Windows build
+        run: Compress-Archive -Path "DSPRE.Avalonia/bin/publish/win-x64/*" -DestinationPath DSPRE-Avalonia-win-x64-canary.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dspre-avalonia-win-x64
+          path: DSPRE-Avalonia-win-x64-canary.zip
+
+  build-linux:
+    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone Database Repository
+        run: git clone https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git databases
+
+      - name: Clone ds-rom Repository
+        run: git clone --depth 1 https://github.com/DS-Pokemon-Rom-Editor/ds-rom.git ds-rom
+
+      - name: Publish DSPRE.Avalonia (linux-x64)
+        run: dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=linux-x64
+
+      - name: Build dsrom (Linux)
+        run: |
+          cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
+          mkdir -p DSPRE.Avalonia/bin/publish/linux-x64/Tools
+          cp ds-rom/target/release/dsrom DSPRE.Avalonia/bin/publish/linux-x64/Tools/dsrom
+          chmod +x DSPRE.Avalonia/bin/publish/linux-x64/Tools/dsrom
+
+      # TODO: same known gap as base-build-nightly.yaml - drop the remaining Linux tool binaries
+      # into Tools/ with these exact names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
+
+      - name: Bundle Databases
+        run: |
+          mkdir -p DSPRE.Avalonia/bin/publish/linux-x64/databases
+          rsync -a --exclude='.git/objects/pack' databases/ DSPRE.Avalonia/bin/publish/linux-x64/databases/
+
+      - name: Make executable
+        run: chmod +x DSPRE.Avalonia/bin/publish/linux-x64/DSPRE.Avalonia
+
+      - name: Archive Linux build
+        run: tar -C DSPRE.Avalonia/bin/publish/linux-x64 -czf DSPRE-Avalonia-linux-x64-canary.tar.gz .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dspre-avalonia-linux-x64
+          path: DSPRE-Avalonia-linux-x64-canary.tar.gz
+
+  release:
+    if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dspre-avalonia-win-x64
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dspre-avalonia-linux-x64
+
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      - name: Delete previous release
+        run: |
+          gh release delete --yes canary-avalonia || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update canary-avalonia tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f canary-avalonia -m "Avalonia canary build for commit ${{ github.sha }}"
+          git push -f origin canary-avalonia
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Create new release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: canary-avalonia
+          name: DSPRE Avalonia Canary Build ${{ steps.date.outputs.date }} (${{ github.sha }})
+          files: |
+            DSPRE-Avalonia-win-x64-canary.zip
+            DSPRE-Avalonia-linux-x64-canary.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ## ⚠️ Avalonia Canary Build Notice ⚠️
+            This is a Canary Build of the pure Avalonia DSPRE shell (no WinForms), automatically
+            generated from the latest push to `feature/avalonia`. Windows and Linux, both
+            self-contained. This is the in-progress cross-platform shell — expect missing features,
+            rough edges, and instability.
+
+            ## 🚧 What does this mean?
+            This build reflects ongoing development on the Avalonia migration and is not a stable
+            release. Features may be incomplete, subject to change, or cause unexpected issues.
+
+            ## 💡 Who is this for?
+            Developers and testers tracking the Avalonia migration who want to try the cross-platform
+            shell as it develops. If you're looking for a reliable version, use the latest Stable
+            Release instead.
+          prerelease: true
+          generate_release_notes: true
