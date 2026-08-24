@@ -809,6 +809,14 @@ namespace DSPRE {
             return DecodeMonIconTiles(imageBase, paletteBase.Palette[0]);
         }
 
+        /// <summary>Same graphic as <see cref="GetMonIconGraphicBitmap"/>, but as an indexed PNG carrying
+        /// all 16 real palette colors (even ones this icon's pixels don't happen to use), so the file is
+        /// ready to hand-edit and reimport without losing slots an external tool would otherwise drop.</summary>
+        public static Bitmap GetMonIconGraphicIndexedBitmap(int species, int paletteIdOverride = -1) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _, out _);
+            return DecodeMonIconTilesIndexed(imageBase, paletteBase.Palette[0]);
+        }
+
         private static Bitmap DecodeMonIconTiles(ImageBase imageBase, Color[] palette) {
             byte[] tiles = imageBase.Tiles;
             int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;   // 32 bytes/tile @ 4bpp
@@ -835,6 +843,63 @@ namespace DSPRE {
                             bmp.SetPixel(tx * MonIconTileSize + x, ty * MonIconTileSize + y,
                                 idx == 0 ? Color.Transparent : Color.FromArgb(255, c.R, c.G, c.B));
                         }
+            return bmp;
+        }
+
+        // Same tile traversal as DecodeMonIconTiles, but keeps raw palette indices instead of resolving
+        // them to colors, so the result can be saved as an indexed PNG with the full 16-slot palette.
+        private static Bitmap DecodeMonIconTilesIndexed(ImageBase imageBase, Color[] palette) {
+            byte[] tiles = imageBase.Tiles;
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
+            int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            int w = MonIconWidth;
+            int h = tilesTall * MonIconTileSize;
+
+            byte[] indices = new byte[w * h];   // raster order (row-major), one byte per pixel
+            int pos = 0;
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            int byteIndex = pos / 2;
+                            int idx = 0;
+                            if (byteIndex < tiles.Length)
+                            {
+                                byte packed = tiles[byteIndex];
+                                idx = (pos % 2 == 0) ? (packed & 0x0F) : ((packed & 0xF0) >> 4);
+                            }
+                            pos++;
+                            int px = tx * MonIconTileSize + x, py = ty * MonIconTileSize + y;
+                            indices[py * w + px] = (byte)idx;
+                        }
+
+            // Pack into 4bpp nibble rows (w is already a multiple of 8, so no stride padding needed):
+            // GDI+ puts the first pixel of a pair in the high nibble, the second in the low nibble.
+            int stride = w / 2;
+            byte[] packed4bpp = new byte[stride * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    byte idx = indices[y * w + x];
+                    int byteOffset = y * stride + x / 2;
+                    if (x % 2 == 0) packed4bpp[byteOffset] = (byte)((packed4bpp[byteOffset] & 0x0F) | (idx << 4));
+                    else packed4bpp[byteOffset] = (byte)((packed4bpp[byteOffset] & 0xF0) | (idx & 0x0F));
+                }
+
+            // Not IndexedBitmapHandler.MakeImage: it copies width*height bytes regardless of format,
+            // which only holds for 8bpp (1 byte/pixel); a 4bpp packed array is half that size.
+            Bitmap bmp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format4bppIndexed);
+            var rect = new Rectangle(0, 0, w, h);
+            var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
+            System.Runtime.InteropServices.Marshal.Copy(packed4bpp, 0, bmpData.Scan0, packed4bpp.Length);
+            bmp.UnlockBits(bmpData);
+
+            System.Drawing.Imaging.ColorPalette pal = bmp.Palette;
+            for (int i = 0; i < pal.Entries.Length; i++)
+                pal.Entries[i] = i < palette.Length ? Color.FromArgb(i == 0 ? 0 : 255, palette[i]) : Color.Black;
+            bmp.Palette = pal;
             return bmp;
         }
 
@@ -926,6 +991,29 @@ namespace DSPRE {
             return paletteId;
         }
 
+        /// <summary>Assigns which palette bank (0-2) a species' icon uses, writing to the same
+        /// ARM9/overlay icon-palette table <see cref="GetMonIconPaletteId"/> reads.</summary>
+        public static void SetMonIconPaletteId(int species, int paletteId) {
+            ResolveIconPalTableLocation(out string iconTablePath, out int iconPalTableOffsetFromFileStart);
+            DSUtils.WriteToFile(iconTablePath, new[] { (byte)paletteId }, (uint)(iconPalTableOffsetFromFileStart + species));
+        }
+
+        private static void ResolveIconPalTableLocation(out string iconTablePath, out int iconPalTableOffsetFromFileStart) {
+            if (RomInfo.isHGE) {
+                // if overlay 129 exists, read it from there
+                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
+                iconTablePath = OverlayUtils.GetPath(129);
+            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+                // if there is a synthetic overlay, read it from there
+                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
+                iconTablePath = Filesystem.expArmPath;
+            } else {
+                // default handling
+                iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
+                iconTablePath = RomInfo.arm9Path;
+            }
+        }
+
         // Loads the mon-icon NCLR/NCGR/NCER + enabled-OAM list. Shared by GetPokePic and the icon-graphic
         // editing methods above.
         private static void LoadMonIconParts(int species, int paletteIdOverride,
@@ -946,21 +1034,7 @@ namespace DSPRE {
             if (paletteIdOverride >= 0) {
                 paletteId = paletteIdOverride;
             } else {
-                string iconTablePath;
-                int iconPalTableOffsetFromFileStart;
-                if (RomInfo.isHGE) {
-                    // if overlay 129 exists, read it from there
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
-                    iconTablePath = OverlayUtils.GetPath(129);
-                } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
-                    // if there is a synthetic overlay, read it from there
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
-                    iconTablePath = Filesystem.expArmPath;
-                } else {
-                    // default handling
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
-                    iconTablePath = RomInfo.arm9Path;
-                }
+                ResolveIconPalTableLocation(out string iconTablePath, out int iconPalTableOffsetFromFileStart);
 
                 using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
                     paletteId = idReader.ReadByte();

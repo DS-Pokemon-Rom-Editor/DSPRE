@@ -467,6 +467,10 @@ namespace DSPRE.Editors {
                 }
             }
 
+            if (currentLoadedId > 0) {
+                DSUtils.SetMonIconPaletteId(currentLoadedId, partyPaletteIndex);
+            }
+
             SetDirty(false);
         }
 
@@ -474,6 +478,7 @@ namespace DSPRE.Editors {
         public InputComboBox IndexBox;
         private NumericUpDown spriteYNumeric, shadowXNumeric, movementTypeNumeric;
         private ComboBox shadowSizeCombo, partyPaletteCombo;
+        private CheckBox fullPaletteExportCheck;
         private GroupBox movementGroup, heightsGroup;
         private NumericUpDown frontHeightMNumeric, frontHeightFNumeric, backHeightMNumeric, backHeightFNumeric;
         private NumericUpDown frameNumeric;
@@ -593,8 +598,10 @@ namespace DSPRE.Editors {
             importBtn.Click += ImportIconButton_Click;
             var exportBtn = new Button { Text = "Export PNG", AutoSize = true };
             exportBtn.Click += ExportIconButton_Click;
+            fullPaletteExportCheck = new CheckBox { Text = "Full palette", AutoSize = true, Margin = new Padding(3, 6, 3, 3) };
             iconButtons.Controls.Add(importBtn);
             iconButtons.Controls.Add(exportBtn);
+            iconButtons.Controls.Add(fullPaletteExportCheck);
 
             var paletteRow = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
             paletteRow.Controls.Add(new Label { Text = "Palette bank:", AutoSize = true, Margin = new Padding(3, 6, 3, 3) });
@@ -700,7 +707,11 @@ namespace DSPRE.Editors {
             using (SaveFileDialog sfd = new SaveFileDialog { Filter = "PNG Image|*.png", FileName = $"mon{currentLoadedId:D3}_icon.png" }) {
                 if (sfd.ShowDialog() != DialogResult.OK) return;
                 try {
-                    Bitmap img = pendingIconGraphic ?? DSUtils.GetMonIconGraphicBitmap(currentLoadedId, partyPaletteIndex);
+                    // Full-palette export needs the raw ROM tile indices, so it only applies to what's
+                    // actually saved; a pending unsaved import is already a plain PNG with no such data.
+                    Bitmap img = pendingIconGraphic != null ? pendingIconGraphic
+                        : fullPaletteExportCheck.Checked ? DSUtils.GetMonIconGraphicIndexedBitmap(currentLoadedId, partyPaletteIndex)
+                        : DSUtils.GetMonIconGraphicBitmap(currentLoadedId, partyPaletteIndex);
                     img.Save(sfd.FileName, System.Drawing.Imaging.ImageFormat.Png);
                 } catch (Exception ex) {
                     MessageBox.Show("Export failed: " + ex.Message, "Export Icon Graphic", MessageBoxButtons.OK, MessageBoxIcon.Error);
