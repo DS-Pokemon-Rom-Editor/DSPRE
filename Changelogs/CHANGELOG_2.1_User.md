@@ -4,6 +4,15 @@
 
 ---
 
+## 2.1.8.1
+- Pokémon Sprite Editor: fixed a bug where importing a shiny palette for one pose (front or back) could
+  silently wipe out or corrupt colors the other pose already had, turning them white, black, or some other
+  wrong color. The editor also no longer asks a confusing "merge or replace?" question when importing, it
+  now does the obviously correct thing automatically depending on whether you're importing the first image
+  for that palette or a later one.
+
+---
+
 ## 2.1.8
 - New Rock Smash editor (Item Table Editor, HeartGold/SoulSilver): edit each map header's item-drop odds
   and which of the three item tables it rolls from, plus the tables themselves (Default, Ruins of Alph,
@@ -11,11 +20,6 @@
 - New Starter Pokémon editor (Pokémon menu, Diamond/Pearl/Platinum/HeartGold/SoulSilver): change the 3
   starter species, their held item, and (HeartGold English only) their level, with Pokémon and item icons
   shown next to each field. Thanks to Shamanka27 for finding the HeartGold offsets.
-- Pokémon Sprite Editor: fixed a bug where importing a shiny palette for one pose (front or back) could
-  silently wipe out colors the other pose already had, turning them white or some other wrong color. The
-  editor also no longer asks a confusing "merge or replace?" question when importing, it now does the
-  obviously correct thing automatically depending on whether you're importing the first image for that
-  palette or a later one.
 - Pokémon Sprite Editor: the window now scrolls if it doesn't fit on your screen, instead of just cutting
   off the bottom.
 

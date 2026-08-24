@@ -209,23 +209,22 @@ namespace DSPRE.Editors.Utils
             return temp;
         }
 
-        public ColorPalette AlternatePalette(Bitmap parent, Bitmap child, ColorPalette existing = null)
+        // For each of parent's own local palette slots, finds a parent pixel using that slot number
+        // and reads whatever color sits at that same pixel position in child. The result is indexed
+        // by PARENT's slot numbers, not child's, which matters when parent is a Sprites[] bitmap:
+        // that numbering is what Sprites[]'s own pixel data already uses, so a caller merging shiny
+        // colors across poses (MergeByIndex) must keep this indexing rather than child's own.
+        // resolved[i] tells the caller which slots this pair could actually derive.
+        public ColorPalette AlternatePalette(Bitmap parent, Bitmap child, out bool[] resolved)
         {
             Bitmap temp = new Bitmap(1, 1, parent.PixelFormat);
             ColorPalette newPalette = temp.Palette;
             ColorPalette ChildPalette = child.Palette;
             byte[] ParentArray = GetArray(parent);
             byte[] ChildArray = GetArray(child);
+            resolved = new bool[ChildPalette.Entries.Length];
             if (ParentArray.Length != ChildArray.Length)
                 return null;
-            // A slot only used by the other pose (e.g. back uses it but this front image doesn't)
-            // can't be resolved from this parent/child pair alone, so seed with whatever was
-            // already known for it instead of leaving it at the bitmap's raw default palette.
-            if (existing != null)
-            {
-                for (int i = 0; i < newPalette.Entries.Length && i < existing.Entries.Length; i++)
-                    newPalette.Entries[i] = existing.Entries[i];
-            }
             for (int i = 0; i < ChildPalette.Entries.Length; i++)
             {
                 for (int j = 0; j < ParentArray.Length; j++)
@@ -233,11 +232,32 @@ namespace DSPRE.Editors.Utils
                     if (ParentArray[j] == i)
                     {
                         newPalette.Entries[i] = ChildPalette.Entries[ChildArray[j]];
+                        resolved[i] = true;
                         break;
                     }
                 }
             }
             return newPalette;
+        }
+
+        // LoadImages() renders both Normal and Shiny from the SAME Sprites[] pixel-index bitmap
+        // (it just swaps .Palette), so a pose's shiny colors have to land at the exact slot numbers
+        // AlternatePalette derived them at against that bitmap -- unlike Normal's PaletteMatch, there
+        // is no freedom to reassign a color to a different free slot, since nothing remaps Sprites[]'s
+        // pixel data to match. A slot the new pose resolves always wins; a slot only an earlier pose
+        // resolved keeps that value.
+        public ColorPalette MergeByIndex(ColorPalette existing, bool[] existingResolved, ColorPalette candidate, bool[] candidateResolved)
+        {
+            Bitmap temp = new Bitmap(1, 1, PixelFormat.Format8bppIndexed);
+            ColorPalette merged = temp.Palette;
+            for (int i = 0; i < 16; i++)
+            {
+                if (i < candidateResolved.Length && candidateResolved[i])
+                    merged.Entries[i] = candidate.Entries[i];
+                else if (i < existingResolved.Length && existingResolved[i] && existing != null && i < existing.Entries.Length)
+                    merged.Entries[i] = existing.Entries[i];
+            }
+            return merged;
         }
 
         public Bitmap PaletteMatch(ColorPalette parent, Bitmap child, bool[] used = null)
