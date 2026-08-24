@@ -121,6 +121,7 @@
             this.eggMoveEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.battleTowerEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.starterEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.trainerFlagBulkEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -1008,7 +1009,8 @@
             this.tMEditorToolStripMenuItem,
             this.eggMoveEditorToolStripMenuItem,
             this.battleTowerEditorToolStripMenuItem,
-            this.starterEditorToolStripMenuItem});
+            this.starterEditorToolStripMenuItem,
+            this.trainerFlagBulkEditorToolStripMenuItem});
             this.otherEditorsToolStripMenuItem.Enabled = false;
             this.otherEditorsToolStripMenuItem.Name = "otherEditorsToolStripMenuItem";
             this.otherEditorsToolStripMenuItem.Size = new System.Drawing.Size(88, 20);
@@ -1104,7 +1106,14 @@
             this.starterEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.starterEditorToolStripMenuItem.Text = "Starter Pokemon Editor";
             this.starterEditorToolStripMenuItem.Click += new System.EventHandler(this.starterEditorToolStripMenuItem_Click);
-            // 
+            //
+            // trainerFlagBulkEditorToolStripMenuItem
+            //
+            this.trainerFlagBulkEditorToolStripMenuItem.Name = "trainerFlagBulkEditorToolStripMenuItem";
+            this.trainerFlagBulkEditorToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.trainerFlagBulkEditorToolStripMenuItem.Text = "Trainer Flag Bulk Editor";
+            this.trainerFlagBulkEditorToolStripMenuItem.Click += new System.EventHandler(this.trainerFlagBulkEditorToolStripMenuItem_Click);
+            //
             // aboutToolStripMenuItem1
             // 
             this.aboutToolStripMenuItem1.Name = "aboutToolStripMenuItem1";
@@ -1757,6 +1766,7 @@
         private System.Windows.Forms.ToolStripMenuItem eggMoveEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem battleTowerEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem starterEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem trainerFlagBulkEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem generateDexExportsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem researchHelperToolStripMenuItem;
     }

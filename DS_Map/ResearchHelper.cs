@@ -1035,6 +1035,109 @@ namespace DSPRE
 
                     #endregion
 
+                    #region Overworld Watcher Tab
+
+                    private List<OwEntryUsageResult> owEntryUsageResults = new List<OwEntryUsageResult>();
+
+                    /// <summary>
+                    /// Data class to hold OW Entry ID usage search results
+                    /// </summary>
+                    private class OwEntryUsageResult
+                    {
+                        public int EventFileID { get; set; }
+                        public int OwIndex { get; set; }
+                        public int OwID { get; set; }
+                        public string Position { get; set; }
+                        public int Movement { get; set; }
+                        public int ScriptNumber { get; set; }
+                    }
+
+                    private void owSearchButton_Click(object sender, EventArgs e)
+                    {
+                        SearchOverworldEntryUsage();
+                    }
+
+                    private void owClearButton_Click(object sender, EventArgs e)
+                    {
+                        owEntryIdNumericUpDown.Value = 0;
+                        owWatcherDataGridView.Rows.Clear();
+                        owEntryUsageResults.Clear();
+                        statusLabel.Text = "Overworld Watcher search cleared";
+                    }
+
+                    private void SearchOverworldEntryUsage()
+                    {
+                        if (!dataLoaded)
+                        {
+                            MessageBox.Show("Please wait for data to finish loading.", "Data Not Ready", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        int owEntryId = (int)owEntryIdNumericUpDown.Value;
+
+                        statusLabel.Text = $"Searching for OW Entry ID {owEntryId}...";
+                        Application.DoEvents();
+
+                        owEntryUsageResults.Clear();
+                        owWatcherDataGridView.Rows.Clear();
+
+                        foreach (var eventFile in cachedEventFiles)
+                        {
+                            if (eventFile.overworlds == null) continue;
+
+                            for (int i = 0; i < eventFile.overworlds.Count; i++)
+                            {
+                                var ow = eventFile.overworlds[i];
+                                if (ow.overlayTableEntry == owEntryId)
+                                {
+                                    owEntryUsageResults.Add(new OwEntryUsageResult
+                                    {
+                                        EventFileID = eventFile.ID,
+                                        OwIndex = i,
+                                        OwID = ow.owID,
+                                        Position = $"Map ({ow.xMapPosition}, {ow.yMapPosition}) / Matrix ({ow.xMatrixPosition}, {ow.yMatrixPosition})",
+                                        Movement = ow.movement,
+                                        ScriptNumber = ow.scriptNumber
+                                    });
+                                }
+                            }
+                        }
+
+                        PopulateOwWatcherDataGridView(owEntryUsageResults);
+                        statusLabel.Text = $"Found {owEntryUsageResults.Count} overworld event(s) using OW Entry ID {owEntryId}";
+                    }
+
+                    private void PopulateOwWatcherDataGridView(IList<OwEntryUsageResult> results)
+                    {
+                        owWatcherDataGridView.Rows.Clear();
+
+                        foreach (var result in results)
+                        {
+                            owWatcherDataGridView.Rows.Add(result.EventFileID, result.OwIndex, result.OwID, result.Position, result.Movement, result.ScriptNumber);
+                        }
+                    }
+
+                    private void owWatcherDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+                    {
+                        if (e.RowIndex < 0) return;
+
+                        int eventFileId = (int)owWatcherDataGridView.Rows[e.RowIndex].Cells[0].Value;
+                        int owIndex = (int)owWatcherDataGridView.Rows[e.RowIndex].Cells[1].Value;
+
+                        var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
+                        if (mainProgram != null)
+                        {
+                            EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, eventFileId, owIndex);
+                            statusLabel.Text = $"Opened Event File {eventFileId}, Overworld {owIndex}";
+                        }
+                        else
+                        {
+                            statusLabel.Text = "Could not find main window to open editor";
+                        }
+                    }
+
+                    #endregion
+
                     #region Script Watcher Tab
 
                     private List<ScriptFileReferenceResult> scriptFileReferenceResults = new List<ScriptFileReferenceResult>();
@@ -1207,8 +1310,9 @@ namespace DSPRE
                         scriptIdUsageResults.Clear();
                         idWatcherDataGridView.Rows.Clear();
 
-                        // First, find which event files are associated with headers that use this script file
+                        // First, find which event files and level scripts are associated with headers that use this script file
                         HashSet<int> associatedEventFileIds = new HashSet<int>();
+                        HashSet<int> associatedLevelScriptIds = new HashSet<int>();
                         int headerCount = RomInfo.GetHeaderCount();
 
                         for (ushort i = 0; i < headerCount; i++)
@@ -1219,6 +1323,7 @@ namespace DSPRE
                                 if (header != null && header.scriptFileID == scriptFileId)
                                 {
                                     associatedEventFileIds.Add(header.eventFileID);
+                                    associatedLevelScriptIds.Add(header.levelScriptID);
                                 }
                             }
                             catch { }
@@ -1288,9 +1393,179 @@ namespace DSPRE
                             }
                         }
 
+                        // Level scripts reference a script number the same way overworlds/spawnables/triggers do, so check those too.
+                        foreach (var levelScript in cachedLevelScriptFiles)
+                        {
+                            if (!associatedLevelScriptIds.Contains(levelScript.ID) || levelScript.bufferSet == null)
+                                continue;
+
+                            for (int i = 0; i < levelScript.bufferSet.Count; i++)
+                            {
+                                var trig = levelScript.bufferSet[i];
+                                if (trig.scriptTriggered == scriptId)
+                                {
+                                    scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                    {
+                                        EventFileID = levelScript.ID,
+                                        EventType = "Level Script",
+                                        EventIndex = i,
+                                        Details = trig.ToString()
+                                    });
+                                }
+                            }
+                        }
+
+                        // Common scripts aren't tied to any header's own scriptFileID, so scan every event file too.
+                        int commonScriptHits = 0;
+                        foreach (var eventFile in cachedEventFiles)
+                        {
+                            if (eventFile.overworlds != null)
+                            {
+                                for (int i = 0; i < eventFile.overworlds.Count; i++)
+                                {
+                                    var ow = eventFile.overworlds[i];
+                                    var resolved = CommonScriptId.Resolve(RomInfo.gameFamily, ow.scriptNumber);
+                                    if (resolved.Kind == CommonScriptId.Kind.Resolved && resolved.ScriptArchiveId == scriptFileId && resolved.ManualUserId == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Overworld (Common Script)",
+                                            EventIndex = i,
+                                            Details = ow.ToString()
+                                        });
+                                        commonScriptHits++;
+                                    }
+                                }
+                            }
+
+                            if (eventFile.spawnables != null)
+                            {
+                                for (int i = 0; i < eventFile.spawnables.Count; i++)
+                                {
+                                    var sp = eventFile.spawnables[i];
+                                    var resolved = CommonScriptId.Resolve(RomInfo.gameFamily, sp.scriptNumber);
+                                    if (resolved.Kind == CommonScriptId.Kind.Resolved && resolved.ScriptArchiveId == scriptFileId && resolved.ManualUserId == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Spawnable (Common Script)",
+                                            EventIndex = i,
+                                            Details = sp.ToString()
+                                        });
+                                        commonScriptHits++;
+                                    }
+                                }
+                            }
+
+                            if (eventFile.triggers != null)
+                            {
+                                for (int i = 0; i < eventFile.triggers.Count; i++)
+                                {
+                                    var tr = eventFile.triggers[i];
+                                    var resolved = CommonScriptId.Resolve(RomInfo.gameFamily, tr.scriptNumber);
+                                    if (resolved.Kind == CommonScriptId.Kind.Resolved && resolved.ScriptArchiveId == scriptFileId && resolved.ManualUserId == scriptId)
+                                    {
+                                        scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                        {
+                                            EventFileID = eventFile.ID,
+                                            EventType = "Trigger (Common Script)",
+                                            EventIndex = i,
+                                            Details = tr.ToString()
+                                        });
+                                        commonScriptHits++;
+                                    }
+                                }
+                            }
+                        }
+
+                        // scriptTriggered is a "script to run" number just like scriptNumber, so it can be a Common Script too.
+                        foreach (var levelScript in cachedLevelScriptFiles)
+                        {
+                            if (levelScript.bufferSet == null) continue;
+
+                            for (int i = 0; i < levelScript.bufferSet.Count; i++)
+                            {
+                                var trig = levelScript.bufferSet[i];
+                                var resolved = CommonScriptId.Resolve(RomInfo.gameFamily, trig.scriptTriggered);
+                                if (resolved.Kind == CommonScriptId.Kind.Resolved && resolved.ScriptArchiveId == scriptFileId && resolved.ManualUserId == scriptId)
+                                {
+                                    scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                    {
+                                        EventFileID = levelScript.ID,
+                                        EventType = "Level Script (Common Script)",
+                                        EventIndex = i,
+                                        Details = trig.ToString()
+                                    });
+                                    commonScriptHits++;
+                                }
+                            }
+                        }
+
+                        // Scripts invoke Common Scripts with the dedicated "CommonScript" command, so scan every
+                        // script and function for it. Actions are movement bytecode and can't contain it.
+                        var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+                        ushort? commonScriptCmdId = null;
+                        foreach (var kvp in commandInfoDict)
+                        {
+                            if (kvp.Value.Name == "CommonScript")
+                            {
+                                commonScriptCmdId = kvp.Key;
+                                break;
+                            }
+                        }
+
+                        if (commonScriptCmdId.HasValue)
+                        {
+                            foreach (var scriptFile in cachedScriptFiles)
+                            {
+                                commonScriptHits += ScanContainersForCommonScriptCommand(scriptFile.allScripts, commonScriptCmdId.Value, scriptFileId, scriptId, scriptFile.fileID, "Script");
+                                commonScriptHits += ScanContainersForCommonScriptCommand(scriptFile.allFunctions, commonScriptCmdId.Value, scriptFileId, scriptId, scriptFile.fileID, "Function");
+                            }
+                        }
+
                         // Populate results
                         PopulateIdWatcherDataGridView(scriptIdUsageResults);
-                        statusLabel.Text = $"Found {scriptIdUsageResults.Count} uses of Script {scriptId} in associated event files";
+                        statusLabel.Text = $"Found {scriptIdUsageResults.Count} uses of Script {scriptId} in Script File {scriptFileId}" +
+                            (commonScriptHits > 0 ? $" ({commonScriptHits} via Common Script references)" : "");
+                    }
+
+                    /// <summary>
+                    /// Scans a list of script/function containers for calls to the "CommonScript" command
+                    /// (u16 Global Script ID parameter) that resolve to the given target archive+script.
+                    /// </summary>
+                    private int ScanContainersForCommonScriptCommand(List<ScriptCommandContainer> containers, ushort commonScriptCmdId, int targetScriptFileId, int targetScriptId, int sourceScriptFileId, string containerLabel)
+                    {
+                        int hits = 0;
+                        if (containers == null) return 0;
+
+                        foreach (var container in containers)
+                        {
+                            if (container.commands == null) continue;
+
+                            foreach (var cmd in container.commands)
+                            {
+                                if (cmd.id != commonScriptCmdId || cmd.cmdParams == null || cmd.cmdParams.Count == 0)
+                                    continue;
+
+                                int globalScriptId = GetParamValue(cmd.cmdParams[0]);
+                                var resolved = CommonScriptId.Resolve(RomInfo.gameFamily, globalScriptId);
+                                if (resolved.Kind == CommonScriptId.Kind.Resolved && resolved.ScriptArchiveId == targetScriptFileId && resolved.ManualUserId == targetScriptId)
+                                {
+                                    scriptIdUsageResults.Add(new ScriptIdUsageResult
+                                    {
+                                        EventFileID = sourceScriptFileId,
+                                        EventType = $"{containerLabel} Command (Common Script)",
+                                        EventIndex = (int)container.manualUserID,
+                                        Details = $"CommonScript call to Global Script ID {globalScriptId}"
+                                    });
+                                    hits++;
+                                }
+                            }
+                        }
+
+                        return hits;
                     }
 
                     private void PopulateIdWatcherDataGridView(IList<ScriptIdUsageResult> results)
@@ -1314,24 +1589,40 @@ namespace DSPRE
                         var mainProgram = Application.OpenForms["MainProgram"] as MainProgram;
                         if (mainProgram != null)
                         {
-                            switch (eventType)
+                            if (eventType.StartsWith("Overworld"))
                             {
-                                case "Overworld":
-                                    EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, eventFileId, eventIndex);
-                                    statusLabel.Text = $"Opened Event File {eventFileId}, Overworld {eventIndex}";
-                                    break;
-                                case "Spawnable":
-                                    EditorPanels.eventEditor.OpenEventEditorWithSpawnable(mainProgram, eventFileId, eventIndex);
-                                    statusLabel.Text = $"Opened Event File {eventFileId}, Spawnable {eventIndex}";
-                                    break;
-                                case "Trigger":
-                                    EditorPanels.eventEditor.OpenEventEditorWithTrigger(mainProgram, eventFileId, eventIndex);
-                                    statusLabel.Text = $"Opened Event File {eventFileId}, Trigger {eventIndex}";
-                                    break;
-                                default:
-                                    EditorPanels.eventEditor.OpenEventEditor(mainProgram, eventFileId);
-                                    statusLabel.Text = $"Opened Event File {eventFileId}";
-                                    break;
+                                EditorPanels.eventEditor.OpenEventEditorWithOverworld(mainProgram, eventFileId, eventIndex);
+                                statusLabel.Text = $"Opened Event File {eventFileId}, Overworld {eventIndex}";
+                            }
+                            else if (eventType.StartsWith("Spawnable"))
+                            {
+                                EditorPanels.eventEditor.OpenEventEditorWithSpawnable(mainProgram, eventFileId, eventIndex);
+                                statusLabel.Text = $"Opened Event File {eventFileId}, Spawnable {eventIndex}";
+                            }
+                            else if (eventType.StartsWith("Trigger"))
+                            {
+                                EditorPanels.eventEditor.OpenEventEditorWithTrigger(mainProgram, eventFileId, eventIndex);
+                                statusLabel.Text = $"Opened Event File {eventFileId}, Trigger {eventIndex}";
+                            }
+                            else if (eventType.StartsWith("Level Script"))
+                            {
+                                EditorPanels.levelScriptEditor.OpenLevelScriptEditor(mainProgram, eventFileId);
+                                statusLabel.Text = $"Opened Level Script {eventFileId}";
+                            }
+                            else if (eventType.StartsWith("Script Command"))
+                            {
+                                EditorPanels.scriptEditor.OpenScriptEditorAndNavigate(mainProgram, eventFileId, eventIndex);
+                                statusLabel.Text = $"Opened Script File {eventFileId}, Script {eventIndex}";
+                            }
+                            else if (eventType.StartsWith("Function Command"))
+                            {
+                                EditorPanels.scriptEditor.OpenScriptEditor(mainProgram, eventFileId);
+                                statusLabel.Text = $"Opened Script File {eventFileId} (see Function {eventIndex})";
+                            }
+                            else
+                            {
+                                EditorPanels.eventEditor.OpenEventEditor(mainProgram, eventFileId);
+                                statusLabel.Text = $"Opened Event File {eventFileId}";
                             }
                         }
                         else
@@ -1432,7 +1723,7 @@ namespace DSPRE
                         headerInfoDataGridView.Rows.Add("Music Day ID", header.musicDayID);
                         headerInfoDataGridView.Rows.Add("Music Night ID", header.musicNightID);
                         headerInfoDataGridView.Rows.Add("Weather ID", header.weatherID);
-                        headerInfoDataGridView.Rows.Add("Wild Pokémon", header.wildPokemon);
+                        headerInfoDataGridView.Rows.Add("Wild Pokï¿½mon", header.wildPokemon);
                         headerInfoDataGridView.Rows.Add("Location Specifier", header.locationSpecifier);
                         headerInfoDataGridView.Rows.Add("Flags", $"0x{header.flags:X2}");
                     }

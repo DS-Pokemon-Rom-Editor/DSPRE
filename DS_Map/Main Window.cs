@@ -2338,6 +2338,14 @@ namespace DSPRE
             helper.Show();
         }
 
+        private void trainerFlagBulkEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var bulkEditor = new TrainerFlagBulkEditor())
+            {
+                bulkEditor.ShowDialog();
+            }
+        }
+
         #endregion
 
         private void trainerEditorStatButton_Click(object sender, EventArgs e)
