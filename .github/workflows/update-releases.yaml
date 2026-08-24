@@ -72,11 +72,13 @@ jobs:
               semver_version="$dotnet_version"
               display_version="$dotnet_version"
               patch=0
+              revision=0
           fi
 
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
           echo "display_version=$display_version" >> $GITHUB_OUTPUT
           echo "patch=$patch" >> $GITHUB_OUTPUT
+          echo "revision=$revision" >> $GITHUB_OUTPUT
           echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
           # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
           # It has to stay the full 4-part version (not display_version) because Helpers.FetchChangelogForTag

@@ -15,6 +15,10 @@ namespace DSPRE
         public static bool IsSupportedForCurrentRom =>
             RomInfo.gameFamily == GameFamilies.Plat && RomInfo.gameLanguage == GameLanguages.English;
 
+        public static bool IsPrizeMulSupportedForCurrentRom =>
+            RomInfo.gameLanguage == GameLanguages.English &&
+            (RomInfo.gameFamily == GameFamilies.Plat || RomInfo.gameFamily == GameFamilies.DP || RomInfo.gameFamily == GameFamilies.HGSS);
+
         public static bool IsGenderTableRepointed { get; private set; }
         public static bool IsPrizeMulTableRepointed { get; private set; }
 
@@ -123,10 +127,26 @@ namespace DSPRE
         {
             multiplier = 0;
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            string ov16Path = OverlayUtils.GetPath(RomInfo.trainerClassPrizeMulOverlayNumber);
-            if (!TryResolveByteTable(ov16Path, RomInfo.trainerClassPrizeMulTablePointerOffset, ov16Path, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out byte[] table, out error))
+            if (!IsPrizeMulSupportedForCurrentRom) { error = "Prize multiplier isn't known for this game/language."; return false; }
+
+            EnsureOverlayDecompressed(RomInfo.trainerClassPrizeMulOverlayNumber);
+            string ovPath = OverlayUtils.GetPath(RomInfo.trainerClassPrizeMulOverlayNumber);
+
+            if (RomInfo.trainerClassPrizeMulTableIsPaired)
+                return TryReadPairedPrizeMul(ovPath, classId, out multiplier, out error);
+
+            byte[] table;
+            if (RomInfo.trainerClassPrizeMulTablePointerOffset == 0)
+            {
+                // No known repoint pointer for this family: the vanilla table is always the real one.
+                try { table = DSUtils.ReadFromFile(ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount); }
+                catch (Exception ex) { error = ex.Message; return false; }
+            }
+            else if (!TryResolveByteTable(ovPath, RomInfo.trainerClassPrizeMulTablePointerOffset, ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out table, out error))
+            {
                 return false;
+            }
+
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
             multiplier = table[classId];
             return true;
@@ -135,22 +155,85 @@ namespace DSPRE
         public static bool TryWritePrizeMul(int classId, byte multiplier, out string error)
         {
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            string ov16Path = OverlayUtils.GetPath(RomInfo.trainerClassPrizeMulOverlayNumber);
-            if (!TryResolveByteTable(ov16Path, RomInfo.trainerClassPrizeMulTablePointerOffset, ov16Path, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out byte[] table, out error))
+            if (!IsPrizeMulSupportedForCurrentRom) { error = "Prize multiplier isn't known for this game/language."; return false; }
+
+            EnsureOverlayDecompressed(RomInfo.trainerClassPrizeMulOverlayNumber);
+            string ovPath = OverlayUtils.GetPath(RomInfo.trainerClassPrizeMulOverlayNumber);
+
+            if (RomInfo.trainerClassPrizeMulTableIsPaired)
+                return TryWritePairedPrizeMul(ovPath, classId, multiplier, out error);
+
+            if (!TryResolveByteTable(ovPath, RomInfo.trainerClassPrizeMulTablePointerOffset, ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out byte[] table, out error))
                 return false;
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
 
-            uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(ov16Path, RomInfo.trainerClassPrizeMulTablePointerOffset, 4), 0);
-            if (ptr < RomInfo.synthOverlayLoadAddress)
+            bool repointed = false;
+            if (RomInfo.trainerClassPrizeMulTablePointerOffset != 0)
             {
-                error = "The prize-multiplier table hasn't been expanded yet. Add a trainer class first (or repoint it by hand).";
-                return false;
+                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(ovPath, RomInfo.trainerClassPrizeMulTablePointerOffset, 4), 0);
+                repointed = ptr >= RomInfo.synthOverlayLoadAddress;
+                if (repointed)
+                {
+                    long start = ptr - RomInfo.synthOverlayLoadAddress;
+                    DSUtils.WriteToFile(Filesystem.expArmPath, new[] { multiplier }, (uint)(start + classId));
+                    return true;
+                }
             }
 
-            long start = ptr - RomInfo.synthOverlayLoadAddress;
-            DSUtils.WriteToFile(Filesystem.expArmPath, new[] { multiplier }, (uint)(start + classId));
+            // Not repointed (or this family has no known repoint pointer): the vanilla table is the real one.
+            DSUtils.WriteToFile(ovPath, new[] { multiplier }, (uint)(RomInfo.trainerClassPrizeMulTableVanillaOffset + classId));
             return true;
+        }
+
+        // HGSS stores {u16 classId, u16 multiplier} pairs rather than a plain array indexed by class,
+        // so entries are matched by their classId field instead of by position.
+        private static bool TryReadPairedPrizeMul(string ovPath, int classId, out byte multiplier, out string error)
+        {
+            multiplier = 0;
+            error = null;
+            try
+            {
+                byte[] data = DSUtils.ReadFromFile(ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount * 4);
+                for (int i = 0; i < RomInfo.trainerClassPrizeMulTableVanillaCount; i++)
+                {
+                    if (BitConverter.ToUInt16(data, i * 4) == classId)
+                    {
+                        multiplier = (byte)BitConverter.ToUInt16(data, i * 4 + 2);
+                        return true;
+                    }
+                }
+                error = "No prize-multiplier entry found for this class.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryWritePairedPrizeMul(string ovPath, int classId, byte multiplier, out string error)
+        {
+            error = null;
+            try
+            {
+                byte[] data = DSUtils.ReadFromFile(ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount * 4);
+                for (int i = 0; i < RomInfo.trainerClassPrizeMulTableVanillaCount; i++)
+                {
+                    if (BitConverter.ToUInt16(data, i * 4) != classId) continue;
+
+                    uint offset = (uint)(RomInfo.trainerClassPrizeMulTableVanillaOffset + i * 4 + 2);
+                    DSUtils.WriteToFile(ovPath, BitConverter.GetBytes((ushort)multiplier), offset);
+                    return true;
+                }
+                error = "No prize-multiplier entry found for this class.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
         }
 
         public static bool AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,

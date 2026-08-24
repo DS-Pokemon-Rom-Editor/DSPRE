@@ -1463,6 +1463,8 @@ namespace DSPRE
                 pokemonEditorToolStripMenuItem.Visible = false; // Hide Personal Data Editor menu item for HGE
                 pokemonEditorButton.Visible = false; // Hide Pokemon Editor button for HGE
                 itemEditorToolStripMenuItem.Visible = false; // Hide Item Editor menu item for HGE
+                vsSeekerRematchEditorToolStripMenuItem.Visible = false; // Hide Vs. Seeker Rematch Editor for HGE
+                battleTowerEditorToolStripMenuItem.Visible = false; // Hide Battle Tower Editor for HGE
                 MessageBox.Show("HGE ROM detected.\nCertain editors have been disabled as they are not compatible with HGE ROMs.\nAdditionally the following information is important:"+
                     "\n\n- Certain editors such as Move Data or Trade Editor seem to work without crashing but it is no gaurantee, use at your own peril. Also, move data will always get overwritten by hg-engine."+
                     "\n\n- Certain text files or script files that HGE edits will be overwritten, please make sure you are aware which are the ones you have to manage with hg-engine."+
@@ -2336,6 +2338,29 @@ namespace DSPRE
         {
             ResearchHelper helper = new ResearchHelper();
             helper.Show();
+        }
+
+        private void trainerFlagBulkEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var bulkEditor = new TrainerFlagBulkEditor())
+            {
+                bulkEditor.ShowDialog();
+            }
+        }
+
+        private void vsSeekerRematchEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!VsSeekerRematchTable.IsSupported)
+            {
+                MessageBox.Show("The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English).",
+                    "Not Supported", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var editor = new VsSeekerRematchEditor())
+            {
+                editor.ShowDialog();
+            }
         }
 
         #endregion

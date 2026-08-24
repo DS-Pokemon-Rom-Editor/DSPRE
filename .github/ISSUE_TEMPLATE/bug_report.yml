@@ -2,6 +2,7 @@ name: Bug Report
 description: Report a bug or issue with the DS Pokémon ROM Editor
 title: "[Bug] "
 labels: ["bug"]
+type: "Bug"
 body:
   - type: markdown
     attributes:

@@ -109,6 +109,34 @@ namespace DSPRE
             this.flagModeGroupBox = new System.Windows.Forms.GroupBox();
             this.flagDecimalRadioButton = new System.Windows.Forms.RadioButton();
             this.flagHexRadioButton = new System.Windows.Forms.RadioButton();
+            // Overworld Watcher tab controls
+            this.owWatcherTabPage = new System.Windows.Forms.TabPage();
+            this.owWatcherDataGridView = new System.Windows.Forms.DataGridView();
+            this.owwColEventFile = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owwColIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owwColOwId = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owwColPosition = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owwColMovement = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owwColScript = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.owSearchPanel = new System.Windows.Forms.Panel();
+            this.owSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.owEntryIdLabel = new System.Windows.Forms.Label();
+            this.owEntryIdNumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.owSearchButton = new System.Windows.Forms.Button();
+            this.owClearButton = new System.Windows.Forms.Button();
+            // Trainer Watcher tab controls
+            this.trainerWatcherTabPage = new System.Windows.Forms.TabPage();
+            this.trainerWatcherDataGridView = new System.Windows.Forms.DataGridView();
+            this.twColSource = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.twColType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.twColIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.twColDetails = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.trainerWatchSearchPanel = new System.Windows.Forms.Panel();
+            this.trainerWatchSearchGroupBox = new System.Windows.Forms.GroupBox();
+            this.trainerWatchLabel = new System.Windows.Forms.Label();
+            this.trainerWatchComboBox = new System.Windows.Forms.ComboBox();
+            this.trainerWatchSearchButton = new System.Windows.Forms.Button();
+            this.trainerWatchClearButton = new System.Windows.Forms.Button();
             // Script Watcher tab controls
             this.scriptWatcherTabPage = new System.Windows.Forms.TabPage();
             this.scriptWatcherSubTabControl = new System.Windows.Forms.TabControl();
@@ -186,6 +214,15 @@ namespace DSPRE
             this.flagSearchPanel.SuspendLayout();
             this.flagSearchGroupBox.SuspendLayout();
             this.flagModeGroupBox.SuspendLayout();
+            this.owWatcherTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.owWatcherDataGridView)).BeginInit();
+            this.owSearchPanel.SuspendLayout();
+            this.owSearchGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.owEntryIdNumericUpDown)).BeginInit();
+            this.trainerWatcherTabPage.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trainerWatcherDataGridView)).BeginInit();
+            this.trainerWatchSearchPanel.SuspendLayout();
+            this.trainerWatchSearchGroupBox.SuspendLayout();
             this.scriptWatcherTabPage.SuspendLayout();
             this.scriptWatcherSubTabControl.SuspendLayout();
             this.fileWatcherSubTabPage.SuspendLayout();
@@ -220,6 +257,8 @@ namespace DSPRE
             this.mainTabControl.Controls.Add(this.levelScriptsTabPage);
             this.mainTabControl.Controls.Add(this.variablesTabPage);
             this.mainTabControl.Controls.Add(this.flagWatcherTabPage);
+            this.mainTabControl.Controls.Add(this.owWatcherTabPage);
+            this.mainTabControl.Controls.Add(this.trainerWatcherTabPage);
             this.mainTabControl.Controls.Add(this.scriptWatcherTabPage);
             this.mainTabControl.Controls.Add(this.headerWatcherTabPage);
             this.mainTabControl.Location = new System.Drawing.Point(12, 12);
@@ -1038,15 +1077,274 @@ namespace DSPRE
             this.flagHexRadioButton.TabIndex = 1;
             this.flagHexRadioButton.Text = "Hex (e.g., 0x200)";
             this.flagHexRadioButton.UseVisualStyleBackColor = true;
-            // 
+            //
+            // owWatcherTabPage
+            //
+            this.owWatcherTabPage.Controls.Add(this.owWatcherDataGridView);
+            this.owWatcherTabPage.Controls.Add(this.owSearchPanel);
+            this.owWatcherTabPage.Location = new System.Drawing.Point(4, 22);
+            this.owWatcherTabPage.Name = "owWatcherTabPage";
+            this.owWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.owWatcherTabPage.Size = new System.Drawing.Size(752, 472);
+            this.owWatcherTabPage.TabIndex = 4;
+            this.owWatcherTabPage.Text = "Overworld Watcher";
+            this.owWatcherTabPage.UseVisualStyleBackColor = true;
+            //
+            // owWatcherDataGridView
+            //
+            this.owWatcherDataGridView.AllowUserToAddRows = false;
+            this.owWatcherDataGridView.AllowUserToDeleteRows = false;
+            this.owWatcherDataGridView.AllowUserToResizeRows = false;
+            this.owWatcherDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.owWatcherDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.owWatcherDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.owWatcherDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.owwColEventFile,
+            this.owwColIndex,
+            this.owwColOwId,
+            this.owwColPosition,
+            this.owwColMovement,
+            this.owwColScript});
+            this.owWatcherDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.owWatcherDataGridView.MultiSelect = false;
+            this.owWatcherDataGridView.Name = "owWatcherDataGridView";
+            this.owWatcherDataGridView.ReadOnly = true;
+            this.owWatcherDataGridView.RowHeadersVisible = false;
+            this.owWatcherDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.owWatcherDataGridView.Size = new System.Drawing.Size(518, 460);
+            this.owWatcherDataGridView.TabIndex = 0;
+            this.owWatcherDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.owWatcherDataGridView_CellDoubleClick);
+            //
+            // owwColEventFile
+            //
+            this.owwColEventFile.HeaderText = "Event File";
+            this.owwColEventFile.Name = "owwColEventFile";
+            this.owwColEventFile.ReadOnly = true;
+            //
+            // owwColIndex
+            //
+            this.owwColIndex.HeaderText = "OW Index";
+            this.owwColIndex.Name = "owwColIndex";
+            this.owwColIndex.ReadOnly = true;
+            //
+            // owwColOwId
+            //
+            this.owwColOwId.HeaderText = "OW ID";
+            this.owwColOwId.Name = "owwColOwId";
+            this.owwColOwId.ReadOnly = true;
+            //
+            // owwColPosition
+            //
+            this.owwColPosition.HeaderText = "Position";
+            this.owwColPosition.Name = "owwColPosition";
+            this.owwColPosition.ReadOnly = true;
+            //
+            // owwColMovement
+            //
+            this.owwColMovement.HeaderText = "Movement";
+            this.owwColMovement.Name = "owwColMovement";
+            this.owwColMovement.ReadOnly = true;
+            //
+            // owwColScript
+            //
+            this.owwColScript.HeaderText = "Script";
+            this.owwColScript.Name = "owwColScript";
+            this.owwColScript.ReadOnly = true;
+            //
+            // owSearchPanel
+            //
+            this.owSearchPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.owSearchPanel.Controls.Add(this.owSearchGroupBox);
+            this.owSearchPanel.Location = new System.Drawing.Point(530, 6);
+            this.owSearchPanel.Name = "owSearchPanel";
+            this.owSearchPanel.Size = new System.Drawing.Size(216, 460);
+            this.owSearchPanel.TabIndex = 1;
+            //
+            // owSearchGroupBox
+            //
+            this.owSearchGroupBox.Controls.Add(this.owEntryIdLabel);
+            this.owSearchGroupBox.Controls.Add(this.owEntryIdNumericUpDown);
+            this.owSearchGroupBox.Controls.Add(this.owSearchButton);
+            this.owSearchGroupBox.Controls.Add(this.owClearButton);
+            this.owSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.owSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.owSearchGroupBox.Name = "owSearchGroupBox";
+            this.owSearchGroupBox.Size = new System.Drawing.Size(216, 110);
+            this.owSearchGroupBox.TabIndex = 0;
+            this.owSearchGroupBox.TabStop = false;
+            this.owSearchGroupBox.Text = "Search OW Entry ID";
+            //
+            // owEntryIdLabel
+            //
+            this.owEntryIdLabel.AutoSize = true;
+            this.owEntryIdLabel.Location = new System.Drawing.Point(6, 25);
+            this.owEntryIdLabel.Name = "owEntryIdLabel";
+            this.owEntryIdLabel.Size = new System.Drawing.Size(69, 13);
+            this.owEntryIdLabel.TabIndex = 0;
+            this.owEntryIdLabel.Text = "OW Entry ID:";
+            //
+            // owEntryIdNumericUpDown
+            //
+            this.owEntryIdNumericUpDown.Location = new System.Drawing.Point(6, 44);
+            this.owEntryIdNumericUpDown.Maximum = new decimal(new int[] { 9999, 0, 0, 0 });
+            this.owEntryIdNumericUpDown.Name = "owEntryIdNumericUpDown";
+            this.owEntryIdNumericUpDown.Size = new System.Drawing.Size(204, 20);
+            this.owEntryIdNumericUpDown.TabIndex = 1;
+            //
+            // owSearchButton
+            //
+            this.owSearchButton.Location = new System.Drawing.Point(6, 70);
+            this.owSearchButton.Name = "owSearchButton";
+            this.owSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.owSearchButton.TabIndex = 2;
+            this.owSearchButton.Text = "Search";
+            this.owSearchButton.UseVisualStyleBackColor = true;
+            this.owSearchButton.Click += new System.EventHandler(this.owSearchButton_Click);
+            //
+            // owClearButton
+            //
+            this.owClearButton.Location = new System.Drawing.Point(111, 70);
+            this.owClearButton.Name = "owClearButton";
+            this.owClearButton.Size = new System.Drawing.Size(99, 30);
+            this.owClearButton.TabIndex = 3;
+            this.owClearButton.Text = "Clear";
+            this.owClearButton.UseVisualStyleBackColor = true;
+            this.owClearButton.Click += new System.EventHandler(this.owClearButton_Click);
+            //
+            // trainerWatcherTabPage
+            //
+            this.trainerWatcherTabPage.Controls.Add(this.trainerWatcherDataGridView);
+            this.trainerWatcherTabPage.Controls.Add(this.trainerWatchSearchPanel);
+            this.trainerWatcherTabPage.Location = new System.Drawing.Point(4, 22);
+            this.trainerWatcherTabPage.Name = "trainerWatcherTabPage";
+            this.trainerWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
+            this.trainerWatcherTabPage.Size = new System.Drawing.Size(752, 472);
+            this.trainerWatcherTabPage.TabIndex = 5;
+            this.trainerWatcherTabPage.Text = "Trainer Watcher";
+            this.trainerWatcherTabPage.UseVisualStyleBackColor = true;
+            //
+            // trainerWatcherDataGridView
+            //
+            this.trainerWatcherDataGridView.AllowUserToAddRows = false;
+            this.trainerWatcherDataGridView.AllowUserToDeleteRows = false;
+            this.trainerWatcherDataGridView.AllowUserToResizeRows = false;
+            this.trainerWatcherDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.trainerWatcherDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.trainerWatcherDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.trainerWatcherDataGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.twColSource,
+            this.twColType,
+            this.twColIndex,
+            this.twColDetails});
+            this.trainerWatcherDataGridView.Location = new System.Drawing.Point(6, 6);
+            this.trainerWatcherDataGridView.MultiSelect = false;
+            this.trainerWatcherDataGridView.Name = "trainerWatcherDataGridView";
+            this.trainerWatcherDataGridView.ReadOnly = true;
+            this.trainerWatcherDataGridView.RowHeadersVisible = false;
+            this.trainerWatcherDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.trainerWatcherDataGridView.Size = new System.Drawing.Size(518, 460);
+            this.trainerWatcherDataGridView.TabIndex = 0;
+            this.trainerWatcherDataGridView.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.trainerWatcherDataGridView_CellDoubleClick);
+            //
+            // twColSource
+            //
+            this.twColSource.HeaderText = "Source";
+            this.twColSource.Name = "twColSource";
+            this.twColSource.ReadOnly = true;
+            //
+            // twColType
+            //
+            this.twColType.HeaderText = "Type";
+            this.twColType.Name = "twColType";
+            this.twColType.ReadOnly = true;
+            //
+            // twColIndex
+            //
+            this.twColIndex.HeaderText = "Index";
+            this.twColIndex.Name = "twColIndex";
+            this.twColIndex.ReadOnly = true;
+            //
+            // twColDetails
+            //
+            this.twColDetails.HeaderText = "Details";
+            this.twColDetails.Name = "twColDetails";
+            this.twColDetails.ReadOnly = true;
+            //
+            // trainerWatchSearchPanel
+            //
+            this.trainerWatchSearchPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.trainerWatchSearchPanel.Controls.Add(this.trainerWatchSearchGroupBox);
+            this.trainerWatchSearchPanel.Location = new System.Drawing.Point(530, 6);
+            this.trainerWatchSearchPanel.Name = "trainerWatchSearchPanel";
+            this.trainerWatchSearchPanel.Size = new System.Drawing.Size(216, 460);
+            this.trainerWatchSearchPanel.TabIndex = 1;
+            //
+            // trainerWatchSearchGroupBox
+            //
+            this.trainerWatchSearchGroupBox.Controls.Add(this.trainerWatchLabel);
+            this.trainerWatchSearchGroupBox.Controls.Add(this.trainerWatchComboBox);
+            this.trainerWatchSearchGroupBox.Controls.Add(this.trainerWatchSearchButton);
+            this.trainerWatchSearchGroupBox.Controls.Add(this.trainerWatchClearButton);
+            this.trainerWatchSearchGroupBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.trainerWatchSearchGroupBox.Location = new System.Drawing.Point(0, 0);
+            this.trainerWatchSearchGroupBox.Name = "trainerWatchSearchGroupBox";
+            this.trainerWatchSearchGroupBox.Size = new System.Drawing.Size(216, 110);
+            this.trainerWatchSearchGroupBox.TabIndex = 0;
+            this.trainerWatchSearchGroupBox.TabStop = false;
+            this.trainerWatchSearchGroupBox.Text = "Search Trainer";
+            //
+            // trainerWatchLabel
+            //
+            this.trainerWatchLabel.AutoSize = true;
+            this.trainerWatchLabel.Location = new System.Drawing.Point(6, 25);
+            this.trainerWatchLabel.Name = "trainerWatchLabel";
+            this.trainerWatchLabel.Size = new System.Drawing.Size(46, 13);
+            this.trainerWatchLabel.TabIndex = 0;
+            this.trainerWatchLabel.Text = "Trainer:";
+            //
+            // trainerWatchComboBox
+            //
+            this.trainerWatchComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.trainerWatchComboBox.FormattingEnabled = true;
+            this.trainerWatchComboBox.Location = new System.Drawing.Point(6, 44);
+            this.trainerWatchComboBox.Name = "trainerWatchComboBox";
+            this.trainerWatchComboBox.Size = new System.Drawing.Size(204, 21);
+            this.trainerWatchComboBox.TabIndex = 1;
+            //
+            // trainerWatchSearchButton
+            //
+            this.trainerWatchSearchButton.Location = new System.Drawing.Point(6, 71);
+            this.trainerWatchSearchButton.Name = "trainerWatchSearchButton";
+            this.trainerWatchSearchButton.Size = new System.Drawing.Size(99, 30);
+            this.trainerWatchSearchButton.TabIndex = 2;
+            this.trainerWatchSearchButton.Text = "Search";
+            this.trainerWatchSearchButton.UseVisualStyleBackColor = true;
+            this.trainerWatchSearchButton.Click += new System.EventHandler(this.trainerWatchSearchButton_Click);
+            //
+            // trainerWatchClearButton
+            //
+            this.trainerWatchClearButton.Location = new System.Drawing.Point(111, 71);
+            this.trainerWatchClearButton.Name = "trainerWatchClearButton";
+            this.trainerWatchClearButton.Size = new System.Drawing.Size(99, 30);
+            this.trainerWatchClearButton.TabIndex = 3;
+            this.trainerWatchClearButton.Text = "Clear";
+            this.trainerWatchClearButton.UseVisualStyleBackColor = true;
+            this.trainerWatchClearButton.Click += new System.EventHandler(this.trainerWatchClearButton_Click);
+            //
             // scriptWatcherTabPage
-            // 
+            //
             this.scriptWatcherTabPage.Controls.Add(this.scriptWatcherSubTabControl);
             this.scriptWatcherTabPage.Location = new System.Drawing.Point(4, 22);
             this.scriptWatcherTabPage.Name = "scriptWatcherTabPage";
             this.scriptWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
             this.scriptWatcherTabPage.Size = new System.Drawing.Size(752, 472);
-            this.scriptWatcherTabPage.TabIndex = 4;
+            this.scriptWatcherTabPage.TabIndex = 6;
             this.scriptWatcherTabPage.Text = "Script Watcher";
             this.scriptWatcherTabPage.UseVisualStyleBackColor = true;
             // 
@@ -1305,7 +1603,7 @@ namespace DSPRE
             this.headerWatcherTabPage.Name = "headerWatcherTabPage";
             this.headerWatcherTabPage.Padding = new System.Windows.Forms.Padding(3);
             this.headerWatcherTabPage.Size = new System.Drawing.Size(752, 472);
-            this.headerWatcherTabPage.TabIndex = 5;
+            this.headerWatcherTabPage.TabIndex = 7;
             this.headerWatcherTabPage.Text = "Header Watcher";
             this.headerWatcherTabPage.UseVisualStyleBackColor = true;
             // 
@@ -1590,6 +1888,17 @@ namespace DSPRE
             this.flagSearchGroupBox.PerformLayout();
             this.flagModeGroupBox.ResumeLayout(false);
             this.flagModeGroupBox.PerformLayout();
+            this.owWatcherTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.owWatcherDataGridView)).EndInit();
+            this.owSearchPanel.ResumeLayout(false);
+            this.owSearchGroupBox.ResumeLayout(false);
+            this.owSearchGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.owEntryIdNumericUpDown)).EndInit();
+            this.trainerWatcherTabPage.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.trainerWatcherDataGridView)).EndInit();
+            this.trainerWatchSearchPanel.ResumeLayout(false);
+            this.trainerWatchSearchGroupBox.ResumeLayout(false);
+            this.trainerWatchSearchGroupBox.PerformLayout();
             this.scriptWatcherTabPage.ResumeLayout(false);
             this.scriptWatcherSubTabControl.ResumeLayout(false);
             this.fileWatcherSubTabPage.ResumeLayout(false);
@@ -1704,6 +2013,34 @@ namespace DSPRE
         private System.Windows.Forms.GroupBox flagModeGroupBox;
         private System.Windows.Forms.RadioButton flagDecimalRadioButton;
         private System.Windows.Forms.RadioButton flagHexRadioButton;
+        // Overworld Watcher tab controls
+        private System.Windows.Forms.TabPage owWatcherTabPage;
+        private System.Windows.Forms.DataGridView owWatcherDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColEventFile;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColOwId;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColPosition;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColMovement;
+        private System.Windows.Forms.DataGridViewTextBoxColumn owwColScript;
+        private System.Windows.Forms.Panel owSearchPanel;
+        private System.Windows.Forms.GroupBox owSearchGroupBox;
+        private System.Windows.Forms.Label owEntryIdLabel;
+        private System.Windows.Forms.NumericUpDown owEntryIdNumericUpDown;
+        private System.Windows.Forms.Button owSearchButton;
+        private System.Windows.Forms.Button owClearButton;
+        // Trainer Watcher tab controls
+        private System.Windows.Forms.TabPage trainerWatcherTabPage;
+        private System.Windows.Forms.DataGridView trainerWatcherDataGridView;
+        private System.Windows.Forms.DataGridViewTextBoxColumn twColSource;
+        private System.Windows.Forms.DataGridViewTextBoxColumn twColType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn twColIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn twColDetails;
+        private System.Windows.Forms.Panel trainerWatchSearchPanel;
+        private System.Windows.Forms.GroupBox trainerWatchSearchGroupBox;
+        private System.Windows.Forms.Label trainerWatchLabel;
+        private System.Windows.Forms.ComboBox trainerWatchComboBox;
+        private System.Windows.Forms.Button trainerWatchSearchButton;
+        private System.Windows.Forms.Button trainerWatchClearButton;
         // Script Watcher tab controls
         private System.Windows.Forms.TabPage scriptWatcherTabPage;
         private System.Windows.Forms.TabControl scriptWatcherSubTabControl;

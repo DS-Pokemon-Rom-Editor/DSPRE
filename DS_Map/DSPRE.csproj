@@ -182,6 +182,12 @@
     <Compile Include="Editors\TmHmBulkEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Editors\TrainerFlagBulkEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Editors\VsSeekerRematchEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Editors\OpenEditorsRegistry.cs" />
     <Compile Include="Editors\PickupTableEditor.cs">
       <SubType>UserControl</SubType>
@@ -243,6 +249,7 @@
       <DependentUpon>AddOverworldEntryForm.cs</DependentUpon>
     </Compile>
     <Compile Include="OverworldSpriteTableExpansion.cs" />
+    <Compile Include="VsSeekerRematchTable.cs" />
     <Compile Include="TrainerClassTableExpansion.cs" />
     <Compile Include="Editors\CameraEditor.cs">
       <SubType>UserControl</SubType>
@@ -562,6 +569,7 @@
       <DependentUpon>BuildingEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="RomInfo.cs" />
+    <Compile Include="CommonScriptId.cs" />
     <Compile Include="ROMFiles\ScriptCommand.cs" />
     <Compile Include="ScintillaUtils\HotKeyManager.cs" />
     <Compile Include="ScintillaUtils\ScriptTooltip.cs">

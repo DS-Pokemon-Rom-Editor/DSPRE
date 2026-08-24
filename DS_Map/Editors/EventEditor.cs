@@ -747,11 +747,6 @@ namespace DSPRE.Editors
         {
             SetupEventEditor(parent);
 
-            if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
-            {
-                selectEventComboBox.SelectedIndex = eventFileID;
-            }
-
             if (EditorPanels.PopoutRegistry.TryGetHost(this, out var host))
             {
                 host.Focus();
@@ -759,6 +754,15 @@ namespace DSPRE.Editors
             else
             {
                 EditorPanels.mainTabControl.SelectedTab = EditorPanels.eventEditorTabPage;
+            }
+
+            if (eventFileID >= 0 && eventFileID < selectEventComboBox.Items.Count)
+            {
+                // Tab must be visible first: the map reload screenshots eventOpenGlControl, which is blank while hidden.
+                Helpers.DisableHandlers();
+                selectEventComboBox.SelectedIndex = eventFileID;
+                Helpers.EnableHandlers();
+                ChangeLoadedEventFile(eventFileID, 0);
             }
         }
 
@@ -1781,20 +1785,28 @@ namespace DSPRE.Editors
         }
         private void sortOWsByIDAscButton_Click(object sender, EventArgs e)
         {
+            var before = currentEvFile.overworlds.ToList();
             currentEvFile.overworlds.Sort((x, y) => x.owID.CompareTo(y.owID));
             overworldsListBox.BeginUpdate();
             FillOverworldsBox();
             overworldsListBox.EndUpdate();
-            SetDirty();
+            if (!currentEvFile.overworlds.SequenceEqual(before))
+            {
+                SetDirty();
+            }
         }
 
         private void sortOWsByIDDescButton_Click(object sender, EventArgs e)
         {
+            var before = currentEvFile.overworlds.ToList();
             currentEvFile.overworlds.Sort((x, y) => y.owID.CompareTo(x.owID));
             overworldsListBox.BeginUpdate();
             FillOverworldsBox();
             overworldsListBox.EndUpdate();
-            SetDirty();
+            if (!currentEvFile.overworlds.SequenceEqual(before))
+            {
+                SetDirty();
+            }
         }
 
         private void locateCurrentEvFile_Click(object sender, EventArgs e)
@@ -2127,6 +2139,11 @@ namespace DSPRE.Editors
         private void owSightRangeUpDown_ValueChanged(object sender, EventArgs e)
         {
             int selection = overworldsListBox.SelectedIndex;
+            if (Helpers.HandlersDisabled || selection < 0)
+            {
+                return;
+            }
+
             currentEvFile.overworlds[selection].sightRange = (ushort)owSightRangeUpDown.Value;
             SetDirty();
         }
@@ -2427,10 +2444,25 @@ namespace DSPRE.Editors
                 
                 if (!scriptExists)
                 {
-                    MessageBox.Show($"This {eventType} is assigned Script {scriptNumber}, which is outside the bounds of Script File {scriptFileID}.\n\n" +
-                        "This script is likely using a common script or calling a script from another file.",
-                        "Script Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    CommonScriptId.Result common = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
+                    switch (common.Kind)
+                    {
+                        case CommonScriptId.Kind.Resolved:
+                            _parent.GoToScript(common.ScriptArchiveId, common.ManualUserId);
+                            Helpers.statusLabelMessage($"Navigated to Common Script {common.ManualUserId} in Script File {common.ScriptArchiveId}");
+                            return;
+                        case CommonScriptId.Kind.Discrepancy:
+                            MessageBox.Show($"This {eventType} is assigned Script {scriptNumber}, which is a Common Script whose exact file " +
+                                $"is ambiguous for this ROM (range {common.RangeLower}-{common.RangeUpper}).\n\n" +
+                                $"It is one of the following Script Files: {string.Join(", ", common.CandidateArchives)}.",
+                                "Ambiguous Common Script", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        default:
+                            MessageBox.Show($"This {eventType} is assigned Script {scriptNumber}, which is outside the bounds of Script File {scriptFileID}.\n\n" +
+                                "This script is likely calling a script from another file that DSPRE doesn't know how to resolve.",
+                                "Script Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                    }
                 }
 
                 // Navigate to the Script Editor and open the script
