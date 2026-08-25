@@ -47,10 +47,9 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _loading;
 
         // ── hg-engine form selection (SpriteOffsets.c/HeightTable.c only) ───────────────────────
-        // hg-engine forms are first-class species IDs with their own full SpriteOffsets.c entry, unlike
-        // vanilla NARC-backed data (battle sprite graphics, height.narc) which has no concept of them, so
-        // this picker only re-routes the hg-engine-source reads/writes below; graphics stay keyed to the
-        // base species (_currentId).
+        // hg-engine forms are first-class species IDs with their own SpriteOffsets.c entry; vanilla
+        // NARC-backed data (graphics, height.narc) has no such concept, so this picker only re-routes
+        // the hg-engine-source reads/writes below. Graphics stay keyed to the base species (_currentId).
         public sealed class FormOption { public string Label { get; set; } public int SpeciesId { get; set; } }
         public ObservableCollection<FormOption> FormOptions { get; } = new ObservableCollection<FormOption>();
         public bool HasForms => FormOptions.Count > 1;
@@ -1086,9 +1085,8 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (HgEngineProject.IsActive)
             {
-                // frontHeader.animation is NOT written here: it's the same source field as the Animation
-                // tab's "Front animation #" (AnimFrontProgNum), and SaveAnim() is its sole writer. Writing
-                // it from both places raced, with whichever ran second silently clobbering the other.
+                // frontHeader.animation is NOT written here: SaveAnim() is its sole writer (see AnimFrontProgNum).
+                // Writing it from both places raced, whichever ran second clobbered the other.
                 var fields = new[]
                 {
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("spriteYOffset") }, _spriteY.ToString()),
