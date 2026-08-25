@@ -4,7 +4,7 @@ using System.Text;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Renders a battle move / effect-sequence (WS_* ServerControl VM) command list as a plain-English summary —
+    /// Renders a battle move / effect-sequence (WS_* ServerControl VM) command list as a plain-English summary:
     /// one numbered line per command with its friendly name, labelled arguments and a short description of what it
     /// does. The counterpart to <see cref="WestStoryboard"/> (which covers the WEST visual-effect scripts), so a
     /// reader can follow "what the move does" without decoding raw opcodes.

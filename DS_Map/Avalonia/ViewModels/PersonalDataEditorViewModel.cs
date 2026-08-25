@@ -507,7 +507,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             LoadEnumLabels();
             // Re-resolve each combo's displayed text (Avalonia keeps a stale SelectedItem when the selected
-            // entry is replaced in place). Toggle via the backing field only — no data write.
+            // entry is replaced in place). Toggle via the backing field only, no data write.
             Repoke(_growthCurveIndex, nameof(GrowthCurveIndex), v => _growthCurveIndex = v);
             Repoke(_dexColorIndex,    nameof(DexColorIndex),   v => _dexColorIndex = v);
             Repoke(_eggGroup1Index,   nameof(EggGroup1Index),  v => _eggGroup1Index = v);
@@ -544,7 +544,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Writes the curated Species fields (base stats, types, abilities) back to
         /// data/Species.c when hg-engine is linked+active. Best-effort: a field the current source
         /// doesn't declare (e.g. an EV yield that's 0 and so absent from the initializer) is logged and
-        /// left alone rather than guessed at — every other field in the same call still gets written.</summary>
+        /// left alone rather than guessed at; every other field in the same call still gets written.</summary>
         private void WriteHgEngineSource()
         {
             if (!HgEngineProject.IsActive) return;

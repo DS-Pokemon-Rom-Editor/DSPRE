@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>hg-engine-only: which form species exist per base Pokémon (data/PokeFormDataTbl.c).
         /// No packed-ROM equivalent, so unlike the other 5 domains this needs neither a narc unpack nor
-        /// isHGE/BlockedForHge gating — it simply doesn't exist without a linked, active checkout.</summary>
+        /// isHGE/BlockedForHge gating: it simply doesn't exist without a linked, active checkout.</summary>
         public static void OpenHgEngineFormEditor()
         {
             if (!IsRomLoaded || !HgEngineProject.IsActive) return;
@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia
             int headerCount = GetHeaderCount();
             // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
             // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
-            // no generic post-close hook for this — the embedded tab's single long-lived instance never
+            // no generic post-close hook for this; the embedded tab's single long-lived instance never
             // needs Detach at all, matching every other embedded-editor VM's lifetime).
             if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
             {
@@ -472,7 +472,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenGlTest()
         {
-            // No ROM required — verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
+            // No ROM required; verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
             new GlTestView().ShowManaged();
         }
 
@@ -497,7 +497,7 @@ namespace DSPRE.Avalonia
             if (!m.Success) yield break;
             int n = int.Parse(m.Value);
 
-            // What the user typed besides the number (minus "go to") — used to filter the jump list.
+            // What the user typed besides the number (minus "go to"), used to filter the jump list.
             string rest = query.Remove(m.Index, m.Length)
                                .Replace("go to", "", System.StringComparison.OrdinalIgnoreCase)
                                .Replace("goto", "", System.StringComparison.OrdinalIgnoreCase)

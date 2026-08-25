@@ -8,8 +8,8 @@ namespace DSPRE.Avalonia
 {
     /// <summary>
     /// Resolves an overworld's sprite bitmap (by overlay-table entry + orientation) the same
-    /// way the WinForms event editor does — 3D-overworld resource images, the NSBTX frame
-    /// banks under <c>OWSprites</c>, or a fallback bounding-box — and decodes it to top-down
+    /// way the WinForms event editor does (3D-overworld resource images, the NSBTX frame
+    /// banks under <c>OWSprites</c>, or a fallback bounding-box), and decodes it to top-down
     /// RGBA for upload as a GL billboard texture. Results are cached per (entry, orientation).
     /// </summary>
     public static class OverworldSprites
@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
         public static void ClearCache() => _cache.Clear();
 
         // Mirrors EventEditor.GetOverworldImage. NSBTX (ROM) frames decode GDI-free via GetRawImage;
-        // the fixed fallback images come from the avares assets (see ResourceImages) — no GDI anywhere.
+        // the fixed fallback images come from the avares assets (see ResourceImages), no GDI anywhere.
         private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.

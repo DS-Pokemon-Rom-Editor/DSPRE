@@ -7,7 +7,7 @@ namespace DSPRE.Avalonia
     /// other. The Text editor raises <see cref="NamesChanged"/> after saving; the Label editor raises
     /// <see cref="LabelsChanged"/> after customising a dropdown. Editors subscribe and reload their
     /// combo sources (preserving the current selection). Handlers run on whatever thread raises the
-    /// event — marshal to the UI thread in the subscriber if needed.
+    /// event; marshal to the UI thread in the subscriber if needed.
     /// </summary>
     public static class AppEvents
     {
@@ -17,14 +17,14 @@ namespace DSPRE.Avalonia
         /// <summary>A customisable dropdown-label category was edited (see <see cref="Data.LabelStore"/>).</summary>
         public static event EventHandler LabelsChanged;
 
-        /// <summary>A ROM Patch Toolbox patch was applied — editors gating a feature on a patch flag
+        /// <summary>A ROM Patch Toolbox patch was applied; editors gating a feature on a patch flag
         /// (e.g. Map Editor's Building Rotation fields) should re-check their state.</summary>
         public static event EventHandler RomPatchStateChanged;
 
-        /// <summary>The game banner (icon / titles) was edited — the main window refreshes its icon.</summary>
+        /// <summary>The game banner (icon / titles) was edited; the main window refreshes its icon.</summary>
         public static event EventHandler BannerChanged;
 
-        /// <summary>The linked hg-engine checkout (or its enabled state) changed — the menu re-checks
+        /// <summary>The linked hg-engine checkout (or its enabled state) changed; the menu re-checks
         /// which of the 5 source-backed editors are unblocked.</summary>
         public static event EventHandler HgEngineLinkChanged;
 

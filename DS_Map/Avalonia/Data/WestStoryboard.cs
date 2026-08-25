@@ -4,10 +4,10 @@ using System.Text;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Renders a WEST (move visual-effect) command list as a readable, frame-stamped "storyboard" — a plain-text
+    /// Renders a WEST (move visual-effect) command list as a readable, frame-stamped "storyboard": a plain-text
     /// timeline of what the effect does (load/spawn particles, sounds, screen shakes & fades via FUNC_CALL, waits,
-    /// loops, end). This is the data-level "view the animation" for Phase 1: it covers every move without a
-    /// particle renderer. Frames advance on WAIT; everything else is listed at the current frame.
+    /// loops, end). This is the data-level "view the animation" that covers every move without a particle
+    /// renderer. Frames advance on WAIT; everything else is listed at the current frame.
     /// </summary>
     public static class WestStoryboard
     {

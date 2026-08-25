@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia
             try
             {
                 // A caller (e.g. a fire-and-forget document-open notification) can still be mid-write
-                // when Dispose() runs from elsewhere (a ROM switch restarting the LSP) — bail before
+                // when Dispose() runs from elsewhere (a ROM switch restarting the LSP); bail before
                 // touching the now-torn-down process/stream rather than throwing into the caller.
                 if (_disposed) return;
                 Stream stream = _process.StandardInput.BaseStream;
@@ -221,7 +221,7 @@ namespace DSPRE.Avalonia
             }
             finally
             {
-                // Dispose() may have torn down _writeLock while this write was in flight (see above) —
+                // Dispose() may have torn down _writeLock while this write was in flight (see above):
                 // Release() on an already-disposed SemaphoreSlim throws ObjectDisposedException, which
                 // would otherwise surface as a confusing "rotom-lsp open failed" warning on every ROM switch.
                 if (!_disposed)

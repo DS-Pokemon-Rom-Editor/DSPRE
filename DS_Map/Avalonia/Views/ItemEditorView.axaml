@@ -57,7 +57,7 @@
                                 <TextBlock Text="n/a" FontSize="10" Opacity="0.6"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            IsVisible="{Binding IconUnavailable}"
-                                           ToolTip.Tip="No icon graphics found for this item at its expected slot in the loaded ROM — likely a brand-new custom item that hasn't been compiled into a ROM yet"/>
+                                           ToolTip.Tip="No icon graphics found for this item at its expected slot in the loaded ROM, likely a brand-new custom item that hasn't been compiled into a ROM yet"/>
                             </Panel>
                         </Border>
 

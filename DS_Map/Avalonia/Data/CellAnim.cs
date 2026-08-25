@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// A live CATS cell actor — the faithful playback model behind the actor-add and set-animation-sequence calls.
+    /// A live CATS cell actor: the faithful playback model behind the actor-add and set-animation-sequence calls.
     /// It advances the current sequence frame-by-frame honouring each frame's hold duration and the sequence
     /// play-mode (loop vs once), and carries the actor-level transform (position/scale/flip/palette/visibility)
     /// the per-move callbacks set each tick. Rendering (NCER cell → OAM) is applied on top of <see cref="CellIndex"/> + the
@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Data
         private readonly CellSequence[] _seqs;
         private int _frame, _timer;
 
-        // Actor transform — set by callbacks (set-position / set-scale / set-flip / palette).
+        // Actor transform, set by callbacks (set-position / set-scale / set-flip / palette).
         public double X, Y;
         public double ScaleX = 1, ScaleY = 1;
         public bool FlipH, FlipV;

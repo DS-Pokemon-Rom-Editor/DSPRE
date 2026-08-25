@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia
     {
         /// <summary>
         /// Builds an Avalonia <see cref="AvaloniaBitmap"/> from a toolkit-agnostic <see cref="DSPRE.RawImage"/>
-        /// (BGRA8888, straight alpha) by copying straight into a <see cref="WriteableBitmap"/> — no GDI+,
+        /// (BGRA8888, straight alpha) by copying straight into a <see cref="WriteableBitmap"/>, no GDI+,
         /// no PNG round-trip. This is the permanent cross-platform render seam; as decoders start emitting
         /// <see cref="DSPRE.RawImage"/>, they render through here directly.
         /// </summary>
@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
                 }
                 else
                 {
-                    // Destination rows may be padded to a wider stride — copy row by row.
+                    // Destination rows may be padded to a wider stride, so copy row by row.
                     for (int y = 0; y < img.Height; y++)
                         Marshal.Copy(img.Bgra, y * srcStride, IntPtr.Add(fb.Address, y * fb.RowBytes), srcStride);
                 }
@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Loads an hg-engine icon.png (data/graphics/sprites/&lt;name&gt;/icon.png), which is a
-        /// vertical N-frame bounce-animation strip with no real alpha channel — crops to the first
+        /// vertical N-frame bounce-animation strip with no real alpha channel; crops to the first
         /// Width×Width frame and color-keys the corner pixel to transparent.
         /// </summary>
         public static AvaloniaBitmap LoadHgeIconFirstFrame(string pngPath)
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Decodes an encoded image stream (PNG/GIF/…) to a <see cref="DSPRE.RawImage"/> via Avalonia's
-        /// codecs — the cross-platform replacement for <c>new System.Drawing.Bitmap(stream)</c>.
+        /// codecs; the cross-platform replacement for <c>new System.Drawing.Bitmap(stream)</c>.
         /// Returns null on an unexpected pixel format.
         /// </summary>
         public static DSPRE.RawImage DecodeRawImage(System.IO.Stream stream)

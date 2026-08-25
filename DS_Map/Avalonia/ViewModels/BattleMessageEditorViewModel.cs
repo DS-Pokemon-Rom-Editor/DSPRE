@@ -73,11 +73,11 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── hg-engine source-backed state ───────────────────────────────────────────────
         // hg-engine embeds each trainer's messages directly in its own `.text = { { .type = TRMSG_X,
-        // .text = "..." }, ... }` array in data/Trainers.c — no shared ROM-wide archive/ID indirection
+        // .text = "..." }, ... }` array in data/Trainers.c, no shared ROM-wide archive/ID indirection
         // at all, unlike the vanilla model above. So instead of reusing Entry/_archive/_byTrainer (which
         // only make sense for a shared, position-keyed binary table), hg-engine mode keeps its own
         // simple per-trainer (triggerId, text) list and reads/writes it straight through
-        // HgEngineTrainerSource — text, never a hardcoded binary layout.
+        // HgEngineTrainerSource, as text, never a hardcoded binary layout.
         private const string TrainerDataHeader = "include/trainer_data.h";
         public bool IsHgeActive => HgEngineProject.IsActive;
         private (int value, string name)[] _hgeTriggers = Array.Empty<(int, string)>();
@@ -416,7 +416,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── hg-engine save: this ONE trainer's .text field only, via the same anchored-patch
-        // mechanism every other curated field goes through — not a "rewrite everything" operation, since
+        // mechanism every other curated field goes through, not a "rewrite everything" operation, since
         // hg-engine's per-trainer message storage has no shared/global structure to keep in sync at all.
         private async Task SaveHgeMessagesAsync()
         {
@@ -424,7 +424,7 @@ namespace DSPRE.Avalonia.ViewModels
                 $"{{ .type = {HgeTriggerName(m.triggerId)}, .text = {HgEngineTrainerSource.ToCStringLiteral(m.text)} }}")) + " }";
             var fields = new List<HgEngineFieldWrite> { new(new[] { FieldPathSegment.Field("text") }, block) };
 
-            // allowInsert: true — a trainer with no messages at all simply omits `.text` from source
+            // allowInsert: true, since a trainer with no messages at all simply omits `.text` from source
             // entirely (matching hg-engine's sparse designated-initializer style), so adding its first
             // message needs to INSERT the field, not just replace an existing one.
             if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _currentTrainerId, fields, out var unresolved, out string error, allowInsert: true))

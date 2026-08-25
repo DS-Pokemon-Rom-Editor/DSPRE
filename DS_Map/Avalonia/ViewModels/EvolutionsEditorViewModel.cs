@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         /// <summary>Forces the bound method combo to re-resolve its displayed text after the label list was
         /// edited in place (Avalonia keeps a stale SelectedItem when the selected entry is replaced). Toggles
-        /// the index via the backing field only — no data write, no Changed event.</summary>
+        /// the index via the backing field only, no data write, no Changed event.</summary>
         public void RefreshMethodDisplay()
         {
             if (_methodIndex < 0) return;
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.ViewModels
             return EvolutionParamMeaning.CustomNumber;
         }
 
-        /// <summary>The target-species dropdown is disabled for a CustomNumber method — its parameter is a
+        /// <summary>The target-species dropdown is disabled for a CustomNumber method: its parameter is a
         /// raw value and the evolution target is handled by the hack's own code, not a picked species.</summary>
         public bool IsTargetEnabled => Meaning != EvolutionParamMeaning.CustomNumber;
 
@@ -247,7 +247,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _loading;
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
-        // Snapshot = the per-row (method, param, target) values — lossless and independent of how Save()
+        // Snapshot = the per-row (method, param, target) values, lossless and independent of how Save()
         // compacts the file. Edit bursts within CoalesceMs collapse into one step.
         private readonly DSPRE.Avalonia.UndoHistory<(int, int, int)[]> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;

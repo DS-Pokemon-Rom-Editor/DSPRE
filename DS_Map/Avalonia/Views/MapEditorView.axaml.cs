@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Views
             };
 
             // Arrow keys pan the camera / nudge a selected building, but only while the 3D
-            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click) —
+            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click);
             // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
             GlHost.KeyDown += OnKeyDown;
 
@@ -93,14 +93,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>
-        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
+        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
         /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
         /// successful load (including switching to a different ROM mid-session), so
-        /// <c>vm.SetupAsync</c> always re-runs — only the event-subscription wiring is one-time.
+        /// <c>vm.SetupAsync</c> always re-runs; only the event-subscription wiring is one-time.
         /// </summary>
         /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
         /// attached to the visual tree yet (e.g. a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case, which
+        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case, which
         /// used to make this whole setup silently no-op until the tab was manually visited once.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {

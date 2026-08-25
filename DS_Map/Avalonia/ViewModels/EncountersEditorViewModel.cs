@@ -9,7 +9,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Parent ViewModel for the Avalonia Encounters editor — a composite that hosts
+    /// Parent ViewModel for the Avalonia Encounters editor, a composite that hosts
     /// the special-encounter sub-editors as tabs, gated by game family:
     ///   • DPPt : Honey Tree, Great Marsh
     ///   • HGSS : Headbutt, Safari Zone, Bug Contest

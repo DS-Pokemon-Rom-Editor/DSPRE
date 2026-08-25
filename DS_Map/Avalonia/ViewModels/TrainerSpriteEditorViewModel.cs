@@ -127,21 +127,17 @@ namespace DSPRE.Avalonia.ViewModels
     /// <summary>
     /// Pixel-level editor for a trainer class's sprite.
     ///
-    /// Plat/HGSS trainer classes have per-frame OAM cells (NCER) compositing pieces of a shared NCGR
-    /// tile sheet into the character you actually see. The flat sheet itself is a jumbled tile atlas,
-    /// not a coherent picture (tiles referenced by an OAM aren't laid out to visually resemble the
-    /// final sprite). So editing happens directly on the composited "as it looks" preview: every paint
-    /// stroke is hit-tested against the current frame's OAM cells (same geometry
+    /// Plat/HGSS trainer classes composite per-frame OAM cells (NCER) from a shared NCGR tile sheet;
+    /// the flat sheet itself is a jumbled atlas, not a coherent picture. Editing happens on the
+    /// composited "as it looks" preview instead: each paint stroke is hit-tested against the current
+    /// frame's OAM cells (same geometry
     /// <see cref="Ekona.Images.Actions.Get_RawImage(Bank, uint, ImageBase, PaletteBase, int, int, bool, int, int, int[])"/>
-    /// itself uses) to find which cell owns that pixel, and therefore which bytes of the shared tile
-    /// sheet and which palette bank, then decodes/edits/re-encodes just that cell's tile bytes in
-    /// place. Because cells from different frames can reference the same underlying tiles, an edit
-    /// naturally propagates to every frame that reuses them; frames that don't share tiles can be
-    /// edited independently by switching the frame selector.
+    /// uses) to find which cell, tile bytes and palette bank own that pixel, then edits just those
+    /// bytes in place. Cells shared across frames mean an edit naturally propagates to every frame
+    /// that reuses them; frames that don't share tiles edit independently.
     ///
-    /// DP trainer classes have no NCER at all (no per-class animation), so there's no cell
-    /// geometry to hit-test against, and editing falls back to the flat NCGR tile sheet directly
-    /// (<see cref="_flatIndices"/> path).
+    /// DP trainer classes have no NCER (no per-class animation), so editing falls back to the flat
+    /// NCGR tile sheet directly (<see cref="_flatIndices"/> path).
     /// </summary>
     public class TrainerSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {

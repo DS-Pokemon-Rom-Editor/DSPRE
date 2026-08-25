@@ -255,7 +255,7 @@ namespace DSPRE.Avalonia.Gl
         }
 
         /// <summary>Sets a marker mesh (8 floats/vertex: pos,uv,col) drawn on top of everything
-        /// with the depth test disabled — e.g. event markers — or null to clear.</summary>
+        /// with the depth test disabled (e.g. event markers), or null to clear.</summary>
         public void SetMarkers(float[] mesh, int vertexCount)
         {
             _markerMesh = mesh;
@@ -373,7 +373,7 @@ namespace DSPRE.Avalonia.Gl
 
         // Sprite GPU textures are cached by their pixel-buffer reference (OverworldSprites.Get returns the
         // SAME cached array for a given sprite), so re-positioning sprites during a drag only rebuilds the
-        // lightweight GpuSprite list — it does NOT re-upload textures (that was the move-gizmo lag).
+        // lightweight GpuSprite list; it does NOT re-upload textures (that was the move-gizmo lag).
         private readonly Dictionary<byte[], int> _spriteTexCache = new Dictionary<byte[], int>();
 
         private void FreeGpuSprites()
@@ -668,7 +668,7 @@ namespace DSPRE.Avalonia.Gl
             // Translucent COLOUR tint over the tile's texture (keeps the permission colour, not a darkening shadow).
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
             // Depth-test ON (write OFF): trees/rocks/buildings in front occlude the tint, and their transparent
-            // texels were discarded in the map pass, so the tinted ground shows through them — decorations stay clean.
+            // texels were discarded in the map pass, so the tinted ground shows through them; decorations stay clean.
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.DepthMask(false);
             _f.Uniform1i(_hasTexLoc, 0);
@@ -739,7 +739,7 @@ namespace DSPRE.Avalonia.Gl
             _f.DepthMask(false);                 // sit in the scene but don't write depth
             // Like markers, sprites always render even through geometry: an NPC standing behind a tall
             // counter/wall prop (e.g. a Pokémon Center nurse) would otherwise be silently depth-tested
-            // away by that geometry — unhelpful in an editor where you need to see every placed event.
+            // away by that geometry, which is unhelpful in an editor where you need to see every placed event.
             _f.Disable(GlFunctions.GL_DEPTH_TEST);
             _f.Uniform1f(_alphaLoc, 1f);
             _f.Uniform1i(_texLoc, 0);

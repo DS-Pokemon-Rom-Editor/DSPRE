@@ -150,7 +150,7 @@
                 </StackPanel>
               </StackPanel>
 
-              <!-- Alternate-form sprite heights (height_o.narc) — shown while a form is selected in the Sprites tab. -->
+              <!-- Alternate-form sprite heights (height_o.narc), shown while a form is selected in the Sprites tab. -->
               <StackPanel IsVisible="{Binding HasFormHeights}" Spacing="6">
                 <TextBlock Text="Alternate-form sprite height" FontWeight="SemiBold"/>
                 <Grid ColumnDefinitions="160,10,150">

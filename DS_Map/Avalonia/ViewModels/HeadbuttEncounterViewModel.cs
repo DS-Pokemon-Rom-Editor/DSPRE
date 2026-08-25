@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.ViewModels
         internal HeadbuttTree Tree => _t;
         public decimal GlobalX { get => _t.globalX; set { if (_t.globalX == value) return; _t.globalX = (ushort)value; OnAll(); } }
         public decimal GlobalY { get => _t.globalY; set { if (_t.globalY == value) return; _t.globalY = (ushort)value; OnAll(); } }
-        // Matrix-cell + in-map-tile breakdown (globalX = matrixX*32 + mapX) — the same coordinates the
+        // Matrix-cell + in-map-tile breakdown (globalX = matrixX*32 + mapX): the same coordinates the
         // 3D map view and the rest of the editor use, so placement is human-readable.
         public decimal MatrixX { get => _t.matrixX; set { if (_t.matrixX == value) return; _t.matrixX = (ushort)value; OnAll(); } }
         public decimal MatrixY { get => _t.matrixY; set { if (_t.matrixY == value) return; _t.matrixY = (ushort)value; OnAll(); } }
@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>HeadbuttEncounterEditor</c> — data scope (HGSS). Edits a
+    /// Avalonia port of the WinForms <c>HeadbuttEncounterEditor</c>, data scope (HGSS). Edits a
     /// headbutt encounter file: the 12 normal + 6 special wild-encounter slots, and the normal /
     /// special tree groups (each a set of trees positioned by a global x/y). The on-map 3D tree
     /// placement from WinForms is deferred; coordinates are editable numerically.
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels
             var groups = _specialGroupActive ? _file.specialTreeGroups : _file.normalTreeGroups;
             if (_selGroup >= groups.Count) return;
             var trees = groups[_selGroup].trees;
-            // Only show USED tree slots — empty slots are the 65535/65535 sentinel and just look like
+            // Only show USED tree slots; empty slots are the 65535/65535 sentinel and just look like
             // broken numbers. The slot index is kept in the name so it's traceable. Add/Remove tree
             // activates/clears a slot.
             for (int i = 0; i < trees.Count; i++)
@@ -204,7 +204,7 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(SelectedSpecialGroupIndex));
             OnPropertyChanged(nameof(SelectedTreeIndex));
             OnPropertyChanged(nameof(GroupTreeSummary));
-            RefreshTreeMarkers();   // the map is already built for the whole file — only re-mark this group
+            RefreshTreeMarkers();   // the map is already built for the whole file, only re-mark this group
         }
 
         public string GroupTreeSummary
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>The matrix cells this header owns (headers[y,x]==header.ID, or all non-empty cells when
-        /// the matrix has no headers section) plus every cell a tree occupies — the WinForms map set.</summary>
+        /// the matrix has no headers section) plus every cell a tree occupies, the WinForms map set.</summary>
         private HashSet<(int x, int y)> HeaderCells()
         {
             var set = new HashSet<(int x, int y)>();
@@ -453,7 +453,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         /// <summary>Moves the selected tree along a ground axis (0=X,2=Z) by a raw delta, stepping its
         /// in-map tile in whole-tile increments (carrying the remainder) and rolling over into the
-        /// neighbouring matrix cell at the edges. Y (axis 1) is a no-op — trees have no height.</summary>
+        /// neighbouring matrix cell at the edges. Y (axis 1) is a no-op: trees have no height.</summary>
         public void NudgeSelectedTreeRaw(int axis, float rawDelta)
         {
             var m = Model3D;

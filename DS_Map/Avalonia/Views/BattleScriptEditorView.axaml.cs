@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Views
             CommandsTextEditor.TextArea.TextView.InvalidateVisual();
         }
 
-        // Block viewing the cards while the text has parse errors — the cards can't represent an invalid script.
+        // Block viewing the cards while the text has parse errors: the cards can't represent an invalid script.
         private async void EditorTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!ReferenceEquals(e.Source, EditorTabs) || EditorTabs == null || VM == null) return;   // ignore child selectors

@@ -18,7 +18,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TrainerEditor</c> — core scope: trainer
+    /// Avalonia port of the WinForms <c>TrainerEditor</c>. Core scope: trainer
     /// selection + properties (name, class, AI flags, held items, battle flags) and
     /// the full 6-Pokémon party (species/form/level/moves/item/gender/ability/IV/ball
     /// seals), plus the trainer-class sprite preview (shared
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels
     ///
     /// Deferred (sub-forms): Battle Message editor, DV Calculator, Mon Reorder,
     /// Trainer Search. Simplification: the per-species "more than one gender" gate is
-    /// not applied — the gender selector is editable whenever the game supports it
+    /// not applied: the gender selector is editable whenever the game supports it
     /// (HGSS / AI-backport).
     /// </summary>
     public class TrainerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
@@ -336,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels
                     TrainerItems.Add(slot);
                 }
 
-                // hg-engine's real TrainerPokemonData struct has no gender field — nowhere to write a
+                // hg-engine's real TrainerPokemonData struct has no gender field, nowhere to write a
                 // forced gender to, so the selector is hidden rather than shown-but-silently-ignored.
                 bool genderVisibleForMode = _genderEditable && !IsHgeActive;
                 for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
@@ -417,7 +417,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── hg-engine source-backed load path ──────────────────────────────────────────
-        // Reads Trainers.c source TEXT directly (via HgEngineTrainerSource/HgEngineSourceBlock) — never
+        // Reads Trainers.c source TEXT directly (via HgEngineTrainerSource/HgEngineSourceBlock), never
         // the compiled a055/a056 narcs, and never a hardcoded byte layout.
         private const string TrainerClassHeader = "include/constants/trainerclass.h";
         private const string SpeciesHeader = "include/constants/species.h";
@@ -433,7 +433,7 @@ namespace DSPRE.Avalonia.ViewModels
                 _ = DialogHelper.ShowError($"Failed to load trainer {index} from hg-engine source:\n{error}", "Trainer Editor Error");
                 return;
             }
-            _trainer = null;   // no binary model for hg-engine trainers — see TryLoad's doc comment
+            _trainer = null;   // no binary model for hg-engine trainers, see TryLoad's doc comment
             _loadedTrainerId = index;
 
             _suppress = true;
@@ -472,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels
                 int idx = Array.IndexOf(_battleTypeValues, battleTypeValue);
                 if (idx >= 0) BattleTypeIndex = idx;
             }
-            DoubleBattle = BattleTypeIndex > 0;   // kept loosely in sync for display only — save uses BattleTypeIndex
+            DoubleBattle = BattleTypeIndex > 0;   // kept loosely in sync for display only; save uses BattleTypeIndex
 
             var itemsRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") });
             for (int i = 0; i < TrainerItems.Count; i++)
@@ -517,7 +517,7 @@ namespace DSPRE.Avalonia.ViewModels
                 for (int i = 0; i < slots.Count; i++) if (slots[i].Bit == slotValue) { abilityIndex = i; break; }
             }
 
-            // hg-engine's TrainerPokemonData has no gender field at all — nowhere to read a forced
+            // hg-engine's TrainerPokemonData has no gender field at all, nowhere to read a forced
             // gender from, so it's always "Default" here (the Gender selector is hidden in the UI too).
             mon.Load(species, 0, Math.Max(1, level), moves, itemVal, 0, abilityIndex, ivs, ballSeal);
 
@@ -871,7 +871,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Add / Export / Import ─────────────────────────────────────────────────────
         /// <summary>Appends a brand-new trainer (blank properties + one empty party slot) after the
-        /// last existing one and selects it — mirrors the WinForms "Add Trainer" button.</summary>
+        /// last existing one and selects it, mirroring the WinForms "Add Trainer" button.</summary>
         public void AddTrainer()
         {
             // Adding a brand-new trainer entry to Trainers.c isn't built yet. Writing a blank trainer
@@ -921,7 +921,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>Loads a combined .trf (name + properties + party) into the CURRENTLY SELECTED
-        /// trainer slot's in-memory state — like Replace Properties/Import Party below, this stages the
+        /// trainer slot's in-memory state. Like Replace Properties/Import Party below, this stages the
         /// change (marks dirty) rather than writing to disk immediately, so Undo and the Save button work.</summary>
         public async Task ImportTrainerAsync()
         {
@@ -1106,7 +1106,7 @@ namespace DSPRE.Avalonia.ViewModels
         public event EventHandler Changed;
         public string Label { get; }
         /// <summary>The real bit value this flag represents when dynamically resolved from an hg-engine
-        /// header (see <see cref="DSPRE.HgEngine.HgEngineTrainerFieldSchema"/>) — -1 for the static,
+        /// header (see <see cref="DSPRE.HgEngine.HgEngineTrainerFieldSchema"/>); -1 for the static,
         /// vanilla-derived flag lists that don't carry a resolvable value.</summary>
         public int Value { get; }
         private bool _checked;

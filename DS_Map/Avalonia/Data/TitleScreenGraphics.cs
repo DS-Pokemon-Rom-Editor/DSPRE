@@ -6,10 +6,9 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Reads and writes the HGSS main-menu title logo, background and copyright text strip in a/0/4/6.
-    /// All three are real NCGR (tiles) + NCLR (palette) + NSCR (screen/tilemap) trios, confirmed against
-    /// the leaked source's titledemo.naix and the real ROM's own bytes, not the flat "bitmap" shortcut an
-    /// earlier pass here assumed. The logo and background share one palette (logo's colours first,
-    /// background's appended right after); the copyright strip has its own separate, dedicated palette.
+    /// All three are real NCGR (tiles) + NCLR (palette) + NSCR (screen/tilemap) trios, not flat bitmaps.
+    /// The logo and background share one palette (logo's colours first, background's appended right
+    /// after); the copyright strip has its own separate, dedicated palette.
     ///
     /// The logo's real screen is 256x256 with visible content only in rows y=24-160; the top 192 rows
     /// (the actual DS screen height) are what this class exposes for preview/import/export, rows

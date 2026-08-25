@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Gl
 
     /// <summary>
     /// Decodes the 7 NDS texture formats (A3I5, palette 4/16/256, 4×4-compressed, A5I3,
-    /// direct BGR555) from an <see cref="NSBMDMaterial"/> into RGBA8 — ported from the
+    /// direct BGR555) from an <see cref="NSBMDMaterial"/> into RGBA8, ported from the
     /// original renderer's MakeTexture/convert_4x4texel. Returns null when the material
     /// has no texture (format 0) or lacks the data to decode.
     /// </summary>

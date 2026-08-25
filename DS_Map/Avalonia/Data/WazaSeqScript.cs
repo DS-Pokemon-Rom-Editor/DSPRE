@@ -9,17 +9,17 @@ namespace DSPRE.Avalonia.Data
     {
         public int OpId;
         public int[] Args;
-        public int WordPos;   // starting word index in the source blob — lets branch opcodes resolve word-relative targets
+        public int WordPos;   // starting word index in the source blob; lets branch opcodes resolve word-relative targets
         public WazaSeqCommand(int opId, int[] args) { OpId = opId; Args = args ?? Array.Empty<int>(); }
         public override string ToString() =>
             Args.Length == 0 ? $"#{OpId}" : $"#{OpId} {string.Join(", ", Args)}";
     }
 
     /// <summary>
-    /// Reads/writes a single battle move-sequence script — one file in waza_seq.narc (per move), be_seq.narc (per
+    /// Reads/writes a single battle move-sequence script: one file in waza_seq.narc (per move), be_seq.narc (per
     /// move effect) or sub_seq.narc (shared subroutines). The bytecode is a stream of little-endian 32-bit words:
     /// an opcode id followed by that opcode's fixed argument words (count from <see cref="WazaSeqOpcodes"/> for the
-    /// game version). Parsing is linear over the WHOLE blob — branch/jump opcodes target later commands by relative
+    /// game version). Parsing is linear over the WHOLE blob; branch/jump opcodes target later commands by relative
     /// word offset, so it does not stop at WS_SEQ_END. Tolerant: stops if it hits an unknown opcode or the args
     /// would overrun (returns what parsed so far).
     /// </summary>

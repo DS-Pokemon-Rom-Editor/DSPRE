@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     /// <summary>
-    /// Edits <see cref="LabelStore"/> categories — renaming hardcoded dropdown entries and adding entries
+    /// Edits <see cref="LabelStore"/> categories: renaming hardcoded dropdown entries and adding entries
     /// beyond the game's defaults (up to the field's data-type cap). Scope is per-project or global.
     /// </summary>
     public class LabelEditorViewModel : INotifyPropertyChanged
@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels
             StatusText = $"Saved labels.";
         }
 
-        /// <summary>Throws away unsaved edits (the draft) — called when the window closes without saving.</summary>
+        /// <summary>Throws away unsaved edits (the draft), called when the window closes without saving.</summary>
         public void Discard()
         {
             LabelStore.DiscardDraft();

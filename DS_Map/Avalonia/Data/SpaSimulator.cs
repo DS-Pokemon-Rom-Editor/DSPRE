@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Data
     public sealed class SpaSimulator
     {
         private struct P { public double X, Y, Z, VX, VY, VZ; public int Age, Life, RndTex, ClrRnd, LrOff; public double OVX, OVY, Phase, Rot0, RotRate, Scl; }
-        // the child-resource block: a child particle spawned by a parent (trail/spark) — its own life, decaying scale/alpha.
+        // the child-resource block: a child particle spawned by a parent (trail/spark), its own life, decaying scale/alpha.
         private struct Child { public double X, Y, Z, VX, VY, VZ; public int Age, Life; public double Scale0, Rot, RotRate, Alpha0; }
 
         // the random-range helper: uniform in [−num, num).
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
         private double _genAccum;
 
         // FIELD_OPERATOR FLD_MAGNET / FLD_CONVERGENCE override: the SPA emitter's own field target is a local
-        // placeholder; the operator retargets it to a mon (FLD_AT/DF/SET_DF) — Mega Drain magnet, BubbleBeam/Aurora
+        // placeholder; the operator retargets it to a mon (FLD_AT/DF/SET_DF): Mega Drain magnet, BubbleBeam/Aurora
         // convergence. NaN = keep the SPA's own target.
         private readonly bool _magOverride; private readonly double _magX, _magY, _magZ;
         private readonly bool _convOverride; private readonly double _convX, _convY, _convZ;
@@ -161,7 +161,7 @@ namespace DSPRE.Avalonia.Data
                     p.Y += ratio * (ctY - p.Y);
                     p.Z += ratio * (ctZ - p.Z);
                 }
-                if (_e.UseColl)   // the collision-plane behavior step: a WORLD horizontal plane — the game tests
+                if (_e.UseColl)   // the collision-plane behavior step: a WORLD horizontal plane; the game tests
                 {                 // emitterPos.y + particle.y against the plane, so include the anchor's world y.
                     double wy = AnchorWorldY + p.Y, wyPrev = wy - p.VY;
                     if ((wyPrev > _e.CollY) != (wy > _e.CollY))   // crossed the plane this frame
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.Data
             }
             double r = _e.Radius * rscale;
             // Spawn position on the emission shape. VOLUME shapes (sphere/circle/hemisphere interiors) scale
-            // EACH component by its OWN random factor (FX_MUL(pos.c, radius) × RangeFX32/…) —
+            // EACH component by its OWN random factor (FX_MUL(pos.c, radius) x RangeFX32/...):
             // the shape switch above provides the direction and a per-type rscale; the per-component spread
             // for volume types is applied here.
             double posX = ux * r + lox, posY = uy * r + loy, posZ = uz * r;
@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.Data
                 posZ = uz * _e.Radius * ((_rng.NextDouble() * 2.0 - 1.0) * 0.5 + 0.5);
             }
             // Radial velocity direction = normalize(spawn position); a POINT emitter (pos 0) gets a RANDOM 3D
-            // direction (posNorm) — point bursts are omnidirectional, not static.
+            // direction (posNorm): point bursts are omnidirectional, not static.
             double nx, ny, nz;
             {
                 double pl = Math.Sqrt(posX * posX + posY * posY + posZ * posZ);
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.Data
             double pScale = _e.BaseScale * DoubleScaled(_e.RndScale);
             int life = Math.Max(1, (int)((_e.ParticleLife <= 0 ? 1 : _e.ParticleLife) * Scaled(_e.RndLife)) + 1);
             (double mx, double my) = _emitterMotion?.Invoke(_frame) ?? (0.0, 0.0);   // emitter's path offset now
-            // The emitter's travel direction at spawn — used to orient a DIRECTIONAL billboard (the needle/wave) whose
+            // The emitter's travel direction at spawn, used to orient a DIRECTIONAL billboard (the needle/wave) whose
             // own velocity is ~0 because it rides the moving emitter (Pin Missile/Sonic Boom/Horn Drill: EMIT_STRAIGHT/
             // PARABOLIC sweep the emitter attacker→defender). Without this the needle has no velocity and points up.
             (double pmx, double pmy) = _emitterMotion?.Invoke(Math.Max(0, _frame - 1)) ?? (0.0, 0.0);
@@ -325,9 +325,9 @@ namespace DSPRE.Avalonia.Data
             {
                 RndTex = rndTex,
                 // Emitter position comes from the ADD_PARTICLE callback (the layer centre), which OVERRIDES the
-                // SPA's own base pos — so particles start at the shape offset (+ the moving emitter's path offset).
+                // SPA's own base pos, so particles start at the shape offset (+ the moving emitter's path offset).
                 // follow_emtr particles TRACK the moving emitter (the current offset is added at render), so DON'T
-                // bake the spawn offset in — otherwise they'd double up. (Pin Missile/Sonic Boom needles travel this way.)
+                // bake the spawn offset in, otherwise they'd double up. (Pin Missile/Sonic Boom needles travel this way.)
                 X = posX + (_e.FollowEmtr ? 0 : mx),
                 Y = posY + (_e.FollowEmtr ? 0 : my),
                 Z = posZ,
@@ -339,7 +339,7 @@ namespace DSPRE.Avalonia.Data
                 OVX = ovx, OVY = ovy,   // emitter travel direction at spawn (orientation only)
                 Phase = _e.RandomLoopAnm ? _rng.NextDouble() : 0.0,
                 LrOff = _e.RandomLoopAnm ? _rng.Next(256) : 0,        // lifeRateOffset for LOOPING anims
-                // colour use_rndm: pick ONE of {start, base, end} at birth — a discrete 3-way
+                // colour use_rndm: pick ONE of {start, base, end} at birth, a discrete 3-way
                 // pick, and the colour anim is NOT registered for such emitters (the pick stays for life).
                 ClrRnd = _e.ClrRndm ? _rng.Next(3) : 0,
                 Rot0 = rot0, RotRate = rotRate,
@@ -377,12 +377,12 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The alive particles this frame, with the SPA scale/colour/alpha animation curves applied over
         /// each particle's life. Without a curve a field stays at its base value (the game holds alpha
-        /// constant and the particle simply ends at death — no synthetic fade).</summary>
+        /// constant and the particle simply ends at death, no synthetic fade).</summary>
         public IEnumerable<SpaParticleState> Particles()
         {
             // follow_emtr: the particle tracks the emitter's CURRENT path offset (added here, not baked at spawn). It
             // also has ~no velocity of its own, so a DIRECTIONAL billboard must orient along the emitter's MOTION
-            // (its travel direction) — otherwise the needle/wave just points up (Pin Missile / Sonic Boom).
+            // (its travel direction), otherwise the needle/wave just points up (Pin Missile / Sonic Boom).
             bool follow = _e.FollowEmtr && _emitterMotion != null;
             (double emx, double emy) = follow ? _emitterMotion(_frame) : (0.0, 0.0);
             (double pemx, double pemy) = follow ? _emitterMotion(Math.Max(0, _frame - 1)) : (0.0, 0.0);
@@ -397,7 +397,7 @@ namespace DSPRE.Avalonia.Data
                 int lr = (int)(255.0 * p.Age / Math.Max(1, p.Life));   // lifeRate 0..255 (once through the life)
                 if (lr > 255) lr = 255;
                 // LOOPING anims run on the loopFrames clock, offset by the per-particle lifeRateOffset and
-                // WRAPPING (lifeRateOffset + loopTimeFactor·age, u8 wrap) — NOT on the life
+                // WRAPPING (lifeRateOffset + loopTimeFactor*age, u8 wrap), NOT on the life
                 // fraction. Each anim picks its clock by its own loop flag.
                 int lrLoop = (p.LrOff + p.Age * 255 / _e.LoopFrames) & 0xFF;
                 int lrScl = _e.SclLoop ? lrLoop : lr;

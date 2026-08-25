@@ -179,19 +179,14 @@ namespace DSPRE.Avalonia.Data
             return bytes;
         }
 
-        // Decoding a bank/wave archive isn't cheap (SWAR decode in particular walks every sample in the
-        // archive, often hundreds, each an ADPCM bit-unpack loop) — cache per sub-file so repeat sound previews
-        // and every note in an animation don't each pay to re-decode the same archive from scratch. This object
-        // is already loaded once per editor session, so it's the natural place for this to live rather than a
-        // cache local to a single render call.
+        // Decoding a bank/wave archive is expensive (SWAR decode walks every sample, each an ADPCM unpack
+        // loop), so cache per sub-file rather than re-decoding on every preview or animation frame.
         //
-        // ConcurrentDictionary, not a plain Dictionary: animation playback renders each triggered sound on its
-        // own background thread (Task.Run, to keep the 60Hz preview timer from stalling on the render), and a
-        // single move frequently fires more than one sound on the same frame sharing the same bank (confirmed
-        // directly — Thunder Punch's two sounds both resolve to bank 751). Two threads racing a first-ever
-        // cache-miss on a plain Dictionary is a real concurrent write, which can corrupt the dictionary and
-        // throw — silently swallowed by the animation path's best-effort exception handling, so the sound
-        // just never played, with no error and no delay to point at the cause.
+        // ConcurrentDictionary, not Dictionary: animation playback renders each triggered sound on its own
+        // background thread, and one move can fire several sounds sharing a bank on the same frame (e.g.
+        // Thunder Punch). A concurrent first-write race on a plain Dictionary can corrupt it and throw,
+        // which the animation path's best-effort exception handling swallows silently, so a sound just
+        // never plays with no visible cause.
         private readonly ConcurrentDictionary<int, List<SbnkInstrument>> _bankCache = new ConcurrentDictionary<int, List<SbnkInstrument>>();
         private readonly ConcurrentDictionary<int, List<SwavSample>> _waveArcCache = new ConcurrentDictionary<int, List<SwavSample>>();
 

@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>MapEditor</c> — core scope: map-file selection,
+    /// Avalonia port of the WinForms <c>MapEditor</c>. Core scope: map-file selection,
     /// a textured-geometry 3D preview (via <see cref="NsbmdGlControl"/>), the two 32×32
     /// movement-permission grids (collision + type, painted via
     /// <see cref="PermissionGridControl"/>), a buildings list, and save / import /
@@ -97,11 +97,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool IsHeaderView => _viewModeIndex == 2;
         /// <summary>Whether the Permissions/Buildings editing panel should be usable: single-map always
         /// was; the "This header" view stitches multiple maps but keeps each one individually editable
-        /// (paint + move buildings). Full-matrix stays render-only — it can span the whole world.</summary>
+        /// (paint + move buildings). Full-matrix stays render-only since it can span the whole world.</summary>
         public bool CanEdit => IsSingleMap || IsHeaderView;
         public bool IsStitchedView => IsMatrixView || IsHeaderView;
 
-        /// <summary>Header list for the "This header" view's own picker — lets a standalone popup
+        /// <summary>Header list for the "This header" view's own picker, letting a standalone popup
         /// (opened from the menu, with no sidebar to follow) choose a header directly. Populated in
         /// <see cref="SetupAsync"/>; index == header ID.</summary>
         public ObservableCollection<string> HeaderNames { get; } = new ObservableCollection<string>();
@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        /// <summary>ComboBox-friendly alias for <see cref="HeaderId"/> — same backing value, so the
+        /// <summary>ComboBox-friendly alias for <see cref="HeaderId"/>. Same backing value, so the
         /// embedded Maps-workspace instance (driven externally by the sidebar) and a standalone popup
         /// (driven by this combo, since it has no sidebar) share one code path.</summary>
         public int SelectedHeaderIndex { get => _headerId; set => HeaderId = value; }
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels
             => value >= -1 && (HeaderNames.Count == 0 || value < HeaderNames.Count);
 
         // Full-matrix stitch layout: false = Continuous (geometry-sized), true = Grid (DS-true fixed 32-tile).
-        // Grid is the default — it's the DS-accurate layout: every block is a fixed BLOCK_GRID_W(32)-tile = MapStride
+        // Grid is the default: it's the DS-accurate layout, every block is a fixed BLOCK_GRID_W(32)-tile = MapStride
         // span, so events/buildings map at exactly TileSize per tile and decorative overhang overlaps neighbours as on
         // hardware. (Events now anchor at the map's tile-(0,0)=raw-0 corner, so both modes align; Grid is exact.)
         private bool _stitchGrid = true;
@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 if (!Set(ref _stitchGrid, value)) return;
                 if (IsMatrixView && _selectedMatrix >= 0) BuildMatrixPreview();
-                else if (IsHeaderView) BuildHeaderPreview();   // was only rebuilding for Full Matrix — "This header" view never picked up the toggle
+                else if (IsHeaderView) BuildHeaderPreview();   // was only rebuilding for Full Matrix; "This header" view never picked up the toggle
             }
         }
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
@@ -221,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
 
         // 3D preview options. Pushed straight to NsbmdGlControl.ShowTextures by the view (no model
-        // rebuild needed) — see MapEditorView.OnVmPropertyChanged.
+        // rebuild needed), see MapEditorView.OnVmPropertyChanged.
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set => Set(ref _showTextures, value); }
 
@@ -239,7 +239,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool OverlayAsMesh { get => _overlayAsMesh; set { if (Set(ref _overlayAsMesh, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
         public bool ShowOverlayHeight => !_overlayAsMesh && _overlayModeIndex > 0;
         /// <summary>"Mesh" only has a visible effect with an overlay mode selected (it re-colours the
-        /// overlay itself, which isn't drawn at all in "No overlay") AND for a single loaded map —
+        /// overlay itself, which isn't drawn at all in "No overlay") and for a single loaded map;
         /// stitched ("This header" / "Full matrix") views always render the flat plane overlay instead
         /// (the mesh-tint texture is keyed to one map's own tile grid and can't be shared across several
         /// stitched maps), so the checkbox is disabled there rather than silently doing nothing.</summary>
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
 
             // The single map is built as a 1×1 cell, so it carries a real tile grid (CellPlacement 0,0): a FIXED
-            // 32 tiles regardless of how much geometry the map has — that's what makes the tiles the right size on
+            // 32 tiles regardless of how much geometry the map has, which is what makes the tiles the right size on
             // smaller maps.
             if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out var cell))
             {
@@ -340,7 +340,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>Appends one cell's flat 32×32 collision/type quad grid (PLANE overlay style) at a
-        /// given world height — the multi-cell building block shared by "This header" view.</summary>
+        /// given world height, the multi-cell building block shared by "This header" view.</summary>
         private static void AppendPlaneOverlay(List<float> v, NsbmdRenderModel.CellPlacement cp, byte[,] grid,
             bool collision, NsbmdRenderModel m, float planeY)
         {
@@ -421,7 +421,7 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal BRotZ { get => _bRotZ; set { if (Set(ref _bRotZ, value) && !_suppress) ApplyBuilding(); } }
 
         // The stored rotation values are always readable/writable, but the GAME only reads them once
-        // the Building Rotation patch (Patch Toolbox) has been applied — gate the controls so it's not
+        // the Building Rotation patch (Patch Toolbox) has been applied. Gate the controls so it's not
         // implied that rotating a building here does anything in an unpatched ROM.
         private bool _buildingRotationEnabled = true;
         public bool BuildingRotationEnabled { get => _buildingRotationEnabled; private set => Set(ref _buildingRotationEnabled, value); }
@@ -441,7 +441,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void OnRomPatchStateChanged(object sender, EventArgs e) => RefreshBuildingRotationPatchState();
 
-        /// <summary>Unsubscribe from app-wide events. Only for a standalone popup instance closing —
+        /// <summary>Unsubscribe from app-wide events. Only for a standalone popup instance closing;
         /// the single long-lived Maps-workspace instance never calls this.</summary>
         public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
 
@@ -485,22 +485,20 @@ namespace DSPRE.Avalonia.ViewModels
             if (reloadModel) b.NSBMDFile = null;   // force reload of the (new) model in BuildPreview
             MaybeTransferBuildingAcrossCells();
             MarkSelectedBuildingDirty();
-            // NOTE: deliberately do not touch the Buildings list here — replacing the selected
+            // NOTE: deliberately do not touch the Buildings list here; replacing the selected
             // item would drop the ListBox selection. The model ID lives in the detail panel.
             RebuildPreview();
             GizmoTargetChanged?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
-        /// In "This header" view, each map only renders (and the game only reads) its OWN buildings
-        /// list — a building dragged/typed past its own map's 0..32 tile bounds into a neighbouring
-        /// cell's visual space would silently do nothing in-game unless it's actually moved into that
-        /// neighbour's building list, in that neighbour's LOCAL coordinates. Detects an out-of-bounds
-        /// position (any whole-tile overflow, so a big jump from typing a coordinate works too) and,
-        /// if a header cell actually exists there, re-homes the building: removes it from the source
-        /// map, rewrites xPosition/zPosition into the destination map's local space, adds it there,
-        /// marks both maps dirty, and re-selects it in its new home. No-ops (leaves the building where
-        /// it is) if no header cell exists at the target location — nothing to move it into.
+        /// In "This header" view, each map only renders (and the game only reads) its own buildings
+        /// list, so a building dragged/typed past its own map's 0..32 tile bounds would silently do
+        /// nothing in-game unless it's actually moved into the neighbouring map's building list, in
+        /// that map's local coordinates. Detects any whole-tile overflow and, if a header cell exists
+        /// there, re-homes the building: removes it from the source map, rewrites its position into
+        /// the destination map's local space, adds it there, marks both dirty, and re-selects it.
+        /// No-ops if no header cell exists at the target location.
         /// </summary>
         private void MaybeTransferBuildingAcrossCells()
         {
@@ -515,12 +513,11 @@ namespace DSPRE.Avalonia.ViewModels
             int dCellZ = (int)Math.Floor(b.zPosition / 32.0);
             if (dCellX == 0 && dCellZ == 0) return;   // still within its own map's tile bounds
 
-            // Buildings can legitimately sit a little outside their own map's 0..32 tile bounds on
-            // one axis (a decorative overhang/eave a couple of units before the edge) without that
-            // meaning anything about which map owns them — e.g. Z = -5 forever computes dCellZ = -1
-            // even though the building never moved in Z. So resolve X and Z independently and only
-            // rebase whichever axis actually found a real neighbouring map there; a combined-axis
-            // lookup is a last resort for a genuine diagonal crossing.
+            // Buildings can legitimately sit a little outside their own map's 0..32 bounds on one axis
+            // (a decorative overhang near the edge) without that meaning anything about which map owns
+            // them, so resolve X and Z independently and only rebase whichever axis actually found a
+            // real neighbouring map; a combined-axis lookup is a last resort for a genuine diagonal
+            // crossing.
             int? Find(int x, int y) { int idx = _headerCells.FindIndex(c => c.CellX == x && c.CellY == y); return idx >= 0 && idx != ci && _headerCells[idx].Map?.buildings != null ? idx : (int?)null; }
 
             int targetIndex; int usedDCellX, usedDCellZ;
@@ -542,7 +539,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>Which header-view map a new/duplicated building should join: the currently
-        /// selected building's map, else the first one — there's no other "current map" concept
+        /// selected building's map, else the first one; there's no other "current map" concept
         /// once several maps are shown stitched together.</summary>
         private int TargetHeaderCellIndex()
         {
@@ -785,7 +782,7 @@ namespace DSPRE.Avalonia.ViewModels
             BX = Coord(b.xPosition, b.xFraction); BY = Coord(b.yPosition, b.yFraction); BZ = Coord(b.zPosition, b.zFraction);
             _suppress = false;
             // If this pushed the building past its own map's edge, re-home it into the neighbouring
-            // header cell (see MaybeTransferBuildingAcrossCells) — this also refreshes BX/BZ to the
+            // header cell (see MaybeTransferBuildingAcrossCells); this also refreshes BX/BZ to the
             // new local-space values via the SelectedBuildingIndex reassignment inside it.
             MaybeTransferBuildingAcrossCells();
             MarkSelectedBuildingDirty();
@@ -877,7 +874,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 // All of the below are rebuilt fresh on every ROM load (including switching to a
-                // different ROM mid-session) — clear first or these would just keep appending onto
+                // different ROM mid-session), clear first or these would just keep appending onto
                 // the previous ROM's entries.
                 CollisionPainters.Clear();
                 TypePainters.Clear();
@@ -971,7 +968,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>
         /// Loads every map belonging to the current header (the matrix cells where
         /// <c>headers[y,x] == HeaderId</c>, or every non-empty cell if the matrix has no headers
-        /// section) — same ownership rule as the Headbutt editor's per-header map set — and stitches
+        /// section), the same ownership rule as the Headbutt editor's per-header map set, and stitches
         /// them into one scene. Unlike Full Matrix, each map stays loaded with real (not discarded)
         /// move-permission data so it can be painted and its buildings edited, individually saved.
         /// </summary>
@@ -1131,7 +1128,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
 
                 // Pass 1: plain matrices (one area for the whole matrix).
-                // Pass 2: header-section matrices (per-cell area) — overwrites pass 1 on overlap.
+                // Pass 2: header-section matrices (per-cell area), overwrites pass 1 on overlap.
                 for (int pass = 0; pass < 2; pass++)
                     for (int mid = 0; mid < matrixCount; mid++)
                     {
@@ -1172,7 +1169,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (_map == null) return;
 
                 // Bind the map tileset textures (if a pack is selected). Always bound regardless of
-                // ShowTextures — that toggle is a pure display setting now (NsbmdGlControl.ShowTextures),
+                // ShowTextures: that toggle is a pure display setting now (NsbmdGlControl.ShowTextures),
                 // not a build-time one, so the model always carries real textures to show/hide instantly.
                 if (_mapTilesetIndex >= 0 && _map.mapModel?.models != null && _map.mapModel.models.Length > 0)
                     BindNsbtx(_map.mapModel, Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, _mapTilesetIndex.ToString("D4")));
@@ -1214,7 +1211,7 @@ namespace DSPRE.Avalonia.ViewModels
                                 b.NSBMDFile.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
                                 b.NSBMDFile.MatchTextures();
                             }
-                            catch { /* pack doesn't match this building — leave untextured */ }
+                            catch { /* pack doesn't match this building, leave untextured */ }
                         }
 
                         buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));

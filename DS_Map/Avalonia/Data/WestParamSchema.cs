@@ -301,12 +301,11 @@ namespace DSPRE.Avalonia.Data
         }
 
         // ── Single-word tokens for the plain-text script editor ─────────────────────────
-        // The card view shows spaced titles ("Add particles"); the text editor instead needs a single typeable
-        // word per command/argument/enum-value, so a line reads like a command line ("AddParticles slot=0 data=482").
-        // These are derived mechanically from the existing friendly text (every letter/digit run becomes one
-        // camel/Pascal-case word) rather than a second hand-curated table, so the two views can never drift apart.
-        // Any distinguishing text already in the friendly name (e.g. the "(emitter)"/"(segmented)" suffixes on the
-        // several "Add particles" variants) carries over and keeps the tokens unique.
+        // The card view shows spaced titles ("Add particles"); the text editor needs a single typeable word
+        // per command/argument/enum-value ("AddParticles slot=0 data=482"). Tokens are derived mechanically
+        // from the friendly text (each letter/digit run becomes one camel/Pascal-case word) rather than a
+        // second hand-curated table, so the two views can't drift apart, and distinguishing suffixes already
+        // in the friendly name (e.g. "(emitter)"/"(segmented)") carry over and keep tokens unique.
         public static string Token(string text, bool pascalCase)
         {
             if (string.IsNullOrEmpty(text)) return "";
@@ -332,7 +331,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Single-word argument label for the text editor (camelCase), e.g. <c>particleSlot</c>.</summary>
         public static string ArgToken(string opName, int index) => Token(ParamName(opName, index), pascalCase: false);
 
-        // ── Operator enums (engine values kept; labels are friendly) — for a FIELD_OPERATOR's settings ──
+        // ── Operator enums (engine values kept; labels are friendly), for a FIELD_OPERATOR's settings ──
         public readonly record struct EnumOption(string Label, int Value);
 
         private static readonly EnumOption[] OpTarget =

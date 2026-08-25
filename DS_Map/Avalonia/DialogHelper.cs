@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia
         public enum MsgResult { Ok, Yes, No, Cancel }
 
         // ----------------------------------------------------------------
-        // Message Boxes (built from plain Avalonia Window — no 3rd-party dep)
+        // Message Boxes (built from plain Avalonia Window, no 3rd-party dep)
         // ----------------------------------------------------------------
 
         public static Task ShowInfo(string message, string title = "Information")

@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia.ViewModels
         private static string[] BuildMachineLabels()
         {
             // Per-machine move names (which move TM/HM slot i actually teaches), not the raw move-name
-            // list indexed by slot — those are unrelated (slot i's move ID is rarely i itself).
+            // list indexed by slot; those are unrelated (slot i's move ID is rarely i itself).
             string[] machineMoveNames = TMEditor.ReadMachineMoveNames();
             var labels = new string[machineMoveNames.Length];
             for (int i = 0; i < labels.Length; i++)

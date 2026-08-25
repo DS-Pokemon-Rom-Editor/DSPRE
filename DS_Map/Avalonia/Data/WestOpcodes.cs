@@ -2,11 +2,11 @@
 // Opcode tables for the move visual-effect bytecode VM (internally "WEST", the move-effect script format used by
 // Platinum and HeartGold/SoulSilver). Each effect script (NARC file index = move number) is a stream of
 // little-endian 32-bit words: an opcode id (index into the version table below) followed by its argument words.
-// Most opcodes are fixed-length; four are VARIABLE — one fixed arg (at CountIndex) holds the number of trailing
-// payload words (FUNC_CALL/SE_TASK/EX_DATA/CATS_ACT_ADD, shorthand for the WEST_* opcodes below). This is an orchestration VM (loads particle archives,
-// invokes built-in routines via FUNC_CALL, drives backgrounds/camera/sound), so unlike the Pokémon sprite
-// animation format it is not directly previewable frame-by-frame; this table powers a structured script editor
-// and storyboard. Generated — do not edit.
+// Most opcodes are fixed-length; four are VARIABLE, with one fixed arg (at CountIndex) holding the number of
+// trailing payload words (FUNC_CALL/SE_TASK/EX_DATA/CATS_ACT_ADD, shorthand for the WEST_* opcodes below). This
+// is an orchestration VM (loads particle archives, invokes built-in routines via FUNC_CALL, drives
+// backgrounds/camera/sound), so unlike the Pokémon sprite animation format it is not directly previewable
+// frame-by-frame; this table powers a structured script editor and storyboard. Generated, do not edit.
 // </auto-generated>
 namespace DSPRE.Avalonia.Data
 {

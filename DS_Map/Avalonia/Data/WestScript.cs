@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Reads/writes a single move VISUAL-effect script — one <c>we_NNN</c> file in the effect NARC, where the file
+    /// Reads/writes a single move VISUAL-effect script: one <c>we_NNN</c> file in the effect NARC, where the file
     /// index is the move number. The bytecode is a stream of little-endian 32-bit words: an opcode id (see
     /// <see cref="WestOpcodes"/>) followed by its argument words. Most opcodes are fixed-length; the four variable
     /// ones carry a count word (at <see cref="WestOp.CountIndex"/>) giving how many extra payload words trail the

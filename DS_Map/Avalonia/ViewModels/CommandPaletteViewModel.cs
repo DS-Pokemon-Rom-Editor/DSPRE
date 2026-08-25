@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             string q = _search?.Trim() ?? "";
             Items.Clear();
-            // Query-specific "go to #N" entries first — they're the most precise thing the user can mean.
+            // Query-specific "go to #N" entries first, they're the most precise thing the user can mean.
             if (_dynamic != null)
                 foreach (var c in _dynamic(q)) Items.Add(c);
             IEnumerable<CommandItem> matches = string.IsNullOrEmpty(q)

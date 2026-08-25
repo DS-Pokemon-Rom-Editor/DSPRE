@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
     /// Avalonia port of the WinForms <c>MatrixEditor</c>. Edits a map matrix's three
-    /// W×H grids — map IDs (always), header IDs and altitudes (optional sections) — via
+    /// W×H grids (map IDs always, header IDs and altitudes as optional sections) via
     /// the paintable <c>MatrixGridControl</c>. Supports selecting a matrix, adding the
     /// optional sections, and save / import / export.
     /// </summary>

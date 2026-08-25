@@ -11,7 +11,7 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 
 namespace DSPRE.Avalonia.ViewModels
 {
-    // ── Observable row — all columns for both game families ──────────────────
+    // ── Observable row: all columns for both game families ──────────────────
     public class FlyRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

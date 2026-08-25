@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia
         }
 
         // Block until the predicate is true. On the UI thread this runs a nested Avalonia dispatcher
-        // frame (cross-platform — pumps the native event loop, no WinForms). On a worker thread it
+        // frame (cross-platform, pumps the native event loop, no WinForms). On a worker thread it
         // just poll-sleeps while the dialog runs on the UI thread.
         private static void PumpUntil(Func<bool> isDone)
         {
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(16, 16, 16, 12),
             };
-            // Only override the foreground for errors — leaving it unset for Info/Confirm lets the
+            // Only override the foreground for errors: leaving it unset for Info/Confirm lets the
             // theme's implicit TextBlock style apply; explicitly assigning null here (even via a
             // ternary) used to win over the theme at Local priority and rendered the text invisible.
             if (error) msgText.Foreground = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia
         }
 
         // Same synchronous-pump approach as ShowSync, with a hex-offset TextBox plus live range/status
-        // feedback — mirrors the WinForms SyntheticOverlayOffsetDialog so both shells behave identically.
+        // feedback, mirroring the WinForms SyntheticOverlayOffsetDialog so both shells behave identically.
         private static uint? PickSyntheticOverlayOffsetSync(string patchName, string filePath, uint defaultOffset, byte[] expectedBytes, uint loadAddress)
         {
             uint? result = null;

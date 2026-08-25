@@ -19,7 +19,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>EventEditor</c> — core scope. Edits an event
+    /// Avalonia port of the WinForms <c>EventEditor</c>, core scope. Edits an event
     /// file's four event lists (Spawnables, Overworlds, Warps, Triggers): select an
     /// event to edit its position (map + matrix) and its type-specific fields, add/remove
     /// events, and save / import / export. The 3D map overlay with event markers and
@@ -74,10 +74,10 @@ namespace DSPRE.Avalonia.ViewModels
         public global::Avalonia.Media.Imaging.Bitmap OwSpritePreview { get => _owSpritePreview; private set => Set(ref _owSpritePreview, value); }
         public bool HasOwSpritePreview => _owSpritePreview != null;
 
-        // ── Overworld "kind" radio group (Standard / Trainer / Item) — mirrors WinForms'
+        // ── Overworld "kind" radio group (Standard / Trainer / Item), mirrors WinForms'
         // normalRadioButton/isTrainerRadioButton/isItemRadioButton: selecting a kind sets ow.type and
         // locks ow.scriptNumber to a value computed from the Trainer/Item dropdown (Script is only
-        // free-form for Standard). ──────────────────────────────────────────────────────────────────
+        // free-form for Standard).
         private enum OwKind { Normal, Trainer, Item }
         private OwKind _owKind;
 
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool OwIsTrainer { get => _owKind == OwKind.Trainer; set { if (value) SetOwKind(OwKind.Trainer); } }
         public bool OwIsItem { get => _owKind == OwKind.Item; set { if (value) SetOwKind(OwKind.Item); } }
 
-        // Script is normally locked when Trainer/Item drives it — but if the current script number
+        // Script is normally locked when Trainer/Item drives it, but if the current script number
         // doesn't resolve to any entry in that list (out-of-range/hand-edited data), unlock it so the
         // user isn't stuck looking at a value they can't change from either the dropdown or the field.
         public bool OwScriptEnabled => _owKind == OwKind.Normal || OwTrainerIndexOutOfRange || OwItemIndexOutOfRange;
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // The Script field's raw value can point past the end of the current trainer roster (a script
         // number that doesn't correspond to any known trainer, e.g. hand-edited data or a ROM-specific
-        // reserved value) — show that clearly instead of a silently-blank dropdown.
+        // reserved value); show that clearly instead of a silently-blank dropdown.
         public bool OwTrainerIndexOutOfRange => _owKind == OwKind.Trainer && (_owTrainerIndex < 0 || _owTrainerIndex >= OwTrainerEntries.Count);
 
         private bool _owPartnerTrainer;
@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.ViewModels
         private decimal _xMap, _yMap, _zPos, _xMat, _yMat;
         public decimal XMap { get => _xMap; set { if (Set(ref _xMap, value) && !_suppress && _current != null) { _current.xMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
         public decimal YMap { get => _yMap; set { if (Set(ref _yMap, value) && !_suppress && _current != null) { _current.yMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
-        // zPosition is a 16.16 fixed-point value (1 tile = 65536 units) — WinForms' owZPositionUpDown shows/edits
+        // zPosition is a 16.16 fixed-point value (1 tile = 65536 units); WinForms' owZPositionUpDown shows/edits
         // the whole-tile part only (-32768..32768, no sub-tile Z control from this field).
         public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)(value * 65536m); Dirty(); RefreshMarkers(); } } }
         public decimal XMatrix { get => _xMat; set { if (Set(ref _xMat, value) && !_suppress && _current != null) { _current.xMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
@@ -391,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.yRange = (ushort)value; Dirty(); } } }
 
         // Dropdown-friendly wrappers: the sprite entry list is the sparse set of valid overlay-table
-        // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value —
+        // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value;
         // movement/orientation are plain 0..N index=value lists so they pass straight through.
         public int OwSpriteIndex
         {
@@ -480,7 +480,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public int InitialIndex { get; set; }
 
-        /// <summary>When set (>=0), selected right after the event file finishes loading — lets callers
+        /// <summary>When set (>=0), selected right after the event file finishes loading; lets callers
         /// (e.g. Research Helper's Overworld/Trainer Watcher) jump straight to a specific overworld
         /// entry instead of just the containing event file.</summary>
         public int InitialOverworldIndex { get; set; } = -1;
@@ -492,7 +492,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
         public bool ShowSpawnables { get => _showSpawn; set { if (Set(ref _showSpawn, value)) RefreshMarkers(); } }
         public bool ShowGrid { get => _showGrid; set { if (Set(ref _showGrid, value)) RefreshMarkers(); } }
-        /// <summary>The tile-boundary grid overlay is only built for small matrices (≤4 cells) — it's an
+        /// <summary>The tile-boundary grid overlay is only built for small matrices (≤4 cells): it's an
         /// expensive per-tile collision scan that would otherwise repeat on every event add/move for a
         /// large header, so bigger matrices skip it rather than pay that cost every refresh. The
         /// checkbox is disabled instead of silently doing nothing so the limit is visible.</summary>
@@ -606,9 +606,9 @@ namespace DSPRE.Avalonia.ViewModels
 
             // Derive the Standard/Trainer/Item radio selection + locked-script dropdown index from the
             // raw type/scriptNumber (mirrors WinForms' overworldsListBox_SelectedIndexChanged, but uses
-            // the trainerFunnyScriptNumber-aware inverse — see NavigateToOverworldTarget in the WinForms
-            // EventEditor — instead of WinForms' own display-only reverse mapping, which is off by one
-            // past that threshold).
+            // the trainerFunnyScriptNumber-aware inverse (see NavigateToOverworldTarget in the WinForms
+            // EventEditor) instead of WinForms' own display-only reverse mapping, which is off by one
+            // past that threshold.
             if (_ow.type == (ushort)Overworld.OwType.TRAINER)
             {
                 _owKind = OwKind.Trainer;
@@ -785,8 +785,8 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Scripts available to this event file (the header's paired script file) ────────
         /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.scriptFileID"/>),
         /// so Overworld/Trigger/Spawnable "Script" fields can be picked from a dropdown of what's actually
-        /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c> — the
-        /// number these events' <c>scriptNumber</c> fields reference — not necessarily a plain 0..N-1 run.</summary>
+        /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c>, the
+        /// number these events' <c>scriptNumber</c> fields reference, not necessarily a plain 0..N-1 run.</summary>
         public ObservableCollection<string> AvailableScripts { get; } = new ObservableCollection<string>();
         private readonly List<uint> _availableScriptIds = new List<uint>();
 
@@ -815,7 +815,7 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
-        // Raw script number 0 conventionally means "the first script in this file", not "none" — a
+        // Raw script number 0 conventionally means "the first script in this file", not "none": a
         // script file's own manualUserID numbering starts at 1, so there's no script literally numbered
         // 0 to match against directly.
         private int IndexOfAvailableScript(decimal rawValue)
@@ -843,8 +843,8 @@ namespace DSPRE.Avalonia.ViewModels
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
-                // Small matrices (interiors / routes / regions) render in full — exactly like the
-                // map editor's working full-matrix view — so the per-cell stride is derived from the
+                // Small matrices (interiors / routes / regions) render in full, exactly like the
+                // map editor's working full-matrix view, so the per-cell stride is derived from the
                 // whole matrix (correct true map size) and maps stitch seamlessly. Only a giant world
                 // matrix falls back to the bounding box of the event's own cells (to avoid loading it all).
                 int total = _matrix.width * _matrix.height;
@@ -1093,7 +1093,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // Event positions are INTEGER tiles (no fraction field), so a mouse drag accumulates sub-tile
-        // movement here and only steps the tile when it crosses a whole-tile boundary — exactly how the
+        // movement here and only steps the tile when it crosses a whole-tile boundary, exactly how the
         // building gizmo carries its fraction. Reset at the start of each drag via BeginGizmoDrag().
         private float _dragAccumX, _dragAccumZ;
         public void BeginGizmoDrag() { _dragAccumX = 0f; _dragAccumZ = 0f; }
@@ -1214,9 +1214,9 @@ namespace DSPRE.Avalonia.ViewModels
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }
 
-        /// <summary>Builds a complete text dump of the current 3D scene — matrix layout, per-cell map
+        /// <summary>Builds a complete text dump of the current 3D scene: matrix layout, per-cell map
         /// placements (origin/size + the gap/overlap to each neighbour), and every event's exact computed
-        /// world position — so a render screenshot can be correlated against the numbers to find stitching/
+        /// world position, so a render screenshot can be correlated against the numbers to find stitching/
         /// placement issues. Paired with a PNG of the live render by the view.</summary>
         public string BuildDebugReport()
         {

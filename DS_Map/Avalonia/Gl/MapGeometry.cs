@@ -26,8 +26,8 @@ namespace DSPRE.Avalonia.Gl
             var rx = Mat4.RotateX(Building.U16ToDeg(b.xRotation) * d2r);
             var ry = Mat4.RotateY(Building.U16ToDeg(b.yRotation) * d2r);
             var rz = Mat4.RotateZ(Building.U16ToDeg(b.zRotation) * d2r);
-            // The engine applies rotations to a building's local axes in X, then Y, then Z order
-            // (confirmed against sub_02020D2C/MTX_Rot33Vec), so X must be innermost here.
+            // The engine applies rotations to a building's local axes in X, then Y, then Z order,
+            // so X must be innermost here.
             return Mat4.Multiply(scale, Mat4.Multiply(trans, Mat4.Multiply(rz, Mat4.Multiply(ry, rx))));
         }
     }

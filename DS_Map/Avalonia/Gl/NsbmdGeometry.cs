@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Gl
         public float Cx, Cy, Cz, Scale = 1f;
         public float RawMinX, RawMaxX, RawMinY, RawMaxY, RawMinZ, RawMaxZ;
 
-        // Raw bounds of the MAP model only (excludes buildings) — for fitting the tile-grid overlay.
+        // Raw bounds of the MAP model only (excludes buildings), for fitting the tile-grid overlay.
         public float MapMinX, MapMaxX, MapMinY, MapMaxY, MapMinZ, MapMaxZ;
         public bool HasMapBounds;
 
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.Gl
             {
                 new MatrixCellGeometry { Map = map, Buildings = buildings, CellX = 0, CellY = 0 }
             }, MatrixStitchMode.Grid);
-            scene.IsMatrix = false;   // single-map view — nothing reads this, but keep it honest
+            scene.IsMatrix = false;   // single-map view, nothing reads this, but keep it honest
             return scene;
         }
 

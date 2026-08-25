@@ -74,10 +74,9 @@ namespace DSPRE.Avalonia.ViewModels
             MaxItemDataId = GetItemDataFileCount() - 1;
             PopulateIconPaletteDropdowns();
 
-            // (GiratinaBoost is no longer hidden for DP — the combos bind by index == byte value, so the
+            // (GiratinaBoost is no longer hidden for DP; the combos bind by index == byte value, so the
             //  list must stay value-aligned. It's just a harmless unused entry there; relabel it if desired.)
 
-            // Load first item
             _selectedItemIndex = 1;
             OnPropertyChanged(nameof(SelectedItemIndex));
             LoadFile(1);
@@ -315,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // ── Party Params — Status Heals ──────────────────────────────────────
+        // ── Party Params: Status Heals ──────────────────────────────────────
         private bool _slpHeal;   public bool SlpHeal   { get => _slpHeal;   set { if (Set(ref _slpHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SlpHeal   = value; SetDataDirty(); } } }
         private bool _psnHeal;   public bool PsnHeal   { get => _psnHeal;   set { if (Set(ref _psnHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PsnHeal   = value; SetDataDirty(); } } }
         private bool _brnHeal;   public bool BrnHeal   { get => _brnHeal;   set { if (Set(ref _brnHeal,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.BrnHeal   = value; SetDataDirty(); } } }
@@ -329,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _levelUp;   public bool LevelUp   { get => _levelUp;   set { if (Set(ref _levelUp,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.LevelUp   = value; SetDataDirty(); } } }
         private bool _evolve;    public bool Evolve    { get => _evolve;    set { if (Set(ref _evolve,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.Evolve    = value; SetDataDirty(); } } }
 
-        // ── Party Params — Stat Stages ───────────────────────────────────────
+        // ── Party Params: Stat Stages ───────────────────────────────────────
         private int _atkStages;      public int AtkStages      { get => _atkStages;      set { if (Set(ref _atkStages,      value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.AtkStages      = value; SetDataDirty(); } } }
         private int _defStages;      public int DefStages      { get => _defStages;      set { if (Set(ref _defStages,      value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.DefStages      = value; SetDataDirty(); } } }
         private int _spAtkStages;    public int SpAtkStages    { get => _spAtkStages;    set { if (Set(ref _spAtkStages,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.SpAtkStages    = value; SetDataDirty(); } } }
@@ -338,7 +337,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int _accuracyStages; public int AccuracyStages { get => _accuracyStages; set { if (Set(ref _accuracyStages, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.AccuracyStages = value; SetDataDirty(); } } }
         private int _critRateStages; public int CritRateStages { get => _critRateStages; set { if (Set(ref _critRateStages, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.CritRateStages = value; SetDataDirty(); } } }
 
-        // ── Party Params — Restore ───────────────────────────────────────────
+        // ── Party Params: Restore ───────────────────────────────────────────
         private bool _hpRestore;    public bool HpRestore    { get => _hpRestore;    set { if (Set(ref _hpRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestore    = value; SetDataDirty(); } } }
         private int  _hpRestoreParam; public int HpRestoreParam { get => _hpRestoreParam; set { if (Set(ref _hpRestoreParam, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestoreParam = (byte)value; SetDataDirty(); } } }
         private bool _ppRestore;    public bool PpRestore    { get => _ppRestore;    set { if (Set(ref _ppRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestore    = value; SetDataDirty(); } } }
@@ -347,7 +346,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _ppMax;        public bool PpMax        { get => _ppMax;        set { if (Set(ref _ppMax,        value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPMax        = value; SetDataDirty(); } } }
         private bool _ppRestoreAll; public bool PpRestoreAll { get => _ppRestoreAll; set { if (Set(ref _ppRestoreAll, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreAll = value; SetDataDirty(); } } }
 
-        // ── Party Params — EVs ───────────────────────────────────────────────
+        // ── Party Params: EVs ───────────────────────────────────────────────
         private bool _evHp;    public bool EVHp    { get => _evHp;    set { if (Set(ref _evHp,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVHp    = value; SetDataDirty(); } } }
         private bool _evAtk;   public bool EVAtk   { get => _evAtk;   set { if (Set(ref _evAtk,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVAtk   = value; SetDataDirty(); } } }
         private bool _evDef;   public bool EVDef   { get => _evDef;   set { if (Set(ref _evDef,   value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVDef   = value; SetDataDirty(); } } }
@@ -362,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int _evSpAtkValue; public int EVSpAtkValue { get => _evSpAtkValue; set { if (Set(ref _evSpAtkValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpAtkValue = (sbyte)value; SetDataDirty(); } } }
         private int _evSpDefValue; public int EVSpDefValue { get => _evSpDefValue; set { if (Set(ref _evSpDefValue, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.EVSpDefValue = (sbyte)value; SetDataDirty(); } } }
 
-        // ── Party Params — Friendship ────────────────────────────────────────
+        // ── Party Params: Friendship ────────────────────────────────────────
         private bool _friendshipLow;  public bool FriendshipLow  { get => _friendshipLow;  set { if (Set(ref _friendshipLow,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipLow  = value; SetDataDirty(); } } }
         private bool _friendshipMid;  public bool FriendshipMid  { get => _friendshipMid;  set { if (Set(ref _friendshipMid,  value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipMid  = value; SetDataDirty(); } } }
         private bool _friendshipHigh; public bool FriendshipHigh { get => _friendshipHigh; set { if (Set(ref _friendshipHigh, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.FriendshipHigh = value; SetDataDirty(); } } }
@@ -413,7 +412,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
 
-            // In-place update (ListSync), not Clear+Add — Clear briefly empties the collection, which
+            // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
             // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the assignment below.
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, RomInfo.GetItemNames());
             MaxItemIndex = ItemNames.Count - 1;
@@ -528,7 +527,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void PopulateFromCurrentData()
         {
-            // Hold effect — combo bound by index == byte value; extend the list if the value is beyond the
+            // Hold effect: combo bound by index == byte value; extend the list if the value is beyond the
             // known labels (a hacked/undefined effect) so it still has a slot.
             _holdEffectIndex = (int)_currentData.holdEffect;
             EnsureCovers(HoldEffectNames, "item_hold_effects", _holdEffectIndex);
@@ -580,7 +579,7 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(FlingPower));
             OnPropertyChanged(nameof(PluckEffect));
 
-            // Functions — combos bound by index == byte value; extend lists for unknown/raw values.
+            // Functions: combos bound by index == byte value; extend lists for unknown/raw values.
             _fieldUseFuncIndex = (int)_currentData.fieldUseFunc;
             EnsureCovers(FieldUseFuncNames, "item_field_use", _fieldUseFuncIndex);
             OnPropertyChanged(nameof(FieldUseFuncIndex));
@@ -631,20 +630,12 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Helpers ───────────────────────────────────────────────────────────
         private static ItemNarcTableEntry ReadTableEntry(int index)
         {
-            // RomInfo.itemTableOffset is a hardcoded per-vanilla-ROM-version ARM9 RAM address for the
-            // item -> (itemData, icon, palette, agb) indirection table — meaningless on hg-engine's
-            // recompiled ARM9. hg-engine's own data/itemdata/itemdata.c is a flat array indexed directly
-            // by item id with no such indirection, so item data itself is read directly by id here.
-            // Icon/palette DO have a real, deterministic mapping too, but NOT "same slot for both": hg-
-            // engine's data/graphics/itemgra.mk emits one NCGR+NCLR pair per item into $(BUILD)/a018,
-            // named "<id+2>-00.NCGR"/"<id+2>-01.NCLR" (a leftover of the vanilla dump script's own
-            // numbering) — but the final a018.narc is packed by naturally-sorted filename order, headed
-            // by two fixed files (0000.NANR, 0001.NCER). So each item contributes two CONSECUTIVE narc
-            // members, image then palette: image slot = 2*id + 2, palette slot = 2*id + 3. Confirmed
-            // against the real checkout end to end (id 0 "none": slots 2/3; id 1 ITEM_MASTER_BALL:
-            // slots 4/5 — verified by magic bytes, RGCN then RLCN — through the real item range). A
-            // brand-new item added but not yet compiled into a ROM simply won't have slots yet and falls
-            // back to "n/a" like before (see UpdateIcon).
+            // RomInfo.itemTableOffset is a vanilla-only ARM9 address for the item indirection table,
+            // meaningless on hg-engine's recompiled ARM9. hg-engine's itemdata.c is a flat array indexed
+            // directly by item id, so item data is read by id here. Icon/palette DO have a deterministic
+            // mapping: a018.narc packs one NCGR+NCLR pair per item, in id order, after 2 fixed header
+            // files, so image slot = 2*id + 2, palette slot = 2*id + 3. A newly added item with no
+            // compiled slot yet falls back to "n/a" (see UpdateIcon).
             if (RomInfo.isHGE)
             {
                 uint imageSlot = (uint)(2 * index + 2);
@@ -691,12 +682,10 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        // Curated v1 scope: every top-level ITEMDATA field this editor already exposes, except price
-        // (hg-engine's source sets it via an ITEM_PRICE(n) macro call, not a plain ".price = n" — the
-        // anchored patcher can't locate a field spelled as a macro argument, so it's reported unresolved
-        // and left untouched rather than guessed) and the nested .partyUseParam sub-fields (30+ fields
-        // whose hg-engine names don't line up 1:1 with this editor's ItemData.PartyUseParam property
-        // names — left for a later pass rather than risking a wrong mapping).
+        // Curated v1 scope: every top-level ITEMDATA field this editor exposes, except price (hg-engine
+        // sets it via an ITEM_PRICE(n) macro call, which the anchored patcher can't locate as a plain
+        // field, so it's left unresolved rather than guessed) and .partyUseParam's 30+ sub-fields, whose
+        // hg-engine names don't line up 1:1 with this editor's properties (left for a later pass).
         private void WriteHgEngineSource()
         {
             if (!HgEngineProject.IsActive || _currentData == null) return;
@@ -704,12 +693,12 @@ namespace DSPRE.Avalonia.ViewModels
             string TypeSymbol(int type) =>
                 HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix(type, "TYPE_", out string n) == true ? n : type.ToString();
             // item.h packs ITEM_*/POCKET_*/BATTLE_POCKET_* into one flat namespace, so a plain by-value
-            // lookup can return a same-valued name from the wrong family — filter by prefix (see
+            // lookup can return a same-valued name from the wrong family, filter by prefix (see
             // TryGetNameWithPrefix's doc comment for the live bug this fixes).
             string PocketSymbol(int pocket) =>
                 HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetNameWithPrefix(pocket, "POCKET_", out string n) == true ? n : pocket.ToString();
             // battlePocket is itself a bit-OR of up to 5 checkboxes (Poké Balls/Battle Items/HP Restore/
-            // Status Healers/PP Restore) — TryGetFlagsExpression handles both the common single-pocket
+            // Status Healers/PP Restore); TryGetFlagsExpression handles both the common single-pocket
             // case and any combination, falling back to a raw number only if some bit isn't covered.
             string BattlePocketSymbol(int pocket) =>
                 HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetFlagsExpression(pocket, "BATTLE_POCKET_", out string n) == true ? n : pocket.ToString();

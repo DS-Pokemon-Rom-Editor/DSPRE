@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia
     /// <summary>
     /// Drives one or more <see cref="SpaSimulator"/>s and renders the current particle state to a transparent
     /// <see cref="WriteableBitmap"/> ready to overlay on the battle scene. Each particle is drawn as its emitter's
-    /// real decoded NDS texture, modulated by the particle's colour + alpha and alpha-blended — the in-game look.
+    /// real decoded NDS texture, modulated by the particle's colour + alpha and alpha-blended, matching the in-game look.
     /// Emitters whose texture couldn't be decoded fall back to a soft colour dot. Projection is the REAL battle
     /// particle camera (eye (0,0,+4.0) world units, 96px focal); nothing here is
     /// eye-tuned: every path reproduces the corresponding step of the NDS particle-library render pipeline.
@@ -24,12 +24,12 @@ namespace DSPRE.Avalonia
             public readonly IReadOnlyList<SpaTexture> Textures;   // archive textures; each particle's TexNo indexes this
             public readonly SpaTexture BaseTex;        // fallback (the emitter's base TexNo) when no texture animation
             public readonly double CenterX, CenterY;   // where this emitter sits (attacker / defender, per callback)
-            public readonly int DrawType;              // the draw-type constants* — 1/3 = directional billboard (oriented along velocity)
+            public readonly int DrawType;              // the draw-type constants*: 1/3 = directional billboard (oriented along velocity)
             public readonly bool RepeatS, RepeatT;     // emitter tex_repeat ≥ 1; with a texture's flip bit → mirror
             public readonly double Aspect, DbbScale;   // base.aspect (sclX = sclY×aspect); directional stretch along vel
             public readonly double OffsetX, OffsetY;    // base.offset_x/offset_y: quad centre offset in half-size units
             // Depth of this emitter's anchor plane in px-units (+z toward the camera): the player mon sits at
-            // ≈0 (WET_PARTICLE_Z_A = 0x40) and the ENEMY at −30.5 (Z_BB = −5248/172) — farther from the camera,
+            // ≈0 (WET_PARTICLE_Z_A = 0x40) and the ENEMY at −30.5 (Z_BB = −5248/172), farther from the camera,
             // so enemy-side effects render ≈75% the size (the real game's perspective).
             public readonly double BaseZ;
             // The camera-reverse emit callbacks (cb 1/2) with an enemy attacker turn the particle camera 180°,
@@ -89,10 +89,10 @@ namespace DSPRE.Avalonia
                 // The real battle particle camera: eye at
                 // (0,0,+4.0) world units looking at the origin, Y up. px-per-world-unit at the z=0 plane is
                 // 4096/172 (PT_LCD_DOT), so the perspective factor for a particle at depth z (px-units,
-                // +z toward camera) is f = 4 / (4 − z/23.81) — 1.0 exactly at the player plane, ≈0.757 at the
+                // +z toward camera) is f = 4 / (4 − z/23.81): 1.0 exactly at the player plane, ≈0.757 at the
                 // enemy plane (Z_BB), matching the game's smaller enemy-side rendering.
                 double fBase = EyeDist / (EyeDist - layer.BaseZ / PxPerUnit);
-                if (fBase <= 0) continue;   // anchor behind the camera — nothing sane to draw
+                if (fBase <= 0) continue;   // anchor behind the camera, nothing sane to draw
                 double mirror = layer.ViewReversed ? -1.0 : 1.0;
                 foreach (var p in layer.Sim.Particles())
                 {
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia
                     // The quad is sized by base_scale (NOT the texture's pixel size); p.Scale already carries
                     // base_scl × scale-anim. sclX = sclY × aspect (billboard). The texture's S axis maps to the
                     // quad's local-X half-axis, its T axis to local-Y.
-                    // NOTE: quads must render at their TRUE size — screen-covering sheets are real data
+                    // NOTE: quads must render at their TRUE size: screen-covering sheets are real data
                     // (Ominous Wind is ONE 128×128 particle at base_scl 11.06 × aspect 4.10 ≈ 2158×526 px,
                     // whose edges must stay off-screen through the flight; an old 96px cap squared it into
                     // a small box, and even 512 exposed its edges mid-flight). BlitQuad clips its bounding
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia
                     double sc = p.Scale <= 0 ? 1.0 : p.Scale;
                     // Per-axis scales (the scale-anim-direction flag): a Y-only scale anim extends the
                     // quad lengthwise while its width stays base_scl (Seed Flare slashes). Raw values, no
-                    // fallback — scale 0 at birth means a hairline quad, exactly like the hardware.
+                    // fallback: scale 0 at birth means a hairline quad, exactly like the hardware.
                     // × f: the perspective factor shrinks/grows the quad with its depth, like the real camera.
                     double scX = p.ScaleForX > 0 ? p.ScaleForX : sc;
                     double scY = p.ScaleForY > 0 ? p.ScaleForY : sc;
@@ -171,9 +171,9 @@ namespace DSPRE.Avalonia
                     }
                     else if (directional)
                     {
-                        // Directional billboard: STILL a view-plane quad — local-Y along the SCREEN
+                        // Directional billboard: STILL a view-plane quad, local-Y along the SCREEN
                         // projection of the velocity, local-X perpendicular. The along-velocity stretch is
-                        // VIEW-DEPENDENT: len = sclY·(1 + dbbScale·(1 − |v̂·look|)) — a particle moving toward/
+                        // VIEW-DEPENDENT: len = sclY·(1 + dbbScale·(1 − |v̂·look|)); a particle moving toward/
                         // away from the camera foreshortens to no stretch. cross(vel, look) == 0 (no screen
                         // velocity) → the particle is NOT drawn at all (the source returns).
                         double vsx = p.VX * mirror, vsy = -p.VY;
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia
                     // init_rtt + rotation-anim spin, matching the hardware billboard build: localX =
                     // (cosθ·sclX, sinθ·sclX), localY = (−sinθ·sclY, cosθ·sclY) in Y-up view space; mapping to our
                     // Y-down screen gives a = −θ on X-right/Y-down axes. Do NOT re-tune this per move: for a +θ the
-                    // quad's top tips screen-LEFT — that IS the game's math (cross-checked against the particle-space
+                    // quad's top tips screen-LEFT: that IS the game's math (cross-checked against the particle-space
                     // mon positions: player (−X,−Y), enemy (+X,+Y), +Y up, no mirror). Side mirroring in-game comes
                     // from the camera-reverse emit callbacks (turn the camera 180°), not from the billboard rotation.
                     if (p.Rotation != 0 && !polygonType)   // polygons carry their rotation inside the 3D basis above
@@ -234,14 +234,14 @@ namespace DSPRE.Avalonia
             return wb;
         }
 
-        // Pinhole eye z in px-units: a world point (x,y,z)pu projects to 128 + x·ZE/(ZE−z) — the same
+        // Pinhole eye z in px-units: a world point (x,y,z)pu projects to 128 + x·ZE/(ZE−z), the same
         // camera as the 2D path (f = ZE/(ZE−z)), just expressed for exact per-pixel ray casting.
         private const double EyeZpu = EyeDist * PxPerUnit;
 
         /// <summary>Exact perspective rendering of a WORLD-space quad (polygon draw types): centre C,
         /// half-axes A/B, all in px-units (+Y up, +Z toward the camera). Per pixel: cast the eye ray,
         /// intersect the quad's plane, map the hit to local (u,v) via the dual basis, sample. This is
-        /// what the DS does per-vertex with hardware perspective — no linearisation.</summary>
+        /// what the DS does per-vertex with hardware perspective, no linearisation.</summary>
         private void BlitQuad3D(SpaTexture tex, double[] C, double[] A, double[] B,
                                 byte r, byte g, byte b, double alpha, bool mirrorX, bool mirrorY, bool flipS, bool flipT)
         {
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia
                     if (u < -1 || u > 1 || v < -1 || v > 1) continue;
                     if (flipS) u = -u;
                     if (flipT) v = -v;
-                    // Texcoords: the plane build puts (s,t)=(0,0) at local (−1,+1) — texture TOP at +B.
+                    // Texcoords: the plane build puts (s,t)=(0,0) at local (−1,+1), texture TOP at +B.
                     int tx = mirrorX ? (int)((1.0 - Math.Abs(u)) * tex.Width) : (int)((u + 1.0) * 0.5 * tex.Width);
                     int ty = mirrorY ? (int)((1.0 - Math.Abs(v)) * tex.Height) : (int)((1.0 - v) * 0.5 * tex.Height);
                     if (tx < 0) tx = 0; else if (tx >= tex.Width) tx = tex.Width - 1;
@@ -323,7 +323,7 @@ namespace DSPRE.Avalonia
             return new[,] { { c, 0.0, -s }, { 0.0, 1.0, 0.0 }, { s, 0.0, c } };
         }
 
-        // Polygon rotation about the normalised (1,1,1) diagonal — the hardware's compact form:
+        // Polygon rotation about the normalised (1,1,1) diagonal, the hardware's compact form:
         // C=(1−cos)/3, Sm=C+sin/√3, Sp=C−sin/√3, diagonal C+cos.
         private static double[,] RotXYZ(double t)
         {
@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia
         }
 
         // Draws the texture onto an oriented quad centred at (cx,cy) whose two half-axes are (axX,axY) [local X /
-        // texture S] and (ayX,ayY) [local Y / texture T] in screen pixels — the exact billboard/dbb quad. For an
+        // texture S] and (ayX,ayY) [local Y / texture T] in screen pixels, the exact billboard/dbb quad. For an
         // axis-aligned billboard the axes are (sclX,0)/(0,sclY); for a directional billboard they rotate with the
         // particle's velocity. Modulated by the particle colour+alpha and blended additively (the glow look).
         private void BlitQuad(SpaTexture tex, double cx, double cy, double axX, double axY, double ayX, double ayY,

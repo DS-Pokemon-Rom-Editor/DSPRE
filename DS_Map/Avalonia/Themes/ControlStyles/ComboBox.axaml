@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Qt Fusion non-editable combo (CC_ComboBox, non-editable branch) draws the WHOLE combo with
-         PE_PanelButtonCommand — i.e. it IS a push button, with the arrow painted on top. So this
+         PE_PanelButtonCommand, i.e. it IS a push button, with the arrow painted on top. So this
          reuses the exact Button structure (dark outer outline + face gradient + white inner ring)
          and just adds the arrow glyph on the right. No separate arrow box, no separator. -->
     <ControlTheme x:Key="{x:Type ComboBox}" TargetType="{x:Type ComboBox}">

@@ -10,7 +10,7 @@
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="ScrollViewer.IsScrollChainingEnabled" Value="True"/>
         <!-- Native item-aligned scrolling: VirtualizingStackPanel publishes snap points (verified by
-             reflection), so Mandatory snapping lands the list on whole-item boundaries — no wheel hack. -->
+             reflection), so Mandatory snapping lands the list on whole-item boundaries, no wheel hack. -->
         <Setter Property="ScrollViewer.VerticalSnapPointsType" Value="Mandatory"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="{x:Type ListBox}">

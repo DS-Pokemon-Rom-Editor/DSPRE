@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.ViewModels
             RaiseUndoState();
         }
 
-        // Grid-row edits don't otherwise reach the dirty/undo pipeline — subscribe each row once so a species
+        // Grid-row edits don't otherwise reach the dirty/undo pipeline; subscribe each row once so a species
         // or level change marks the editor dirty (also fixes a latent "edited rows close without prompting").
         private void HookRowsOnce()
         {

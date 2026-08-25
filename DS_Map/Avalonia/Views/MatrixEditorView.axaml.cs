@@ -53,14 +53,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>
-        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
+        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
         /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
         /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs — only the event-subscription wiring is one-time.
+        /// re-runs; only the event-subscription wiring is one-time.
         /// </summary>
         /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
         /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;

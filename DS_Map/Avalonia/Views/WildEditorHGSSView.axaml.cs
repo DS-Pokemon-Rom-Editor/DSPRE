@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views
 {
     /// <summary>Authored as a <see cref="UserControl"/> so it can be embedded as the Encounters tab in
     /// the Maps workspace; standalone launches host it in an <see cref="EditorHostWindow"/> (which calls
-    /// <see cref="WildEditorHGSSViewModel.Detach"/> on close — see AvaloniaEditorLauncher.OpenWildEditor).</summary>
+    /// <see cref="WildEditorHGSSViewModel.Detach"/> on close, see AvaloniaEditorLauncher.OpenWildEditor).</summary>
     public partial class WildEditorHGSSView : UserControl
     {
         private WildEditorHGSSViewModel ViewModel => (WildEditorHGSSViewModel)DataContext;

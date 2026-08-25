@@ -7,7 +7,7 @@ namespace DSPRE.Avalonia
 {
     /// <summary>
     /// Multi-monitor window placement. Editors/pop-ups are opened with <c>.Show()</c> and no owner, so their
-    /// XAML <c>WindowStartupLocation="CenterScreen"</c> always lands them on the PRIMARY monitor — even when the
+    /// XAML <c>WindowStartupLocation="CenterScreen"</c> always lands them on the PRIMARY monitor, even when the
     /// user has dragged the editor they opened it from onto another screen. <see cref="ShowManaged"/> instead
     /// positions the new window on the currently-active window's monitor (a small cascade offset from it), so a
     /// pop-up appears next to the editor you're actually using.
@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia
                     w.Position = new PixelPoint(p.X + 48, p.Y + 48);
                 }
             }
-            catch { /* positioning is best-effort — never block opening the window */ }
+            catch { /* positioning is best-effort, never block opening the window */ }
             w.Show();
         }
 

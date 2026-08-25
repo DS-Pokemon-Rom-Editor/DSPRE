@@ -14,8 +14,8 @@ namespace DSPRE.Avalonia.Data
         /// then an offset table, each entry a small SWAV record: wave type / loop flag / sample rate / loop point
         /// / length, followed by the raw sample data) into its individual waves, decoding PCM8/PCM16/IMA-ADPCM to
         /// 16-bit PCM. This is the standard wave-archive format shared by DS sound engines generally, not
-        /// something specific to this game; unlike the SDAT container itself (verified against the actual game
-        /// source), this decode follows the well-documented public format.
+        /// something specific to this game, so this decode follows the well-documented public format rather
+        /// than the game's own source (unlike the SDAT container itself).
         /// </summary>
         public static System.Collections.Generic.List<SwavSample> ParseArchive(byte[] d)
         {
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
                 int relOff = (int)U32(entryAt);
                 if (relOff == 0) { list.Add(null); continue; }
                 // Relative to this SWAR sub-file's own byte 0, not the DATA block's start (same convention as
-                // SBNK's instrument offset table — verified against an independent open-source NDS-audio parser).
+                // SBNK's instrument offset table).
                 int at = relOff;
                 var wav = ParseOne(d, at);
                 list.Add(wav);
@@ -60,14 +60,14 @@ namespace DSPRE.Avalonia.Data
             int waveType = d[at];
             bool loop = d[at + 1] != 0;
             int sampleRate = U16(at + 2);
-            // at+4: timer value (hardware clock divisor) — not needed, we already have sampleRate directly.
+            // at+4: timer value (hardware clock divisor), not needed since we already have sampleRate directly.
             int loopOffsetWords = U16(at + 6);
             long nonLoopLenWords = U32(at + 8);   // widen: a malformed/misaligned record can hold a huge raw value
             int dataAt = at + 12;
             if (dataAt > d.Length) return null;
 
             long totalWordsWide = loopOffsetWords + nonLoopLenWords;
-            // Clamp against the data actually available rather than trust the header — a wave type/loop/length
+            // Clamp against the data actually available rather than trust the header: a wave type/loop/length
             // read from a bad offset can produce an arbitrarily large value that would otherwise overflow the
             // byte-count math below.
             long maxWordsFromFileSize = (d.Length - dataAt) / 4 + 1;
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
                     for (int i = 0; i < sampleCount; i++) pcm[i] = (short)(d[dataAt + i * 2] | (d[dataAt + i * 2 + 1] << 8));
                     return new SwavSample { SampleRate = sampleRate, Loop = loop, LoopStartSample = loopOffsetWords * 2, Pcm = pcm };
                 }
-                case 2:   // IMA-ADPCM: 2 samples/byte (nibbles), 1 word (4 bytes) = 8 samples — but the first word
+                case 2:   // IMA-ADPCM: 2 samples/byte (nibbles), 1 word (4 bytes) = 8 samples, but the first word
                           // is the one-time predictor/step header, consumed by the decoder and absent from the
                           // decoded PCM array, so it doesn't count towards the loop-start sample index.
                 {

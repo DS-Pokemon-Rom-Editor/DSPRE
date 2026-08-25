@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Views
         private CtrlHoverUnderlineColorizer _ctrlHoverUnderline;
         private bool _setupDone;
         // SetGrammarFile() re-registers "source.rotom" into the underlying TextMateSharp registry every
-        // call — fine the first time, but throws ("An item with the same key has already been added")
+        // call; fine the first time, but throws ("An item with the same key has already been added")
         // if called again, which now happens on every ROM load since ApplyGrammar() must re-run to pick
         // up the newly loaded ROM's script text. Once loaded, switch grammars via the cheap scope-name
         // overload instead of re-registering the file.
@@ -127,14 +127,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>
-        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
+        /// VM setup. No-ops until a ROM is loaded: the embedded Maps-workspace instance is created at
         /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
         /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs — only the event-subscription wiring is one-time.
+        /// re-runs; only the event-subscription wiring is one-time.
         /// </summary>
         /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
         /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// right after a ROM load); <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -146,10 +146,10 @@ namespace DSPRE.Avalonia.Views
             if (!_setupDone)
             {
                 _setupDone = true;
-                // Hook the owning Window's Closed (not this UserControl's DetachedFromVisualTree — that
+                // Hook the owning Window's Closed (not this UserControl's DetachedFromVisualTree, which
                 // fires on every tab switch when embedded in the Maps workspace, which would tear down the
                 // LSP mid-session). For the embedded case the owner is the main window, whose Closed only
-                // fires at app exit — exactly when this cleanup should happen there too.
+                // fires at app exit, exactly when this cleanup should happen there too.
                 owner.Closed += (_, _) =>
                 {
                     RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);

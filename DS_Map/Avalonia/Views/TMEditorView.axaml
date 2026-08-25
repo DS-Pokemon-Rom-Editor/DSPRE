@@ -23,7 +23,7 @@
 		</Style>
 	</Window.Styles>
 
-	<!-- Root: two columns — list | detail panel -->
+	<!-- Root: two columns (list, detail panel) -->
 	<Grid Margin="8" ColumnDefinitions="230,*" RowDefinitions="*,Auto">
 
 		<!-- ── Left column: TM/HM list ─────────────────────────────── -->

@@ -6,7 +6,7 @@ namespace DSPRE.Avalonia.Models
 {
     /// <summary>
     /// Tree nodes for the TM/HM Bulk Editor (evolution-family parent, per-species leaves). Same
-    /// "suppress while cascading" discipline as <see cref="TrainerFlagTreeNode"/> — kept as its own
+    /// "suppress while cascading" discipline as <see cref="TrainerFlagTreeNode"/>, kept as its own
     /// type rather than reused because species IDs need <c>int</c>, not the trainer tree's <c>byte</c>
     /// class ID (species count regularly exceeds 255 once alt forms are counted).
     /// </summary>

@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views
     /// <summary>
     /// Authored as a <see cref="UserControl"/> so it can be embedded as the Events tab in the Maps
     /// workspace; standalone launches (<see cref="AvaloniaEditorLauncher.OpenEventEditor"/>) host it
-    /// in an <see cref="EditorHostWindow"/>. Do not change the base type back to Window — Avalonia
+    /// in an <see cref="EditorHostWindow"/>. Do not change the base type back to Window: Avalonia
     /// windows cannot be re-parented as a child control (embedding one throws "already has a visual
     /// parent TopLevelHost").
     /// </summary>
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Views
             };
 
             // Arrow keys nudge the selected event / pan the camera, but only while the 3D
-            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click) —
+            // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click);
             // otherwise they'd steal input from a focused dropdown/spinner in the side panel.
             GlHost.KeyDown += (s, e) =>
             {
@@ -79,14 +79,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>
-        /// VM setup. No-ops until a ROM is loaded — the embedded Maps-workspace instance is created at
-        /// app boot, before any ROM; <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
+        /// VM setup. No-ops until a ROM is loaded; the embedded Maps-workspace instance is created at
+        /// app boot, before any ROM. <see cref="MapsWorkspaceView"/> re-invokes this after EVERY
         /// successful load (including switching ROMs mid-session), so <c>vm.SetupAsync</c> always
-        /// re-runs — only the event-subscription wiring is one-time.
+        /// re-runs, only the event-subscription wiring is one-time.
         /// </summary>
         /// <param name="ownerOverride">Pass the owning Window explicitly when this control may not be
         /// attached to the visual tree yet (a non-selected TabItem's content in the Maps workspace,
-        /// right after a ROM load) — <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
+        /// right after a ROM load), since <see cref="TopLevel.GetTopLevel"/> returns null in that case.</param>
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.Views
             {
                 _setupDone = true;
                 // No EditorWindowChrome here (it requires a Window): the toolbar's own Save button covers
-                // saving, and — when hosted standalone — EditorHostWindow already guards unsaved changes on
+                // saving, and when hosted standalone, EditorHostWindow already guards unsaved changes on
                 // close via this VM's IEditorWithUnsavedChanges. When embedded in the Maps workspace tab,
                 // the workspace's own Save/Reset handles it instead.
                 vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.Views
 
                 System.IO.File.WriteAllText(txtPath, VM.BuildDebugReport());
 
-                // Capture the live GL render (async — fires after the next frame).
+                // Capture the live GL render (async, fires after the next frame).
                 GlView.CaptureFrame((rgba, w, h) =>
                 {
                     bool pngOk = false;

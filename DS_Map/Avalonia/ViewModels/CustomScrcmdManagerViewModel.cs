@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
     /// Avalonia port of the WinForms <c>CustomScrcmdManager</c>: manages the per-ROM script-command
-    /// databases under <c>AppPaths.DatabasePath\edited_databases</c> — import (replace) a project's
+    /// databases under <c>AppPaths.DatabasePath\edited_databases</c>: import (replace) a project's
     /// scrcmd_database.json (with optional live reload + full script reparse), export it, and open
     /// the folder in the system file manager.
     /// </summary>

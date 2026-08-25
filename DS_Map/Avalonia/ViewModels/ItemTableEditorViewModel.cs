@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels
 
     /// <summary>One Rock Smash NARC entry (data/a/2/5/3): a header's item-drop odds and which of the
     /// three hardcoded tables it rolls from. <see cref="Missing"/> flags headers whose file didn't
-    /// exist on disk (a modified ROM, or a header added after the NARC was last touched) — Save
+    /// exist on disk (a modified ROM, or a header added after the NARC was last touched). Save
     /// materializes it with whatever's currently shown (defaults to Odds=0/Default if left alone).</summary>
     public class RockSmashHeaderRow : INotifyPropertyChanged
     {
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // 0 = Default, 1 = Ruins of Alph, 2 = Cliff Cave — matches RockSmashData.TableType.
+        // 0 = Default, 1 = Ruins of Alph, 2 = Cliff Cave, matches RockSmashData.TableType.
         public int TypeIndex
         {
             get => (int)Data.Type;
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     /// <summary>One of Rock Smash's three fixed 8-slot item tables, hardcoded in HGSS's ov001.bin
-    /// (English offsets only — see <see cref="RomInfo.IsRockSmashItemTableAvailable"/>).</summary>
+    /// (English offsets only, see <see cref="RomInfo.IsRockSmashItemTableAvailable"/>).</summary>
     public class RockSmashItemSlotsRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.ViewModels
         public void DiscardChanges() => _dirty = false;
 
         // ── Undo / redo (ISupportsUndo) ─────────────────────────────────────────
-        // Only the 4 field values are snapshotted — the byte patches (ASM/rival scripts/text) run once, on
+        // Only the 4 field values are snapshotted; the byte patches (ASM/rival scripts/text) run once, on
         // Save, not per undo step.
         private sealed class Snapshot { public int S1, S2, S3, HeldItem; }
         private readonly DSPRE.Avalonia.UndoHistory<Snapshot> _history = new();
@@ -177,7 +177,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
-        // ── Busy state (background .rotom resync after Save — see SaveChanges) ──
+        // ── Busy state (background .rotom resync after Save, see SaveChanges) ──
         private bool _isBusy;
         public bool IsBusy { get => _isBusy; private set => Set(ref _isBusy, value); }
         private string _busyText;
@@ -192,7 +192,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 AppMessages.Error(
                     "Couldn't safely locate the starter species table on this ROM (it may already be modified " +
-                    "by another tool) — nothing was changed.",
+                    "by another tool); nothing was changed.",
                     "Starter Pokémon Editor");
                 return;
             }
@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels
             _history.MarkSaved();
             RaiseUndoState();
 
-            // The species/rival-script bytes above are already on disk — this only keeps the Script
+            // The species/rival-script bytes above are already on disk; this only keeps the Script
             // Editor's .rotom text in sync (see RefreshRotomSourcesAsync's remarks) and must run in the
             // background: it shells out to rotom.exe per touched file, and awaiting it synchronously here
             // would freeze the whole app (SaveChanges is called directly from a UI Click handler).

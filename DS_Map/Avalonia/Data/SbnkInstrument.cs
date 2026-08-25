@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
         public int BaseNote = 60;   // middle C, the common default when a record doesn't specify one
 
         // Raw SNDInstParam envelope bytes (0-127, Nitro SDK's own rate/level encoding, NOT plain milliseconds
-        // or a linear 0-1 level — see NitroEnvelope for the conversion; 127 means "fast/instant" for
+        // or a linear 0-1 level; see NitroEnvelope for the conversion. 127 means "fast/instant" for
         // attack/decay/release, "full level" for sustain). All-127 is a flat, unshaped envelope, matching a
         // record that (for whatever reason) didn't carry real envelope bytes rather than silently applying a
         // slow ramp or an inaudible decay.
@@ -37,15 +37,15 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// Parses an SBNK instrument bank (public Nitro sound format: a file header, one DATA block, then a per-
-    /// program-slot offset table — a record-type byte plus a 24-bit offset, relative to the SBNK sub-file's own
-    /// byte 0, to the instrument's parameters) into per-program instrument info. Mirrors the verified on-disk
-    /// layout of <c>SNDBankData</c>: a 32-byte reserved area (the in-memory struct's wave-archive link pointers,
-    /// zero-filled on disk) sits between the block header and the real instrument count.
-    /// Decodes the PCM-backed record types: a single-region instrument (the common case for one-shot sound
-    /// effects), a key-split instrument (several regions, each covering its own note range) and a drum set
-    /// (one region per individual key, common for percussion). The tone-generator record types (PSG tone/noise,
-    /// which synthesize rather than play a sample) have no wave to resolve and are left unsupported.
+    /// Parses an SBNK instrument bank (public Nitro sound format: file header, one DATA block, then a
+    /// per-program-slot offset table of record-type byte + 24-bit offset relative to the SBNK sub-file's
+    /// own byte 0) into per-program instrument info. Matches <c>SNDBankData</c>'s on-disk layout: a
+    /// 32-byte reserved area (the in-memory struct's wave-archive link pointers, zero-filled on disk)
+    /// sits between the block header and the real instrument count.
+    ///
+    /// Decodes the PCM-backed record types: single-region (one-shot SFX), key-split (several regions,
+    /// each its own note range) and drum set (one region per key, for percussion). PSG tone/noise record
+    /// types synthesize rather than play a sample and have no wave to resolve, so they're unsupported.
     /// </summary>
     public static class SbnkBank
     {
@@ -73,17 +73,16 @@ namespace DSPRE.Avalonia.Data
                 int relOff = (int)(packed >> 8);
                 if (recordType == 0 || relOff == 0) { list.Add(null); continue; }
 
-                // The offset is relative to this SBNK sub-file's own byte 0, NOT the DATA block's start (verified
-                // against the format's own instCount lookup using the identical base, and cross-checked against
-                // an independent open-source NDS-audio parser).
+                // The offset is relative to this SBNK sub-file's own byte 0, NOT the DATA block's start (same
+                // base the format's own instCount lookup uses).
                 int at = relOff;
                 var inst = new SbnkInstrument();
 
                 switch (recordType)
                 {
                     // Single-region PCM instrument (10 bytes, the real SNDInstParam layout: sampleIndex u16,
-                    // wave-archive-slot index u16 — a plain 0-3 index into the bank's 4 linked wave archives, no
-                    // bit or mask games — unityKey u8, then attack/decay/sustain/release/pan, one byte each).
+                    // wave-archive-slot index u16 (a plain 0-3 index into the bank's 4 linked wave archives, no
+                    // bit or mask games), unityKey u8, then attack/decay/sustain/release/pan, one byte each).
                     // Covers the whole key range.
                     case 1 when at + 5 <= d.Length:
                     {

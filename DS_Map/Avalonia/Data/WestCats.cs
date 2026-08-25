@@ -4,9 +4,9 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Pulls the cell-animation (CATS) resource file indices out of a WEST move-effect script. A move that uses the
-    /// cell-actor layer issues <c>the cell-actor engine's*_RES_LOAD res, arc</c> commands; the <c>arc</c> word is the file index into
-    /// the matching wazaeffect/effectclact NARC (char/pltt/cell/cellanm). ~32 of the 501 moves use this; the rest
-    /// are particle-only (<see cref="HasCellAnimation"/> is false).
+    /// cell-actor layer issues <c>CATS_*_RES_LOAD res, arc</c> commands; the <c>arc</c> word is the file index into
+    /// the matching wazaeffect/effectclact NARC (char/pltt/cell/cellanm). Only a minority of moves use this; the
+    /// rest are particle-only (<see cref="HasCellAnimation"/> is false).
     /// </summary>
     public readonly struct WestCatsResources
     {
@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
 
     public static class WestCats
     {
-        // arc_no is the 2nd arg word of each the cell-actor engine's*_RES_LOAD opcode (res_no, arc_no, …).
+        // arc_no is the 2nd arg word of each CATS_*_RES_LOAD opcode (res_no, arc_no, …).
         public static WestCatsResources Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
         {
             int ch = -1, pl = -1, ce = -1, ca = -1;

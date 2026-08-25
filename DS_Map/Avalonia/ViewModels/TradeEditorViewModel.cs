@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Trade edits live in the VM fields (only synced to _cur at save), and the nickname/OT names live in a
-        // text archive — so the snapshot is composite: the synced trade-data bytes + the two text strings.
+        // text archive, so the snapshot is composite: the synced trade-data bytes + the two text strings.
         private sealed class TradeSnapshot { public byte[] Data; public string OtName; public string Nickname; }
         private readonly DSPRE.Avalonia.UndoHistory<TradeSnapshot> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
@@ -316,7 +316,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
-            // Pokémon / ability / item names live in ROM text archives — refresh when the Text editor saves.
+            // Pokémon / ability / item names live in ROM text archives; refresh when the Text editor saves.
             DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
             DSPRE.Avalonia.Data.ListSync.Apply(AbilityNames, RomInfo.GetAbilityNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    RomInfo.GetItemNames());
@@ -362,7 +362,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 else if (result == DialogHelper.MsgResult.Cancel)
                 {
-                    // revert spinner — caller must handle
+                    // revert spinner: caller must handle
                     TradeID = _cur?.id ?? 0;
                     return;
                 }

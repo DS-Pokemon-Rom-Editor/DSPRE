@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Views
         private async void ChooseRawBtx_Click(object sender, RoutedEventArgs e)
         {
             // Raw NSBTX/BTX0 dumps (e.g. extracted from another ROM) commonly have no file
-            // extension at all, so no FileTypeFilter here — any file can be picked and it's
+            // extension at all, so no FileTypeFilter here: any file can be picked and it's
             // validated as a real BTX0 texture right after selection.
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {

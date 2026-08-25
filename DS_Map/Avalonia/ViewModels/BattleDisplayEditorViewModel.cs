@@ -18,10 +18,9 @@ namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
     /// "Battle Display" tab of the Pokémon editor: per-species presentation tweaks that live outside the
-    /// personal/sprite data. Currently the party-icon palette (which of the 3 icon palettes a mon's party
-    /// icon uses — 1 byte per species in the ARM9 icon-palette table). Battle-sprite coordinates
-    /// (/a/1/8/0) will be added here next. GATED to HeartGold/SoulSilver (English) for now, since the
-    /// underlying offsets are version-specific.
+    /// personal/sprite data, including the party-icon palette (which of the 3 icon palettes a mon's party
+    /// icon uses, 1 byte per species in the ARM9 icon-palette table) and battle-sprite coordinates
+    /// (/a/1/8/0). Supported on Diamond/Pearl, Platinum, and HeartGold/SoulSilver; see <see cref="IsAvailable"/>.
     /// </summary>
     public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -50,16 +49,16 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
         // One dropdown picks a GROUND_ID terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
         // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
-        // already uses for its (separate, more granular) Background/Terrain selectors — see
+        // already uses for its (separate, more granular) Background/Terrain selectors; see
         // DS_Map/Avalonia/Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
         // placeholder art (HasArenaGraphics=false) if the ROM/NARC is unavailable or decoding fails, so
-        // the scene always has a floor. Not saved anywhere — purely how the preview looks.
+        // the scene always has a floor. Not saved anywhere, purely how the preview looks.
         private BattleGroundRenderer _groundRenderer;
         private BattleBgRenderer _bgRenderer;
 
         public IReadOnlyList<string> ArenaTypeNames { get; } = BattleGroundRenderer.TerrainNames;
 
-        private int _arenaTypeIndex = 2;   // "Lawn" — a reasonably common default
+        private int _arenaTypeIndex = 2;   // "Lawn": a reasonably common default
         public int ArenaTypeIndex
         {
             get => _arenaTypeIndex;
@@ -97,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels
                     ArenaGroundEnemy = RgbaToBitmap(enemy.Rgba, enemy.Width, enemy.Height);
                     ArenaGroundEnemyLeft = enemy.Left; ArenaGroundEnemyTop = enemy.Top;
                     // The shared backdrop tilemap can be taller than the 256×192 scene (some are a stacked
-                    // multi-band scrolling texture) — crop to the top-left 256×192 instead of stretching the
+                    // multi-band scrolling texture), so crop to the top-left 256×192 instead of stretching the
                     // whole thing to fit, or a taller source visibly squishes into repeated horizontal bands
                     // (mirrors BattleScriptEditorViewModel.BgToBackdrop, same underlying data).
                     ArenaBackdrop = RgbaToBitmap(CropBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height), 256, 192);
@@ -122,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // Straight RGBA byte[] -> an unpremultiplied BGRA Avalonia bitmap (mirrors
-        // BattleScriptEditorViewModel.GaugeToBitmap — same conversion, different scene).
+        // BattleScriptEditorViewModel.GaugeToBitmap: same conversion, different scene).
         private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
         {
             if (rgba == null || w <= 0 || h <= 0) return null;
@@ -166,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _unifiedDisplay;
         public bool UnifiedDisplay { get => _unifiedDisplay; set => Set(ref _unifiedDisplay, value); }
 
-        /// <summary>Highest valid frame index (sheet width/80 − 1) — bounds the Frame field and the preview.</summary>
+        /// <summary>Highest valid frame index (sheet width/80 − 1); bounds the Frame field and the preview.</summary>
         public int MaxFrameIndex => System.Math.Max(0, (_sprites?.BattleFrameCount ?? 2) - 1);
 
         private static Bitmap Pick(System.Collections.Generic.IReadOnlyList<Bitmap> primary,
@@ -257,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels
         public Bitmap IconPreview { get => _iconPreview; private set => Set(ref _iconPreview, value); }
 
         // A just-imported icon graphic, staged in memory until Save() (same convention as every other
-        // field on this tab). Quantized against whatever palette was selected at import time — changing
+        // field on this tab). Quantized against whatever palette was selected at import time; changing
         // PartyPaletteIndex afterward does not automatically re-quantize a pending import.
         private RawImage _pendingIconGraphic;
 
@@ -281,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool FullPaletteExport { get => _fullPaletteExport; set => Set(ref _fullPaletteExport, value); }
 
         /// <summary>Exports the icon's current raw graphic (on-disk, or the pending import if one hasn't
-        /// been saved yet) at native resolution — no OAM padding, suitable for round-tripping.</summary>
+        /// been saved yet) at native resolution: no OAM padding, suitable for round-tripping.</summary>
         public RawImage ExportIconGraphic()
         {
             if (!IsAvailable || _currentId < 0) return null;
@@ -291,7 +290,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>Exports the icon as a genuine indexed PNG (real embedded 16-color palette table,
-        /// not RawImage's always-flattened RGBA) so tools that read PNG palettes see the actual colors —
+        /// not RawImage's always-flattened RGBA) so tools that read PNG palettes see the actual colors,
         /// same intent as the WinForms "export full palette" option. Unavailable while a pending unsaved
         /// import exists, since that replacement isn't on disk in indexed form yet.</summary>
         public byte[] ExportIconGraphicIndexedPng()
@@ -322,7 +321,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Battle sprite / shadow data (family-specific NARC layout) ─────────────────────────
         // Editable: front-sprite Y (signed), shadow X (signed), shadow size; a movement/animation byte
-        // (HGSS + Platinum combined record); the per-gender sprite HEIGHTS (DP & Platinum, height.narc — 4
+        // (HGSS + Platinum combined record); the per-gender sprite HEIGHTS (DP & Platinum, height.narc: 4
         // unsigned values/mon: back ♀/♂, front ♀/♂); and the raw 28-byte battle-animation record (DP, pokeanm).
         // Storage by family (see battle-sprite-offsets-dp-pt note):
         //   HGSS → one record/mon in pokemonSpriteOffsets (/a/1/8/0, 89 B); last 3 bytes = Y/X/size, byte 1 = movement.
@@ -352,15 +351,15 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _hasSpriteData;
         public bool HasSpriteData { get => _hasSpriteData; private set => Set(ref _hasSpriteData, value); }
 
-        /// <summary>True only where a movement/animation byte exists (HGSS, Platinum) — hides that field on DP.</summary>
+        /// <summary>True only where a movement/animation byte exists (HGSS, Platinum); hides that field on DP.</summary>
         private bool _hasMovementType;
         public bool HasMovementType { get => _hasMovementType; private set => Set(ref _hasMovementType, value); }
 
-        /// <summary>True where per-gender sprite heights exist (DP, Platinum — height.narc).</summary>
+        /// <summary>True where per-gender sprite heights exist (DP, Platinum; height.narc).</summary>
         private bool _hasHeights;
         public bool HasHeights { get => _hasHeights; private set { if (Set(ref _hasHeights, value)) OnPropertyChanged(nameof(ShowBaseHeights)); } }
 
-        /// <summary>True where the raw battle-animation record exists (DP — pokeanm.narc).</summary>
+        /// <summary>True where the raw battle-animation record exists (DP; pokeanm.narc).</summary>
         private bool _hasAnimData;
         public bool HasAnimData { get => _hasAnimData; private set => Set(ref _hasAnimData, value); }
 
@@ -394,10 +393,10 @@ namespace DSPRE.Avalonia.ViewModels
         public int FrontHeightUnified { get => _frontHeightM; set { FrontHeightM = value; FrontHeightF = value; } }
         public int BackHeightUnified { get => _backHeightM; set { BackHeightM = value; BackHeightF = value; } }
 
-        // ── Alternate-form sprite heights (height_o.narc; DP/Plat) — follows the Sprite tab's form selector ──
-        // height_o: 2 files/form — (formIndex*2) = back (both genders), (formIndex*2 + 1) = front. Signed. The
+        // ── Alternate-form sprite heights (height_o.narc; DP/Plat), follows the Sprite tab's form selector ──
+        // height_o: 2 files/form: (formIndex*2) = back (both genders), (formIndex*2 + 1) = front. Signed. The
         // form index mirrors the Sprites tab's global alternate-form list (SelectedFormIndex). [ASSUMPTION: the
-        // two lists share an ordering — verify the read values match the form before trusting writes.]
+        // two lists share an ordering; verify the read values match the form before trusting writes.]
         private OffsetNarc _formHeightNarc;
         private bool _formNarcTried;
         private bool _formMode;       // mirrors SpriteVM.IsAlternateForms
@@ -458,9 +457,9 @@ namespace DSPRE.Avalonia.ViewModels
             RaiseLayout();
         }
 
-        // ── Battle-sprite animation (the Pokémon battle-animation NARC; DP/Plat/HGSS) — 28 bytes per Pokémon ──
+        // ── Battle-sprite animation (the Pokémon battle-animation NARC; DP/Plat/HGSS), 28 bytes per Pokémon ──
         // Record layout: [0] front program-anim #, [1] its wait, [2..7] three back program-anim steps
-        // {patno,wait}, [8..27] ten "pattern" steps {s8 patno(frame), u8 wait} — patno=-1 (0xFF) terminates.
+        // {patno,wait}, [8..27] ten "pattern" steps {s8 patno(frame), u8 wait}; patno=-1 (0xFF) terminates.
         // The pattern steps are the on-field sprite wiggle, so they drive the preview loop.
         private const int ANIM_REC_LEN = 28, ANIM_PAT_OFFSET = 8, ANIM_PAT_MAX = 10;
         private OffsetNarc _animNarc;
@@ -471,7 +470,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         /// <summary>The three back program-animation steps ({number, wait}).</summary>
         public ObservableCollection<AnimProgStep> AnimBack { get; } = new ObservableCollection<AnimProgStep>();
-        /// <summary>The pattern (frame) animation steps — the visible send-out/idle wiggle. Drives the preview.</summary>
+        /// <summary>The pattern (frame) animation steps: the visible send-out/idle wiggle. Drives the preview.</summary>
         public ObservableCollection<AnimPatternStep> AnimSteps { get; } = new ObservableCollection<AnimPatternStep>();
 
         public bool CanAddAnimStep => AnimSteps.Count < ANIM_PAT_MAX;
@@ -658,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ── Program-animation SCRIPT EDITOR (Phase B): editable PAST command list for the front script ──
-        // NOTE: this edits the shared animation script in the pokeanime NARC — it affects every Pokémon that
+        // NOTE: this edits the shared animation script in the pokeanime NARC, so it affects every Pokémon that
         // uses this program-animation number, not just the current mon. Saved via its own "Save script" button.
         public ObservableCollection<ProgramCmdRow> ProgramRows { get; } = new ObservableCollection<ProgramCmdRow>();
         public bool HasProgramScript => ProgramRows.Count > 0;
@@ -1013,7 +1012,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        /// <summary>height.narc (DP + Platinum): 4 unsigned 1-byte values per mon — file order F-back, M-back,
+        /// <summary>height.narc (DP + Platinum): 4 unsigned 1-byte values per mon, file order F-back, M-back,
         /// F-front, M-front, so mon N's slot s is the (N*4 + s)th file (or byte, if it unpacks to one blob).</summary>
         private sealed class HeightNarc
         {

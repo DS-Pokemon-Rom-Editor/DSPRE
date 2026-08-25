@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Data
 
     /// <summary>
     /// Customisable labels for hardcoded enums/dropdowns. The game stores fixed-width numeric values;
-    /// DSPRE only relabels them — useful when a ROM hack repurposes or adds values (e.g. a new evolution
+    /// DSPRE only relabels them, useful when a ROM hack repurposes or adds values (e.g. a new evolution
     /// method). Resolution order per index: PROJECT override → GLOBAL override → built-in default →
     /// generated "Singular N". Project overrides live in <c>workDir/dspre_labels.json</c> (travels with
     /// the extracted ROM); global overrides in <c>%AppData%/DSPRE/databases/labels.global.json</c>.
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Data
             void Reg(string key, string name, string group, string singular, string[] defaults)
                 => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults });
 
-            // Pokémon — combos bind by SelectedIndex == enum position (these enums are sequential).
+            // Pokémon: combos bind by SelectedIndex == enum position (these enums are sequential).
             // Evolution methods also carry a per-method "param meaning" attribute (what the parameter is).
             Register(new LabelCategory
             {
@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Data
             Reg("pokemon_growth_curves",  "Growth Curves",     "Pokémon", "Curve",  Enum.GetNames<PokemonGrowthCurve>());
             Reg("pokemon_egg_groups",     "Egg Groups",        "Pokémon", "Group",  Enum.GetNames<PokemonEggGroup>());
             Reg("pokemon_dex_colors",     "Pokédex Colors",    "Pokémon", "Color",  Enum.GetNames<PokemonDexColor>());
-            // Items — combos bind by SelectedIndex == raw byte VALUE, so register VALUE-indexed defaults
+            // Items: combos bind by SelectedIndex == raw byte VALUE, so register VALUE-indexed defaults
             // (NaturalGiftType is non-sequential: gaps become generated "Type N" labels you can rename).
             Reg("item_hold_effects",      "Item Hold Effects",       "Items", "Effect", ByValue<HoldEffect>());
             Reg("item_field_pockets",     "Item Field Pockets",      "Items", "Pocket", ByValue<FieldPocket>());
@@ -99,11 +99,8 @@ namespace DSPRE.Avalonia.Data
             Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
         }
 
-        /// <summary>Builds a VALUE-indexed default-label array for an enum (slot i = the member whose value
-        /// is i, or null for a gap → resolved to a generated "Singular i"). Needed for combos bound by the
-        /// raw byte value rather than the declaration position.</summary>
         /// <summary>Default "param meaning" per evolution method (method index → EvolutionParamMeaning value),
-        /// from EvolutionFile.evoDescriptions — the attribute defaults for the evolution_methods category.</summary>
+        /// from EvolutionFile.evoDescriptions, the attribute defaults for the evolution_methods category.</summary>
         private static int[] EvoParamDefaults()
         {
             var names = Enum.GetNames<EvolutionMethod>();
@@ -113,6 +110,9 @@ namespace DSPRE.Avalonia.Data
             return arr;
         }
 
+        /// <summary>Builds a VALUE-indexed default-label array for an enum (slot i = the member whose value
+        /// is i, or null for a gap → resolved to a generated "Singular i"). Needed for combos bound by the
+        /// raw byte value rather than the declaration position.</summary>
         private static string[] ByValue<TEnum>() where TEnum : struct, Enum
         {
             var vals = Enum.GetValues<TEnum>();
@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.Data
             return _cats.TryGetValue(key, out var cat) ? Resolve(cat, key, index) : index.ToString();
         }
 
-        /// <summary>The built-in default at an index (ignores overrides) — shown as a hint in the editor.</summary>
+        /// <summary>The built-in default at an index (ignores overrides), shown as a hint in the editor.</summary>
         public static string GetDefault(string key, int index)
         {
             var cat = GetCategory(key);

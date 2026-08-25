@@ -68,13 +68,11 @@ namespace DSPRE.Avalonia.ViewModels
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
         // --- Mono-gender / genderless sprite gap ---------------------------------------
-        // Gen 4 stores 6 files per species: 4 battle sprites (slots 0-3) + 2 palettes. A species that
-        // can currently only be one gender (or is genderless) has its "other" gender's back+front slots
-        // stored as small placeholder .bin stubs instead of real 6448-byte RGCN sprites, since the game
-        // never needs them. If the user later widens that species' gender ratio (Personal Data editor),
-        // those slots stay empty and the game shows garbage/crashes. This offers a one-click fix: clone
-        // the existing gender's sprites into the missing slots (byte-identical duplicates, editable
-        // afterward like any other sprite) — the same fix the community has long done by hand in Tinke.
+        // A species that can only be one gender (or is genderless) has its "other" gender's back+front
+        // slots stored as placeholder .bin stubs instead of real RGCN sprites, since the game never
+        // needs them. Widening that species' gender ratio later (Personal Data editor) leaves those
+        // slots empty and the game shows garbage or crashes. This offers a one-click fix: clone the
+        // existing gender's sprites into the missing slots, editable afterward like any other sprite.
         private bool _canAddOppositeGenderSprites;
         public bool CanAddOppositeGenderSprites { get => _canAddOppositeGenderSprites; private set => Set(ref _canAddOppositeGenderSprites, value); }
 
@@ -91,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels
         // 16 colors as packed BGRA (byte order b,g,r,a little-endian), always opaque
         private uint[] _normalPal;
         private uint[] _shinyPal;
-        // Replacement images loaded from PNG by the user (index 0-3). Rendered as-is — palettes
+        // Replacement images loaded from PNG by the user (index 0-3). Rendered as-is; palettes
         // don't apply to true-color imports (matches the previous GDI behavior).
         private readonly RawImage[] _replacementSprites = new RawImage[4];
 
@@ -674,7 +672,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>
         /// Renders a sprite slot to BGRA. <paramref name="frame"/> ≥ 0 crops the 80-wide cell at
         /// x = frame*80. With <paramref name="transparentIndex0"/>, palette index 0 becomes fully
-        /// transparent (for PNG replacements, pixels matching palette entry 0's colour — the old
+        /// transparent (for PNG replacements, pixels matching palette entry 0's colour, per the old
         /// GDI MakeTransparent semantics). PNG replacements render as-is otherwise.
         /// </summary>
         private RawImage ComposeSprite(int slot, uint[] palette, bool transparentIndex0, int frame)
@@ -723,7 +721,7 @@ namespace DSPRE.Avalonia.ViewModels
             return outImg;
         }
 
-        // Nearest-neighbor 2× upscale (pixel art — keeps edges crisp).
+        // Nearest-neighbor 2× upscale (pixel art, keeps edges crisp).
         private static RawImage Scale2x(RawImage src)
         {
             var dst = new RawImage(src.Width * 2, src.Height * 2);
@@ -762,7 +760,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // Slots: 0=FemaleBack, 1=MaleBack, 2=FemaleFront, 3=MaleFront. A species can add the missing
         // gender's sprites only when that gender's back+front are BOTH placeholders and the other
-        // gender's back+front are BOTH real — anything else (already has all 4, or a partial/corrupt
+        // gender's back+front are BOTH real; anything else (already has all 4, or a partial/corrupt
         // set) is left alone rather than guessed at.
         private void UpdateOppositeGenderGap(bool[] hasRealSprite)
         {
@@ -828,7 +826,7 @@ namespace DSPRE.Avalonia.ViewModels
                 CopyEntryFile(unpackedDir, srcFront, dstFront);
 
                 // Re-sync the packed NARC immediately (rather than waiting for the next full "Save ROM"),
-                // since every other read in this editor — LoadMon included — goes through the packed file.
+                // since every other read in this editor, LoadMon included, goes through the packed file.
                 Narc.FromFolder(unpackedDir).Save(packedPath);
 
                 // Sprites alone aren't enough: without height data too, the new gender renders at the wrong Y.

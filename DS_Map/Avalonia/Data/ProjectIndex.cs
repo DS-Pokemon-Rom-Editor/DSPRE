@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
 
     /// <summary>
     /// Scans every map header once and exposes two project-health views: VALIDATION (references that point
-    /// past the end of their NARC — e.g. a header still pointing at a deleted matrix/event) and WHERE-USED
+    /// past the end of their NARC, e.g. a header still pointing at a deleted matrix/event) and WHERE-USED
     /// (reverse lookup: which headers reference a given matrix / event / script / … id). Cheap: one read per
     /// header, all the cross-references live on the header.
     /// </summary>

@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.ViewModels
     }
 
     /// <summary>
-    /// Avalonia port of the WinForms <c>HeaderEditor</c>. Edits map headers — all
+    /// Avalonia port of the WinForms <c>HeaderEditor</c>. Edits map headers: all
     /// common fields plus the game-family-specific ones (DP/Plat location specifier
     /// &amp; Plat area icon; HGSS area icon, world-map coords, follow mode, Kanto flag,
     /// location type). Camera/weather/music expose synced combo+numeric pairs with
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels
         public string SelectedHeaderTitle =>
             _locationNameIndex >= 0 && _locationNameIndex < LocationNames.Count && !string.IsNullOrWhiteSpace(LocationNames[_locationNameIndex])
                 ? LocationNames[_locationNameIndex].Trim()
-                : (_header != null ? _internalName : "—");
+                : (_header != null ? _internalName : "-");
         public string SelectedHeaderSubtitle => _header != null ? $"header {_header.ID:D3}" : "";
 
         /// <summary>The currently loaded header's own ID, or -1 if none is loaded. Fed to the Maps
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels
         // Bound directly to the TreeView's ItemsSource, so this MUST be typed HeaderTreeNode (the base
         // type), even though only HeaderTreeFolder instances are ever added at the root: Avalonia's
         // TreeView resolves a clicked item's container via ItemsSourceView.IndexOf against this
-        // collection's IList.IndexOf(object), which does an unchecked (T)value cast before comparing —
+        // collection's IList.IndexOf(object), which does an unchecked (T)value cast before comparing;
         // clicking a HeaderTreeLeaf nested under a folder throws InvalidCastException there if T is
         // narrowed to HeaderTreeFolder, because the cast fails before it ever gets to "not found in this
         // list, must be nested deeper." Root-only, strongly-typed iteration should use _allTreeFolders.
@@ -814,7 +814,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>
-        /// Re-reads the location-name text archive and relabels folders — for when the archive was
+        /// Re-reads the location-name text archive and relabels folders, for when the archive was
         /// edited in another editor window. No-op (no flicker) when nothing changed.
         /// </summary>
         public void ReloadLocationNames()

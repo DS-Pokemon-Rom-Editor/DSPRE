@@ -9,7 +9,7 @@ namespace DSPRE.Avalonia.Data
     {
         public readonly int DataNo;
         public readonly int EmitterNo;
-        public readonly int Callback;   // EMTFUNC_* — places the emitter (attacker/defender) + sets its travel axis
+        public readonly int Callback;   // EMTFUNC_*: places the emitter (attacker/defender) + sets its travel axis
         public readonly int SepIndex;   // for ADD_PARTICLE_SEP beams: this segment's index…
         public readonly int SepCount;   // …out of how many (1 = not a SEP beam). Used to spread along the path.
         public WestParticleRef(int dataNo, int emitterNo, int callback, int sepIndex = 0, int sepCount = 1)
@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Data
         /// Walks the script the way the game's sequencer would for the previewed side, following the branch
         /// opcodes (SIDE_JP / TURN_CHK / SEQ_JP / SEQ_CALL), and stops at the SEQEND that actually terminates
         /// that path. A plain linear scan that stops at the FIRST SEQEND misses most side-branched moves
-        /// entirely — e.g. Dark Void's and Ominous Wind's ADD_PARTICLEs all live in per-side blocks placed
+        /// entirely: e.g. Dark Void's and Ominous Wind's ADD_PARTICLEs all live in per-side blocks placed
         /// after a SEQEND and reached only via SIDE_JP.
         /// </summary>
         public static List<WestParticleRef> Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Data
             var refs = new List<WestParticleRef>();
             if (cmds == null || cmds.Count == 0) return refs;
 
-            // Recompute word positions (commands may come from the UI grid without parsed WordPos) —
+            // Recompute word positions (commands may come from the UI grid without parsed WordPos),
             // identical layout math to WestPlayer's constructor.
             var wordToIndex = new Dictionary<int, int>();
             var wordPos = new int[cmds.Count];
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
             while (pc >= 0 && pc < cmds.Count && guard++ < 100000)
             {
                 var c = cmds[pc];
-                // A revisited command outside a call continuation means a loop we don't model — stop.
+                // A revisited command outside a call continuation means a loop we don't model, so stop.
                 if (!visited.Add(pc) && callStack.Count == 0) break;
                 int cur = pc;
                 pc++;
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.Data
                         break;
 
                     // WEST_TURN_CHK: pick ONE branch by waza_eff_cnt parity (fresh battle = even = the
-                    // first branch), exactly like the game — mirrors WestPlayer.
+                    // first branch), exactly like the game; mirrors WestPlayer.
                     case "WEST_TURN_CHK":
                         if (n >= 1 && Jump(ref pc, wordPos[cur] + 1, c.Args[0])) break;
                         if (n >= 2) Jump(ref pc, wordPos[cur] + 2, c.Args[1]);
@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.Data
                             refs.Add(new WestParticleRef(d1, c.Args[2], c.Args[3]));
                         break;
 
-                    // ptc_no, data1..N, callback — a SEP beam / party fan: N emitters spread along the path.
+                    // ptc_no, data1..N, callback: a SEP beam / party fan, N emitters spread along the path.
                     case "WEST_ADD_PARTICLE_SEP":
                     case "WEST_ADD_PARTICLE_PTAT":
                         if (n >= 3 && slot.TryGetValue(c.Args[0], out int d2))

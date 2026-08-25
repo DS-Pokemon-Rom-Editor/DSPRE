@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> DayItems { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> NightItems { get; } = new ObservableCollection<string>();
 
-        // Object slots (display) — one entry per shared object slot.
+        // Object slots (display), one entry per shared object slot.
         public ObservableCollection<string> ObjectItems { get; } = new ObservableCollection<string>();
 
         public SafariZoneGroupViewModel(ObservableCollection<string> speciesNames)

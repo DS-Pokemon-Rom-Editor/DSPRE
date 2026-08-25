@@ -6,7 +6,7 @@ using Velopack.Sources;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Velopack-based update check for the Avalonia shell — the cross-platform counterpart of the
+    /// Velopack-based update check for the Avalonia shell, the cross-platform counterpart of the
     /// WinForms <c>Helpers.CheckForUpdates</c> (Velopack ships Windows installers and Linux
     /// AppImages from the same release feed). Installed as the default
     /// <see cref="ShellIntegration.CheckForUpdatesHook"/> when no host provides one.

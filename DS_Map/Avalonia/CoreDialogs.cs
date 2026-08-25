@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
             DSPRE.AppMessages.ConfirmYesNoCancelHook = ShowConfirmCancelSync;
             // PumpEventsHook stays the default no-op: core long-ops run off the UI thread under Avalonia.
 
-            // Placeholder mon icon for undecodable icons — from the avares assets, no GDI.
+            // Placeholder mon icon for undecodable icons, from the avares assets, no GDI.
             DSPRE.DSUtils.MonIconFallbackHook = () => ResourceImages.GetRaw("IconPokeball");
         }
 
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia
         }
 
         // Block until the predicate is true. On the UI thread this runs a nested Avalonia dispatcher
-        // frame (cross-platform — pumps the native event loop, no WinForms). On a worker thread it
+        // frame (cross-platform, pumps the native event loop, no WinForms). On a worker thread it
         // just poll-sleeps while the dialog runs on the UI thread.
         private static void PumpUntil(Func<bool> isDone)
         {

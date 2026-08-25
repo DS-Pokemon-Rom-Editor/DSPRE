@@ -6,11 +6,11 @@ using Avalonia.Markup.Xaml;
 namespace DSPRE
 {
     /// <summary>
-    /// Avalonia Application entry point (UI-toolkit layer — no WinForms dependency).
+    /// Avalonia Application entry point (UI-toolkit layer, no WinForms dependency).
     ///
     /// The Windows DSPRE exe installs <see cref="WinFormsHostHook"/> so that, by default, startup
     /// shows the legacy WinForms MainProgram (both toolkits share the Win32 message pump). Without
-    /// the hook — or with DSPRE_AVALONIA_SHELL=1 — the pure-Avalonia shell runs instead.
+    /// the hook, or with DSPRE_AVALONIA_SHELL=1, the pure-Avalonia shell runs instead.
     /// </summary>
     public class AvaloniaApp : Application
     {

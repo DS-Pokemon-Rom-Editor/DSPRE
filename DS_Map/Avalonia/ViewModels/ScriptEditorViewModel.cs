@@ -531,7 +531,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 SaveSourceOnly(true);
                 bool compiled = await CompileAsync(false);
-                if (!compiled) Dirty();   // source is on disk, but the binary wasn't regenerated — the editor is not fully saved
+                if (!compiled) Dirty();   // source is on disk, but the binary wasn't regenerated: the editor is not fully saved
                 return compiled;
             }
             catch (Exception ex)
@@ -848,7 +848,7 @@ namespace DSPRE.Avalonia.ViewModels
                 System.IO.Directory.Exists(root)
                 && System.IO.Directory.EnumerateFiles(root, "*.script", System.IO.SearchOption.AllDirectories).Any());
 
-        // Minimal rotom.toml parsing — avoids a TOML dependency but only handles a flat source_roots = ["..."] array. Replace with Tomlyn if the config schema grows.
+        // Minimal rotom.toml parsing: avoids a TOML dependency but only handles a flat source_roots = ["..."] array. Replace with Tomlyn if the config schema grows.
         private IEnumerable<string> SourceRoots()
         {
             string configPath = System.IO.Path.Combine(RotomTool.ProjectRoot, "rotom.toml");

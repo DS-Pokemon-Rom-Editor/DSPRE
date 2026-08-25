@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         // family: Platinum uses pl_batt_bg.narc, HGSS uses batt_bg_gs.narc (retail a/0/0/7, 351 entries).
         // Index = the BG_ID the move-effect scripts pass to the background-change / background-scroll opcodes
         // (BG_ID 48 → Surf; BG_ID 44 → Dark Void). −1 = no reverse-side tilemap. The two families' file layouts
-        // differ throughout — using one family's table on the other decodes entirely wrong entries.
+        // differ throughout, so using one family's table on the other decodes entirely wrong entries.
         private static readonly (int chr, int pal, int scr, int scrRev)[] PlatTable =
         {
             (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,321,62,63),
@@ -54,12 +54,11 @@ namespace DSPRE.Avalonia.Data
         public static bool HasBg(int bgId) => bgId >= 0 && bgId < Table.Length;
         public static int BgCount => Table.Length;
 
-        // The real battle-scene backdrops (the scenery behind the platforms), distinct from the move-effect BGs
-        // above. The character file = base graphic index (3) + bg_id, with a single shared tilemap (index 2) for
-        // every bg_id. 23 backdrops (BG00..BG22). The day/eve/night palette base is PER-FAMILY — confirmed by
-        // scanning both real archives for the 23×3 palette run: Platinum pl_batt_bg = 172..240, HGSS a/0/0/7 =
-        // 176..244. Hardcoding either base breaks the other family: the wrong base still lands on SOME valid
-        // palette (the palette-chunk guard passes), so it renders confidently wrong colours rather than failing.
+        // The real battle-scene backdrops (scenery behind the platforms), distinct from the move-effect BGs
+        // above. Character file = base graphic index (3) + bg_id, one shared tilemap (index 2) for every
+        // bg_id, 23 backdrops (BG00..BG22). Day/eve/night palette base is per-family: Platinum pl_batt_bg
+        // = 172..240, HGSS a/0/0/7 = 176..244. The wrong base still lands on some valid palette, so mixing
+        // them up renders wrong colours instead of failing loudly.
         public const int BackdropCount = 23;
         private const int BackdropChr0 = 3, BackdropScr = 2;
         private static int BackdropPal0 => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? 176 : 172;
@@ -73,7 +72,7 @@ namespace DSPRE.Avalonia.Data
             byte[] pal = Inflate(_narc.Get(BackdropPal0 + bgId * 3 + tz));
             byte[] scr = Inflate(_narc.Get(BackdropScr));
             // Guard against a wrong palette index quietly reading non-palette bytes (e.g. another NSCR) as
-            // colours, which renders as garbled noise instead of failing — fall back to placeholder art instead.
+            // colours, which renders as garbled noise instead of failing; fall back to placeholder art instead.
             if (chr == null || pal == null || scr == null || NitroBgCodec.Find(pal, "TTLP", 0) < 0) return null;
             try { return Composite(chr, pal, scr); } catch { return null; }
         }

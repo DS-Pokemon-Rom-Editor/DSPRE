@@ -9,7 +9,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// ViewModel for the Avalonia <c>MainWindowView</c> shell — the in-progress
+    /// ViewModel for the Avalonia <c>MainWindowView</c> shell, the in-progress
     /// replacement for the WinForms main window.
     ///
     /// For now it hosts the editors that have already been ported to Avalonia
@@ -32,8 +32,8 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Per-editor availability (bound by menu items so unsupported editors are
         //    greyed out instead of carrying "(HGSS)"-style labels or failing silently).
         //    hg-engine ROMs: HGE owns/overwrites mon, move, item, trainer and encounter
-        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list) —
-        //    UNLESS a source checkout is linked (HgEngineProject.IsActive), in which case
+        //    data, so those editors are disabled (mirrors the WinForms shell's HGE list),
+        //    unless a source checkout is linked (HgEngineProject.IsActive), in which case
         //    the 5 covered domains read/write straight from source instead.
         private static bool HgAllows => !isHGE || HgEngineProject.IsActive;
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool CanUseTrainerCardEditor => IsRomLoaded && RomInfo.IsTrainerCardEditorAvailable();
         public bool CanUseWildEditors   => IsRomLoaded && HgAllows;
         // Special Encounters (Safari/Great Marsh-style tables) isn't one of the 5 hg-engine domains
-        // DSPRE can read/write from source yet, so it stays blocked regardless of the link — unlike
+        // DSPRE can read/write from source yet, so it stays blocked regardless of the link, unlike
         // CanUseWildEditors, which covers the actual wild-encounter table hg-engine does own.
         public bool CanUseSpecialEncountersEditor => IsRomLoaded && !isHGE;
         public bool CanUseTrophyGardenEditor => IsRomLoaded && DSPRE.ROMFiles.TrophyGardenEncounterFile.IsAvailable();
@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.ViewModels
         public bool CanCompileRom       => IsRomLoaded && HgEngineProject.IsActive;
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
         // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
-        // are Plat+HGSS — nothing in it exists on DP.
+        // are Plat+HGSS; nothing in it exists on DP.
         public bool CanUseMiscTables    => IsRomLoaded && gameFamily != GameFamilies.DP;
 
         // ── Busy state while a ROM is being opened/unpacked or saved/repacked ──

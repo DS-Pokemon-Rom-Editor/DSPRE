@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>Prompts the user about unsaved work across every open editor. Returns true if they
-        /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows — callers
+        /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows: callers
         /// close them only once the new project is actually chosen, so cancelling the file picker or a
         /// preflight prompt doesn't leave the current project editor-less.</summary>
         private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync()
@@ -290,7 +290,7 @@ namespace DSPRE.Avalonia.Views
 
         // Runs a ROM load off the UI thread (unpacking blocks), then refreshes the menus/title and reports errors.
         // autoLinkHgEnginePath: set when the user explicitly opened an hg-engine checkout folder (its rom.nds
-        // was opened on their behalf) — link it immediately instead of asking, since they already chose it.
+        // was opened on their behalf), so link it immediately instead of asking since they already chose it.
         private async System.Threading.Tasks.Task LoadRom(System.Func<System.Action<string>, bool> load, string autoLinkHgEnginePath = null)
         {
             var vm = DataContext as MainWindowViewModel;
@@ -321,7 +321,7 @@ namespace DSPRE.Avalonia.Views
             RefreshGameIcon();
             if (RomInfo.isHGE)
                 await HandleHgEngineDetectedAsync(vm, autoLinkHgEnginePath);
-            // The Maps workspace skipped its setup at boot (no ROM yet) — run it now.
+            // The Maps workspace skipped its setup at boot (no ROM yet); run it now.
             await Maps.EnsureSetupAsync();
             // First successful ROM load ever: walk the user through the UI once.
             if (SettingsManager.Settings?.guidedTourShown == false)
@@ -330,7 +330,7 @@ namespace DSPRE.Avalonia.Views
 
         /// <summary>Handles an hg-engine ROM on load: auto-links if the caller already picked a checkout
         /// (opened it directly), reminds silently if this project was already linked in an earlier
-        /// session, otherwise offers to link one now — same "no source folder" behavior as before this
+        /// session, otherwise offers to link one now: same "no source folder" behavior as before this
         /// feature existed if the user declines.</summary>
         private async System.Threading.Tasks.Task HandleHgEngineDetectedAsync(MainWindowViewModel vm, string autoLinkHgEnginePath)
         {
@@ -352,7 +352,7 @@ namespace DSPRE.Avalonia.Views
                 return;
             }
 
-            if (HgEngineProject.IsLinked) return;   // already configured in an earlier session — banner says it all
+            if (HgEngineProject.IsLinked) return;   // already configured in an earlier session; banner says it all
 
             bool link = await DialogHelper.AskYesNo(
                 "This is an hg-engine ROM. hg-engine manages the Pokémon, Move Data, Item, Trainer and " +

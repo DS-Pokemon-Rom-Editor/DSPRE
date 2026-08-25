@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Add / Delete custom entries (expansion patch only) ───────────────────
         /// <summary>Adds a new custom overworld entry (called from the "Add Custom Entry…" dialog
         /// once the user confirms it). If an image was picked, it is NEVER written into
-        /// <paramref name="templateMember"/> (the slot the user chose in the dropdown) — that slot
+        /// <paramref name="templateMember"/> (the slot the user chose in the dropdown); that slot
         /// is only read as a structural template (matching width/height/color-count), which
         /// <see cref="LibNDSFormats.BTX0.Write"/> requires. The actual pixels are written into a
         /// brand-new mmodel NARC member (<see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>)

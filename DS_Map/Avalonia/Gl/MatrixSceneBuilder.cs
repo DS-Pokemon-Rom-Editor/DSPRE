@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>
         /// Like <see cref="Build"/>, but stitches ALREADY-LOADED <see cref="MapFile"/> instances instead
-        /// of reading fresh copies from disk — used to re-render a scene that has in-memory, not-yet-saved
+        /// of reading fresh copies from disk, used to re-render a scene that has in-memory, not-yet-saved
         /// edits (e.g. the Map editor's "This header" view after painting or moving a building).
         /// </summary>
         public static NsbmdRenderModel BuildFromLoaded(
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Gl
                             b.NSBMDFile.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bldTex), out b.NSBMDFile.Textures, out b.NSBMDFile.Palettes);
                             b.NSBMDFile.MatchTextures();
                         }
-                        catch { /* pack mismatch — leave untextured */ }
+                        catch { /* pack mismatch, leave untextured */ }
                     }
                     buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));
                 }

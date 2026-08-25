@@ -117,7 +117,7 @@
           </HeaderedContentControl>
 
           <!-- AI flags: dynamically named from trainer_data.h's real F_* bits when hg-engine is active
-               (repopulated in code — see TrainerEditorViewModel.SetupAsync); the same static, generic
+               (repopulated in code, see TrainerEditorViewModel.SetupAsync); the same static, generic
                labels as before otherwise. -->
           <HeaderedContentControl Header="AI flags">
             <ItemsControl ItemsSource="{Binding AiFlags}">

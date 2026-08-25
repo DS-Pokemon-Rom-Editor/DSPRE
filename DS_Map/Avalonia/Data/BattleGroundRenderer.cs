@@ -9,9 +9,9 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Decodes the real in-game battle ground "tray" the Pokémon stand on (the terrain platforms) from
-    /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.battleObj"/>, Platinum). Source: battle/ —
-    /// the OAM cell layout (NCER) is SHARED across every terrain (GROUND00's mine/enemy cell), only the tiles (NCGR)
-    /// and palette (NCLR, day/eve/night) change per <c>GROUND_ID</c>; 's GroundResourceID_Mine/Enemy/Palette
+    /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.battleObj"/>, Platinum).
+    /// The OAM cell layout (NCER) is SHARED across every terrain (GROUND00's mine/enemy cell), only the tiles (NCGR)
+    /// and palette (NCLR, day/eve/night) change per <c>GROUND_ID</c>; the game's GroundResourceID_Mine/Enemy/Palette
     /// tables remap the GROUND_ID to a GROUND## graphic set. Renders bank 0 of the shared cell with each terrain's
     /// tiles + palette to a straight-RGBA platform, positioned at the game's GROUND_MINE/ENEMY screen coordinates.
     /// </summary>
@@ -19,11 +19,11 @@ namespace DSPRE.Avalonia.Data
     {
         public sealed class GroundImage { public byte[] Rgba; public int Width, Height, Left, Top; }
 
-        // GROUND_ID (battle/, 0..9) → human label.
+        // GROUND_ID (0..9) → human label.
         public static readonly string[] TerrainNames =
             { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor" };
 
-        // GROUND_ID → GROUND## graphic set, in the order of 's GroundResourceID_Mine[]/Enemy[]/Palette[] tables
+        // GROUND_ID → GROUND## graphic set, in the order of the game's GroundResourceID_Mine[]/Enemy[]/Palette[] tables
         // (e.g. GRAVEL(0) uses GROUND02, LAWN(2) uses GROUND00, WATER(7) uses GROUND01).
         private static readonly int[] GroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6 };
 
@@ -34,14 +34,14 @@ namespace DSPRE.Avalonia.Data
         private const int MineNcer = 128, EnemyNcer = 131;
         private static int PalDay(int gg) => 1 + gg * 3;   // +0 day, +1 evening, +2 night (BATT_GROUND##_D/E/N_NCLR)
 
-        // GROUND_MINE_X/Y, GROUND_ENEMY_X/Y — the CATS actor screen position (the cell origin). Get_Image
+        // GROUND_MINE_X/Y, GROUND_ENEMY_X/Y: the CATS actor screen position (the cell origin). Get_Image
         // draws each OAM at canvasSize/2 + oam.xy, so a 256² render placed at (pos − 128) lands the origin on pos.
         private const int MineX = 64, MineY = 128 + 8, EnemyX = 24 * 8, EnemyY = 8 * 11, Canvas = 256;
 
         public static int TerrainCount => TerrainNames.Length;
 
         // Editor convenience: a matching scene backdrop (bg_id 0..22) for a terrain (GROUND_ID). bg_id and ground_id
-        // are set independently per-zone in the game data, so there is no canonical 1:1 — this reuses the GROUND##
+        // are set independently per-zone in the game data, so there is no canonical 1:1; this reuses the GROUND##
         // graphic number (which parallels the BATTLE_BG## scene numbering) as a sensible default; the Backdrop
         // selector still overrides it. Returns -1 for none.
         public static int BackdropForTerrain(int terrainId)
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Data
 
         // HP-gauge frames (GaugeObjParam_aa/bb, single battle): the PLAYER gauge = SINGLE_GAGE2 at (192,116),
         // the ENEMY gauge = SINGLE_GAGE1 at (58,36); both use GAGE_PALETTE_NCLR. All in pl_batt_obj. This renders only
-        // the static frame cell (bank 0) — the HP bar fill + name/level/HP text are drawn at runtime, overlaid in the UI.
+        // the static frame cell (bank 0); the HP bar fill + name/level/HP text are drawn at runtime, overlaid in the UI.
         private const int GaugePal = 71;
         public GroundImage BuildGauge(bool player)
         {

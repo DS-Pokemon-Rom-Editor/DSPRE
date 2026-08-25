@@ -4,13 +4,13 @@ namespace DSPRE.Avalonia
 {
     /// <summary>
     /// A pure undo/redo stack of immutable state snapshots (mementos). The owning editor decides what a
-    /// snapshot IS (e.g. a file's <c>ToByteArray()</c>) and how to apply one — this class only sequences them,
+    /// snapshot IS (e.g. a file's <c>ToByteArray()</c>) and how to apply one; this class only sequences them,
     /// so it has no ROM or UI dependency and is fully unit-testable.
     ///
     /// Model: <c>_current</c> is the live state. <see cref="Capture"/> pushes the previous current onto the
     /// undo stack and clears the redo branch. <see cref="Undo"/>/<see cref="Redo"/> shuffle <c>_current</c>
     /// between the two stacks and return the state to apply. <see cref="IsDirty"/> is true whenever the current
-    /// state is not the one last marked saved — tracked by reference, so snapshots must be distinct instances
+    /// state is not the one last marked saved. Tracked by reference, so snapshots must be distinct instances
     /// (which byte-array snapshots naturally are).
     /// </summary>
     public sealed class UndoHistory<T> where T : class
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Record a transition to <paramref name="state"/> after an edit, clearing any redo branch.
-        /// When <paramref name="coalesce"/> is true the previous current is NOT pushed — the new state simply
+        /// When <paramref name="coalesce"/> is true the previous current is NOT pushed; the new state simply
         /// replaces it in the same undo step, so a burst of rapid edits collapses into one undoable change.
         /// </summary>
         public void Capture(T state, bool coalesce = false)
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia
             _redo.Clear();
         }
 
-        /// <summary>Mark the current state as saved (after a Save) — flips <see cref="IsDirty"/> off without
+        /// <summary>Mark the current state as saved (after a Save); flips <see cref="IsDirty"/> off without
         /// touching history, so the user can still undo past a save.</summary>
         public void MarkSaved() => _saved = _current;
 

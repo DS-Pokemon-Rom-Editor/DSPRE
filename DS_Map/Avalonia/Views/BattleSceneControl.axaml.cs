@@ -26,12 +26,10 @@ namespace DSPRE.Avalonia.Views
         public double EnemyY  { get => GetValue(EnemyYProperty);  set => SetValue(EnemyYProperty, value); }
         public double PlayerY { get => GetValue(PlayerYProperty); set => SetValue(PlayerYProperty, value); }
 
-        // Static battle-scene chrome (background/platforms/shadows/health bars), loaded once via
-        // code-behind instead of a literal XAML "avares://" Image.Source. The declarative binding form
-        // throws (and crashes the whole editor — no try/catch anywhere above XAML-populate) if the
-        // asset can't be resolved; BattleScriptEditorViewModel.LoadAsset already uses this exact
-        // try/catch-protected pattern for the same assets, so a missing/unresolvable file just leaves
-        // that one image blank instead of taking down the Pokémon Editor.
+        // Static battle-scene chrome (background/platforms/shadows/health bars), loaded via code-behind
+        // instead of a literal XAML "avares://" Image.Source: the declarative form throws and crashes
+        // the whole editor if an asset can't be resolved, so this try/catch keeps a missing file to one
+        // blank image instead.
         private static Bitmap LoadAsset(string name)
         {
             try { return new Bitmap(global::Avalonia.Platform.AssetLoader.Open(new System.Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Battle/{name}"))); }

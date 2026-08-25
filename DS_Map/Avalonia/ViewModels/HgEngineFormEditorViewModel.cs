@@ -9,7 +9,7 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>One form-slot row: which species this base Pokémon can turn into, and whether that
-    /// change needs the NEEDS_REVERSION flag (reverts back to base under specific conditions — Mega
+    /// change needs the NEEDS_REVERSION flag (reverts back to base under specific conditions: Mega
     /// Evolution, Primal Reversion, and a few late-gen Terastal/other forms all use it).</summary>
     public class FormSlotRow : INotifyPropertyChanged
     {
@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.ViewModels
     /// <summary>
     /// hg-engine-only editor for data/PokeFormDataTbl.c: which form species exist for a base Pokémon
     /// (Mega Evolutions, regional forms, Gmax, etc.) and each one's NEEDS_REVERSION flag. Forms
-    /// themselves (base stats, types, abilities...) are edited through the normal Pokémon Editor — this
+    /// themselves (base stats, types, abilities...) are edited through the normal Pokémon Editor; this
     /// editor only manages which form entries exist and how they're flagged, not their contents.
     /// </summary>
     public class HgEngineFormEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels
             foreach (var row in Slots)
             {
                 string symbol = SymbolFor(row.PokemonIndex);
-                if (symbol == null) continue;   // couldn't resolve — skip rather than write garbage
+                if (symbol == null) continue;   // couldn't resolve, skip rather than write garbage
                 desired.Add(new HgEngineFormRegistry.FormSlot(row.NeedsReversion, symbol));
             }
 

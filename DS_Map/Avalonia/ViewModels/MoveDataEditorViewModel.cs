@@ -247,7 +247,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
         private void OnNamesChanged(object sender, EventArgs e)
         {
-            // Move names live in a ROM text archive — refresh when the Text editor saves (the move list is a
+            // Move names live in a ROM text archive; refresh when the Text editor saves (the move list is a
             // ListBox, which re-renders replaced items fine, so no combo re-poke needed here).
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
         }
@@ -275,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // Curated v1 scope: every MoveData field this editor already exposes. .battle.flags is a bit-OR'd
-        // combo in hg-engine's source (FLAG_CONTACT | FLAG_PROTECT | ...) — TryGetFlagsExpression
+        // combo in hg-engine's source (FLAG_CONTACT | FLAG_PROTECT | ...); TryGetFlagsExpression
         // decomposes it back into that same "NAME | NAME | ..." form; only a combination with a bit no
         // FLAG_* name covers falls back to a raw number (compiles to the same bits either way).
         private void WriteHgEngineSource()

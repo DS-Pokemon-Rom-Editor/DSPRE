@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia
                     "The grid that stitches individual maps into the seamless overworld. Each cell " +
                     "points at one map file and sets its elevation."),
                 Tab(4, "Tab 5 of 9: Area Data",
-                    "Which texture pack and building set this area draws from — change it to re-skin " +
+                    "Which texture pack and building set this area draws from; change it to re-skin " +
                     "an area."),
                 Tab(5, "Tab 6 of 9: Encounters",
                     "The wild Pokémon of this area: which species appear in grass, water and caves, " +
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia
                     "Event logic: what happens when the player talks to an NPC or steps on a trigger. " +
                     "Scripts reference the text you'll see in the next tabs."),
                 Tab(7, "Tab 8 of 9: Level Scripts",
-                    "Scripts that run automatically when the map loads — used for weather, one-time " +
+                    "Scripts that run automatically when the map loads, used for weather, one-time " +
                     "cutscenes and map setup."),
                 Tab(8, "Tab 9 of 9: Text",
                     "The dialogue and signs used by this area. Every piece of game text lives in an " +
@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("ItemsMenu"),
                     Title = "The Items menu",
                     Body = "Edit items here: the Item Editor covers each item's data and icon, and Item " +
-                           "Tables covers where items come from — the Pickup ability's loot, hidden " +
+                           "Tables covers where items come from: the Pickup ability's loot, hidden " +
                            "ground items, and HGSS Rock Smash drops."
                 },
                 new Step

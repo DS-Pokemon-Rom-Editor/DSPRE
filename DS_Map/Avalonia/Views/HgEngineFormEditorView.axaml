@@ -30,7 +30,7 @@
     <Border DockPanel.Dock="Top" Padding="8,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
       <TextBlock TextWrapping="Wrap" FontSize="12"
                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                 Text="Which form species exist for the selected base Pokémon (Mega, regional, Gmax, etc.), from data/PokeFormDataTbl.c. A form's own stats/types/abilities are edited in the Pokémon Editor — this only manages which form entries exist. &quot;Needs Reversion&quot; marks a form that reverts to base under specific conditions (Mega Evolution, Primal Reversion, and a few late-gen forms)."/>
+                 Text="Which form species exist for the selected base Pokémon (Mega, regional, Gmax, etc.), from data/PokeFormDataTbl.c. A form's own stats/types/abilities are edited in the Pokémon Editor; this only manages which form entries exist. &quot;Needs Reversion&quot; marks a form that reverts to base under specific conditions (Mega Evolution, Primal Reversion, and a few late-gen forms)."/>
     </Border>
 
     <!-- ── Bottom: status + add ── -->

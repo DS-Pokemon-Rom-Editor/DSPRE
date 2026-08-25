@@ -6,7 +6,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// UI-agnostic ROM loader for the Avalonia shell — the counterpart to the WinForms MainProgram open-ROM flow.
+    /// UI-agnostic ROM loader for the Avalonia shell, the counterpart to the WinForms MainProgram open-ROM flow.
     /// Unpacks a .nds (or opens an already-extracted folder), reads the game code from the header and constructs
     /// <see cref="RomInfo"/> (which populates the static RomInfo.* state the Avalonia editors read). This class
     /// itself has no UI: the caller decides (via <see cref="PeekFolderType"/>) whether to prompt the user about

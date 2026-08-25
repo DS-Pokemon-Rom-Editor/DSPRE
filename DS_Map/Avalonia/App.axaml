@@ -72,7 +72,7 @@
 			<Setter Property="MinHeight" Value="28"/>
 		</Style>
 		<!-- Numeric spinners: wide enough to read, tall enough to match buttons.
-		     Default to integer display (FormatString="0") — most spinners are IDs/counts; the few
+		     Default to integer display (FormatString="0"), since most spinners are IDs/counts; the few
 		     genuinely decimal ones (map building coords, camera speeds) set their own FormatString,
 		     and a locally-set value overrides this style setter. Fixes ID fields showing as "0.00". -->
 		<Style Selector="NumericUpDown">

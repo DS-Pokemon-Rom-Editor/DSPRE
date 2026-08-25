@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia
     ///  • a Ctrl+S save shortcut, and
     ///  • a close-confirmation guard (prompt before discarding unsaved work).
     /// Attach once from a window that hosts an <see cref="IEditorWithUnsavedChanges"/> VM. Because the
-    /// guard lives here, any future editor that calls <see cref="Attach"/> gets it for free — there is no
+    /// guard lives here, any future editor that calls <see cref="Attach"/> gets it for free; there is no
     /// separate <c>OnClosing</c> to remember (and forget) per view.
     /// </summary>
     public static class EditorWindowChrome
@@ -44,10 +44,10 @@ namespace DSPRE.Avalonia
         }
 
         /// <param name="manageTitle">When true, prefixes the window title with "● " while there are unsaved
-        /// changes. Pass FALSE for windows whose Title is data-bound (Title="{Binding Title}") — the chrome
-        /// can't set window.Title without fighting the binding; those VMs show their own marker instead.</param>
+        /// changes. Pass FALSE for windows whose Title is data-bound (Title="{Binding Title}"): the chrome
+        /// can't set window.Title without fighting the binding, so those VMs show their own marker instead.</param>
         /// <param name="onClosed">Optional cleanup (e.g. <c>vm.Detach</c>) run exactly once when the window is
-        /// actually allowed to close — both on the clean path and after a confirmed discard.</param>
+        /// actually allowed to close, both on the clean path and after a confirmed discard.</param>
         public static void Attach(
             Window window,
             IEditorWithUnsavedChanges vm,
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia
             {
                 if (confirmed) return;
 
-                if (!vm.HasUnsavedChanges)   // nothing to lose — let it close, but still run cleanup once
+                if (!vm.HasUnsavedChanges)   // nothing to lose, but still run cleanup once
                 {
                     onClosed?.Invoke();
                     return;

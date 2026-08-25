@@ -51,7 +51,7 @@
         <DataGridTextColumn Header="Near Clip"    Binding="{Binding NearClip}"  Width="85"/>
         <DataGridTextColumn Header="Far Clip"     Binding="{Binding FarClip}"   Width="85"/>
 
-        <!-- HGSS-only columns — hidden for DP/Plat in code-behind (matched by Header text) -->
+        <!-- HGSS-only columns, hidden for DP/Plat in code-behind (matched by Header text) -->
         <DataGridTextColumn Header="X Offset" Binding="{Binding XOffset}" Width="75"/>
         <DataGridTextColumn Header="Y Offset" Binding="{Binding YOffset}" Width="75"/>
         <DataGridTextColumn Header="Z Offset" Binding="{Binding ZOffset}" Width="75"/>

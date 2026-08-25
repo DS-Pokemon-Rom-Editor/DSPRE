@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
     /// Avalonia port of the WinForms <c>LevelScriptEditor</c>. A level script is a script file
-    /// whose body is a set of triggers — either map/screen/load triggers (run a script when the
+    /// whose body is a set of triggers: either map/screen/load triggers (run a script when the
     /// map is entered / a fade happens / the game loads) or variable-value triggers (keep running
     /// a script while a variable holds a value). Lets you pick a script file, list its triggers,
     /// add/remove them, and save / import / export. Files that aren't level scripts load empty.

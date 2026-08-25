@@ -6,10 +6,10 @@ using System.IO.Compression;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Writes a genuine indexed (palette) PNG — real PLTE/tRNS chunks, not a flattened RGBA render.
+    /// Writes a genuine indexed (palette) PNG: real PLTE/tRNS chunks, not a flattened RGBA render.
     /// Avalonia's own <c>Bitmap.Save</c> only writes 32bpp RGBA PNGs, and the cross-platform
     /// <see cref="RawImage"/> currency is always flattened BGRA (see its own doc comment), so neither
-    /// can carry a real palette table through to the file — this is a from-scratch minimal encoder for
+    /// can carry a real palette table through to the file. This is a from-scratch minimal encoder for
     /// the one shape DSPRE needs: up to 16 colors, 4 bits/pixel, index 0 transparent.
     /// </summary>
     internal static class IndexedPngWriter

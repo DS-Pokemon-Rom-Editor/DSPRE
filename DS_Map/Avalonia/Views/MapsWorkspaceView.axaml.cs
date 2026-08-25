@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Views
     public partial class MapsWorkspaceView : UserControl
     {
         private HeaderEditorViewModel VM => DataContext as HeaderEditorViewModel;
-        // Only gates one-time event-subscription wiring (below) — NOT the actual data setup, which must
+        // Only gates one-time event-subscription wiring (below), NOT the actual data setup, which must
         // re-run every time a ROM is loaded (including switching to a DIFFERENT rom mid-session), or the
         // header sidebar and every tab stay frozen on whatever ROM was loaded first in the app's lifetime.
         private bool _wiringDone;
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Views
         private async void OnLoadedSetup(object sender, RoutedEventArgs e) => await EnsureSetupAsync();
 
         /// <summary>
-        /// Workspace setup. No-ops until a ROM is loaded — the workspace is created at app boot,
+        /// Workspace setup. No-ops until a ROM is loaded; the workspace is created at app boot,
         /// before any ROM; <see cref="MainWindowView"/> re-invokes this after EVERY successful load,
         /// including switching to a different ROM mid-session, so the data-refresh portion below
         /// always re-runs (only the event-subscription wiring is one-time, guarded by
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Views
                 };
             }
 
-            // Every tab follows the selected header's linked file id — refresh every ROM load (a
+            // Every tab follows the selected header's linked file id; refresh on every ROM load (a
             // coincidental same numeric id across two different ROMs must still force a real reload,
             // so reset first rather than relying on the property setters' equality-skip).
             EventVM.InitialIndex = (int)vm.EventFileId;
@@ -115,10 +115,10 @@ namespace DSPRE.Avalonia.Views
 
             // Tabs that latched their no-ROM state at boot get to set up now. Pass our own resolved
             // owner through explicitly: these controls live in non-selected TabItems (Header is the
-            // default), so TopLevel.GetTopLevel(this) on them returns null this early — their own
+            // default), so TopLevel.GetTopLevel(this) on them returns null this early. Their own
             // EnsureSetupAsync used to silently no-op until the tab was manually visited once, which
             // for Map meant BuildHeaderPreview() built a real stitched model with zero MapLoaded
-            // subscribers (GlView never got it — stuck showing its placeholder cube).
+            // subscribers (GlView never got it, so it stayed stuck showing its placeholder cube).
             await EventsEmbed.EnsureSetupAsync(owner);
             await MapEmbed.EnsureSetupAsync(owner);
             // Default the embedded Map tab to "This header" (rather than an arbitrary single map) now
@@ -185,7 +185,7 @@ namespace DSPRE.Avalonia.Views
         }
 
         /// <summary>Builds the Wild Encounters tab's editor. Rebuilds from scratch on EVERY ROM load
-        /// (not just the first) — the pokemon names, NARC path and header count are all ROM-specific,
+        /// (not just the first): the pokemon names, NARC path and header count are all ROM-specific,
         /// and the VM type itself (DPPt vs HGSS) depends on gameFamily, so a ROM switch that changes
         /// game family needs a genuinely different VM/View, not just a retarget.</summary>
         private void EnsureEncountersEmbedded()
@@ -252,7 +252,7 @@ namespace DSPRE.Avalonia.Views
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
 
-        /// <summary>Builds a playable .nds — same flow as the File menu's "Save ROM…", just reachable
+        /// <summary>Builds a playable .nds, same flow as the File menu's "Save ROM…", just reachable
         /// without leaving the Maps workspace (this used to be the only visible Save button here, easily
         /// mistaken for "save the whole ROM" when it only ever saved the current header's own fields).</summary>
         private async void SaveRom_Click(object sender, RoutedEventArgs e)

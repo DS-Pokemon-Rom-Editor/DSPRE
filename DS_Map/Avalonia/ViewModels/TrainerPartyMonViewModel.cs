@@ -9,7 +9,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels
 {
-    /// <summary>Six raw stat bytes — reused for both a party mon's explicit `.setIvs`/`.setEvs`
+    /// <summary>Six raw stat bytes, reused for both a party mon's explicit `.setIvs`/`.setEvs`
     /// (hg-engine's `TrainerPokemonEVIV`), gated as a whole by the trainer-level `IV_EV_SET` flag.</summary>
     public class StatBlockViewModel : INotifyPropertyChanged
     {
@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
     }
 
-    /// <summary>hg-engine-only extended fields for one party slot — every field hg-engine's real
+    /// <summary>hg-engine-only extended fields for one party slot: every field hg-engine's real
     /// `TrainerPokemonData` struct has beyond the base vanilla-compatible set (species/level/ivs/
     /// abilitySlot/item/moves/ballSeal), each only meaningful (and only ever written to source) when its
     /// gating <see cref="TrainerEditorViewModel"/>-level trainer-data-type flag is checked.</summary>
@@ -48,15 +48,15 @@ namespace DSPRE.Avalonia.ViewModels
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); Changed?.Invoke(this, EventArgs.Empty); return true; }
 
-        // Explicit ability (TRAINER_DATA_TYPE_ABILITY) — distinct from the always-present abilitySlot
+        // Explicit ability (TRAINER_DATA_TYPE_ABILITY), distinct from the always-present abilitySlot
         // selector (TrainerPartyMonViewModel.AbilityIndex): this lets the mon carry ANY ability, not just
         // one of its species' normal two.
         private int _abilityId = -1; public int AbilityId { get => _abilityId; set { if (Set(ref _abilityId, value)) { } } }
 
-        // Held/catch ball (TRAINER_DATA_TYPE_BALL) — an ITEM_* id, same list as held items.
+        // Held/catch ball (TRAINER_DATA_TYPE_BALL): an ITEM_* id, same list as held items.
         private int _ballId = -1; public int BallId { get => _ballId; set => Set(ref _ballId, value); }
 
-        // Explicit IVs/EVs (TRAINER_DATA_TYPE_IV_EV_SET) — both fields are ALWAYS present together in
+        // Explicit IVs/EVs (TRAINER_DATA_TYPE_IV_EV_SET): both fields are ALWAYS present together in
         // hg-engine's struct once this flag is set; there's no per-stat sub-gate.
         public StatBlockViewModel SetIvs { get; } = new StatBlockViewModel();
         public StatBlockViewModel SetEvs { get; } = new StatBlockViewModel();
@@ -64,10 +64,10 @@ namespace DSPRE.Avalonia.ViewModels
         public System.Collections.Generic.IReadOnlyList<string> NatureNames => DVCalculator.Natures;
         private int _natureIndex; public int NatureIndex { get => _natureIndex; set => Set(ref _natureIndex, value); }
 
-        // Shiny lock (TRAINER_DATA_TYPE_SHINY_LOCK) — forces/forbids a shiny encounter for this mon.
+        // Shiny lock (TRAINER_DATA_TYPE_SHINY_LOCK): forces/forbids a shiny encounter for this mon.
         private bool _shinyLocked; public bool ShinyLocked { get => _shinyLocked; set => Set(ref _shinyLocked, value); }
 
-        // Additional flags (TRAINER_DATA_TYPE_ADDITIONAL_FLAGS) — each sub-flag independently gates its
+        // Additional flags (TRAINER_DATA_TYPE_ADDITIONAL_FLAGS): each sub-flag independently gates its
         // own value field (TRAINER_DATA_EXTRA_TYPE_*), unlike IV_EV_SET's all-or-nothing pair above.
         private bool _extraStatusEnabled; public bool ExtraStatusEnabled { get => _extraStatusEnabled; set => Set(ref _extraStatusEnabled, value); }
         private int _extraStatus; public int ExtraStatus { get => _extraStatus; set => Set(ref _extraStatus, value); }
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> AbilityItems { get; } = new ObservableCollection<string>();
 
         /// <summary>Full ability list (not species-restricted), for hg-engine's optional explicit
-        /// `.ability` field — unlike <see cref="AbilityItems"/>, which is always just the species' own
+        /// `.ability` field, unlike <see cref="AbilityItems"/>, which is always just the species' own
         /// two abilities for the always-present abilitySlot selector.</summary>
         public ObservableCollection<string> AllAbilityNames { get; } = new ObservableCollection<string>();
 
@@ -255,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (!_abilityEditable)
             {
-                // DPPt: ability not editable — show ability 1 three times (matches WinForms padding).
+                // DPPt: ability not editable, show ability 1 three times (matches WinForms padding).
                 AbilityItems.Add(a1); AbilityItems.Add(a1); AbilityItems.Add(a1);
             }
             else
@@ -266,12 +266,11 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // Mirrors PokemonEditorViewModel.LoadMon's icon handling exactly — hg-engine doesn't keep icons
-        // in personal.narc at all (each species' icon is a source PNG, data/graphics/sprites/<name>/
+        // Mirrors PokemonEditorViewModel.LoadMon's icon handling: hg-engine doesn't keep icons in
+        // personal.narc at all (each species' icon is a source PNG, data/graphics/sprites/<name>/
         // icon.png), so it's loaded directly rather than through the vanilla NCGR/NCLR/ARM9-palette-table
         // pipeline, which relies on a hardcoded byte offset that's meaningless against hg-engine's
-        // recompiled ARM9 (see HgEnginePokemonIcons). Missed here originally — this VM has its own icon
-        // loader separate from the Pokémon Editor's, so the same fix had to be applied twice.
+        // recompiled ARM9 (see HgEnginePokemonIcons).
         private void UpdateIcon()
         {
             try

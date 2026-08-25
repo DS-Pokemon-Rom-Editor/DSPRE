@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.ViewModels
                     });
             }
             RefreshIconPreview();
-            StatusText = _yaml == null ? "banner.yaml not found — titles unavailable." : $"{Titles.Count} title languages.";
+            StatusText = _yaml == null ? "banner.yaml not found, titles unavailable." : $"{Titles.Count} title languages.";
         }
 
         private void RefreshIconPreview()

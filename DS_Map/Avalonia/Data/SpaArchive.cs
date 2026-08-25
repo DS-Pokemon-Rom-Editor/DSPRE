@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
         public double InitRot, RttMinRot, RttMaxRot, RotRate;   // billboard rotation (radians); RotRate = spin rad/frame
         public bool UseRttAnm, UseInitRttRndm;
 
-        // Animation curves over a particle's life (lifeRate 0..255), decoded from — these are what make
+        // Animation curves over a particle's life (lifeRate 0..255): these are what make
         // particles fade, shrink/grow and recolour like the game.
         public double SclS, SclN, SclE; public int SclIn, SclOut;                    // scale anim (×base_scl)
         public byte ClrSR, ClrSG, ClrSB, ClrER, ClrEG, ClrEB; public int ClrIn, ClrPeak, ClrOut; public bool ClrInterp;
@@ -64,19 +64,19 @@ namespace DSPRE.Avalonia.Data
         public double RandMagX, RandMagY; public int RandIntvl;                     // random field: velocity kick every intvl
         public bool UseConv; public double ConvX, ConvY, ConvRatio;                 // convergence field: lerp pos→point/frame
         public bool UseColl; public double CollY, CollBounce; public int CollEvent; // collision plane: kill(0)/bounce(1)
-        // the child-resource block — parent particles spawn child particles (trails/sparks): half of all emitters use this.
+        // the child-resource block: parent particles spawn child particles (trails/sparks); half of all emitters use this.
         public int ChildLife, ChildGenNum, ChildGenStart, ChildGenIntvl, ChildTexNo;
         public double ChildVelRatio, ChildSclRatio, ChildSclEnd;
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
         public double Aspect = 1.0;     // base.aspect (fx16): billboard sclX = sclY × aspect (non-square sprites)
         // misc.scaleAnimDir (the resource header, bits 28-30 of the word at +72): which axes the scale anim
-        // drives — 0 = both, 1 = X only, 2 = Y only (the hardware billboard-build step applies it per-axis). A thin quad
+        // drives (0 = both, 1 = X only, 2 = Y only; the hardware billboard-build step applies it per-axis). A thin quad
         // with a Y-only scale anim EXTENDS along its length instead of growing as a blob (Seed Flare slashes).
         public int ScaleAnimDir;
         public bool FlipS, FlipT;       // misc.flipTextureS/T (bits 0/1 of the word at +76): mirror the texture on the quad
         public double AxisZ;            // base.axis z (VecFx16 @ +32): 3D travel axis component (+z toward camera)
-        // Resource-flag bits 17-23 — polygon draw-type params + parent/child draw order.
+        // Resource-flag bits 17-23: polygon draw-type params + parent/child draw order.
         public int PolyRotAxis;         // 0 = rotate about Y, 1 = rotate about the (1,1,1) diagonal (sRotationFunctions)
         public int PolyRefPlane;        // 0 = XY plane quad, 1 = XZ plane quad (sPlaneDrawingFunctions)
         public bool DrawChildrenFirst;  // render children before parents
@@ -159,20 +159,20 @@ namespace DSPRE.Avalonia.Data
                     Radius = Px(I32(off + 20)),
                     InitVelPos = Px(I32(off + 36)),
                     InitVelAxis = Px(I32(off + 40)),
-                    AxisX = (short)U16(off + 28) / 4096.0,   // base.axis VecFx16 (x@28, y@30, z@32) — unit dir, +Y up
+                    AxisX = (short)U16(off + 28) / 4096.0,   // base.axis VecFx16 (x@28, y@30, z@32): unit dir, +Y up
                     AxisY = (short)U16(off + 30) / 4096.0,
                     AxisZ = (short)U16(off + 32) / 4096.0,
                     PolyRotAxis = (int)((flag >> 17) & 3),
                     PolyRefPlane = (int)((flag >> 19) & 1),
                     DrawChildrenFirst = (flag & (1u << 21)) != 0,
                     HideParent = (flag & (1u << 22)) != 0,
-                    Length = Px(I32(off + 24)),              // cylinder length (fx32) — spread along the emitter axis
+                    Length = Px(I32(off + 24)),              // cylinder length (fx32), spread along the emitter axis
                     BaseScale = Fx32(I32(off + 44)),
                     EmitterLife = U16(off + 60),
                     ParticleLife = U16(off + 62),
                     Aspect = (short)U16(off + 48) / 4096.0,   // base.aspect (fx16)
                     // start_offset (u16 @50,): the emitter idles this many frames before emitting.
-                    // This is script-invisible sequencing — e.g. Seed Flare adds all 3 emitters at once but its
+                    // This is script-invisible sequencing: e.g. Seed Flare adds all 3 emitters at once but its
                     // big slashes carry a start_offset so they fire after the small particles.
                     StartOffset = U16(off + 50),
                     // Billboard rotation (the resource base header): rtt_min@52 / rtt_max@54 (s16) + init_rtt@56 (u16); units = full
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.Data
                 e.FlipT = (etc2 & 2) != 0;
                 e.RepeatS = ((etc1 >> 24) & 0x3) >= 1;
                 e.RepeatT = ((etc1 >> 26) & 0x3) >= 1;
-                // base.offset_x/offset_y (fx16 @ 80/82): the billboard QUAD centre offset in half-size units —
+                // base.offset_x/offset_y (fx16 @ 80/82): the billboard QUAD centre offset in half-size units;
                 // spl_draw_bb passes these to drawXYPlane, so the quad spans (offset±1). Anchors e.g. the Bite
                 // jaws so the upper fang hangs DOWN from its top point and the lower fang rises UP (we_044).
                 e.OffsetX = (short)U16(off + 80) / 4096.0;

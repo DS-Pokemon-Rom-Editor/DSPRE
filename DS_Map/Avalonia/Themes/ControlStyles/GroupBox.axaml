@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Qt Fusion group box (qfusionstyle.cpp): the title sits fully ABOVE the frame
          (SH_GroupBox_TextLabelVerticalAlignment = AlignTop), in regular weight, hugging the
-         frame's left edge — no Windows-style straddle with an opaque title patch.
+         frame's left edge, no Windows-style straddle with an opaque title patch.
          Frame top = title height + 3px (QCommonStyle SC_GroupBoxFrame), content starts 3px
          below the frame line (SC_GroupBoxContents margin=3 + groupBoxTopMargin=3).
          The Grid rows measure the title so the frame tracks the real font height. -->

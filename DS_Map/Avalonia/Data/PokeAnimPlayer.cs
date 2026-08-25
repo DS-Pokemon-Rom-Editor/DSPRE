@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.Data
                     break;
                 }
 
-                // ApplyTrans/ApplyAffine are implicit — the output reads the accumulators live. SET_VAL / ADD_VAL /
+                // ApplyTrans/ApplyAffine are implicit: the output reads the accumulators live. SET_VAL / ADD_VAL /
                 // SET_ADD_VAL write less-common sprite params and are consumed (no transform effect for now).
                 default: break;
             }
@@ -250,7 +250,7 @@ namespace DSPRE.Avalonia.Data
             int v2 = (a.Length > 1 && a[1] == CALC_WORK) ? GetW(a.Length > 3 ? a[3] : 0) : (a.Length > 3 ? a[3] : 0);
             return (v1, v2);
         }
-        // SUB/DIV/MOD: [dst, calc1, calc2, v1, v2] — each operand work-or-literal.
+        // SUB/DIV/MOD: [dst, calc1, calc2, v1, v2], each operand work-or-literal.
         private (int, int) SubDivOperands(int[] a)
         {
             int v1 = (a.Length > 1 && a[1] == CALC_WORK) ? GetW(a.Length > 3 ? a[3] : 0) : (a.Length > 3 ? a[3] : 0);
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.Data
             _fade = startEvy / 16.0;
             _fadeTarget = endEvy / 16.0;
             // The soft-sprite fade steps EVY by 1 every (wait+1) frames until it reaches end, so the visible
-            // duration scales with both the EVY delta and the wait — not the wait alone.
+            // duration scales with both the EVY delta and the wait, not the wait alone.
             _fadeFrames = Math.Max(1, Math.Abs(endEvy - startEvy) * (wait + 1));
             _fadeR = (byte)((rgb & 0x1F) * 255 / 31);
             _fadeG = (byte)(((rgb >> 5) & 0x1F) * 255 / 31);

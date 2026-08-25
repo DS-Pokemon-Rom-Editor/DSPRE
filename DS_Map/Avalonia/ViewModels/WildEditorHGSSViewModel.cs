@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // Curated v1 scope: every EncounterFileHGSS field this editor already exposes. Water/rod slots
         // are undesignated "{ min, max, SPECIES_X }" structs in hg-engine's source (no field names at
-        // all) — At(0)/At(1)/At(2) locate them positionally, the same mechanism used for named fields.
+        // all); At(0)/At(1)/At(2) locate them positionally, the same mechanism used for named fields.
         private void WriteHgEngineSource()
         {
             if (!HgEngineProject.IsActive || _current == null) return;

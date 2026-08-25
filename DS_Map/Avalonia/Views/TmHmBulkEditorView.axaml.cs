@@ -58,9 +58,8 @@ namespace DSPRE.Avalonia.Views
 
         private string[] PokemonNamesFromTree()
         {
-            // The dialog needs the full species-name list (for its own source dropdown), which the
-            // main VM doesn't expose directly — rebuilt here from the same source it was constructed
-            // with via RomInfo, matching AvaloniaEditorLauncher's own lookup.
+            // The dialog needs the full species-name list for its own source dropdown; the main VM
+            // doesn't expose it directly, so rebuild it from the same RomInfo lookup it was constructed with.
             return RomInfo.GetPokemonNames();
         }
     }

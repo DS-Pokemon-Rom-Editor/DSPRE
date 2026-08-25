@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels
 
     /// <summary>
     /// Avalonia port of the WinForms <c>TextEditor</c>. Edits in-game text archives
-    /// (dual binary/JSON format) — archive selection, per-line editing, add/remove
+    /// (dual binary/JSON format): archive selection, per-line editing, add/remove
     /// strings &amp; archives, reorder, import/export, and search &amp; replace.
     /// </summary>
     public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.ViewModels
             StatusText = $"Saved Text Archive {_current.ID}.";
             if (_current.ID == locationNamesTextNumber)
                 ReloadHeaderEditorLocations(_current.messages);
-            // Names (Pokémon/item/move/…) come from text archives — tell open editors to refresh their combos.
+            // Names (Pokémon/item/move/…) come from text archives; tell open editors to refresh their combos.
             AppEvents.RaiseNamesChanged();
         }
 

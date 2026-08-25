@@ -21,7 +21,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>NsbtxEditor</c> — the texture-pack viewer/editor.
+    /// Avalonia port of the WinForms <c>NsbtxEditor</c>, the texture-pack viewer/editor.
     /// Lists map / building texture packs; for the selected pack, lists its textures and
     /// palettes and renders a preview of the chosen texture+palette (via the shared
     /// <see cref="NsbmdTextureDecoder"/>). Whole packs can be imported / exported.

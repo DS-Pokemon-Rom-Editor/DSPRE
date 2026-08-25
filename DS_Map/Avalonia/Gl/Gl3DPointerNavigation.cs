@@ -7,15 +7,12 @@ namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
     /// Shared mouse-drag camera + pick/gizmo wiring for every 3D viewport (Map/Event/Building/
-    /// Headbutt editors). Centralizing this (rather than copying the press/move/release/wheel
-    /// block into each view) is what keeps the button mapping below, and "click the viewport to
-    /// give it keyboard focus" (so arrow keys don't leak into it from a focused dropdown/spinner
-    /// elsewhere in the panel), consistent everywhere instead of drifting per view.
+    /// Headbutt editors), so the button mapping and click-to-focus behavior stay consistent
+    /// instead of drifting per view.
     ///
-    /// Button roles (matches PDSMS's convention, not DSPRE's old default): right-drag orbits
-    /// (tilts) the camera, left-drag pans it, middle-drag also pans. Left is still the "action"
-    /// button first — paint-mode paints, edit-mode grabs a gizmo handle or picks the nearest item
-    /// — and only falls back to a pan-drag when neither of those claimed the press.
+    /// Button roles match PDSMS's convention, not DSPRE's old default: right-drag orbits (tilts)
+    /// the camera, left-drag pans, middle-drag also pans. Left is still the "action" button
+    /// first, falling back to pan only when paint/edit mode didn't claim the press.
     /// </summary>
     public sealed class Gl3DPointerNavigation
     {
@@ -34,7 +31,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>True while 3D move-gizmo editing is active: left-press hit-tests the gizmo handle before falling back to picking.</summary>
         public Func<bool> IsEditModeActive;
         public Action BeginGizmoDrag;
-        /// <summary>Gizmo axis (0=X,1=Y,2=Z) and the raw normalized-space drag delta along it (via <see cref="NsbmdGlControl.ScreenDragToAxis"/>) — the caller applies its own model-scale division.</summary>
+        /// <summary>Gizmo axis (0=X,1=Y,2=Z) and the raw normalized-space drag delta along it (via <see cref="NsbmdGlControl.ScreenDragToAxis"/>); the caller applies its own model-scale division.</summary>
         public Action<int, float> NudgeAxis;
         public Action<Point> Pick;
 

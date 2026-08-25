@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>Drops whatever resources are currently loaded. This instance is shared across every move
         /// preview in the editor session (persisted so switching moves doesn't re-decode graphics unnecessarily),
-        /// so a move whose own WEST script has no CATS cell-anim resource must call this — otherwise the
+        /// so a move whose own WEST script has no CATS cell-anim resource must call this, otherwise the
         /// PREVIOUS move's graphics (e.g. Surf's wave sprite) stay loaded and get reused by any later move
         /// whose script still fires a generic ACT_ADD-family opcode.</summary>
         public void Unload() { _char = null; _pltt = null; _cell = null; _anm = null; _cellRgbaCache.Clear(); }
@@ -50,10 +50,9 @@ namespace DSPRE.Avalonia
         {
             _char = null; _pltt = null; _cell = null; _anm = null;
             // RenderCellRgba's cache is keyed by a bare cell INDEX, with no idea which resource set it came
-            // from — without clearing it here, a later move whose actor requests the same index (e.g. cell 0)
+            // from; without clearing it here, a later move whose actor requests the same index (e.g. cell 0)
             // would get back a bitmap rendered from the PREVIOUSLY loaded char/pltt/cell archives instead of
-            // this move's own (confirmed live: Metronome's hand sprite bled into Icicle Spear this way, even
-            // after fixing the separate bug of Unload() never being called for cell-anim-less moves).
+            // this move's own.
             _cellRgbaCache.Clear();
             try
             {
@@ -96,7 +95,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>The parsed NANR sequences as the CATS playback model — drives live <see cref="DSPRE.Avalonia.Data.CellActor"/>s.</summary>
+        /// <summary>The parsed NANR sequences as the CATS playback model, drives live <see cref="DSPRE.Avalonia.Data.CellActor"/>s.</summary>
         public DSPRE.Avalonia.Data.CellSequence[] BuildSequences() => DSPRE.Avalonia.Data.CellActor.FromNanr(_anm);
 
         /// <summary>Renders a SINGLE cell bank (the actor's current frame) to a 256×192 bitmap, composited at the
@@ -113,7 +112,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>One rendered cell as a straight (non-premultiplied) RGBA buffer, with the actor origin (0,0) at the
-        /// canvas centre (<see cref="Size"/>/2) — Ekona Get_Image draws each OAM at <c>size/2 + oam.xy</c>. Cached.</summary>
+        /// canvas centre (<see cref="Size"/>/2): Ekona Get_Image draws each OAM at <c>size/2 + oam.xy</c>. Cached.</summary>
         public readonly struct CellPixels
         {
             public readonly byte[] Rgba; public readonly int Size;
@@ -186,7 +185,7 @@ namespace DSPRE.Avalonia
             return frames;
         }
 
-        // Scan the rendered frame for the bounding box of non-transparent pixels and store its centre — so WE_057
+        // Scan the rendered frame for the bounding box of non-transparent pixels and store its centre, so WE_057
         // can scale/anchor the wave about its ACTUAL position instead of assuming the frame centre (which made it
         // jump). Falls back to the frame centre if empty.
         private void ComputeContentCenter(DSPRE.RawImage raw, int w, int h)
@@ -219,7 +218,7 @@ namespace DSPRE.Avalonia
             return tmp;
         }
 
-        // Constructs one resource, logging (instead of aborting all four) if its reader throws — so we see exactly
+        // Constructs one resource, logging (instead of aborting all four) if its reader throws, so we see exactly
         // which format/file is the culprit rather than a blanket "read beyond end of stream".
         private static T Try<T>(string what, Func<T> make) where T : class
         {

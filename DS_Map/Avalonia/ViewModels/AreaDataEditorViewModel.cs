@@ -14,7 +14,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Avalonia editor for AreaData files — the records that tie a map area to its texture packs.
+    /// Avalonia editor for AreaData files: the records that tie a map area to its texture packs.
     /// Each entry sets the map tileset and buildings tileset (the NSBTX pack indices), plus the
     /// dynamic-texture/area-type/light fields. This is the data the map &amp; event 3D views resolve
     /// to pick the correct textures; it had no Avalonia editor before (was only in WinForms NSBTX).
@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-        // NOTE: Set() does NOT mark dirty — only the actual area-field edits below do (via Dirty()). Otherwise
+        // NOTE: Set() does NOT mark dirty; only the actual area-field edits below do (via Dirty()). Otherwise
         // selecting a different area or updating StatusText would falsely flag unsaved changes (and saving,
         // which sets StatusText after SetClean, would immediately re-dirty the editor).
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)

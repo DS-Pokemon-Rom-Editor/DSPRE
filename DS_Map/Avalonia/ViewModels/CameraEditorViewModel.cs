@@ -366,7 +366,7 @@ namespace DSPRE.Avalonia.ViewModels
                 T arg = (T)Convert.ChangeType(parameter, typeof(T));
                 await _execute(arg);
             }
-            catch { /* swallow — errors handled inside execute delegates */ }
+            catch { /* swallow, errors handled inside execute delegates */ }
             finally
             {
                 _running = false;

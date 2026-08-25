@@ -4,7 +4,7 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Human-readable names, one-line descriptions and parameter labels for the battle move/effect-sequence
-    /// opcodes (the <c>WS_*</c> server-control command set shared by the waza_seq / be_seq / sub_seq formats —
+    /// opcodes (the <c>WS_*</c> server-control command set shared by the waza_seq / be_seq / sub_seq formats,
     /// "what the move DOES"). Platinum and HGSS use the same command list. The many <c>WS_&lt;romaji&gt;</c>
     /// per-move handlers are mapped to their English move names so the effect scripts read as English. Opcodes not
     /// listed fall back to a prefix-stripped, title-cased name.

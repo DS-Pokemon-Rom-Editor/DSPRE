@@ -15,7 +15,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TableEditor</c> (data only — the animated
+    /// Avalonia port of the WinForms <c>TableEditor</c> (data only: the animated
     /// trainer-class sprite preview is intentionally omitted; it will return once
     /// the Trainer Editor is ported and its sprite renderer can be reused).
     ///
@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int _trainerComboIndex = -1;
         public int TrainerComboIndex { get => _trainerComboIndex; set { if (Set(ref _trainerComboIndex, value)) MarkVsTrainerDirty(); } }
 
-        // ── VS Pokémon selection/detail (display only — original Save is a no-op) ──
+        // ── VS Pokémon selection/detail (display only, original Save is a no-op) ──
         private int _vsPokemonSelectedIndex = -1;
         public int VsPokemonSelectedIndex
         {

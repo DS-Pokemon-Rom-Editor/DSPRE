@@ -96,11 +96,7 @@ namespace DSPRE.Avalonia.ViewModels
             _sdatLoadTried = true;
             try
             {
-                // Verified directly against the leaked Platinum source (main/src/system/snd_system.c): Platinum's
-                // real init call is NNS_SndArcInit(..., "data/sound/pl_sound_data.sdat", ...), with the DP-era
-                // call left commented out right above it — "data/sound/sound_data.sdat", no prefix. So DP is a
-                // third, distinct filename, not just "whatever Plat uses" (the previous two-way ternary silently
-                // pointed DP projects at Platinum's "pl_" file, which a real DP ROM doesn't carry).
+                // Each version's sound archive has its own filename; DP does not carry Platinum's "pl_" file.
                 string fileName = gameFamily switch
                 {
                     GameFamilies.HGSS => "gs_sound_data.sdat",
@@ -121,23 +117,18 @@ namespace DSPRE.Avalonia.ViewModels
             return _sdat;
         }
 
-        /// <summary>The sound's real name from the ROM's own sound archive (e.g. "SEQ_SE_PL_KEZURI"), or null if
-        /// it can't be resolved — shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
+        /// <summary>The sound's real name from the ROM's own sound archive (e.g. "SEQ_SE_PL_KEZURI"), or null
+        /// if it can't be resolved. Shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
         private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out var n) == true ? n : null;
 
         /// <summary>Renders and plays the given sound ID through the active <see cref="AudioOutput"/> backend.
         /// Best-effort: an out-of-range ID or an unresolved instrument just stays silent rather than erroring.
         /// Used during animation playback, where a popup per failed note would be disruptive.
         ///
-        /// Rendering (SSEQ interpretation + PCM mixdown) runs on a background thread, not inline on the
-        /// caller. This is called from <see cref="WestPlayer"/>'s frame Step(), which runs on the UI dispatcher's
-        /// 60Hz preview timer — measured directly (GC.GetAllocatedBytesForCurrentThread on real ROM sounds):
-        /// every render allocates ~2MB on the Large Object Heap, and repeated LOH churn from firing several SEs
-        /// through a script's timeline provokes blocking gen1/gen2 collections that stall every thread in the
-        /// process, including whatever's already mid-playback. That reads as exactly the "choppy"/"staticky"
-        /// glitching this was built to avoid, and it has nothing to do with the sound content itself. Moving the
-        /// render off the dispatcher thread keeps the 60Hz animation loop from stalling on it and stops the
-        /// allocation from landing in the same GC generation the UI thread's own churn is driving.</summary>
+        /// Rendering (SSEQ interpretation + PCM mixdown) runs on a background thread, not inline on the caller:
+        /// each render allocates several MB on the Large Object Heap, and doing that on the UI dispatcher thread
+        /// (which drives <see cref="WestPlayer"/>'s 60Hz preview timer) causes LOH-churn GC pauses that stall the
+        /// animation loop.</summary>
         private void PreviewSound(int soundId)
         {
             var sdat = LoadSdat();
@@ -172,9 +163,9 @@ namespace DSPRE.Avalonia.ViewModels
             catch (System.Exception ex) { return ex.ToString(); }
         }
 
-        /// <summary>Internal opcode names for the current archive (index = opcode id) — used for schema lookups.</summary>
+        /// <summary>Internal opcode names for the current archive (index = opcode id), used for schema lookups.</summary>
         public ObservableCollection<string> OpcodeNames { get; } = new ObservableCollection<string>();
-        /// <summary>Friendly opcode titles (index = opcode id) — drives the per-row opcode dropdown.</summary>
+        /// <summary>Friendly opcode titles (index = opcode id); drives the per-row opcode dropdown.</summary>
         public ObservableCollection<string> OpcodeDisplayNames { get; } = new ObservableCollection<string>();
 
         private void SelectArchive(int index)
@@ -327,7 +318,7 @@ namespace DSPRE.Avalonia.ViewModels
         public void Save()
         {
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
-            if (HasTextErrors)   // the cards are stale while the text is invalid — don't persist the wrong thing
+            if (HasTextErrors)   // the cards are stale while the text is invalid, don't persist the wrong thing
             {
                 _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The command text has errors. Fix the red-underlined line(s) before saving.", "Fix errors first");
                 return;
@@ -351,7 +342,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 else
                 {
-                    // waza/be/sub opcodes are fixed-length — pad/truncate to the opcode's arg count.
+                    // waza/be/sub opcodes are fixed-length, pad/truncate to the opcode's arg count.
                     int n = Math.Max(0, WazaSeqOpcodes.ArgCount(_version, row.OpId));
                     args = new int[n];
                     for (int i = 0; i < n; i++) args[i] = i < row.Args.Count ? row.Args[i] : 0;
@@ -379,7 +370,7 @@ namespace DSPRE.Avalonia.ViewModels
         // ── Text ⇄ container two-way sync ───────────────────────────────────────────
         // The command list can be edited either as collapsible cards (Rows) or as plain text (CommandsText); the two are
         // kept live-synced. Each text line is "OPCODE_NAME arg0 arg1 …" (decimal or 0xHEX). Editing the cards regenerates
-        // the text; editing the text re-parses into the cards — but ONLY when the text is error-free (else the cards keep
+        // the text; editing the text re-parses into the cards, but ONLY when the text is error-free (else the cards keep
         // the last good state and the errors are surfaced as red squiggles + block switching to card view).
         private bool _pushingText;     // Rows→text: a programmatic CommandsText push (don't re-parse it)
         private bool _rebuildingRows;  // text→Rows: rebuilding the cards from text (don't regenerate the text)
@@ -413,9 +404,9 @@ namespace DSPRE.Avalonia.ViewModels
         // The text format is a single-word command line: "CommandName label=value label=value ...", e.g.
         // "AddParticles slot=0 data=482 behavior=3". Every command/argument/enum-value token is a single
         // camel/Pascal-case word (WestParamSchema.CommandName/ArgToken/Token) so it types and greps like a real
-        // command line rather than a sentence. Args may be named (label=value, any order — the label pins it to
-        // that parameter's slot) or bare (a plain number/enum name — fills the next slot not already claimed by
-        // a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
+        // command line rather than a sentence. Args may be named (label=value, in any order; the label pins it
+        // to that parameter's slot) or bare (a plain number/enum name; fills the next slot not already claimed
+        // by a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
         private string RowsToText()
         {
             var sb = new StringBuilder();
@@ -465,8 +456,8 @@ namespace DSPRE.Avalonia.ViewModels
                 : int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out v);
         }
 
-        // Resolve a friendly enum value token (e.g. "AttackerSide", "ConvergeToPoint") — or the old spaced label,
-        // still accepted — back to its engine value for an enum-typed parameter.
+        // Resolve a friendly enum value token (e.g. "AttackerSide", "ConvergeToPoint") back to its engine value
+        // for an enum-typed parameter; the old spaced label is still accepted too.
         private static bool TryResolveEnum(string rawOpName, int argIndex, string token, out int value)
         {
             value = 0;
@@ -484,7 +475,7 @@ namespace DSPRE.Avalonia.ViewModels
             => TryParseWord(token, out v) || TryResolveEnum(rawOpName, argIndex, token, out v);
 
         // Finds the argument index whose single-word label (or, for a payload slot with no known name, "paramN"/
-        // "argN") matches the given token — scanning only the opcode's KNOWN fixed labels (stops at the first
+        // "argN") matches the given token by scanning only the opcode's KNOWN fixed labels (stops at the first
         // generic "Param N" fallback, since anything past that is unnamed variable payload).
         private static int ResolveArgIndex(string rawOpName, string label)
         {
@@ -623,7 +614,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         public bool HasCellAnimation { get; private set; }
         public bool HasParticleAnimation { get; private set; }
-        // Any WEST entry shows the battle scene — even moves with no particles still animate (lunge/shake/fade).
+        // Any WEST entry shows the battle scene, even moves with no particles still animate (lunge/shake/fade).
         public bool HasPreview => IsWest && _fileIndex >= 0;
         public string CellAnimNote { get; private set; } = "";
         private Bitmap _cellPreview;
@@ -674,10 +665,9 @@ namespace DSPRE.Avalonia.ViewModels
         public double EnemyTintOpacity { get => _eTintA; private set => Set(ref _eTintA, value); }
         public IBrush TintBrush { get => _tintBrush; private set => Set(ref _tintBrush, value); }
 
-        // The battle backdrop sprites — Shuckle vs Shuckle (#213) 🐢, the author's romhacking namesake. Loaded once,
-        // positioned exactly like the Battle Display editor (sprite-Y offset + heights), reusing its VM.
-        // Software compositor: backdrop + mons + effect-BG composited with the real NDS blend (replaces the stacked
-        // backdrop/platform/mon/BG images so the GX blend is exact). Particles/cell/chrome stay as overlays on top.
+        // Backdrop + mon sprites are positioned exactly like the Battle Display editor (sprite-Y offset + heights),
+        // reusing its VM, then composited with the real NDS blend so the GX blend is exact. Particles/cell/chrome
+        // stay as overlays on top.
         private readonly BattleSceneCompositor _compositor = new BattleSceneCompositor();
         private Bitmap _sceneComposite;
         public Bitmap SceneComposite { get => _sceneComposite; private set => Set(ref _sceneComposite, value); }
@@ -723,7 +713,7 @@ namespace DSPRE.Avalonia.ViewModels
                 sv.LoadMon(id);
                 var bd = new BattleDisplayEditorViewModel(sv);
                 bd.LoadMon(id);
-                bd.Detach();       // we only want its computed positions — stop its preview timer
+                bd.Detach();       // we only want its computed positions, stop its preview timer
 
                 EnemySprite = bd.EnemySprite ?? First(sv.BattleFrontM) ?? First(sv.BattleFrontF);
                 PlayerSprite = bd.PlayerSprite ?? First(sv.BattleBackM) ?? First(sv.BattleBackF);
@@ -740,7 +730,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (EnemySprite != null) { var (ex, ew, eh) = ToRgba(EnemySprite); _compositor.SetEnemy(ex, ew, eh, (int)EnemyLeft, (int)EnemyTop); }
                 if (IsWest && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
-            catch { /* no ROM / sprite — backdrop just shows the scene without the mons */ }
+            catch { /* no ROM / sprite, backdrop just shows the scene without the mons */ }
 
             static Bitmap First(System.Collections.Generic.IReadOnlyList<Bitmap> l) => l != null && l.Count > 0 ? l[0] : null;
         }
@@ -757,7 +747,7 @@ namespace DSPRE.Avalonia.ViewModels
         private DSPRE.Avalonia.Data.BattleBgRenderer _bgRenderer;
         private System.Collections.Generic.List<string> _backgroundOptions;
         /// <summary>Dropdown: "Provided image" (the bundled PNG) + every REAL battle-scene backdrop decoded from
-        /// pl_batt_bg.narc (BATTLE_BG00 + bg_id, the scenery behind the platforms — NOT the move-effect backgrounds).
+        /// pl_batt_bg.narc (BATTLE_BG00 + bg_id, the scenery behind the platforms, NOT the move-effect backgrounds).
         /// Picking one swaps the scene backdrop for the real ROM graphics.</summary>
         public System.Collections.Generic.List<string> BackgroundOptions => _backgroundOptions ??= BuildBackgroundOptions();
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
@@ -840,7 +830,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // CT_WazaEffectGaugeShadowOnOffCheck: during a move the gauges are hidden UNLESS the move's
         // WazaData flag (byte 11) has FLAG_PUT_GAUGE(0x40); the soft-sprite shadow is hidden if FLAG_DEL_SHADOW(0x80).
-        // Re-shown when the effect ends. So most moves drop the HUD for their animation — exactly per the code.
+        // Re-shown when the effect ends. So most moves drop the HUD for their animation, exactly per the code.
         private bool _hideGaugesThisMove, _hideShadowThisMove;
         public bool GaugesVisible => !(IsCellPlaying && _hideGaugesThisMove);
         public bool ShadowHidden => IsCellPlaying && _hideShadowThisMove;
@@ -865,8 +855,8 @@ namespace DSPRE.Avalonia.ViewModels
         private void RaiseHpProps() { OnPropertyChanged(nameof(GaugeHpBarWidth)); OnPropertyChanged(nameof(GaugeHpBrush)); OnPropertyChanged(nameof(GaugeCurHp)); OnPropertyChanged(nameof(GaugeHpText)); }
         public int GaugeLevel { get => _gaugeLevel; set { if (Set(ref _gaugeLevel, Math.Clamp(value, 1, 100))) OnPropertyChanged(nameof(GaugeLevelText)); } }
 
-        // The Pokémon shown in the preview (and named on the gauge) — pick it from a dropdown. Changing it live-loads
-        // that species' front/back battle sprites into the scene.
+        // The Pokémon shown in the preview (and named on the gauge); pick it from a dropdown. Changing it
+        // live-loads that species' front/back battle sprites into the scene.
         private string[] _speciesNames;
         public string[] SpeciesNames => _speciesNames ??= SafeSpeciesNames();
         private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch { return Array.Empty<string>(); } }
@@ -930,8 +920,9 @@ namespace DSPRE.Avalonia.ViewModels
             return wb;
         }
 
-        /// <summary>Loads the selected backdrop into the compositor — the bundled PNG for index 0, otherwise the real
-        /// pl_batt_bg background (cropped to the 256×192 scene). Falls back to the PNG if the ROM/NARC is unavailable.</summary>
+        /// <summary>Loads the selected backdrop into the compositor: the bundled PNG for index 0, otherwise the
+        /// real pl_batt_bg background (cropped to the 256×192 scene). Falls back to the PNG if the ROM/NARC is
+        /// unavailable.</summary>
         private void ApplyBackdrop()
         {
             byte[] rgb = null;
@@ -944,7 +935,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 catch { rgb = null; }
             }
-            // Index 0 is deliberately "No background" (plain black), NOT the bundled placeholder art —
+            // Index 0 is deliberately "No background" (plain black), NOT the bundled placeholder art:
             // effects are easiest to judge against black, and it's honest about not being ROM data.
             _compositor.SetBackdrop(rgb ?? new byte[256 * 192 * 3]);
         }
@@ -1034,7 +1025,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// commands, updating <see cref="HasCellAnimation"/>/<see cref="_cellFrames"/>/<see cref="CellOrigin"/>.
         /// Factored out of <see cref="SetupCellPreview"/> so the Metronome "plays a randomly called move's real
         /// animation" preview (see <see cref="StartChainedWest"/>) can load the CALLED move's own cell resource
-        /// the same correct way — without this, the called move would render with whatever Metronome's own hand
+        /// the same correct way. Without this, the called move would render with whatever Metronome's own hand
         /// graphics left loaded (the exact stale-cache bug already fixed once for ordinary move-to-move switches).</summary>
         private void LoadCellResourcesForCommands(List<WazaSeqCommand> cmds, int moveIdForLogging)
         {
@@ -1046,7 +1037,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (loaded)
                 {
                     // WE_057 picks the cell animation SEQUENCE by side (0=player /
-                    // 1=enemy) — sequence 1 is the enemy-facing (flipped) wave.
+                    // 1=enemy), sequence 1 is the enemy-facing (flipped) wave.
                     int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
                     _cellFrames = _cellRenderer.RenderAnimation(bank);
                     if (_cellFrames.Count > 0)
@@ -1063,7 +1054,7 @@ namespace DSPRE.Avalonia.ViewModels
             else
             {
                 // _cellRenderer is shared across every move preview in this session (not recreated per
-                // move) — without explicitly unloading here, a move with no CATS resource of its own
+                // move), without explicitly unloading here, a move with no CATS resource of its own
                 // would keep whatever the PREVIOUSLY previewed move loaded (e.g. Surf's wave sprite),
                 // and any later move whose script still fires a generic ACT_ADD-family opcode would
                 // render using that stale graphic instead of nothing.
@@ -1074,19 +1065,17 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // Metronome's real move id, verified against the leak's wazano_def.h (WAZANO_METRONOME = 118) —
-        // consistent across DP/Platinum/HGSS since all three generations share the same move-id table. Its
-        // own WEST script is just the self-contained finger-wag flourish (resource set 3, confirmed by
-        // parsing the real script directly); the actual "call a random other move" behaviour lives in the
-        // battle engine's move-selection logic, not in the animation script — so this preview picks one
-        // itself, purely as a fun, plausible-looking bonus once the finger-wag finishes.
+        // Metronome's move id (118), consistent across DP/Platinum/HGSS. Its own WEST script is just the
+        // self-contained finger-wag flourish; the actual "call a random other move" behaviour lives in the
+        // battle engine's move-selection logic, not the animation script, so this preview picks one itself
+        // as a plausible-looking bonus once the finger-wag finishes.
         private const int MetronomeMoveId = 118;
         private bool IsMetronomePreview => IsWest && _fileIndex == MetronomeMoveId;
         private static readonly Random _metronomeRandom = new Random();
         private int _metronomeCalledMoveId = -1;
 
         /// <summary>Picks a move id for Metronome's preview flourish to "call". Real Metronome excludes a long,
-        /// specific table of moves (other move-calling moves, signature/exclusive moves, Struggle, etc.) — not
+        /// specific table of moves (other move-calling moves, signature/exclusive moves, Struggle, etc.), not
         /// ported here, since this is a discretionary visual bonus, not an accuracy requirement; only excludes
         /// Metronome itself, move id 0 (the no-move placeholder) and any id whose script fails to parse.</summary>
         private int PickRandomMetronomeTarget()
@@ -1108,17 +1097,15 @@ namespace DSPRE.Avalonia.ViewModels
             if (!HasPreview) return;
             if (IsCellPlaying) { StopCell(); return; }
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
-            // Re-establish the CURRENTLY selected move's own cell resource before every fresh play, not just
-            // when the move is first selected: a previous play-through may have chained into a Metronome-
-            // called move (StartChainedWest), which reloads the shared _cellRenderer for THAT move — without
-            // redoing it here, a second Play click on Metronome itself would start with the LAST called
-            // move's graphics (or none) still loaded instead of Metronome's own hand, since SetupCellPreview
-            // only runs on move SELECTION, not on repeated Play clicks for the same move.
+            // Re-establish the CURRENTLY selected move's own cell resource on every fresh play, not just on
+            // selection: a previous play may have chained into a Metronome-called move (StartChainedWest)
+            // and left ITS graphics loaded, since SetupCellPreview only runs on selection, not on repeated
+            // Play clicks for the same move.
             var cmds = BuildCommands();
             LoadCellResourcesForCommands(cmds, _fileIndex);
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
             // Fresh timeline interpreter each play: runs the WEST script, spawning emitters / firing shake+fade
-            // at the right frames, anchored on the two Shuckle.
+            // at the right frames.
             // Anchor the attacker on the chosen side: player (bottom) by default, enemy (top) when toggled.
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
@@ -1139,10 +1126,10 @@ namespace DSPRE.Avalonia.ViewModels
             RaisePreviewProps();
         }
 
-        /// <summary>Swaps the live preview to a SECOND, independent WestPlayer for the move Metronome "called" —
+        /// <summary>Swaps the live preview to a SECOND, independent WestPlayer for the move Metronome "called":
         /// its own real WEST script (not the currently-edited grid), so an in-progress edit to Metronome's own
         /// script can't affect it. Reloads the shared cell renderer for the called move's own CATS resource
-        /// (same fix as ordinary move-to-move switching — otherwise it would render with Metronome's hand).</summary>
+        /// (same fix as ordinary move-to-move switching, otherwise it would render with Metronome's hand).</summary>
         private void StartChainedWest(int moveId)
         {
             var bytes = CurrentNarc.Get(moveId);
@@ -1167,7 +1154,7 @@ namespace DSPRE.Avalonia.ViewModels
             RaisePreviewProps();
         }
 
-        // A move whose range targets the user (User / User-side / User-or-ally bits) plays its effect on the caster —
+        // A move whose range targets the user (User / User-side / User-or-ally bits) plays its effect on the caster:
         // in-game df_client == at_client. Only meaningful for the move-animation archive (file index = move id).
         // The move's base power (MoveData.damage) when previewing the move-animation archive, else −1 (unknown).
         private int GetMovePower(int moveId = -1)
@@ -1194,7 +1181,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void PreviewTick(object sender, EventArgs e)
         {
             // When the WEST script drives CATS cell actors (incl. the Surf WE_057 wave) the cells are composited
-            // straight into SceneComposite — hide the legacy CellPreview overlay so it can't double-draw. Only a
+            // straight into SceneComposite; hide the legacy CellPreview overlay so it can't double-draw. Only a
             // STANDALONE cell archive (no CATS actors) still previews through the overlay by cycling its frames.
             bool cellsViaCats = _west != null && _west.CatsActors.Count > 0;
             if (!cellsViaCats && HasCellAnimation && _cellFrames.Count > 0 && ++_cellTick >= _cellFrames[_cellFrameIdx].Duration)
@@ -1226,7 +1213,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (done && _metronomeCalledMoveId >= 0)
             {
                 int calledMoveId = _metronomeCalledMoveId;
-                _metronomeCalledMoveId = -1;   // only chain once — the called move doesn't itself call another
+                _metronomeCalledMoveId = -1;   // only chain once; the called move doesn't itself call another
                 _previewFrames = 0;
                 StartChainedWest(calledMoveId);
                 return;   // keep the timer running for the chained move instead of stopping
@@ -1237,11 +1224,11 @@ namespace DSPRE.Avalonia.ViewModels
         private void StopCell()
         {
             _previewTimer?.Stop();
-            _metronomeCalledMoveId = -1;   // manually stopped mid-Metronome — don't chain into it on a later, unrelated play
+            _metronomeCalledMoveId = -1;   // manually stopped mid-Metronome; don't chain into it on a later, unrelated play
             BackgroundFrame = null;
             CellPreview = null; ParticlePreview = null;   // don't leave the last wave/particle frame statically on screen
             // Re-render the static scene: the last played frame may have mons hidden / dragged (Dark Void
-            // vanishes the defender mid-effect) — without this the frozen composite keeps them invisible
+            // vanishes the defender mid-effect). Without this the frozen composite keeps them invisible
             // after playback ends.
             if (IsWest && _sceneLoaded) SceneComposite = _compositor.Render(null);
             CellScaleX = CellScaleY = CellOpacity = 1;
@@ -1327,7 +1314,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // Raw comma/space-separated args — lets the user add/remove arguments (needed for variable-length opcodes).
+        // Raw comma/space-separated args; lets the user add/remove arguments (needed for variable-length opcodes).
         public string RawArgs
         {
             get => string.Join(", ", Args);
@@ -1387,7 +1374,7 @@ namespace DSPRE.Avalonia.ViewModels
             get => _value;
             set { if (_value != value) { _value = value; Raise(nameof(Value)); Raise(nameof(ValueDec)); Raise(nameof(SelectedEnumIndex)); Raise(nameof(SoundName)); _row.SetParam(_index, value); } }
         }
-        // NumericUpDown.Value is decimal? — bridge it to the int store.
+        // NumericUpDown.Value is decimal?; bridge it to the int store.
         public decimal ValueDec { get => _value; set { Value = (int)value; } }
 
         // A "Sound" argument gets a name lookup + a preview-playback button next to its numeric entry.

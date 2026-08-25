@@ -2,7 +2,7 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>Plays back interleaved stereo 16-bit PCM (the format <see cref="SseqPlayer"/> renders to).
     /// Kept as a thin interface so this cross-platform layer never needs an audio-output package reference
-    /// itself — a real backend is wired in by whichever shell hosts it (see <see cref="AudioOutput"/>).</summary>
+    /// itself; a real backend is wired in by whichever shell hosts it (see <see cref="AudioOutput"/>).</summary>
     public interface IAudioOutput
     {
         void Play(short[] interleavedStereoPcm, int sampleRate);

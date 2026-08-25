@@ -102,7 +102,7 @@
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,4">
                 <TextBlock Text="Click/drag a grid to paint." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
-                <TextBlock Text="Use 🖌 Paint in the 3D view — click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
+                <TextBlock Text="Use 🖌 Paint in the 3D view, click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
                 <Button Content="🔎 Scan used types" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
@@ -122,7 +122,7 @@
               <Button Content="Duplicate" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="📥 Import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
-                      ToolTip.Tip="Replaces one map's whole building list — single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
+                      ToolTip.Tip="Replaces one map's whole building list, single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
               <Button Content="📤 Export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
             </StackPanel>
             <Grid ColumnDefinitions="*,200">

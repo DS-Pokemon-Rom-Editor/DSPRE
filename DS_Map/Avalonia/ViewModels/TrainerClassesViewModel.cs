@@ -131,11 +131,10 @@ namespace DSPRE.Avalonia.ViewModels
                 string[] names = GetTrainerClassNames();
                 for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
 
-                // The eye-contact encounter-music table is found via a hardcoded vanilla ARM9 RAM
-                // address (RomInfo.encounterMusicTableOffsetToRAMAddress) — meaningless on an hg-engine
-                // ROM, whose ARM9 is a different compiled binary with no such table at that address.
-                // Reading it there returns garbage that then overruns the file when treated as an entry
-                // count, so this feature simply doesn't exist for hg-engine ROMs (mirrors IsExpansionSupported).
+                // The eye-contact encounter-music table is found via a hardcoded vanilla ARM9 RAM address
+                // (RomInfo.encounterMusicTableOffsetToRAMAddress), meaningless on hg-engine's differently
+                // compiled ARM9: reading it there returns garbage that overruns the file, so this feature
+                // simply doesn't exist for hg-engine ROMs (mirrors IsExpansionSupported).
                 if (!isHGE) SetupEncounterMusicTable();
 
                 StatusText = $"{ClassNames.Count} trainer classes.";

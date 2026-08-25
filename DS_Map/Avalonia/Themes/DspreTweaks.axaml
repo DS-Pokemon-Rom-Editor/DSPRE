@@ -36,7 +36,7 @@
     <Style Selector="NumericUpDown">
         <Setter Property="Background" Value="{DynamicResource TextBox.Static.Background}"/>
         <!-- BorderThickness/Brush propagate to the inner ButtonSpinner frame (SimpleTheme's
-             NumericUpDown template binds them through). So THIS draws the spinbox's dark outline —
+             NumericUpDown template binds them through), so THIS draws the spinbox's dark outline:
              setting it to 0 earlier is exactly what removed the outline. Keep it dark + 1px; the
              inner TextBox is separately de-bordered below so there's no double frame. -->
         <Setter Property="BorderThickness" Value="1"/>

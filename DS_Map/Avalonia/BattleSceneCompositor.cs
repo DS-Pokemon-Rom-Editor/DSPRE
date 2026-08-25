@@ -8,7 +8,7 @@ using global::Avalonia.Platform;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Software battle-scene compositor — renders the backdrop, platforms and the two Pokémon (with the WEST
+    /// Software battle-scene compositor: renders the backdrop, platforms and the two Pokémon (with the WEST
     /// per-mon affine transforms) into one RGB buffer, then composites the move-effect background (BG2) over it
     /// using the real NDS 2D blend (G2_SetBlendAlpha: <c>out = water·ca + sceneBelow·cb</c>). This replaces the
     /// stacked-Avalonia-Image approach so the hardware blend is reproduced exactly instead of approximated. The
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia
             // 2. platforms (alpha-over).
             foreach (var s in _statics) BlitAxisAligned(s.rgba, s.w, s.h, s.left, s.top);
 
-            // 2b. the grayscale-toggle handler grayscale — WeTool_PalGrayScale only grays FADE_MAIN_BG (the BACKGROUND palette),
+            // 2b. the grayscale-toggle handler grayscale: WeTool_PalGrayScale only grays FADE_MAIN_BG (the BACKGROUND palette),
             //     NOT the OBJ/mons. So desaturate the backdrop+platforms here, BEFORE the mons (they stay in colour).
             if (west != null && west.Grayscale)
                 for (int i = 0; i < W * H * 3; i += 3)
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia
                     _scene[i] = _scene[i + 1] = _scene[i + 2] = y8;
                 }
 
-            // 2c. Palette color-change flash on FADE_MAIN_BG — lerp the backdrop+platforms toward a colour (Earthquake's
+            // 2c. Palette color-change flash on FADE_MAIN_BG: lerp the backdrop+platforms toward a colour (Earthquake's
             //     black↔white pulses). BG-only (same as grayscale), so the mons stay unflashed.
             if (west != null && west.BgFlashAmount > 0)
             {
@@ -79,9 +79,9 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            // 2d. HAIKEI_PAL_FADE / Wish BG flash — the palette-fade request on FADE_MAIN_BG ramps the BACKGROUND toward a colour
-            //     (Thunder etc. darken toward black; Wish flashes white). BG-only like 2b/2c, so the mons stay LIT — the
-            //     game fades only the main-BG palette, not the OBJ/soft-sprite mons (was a full-screen overlay in the view).
+            // 2d. HAIKEI_PAL_FADE / Wish BG flash: the palette-fade request on FADE_MAIN_BG ramps the BACKGROUND toward a colour
+            //     (Thunder etc. darken toward black; Wish flashes white). BG-only like 2b/2c, so the mons stay LIT: the
+            //     game fades only the main-BG palette, not the OBJ/soft-sprite mons.
             if (west != null && west.FadeOpacity > 0)
             {
                 double k = Math.Clamp(west.FadeOpacity, 0, 1); double ik = 1 - k;
@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia
             // 3. the two mons, with their WEST affine transforms + colour tint, back (player) then front (enemy).
             // Null west = the static pre-play scene (mons at rest).
             byte tr = west?.TintR ?? 0, tg = west?.TintG ?? 0, tb = west?.TintB ?? 0;
-            // 3a. afterimage ghosts (Double Team etc.) — copies of a mon sprite drawn BEHIND the real mons.
+            // 3a. afterimage ghosts (Double Team etc.): copies of a mon sprite drawn BEHIND the real mons.
             if (west != null)
                 foreach (var gh in west.Ghosts)
                 {
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia
                     warp ? west.MonWarpWidthA : 0, warp ? west.MonWarpShimmer : 0);
             }
 
-            // 3a2. POKEOAM_DROP caps — clones of a mon sprite dropped into OAM (Disable's gray shadow, Substitute, …),
+            // 3a2. POKEOAM_DROP caps: clones of a mon sprite dropped into OAM (Disable's gray shadow, Substitute, etc.),
             //      scaled/recoloured/mosaic'd by the CAP_* routines. Drawn over the mons (OAM layer).
             if (west != null)
             {
@@ -135,11 +135,10 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            // 3b. CATS cell actors (OAM cell animations) — drawn over the mons. The Surf (WE_057) wave is now a
-            //     normal driven actor here too (no legacy view overlay).
+            // 3b. CATS cell actors (OAM cell animations), drawn over the mons.
             if (west != null) BlitCellActors(west);
 
-            // 4. WeT02 effect BG (overlay) — blended over the scene with the GX coefficients.
+            // 4. WeT02 effect BG (overlay), blended over the scene with the GX coefficients.
             if (west != null && west.HasBackground && west.BackgroundIsOverlay) OverlayBg(west, west.BgCa, west.BgCb);
 
             // 5. emit premultiplied BGRA.
@@ -266,7 +265,7 @@ namespace DSPRE.Avalonia
             // dest bbox: the sprite half-extents grown by scale+rotation.
             double hw = s.w / 2.0 * sxAbs, hh = s.h / 2.0 * syAbs;
             double ext = Math.Sqrt(hw * hw + hh * hh);
-            int warpPad = warp ? 64 : 0;   // raster warp shifts rows horizontally by up to ~sine+shear ≈ 60px — widen the bbox
+            int warpPad = warp ? 64 : 0;   // raster warp shifts rows horizontally by up to ~sine+shear ≈ 60px, so widen the bbox
             int x0 = Math.Max(0, (int)(cx - ext) - warpPad), x1 = Math.Min(W - 1, (int)(cx + ext) + 1 + warpPad);
             int y0 = Math.Max(0, (int)(cy - ext)), y1 = Math.Min(H - 1, (int)(cy + ext) + 1);
             // Raster warp band: rows are indexed from the top of the SIZE_Y-80 effect band (start = effect_y−8 = center−48).

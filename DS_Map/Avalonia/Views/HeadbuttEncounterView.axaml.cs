@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Views
             };
 
             // Arrow keys nudge the selected tree, but only while the 3D viewport itself has
-            // keyboard focus (Gl3DPointerNavigation focuses it on click) — otherwise they'd steal
+            // keyboard focus (Gl3DPointerNavigation focuses it on click); otherwise they'd steal
             // input from a focused dropdown/spinner in the side panel.
             GlHost.KeyDown += (s, e) =>
             {
