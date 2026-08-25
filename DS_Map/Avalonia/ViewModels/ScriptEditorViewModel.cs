@@ -268,12 +268,24 @@ namespace DSPRE.Avalonia.ViewModels
             _selectedEditorThemeIndex = savedThemeIndex >= 0 ? savedThemeIndex : 0;
         }
 
+        private static bool _warnedAboutDPRotomSupport;
+
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
             IsBusy = true;
             IsReadOnly = true;
             StatusText = "Preparing Rotom project...";
+
+            if (gameFamily == GameFamilies.DP && !_warnedAboutDPRotomSupport)
+            {
+                _warnedAboutDPRotomSupport = true;
+                await DialogHelper.ShowInfo(
+                    "Rotom's Diamond/Pearl script support is still a work in progress and can behave " +
+                    "less reliably than Platinum/HGSS. If script conversion or decompiling fails or " +
+                    "produces something wrong, that's a known rough edge, not necessarily something you did.",
+                    "Diamond/Pearl script support");
+            }
 
             try
             {
