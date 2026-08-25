@@ -85,25 +85,7 @@ namespace DSPRE {
             
         }
 
-        private string[] GetFileNames() 
-        {
-
-            int learnsetCount = RomInfo.GetLearnsetFilesCount();
-
-            List<string> fileNames = new List<string>(RomInfo.GetLearnsetFilesCount());
-            fileNames.AddRange(pokenames);
-            for (int i = 0; i < PokeDatabase.PersonalData.personalExtraFiles.Length; i++) {
-                PokeDatabase.PersonalData.PersonalExtraFiles altFormEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                fileNames.Add(fileNames[altFormEntry.monId] + " - " + altFormEntry.description);
-            }
-
-            for (int i = 0; i < learnsetCount - fileNames.Count; i++)
-            {
-                fileNames.Add($"Extra entry {fileNames.Count}");
-            }
-
-            return fileNames.ToArray();
-        }
+        private string[] GetFileNames() => RomInfo.GetPokemonNamesWithForms(RomInfo.GetLearnsetFilesCount());
 
         public void ChangeLoadedFile(int learnsetID)
         {

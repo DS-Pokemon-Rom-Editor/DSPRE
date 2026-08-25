@@ -46,25 +46,13 @@ namespace DSPRE
                 DirNames.eventFiles
             });
 
-            string[] pokeNames = RomInfo.GetPokemonNames();
+            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
             string[] itemNames = RomInfo.GetItemNames();
             string[] abilityNames = RomInfo.GetAbilityNames();
             string[] moveNames = RomInfo.GetAttackNames();
             string[] trainerNames = RomInfo.GetSimpleTrainerNames();
             string[] trainerClassNames = RomInfo.GetTrainerClassNames();
             string[] typeNames = RomInfo.GetTypeNames();
-
-            // Handle Forms
-            int extraCount = RomInfo.GetPersonalFilesCount() - pokeNames.Length;
-            string[] extraNames = new string[extraCount];
-
-            for (int i = 0; i < extraCount; i++)
-            {
-                PokeDatabase.PersonalData.PersonalExtraFiles extraEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                extraNames[i] = pokeNames[extraEntry.monId] + " - " + extraEntry.description;
-            }
-
-            pokeNames = pokeNames.Concat(extraNames).ToArray();
 
             // Create the Docs folder if it doesn't exist
             if (!Directory.Exists(docsFolderPath))
@@ -336,29 +324,7 @@ namespace DSPRE
             };
         }
 
-        private static string[] GetPokemonNamesWithForms()
-        {
-            // Base names from text archive
-            string[] pokeNames = RomInfo.GetPokemonNames();
-
-            // Append extra personal files (forms) like DocTool.ExportAll already does
-            int extraCount = RomInfo.GetPersonalFilesCount() - pokeNames.Length;
-            if (extraCount <= 0) return pokeNames;
-
-            string[] extraNames = new string[extraCount];
-
-            for (int i = 0; i < extraCount; i++)
-            {
-                var extraEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                string baseName = (extraEntry.monId >= 0 && extraEntry.monId < pokeNames.Length)
-                    ? pokeNames[extraEntry.monId]
-                    : $"UNKNOWN_{extraEntry.monId}";
-
-                extraNames[i] = $"{baseName} - {extraEntry.description}";
-            }
-
-            return pokeNames.Concat(extraNames).ToArray();
-        }
+        private static string[] GetPokemonNamesWithForms() => RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
 
         private static List<object> ExportMinMaxU16Named(ushort[] mons, byte[] minLv, byte[] maxLv, string[] pokeNames)
         {
@@ -691,20 +657,8 @@ namespace DSPRE
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData });
 
-            string[] pokeNames = RomInfo.GetPokemonNames();
+            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
             string[] moveNames = RomInfo.GetAttackNames();
-
-            // Handle Forms
-            int extraCount = RomInfo.GetPersonalFilesCount() - pokeNames.Length;
-            string[] extraNames = new string[extraCount];
-
-            for (int i = 0; i < extraCount; i++)
-            {
-                PokeDatabase.PersonalData.PersonalExtraFiles extraEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                extraNames[i] = pokeNames[extraEntry.monId] + " - " + extraEntry.description;
-            }
-
-            pokeNames = pokeNames.Concat(extraNames).ToArray();
 
             // Create the Docs folder if it doesn't exist
             if (!Directory.Exists(docsFolderPath))
@@ -755,19 +709,7 @@ namespace DSPRE
             ScriptDatabase.InitializePokemonNamesIfNeeded();
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData });
 
-            string[] pokeNames = RomInfo.GetPokemonNames();
-
-            // Handle Forms
-            int extraCount = RomInfo.GetPersonalFilesCount() - pokeNames.Length;
-            string[] extraNames = new string[extraCount];
-
-            for (int i = 0; i < extraCount; i++)
-            {
-                PokeDatabase.PersonalData.PersonalExtraFiles extraEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                extraNames[i] = pokeNames[extraEntry.monId] + " - " + extraEntry.description;
-            }
-
-            pokeNames = pokeNames.Concat(extraNames).ToArray();
+            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
 
             // Create the Docs folder if it doesn't exist
             if (!Directory.Exists(docsFolderPath))

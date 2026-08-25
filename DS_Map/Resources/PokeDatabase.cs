@@ -1877,6 +1877,7 @@ namespace DSPRE.Resources {
                 }
             }
 
+            // Order matters: GetPokemonNamesWithForms() stops once the ROM's file count is hit, so keep this in the order each game family's data actually grew.
             public static PersonalExtraFiles[] personalExtraFiles = new PersonalExtraFiles[] {
                 /* Deoxys */
                 new PersonalExtraFiles(386, "Attack", 496), /* Ideally replace this last number with an alt form icon id? */

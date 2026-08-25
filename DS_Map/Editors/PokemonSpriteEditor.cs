@@ -551,7 +551,12 @@ namespace DSPRE.Editors {
         
         private void LoadMainSprites(int selectedIndex) {
             int baseOffset = selectedIndex * 6;
-            
+
+            if (baseOffset < 0 || baseOffset + 5 >= narcReader.fe.Length) {
+                MessageBox.Show($"No main sprite data for index {selectedIndex}.", "Error");
+                return;
+            }
+
             for (int i = 0; i < 4; i++) {
                 if (narcReader.fe[baseOffset + i].Size == 6448) {
                     narcReader.OpenEntry(baseOffset + i);
@@ -1281,11 +1286,14 @@ namespace DSPRE.Editors {
                     usedEntries[i] = (narcReader.fe[i].Size > 0);
                 }
                 
+                // pokegra.narc has no slot for "Egg"/"Bad Egg" or alt forms (those live in otherpoke.narc).
+                int mainSpeciesCount = Math.Min(pokenames.Length, narcReader.fe.Length / 6);
+
                 IndexBox.Items.Clear();
-                for (int i = 0; i < pokenames.Length; i++) {
+                for (int i = 0; i < mainSpeciesCount; i++) {
                     IndexBox.Items.Add($"{i:D3} {pokenames[i]}");
                 }
-                
+
                 // Load first entry (index 1 to skip "None/Egg" at 0)
                 ChangeLoadedFile(1);
             } else {

@@ -53,18 +53,12 @@ namespace DSPRE.Avalonia
                 DirNames.evolutions, DirNames.monIcons });
             SetMonIconsPalTableAddress();
 
-            // Build full Pokémon name list (base + alt forms + extras)
-            string[] pokeNames = GetPokemonNames();
-            var fullList = new List<string>(pokeNames);
-            foreach (var extra in PokeDatabase.PersonalData.personalExtraFiles)
-                fullList.Add(fullList[extra.monId] + " - " + extra.description);
-            int count = GetPersonalFilesCount();
-            for (int i = fullList.Count; i < count; i++) fullList.Add($"Extra entry {i}");
-
+            // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
+            string[] fullList = GetPokemonNamesWithForms(GetPersonalFilesCount());
             string[] moveNames = GetAttackNames();
 
-            int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Count - 1));
-            var vm = new PokemonEditorViewModel(fullList.ToArray(), moveNames, initialMon: mon);
+            int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
+            var vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
             new PokemonEditorView(vm).ShowManaged();
         }
 

@@ -93,15 +93,23 @@ namespace DSPRE
             Helpers.DisableHandlers();
             if (personalEditor.CheckDiscardChanges())
             {
-                personalEditor.pokemonNameInputComboBox.SelectedIndex = sender.SelectedIndex;
-                personalEditor.monNumberNumericUpDown.Value = sender.SelectedIndex;
-                personalEditor.ChangeLoadedFile(sender.SelectedIndex);
+                // SelectedIndex may be out of bounds (tabs don't all share the same entry count)
+                if (sender.SelectedIndex < personalEditor.pokemonNameInputComboBox.Items.Count)
+                {
+                    personalEditor.pokemonNameInputComboBox.SelectedIndex = sender.SelectedIndex;
+                    personalEditor.monNumberNumericUpDown.Value = sender.SelectedIndex;
+                    personalEditor.ChangeLoadedFile(sender.SelectedIndex);
+                }
             }
             if (learnsetEditor.CheckDiscardChanges())
             {
-                learnsetEditor.pokemonNameInputComboBox.SelectedIndex = sender.SelectedIndex;
-                learnsetEditor.monNumberNumericUpDown.Value = sender.SelectedIndex;
-                learnsetEditor.ChangeLoadedFile(sender.SelectedIndex);
+                // SelectedIndex may be out of bounds (tabs don't all share the same entry count)
+                if (sender.SelectedIndex < learnsetEditor.pokemonNameInputComboBox.Items.Count)
+                {
+                    learnsetEditor.pokemonNameInputComboBox.SelectedIndex = sender.SelectedIndex;
+                    learnsetEditor.monNumberNumericUpDown.Value = sender.SelectedIndex;
+                    learnsetEditor.ChangeLoadedFile(sender.SelectedIndex);
+                }
             }
             if (evoEditor.CheckDiscardChanges())
             {
@@ -137,15 +145,23 @@ namespace DSPRE
             Helpers.DisableHandlers();
             if (personalEditor.CheckDiscardChanges())
             {
-                personalEditor.pokemonNameInputComboBox.SelectedIndex = (int)sender.Value;
-                personalEditor.monNumberNumericUpDown.Value = sender.Value;
-                personalEditor.ChangeLoadedFile((int)sender.Value);
+                // SelectedIndex may be out of bounds (tabs don't all share the same entry count)
+                if ((int)sender.Value < personalEditor.pokemonNameInputComboBox.Items.Count)
+                {
+                    personalEditor.pokemonNameInputComboBox.SelectedIndex = (int)sender.Value;
+                    personalEditor.monNumberNumericUpDown.Value = sender.Value;
+                    personalEditor.ChangeLoadedFile((int)sender.Value);
+                }
             }
             if (learnsetEditor.CheckDiscardChanges())
             {
-                learnsetEditor.pokemonNameInputComboBox.SelectedIndex = (int)sender.Value;
-                learnsetEditor.monNumberNumericUpDown.Value = sender.Value;
-                learnsetEditor.ChangeLoadedFile((int)sender.Value);
+                // SelectedIndex may be out of bounds (tabs don't all share the same entry count)
+                if ((int)sender.Value < learnsetEditor.pokemonNameInputComboBox.Items.Count)
+                {
+                    learnsetEditor.pokemonNameInputComboBox.SelectedIndex = (int)sender.Value;
+                    learnsetEditor.monNumberNumericUpDown.Value = sender.Value;
+                    learnsetEditor.ChangeLoadedFile((int)sender.Value);
+                }
             }
             // SelectedIndex may be out of bounds
             if ((int)sender.Value < evoEditor.pokemonNameInputComboBox.Items.Count)

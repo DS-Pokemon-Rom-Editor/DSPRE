@@ -2308,17 +2308,11 @@ namespace DSPRE
                 DirNames.evolutions, DirNames.monIcons });
             RomInfo.SetMonIconsPalTableAddress();
 
-            // Build full Pokémon name list (base + alt forms + extras)
-            string[] pokeNames = RomInfo.GetPokemonNames();
-            var fullList = new System.Collections.Generic.List<string>(pokeNames);
-            foreach (var extra in PokeDatabase.PersonalData.personalExtraFiles)
-                fullList.Add(fullList[extra.monId] + " - " + extra.description);
-            int count = RomInfo.GetPersonalFilesCount();
-            for (int i = fullList.Count; i < count; i++) fullList.Add($"Extra entry {i}");
-
+            // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
+            string[] fullList = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
             string[] moveNames = RomInfo.GetAttackNames();
 
-            var vm = new DSPRE.Avalonia.ViewModels.PokemonEditorViewModel(fullList.ToArray(), moveNames, initialMon: 1);
+            var vm = new DSPRE.Avalonia.ViewModels.PokemonEditorViewModel(fullList, moveNames, initialMon: 1);
             var view = new DSPRE.Avalonia.Views.PokemonEditorView(vm);
 
             Helpers.statusLabelMessage();

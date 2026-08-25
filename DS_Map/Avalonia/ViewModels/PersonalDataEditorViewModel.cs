@@ -450,18 +450,8 @@ namespace DSPRE.Avalonia.ViewModels
             _itemNamesArr    = GetItemNames();
             _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
 
-            // Build full pokemon name list (base + alt forms + extra)
-            int count = GetPersonalFilesCount();
-            string[] pokeNames = GetPokemonNames();
-            var fullList = new List<string>(pokeNames);
-            for (int i = 0; i < PokeDatabase.PersonalData.personalExtraFiles.Length; i++)
-            {
-                var e = PokeDatabase.PersonalData.personalExtraFiles[i];
-                fullList.Add(fullList[e.monId] + " - " + e.description);
-            }
-            int extraCount = fullList.Count;
-            for (int i = 0; i < count - extraCount; i++) fullList.Add($"Extra entry {fullList.Count}");
-            _allFileNames = fullList.ToArray();
+            // Full pokemon name list (base + alt forms this ROM actually has data for + extra)
+            _allFileNames = GetPokemonNamesWithForms(GetPersonalFilesCount());
 
             foreach (var n in _allFileNames)    PokemonNames.Add(n);
             foreach (var n in _typeNamesArr)    TypeNames.Add(n);
@@ -712,6 +702,12 @@ namespace DSPRE.Avalonia.ViewModels
 
         internal void LoadMon(int id)
         {
+            if (id < 0 || id >= GetPersonalFilesCount())
+            {
+                MonIconBitmap = null;
+                return;
+            }
+
             _loading = true;
             _currentId = id;
             _current   = new PokemonPersonalData(id);

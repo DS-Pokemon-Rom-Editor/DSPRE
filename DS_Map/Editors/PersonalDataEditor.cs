@@ -84,23 +84,9 @@ namespace DSPRE {
 
 
             /* ---------------- */
-            int count = RomInfo.GetPersonalFilesCount();
             this.pokenames = RomInfo.GetPokemonNames();
-            List<string> fileNames = new List<string>(count);
-            fileNames.AddRange(pokenames);
-
-            for (int i = 0; i < PokeDatabase.PersonalData.personalExtraFiles.Length; i++) {
-                PokeDatabase.PersonalData.PersonalExtraFiles altFormEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
-                fileNames.Add(fileNames[altFormEntry.monId] + " - " + altFormEntry.description);
-            }
-
-            int extraEntries = fileNames.Count;
-            for (int i = 0; i < count - extraEntries; i++) {
-                fileNames.Add($"Extra entry {fileNames.Count}");
-            }
-            
-            this.fileNames = fileNames.ToArray();
-            monNumberNumericUpDown.Maximum = fileNames.Count - 1;
+            this.fileNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
+            monNumberNumericUpDown.Maximum = fileNames.Length - 1;
             pokemonNameInputComboBox.Items.AddRange(this.fileNames);
             hatchResultComboBox.DataSource = fileNames.ToArray();
             /* ---------------- */

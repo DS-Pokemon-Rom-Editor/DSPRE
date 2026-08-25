@@ -2041,6 +2041,24 @@ namespace DSPRE
 
         public static int GetPersonalFilesCount() => Directory.GetFiles(gameDirs[DirNames.personalPokeData].unpackedDir).Length;
 
+        /// <summary>Species names padded with alt-form labels up to targetCount, dropping any that don't fit this ROM's real file count.</summary>
+        public static string[] GetPokemonNamesWithForms(int targetCount)
+        {
+            var names = new List<string>(targetCount);
+            names.AddRange(GetPokemonNames());
+
+            foreach (var extra in PokeDatabase.PersonalData.personalExtraFiles)
+            {
+                if (names.Count >= targetCount) break;
+                names.Add($"{names[extra.monId]} - {extra.description}");
+            }
+
+            while (names.Count < targetCount)
+                names.Add($"Extra entry {names.Count}");
+
+            return names.ToArray();
+        }
+
         public static string[] GetEvolutionFilesList() => Directory.GetFiles(gameDirs[DirNames.evolutions].unpackedDir);
 
         public static int GetEvolutionFilesCount() => GetEvolutionFilesList().Length;
