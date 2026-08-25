@@ -74,7 +74,9 @@ namespace DSPRE.Editors
 
         private void LoadAllPersonalData()
         {
-            speciesCount = pokemonNames.Length;
+            // DP's personalPokeData NARC has fewer files than the species-name text archive, which still
+            // lists Platinum-introduced forms (501-507) DP never got data files for.
+            speciesCount = Math.Min(pokemonNames.Length, RomInfo.GetPersonalFilesCount());
             for (int i = 0; i < speciesCount; i++)
             {
                 personalData[i] = new PokemonPersonalData(i);
