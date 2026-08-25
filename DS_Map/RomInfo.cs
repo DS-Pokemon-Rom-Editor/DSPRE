@@ -2534,10 +2534,9 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.Plat when OverworldSpriteTableExpansion.Detect():
-                    // hzla's PlatPatches "overworld sprites" expansion is applied, so the vanilla
-                    // fixed-offset table read below is stale (the game now reads the relocated,
-                    // expanded copy instead). Read that one instead, it's a strict superset of
-                    // the vanilla entries plus whatever custom ones were added.
+                case GameFamilies.DP when OverworldSpriteTableExpansion.Detect():
+                    // Expansion patch applied: the vanilla fixed-offset read below is stale, the game
+                    // reads the relocated table instead, which also holds any custom entries added.
                     OverworldTable = OverworldSpriteTableExpansion.ReadTextureTable();
                     break;
 
