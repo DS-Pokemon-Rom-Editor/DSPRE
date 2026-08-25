@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => $"Sprites (Mon {_currentId})";
-        public void SaveChanges() { /* sprites are saved inline via Save(); */ }
+        public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // --- Sprite bitmaps (Avalonia bitmaps for the View) --------------------------
@@ -64,6 +64,76 @@ namespace DSPRE.Avalonia.ViewModels
         private AvaBitmap _femaleFrontShiny;  public AvaBitmap FemaleFrontShiny  { get => _femaleFrontShiny;  private set => Set(ref _femaleFrontShiny,  value); }
         private AvaBitmap _maleFrontShiny;    public AvaBitmap MaleFrontShiny    { get => _maleFrontShiny;    private set => Set(ref _maleFrontShiny,    value); }
 
+        // 16-swatch strips for the paired palette rail: one Normal palette and one Shiny palette,
+        // each shared by all four poses (the ROM stores exactly one of each per species/form).
+        public class PaletteSwatch
+        {
+            public global::Avalonia.Media.IBrush Brush { get; set; }
+            // True when this slot has never actually been given a color (import produced fewer than
+            // 16 colors, so it's black padding, not a real entry the sprite uses).
+            public bool IsPlaceholder { get; set; }
+        }
+        public ObservableCollection<PaletteSwatch> NormalSwatches { get; } = new();
+        public ObservableCollection<PaletteSwatch> ShinySwatches { get; } = new();
+
+        // Which of the 16 palette slots are backed by a real color, for Normal/Shiny respectively.
+        // ROM-loaded palettes are always all-real; only import can leave some slots as placeholders.
+        private bool[] _normalPalUsed = AllUsed();
+        private bool[] _shinyPalUsed = AllUsed();
+        private static bool[] AllUsed() { var a = new bool[16]; Array.Fill(a, true); return a; }
+
+        // --- Frame animation: shows one 80×80 half of the sprite at a time instead of the full strip.
+        // Each cell picks its own frame independently; Animate just drives them all off one timer,
+        // and stopping it leaves whatever each cell was last showing. ------------------------------
+        public class FrameCellState : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            private int _frame;
+            public Action<int> OnChanged;
+            public int Frame
+            {
+                get => _frame;
+                set
+                {
+                    int v = ((value % 2) + 2) % 2;
+                    if (_frame == v) return;
+                    _frame = v;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Frame)));
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFrame1)));
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFrame2)));
+                    OnChanged?.Invoke(_frame);
+                }
+            }
+            public bool IsFrame1 => Frame == 0;
+            public bool IsFrame2 => Frame == 1;
+        }
+
+        public FrameCellState FemaleBackNormalFrame  { get; } = new();
+        public FrameCellState MaleBackNormalFrame    { get; } = new();
+        public FrameCellState FemaleFrontNormalFrame { get; } = new();
+        public FrameCellState MaleFrontNormalFrame   { get; } = new();
+        public FrameCellState FemaleBackShinyFrame   { get; } = new();
+        public FrameCellState MaleBackShinyFrame     { get; } = new();
+        public FrameCellState FemaleFrontShinyFrame  { get; } = new();
+        public FrameCellState MaleFrontShinyFrame    { get; } = new();
+
+        private FrameCellState[] AllFrameCells => new[]
+        {
+            FemaleBackNormalFrame, MaleBackNormalFrame, FemaleFrontNormalFrame, MaleFrontNormalFrame,
+            FemaleBackShinyFrame, MaleBackShinyFrame, FemaleFrontShinyFrame, MaleFrontShinyFrame
+        };
+
+        private bool _animateFrames = true;
+        public bool AnimateFrames
+        {
+            get => _animateFrames;
+            set { if (Set(ref _animateFrames, value)) OnPropertyChanged(nameof(AnimateButtonText)); }
+        }
+        public string AnimateButtonText => AnimateFrames ? "Stop Animating" : "Animate Frames";
+        private global::Avalonia.Threading.DispatcherTimer _frameTimer;
+
+        public void StopFrameAnimation() => _frameTimer?.Stop();
+
         private string _statusText = "";
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
@@ -80,18 +150,17 @@ namespace DSPRE.Avalonia.ViewModels
         public string AddOppositeGenderLabel { get => _addOppositeGenderLabel; private set => Set(ref _addOppositeGenderLabel, value); }
 
         private bool _missingGenderIsFemale;
+        /// <summary>The gender that DOES have sprites when CanAddOppositeGenderSprites is true; meaningless otherwise.</summary>
+        public string ExistingGenderName => _missingGenderIsFemale ? "Male" : "Female";
 
         // --- Internal state ----------------------------------------------------------
         private int _currentId = -1;
-        // Decrypted 4bpp palette indices per slot 0-3 (FemBack, MBack, FFront, MFront),
-        // 160×80 row-major (one byte per pixel), kept for save
+        // Pixel data per slot 0-3 (FemBack, MBack, FFront, MFront), one color index (0-15) per pixel,
+        // 160×80. Import writes straight into this array, so it's always what Save() writes out.
         private byte[][] _rawSprites = new byte[4][];
-        // 16 colors as packed BGRA (byte order b,g,r,a little-endian), always opaque
+        // 16 colors as packed ARGB (0xAARRGGBB), always opaque (alpha byte FF)
         private uint[] _normalPal;
         private uint[] _shinyPal;
-        // Replacement images loaded from PNG by the user (index 0-3). Rendered as-is; palettes
-        // don't apply to true-color imports (matches the previous GDI behavior).
-        private readonly RawImage[] _replacementSprites = new RawImage[4];
 
         private const int SpriteWidth = 160;
         private const int SpriteHeight = 80;
@@ -143,10 +212,39 @@ namespace DSPRE.Avalonia.ViewModels
 
         public string ToggleButtonText => _isAlternateForms ? "← Main Sprites" : "Alternate Forms →";
 
+        private bool _hasAlternateForms;
+        /// <summary>True when the current species has its own entries in the alternate-forms table (Deoxys, Unown, etc.), so the toggle only shows up when it's actually useful.</summary>
+        public bool HasAlternateForms { get => _hasAlternateForms; private set => Set(ref _hasAlternateForms, value); }
+
         private FormSpriteData[] _currentFormData;
 
+        /// <summary>Form table names look like "DEOXYS - Attack"; splitting on the dash is the only way to tell which species an entry belongs to, since there's no id field for it.</summary>
+        private static string SpeciesNamePrefix(string formName)
+        {
+            int dash = formName.IndexOf(" - ", StringComparison.Ordinal);
+            return dash < 0 ? null : formName.Substring(0, dash);
+        }
+
+        private FormSpriteData[] GetAlternateFormsForCurrentSpecies()
+        {
+            if (_currentId <= 0) return Array.Empty<FormSpriteData>();
+            string[] names = RomInfo.GetPokemonNames();
+            if (_currentId >= names.Length) return Array.Empty<FormSpriteData>();
+            string mySpecies = names[_currentId];
+
+            var matches = new System.Collections.Generic.List<FormSpriteData>();
+            foreach (var f in GetFormDataForCurrentGame())
+            {
+                string prefix = SpeciesNamePrefix(f.Name);
+                if (prefix != null && string.Equals(prefix, mySpecies, StringComparison.OrdinalIgnoreCase))
+                    matches.Add(f);
+            }
+            return matches.ToArray();
+        }
+
         /// <summary>
-        /// Switches between the main sprite NARC and the alternate-forms NARC.
+        /// Switches between the main sprite NARC and the alternate-forms NARC, scoped to whichever
+        /// entries belong to the currently-loaded species.
         /// </summary>
         public void ToggleAlternateFormsMode()
         {
@@ -156,13 +254,16 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (_isAlternateForms)
             {
-                _currentFormData = GetFormDataForCurrentGame();
+                _currentFormData = GetAlternateFormsForCurrentSpecies();
                 AlternateFormNames.Clear();
                 for (int i = 0; i < _currentFormData.Length; i++)
                     AlternateFormNames.Add($"{i:D3} {_currentFormData[i].Name}");
-                _selectedFormIndex = 0;
+
+                // ComboBox selection doesn't reliably pick up SelectedIndex=0 set in the same tick as
+                // repopulating ItemsSource, so force a real 0->0 transition via -1 on the next UI tick.
+                _selectedFormIndex = -1;
                 OnPropertyChanged(nameof(SelectedFormIndex));
-                LoadAlternateForm(0);
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => SelectedFormIndex = 0);
             }
             else
             {
@@ -244,6 +345,8 @@ namespace DSPRE.Avalonia.ViewModels
                 _rawSprites = rawBmps;
                 _normalPal  = normalPal;
                 _shinyPal   = shinyPal;
+                _normalPalUsed = AllUsed();
+                _shinyPalUsed  = AllUsed();
 
                 ApplyPalettesAndPublish();
                 _dirty = false;
@@ -471,7 +574,25 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // --- Runtime constructor -----------------------------------------------------
-        public PokemonSpriteEditorViewModel(bool _) { /* just constructed; LoadMon called by parent */ }
+        public PokemonSpriteEditorViewModel(bool _)
+        {
+            FemaleBackNormalFrame.OnChanged  = f => FemaleBackNormal  = RenderBattleSprite(0, _normalPal, f);
+            MaleBackNormalFrame.OnChanged    = f => MaleBackNormal    = RenderBattleSprite(1, _normalPal, f);
+            FemaleFrontNormalFrame.OnChanged = f => FemaleFrontNormal = RenderBattleSprite(2, _normalPal, f);
+            MaleFrontNormalFrame.OnChanged   = f => MaleFrontNormal   = RenderBattleSprite(3, _normalPal, f);
+            FemaleBackShinyFrame.OnChanged   = f => FemaleBackShiny   = RenderBattleSprite(0, _shinyPal, f);
+            MaleBackShinyFrame.OnChanged     = f => MaleBackShiny     = RenderBattleSprite(1, _shinyPal, f);
+            FemaleFrontShinyFrame.OnChanged  = f => FemaleFrontShiny  = RenderBattleSprite(2, _shinyPal, f);
+            MaleFrontShinyFrame.OnChanged    = f => MaleFrontShiny    = RenderBattleSprite(3, _shinyPal, f);
+
+            _frameTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _frameTimer.Tick += (_, __) =>
+            {
+                if (!AnimateFrames) return;
+                foreach (var cell in AllFrameCells) cell.Frame = 1 - cell.Frame;
+            };
+            _frameTimer.Start();
+        }
 
         // --- Load --------------------------------------------------------------------
         public void LoadMon(int id)
@@ -479,6 +600,7 @@ namespace DSPRE.Avalonia.ViewModels
             _currentId = id;
             ClearBitmaps();
             StatusText = "";
+            HasAlternateForms = id > 0 && GetAlternateFormsForCurrentSpecies().Length > 0;
 
             if (id <= 0)
             {
@@ -541,6 +663,8 @@ namespace DSPRE.Avalonia.ViewModels
                 _rawSprites = rawBmps;
                 _normalPal  = normalPal;
                 _shinyPal   = shinyPal;
+                _normalPalUsed = AllUsed();
+                _shinyPalUsed  = AllUsed();
 
                 ApplyPalettesAndPublish();
                 _dirty = false;
@@ -575,11 +699,103 @@ namespace DSPRE.Avalonia.ViewModels
                     StatusText = $"Sprite must be {SpriteWidth}×{SpriteHeight} pixels (got {imported.Width}×{imported.Height}).";
                     return;
                 }
-                _replacementSprites[slot] = imported;
+                if (!TryReadImageColors(imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
+                {
+                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    return;
+                }
+
+                bool[] newUsed = MakeUsedMask(usedCount);
+
+                if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
+                {
+                    bool keepExisting = await DialogHelper.AskYesNo(
+                        $"{SpriteLabels[slot]}'s image uses different colors than the palette already saved for this sprite.\n\n" +
+                        "Keep the saved palette and match this image's colors to it? Choosing No replaces the saved palette with this image's own colors instead.",
+                        "Palette mismatch");
+                    if (keepExisting)
+                    {
+                        newIndices = RemapToExistingPalette(newIndices, newPalette, usedCount, _normalPal, _normalPalUsed, out uint[] merged, out bool[] mergedUsed);
+                        _normalPal = merged;
+                        _normalPalUsed = mergedUsed;
+                    }
+                    else
+                    {
+                        _normalPal = newPalette;
+                        _normalPalUsed = newUsed;
+                    }
+                }
+                else if (_normalPal == null)
+                {
+                    _normalPal = newPalette;
+                    _normalPalUsed = newUsed;
+                }
+
+                _rawSprites[slot] = newIndices;
                 ApplyPalettesAndPublish();
                 _dirty = true;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Imported {SpriteLabels[slot]}. Save to apply.";
+                StatusText = $"Imported {SpriteLabels[slot]}. Save to write it to the ROM.";
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Import failed: {ex.Message}";
+            }
+        }
+
+        /// <summary>Gets the shiny palette from a reference image; doesn't touch pixels, since shiny shares artwork with Normal.</summary>
+        public Task ImportShinyPalette(int slot, Window owner) => ImportPaletteFromReference(slot, owner, shiny: true);
+
+        /// <summary>Gets the normal palette from a reference image, keeping the pixels already saved for this pose.</summary>
+        public Task ImportNormalPalette(int slot, Window owner) => ImportPaletteFromReference(slot, owner, shiny: false);
+
+        private async Task ImportPaletteFromReference(int slot, Window owner, bool shiny)
+        {
+            if (slot < 0 || slot > 3) return;
+            string label = shiny ? "shiny" : "normal";
+            if (_rawSprites[slot] == null)
+            {
+                StatusText = $"Load or import {SpriteLabels[slot]}'s artwork first, then you can get the {label} palette from a reference image.";
+                return;
+            }
+            string path = await DialogHelper.OpenFile(owner, $"Import {label} reference for {SpriteLabels[slot]}",
+                new[] { DialogHelper.PngFilter, DialogHelper.AllFilter });
+            if (string.IsNullOrEmpty(path)) return;
+
+            try
+            {
+                RawImage imported;
+                using (var fs = File.OpenRead(path))
+                    imported = ImageConverter.DecodeRawImage(fs);
+                if (imported == null)
+                {
+                    StatusText = "Image could not be decoded.";
+                    return;
+                }
+                if (imported.Width != SpriteWidth || imported.Height != SpriteHeight)
+                {
+                    StatusText = $"Image must be {SpriteWidth}×{SpriteHeight} pixels to line up with the saved artwork (got {imported.Width}×{imported.Height}).";
+                    return;
+                }
+                if (!TryReadImageColors(imported, out byte[] childIndices, out uint[] childPalette, out _))
+                {
+                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    return;
+                }
+
+                uint[] derived = DeriveAlternatePalette(_rawSprites[slot], childIndices, childPalette, out bool[] derivedUsed);
+                if (derived == null)
+                {
+                    StatusText = $"Could not get a {label} palette from this image.";
+                    return;
+                }
+
+                if (shiny) { _shinyPal = derived; _shinyPalUsed = derivedUsed; }
+                else { _normalPal = derived; _normalPalUsed = derivedUsed; }
+                ApplyPalettesAndPublish();
+                _dirty = true;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                StatusText = $"Got the {label} palette from {SpriteLabels[slot]}'s reference image. Save to write it to the ROM.";
             }
             catch (Exception ex)
             {
@@ -588,40 +804,67 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // --- Export PNG for one sprite slot -----------------------------------------
-        public async Task ExportSprite(int slot, Window owner)
+        public async Task ExportSprite(int slot, Window owner, bool shiny = false)
         {
             if (slot < 0 || slot > 3 || !HasSlot(slot)) return;
+
+            bool[] used = shiny ? _shinyPalUsed : _normalPalUsed;
+            int usedCount = 0;
+            foreach (bool u in used) if (u) usedCount++;
+            if (usedCount < 16)
+            {
+                bool fillBlack = await DialogHelper.AskYesNo(
+                    $"This image has a palette of {usedCount} colors, not the full 16.\n\n" +
+                    "Fill in the blanks with black? Choosing No keeps it as a " + usedCount + "-color palette.",
+                    "Palette isn't full");
+                if (fillBlack)
+                {
+                    for (int i = 0; i < 16; i++) used[i] = true;
+                    RefreshSwatches(shiny ? ShinySwatches : NormalSwatches, shiny ? _shinyPal : _normalPal, used);
+                }
+            }
+
+            string suffix = shiny ? "Shiny" : "";
             string path = await DialogHelper.SaveFile(owner,
-                $"Export {SpriteLabels[slot]} as PNG",
+                $"Export {SpriteLabels[slot]}{(shiny ? " (Shiny)" : "")} as PNG",
                 new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
-                $"mon{_currentId:D3}_{SpriteLabels[slot].Replace(" ", "")}.png");
+                $"mon{_currentId:D3}_{SpriteLabels[slot].Replace(" ", "")}{suffix}.png");
             if (string.IsNullOrEmpty(path)) return;
             try
             {
-                var raw = ComposeSprite(slot, _normalPal, transparentIndex0: false, frame: -1);
+                var raw = ComposeSprite(slot, shiny ? _shinyPal : _normalPal, transparentIndex0: false, frame: -1);
                 if (raw == null) { StatusText = "Export failed: nothing to export."; return; }
                 ImageConverter.ToAvaloniaBitmap(raw).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
-                StatusText = $"Exported {SpriteLabels[slot]}.";
+                StatusText = $"Exported {SpriteLabels[slot]}{(shiny ? " (Shiny)" : "")}.";
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
         }
 
         // --- Helpers -----------------------------------------------------------------
+        private static void RefreshSwatches(ObservableCollection<PaletteSwatch> target, uint[] palette, bool[] used)
+        {
+            target.Clear();
+            if (palette == null) return;
+            for (int i = 0; i < palette.Length; i++)
+            {
+                uint c = palette[i];
+                var color = global::Avalonia.Media.Color.FromArgb((byte)(c >> 24), (byte)(c >> 16), (byte)(c >> 8), (byte)c);
+                target.Add(new PaletteSwatch
+                {
+                    Brush = new global::Avalonia.Media.SolidColorBrush(color),
+                    IsPlaceholder = used != null && i < used.Length && !used[i]
+                });
+            }
+        }
+
         private void ApplyPalettesAndPublish()
         {
             if (_normalPal == null) return;
 
-            // Publish normal versions
-            FemaleBackNormal  = RenderSprite(0, _normalPal);
-            MaleBackNormal    = RenderSprite(1, _normalPal);
-            FemaleFrontNormal = RenderSprite(2, _normalPal);
-            MaleFrontNormal   = RenderSprite(3, _normalPal);
+            RefreshSwatches(NormalSwatches, _normalPal, _normalPalUsed);
+            RefreshSwatches(ShinySwatches, _shinyPal, _shinyPalUsed);
 
-            // Publish shiny versions
-            FemaleBackShiny   = RenderSprite(0, _shinyPal);
-            MaleBackShiny     = RenderSprite(1, _shinyPal);
-            FemaleFrontShiny  = RenderSprite(2, _shinyPal);
-            MaleFrontShiny    = RenderSprite(3, _shinyPal);
+            RenderCurrentFrameForAllCells();
 
             // Battle-mock sprites per gender: a LIST of N 80×80 frames (N = sheet width / 80). The pattern
             // animation (pokeanm) picks which frame to show; the count drives the editor's Frame limit.
@@ -633,9 +876,8 @@ namespace DSPRE.Avalonia.ViewModels
             BattleBackF  = RenderFrames(0, _normalPal, BattleFrameCount);
         }
 
-        private bool HasSlot(int slot) => _replacementSprites[slot] != null || _rawSprites[slot] != null;
-        private int SlotWidth(int slot) =>
-            _replacementSprites[slot]?.Width ?? (_rawSprites[slot] != null ? SpriteWidth : 0);
+        private bool HasSlot(int slot) => _rawSprites[slot] != null;
+        private int SlotWidth(int slot) => _rawSprites[slot] != null ? SpriteWidth : 0;
 
         // Renders all `count` 80×80 frames of a sprite slot (null list if the slot is empty).
         private System.Collections.Generic.IReadOnlyList<AvaBitmap> RenderFrames(int slot, uint[] palette, int count)
@@ -657,6 +899,12 @@ namespace DSPRE.Avalonia.ViewModels
             catch { return null; }
         }
 
+        /// <summary>Re-renders all 8 pose previews at whichever frame each one is already showing (new pixel/palette data, same frame selection).</summary>
+        private void RenderCurrentFrameForAllCells()
+        {
+            foreach (var cell in AllFrameCells) cell.OnChanged(cell.Frame);
+        }
+
         // Crops the 80×80 cell at frame index `frame` (cell at x = frame*80) out of the sheet,
         // with palette index 0 made transparent (in-game colour 0). Out-of-range → null.
         private AvaBitmap RenderBattleSprite(int slot, uint[] palette, int frame)
@@ -670,20 +918,16 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>
-        /// Renders a sprite slot to BGRA. <paramref name="frame"/> ≥ 0 crops the 80-wide cell at
+        /// Renders a sprite slot to BGRA. <paramref name="frame"/> &gt;= 0 crops the 80-wide cell at
         /// x = frame*80. With <paramref name="transparentIndex0"/>, palette index 0 becomes fully
-        /// transparent (for PNG replacements, pixels matching palette entry 0's colour, per the old
-        /// GDI MakeTransparent semantics). PNG replacements render as-is otherwise.
+        /// transparent (in-game colour 0).
         /// </summary>
         private RawImage ComposeSprite(int slot, uint[] palette, bool transparentIndex0, int frame)
         {
-            RawImage replacement = _replacementSprites[slot];
             byte[] indices = _rawSprites[slot];
-            if (replacement == null && indices == null) return null;
-            if (palette == null) return null;
+            if (indices == null || palette == null) return null;
 
-            int srcW = replacement?.Width ?? SpriteWidth;
-            int srcH = replacement?.Height ?? SpriteHeight;
+            int srcW = SpriteWidth, srcH = SpriteHeight;
             int x0 = 0, w = srcW;
             if (frame >= 0)
             {
@@ -693,29 +937,18 @@ namespace DSPRE.Avalonia.ViewModels
             }
 
             var outImg = new RawImage(w, srcH);
-            byte key0B = (byte)palette[0], key0G = (byte)(palette[0] >> 8), key0R = (byte)(palette[0] >> 16);
             for (int y = 0; y < srcH; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
                     int o = (y * w + x) * 4;
-                    if (replacement != null)
-                    {
-                        int s = (y * srcW + x0 + x) * 4;
-                        byte b = replacement.Bgra[s], g = replacement.Bgra[s + 1], r = replacement.Bgra[s + 2], a = replacement.Bgra[s + 3];
-                        if (transparentIndex0 && r == key0R && g == key0G && b == key0B) a = 0;
-                        outImg.Bgra[o] = b; outImg.Bgra[o + 1] = g; outImg.Bgra[o + 2] = r; outImg.Bgra[o + 3] = a;
-                    }
-                    else
-                    {
-                        byte pi = indices[y * SpriteWidth + x0 + x];
-                        if (transparentIndex0 && pi == 0) continue;   // stays 0,0,0,0
-                        uint c = palette[pi & 0xF];
-                        outImg.Bgra[o] = (byte)c;
-                        outImg.Bgra[o + 1] = (byte)(c >> 8);
-                        outImg.Bgra[o + 2] = (byte)(c >> 16);
-                        outImg.Bgra[o + 3] = (byte)(c >> 24);
-                    }
+                    byte pi = indices[y * SpriteWidth + x0 + x];
+                    if (transparentIndex0 && pi == 0) continue;   // stays 0,0,0,0
+                    uint c = palette[pi & 0xF];
+                    outImg.Bgra[o] = (byte)c;
+                    outImg.Bgra[o + 1] = (byte)(c >> 8);
+                    outImg.Bgra[o + 2] = (byte)(c >> 16);
+                    outImg.Bgra[o + 3] = (byte)(c >> 24);
                 }
             }
             return outImg;
@@ -752,8 +985,11 @@ namespace DSPRE.Avalonia.ViewModels
             FemaleBackShiny  = MaleBackShiny  = FemaleFrontShiny  = MaleFrontShiny  = null;
             BattleFrontM = BattleFrontF = BattleBackM = BattleBackF = null;
             _rawSprites = new byte[4][];
-            for (int i = 0; i < _replacementSprites.Length; i++) _replacementSprites[i] = null;
             _normalPal = null; _shinyPal = null;
+            _normalPalUsed = AllUsed(); _shinyPalUsed = AllUsed();
+            NormalSwatches.Clear();
+            ShinySwatches.Clear();
+            foreach (var cell in AllFrameCells) cell.Frame = 0;
             CanAddOppositeGenderSprites = false;
             AddOppositeGenderLabel = "";
         }
@@ -920,6 +1156,209 @@ namespace DSPRE.Avalonia.ViewModels
                 pal[j] = 0xFF000000u | (r << 16) | (g << 8) | b;
             }
             return pal;
+        }
+
+        // --- Save: writes every loaded pose plus both palettes back into the ROM's battle-sprite
+        // NARC, in place (fixed-size entries, same shape MakeImage/ReadPalette already expect to
+        // read back). Ported from PokemonSpriteEditor's SaveChanges_Click/SaveBin/SavePal. ---------
+
+        public void Save()
+        {
+            if (!_dirty || _currentId <= 0) return;
+
+            string packedPath = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
+            if (!File.Exists(packedPath))
+            {
+                StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
+                return;
+            }
+
+            var narc = new NarcReader(packedPath);
+            int baseOffset = _currentId * 6;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (_rawSprites[i] == null) continue;
+                int idx = baseOffset + i;
+                if (idx >= narc.fe.Length || narc.fe[idx].Size != 6448) continue;
+                narc.OpenEntry(idx);
+                WriteSpriteEntry(narc.fs, _rawSprites[i]);
+                narc.Close();
+            }
+            if (_normalPal != null)
+            {
+                int idx = baseOffset + 4;
+                if (idx < narc.fe.Length && narc.fe[idx].Size == 72) { narc.OpenEntry(idx); WritePaletteEntry(narc.fs, _normalPal); narc.Close(); }
+            }
+            if (_shinyPal != null)
+            {
+                int idx = baseOffset + 5;
+                if (idx < narc.fe.Length && narc.fe[idx].Size == 72) { narc.OpenEntry(idx); WritePaletteEntry(narc.fs, _shinyPal); narc.Close(); }
+            }
+
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            StatusText = "Saved.";
+        }
+
+        /// <summary>Encrypts 160×80 4bpp palette indices into one 6448-byte battle sprite entry. Ported from PokemonSpriteEditor.SaveBin.</summary>
+        private static void WriteSpriteEntry(FileStream fs, byte[] indices)
+        {
+            ushort[] packed = new ushort[3200];
+            for (int i = 0; i < 3200; i++)
+            {
+                packed[i] = (ushort)((indices[i * 4] & 0xF) | ((indices[i * 4 + 1] & 0xF) << 4) |
+                                      ((indices[i * 4 + 2] & 0xF) << 8) | ((indices[i * 4 + 3] & 0xF) << 12));
+            }
+
+            // MakeImage reads its seed straight back from this position, so it must literally BE the
+            // seed, not the seed XORed with a pixel value, or every position after it decodes wrong.
+            if (gameFamily != GameFamilies.DP)
+            {
+                uint num = 0u;
+                packed[0] = (ushort)(num & 0xFFFF);
+                num = num * 1103515245 + 24691;
+                for (int j = 1; j < 3200; j++)
+                {
+                    unchecked { packed[j] = (ushort)(packed[j] ^ (ushort)(num & 0xFFFF)); num = num * 1103515245 + 24691; }
+                }
+            }
+            else
+            {
+                uint seed = 31315u;
+                for (int k = 3199; k >= 0; k--) seed += packed[k];
+                uint num = seed;
+                packed[3199] = (ushort)(num & 0xFFFF);
+                num = num * 1103515245 + 24691;
+                for (int k = 3198; k >= 0; k--)
+                {
+                    unchecked { packed[k] = (ushort)(packed[k] ^ (ushort)(num & 0xFFFF)); num = num * 1103515245 + 24691; }
+                }
+            }
+
+            byte[] header = {
+                82, 71, 67, 78, 255, 254, 0, 1, 48, 25, 0, 0, 16, 0, 1, 0,
+                82, 65, 72, 67, 32, 25, 0, 0, 10, 0, 20, 0, 3, 0, 0, 0,
+                0, 0, 0, 0, 1, 0, 0, 0, 0, 25, 0, 0, 24, 0, 0, 0
+            };
+            var bw = new BinaryWriter(fs);
+            bw.Write(header, 0, 48);
+            for (int l = 0; l < 3200; l++) bw.Write(packed[l]);
+        }
+
+        /// <summary>Packs 16 ARGB colors into one 72-byte RGB555 palette entry. Ported from PokemonSpriteEditor.SavePal.</summary>
+        private static void WritePaletteEntry(FileStream fs, uint[] palette)
+        {
+            byte[] header = {
+                82, 76, 67, 78, 255, 254, 0, 1, 72, 0, 0, 0, 16, 0, 1, 0,
+                84, 84, 76, 80, 56, 0, 0, 0, 4, 0, 10, 0, 0, 0, 0, 0,
+                32, 0, 0, 0, 16, 0, 0, 0
+            };
+            var bw = new BinaryWriter(fs);
+            bw.Write(header, 0, 40);
+            for (int i = 0; i < 16; i++)
+            {
+                byte r = (byte)(palette[i] >> 16), g = (byte)(palette[i] >> 8), b = (byte)palette[i];
+                ushort v = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
+                bw.Write(v);
+            }
+        }
+
+        // --- Reading an image's colors and matching palettes, ported from IndexedBitmapHandler ------
+
+        /// <summary>Builds a color index (0-15) per pixel plus the list of colors used, in the order they first appear. Fails past 16 distinct colors, the ROM format's own limit.</summary>
+        private static bool TryReadImageColors(RawImage img, out byte[] indices, out uint[] palette, out int usedCount)
+        {
+            indices = new byte[SpriteWidth * SpriteHeight];
+            palette = new uint[16];
+            usedCount = 0;
+
+            var seen = new System.Collections.Generic.Dictionary<uint, byte>();
+            int n = SpriteWidth * SpriteHeight;
+            for (int p = 0; p < n; p++)
+            {
+                int o = p * 4;
+                uint c = 0xFF000000u | ((uint)img.Bgra[o + 2] << 16) | ((uint)img.Bgra[o + 1] << 8) | img.Bgra[o];
+                if (!seen.TryGetValue(c, out byte idx))
+                {
+                    if (seen.Count >= 16) { indices = null; palette = null; usedCount = 0; return false; }
+                    idx = (byte)seen.Count;
+                    seen[c] = idx;
+                    palette[idx] = c;
+                }
+                indices[p] = idx;
+            }
+            usedCount = seen.Count;
+            for (int i = usedCount; i < 16; i++) palette[i] = 0xFF000000u;
+            return true;
+        }
+
+        private static bool PaletteEqualsUpTo(uint[] existing, uint[] candidate, int count)
+        {
+            for (int i = 0; i < count; i++) if (existing[i] != candidate[i]) return false;
+            return true;
+        }
+
+        private static bool[] MakeUsedMask(int usedCount)
+        {
+            var a = new bool[16];
+            for (int i = 0; i < usedCount && i < 16; i++) a[i] = true;
+            return a;
+        }
+
+        /// <summary>Points the new image's pixels at the palette that's already saved: matching colors reuse their existing slot, new colors take a genuine placeholder slot rather than overwriting a real existing color the current import just doesn't happen to need.</summary>
+        private static byte[] RemapToExistingPalette(byte[] newIndices, uint[] newPalette, int usedCount, uint[] existingPalette, bool[] existingUsed, out uint[] mergedPalette, out bool[] mergedUsed)
+        {
+            var indexMap = new byte[16];
+            var claimed = new bool[16];
+
+            for (int i = 0; i < usedCount; i++)
+            {
+                int found = -1;
+                for (int j = 0; j < 16; j++)
+                {
+                    if (!claimed[j] && existingPalette[j] == newPalette[i]) { found = j; break; }
+                }
+                indexMap[i] = found >= 0 ? (byte)found : (byte)255;
+                if (found >= 0) claimed[found] = true;
+            }
+
+            mergedPalette = (uint[])existingPalette.Clone();
+            mergedUsed = (bool[])(existingUsed ?? AllUsed()).Clone();
+            for (int i = 0; i < usedCount; i++)
+            {
+                if (indexMap[i] != 255) continue;
+                int freeSlot = -1;
+                for (int j = 0; j < 16; j++) if (!claimed[j] && !mergedUsed[j]) { freeSlot = j; break; }
+                if (freeSlot < 0)
+                    for (int j = 0; j < 16; j++) if (!claimed[j]) { freeSlot = j; break; } // no placeholder left, don't drop the color
+                if (freeSlot < 0) freeSlot = 0; // unreachable: usedCount <= 16
+                claimed[freeSlot] = true;
+                indexMap[i] = (byte)freeSlot;
+                mergedPalette[freeSlot] = newPalette[i];
+                mergedUsed[freeSlot] = true;
+            }
+
+            var outIdx = new byte[newIndices.Length];
+            for (int p = 0; p < newIndices.Length; p++) outIdx[p] = indexMap[newIndices[p]];
+            return outIdx;
+        }
+
+        /// <summary>Builds the shiny palette from a reference image: for each Normal color index, reads whatever color the reference image has at one of the pixels using that index.</summary>
+        private static uint[] DeriveAlternatePalette(byte[] parentIndices, byte[] childIndices, uint[] childPalette, out bool[] used)
+        {
+            used = null;
+            if (parentIndices == null || childIndices == null || parentIndices.Length != childIndices.Length) return null;
+            var result = new uint[16];
+            var found = new bool[16];
+            for (int p = 0; p < parentIndices.Length; p++)
+            {
+                int i = parentIndices[p] & 0xF;
+                if (!found[i]) { result[i] = childPalette[childIndices[p]]; found[i] = true; }
+            }
+            for (int i = 0; i < 16; i++) if (!found[i]) result[i] = 0xFF000000u;
+            used = found;
+            return result;
         }
     }
 }

@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.SpriteImportWizardView"
+        x:DataType="vm:SpriteImportWizardViewModel"
+        Title="Import Wizard"
+        Width="460" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterScreen">
+  <StackPanel Margin="18" Spacing="16">
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="What do you want to change?" FontWeight="SemiBold"/>
+      <RadioButton GroupName="mode" Content="Change image, keep palettes" IsChecked="True" Click="ModeImage_Click"/>
+      <RadioButton GroupName="mode" Content="Change palette, keep image" Click="ModePalette_Click"/>
+      <RadioButton GroupName="mode" Content="Change full artwork (image and palette together)" Click="ModeFull_Click"/>
+    </StackPanel>
+
+    <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">
+      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
+      <TextBlock Text="Which pose(s)?" FontWeight="SemiBold"/>
+      <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
+                 IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Text="Facing" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <RadioButton GroupName="face" Content="Back" Click="FaceBack_Click"/>
+        <RadioButton GroupName="face" Content="Front" IsChecked="True" Click="FaceFront_Click"/>
+        <RadioButton GroupName="face" Content="Both" Click="FaceBoth_Click"/>
+      </StackPanel>
+      <TextBlock Text="Gender" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !GenderGapActive}"/>
+      <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !GenderGapActive}">
+        <RadioButton GroupName="gender" Content="Female" Click="GenderFemale_Click"/>
+        <RadioButton GroupName="gender" Content="Male" Click="GenderMale_Click"/>
+        <RadioButton GroupName="gender" Content="Both" IsChecked="True" Click="GenderBoth_Click"/>
+      </StackPanel>
+    </StackPanel>
+
+    <StackPanel Spacing="8" IsVisible="{Binding ShowPaletteScope}">
+      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
+      <TextBlock Text="Which palette(s)?" FontWeight="SemiBold"/>
+      <CheckBox Content="Normal" IsChecked="{Binding IncludeNormalPalette}"/>
+      <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}"/>
+      <TextBlock Text="Based on which pose's reference image?" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+      <ComboBox ItemsSource="{Binding AvailableRefPoses}" SelectedItem="{Binding RefPose}" HorizontalAlignment="Stretch"/>
+    </StackPanel>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="Cancel_Click"/>
+      <Button Content="{Binding RunButtonText}" Click="Run_Click" IsDefault="True" FontWeight="SemiBold"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
