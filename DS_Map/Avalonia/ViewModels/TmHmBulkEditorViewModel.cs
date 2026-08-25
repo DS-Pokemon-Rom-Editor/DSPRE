@@ -96,7 +96,9 @@ namespace DSPRE.Avalonia.ViewModels
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions });
 
-            _speciesCount = pokemonNames.Length;
+            // DP's personalPokeData NARC has fewer files than the species-name text archive, which still
+            // lists Platinum-introduced forms (501-507) DP never got data files for.
+            _speciesCount = Math.Min(pokemonNames.Length, GetPersonalFilesCount());
             for (int i = 0; i < _speciesCount; i++) _personalData[i] = new PokemonPersonalData(i);
 
             _families = BuildFamilies();
