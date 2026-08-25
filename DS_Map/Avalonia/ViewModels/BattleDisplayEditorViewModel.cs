@@ -46,6 +46,90 @@ namespace DSPRE.Avalonia.ViewModels
         private int _currentId = -1;
         private bool _loading;
 
+        // ── hg-engine form selection (SpriteOffsets.c/HeightTable.c only) ───────────────────────
+        // hg-engine forms are first-class species IDs with their own full SpriteOffsets.c entry, unlike
+        // vanilla NARC-backed data (battle sprite graphics, height.narc) which has no concept of them, so
+        // this picker only re-routes the hg-engine-source reads/writes below; graphics stay keyed to the
+        // base species (_currentId).
+        public sealed class FormOption { public string Label { get; set; } public int SpeciesId { get; set; } }
+        public ObservableCollection<FormOption> FormOptions { get; } = new ObservableCollection<FormOption>();
+        public bool HasForms => FormOptions.Count > 1;
+
+        private int _currentHgeSpeciesId = -1;
+        private int _selectedFormIndex;
+        public int SelectedFormIndex
+        {
+            get => _selectedFormIndex;
+            set
+            {
+                if (_selectedFormIndex == value) return;
+                _selectedFormIndex = value;
+                OnPropertyChanged();
+                _currentHgeSpeciesId = (value >= 0 && value < FormOptions.Count) ? FormOptions[value].SpeciesId : _currentId;
+                if (!_loading) LoadHgeFormData();
+            }
+        }
+
+        private HgEngineSymbolTable _hgeSpecies;
+        private Dictionary<string, List<HgEngineFormRegistry.FormSlot>> _hgeFormTable;
+        private bool _hgeFormLookupTried;
+
+        private void EnsureHgeFormLookup()
+        {
+            if (_hgeFormLookupTried) return;
+            _hgeFormLookupTried = true;
+            try
+            {
+                _hgeSpecies = HgEngineSymbolTable.Load("include/constants/species.h");
+                _hgeFormTable = HgEngineFormRegistry.LoadAll();
+            }
+            catch { _hgeSpecies = null; _hgeFormTable = null; }
+        }
+
+        private void LoadFormOptions(int baseId)
+        {
+            FormOptions.Clear();
+            _currentHgeSpeciesId = baseId;
+            if (HgEngineProject.IsActive && baseId >= 0)
+            {
+                EnsureHgeFormLookup();
+                FormOptions.Add(new FormOption { Label = "(base form)", SpeciesId = baseId });
+                if (_hgeSpecies != null && _hgeFormTable != null
+                    && _hgeSpecies.TryGetNameWithPrefix(baseId, "SPECIES_", out string baseDesignator)
+                    && _hgeFormTable.TryGetValue(baseDesignator, out var slots))
+                {
+                    foreach (var slot in slots)
+                        if (_hgeSpecies.TryGetValue(slot.SpeciesSymbol, out int formId))
+                            FormOptions.Add(new FormOption { Label = FormDisplayName(slot.SpeciesSymbol), SpeciesId = formId });
+                }
+            }
+            _selectedFormIndex = 0;
+            OnPropertyChanged(nameof(SelectedFormIndex));
+            OnPropertyChanged(nameof(HasForms));
+        }
+
+        private static string FormDisplayName(string designator)
+        {
+            string s = designator.StartsWith("SPECIES_", StringComparison.Ordinal) ? designator.Substring(8) : designator;
+            return s.Replace('_', ' ');
+        }
+
+        // Re-reads just the hg-engine-source-backed data (Positioning/Frames/Animation) for the newly
+        // selected form; graphics/icon/NARC-backed data are unaffected, since they stay keyed to the base species.
+        private void LoadHgeFormData()
+        {
+            if (!HgEngineProject.IsActive) return;
+            _loading = true;
+            try
+            {
+                LoadSpriteDataFromHgeSource(_currentHgeSpeciesId);
+                LoadAnimFromHgeSource(_currentHgeSpeciesId);
+            }
+            finally { _loading = false; }
+            RaiseLayout();
+            RaiseSprites();
+        }
+
         // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
         // One dropdown picks a GROUND_ID terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
         // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
@@ -353,7 +437,12 @@ namespace DSPRE.Avalonia.ViewModels
 
         /// <summary>True only where a movement/animation byte exists (HGSS, Platinum); hides that field on DP.</summary>
         private bool _hasMovementType;
-        public bool HasMovementType { get => _hasMovementType; private set => Set(ref _hasMovementType, value); }
+        public bool HasMovementType { get => _hasMovementType; private set { if (Set(ref _hasMovementType, value)) OnPropertyChanged(nameof(ShowMovementType)); } }
+
+        /// <summary>Whether to show the vanilla "Movement type" field in Positioning. Hidden on hg-engine
+        /// ROMs: it's the same source field (frontHeader.animation) as the Animation tab's "Front animation
+        /// #", and only one place should ever write it (see the comment in SaveSpriteData).</summary>
+        public bool ShowMovementType => _hasMovementType && !HgEngineProject.IsActive;
 
         /// <summary>True where per-gender sprite heights exist (DP, Platinum; height.narc).</summary>
         private bool _hasHeights;
@@ -468,6 +557,10 @@ namespace DSPRE.Avalonia.ViewModels
         private int _animFrontProg; public int AnimFrontProgNum { get => _animFrontProg; set { if (Set(ref _animFrontProg, value)) { if (!_loading) SetDirty(); if (_scriptTarget == 0) RefreshProgramScript(); else OnPropertyChanged(nameof(ProgramScriptHeader)); } } }
         private int _animFrontWait; public int AnimFrontWait { get => _animFrontWait; set { if (Set(ref _animFrontWait, value) && !_loading) SetDirty(); } }
 
+        // hg-engine only: cryDelay sits alongside animation/animationDelay in each of frontHeader/backHeader.
+        private int _animFrontCryDelay; public int AnimFrontCryDelay { get => _animFrontCryDelay; set { if (Set(ref _animFrontCryDelay, value) && !_loading) SetDirty(); } }
+        private int _animBackCryDelay; public int AnimBackCryDelay { get => _animBackCryDelay; set { if (Set(ref _animBackCryDelay, value) && !_loading) SetDirty(); } }
+
         /// <summary>The three back program-animation steps ({number, wait}).</summary>
         public ObservableCollection<AnimProgStep> AnimBack { get; } = new ObservableCollection<AnimProgStep>();
         /// <summary>The pattern (frame) animation steps: the visible send-out/idle wiggle. Drives the preview.</summary>
@@ -490,7 +583,7 @@ namespace DSPRE.Avalonia.ViewModels
             AnimSteps.Clear(); AnimBack.Clear();
             if (!IsAvailable || id < 0) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
 
-            if (HgEngineProject.IsActive) { LoadAnimFromHgeSource(id); return; }
+            if (HgEngineProject.IsActive) { LoadAnimFromHgeSource(_currentHgeSpeciesId); return; }
 
             EnsureAnimNarc();
             var r = _animNarc?.GetRecord(id);
@@ -515,11 +608,15 @@ namespace DSPRE.Avalonia.ViewModels
             if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, out _animFrontProg)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, out _animFrontWait);
+            block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("cryDelay") }, out _animFrontCryDelay);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, out int backProg);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, out int backWait);
+            block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, out _animBackCryDelay);
             AddBackStep(backProg, backWait);
 
-            OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait)); OnPropertyChanged(nameof(CanAddAnimStep));
+            OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait));
+            OnPropertyChanged(nameof(AnimFrontCryDelay)); OnPropertyChanged(nameof(AnimBackCryDelay));
+            OnPropertyChanged(nameof(CanAddAnimStep));
             HasAnimData = true;
             RefreshProgramScript();
             RestartAnimPreview();
@@ -535,10 +632,12 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _animFrontProg.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, _animFrontWait.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("cryDelay") }, _animFrontCryDelay.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, (AnimBack.Count > 0 ? AnimBack[0].Number : 0).ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, (AnimBack.Count > 0 ? AnimBack[0].Wait : 0).ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, _animBackCryDelay.ToString()),
                 };
-                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentId, fields, out _, out _);
+                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
                 return;
             }
 
@@ -573,6 +672,82 @@ namespace DSPRE.Avalonia.ViewModels
             AnimSteps.Remove(step);
             OnPropertyChanged(nameof(CanAddAnimStep));
             if (!_loading) { SetDirty(); RestartAnimPreview(); }
+        }
+
+        // ── hg-engine frame editing (data/SpriteOffsets.c's .frontFrames/.backFrames, 10 slots each) ──
+        // Fixed-size (the source C array is SpriteFrame[10]); no add/remove, a slot with FrameNo = -1 is
+        // simply unused/terminates the idle-cycle loop, matching the file's own convention. Editing a slot
+        // live-updates the preview loop below (RecomputeHgeSteps), same as editing AnimSteps does for vanilla.
+        public ObservableCollection<SpriteFrameEntry> FrontFrameEntries { get; } = new ObservableCollection<SpriteFrameEntry>();
+        public ObservableCollection<SpriteFrameEntry> BackFrameEntries { get; } = new ObservableCollection<SpriteFrameEntry>();
+        public bool HasHgeFrameData => HgEngineProject.IsActive && _hasSpriteData;
+
+        private void LoadFrameEntries(HgEngineSourceBlock block)
+        {
+            foreach (var e in FrontFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
+            foreach (var e in BackFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
+            FrontFrameEntries.Clear(); BackFrameEntries.Clear();
+
+            foreach (var slot in HgEngineSpriteOffsets.ReadFrameSlots(block, "frontFrames")) AddFrameEntry(FrontFrameEntries, slot);
+            foreach (var slot in HgEngineSpriteOffsets.ReadFrameSlots(block, "backFrames")) AddFrameEntry(BackFrameEntries, slot);
+
+            RecomputeHgeSteps();
+            OnPropertyChanged(nameof(HasHgeFrameData));
+        }
+
+        private void AddFrameEntry(ObservableCollection<SpriteFrameEntry> list, HgEngineSpriteOffsets.SpriteFrameSlot slot)
+        {
+            var e = new SpriteFrameEntry
+            {
+                FrameNo = slot.FrameNo, Duration = slot.Duration,
+                HorizontalShift = slot.HorizontalShift, VerticalShift = slot.VerticalShift,
+            };
+            e.PropertyChanged += OnFrameEntryChanged;
+            list.Add(e);
+        }
+
+        private void OnFrameEntryChanged(object _, PropertyChangedEventArgs __)
+        {
+            if (_loading) return;
+            SetDirty();
+            RecomputeHgeSteps();
+            RestartAnimPreview();
+        }
+
+        // Same "stop at the first negative frameNo" semantics as HgEngineSpriteOffsets.ReadFrameSteps,
+        // just re-derived from the live-editable entries instead of a fresh file read.
+        private void RecomputeHgeSteps()
+        {
+            _hgeFrontSteps = StepsFrom(FrontFrameEntries);
+            _hgeBackSteps = StepsFrom(BackFrameEntries);
+        }
+
+        private static List<(int Frame, int Duration)> StepsFrom(ObservableCollection<SpriteFrameEntry> entries)
+        {
+            var steps = new List<(int, int)>();
+            foreach (var e in entries)
+            {
+                if (e.FrameNo < 0) break;
+                steps.Add((e.FrameNo, e.Duration));
+            }
+            return steps;
+        }
+
+        private void SaveFrames()
+        {
+            if (!HgEngineProject.IsActive || !_hasSpriteData) return;
+            var fields = new List<HgEngineFieldWrite>();
+            fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", ToSlotData(FrontFrameEntries)));
+            fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("backFrames", ToSlotData(BackFrameEntries)));
+            HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+        }
+
+        private static List<HgEngineSpriteOffsets.SpriteFrameSlot> ToSlotData(ObservableCollection<SpriteFrameEntry> entries)
+        {
+            var slots = new List<HgEngineSpriteOffsets.SpriteFrameSlot>(entries.Count);
+            foreach (var e in entries)
+                slots.Add(new HgEngineSpriteOffsets.SpriteFrameSlot(e.FrameNo, e.Duration, e.HorizontalShift, e.VerticalShift));
+            return slots;
         }
 
         // ── Program-animation playback (PAST interpreter → live transform on the front sprite) ──────────
@@ -863,7 +1038,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || id < 0) return;
             try
             {
-                if (HgEngineProject.IsActive) { LoadSpriteDataFromHgeSource(id); return; }
+                if (HgEngineProject.IsActive) { LoadSpriteDataFromHgeSource(_currentHgeSpeciesId); return; }
 
                 EnsureSource();
                 if (_src == null) return;
@@ -889,8 +1064,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowXOffset") }, out int shadowX)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowSize") }, out int shadowSize)) return;
 
-            _hgeFrontSteps = HgEngineSpriteOffsets.ReadFrameSteps(block, "frontFrames");
-            _hgeBackSteps = HgEngineSpriteOffsets.ReadFrameSteps(block, "backFrames");
+            LoadFrameEntries(block);
 
             _spriteY = spriteY; _shadowX = shadowX; _shadowSize = shadowSize; _movementType = movement;
 
@@ -912,16 +1086,18 @@ namespace DSPRE.Avalonia.ViewModels
 
             if (HgEngineProject.IsActive)
             {
+                // frontHeader.animation is NOT written here: it's the same source field as the Animation
+                // tab's "Front animation #" (AnimFrontProgNum), and SaveAnim() is its sole writer. Writing
+                // it from both places raced, with whichever ran second silently clobbering the other.
                 var fields = new[]
                 {
-                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _movementType.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("spriteYOffset") }, _spriteY.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowXOffset") }, _shadowX.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowSize") }, _shadowSize.ToString()),
                 };
-                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentId, fields, out _, out _);
+                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
                 if (_hasHeights)
-                    HgEngineHeightTable.TrySet(_currentId, _backHeightF, _backHeightM, _frontHeightF, _frontHeightM, out _);
+                    HgEngineHeightTable.TrySet(_currentHgeSpeciesId, _backHeightF, _backHeightM, _frontHeightF, _frontHeightM, out _);
                 return;
             }
 
@@ -1229,6 +1405,7 @@ namespace DSPRE.Avalonia.ViewModels
             catch { _partyPaletteIndex = 0; }
             OnPropertyChanged(nameof(PartyPaletteIndex));
             RefreshPreview();
+            LoadFormOptions(id);
             LoadSpriteData(id);
             _formMode = _sprites != null && _sprites.IsAlternateForms;
             _formIndex = _sprites != null ? _sprites.SelectedFormIndex : -1;
@@ -1256,7 +1433,7 @@ namespace DSPRE.Avalonia.ViewModels
                     DSPRE.DSUtils.SetMonIconGraphic(_currentId, _partyPaletteIndex, _pendingIconGraphic);
                     _pendingIconGraphic = null;
                 }
-                SaveSpriteData(); SaveFormHeights(); SaveAnim(); SetClean();
+                SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames(); SetClean();
                 RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
             }
             catch { /* surfaced by the global error net */ }
@@ -1280,6 +1457,18 @@ namespace DSPRE.Avalonia.ViewModels
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         private int _number; public int Number { get => _number; set { if (_number != value) { _number = value; Raise(nameof(Number)); } } }
         private int _wait; public int Wait { get => _wait; set { if (_wait != value) { _wait = value; Raise(nameof(Wait)); } } }
+    }
+
+    /// <summary>One hg-engine SpriteFrame slot (data/SpriteOffsets.c's .frontFrames/.backFrames): which raw
+    /// sprite frame to show, how long, and its per-frame pixel shift. FrameNo = -1 means "unused."</summary>
+    public sealed class SpriteFrameEntry : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        private int _frameNo = -1; public int FrameNo { get => _frameNo; set { if (_frameNo != value) { _frameNo = value; Raise(nameof(FrameNo)); } } }
+        private int _duration; public int Duration { get => _duration; set { if (_duration != value) { _duration = value; Raise(nameof(Duration)); } } }
+        private int _horizontalShift; public int HorizontalShift { get => _horizontalShift; set { if (_horizontalShift != value) { _horizontalShift = value; Raise(nameof(HorizontalShift)); } } }
+        private int _verticalShift; public int VerticalShift { get => _verticalShift; set { if (_verticalShift != value) { _verticalShift = value; Raise(nameof(VerticalShift)); } } }
     }
 
     /// <summary>One editable row of a PAST program-animation script: an opcode + its argument words (edited as

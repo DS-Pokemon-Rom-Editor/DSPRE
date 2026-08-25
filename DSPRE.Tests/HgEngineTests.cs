@@ -247,5 +247,44 @@ const SafariZoneAreaEncounterFile __data[] = {
             Assert.Equal(2, slots.Count);
             Assert.Contains("SPECIES_RATTATA", slots[0]);
         }
+
+        // ── HgEngineSpriteOffsets: SpriteFrame[10] array (frontFrames/backFrames) read + write ──
+
+        private static string TwoSlotFrameArray(string field) =>
+            "{ " + field + " = { " +
+            "{ .frameNo = 0, .duration = 4, .horizontalShift = 0, .verticalShift = 0 }, " +
+            "{ .frameNo = 1, .duration = 10, .horizontalShift = -2, .verticalShift = 3 }, " +
+            "{ .frameNo = -1, .duration = 0, .horizontalShift = 0, .verticalShift = 0 } } }";
+
+        [Fact]
+        public void SpriteOffsets_ReadFrameSlotsReadsEveryElementVerbatimIncludingUnusedTrailingSlots()
+        {
+            var block = new HgEngineSourceBlock(TwoSlotFrameArray(".frontFrames"));
+            var slots = HgEngineSpriteOffsets.ReadFrameSlots(block, "frontFrames");
+
+            Assert.Equal(3, slots.Count);   // unlike ReadFrameSteps, doesn't stop at the first frameNo < 0
+            Assert.Equal(0, slots[0].FrameNo); Assert.Equal(4, slots[0].Duration);
+            Assert.Equal(1, slots[1].FrameNo); Assert.Equal(10, slots[1].Duration);
+            Assert.Equal(-2, slots[1].HorizontalShift); Assert.Equal(3, slots[1].VerticalShift);
+            Assert.Equal(-1, slots[2].FrameNo);
+        }
+
+        [Fact]
+        public void SpriteOffsets_BuildFrameWritesRoundTripsThroughTryReplaceField()
+        {
+            string text = "const SpriteFrameData __data[] = {\n    [SPECIES_BULBASAUR] = " + TwoSlotFrameArray(".frontFrames") + ",\n};\n";
+
+            var edited = new System.Collections.Generic.List<HgEngineSpriteOffsets.SpriteFrameSlot>
+            {
+                new HgEngineSpriteOffsets.SpriteFrameSlot(frameNo: 5, duration: 20, horizontalShift: 1, verticalShift: -1),
+            };
+            foreach (var write in HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", edited))
+                Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "SPECIES_BULBASAUR", write.Path, write.ValueLiteral));
+
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "SPECIES_BULBASAUR",
+                new[] { FieldPathSegment.Field("frontFrames"), FieldPathSegment.At(0), FieldPathSegment.Field("frameNo") }, out string frameNo));
+            Assert.Equal("5", frameNo.Trim());
+            Assert.Contains("SPECIES_BULBASAUR", text);   // other entries/labels untouched
+        }
     }
 }

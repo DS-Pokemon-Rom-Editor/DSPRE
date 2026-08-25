@@ -190,6 +190,11 @@ publish/
 # Note: Comment the next line if you want to checkin your web deploy settings,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
+# DSPRE.Avalonia's FileSystem publish profiles carry no secrets (just RID/config/output dir) and CI
+# depends on them being checked in — without this exception they're silently absent on every fresh
+# clone, which breaks `dotnet publish -p:PublishProfile=...` there while still working locally wherever
+# the ignored file happens to already exist on disk.
+!DSPRE.Avalonia/Properties/PublishProfiles/*.pubxml
 *.publishproj
 
 # Microsoft Azure Web App publish settings. Comment the next line if you want to
