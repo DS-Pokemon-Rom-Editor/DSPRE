@@ -4,6 +4,18 @@
 
 ---
 
+## 2.2.1
+- Fixed a crash opening the TM/HM Bulk Editor on Diamond/Pearl ROMs. The editor tried to load every
+  Pokémon form up through the ones Platinum introduced, but Diamond/Pearl's own data was never extended
+  to include those forms, so opening the Bulk Editor (or selecting one of those forms, IDs 501-507, in
+  the Pokémon Editor) threw a file-not-found error instead of working normally.
+- Fixed newly-added custom Overworld entries on Diamond/Pearl (via hzla's Overworld Sprites Expansion
+  patch) not showing up in the Overworld Editor or Event Editor dropdowns after being added. The entry
+  was written correctly, it just wasn't appearing in the list, so it showed a placeholder image and a
+  blank selection field instead of the one you just created. Already worked correctly on Platinum.
+
+---
+
 ## 2.2
 - New Overworld Watcher tab in the Research Helper: find every event using a given OW Entry ID, with double-click to jump straight to it.
 - New Trainer Flag Bulk Editor (Other Editors menu): edit AI flags and Double Battle for many trainers at once, by trainer or by flag.
