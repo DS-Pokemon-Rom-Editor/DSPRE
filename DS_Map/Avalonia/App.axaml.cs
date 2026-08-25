@@ -43,6 +43,24 @@ namespace DSPRE
 
                 if (WinFormsHostHook == null || ForceAvaloniaShell)
                 {
+                    // The pure-Avalonia shell is the only one that ever runs on Linux (no WinForms
+                    // host exe there). ndstool/blz/apicula have no native Linux build yet, so without
+                    // Wine (or WSL's own interop) nothing DSPRE does can actually touch a ROM.
+                    if (DSUtils.RequiresWineButUnavailable())
+                    {
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+                        {
+                            await DSPRE.Avalonia.DialogHelper.ShowError(
+                                "DSPRE needs Wine to run its bundled tools (ndstool, blz, apicula) on Linux, "
+                                + "but Wine wasn't found on PATH.\n\n"
+                                + "Install it (e.g. \"sudo apt install wine\") and start DSPRE again.",
+                                "Wine required");
+                            desktop.Shutdown();
+                        });
+                        base.OnFrameworkInitializationCompleted();
+                        return;
+                    }
+
                     CrashReporter.Initialize();   // global crash handlers + report file
 
                     // The WinForms shell does these in the MainProgram ctor; the pure-Avalonia shell must

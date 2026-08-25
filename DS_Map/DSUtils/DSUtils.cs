@@ -214,10 +214,10 @@ namespace DSPRE {
         }
 
         /// <summary>
-        /// Configures a process to run a bundled tool directly or through Wine when a non-Windows
-        /// platform only has the Windows executable available. Returns false when the tool or Wine
-        /// is unavailable, allowing callers to report the failure without reaching Process.Start().
-        /// Call this after setting any tool arguments.
+        /// Configures a process to run a bundled tool directly, through WSL's own interop when only
+        /// the Windows executable is available, or through Wine as the last resort on real Linux.
+        /// Returns false when nothing can run the tool, allowing callers to report the failure without
+        /// reaching Process.Start(). Call this after setting any tool arguments.
         /// </summary>
         public static bool ConfigureToolStartInfo(ProcessStartInfo startInfo, string name)
         {
@@ -245,10 +245,30 @@ namespace DSPRE {
                 toolPath = windowsPath;
             }
 
+            if (IsWsl())
+            {
+                if (!TryEnsureUnixExecutable(toolPath)) return false;
+                ConfigureWslStartInfo(startInfo, toolPath);
+                return true;
+            }
+
             if (!IsCommandAvailable("wine")) return false;
 
             ConfigureWineStartInfo(startInfo, toolPath);
             return true;
+        }
+
+        /// <summary>True when running inside WSL, where the kernel can execute a Windows .exe directly
+        /// (no Wine needed). WSL2 sets this env var by default.</summary>
+        private static bool IsWsl() =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME"));
+
+        /// <summary>No path rewriting needed here: WSL interop already resolves plain Linux paths in a
+        /// launched .exe's arguments on its own (confirmed directly against ndstool.exe; a \\wsl.localhost
+        /// UNC rewrite, the Wine-style fix, actually broke it).</summary>
+        private static void ConfigureWslStartInfo(ProcessStartInfo startInfo, string toolPath)
+        {
+            startInfo.FileName = toolPath;
         }
 
         private static bool TryEnsureUnixExecutable(string toolPath)
@@ -296,6 +316,11 @@ namespace DSPRE {
                 : toolArgument + " " + startInfo.Arguments;
         }
 
+        /// <summary>True on real (non-WSL) Linux/macOS with no Wine on PATH: none of the bundled
+        /// .exe-only tools (ndstool, blz, apicula) can run at all in that case.</summary>
+        public static bool RequiresWineButUnavailable() =>
+            !OperatingSystem.IsWindows() && !IsWsl() && !IsCommandAvailable("wine");
+
         /// <summary>Returns a user-facing explanation for a tool that could not be launched.</summary>
         public static string ToolAvailabilityError(string name)
         {
@@ -303,9 +328,7 @@ namespace DSPRE {
             if (!File.Exists(toolPath))
                 return $"{name} was not found in DSPRE's Tools folder.";
 
-            if (!OperatingSystem.IsWindows()
-                && toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                && !IsCommandAvailable("wine"))
+            if (toolPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && RequiresWineButUnavailable())
             {
                 return $"Wine is required to run {Path.GetFileName(toolPath)} on this platform, "
                     + "but Wine was not found on PATH.";
