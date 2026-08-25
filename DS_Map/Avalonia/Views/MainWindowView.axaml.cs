@@ -584,6 +584,9 @@ namespace DSPRE.Avalonia.Views
         private void HeadbuttEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHeadbuttEncounterEditor();
 
+        private void TrophyGardenEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTrophyGardenEditor();
+
         private void WildEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenWildEditor();
 
@@ -592,6 +595,15 @@ namespace DSPRE.Avalonia.Views
 
         private void HeaderSearch_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHeaderSearch();
+
+        private void VsSeekerRematchEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenVsSeekerRematchEditor();
+
+        private void TrainerFlagBulkEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTrainerFlagBulkEditor();
+
+        private void BattleTowerEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBattleTowerEditor();
 
         private void Welcome_Click(object sender, RoutedEventArgs e)
             => WelcomeView.ShowWelcome(this);

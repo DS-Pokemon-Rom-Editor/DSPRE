@@ -480,6 +480,11 @@ namespace DSPRE.Avalonia.ViewModels
 
         public int InitialIndex { get; set; }
 
+        /// <summary>When set (>=0), selected right after the event file finishes loading — lets callers
+        /// (e.g. Research Helper's Overworld/Trainer Watcher) jump straight to a specific overworld
+        /// entry instead of just the containing event file.</summary>
+        public int InitialOverworldIndex { get; set; } = -1;
+
         // ── 3D marker visibility toggles (per event type) ────────────────────────────────
         private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true, _showGrid;
         public bool ShowOverworlds { get => _showOw; set { if (Set(ref _showOw, value)) RefreshMarkers(); } }
@@ -527,6 +532,8 @@ namespace DSPRE.Avalonia.ViewModels
                 for (int i = 0; i < count; i++) EventNames.Add("Event File " + i);
                 StatusText = $"{count} event files.";
                 if (count > 0) SelectedEventIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
+                if (InitialOverworldIndex >= 0 && InitialOverworldIndex < _file?.overworlds.Count)
+                    SelectedOverworldIndex = InitialOverworldIndex;
             }
             catch (Exception ex)
             {

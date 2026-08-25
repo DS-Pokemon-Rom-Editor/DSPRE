@@ -56,11 +56,19 @@
         <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"/>
         <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding IsHgssRom}"
                   ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
+        <MenuItem Header="Trophy Garden Editor…"   Click="TrophyGardenEditor_Click" IsEnabled="{Binding CanUseTrophyGardenEditor}"
+                  ToolTip.Tip="The 16-species pool Trophy Garden picks its daily-changing Pokémon from (DP/Platinum)"/>
       </MenuItem>
 
       <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Trainer Editor…"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
         <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}"/>
+        <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}"
+                  ToolTip.Tip="Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer"/>
+        <MenuItem Header="Trainer Flag Bulk Editor…" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
+                  ToolTip.Tip="Bulk-edit AI flags and the double-battle flag across many trainers at once"/>
+        <MenuItem Header="Battle Tower Editor…" Click="BattleTowerEditor_Click" IsEnabled="{Binding CanUseBattleTowerEditor}"
+                  ToolTip.Tip="Battle Tower trainer roster + the shared pool of rental Pokémon sets"/>
       </MenuItem>
 
       <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">

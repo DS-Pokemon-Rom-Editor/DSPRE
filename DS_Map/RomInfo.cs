@@ -122,6 +122,9 @@ namespace DSPRE
         public static int trainerNameLenOffset { get; private set; }
         public static int trainerNameMaxLen => SetTrainerNameMaxLen();
         public static int trainerFunnyScriptNumber { get; private set; }
+        /// <summary>US-version text archive numbers only; not yet confirmed for other localizations.</summary>
+        public static int battleTowerTrainerNamesMessageNumber { get; private set; }
+        public static int battleTowerTrainerMessagesNumber { get; private set; }
 
         public static int typesTextNumber { get; private set; }
         public static int trainerMessageTextNumber { get; private set; }
@@ -233,6 +236,8 @@ namespace DSPRE
             headbutt,
             rockSmash,
             safariZone,
+            battleTowerTrainers,
+            battleTowerPokemon,
 
             trainerProperties,
             trainerParty,
@@ -377,6 +382,7 @@ namespace DSPRE
             SetTrainerClassMessageNumber();
             SetTrainerFunnyScriptNumber();
             SetTrainerNameLenOffset();
+            SetBattleTowerTextNumbers();
             SetMoveTextNumbers();
             SetTypesTextNumber();
             SetTrainerMessageTextNumber();
@@ -1601,6 +1607,27 @@ namespace DSPRE
 
             trainerClassDescriptionMessageNumber = trainerClassMessageNumber + 1;
         }
+        // US-version text archive numbers only; not yet confirmed for other localizations.
+        private static void SetBattleTowerTextNumbers()
+        {
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    battleTowerTrainerNamesMessageNumber = 16;
+                    battleTowerTrainerMessagesNumber = 555;
+                    break;
+
+                case GameFamilies.Plat:
+                    battleTowerTrainerNamesMessageNumber = 21;
+                    battleTowerTrainerMessagesNumber = 614;
+                    break;
+
+                case GameFamilies.HGSS:
+                    battleTowerTrainerNamesMessageNumber = 27;
+                    battleTowerTrainerMessagesNumber = 724;
+                    break;
+            }
+        }
         private static void SetMoveTextNumbers()
         {
             bool jp = gameLanguage == GameLanguages.Japanese;
@@ -2158,6 +2185,9 @@ namespace DSPRE
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_tower\btdtr.narc",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_tower\btdpm.narc",
+
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\pokegra.narc",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\poketool\pokegra\otherpoke.narc",
 
@@ -2270,6 +2300,9 @@ namespace DSPRE
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
 
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdtr.narc",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdpm.narc",
+
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\pl_item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
 
@@ -2311,6 +2344,9 @@ namespace DSPRE
                         [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",   // ARC_BATT_BG (battle backgrounds + HAIKEI scroll BGs)
                         [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",   // ARC_BATT_OBJ (battle OBJ / terrain ground platforms)
                         [DirNames.battleBgPlanm] = $@"{dataFolderName}\a\0\0\9",   // ARC_BATT_BG_PLANM (HGSS-only WEST_HAIKEI_CHG_EX anim data)
+
+                        [DirNames.battleTowerTrainers] = $@"{dataFolderName}\a\2\0\2",
+                        [DirNames.battleTowerPokemon] = $@"{dataFolderName}\a\2\0\3",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",

@@ -124,6 +124,60 @@
         </DockPanel>
       </TabItem>
 
+      <TabItem Header="Overworld Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="OW Entry ID:" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding OwEntryIdSearch}" Minimum="0" Maximum="9999" Width="120"/>
+            <Button Content="Search"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="OwClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Which overworld events use a given OW sprite table entry. Double-click to open in the Event Editor."/>
+          <DataGrid ItemsSource="{Binding OwWatcherResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="OwGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Event File" Binding="{Binding EventFileID}"  Width="80"/>
+              <DataGridTextColumn Header="OW Index"   Binding="{Binding OwIndex}"      Width="70"/>
+              <DataGridTextColumn Header="OW ID"      Binding="{Binding OwID}"         Width="60"/>
+              <DataGridTextColumn Header="Position"   Binding="{Binding Position}"     Width="*"/>
+              <DataGridTextColumn Header="Movement"   Binding="{Binding Movement}"     Width="80"/>
+              <DataGridTextColumn Header="Script"     Binding="{Binding ScriptNumber}" Width="70"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Trainer Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
+            <Button Content="Search"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="TrainerWatchClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Where a trainer is referenced: script/function Trainer params, overworld trainer battles, and Vs. Seeker rows. Double-click to open."/>
+          <DataGrid ItemsSource="{Binding TrainerWatcherResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="TrainerWatchGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Source" Binding="{Binding SourceId}" Width="70"/>
+              <DataGridTextColumn Header="Type"   Binding="{Binding Type}"     Width="160"/>
+              <DataGridTextColumn Header="Index"  Binding="{Binding Index}"    Width="60"/>
+              <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
       <!-- ── Tab 5: Script Watcher ──────────────────────────────────────── -->
       <TabItem Header="Script Watcher">
         <TabControl>

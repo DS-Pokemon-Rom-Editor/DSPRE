@@ -129,22 +129,26 @@
         </ScrollViewer>
       </TabItem>
       <TabItem Header="TM/HM">
-        <Grid ColumnDefinitions="*,8,Auto,8,*" Margin="8">
-          <DockPanel Grid.Column="0">
-            <TextBlock DockPanel.Dock="Top" Text="Can Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}"/>
-          </DockPanel>
-          <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6">
-            <Button Content="Remove" Click="RemoveMachine_Click" Width="90"/>
-            <Button Content="Remove All" Click="RemoveAll_Click" Width="90"/>
-            <Button Content="Add" Click="AddMachine_Click" Width="90"/>
-            <Button Content="Add All" Click="AddAll_Click" Width="90"/>
-          </StackPanel>
-          <DockPanel Grid.Column="4">
-            <TextBlock DockPanel.Dock="Top" Text="Cannot Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>
-            <ListBox ItemsSource="{Binding AddableMachines}" SelectedIndex="{Binding SelectedAddableMachineIndex}"/>
-          </DockPanel>
-        </Grid>
+        <DockPanel Margin="8">
+          <Button DockPanel.Dock="Bottom" Content="Bulk Editor…" Click="TmHmBulkEditor_Click" HorizontalAlignment="Left" Margin="0,8,0,0"
+                   ToolTip.Tip="Edit TM/HM compatibility across many Pokémon at once, or per-machine across the whole dex"/>
+          <Grid ColumnDefinitions="*,8,Auto,8,*">
+            <DockPanel Grid.Column="0">
+              <TextBlock DockPanel.Dock="Top" Text="Can Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+              <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}"/>
+            </DockPanel>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6">
+              <Button Content="Remove" Click="RemoveMachine_Click" Width="90"/>
+              <Button Content="Remove All" Click="RemoveAll_Click" Width="90"/>
+              <Button Content="Add" Click="AddMachine_Click" Width="90"/>
+              <Button Content="Add All" Click="AddAll_Click" Width="90"/>
+            </StackPanel>
+            <DockPanel Grid.Column="4">
+              <TextBlock DockPanel.Dock="Top" Text="Cannot Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+              <ListBox ItemsSource="{Binding AddableMachines}" SelectedIndex="{Binding SelectedAddableMachineIndex}"/>
+            </DockPanel>
+          </Grid>
+        </DockPanel>
       </TabItem>
       <TabItem Header="hg-engine" IsVisible="{Binding ShowHgEngineExtras}">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">

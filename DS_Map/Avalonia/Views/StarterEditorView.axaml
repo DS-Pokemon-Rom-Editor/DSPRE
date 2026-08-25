@@ -4,7 +4,7 @@
 		x:Class="DSPRE.Avalonia.Views.StarterEditorView"
 		x:DataType="vm:StarterEditorViewModel"
 		Title="{Binding Title}"
-		Width="420" Height="320"
+		Width="460" Height="320"
 		WindowStartupLocation="CenterOwner"
 		CanResize="False">
   <Design.DataContext>
@@ -28,19 +28,24 @@
 		<TextBlock TextWrapping="Wrap" Opacity="0.8"
 				   Text="Also updates the DP/Pt selection-scene graphics, the rival's early team, tag-battle partners, HGSS starter cries, and the professor/rival dialogue naming the species."/>
 
-		<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,8,0,0">
+		<Grid ColumnDefinitions="Auto,*,36" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,8,0,0">
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Starter 1:" VerticalAlignment="Center"/>
 		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter1}" HorizontalAlignment="Stretch"/>
+		  <Image     Grid.Row="0" Grid.Column="2" Source="{Binding Starter1Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="1" Grid.Column="0" Text="Starter 2:" VerticalAlignment="Center"/>
 		  <ComboBox  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter2}" HorizontalAlignment="Stretch"/>
+		  <Image     Grid.Row="1" Grid.Column="2" Source="{Binding Starter2Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Starter 3:" VerticalAlignment="Center"/>
 		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch"/>
+		  <Image     Grid.Row="2" Grid.Column="2" Source="{Binding Starter3Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held Item:" VerticalAlignment="Center" IsVisible="{Binding IsHeldItemSupported}"/>
 		  <ComboBox  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
 					 HorizontalAlignment="Stretch" IsVisible="{Binding IsHeldItemSupported}"/>
+		  <Image     Grid.Row="3" Grid.Column="2" Source="{Binding HeldItemIcon}" Width="32" Height="32" Stretch="Uniform"
+					 IsVisible="{Binding IsHeldItemSupported}"/>
 		</Grid>
 	  </StackPanel>
 	</Border>

@@ -46,6 +46,26 @@ namespace DSPRE.Avalonia.Views
             }
         }
 
+        // ── Overworld Watcher ────────────────────────────────────────────────────
+        private void OwSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchOverworldEntryUsage();
+        private void OwClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearOwResults();
+
+        private void OwGrid_DoubleTapped(object sender, TappedEventArgs e)
+        {
+            if (sender is DataGrid dg && dg.SelectedItem is OwEntryUsageResult r)
+                VM?.NavigateToOwResult(r);
+        }
+
+        // ── Trainer Watcher ──────────────────────────────────────────────────────
+        private void TrainerWatchSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchTrainerUsage();
+        private void TrainerWatchClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearTrainerResults();
+
+        private void TrainerWatchGrid_DoubleTapped(object sender, TappedEventArgs e)
+        {
+            if (sender is DataGrid dg && dg.SelectedItem is TrainerUsageResult r)
+                VM?.NavigateToTrainerResult(r);
+        }
+
         // ── File Watcher ──────────────────────────────────────────────────────
         private void FileWatcherSearch_Click(object sender, RoutedEventArgs e)
             => VM?.SearchScriptFileReferences();

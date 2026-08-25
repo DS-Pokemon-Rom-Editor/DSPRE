@@ -205,8 +205,12 @@ namespace DSPRE.Avalonia.ViewModels
             }
             else
             {
-                GenderLoaded = IsExpansionSupported && TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _);
-                if (GenderLoaded) GenderIndex = gender;
+                GenderLoaded = false;
+                if (IsExpansionSupported && TrainerClassTableExpansion.TryReadGender(index, out byte gender, out _))
+                {
+                    GenderLoaded = true;
+                    GenderIndex = gender;
+                }
 
                 PrizeMulLoaded = TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
                 if (PrizeMulLoaded) PrizeMultiplier = prizeMul;

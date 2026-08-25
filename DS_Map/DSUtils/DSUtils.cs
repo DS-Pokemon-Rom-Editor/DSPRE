@@ -1045,6 +1045,32 @@ namespace DSPRE {
             }
         }
 
+        /// <summary>GDI-free item icon lookup, same NCLR/NCGR/NCER decode as the WinForms <c>GetItemPic</c>
+        /// (item icon table entry → palette/sprite/cell files in the itemIcons NARC), returned as a
+        /// <see cref="RawImage"/> instead of a System.Drawing Image. Returns null (not a placeholder) on
+        /// failure — callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
+        public static RawImage GetItemPicRaw(int itemId, int w, int h) {
+            try {
+                uint entryOffset = (uint)(RomInfo.itemTableOffset + itemId * 8);
+                int itemIconId = ARM9.ReadWordLE(entryOffset + 2);
+                int itemPaletteId = ARM9.ReadWordLE(entryOffset + 4);
+                string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
+
+                string paletteFilename = itemPaletteId.ToString("D4");
+                var itemPalette = new NCLR(Path.Combine(itemIconsDir, paletteFilename), itemPaletteId, paletteFilename);
+
+                string spriteFilename = itemIconId.ToString("D4");
+                ImageBase imageBase = new NCGR(Path.Combine(itemIconsDir, spriteFilename), itemIconId, spriteFilename);
+
+                string ncerFileName = "0001"; // the only NCER in the itemIcons NARC
+                SpriteBase spriteBase = new NCER(Path.Combine(itemIconsDir, ncerFileName), 2, ncerFileName);
+
+                return spriteBase.Get_RawImage(imageBase, itemPalette, 0, w, h, trans: true, currOAM: -1, draw_index: null);
+            } catch (Exception) {
+                return null;
+            }
+        }
+
         // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so ImageBase.Read falls
         // back to Actions.Get_Size's generic square/0x100-wide guess — which produces a nonsensical shape
         // (e.g. 256×8 for a real 32×64 icon) totally unrelated to how the game actually reads this data.
@@ -1065,6 +1091,45 @@ namespace DSPRE {
         public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1) {
             LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
             return DecodeMonIconTiles(imageBase, paletteBase.Palette[0]);
+        }
+
+        /// <summary>Same tile walk as <see cref="DecodeMonIconTiles"/>, but returns the raw 0-15 palette
+        /// indices instead of resolving them to colors, plus the palette itself. RawImage is always
+        /// flattened BGRA (see its own doc comment) so it can't carry an indexed image; callers that want
+        /// a genuine indexed PNG (preserving the real 16-color palette table, not just its resolved
+        /// pixels) need this instead.</summary>
+        public static bool TryGetMonIconIndexedPixels(int species, int paletteIdOverride, out byte[] indices, out int width, out int height, out Color[] palette) {
+            LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out _, out _);
+            indices = null; width = 0; height = 0; palette = null;
+            if (imageBase.FormatColor != Ekona.Images.ColorFormat.colors16) return false;
+
+            byte[] tiles = imageBase.Tiles;
+            int tileBytes = MonIconTileSize * MonIconTileSize * imageBase.BPP / 8;
+            int totalTiles = tileBytes > 0 ? tiles.Length / tileBytes : 0;
+            int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
+            height = tilesTall * MonIconTileSize;
+            width = MonIconWidth;
+            indices = new byte[width * height];
+
+            int pos = 0;
+            for (int ty = 0; ty < tilesTall; ty++)
+                for (int tx = 0; tx < MonIconTilesWide; tx++)
+                    for (int y = 0; y < MonIconTileSize; y++)
+                        for (int x = 0; x < MonIconTileSize; x++)
+                        {
+                            int byteIndex = pos / 2;
+                            int idx = 0;
+                            if (byteIndex < tiles.Length)
+                            {
+                                byte packed = tiles[byteIndex];
+                                idx = (pos % 2 == 0) ? (packed & 0x0F) : ((packed & 0xF0) >> 4);
+                            }
+                            pos++;
+                            indices[(ty * MonIconTileSize + y) * width + (tx * MonIconTileSize + x)] = (byte)idx;
+                        }
+
+            palette = paletteBase.Palette[0];
+            return true;
         }
 
         private static RawImage DecodeMonIconTiles(ImageBase imageBase, Color[] palette) {

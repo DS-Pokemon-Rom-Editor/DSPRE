@@ -277,6 +277,9 @@ namespace DSPRE.Avalonia.ViewModels
             catch { IconPreview = null; }
         }
 
+        private bool _fullPaletteExport;
+        public bool FullPaletteExport { get => _fullPaletteExport; set => Set(ref _fullPaletteExport, value); }
+
         /// <summary>Exports the icon's current raw graphic (on-disk, or the pending import if one hasn't
         /// been saved yet) at native resolution — no OAM padding, suitable for round-tripping.</summary>
         public RawImage ExportIconGraphic()
@@ -284,6 +287,22 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _currentId < 0) return null;
             if (_pendingIconGraphic != null) return _pendingIconGraphic;
             try { return DSPRE.DSUtils.GetMonIconGraphicRaw(_currentId, _partyPaletteIndex); }
+            catch { return null; }
+        }
+
+        /// <summary>Exports the icon as a genuine indexed PNG (real embedded 16-color palette table,
+        /// not RawImage's always-flattened RGBA) so tools that read PNG palettes see the actual colors —
+        /// same intent as the WinForms "export full palette" option. Unavailable while a pending unsaved
+        /// import exists, since that replacement isn't on disk in indexed form yet.</summary>
+        public byte[] ExportIconGraphicIndexedPng()
+        {
+            if (!IsAvailable || _currentId < 0 || _pendingIconGraphic != null) return null;
+            try
+            {
+                if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(_currentId, _partyPaletteIndex, out byte[] indices, out int w, out int h, out var palette))
+                    return null;
+                return DSPRE.Avalonia.IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
+            }
             catch { return null; }
         }
 

@@ -85,6 +85,8 @@
                 <Button Content="Import PNG…" Click="ImportIcon_Click" Width="110"
                         ToolTip.Tip="Replace the icon graphic. Must match the icon's exact pixel size; colors are matched to the palette selected above (pixels below 50% alpha become transparent)."/>
                 <Button Content="Export PNG…" Click="ExportIcon_Click" Width="110"/>
+                <CheckBox Content="Full palette" IsChecked="{Binding FullPaletteExport}"
+                          ToolTip.Tip="Export as a real indexed PNG with the icon's 16-color palette embedded, instead of flattening it to plain RGBA"/>
               </StackPanel>
             </StackPanel>
           </StackPanel>

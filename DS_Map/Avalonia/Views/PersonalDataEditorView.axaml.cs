@@ -48,6 +48,9 @@ namespace DSPRE.Avalonia.Views
         private void RemoveAll_Click(object sender, RoutedEventArgs e)
             => ViewModel.RemoveAllMachinesCommand();
 
+        private void TmHmBulkEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTmHmBulkEditor();
+
         private void CreateOwEntry_Click(object sender, RoutedEventArgs e)
             => ViewModel.CreateOwFollowerEntry();
 

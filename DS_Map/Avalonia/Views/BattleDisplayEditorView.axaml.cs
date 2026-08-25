@@ -47,8 +47,14 @@ namespace DSPRE.Avalonia.Views
             var top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
 
-            var raw = VM.ExportIconGraphic();
-            if (raw == null) { await DialogHelper.ShowError("Export failed: nothing to export."); return; }
+            byte[] indexedPng = VM.FullPaletteExport ? VM.ExportIconGraphicIndexedPng() : null;
+            var raw = VM.FullPaletteExport ? null : VM.ExportIconGraphic();
+            if (indexedPng == null && raw == null)
+            {
+                string reason = VM.FullPaletteExport ? "save the icon graphic first (full-palette export needs it on disk)" : "nothing to export";
+                await DialogHelper.ShowError($"Export failed: {reason}.");
+                return;
+            }
 
             var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -60,7 +66,11 @@ namespace DSPRE.Avalonia.Views
             string path = file.TryGetLocalPath();
             if (path == null) return;
 
-            try { DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path, PngBitmapEncoderOptions.Default); }
+            try
+            {
+                if (indexedPng != null) System.IO.File.WriteAllBytes(path, indexedPng);
+                else DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw).Save(path, PngBitmapEncoderOptions.Default);
+            }
             catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}"); }
         }
 

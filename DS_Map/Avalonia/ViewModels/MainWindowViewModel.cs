@@ -44,6 +44,9 @@ namespace DSPRE.Avalonia.ViewModels
         public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
         public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
         public bool CanUseTrainerSpriteEditor => IsRomLoaded && !isHGE;
+        public bool CanUseVsSeekerRematchEditor => IsRomLoaded && VsSeekerRematchTable.IsSupported;
+        public bool CanUseTrainerFlagBulkEditor => IsRomLoaded && HgAllows;
+        public bool CanUseBattleTowerEditor => IsRomLoaded && DSPRE.ROMFiles.BattleTowerTrainerFile.IsAvailable() && DSPRE.ROMFiles.BattleTowerPokemonSetFile.IsAvailable();
         public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
         public bool CanUseDungeonCutinEditor => IsRomLoaded && RomInfo.IsDungeonCutinEditorAvailable();
         public bool CanUseTitleScreenEditor => IsRomLoaded && RomInfo.IsTitleScreenEditorAvailable();
@@ -53,6 +56,7 @@ namespace DSPRE.Avalonia.ViewModels
         // DSPRE can read/write from source yet, so it stays blocked regardless of the link — unlike
         // CanUseWildEditors, which covers the actual wild-encounter table hg-engine does own.
         public bool CanUseSpecialEncountersEditor => IsRomLoaded && !isHGE;
+        public bool CanUseTrophyGardenEditor => IsRomLoaded && DSPRE.ROMFiles.TrophyGardenEncounterFile.IsAvailable();
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
         // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
@@ -110,12 +114,16 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
             OnPropertyChanged(nameof(CanUseTrainerSpriteEditor));
+            OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
+            OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
+            OnPropertyChanged(nameof(CanUseBattleTowerEditor));
             OnPropertyChanged(nameof(CanUseStarterEditor));
             OnPropertyChanged(nameof(CanUseDungeonCutinEditor));
             OnPropertyChanged(nameof(CanUseTitleScreenEditor));
             OnPropertyChanged(nameof(CanUseTrainerCardEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
+            OnPropertyChanged(nameof(CanUseTrophyGardenEditor));
             OnPropertyChanged(nameof(IsHgssRom));
             OnPropertyChanged(nameof(CanUseMiscTables));
             OnPropertyChanged(nameof(IsHgEngineLinked));
@@ -133,6 +141,7 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
+            OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanCompileRom));
         }

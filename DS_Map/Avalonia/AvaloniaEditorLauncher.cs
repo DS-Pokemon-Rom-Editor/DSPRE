@@ -3,6 +3,7 @@ using DSPRE.Avalonia.ViewModels;
 using DSPRE.Avalonia.Views;
 using DSPRE.HgEngine;
 using DSPRE.Resources;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia
@@ -189,6 +190,34 @@ namespace DSPRE.Avalonia
             new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
+        public static void OpenTmHmBulkEditor()
+        {
+            if (!IsRomLoaded || BlockedForHge("The TM/HM Bulk Editor", HgEngineDomain.Species)) return;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions });
+            var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
+            new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700).ShowManaged();
+        }
+
+        public static void OpenBattleTowerEditor()
+        {
+            if (!IsRomLoaded || !BattleTowerTrainerFile.IsAvailable() || !BattleTowerPokemonSetFile.IsAvailable())
+            {
+                if (IsRomLoaded) AppMessages.Warning("Battle Tower data was not found for this game.", "Not Available");
+                return;
+            }
+            new EditorHostWindow("Battle Tower Editor",
+                new BattleTowerEditorView(new BattleTowerEditorViewModel()),
+                1000, 700).ShowManaged();
+        }
+
+        public static void OpenTrophyGardenEditor()
+        {
+            if (!IsRomLoaded || !TrophyGardenEncounterFile.IsAvailable()) return;
+            new EditorHostWindow("Trophy Garden Editor",
+                new TrophyGardenEditorView(new TrophyGardenEditorViewModel()),
+                700, 500).ShowManaged();
+        }
+
         public static void OpenWildEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded || BlockedForHge("The Wild Pokémon Editor", HgEngineDomain.Encounters)) return;
@@ -242,6 +271,29 @@ namespace DSPRE.Avalonia
             if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor")) return;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
             new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
+        }
+
+        public static void OpenTrainerFlagBulkEditor()
+        {
+            if (!IsRomLoaded || BlockedForHge("The Trainer Flag Bulk Editor", HgEngineDomain.Trainers)) return;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+            new EditorHostWindow("Trainer Flag Bulk Editor",
+                new TrainerFlagBulkEditorView(new TrainerFlagBulkEditorViewModel()),
+                1050, 700).ShowManaged();
+        }
+
+        public static void OpenVsSeekerRematchEditor(int initialRowIndex = -1)
+        {
+            if (!IsRomLoaded) return;
+            if (!VsSeekerRematchTable.IsSupported)
+            {
+                AppMessages.Info("The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English).",
+                    "Not Supported");
+                return;
+            }
+            new EditorHostWindow("Vs. Seeker Rematch Editor",
+                new VsSeekerRematchView(new VsSeekerRematchViewModel(initialRowIndex)),
+                900, 600).ShowManaged();
         }
 
         public static void OpenStarterEditor()
@@ -317,6 +369,14 @@ namespace DSPRE.Avalonia
             if (!IsRomLoaded) return;
             new EditorHostWindow("Event Editor",
                 new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }),
+                1200, 720).ShowManaged();
+        }
+
+        public static void OpenEventEditorWithOverworld(int eventFileId, int owIndex)
+        {
+            if (!IsRomLoaded) return;
+            new EditorHostWindow("Event Editor",
+                new EventEditorView(new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex }),
                 1200, 720).ShowManaged();
         }
 
@@ -477,6 +537,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
+            new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
@@ -485,6 +546,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
+            new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
+            new() { Name = "Trainer Flag Bulk Editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },
             new() { Name = "Level Script Editor",   Run = () => OpenLevelScriptEditor() },
@@ -505,6 +568,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Special Encounters",    Keywords = "bug contest marsh honey safari", Run = OpenEncountersEditor },
             new() { Name = "Headbutt Editor",       Keywords = "tree hgss", Run = () => OpenHeadbuttEncounterEditor() },
+            new() { Name = "Trophy Garden Editor",  Keywords = "daily pokemon backlot dp plat", Run = OpenTrophyGardenEditor },
+            new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },

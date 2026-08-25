@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using DSPRE.Avalonia;
 using DSPRE.Editors.Utils;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
@@ -88,6 +89,25 @@ namespace DSPRE.Avalonia.ViewModels
         public string Value { get; set; }
     }
 
+    public class OwEntryUsageResult
+    {
+        public int EventFileID { get; set; }
+        public int OwIndex { get; set; }
+        public int OwID { get; set; }
+        public string Position { get; set; }
+        public int Movement { get; set; }
+        public int ScriptNumber { get; set; }
+    }
+
+    public class TrainerUsageResult
+    {
+        /// <summary>Event file ID, script file ID, or -1 for Vs. Seeker rows.</summary>
+        public int SourceId { get; set; }
+        public string Type { get; set; }
+        public int Index { get; set; }
+        public string Details { get; set; }
+    }
+
     // ── Main ViewModel ────────────────────────────────────────────────────────
 
     public class ResearchHelperViewModel : INotifyPropertyChanged
@@ -157,6 +177,20 @@ namespace DSPRE.Avalonia.ViewModels
         public int SelectedScriptIdIndex { get => _selectedScriptIdIndex; set => Set(ref _selectedScriptIdIndex, value); }
 
         public ObservableCollection<ScriptIdUsageResult> ScriptIdResults { get; } = new();
+
+        // ── Tab: Overworld Watcher ──────────────────────────────────────────────
+        private int _owEntryIdSearch;
+        public int OwEntryIdSearch { get => _owEntryIdSearch; set => Set(ref _owEntryIdSearch, value); }
+
+        public ObservableCollection<OwEntryUsageResult> OwWatcherResults { get; } = new();
+
+        // ── Tab: Trainer Watcher ────────────────────────────────────────────────
+        public ObservableCollection<string> TrainerNamesList { get; } = new();
+
+        private int _selectedTrainerIndex = -1;
+        public int SelectedTrainerIndex { get => _selectedTrainerIndex; set => Set(ref _selectedTrainerIndex, value); }
+
+        public ObservableCollection<TrainerUsageResult> TrainerWatcherResults { get; } = new();
 
         // ── Tab 6: Header Watcher ─────────────────────────────────────────────
         private int _headerSearchId;
@@ -290,6 +324,10 @@ namespace DSPRE.Avalonia.ViewModels
 
                 if (ScriptFileEntries.Count > 0)
                     SelectedScriptFileIndex = 0;
+
+                TrainerNamesList.Clear();
+                foreach (var name in DSPRE.TrainerNames.GetAll()) TrainerNamesList.Add(name);
+                if (TrainerNamesList.Count > 0) SelectedTrainerIndex = 0;
 
                 DataLoaded = true;
                 StatusText = $"Loaded {_cachedScriptFiles.Count} script files, {_cachedLevelScriptFiles.Count} level scripts, {_cachedEventFiles.Count} event files";
@@ -497,6 +535,181 @@ namespace DSPRE.Avalonia.ViewModels
             }
 
             StatusText = $"Found {ScriptIdResults.Count} uses of Script {scriptId}";
+        }
+
+        // ── Overworld Watcher ────────────────────────────────────────────────────
+        public void SearchOverworldEntryUsage()
+        {
+            if (!DataLoaded) { StatusText = "Data not loaded yet."; return; }
+
+            int owEntryId = OwEntryIdSearch;
+            OwWatcherResults.Clear();
+            StatusText = $"Searching for OW Entry ID {owEntryId}...";
+
+            foreach (var eventFile in _cachedEventFiles)
+            {
+                if (eventFile.overworlds == null) continue;
+
+                for (int i = 0; i < eventFile.overworlds.Count; i++)
+                {
+                    var ow = eventFile.overworlds[i];
+                    if (ow.overlayTableEntry != owEntryId) continue;
+
+                    OwWatcherResults.Add(new OwEntryUsageResult
+                    {
+                        EventFileID = eventFile.ID,
+                        OwIndex = i,
+                        OwID = ow.owID,
+                        Position = $"Map ({ow.xMapPosition}, {ow.yMapPosition}) / Matrix ({ow.xMatrixPosition}, {ow.yMatrixPosition})",
+                        Movement = ow.movement,
+                        ScriptNumber = ow.scriptNumber
+                    });
+                }
+            }
+
+            StatusText = $"Found {OwWatcherResults.Count} overworld event(s) using OW Entry ID {owEntryId}";
+        }
+
+        public void ClearOwResults() { OwWatcherResults.Clear(); OwEntryIdSearch = 0; StatusText = "Overworld Watcher search cleared"; }
+
+        public void NavigateToOwResult(OwEntryUsageResult result)
+        {
+            if (result == null) return;
+            AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.EventFileID, result.OwIndex);
+            StatusText = $"Opened Event File {result.EventFileID}, Overworld {result.OwIndex}";
+        }
+
+        // ── Trainer Watcher ──────────────────────────────────────────────────────
+        public void SearchTrainerUsage()
+        {
+            if (!DataLoaded) { StatusText = "Data not loaded yet."; return; }
+            if (SelectedTrainerIndex < 0) { StatusText = "Select a trainer."; return; }
+
+            int trainerId = SelectedTrainerIndex;
+            TrainerWatcherResults.Clear();
+            StatusText = $"Searching for Trainer {trainerId} usage...";
+
+            var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+            foreach (var scriptFile in _cachedScriptFiles)
+            {
+                ScanContainersForTrainerParameter(scriptFile.allScripts, commandInfoDict, trainerId, scriptFile.fileID, "Script Command");
+                ScanContainersForTrainerParameter(scriptFile.allFunctions, commandInfoDict, trainerId, scriptFile.fileID, "Function Command");
+            }
+
+            // Mirrors EventEditor.NavigateToOverworldTarget's decode formula.
+            foreach (var eventFile in _cachedEventFiles)
+            {
+                if (eventFile.overworlds == null) continue;
+
+                for (int i = 0; i < eventFile.overworlds.Count; i++)
+                {
+                    var ow = eventFile.overworlds[i];
+                    if (ow.type != (ushort)Overworld.OwType.TRAINER) continue;
+
+                    bool isPartner = ow.scriptNumber >= 4999;
+                    int decodedId = ow.scriptNumber - (isPartner ? 4999 : 2999);
+                    if (decodedId > RomInfo.trainerFunnyScriptNumber - 1) decodedId--;
+
+                    if (decodedId != trainerId) continue;
+
+                    TrainerWatcherResults.Add(new TrainerUsageResult
+                    {
+                        SourceId = eventFile.ID,
+                        Type = isPartner ? "Overworld (Partner)" : "Overworld",
+                        Index = i,
+                        Details = ow.ToString()
+                    });
+                }
+            }
+
+            if (VsSeekerRematchTable.IsSupported)
+            {
+                var rows = VsSeekerRematchTable.ReadAll();
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    var row = rows[r];
+                    if (row.EncounterTrainerId == trainerId)
+                    {
+                        TrainerWatcherResults.Add(new TrainerUsageResult
+                        {
+                            SourceId = -1,
+                            Type = "Vs. Seeker Encounter",
+                            Index = r,
+                            Details = $"Row {r}: owns this rematch chain"
+                        });
+                    }
+                    for (int s = 0; s < row.RematchTrainerIds.Length; s++)
+                    {
+                        if (row.RematchTrainerIds[s] != trainerId) continue;
+
+                        TrainerWatcherResults.Add(new TrainerUsageResult
+                        {
+                            SourceId = -1,
+                            Type = $"Vs. Seeker Rematch {(char)('A' + s)}",
+                            Index = r,
+                            Details = $"Row {r}: rematch {(char)('A' + s)} for encounter trainer {row.EncounterTrainerId}"
+                        });
+                    }
+                }
+            }
+
+            StatusText = $"Found {TrainerWatcherResults.Count} use(s) of Trainer {trainerId}";
+        }
+
+        public void ClearTrainerResults() { TrainerWatcherResults.Clear(); StatusText = "Trainer Watcher search cleared"; }
+
+        private void ScanContainersForTrainerParameter(List<ScriptCommandContainer> containers,
+            Dictionary<ushort, ScriptCommandInfo> commandInfoDict, int trainerId, int sourceFileId, string typeLabel)
+        {
+            if (containers == null) return;
+
+            foreach (var container in containers)
+            {
+                if (container.commands == null) continue;
+
+                foreach (var cmd in container.commands)
+                {
+                    if (cmd.id == null || cmd.cmdParams == null) continue;
+                    if (!commandInfoDict.TryGetValue(cmd.id.Value, out ScriptCommandInfo cmdInfo) || cmdInfo.ParameterTypes == null) continue;
+
+                    for (int i = 0; i < cmd.cmdParams.Count && i < cmdInfo.ParameterTypes.Count; i++)
+                    {
+                        if (cmdInfo.ParameterTypes[i] != ScriptParameter.ParameterType.Trainer) continue;
+                        if (GetParamValue(cmd.cmdParams[i]) != trainerId) continue;
+
+                        TrainerWatcherResults.Add(new TrainerUsageResult
+                        {
+                            SourceId = sourceFileId,
+                            Type = typeLabel,
+                            Index = (int)container.manualUserID,
+                            Details = $"{cmdInfo.Name} (param {i})"
+                        });
+                    }
+                }
+            }
+        }
+
+        public void NavigateToTrainerResult(TrainerUsageResult result)
+        {
+            if (result == null) return;
+
+            if (result.Type.StartsWith("Vs. Seeker"))
+            {
+                AvaloniaEditorLauncher.OpenVsSeekerRematchEditor(result.Index);
+                StatusText = "Opened Vs. Seeker Rematch Editor";
+                return;
+            }
+
+            if (result.Type.StartsWith("Overworld"))
+            {
+                AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.SourceId, result.Index);
+                StatusText = $"Opened Event File {result.SourceId}, Overworld {result.Index}";
+            }
+            else if (result.Type == "Script Command" || result.Type == "Function Command")
+            {
+                AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId);
+                StatusText = $"Opened Script File {result.SourceId}";
+            }
         }
 
         // ── Header Watcher ────────────────────────────────────────────────────

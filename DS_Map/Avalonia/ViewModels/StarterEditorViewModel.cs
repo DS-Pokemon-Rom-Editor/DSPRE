@@ -52,6 +52,7 @@ namespace DSPRE.Avalonia.ViewModels
             _starter2 = snap.S2; OnPropertyChanged(nameof(Starter2));
             _starter3 = snap.S3; OnPropertyChanged(nameof(Starter3));
             _heldItem = snap.HeldItem; OnPropertyChanged(nameof(HeldItem));
+            RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon();
             _loading = false;
 
             _dirty = _history.IsDirty;
@@ -79,10 +80,37 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Starter species / held item ──────────────────────────────────────
         private int _starter1, _starter2, _starter3, _heldItem;
-        public int Starter1 { get => _starter1; set { if (Set(ref _starter1, value)) MarkDirty(); } }
-        public int Starter2 { get => _starter2; set { if (Set(ref _starter2, value)) MarkDirty(); } }
-        public int Starter3 { get => _starter3; set { if (Set(ref _starter3, value)) MarkDirty(); } }
-        public int HeldItem { get => _heldItem; set { if (Set(ref _heldItem, value)) MarkDirty(); } }
+        public int Starter1 { get => _starter1; set { if (Set(ref _starter1, value)) { MarkDirty(); RefreshStarterIcon(1); } } }
+        public int Starter2 { get => _starter2; set { if (Set(ref _starter2, value)) { MarkDirty(); RefreshStarterIcon(2); } } }
+        public int Starter3 { get => _starter3; set { if (Set(ref _starter3, value)) { MarkDirty(); RefreshStarterIcon(3); } } }
+        public int HeldItem { get => _heldItem; set { if (Set(ref _heldItem, value)) { MarkDirty(); RefreshHeldItemIcon(); } } }
+
+        // ── Icons ─────────────────────────────────────────────────────────────
+        private readonly PokemonIconCache _pokemonIcons = new();
+        private global::Avalonia.Media.IImage _starter1Icon, _starter2Icon, _starter3Icon, _heldItemIcon;
+        public global::Avalonia.Media.IImage Starter1Icon { get => _starter1Icon; private set => Set(ref _starter1Icon, value); }
+        public global::Avalonia.Media.IImage Starter2Icon { get => _starter2Icon; private set => Set(ref _starter2Icon, value); }
+        public global::Avalonia.Media.IImage Starter3Icon { get => _starter3Icon; private set => Set(ref _starter3Icon, value); }
+        public global::Avalonia.Media.IImage HeldItemIcon { get => _heldItemIcon; private set => Set(ref _heldItemIcon, value); }
+
+        private void RefreshStarterIcon(int slot)
+        {
+            var icon = _pokemonIcons.Get(slot == 1 ? _starter1 : slot == 2 ? _starter2 : _starter3);
+            if (slot == 1) Starter1Icon = icon;
+            else if (slot == 2) Starter2Icon = icon;
+            else Starter3Icon = icon;
+        }
+
+        private void RefreshHeldItemIcon()
+        {
+            if (!IsHeldItemSupported || _heldItem <= 0) { HeldItemIcon = null; return; }
+            try
+            {
+                var raw = DSUtils.GetItemPicRaw(_heldItem, 32, 32);
+                HeldItemIcon = raw != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw) : null;
+            }
+            catch { HeldItemIcon = null; }
+        }
 
         /// <summary>HGSS starters never carry a held item.</summary>
         public bool IsHeldItemSupported => RomInfo.gameFamily != RomInfo.GameFamilies.HGSS;
@@ -103,6 +131,9 @@ namespace DSPRE.Avalonia.ViewModels
                 _loading = false;
                 return;
             }
+
+            DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<RomInfo.DirNames> { RomInfo.DirNames.monIcons, RomInfo.DirNames.itemIcons });
+            RomInfo.SetMonIconsPalTableAddress();
 
             foreach (var n in RomInfo.GetPokemonNames()) PokemonNames.Add(n);
             foreach (var n in RomInfo.GetItemNames()) ItemNames.Add(n);
@@ -126,6 +157,7 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(Starter3));
             OnPropertyChanged(nameof(HeldItem));
             OnPropertyChanged(nameof(IsHeldItemSupported));
+            RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon();
 
             _dirty = false;
             Title = "Starter Pokémon Editor";

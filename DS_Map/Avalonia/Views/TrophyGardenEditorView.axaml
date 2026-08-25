@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.TrophyGardenEditorView"
+        x:DataType="vm:TrophyGardenEditorViewModel">
+
+  <Design.DataContext>
+    <vm:TrophyGardenEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" ToolTip.Tip="Save changes to the ROM."/>
+        <Button Content="Export…" Click="Export_Click" ToolTip.Tip="Export encounters to an external file."/>
+        <Button Content="Import…" Click="Import_Click" ToolTip.Tip="Import encounters from an external file."/>
+        <Button Content="Locate…" Click="Locate_Click" ToolTip.Tip="Open the folder containing the encounter files."/>
+        <Button Content="Help" Click="Help_Click" Margin="12,0,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <Grid>
+      <TextBlock Text="Trophy Garden isn't available for this ROM." Margin="16" IsVisible="{Binding !IsAvailable}"/>
+
+      <Grid ColumnDefinitions="240,*" IsVisible="{Binding IsAvailable}">
+        <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding SlotLabels}"
+                 SelectedIndex="{Binding SelectedSlotIndex}"/>
+
+        <StackPanel Grid.Column="1" Margin="16" Spacing="8">
+          <Border Width="64" Height="64" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                  Background="{DynamicResource Editor.PanelBg}" HorizontalAlignment="Left">
+            <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
+          </Border>
+          <TextBlock Text="{Binding SlotInfoText}"/>
+          <TextBlock Text="Species"/>
+          <ComboBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</UserControl>
