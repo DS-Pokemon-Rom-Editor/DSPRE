@@ -1523,7 +1523,7 @@ namespace DSPRE.ROMFiles
 
             for (int l = 0; l < linelist.Count; l++)
             {
-                string cur = linelist[l];
+                string cur = linelist[l].Trim();
                 if (!string.IsNullOrWhiteSpace(cur))
                 {
                     lineSource.Add((l, cur));
