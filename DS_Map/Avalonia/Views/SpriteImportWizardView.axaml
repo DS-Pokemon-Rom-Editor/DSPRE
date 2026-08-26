@@ -39,7 +39,7 @@
       <Border Height="1" Background="{DynamicResource Editor.Border}"/>
       <TextBlock Text="Which palette(s)?" FontWeight="SemiBold"/>
       <CheckBox Content="Normal" IsChecked="{Binding IncludeNormalPalette}"/>
-      <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}"/>
+      <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}" IsVisible="{Binding ShowShinyPaletteOption}"/>
       <TextBlock Text="Based on which pose's reference image?" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
       <ComboBox ItemsSource="{Binding AvailableRefPoses}" SelectedItem="{Binding RefPose}" HorizontalAlignment="Stretch"/>
     </StackPanel>
@@ -50,7 +50,7 @@
       <TextBlock Text="Which color?" FontWeight="SemiBold"/>
       <StackPanel Orientation="Horizontal" Spacing="12">
         <RadioButton GroupName="sheetcolor" Content="Normal (the artwork itself)" IsChecked="True" Click="SheetColorNormal_Click"/>
-        <RadioButton GroupName="sheetcolor" Content="Shiny (colors only, from a shiny-colored sheet)" Click="SheetColorShiny_Click"/>
+        <RadioButton GroupName="sheetcolor" Content="Shiny (colors only, from a shiny-colored sheet)" Click="SheetColorShiny_Click" IsVisible="{Binding !IsHgEngineActive}"/>
       </StackPanel>
       <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
                  IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -58,7 +58,8 @@
       <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !GenderGapActive}">
         <RadioButton GroupName="sheetgender" Content="Female" Click="SheetGenderFemale_Click"/>
         <RadioButton GroupName="sheetgender" Content="Male" Click="SheetGenderMale_Click"/>
-        <RadioButton GroupName="sheetgender" Content="Both" IsChecked="True" Click="SheetGenderBoth_Click"/>
+        <RadioButton GroupName="sheetgender" Content="Both (2 separate sheets)" IsChecked="True" Click="SheetGenderBoth_Click"/>
+        <RadioButton GroupName="sheetgender" Content="Both (1 combined sheet)" Click="SheetGenderCombined_Click" IsVisible="{Binding CanUseFullSheet}"/>
       </StackPanel>
     </StackPanel>
 

@@ -33,6 +33,7 @@ namespace DSPRE.Avalonia.Views
         private void SheetGenderFemale_Click(object sender, RoutedEventArgs e) => VM.SheetGenderMode = "Female";
         private void SheetGenderMale_Click(object sender, RoutedEventArgs e) => VM.SheetGenderMode = "Male";
         private void SheetGenderBoth_Click(object sender, RoutedEventArgs e) => VM.SheetGenderMode = "Both";
+        private void SheetGenderCombined_Click(object sender, RoutedEventArgs e) => VM.SheetGenderMode = "Combined";
 
         private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 

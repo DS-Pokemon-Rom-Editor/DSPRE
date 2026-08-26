@@ -115,5 +115,24 @@ namespace DSPRE.Avalonia.Views
             => await VM.ExportSpriteSheet(OwnerWindow, female: true, shiny: true);
         private async void ExportMaleShinySheet_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSpriteSheet(OwnerWindow, female: false, shiny: true);
+
+        // --- Both-genders sheet (only shown when the species genuinely has separate male/female art) ---
+        private async void ImportFullSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportFullSheet(OwnerWindow);
+        private async void ExportFullSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportFullSheet(OwnerWindow);
+        private async void ImportShinyFullSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportShinyFullSheet(OwnerWindow);
+        private async void ExportShinyFullSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportFullSheet(OwnerWindow, shiny: true);
+
+        // --- Palette swatch color editor -----------------------------------------------
+        private void PaletteSwatch_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.Tag is not PokemonSpriteEditorViewModel.PaletteSwatch swatch) return;
+            var vm = new PaletteColorEditorViewModel(VM, swatch.Shiny, swatch.Index);
+            var popup = new PaletteColorEditorView(vm);
+            popup.Show(OwnerWindow);
+        }
     }
 }

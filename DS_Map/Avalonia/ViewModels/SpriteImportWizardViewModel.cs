@@ -63,8 +63,17 @@ namespace DSPRE.Avalonia.ViewModels
         // ---- Sheet scope: one image holds Back+Front together, so it only needs a gender and a color ----
         private string _sheetColorMode = "normal"; // normal | shiny
         public string SheetColorMode { get => _sheetColorMode; set => Set(ref _sheetColorMode, value); }
-        private string _sheetGenderMode = "Both"; // Female | Male | Both
+        private string _sheetGenderMode = "Both"; // Female | Male | Both | Combined
         public string SheetGenderMode { get => _sheetGenderMode; set => Set(ref _sheetGenderMode, value); }
+
+        /// <summary>Only true when the species genuinely has separate male/female art, so a single sheet with all 4 poses actually makes sense.</summary>
+        public bool CanUseFullSheet => _sprite.CanUseFullSheet;
+
+        /// <summary>True while this species' sprites are hg-engine source-backed, where only Male Back is a real independent shiny-color file.</summary>
+        public bool IsHgEngineActive => _sprite.IsHgEngineSourced;
+
+        /// <summary>Under hg-engine, deriving a shiny palette only makes sense from the one real source pose (Male Back).</summary>
+        public bool ShowShinyPaletteOption => !IsHgEngineActive || RefPose == "Male Back";
 
         // ---- Artwork scope: facing x gender are independent axes ----
         private string _faceMode = "Front"; // Back | Front | Both
@@ -78,7 +87,16 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _includeShinyPalette = true;
         public bool IncludeShinyPalette { get => _includeShinyPalette; set => Set(ref _includeShinyPalette, value); }
         private string _refPose;
-        public string RefPose { get => _refPose; set => Set(ref _refPose, value); }
+        public string RefPose
+        {
+            get => _refPose;
+            set
+            {
+                if (!Set(ref _refPose, value)) return;
+                OnPropertyChanged(nameof(ShowShinyPaletteOption));
+                if (!ShowShinyPaletteOption) IncludeShinyPalette = false;
+            }
+        }
 
         public string RunButtonText => Mode switch { "palette" => "Import Palette", "sheet" => "Import Sheet", _ => "Import Artwork" };
 
@@ -107,6 +125,12 @@ namespace DSPRE.Avalonia.ViewModels
             }
             else if (Mode == "sheet")
             {
+                if (SheetGenderMode == "Combined")
+                {
+                    if (SheetColorMode == "shiny") await _sprite.ImportShinyFullSheet(_owner);
+                    else await _sprite.ImportFullSheet(_owner);
+                    return;
+                }
                 var genders = GenderGapActive ? new[] { ExistingGender } : (SheetGenderMode == "Both" ? new[] { "Female", "Male" } : new[] { SheetGenderMode });
                 foreach (var gender in genders)
                 {

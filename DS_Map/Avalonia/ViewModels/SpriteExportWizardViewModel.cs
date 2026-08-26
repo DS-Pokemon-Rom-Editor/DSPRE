@@ -22,7 +22,10 @@ namespace DSPRE.Avalonia.ViewModels
             get => _isSelected;
             set { if (_isSelected == value) return; _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
         }
-        public Func<RawImage> Compose { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public Func<byte[]> GetIndices { get; set; }
+        public Func<uint[]> GetPalette { get; set; }
     }
 
     /// <summary>
@@ -66,20 +69,42 @@ namespace DSPRE.Avalonia.ViewModels
                 if (sprite.HasPalette(true))
                     SpriteSheets.Add(MakeSheetItem(genderLabel, female, true));
             }
+
+            if (sprite.CanUseFullSheet)
+            {
+                if (sprite.HasPalette(false)) SpriteSheets.Add(MakeFullSheetItem(false));
+                if (sprite.HasPalette(true)) SpriteSheets.Add(MakeFullSheetItem(true));
+            }
         }
 
         private ExportPickItem MakeSpriteItem(string pose, int slot, bool shiny) => new ExportPickItem
         {
             Label = pose + (shiny ? " (Shiny)" : ""),
             FileName = $"mon{_sprite.CurrentId:D3}_{pose.Replace(" ", "")}{(shiny ? "Shiny" : "")}.png",
-            Compose = () => _sprite.ComposeSpriteRaw(slot, shiny)
+            Width = _sprite.SpritePixelWidth,
+            Height = _sprite.SpritePixelHeight,
+            GetIndices = () => _sprite.GetRawSpriteIndices(slot),
+            GetPalette = () => _sprite.GetPalette(shiny)
+        };
+
+        private ExportPickItem MakeFullSheetItem(bool shiny) => new ExportPickItem
+        {
+            Label = "Both Genders Sheet" + (shiny ? " (Shiny)" : ""),
+            FileName = $"mon{_sprite.CurrentId:D3}_Both_{(shiny ? "Shiny" : "Normal")}_sheet.png",
+            Width = _sprite.SpritePixelWidth * 4,
+            Height = _sprite.SpritePixelHeight,
+            GetIndices = () => _sprite.GetRawFullSheetIndices(),
+            GetPalette = () => _sprite.GetPalette(shiny)
         };
 
         private ExportPickItem MakeSheetItem(string genderLabel, bool female, bool shiny) => new ExportPickItem
         {
             Label = $"{genderLabel} Sheet" + (shiny ? " (Shiny)" : ""),
             FileName = $"mon{_sprite.CurrentId:D3}_{genderLabel}_{(shiny ? "Shiny" : "Normal")}_sheet.png",
-            Compose = () => _sprite.ComposeSheetRaw(female, shiny)
+            Width = _sprite.SpritePixelWidth * 2,
+            Height = _sprite.SpritePixelHeight,
+            GetIndices = () => _sprite.GetRawSheetIndices(female),
+            GetPalette = () => _sprite.GetPalette(shiny)
         };
 
         public void SelectAll(bool selected)
@@ -105,11 +130,13 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     foreach (var item in selected)
                     {
-                        var raw = item.Compose();
-                        if (raw == null) continue;
+                        byte[] indices = item.GetIndices();
+                        uint[] palette = item.GetPalette();
+                        if (indices == null || palette == null) continue;
+                        byte[] png = IndexedPng.Write(indices, palette, item.Width, item.Height);
                         var entry = zip.CreateEntry(item.FileName);
                         using (var entryStream = entry.Open())
-                            ImageConverter.ToAvaloniaBitmap(raw).Save(entryStream, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                            entryStream.Write(png, 0, png.Length);
                     }
                 }
                 StatusText = $"Exported {selected.Count} file(s) to {Path.GetFileName(path)}.";

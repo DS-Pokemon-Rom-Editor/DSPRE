@@ -26,7 +26,7 @@ namespace DSPRE.HgEngine
             var map = LoadMap();
             if (map == null) return false;
 
-            int lookupId = AdjustForFakemonShift(speciesId);
+            int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string relPath)) return false;
 
             string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', '\\'));
@@ -34,20 +34,6 @@ namespace DSPRE.HgEngine
 
             absolutePngPath = full;
             return true;
-        }
-
-        /// <summary>pokegra.mk is static and never regenerated when a fakemon is inserted, even though
-        /// every downstream form species shifts up by NUM_OF_FAKEMONS in personal.narc. Maps an id past
-        /// the fakemon block back down to what pokegra.mk still calls it by; an id inside the fakemon
-        /// block has no dump-time entry and correctly resolves to "no icon".</summary>
-        private static int AdjustForFakemonShift(int speciesId)
-        {
-            if (!HgEngineSpeciesExpansion.TryGetCustomRange(out int firstCustomId, out int fakemonCount) || fakemonCount == 0)
-                return speciesId;
-
-            if (speciesId < firstCustomId) return speciesId;
-            if (speciesId < firstCustomId + fakemonCount) return -1;
-            return speciesId - fakemonCount;
         }
 
         private static Dictionary<int, string> LoadMap()

@@ -34,6 +34,21 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        /// <summary>pokegra.mk is static and never regenerated when a fakemon is inserted, even though
+        /// every downstream form species shifts up by NUM_OF_FAKEMONS in personal.narc. Maps an id past
+        /// the fakemon block back down to what pokegra.mk still calls it by; an id inside the fakemon
+        /// block has no dump-time entry and correctly resolves to "not found". Shared by every domain
+        /// that looks a species id up in pokegra.mk (icons, battle sprites).</summary>
+        public static int AdjustForPokegraMkLookup(int speciesId)
+        {
+            if (!TryGetCustomRange(out int firstCustomId, out int fakemonCount) || fakemonCount == 0)
+                return speciesId;
+
+            if (speciesId < firstCustomId) return speciesId;
+            if (speciesId < firstCustomId + fakemonCount) return -1;
+            return speciesId - fakemonCount;
+        }
+
         public static bool TryAddFakemon(string displayName, out int newSpeciesId, out string error)
         {
             newSpeciesId = -1;

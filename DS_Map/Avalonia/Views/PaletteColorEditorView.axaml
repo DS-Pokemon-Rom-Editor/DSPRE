@@ -1,0 +1,90 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        x:Class="DSPRE.Avalonia.Views.PaletteColorEditorView"
+        x:DataType="vm:PaletteColorEditorViewModel"
+        Title="{Binding Title}"
+        Width="300" SizeToContent="Height" CanResize="False"
+        ShowInTaskbar="False">
+  <Window.Styles>
+    <Style Selector="Border.big-swatch">
+      <Setter Property="Width" Value="60"/>
+      <Setter Property="Height" Value="60"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="BorderBrush" Value="#555"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.chip-btn">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="2"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Border.chip">
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="BorderBrush" Value="#555"/>
+      <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+  </Window.Styles>
+
+  <StackPanel Margin="14" Spacing="10">
+    <StackPanel Orientation="Horizontal" Spacing="10">
+      <Border Classes="big-swatch" Background="{Binding PreviewBrush}"/>
+      <TextBox Text="{Binding Hex}" Width="90" VerticalAlignment="Center" MaxLength="7"/>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="20,*,36" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="R" VerticalAlignment="Center"/>
+      <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding R}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding R}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="G" VerticalAlignment="Center"/>
+      <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding G}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding G}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="B" VerticalAlignment="Center"/>
+      <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding B}" VerticalAlignment="Center"/>
+      <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding B}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+    </Grid>
+
+    <Border Height="1" Background="{DynamicResource Editor.Border}"/>
+
+    <TextBlock Text="Favorites" FontWeight="SemiBold" FontSize="12"/>
+    <ItemsControl ItemsSource="{Binding Favorites}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><WrapPanel MaxWidth="128"/></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Grid Width="28" Height="28">
+            <Button Classes="chip-btn" Width="28" Height="28" Tag="{Binding}" Click="FavoriteSlot_Click">
+              <Border Classes="chip" Width="26" Height="26" Background="{Binding Brush}"/>
+            </Button>
+            <TextBlock Text="+" IsVisible="{Binding IsEmpty}" IsHitTestVisible="False"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888"/>
+            <Button Content="×" Classes="chip-btn" Width="14" Height="14" FontSize="9" Margin="0"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Background="#333" Foreground="White"
+                    IsVisible="{Binding !IsEmpty}" Tag="{Binding}" Click="FavoriteClear_Click"/>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <TextBlock Text="Last Used" FontWeight="SemiBold" FontSize="12" IsVisible="{Binding HasLastUsed}"/>
+    <ItemsControl ItemsSource="{Binding LastUsed}" IsVisible="{Binding HasLastUsed}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3"/></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Button Classes="chip-btn" Width="20" Height="20" Tag="{Binding}" Click="RecentColor_Click">
+            <Border Classes="chip" Width="20" Height="20" Background="{Binding Brush}"/>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <Button Content="Close" HorizontalAlignment="Right" Click="Close_Click"/>
+  </StackPanel>
+</Window>

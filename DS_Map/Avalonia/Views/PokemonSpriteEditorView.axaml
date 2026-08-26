@@ -56,19 +56,33 @@
       <Setter Property="BorderBrush" Value="#555"/>
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
+    <Style Selector="Button.swatch-btn">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="20"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="ToolTip.Tip" Value="Click to edit this color"/>
+    </Style>
   </UserControl.Styles>
 
   <DockPanel LastChildFill="True" Margin="8">
 
-    <!-- Top toolbar: Import Wizard is the primary action (left), per-species extras sit out of the way (right) -->
+    <!-- Top toolbar: Animate top-left, Import/Export Wizard centered, per-species extras (alternate forms etc.) top-right -->
     <Border DockPanel.Dock="Top" Padding="0,0,0,10">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-        <Button Grid.Column="0" Content="Import Wizard…" Click="OpenImportWizard_Click"
-                Padding="14,8" FontWeight="Bold" FontSize="14"/>
-        <Button Grid.Column="1" Content="Export Wizard…" Click="OpenExportWizard_Click"
-                Padding="14,8" FontSize="14" Margin="8,0,0,0"/>
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0" Classes="animate-btn" Content="{Binding AnimateButtonText}" Click="AnimateFrames_Click"/>
 
-        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+          <Button Content="Import Wizard…" Click="OpenImportWizard_Click"
+                  Padding="14,8" FontWeight="Bold" FontSize="14"/>
+          <Button Content="Export Wizard…" Click="OpenExportWizard_Click"
+                  Padding="14,8" FontSize="14"/>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <Button Content="{Binding AddOppositeGenderLabel}"
                   Click="AddOppositeGenderSprites_Click"
                   IsVisible="{Binding CanAddOppositeGenderSprites}"
@@ -99,6 +113,10 @@
               <Button Classes="sprite-btn" Content="Export Female" Click="ExportFemaleSheet_Click"/>
               <Button Classes="sprite-btn" Content="Import Male" Click="ImportMaleSheet_Click"/>
               <Button Classes="sprite-btn" Content="Export Male" Click="ExportMaleSheet_Click"/>
+              <Border Width="1" Margin="4,2" Background="{DynamicResource Editor.Border}" IsVisible="{Binding CanUseFullSheet}"/>
+              <Button Classes="sprite-btn" Content="Import Both" Click="ImportFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"
+                      ToolTip.Tip="Both genders together: Female Back, Male Back, Female Front, Male Front, left to right."/>
+              <Button Classes="sprite-btn" Content="Export Both" Click="ExportFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
@@ -170,10 +188,12 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid Width="20" Height="20">
-                      <Border Classes="swatch" Background="{Binding Brush}"/>
-                      <Path Data="M1,1 L19,19 M19,1 L1,19" Stroke="Red" StrokeThickness="1.5" IsVisible="{Binding IsPlaceholder}"/>
-                    </Grid>
+                    <Button Classes="swatch-btn" Tag="{Binding}" Click="PaletteSwatch_Click">
+                      <Grid Width="20" Height="20">
+                        <Border Classes="swatch" Background="{Binding Brush}"/>
+                        <Path Data="M1,1 L19,19 M19,1 L1,19" Stroke="Red" StrokeThickness="1.5" IsVisible="{Binding IsPlaceholder}"/>
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -186,11 +206,17 @@
             <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsAlternateForms}">
               <TextBlock Text="Sprite Sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
                          ToolTip.Tip="Get the shiny palette from a fully shiny-colored Back+Front sheet. Artwork is unchanged, only colors are read from it."/>
-              <Button Classes="sprite-btn" Content="Import Female" Click="ImportFemaleShinySheet_Click"/>
+              <Button Classes="sprite-btn" Content="Import Female" Click="ImportFemaleShinySheet_Click" IsVisible="{Binding !IsHgEngineSourced}"/>
               <Button Classes="sprite-btn" Content="Export Female" Click="ExportFemaleShinySheet_Click"/>
-              <Button Classes="sprite-btn" Content="Import Male" Click="ImportMaleShinySheet_Click"/>
+              <Button Classes="sprite-btn" Content="Import Male" Click="ImportMaleShinySheet_Click" IsVisible="{Binding !IsHgEngineSourced}"/>
               <Button Classes="sprite-btn" Content="Export Male" Click="ExportMaleShinySheet_Click"/>
+              <Border Width="1" Margin="4,2" Background="{DynamicResource Editor.Border}" IsVisible="{Binding CanUseFullSheet}"/>
+              <Button Classes="sprite-btn" Content="Import Both" Click="ImportShinyFullSheet_Click" IsVisible="{Binding ShowShinyFullSheetImport}"
+                      ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference sheet covering both genders; artwork is unchanged."/>
+              <Button Classes="sprite-btn" Content="Export Both" Click="ExportShinyFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
+            <TextBlock Text="Shiny colors come from this species' own hg-engine source (male back.png); the other poses don't have an independent shiny file to import."
+                       IsVisible="{Binding IsHgEngineSourced}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
                 <TextBlock Classes="header" Text="Female Back (Shiny)"/>
@@ -203,7 +229,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
                             IsVisible="{Binding !IsAlternateForms}">
-                  <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleBackShiny_Click"
+                  <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleBackShiny_Click" IsVisible="{Binding !IsHgEngineSourced}"
                           ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
                   <Button Classes="sprite-btn" Content="Export" Click="ExportFemaleBackShiny_Click"/>
                 </StackPanel>
@@ -235,7 +261,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
                             IsVisible="{Binding !IsAlternateForms}">
-                  <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleFrontShiny_Click"
+                  <Button Classes="sprite-btn" Content="Import" Click="ImportFemaleFrontShiny_Click" IsVisible="{Binding !IsHgEngineSourced}"
                           ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
                   <Button Classes="sprite-btn" Content="Export" Click="ExportFemaleFrontShiny_Click"/>
                 </StackPanel>
@@ -251,7 +277,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"
                             IsVisible="{Binding !IsAlternateForms}">
-                  <Button Classes="sprite-btn" Content="Import" Click="ImportMaleFrontShiny_Click"
+                  <Button Classes="sprite-btn" Content="Import" Click="ImportMaleFrontShiny_Click" IsVisible="{Binding !IsHgEngineSourced}"
                           ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
                   <Button Classes="sprite-btn" Content="Export" Click="ExportMaleFrontShiny_Click"/>
                 </StackPanel>
@@ -265,10 +291,12 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid Width="20" Height="20">
-                      <Border Classes="swatch" Background="{Binding Brush}"/>
-                      <Path Data="M1,1 L19,19 M19,1 L1,19" Stroke="Red" StrokeThickness="1.5" IsVisible="{Binding IsPlaceholder}"/>
-                    </Grid>
+                    <Button Classes="swatch-btn" Tag="{Binding}" Click="PaletteSwatch_Click">
+                      <Grid Width="20" Height="20">
+                        <Border Classes="swatch" Background="{Binding Brush}"/>
+                        <Path Data="M1,1 L19,19 M19,1 L1,19" Stroke="Red" StrokeThickness="1.5" IsVisible="{Binding IsPlaceholder}"/>
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -276,7 +304,6 @@
           </StackPanel>
         </GroupBox>
 
-        <Button Classes="animate-btn" Content="{Binding AnimateButtonText}" Click="AnimateFrames_Click" HorizontalAlignment="Center"/>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>
