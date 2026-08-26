@@ -790,8 +790,13 @@ namespace DSPRE.Avalonia.ViewModels
                     return;
                 }
 
-                if (shiny) { _shinyPal = derived; _shinyPalUsed = derivedUsed; }
-                else { _normalPal = derived; _normalPalUsed = derivedUsed; }
+                // Fill in only the slots this pose's image actually shows; never blank out a color a different pose already found.
+                uint[] pal = shiny ? (_shinyPal ??= new uint[16]) : (_normalPal ??= new uint[16]);
+                bool[] used = shiny ? _shinyPalUsed : _normalPalUsed;
+                for (int i = 0; i < 16; i++)
+                {
+                    if (derivedUsed[i]) { pal[i] = derived[i]; used[i] = true; }
+                }
                 ApplyPalettesAndPublish();
                 _dirty = true;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -840,6 +845,183 @@ namespace DSPRE.Avalonia.ViewModels
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
         }
 
+        // --- Sprite sheet export/import ------------------------------------------------
+
+        // Sheet layout is 320x80: Back (both its frames, 160x80) then Front (both its frames, 160x80),
+        // side by side. That's exactly _rawSprites[backSlot] followed by _rawSprites[frontSlot] as-is,
+        // so building/reading the sheet is just concatenating/splitting those two 160-wide arrays.
+        private static (int backSlot, int frontSlot) GenderSlots(bool female) => female ? (0, 2) : (1, 3);
+
+        private byte[] BuildGenderSheetIndices(bool female)
+        {
+            var (backSlot, frontSlot) = GenderSlots(female);
+            byte[] back = _rawSprites[backSlot], front = _rawSprites[frontSlot];
+            if (back == null || front == null) return null;
+            var sheet = new byte[SpriteWidth * 2 * SpriteHeight];
+            for (int y = 0; y < SpriteHeight; y++)
+            {
+                Array.Copy(back, y * SpriteWidth, sheet, y * SpriteWidth * 2, SpriteWidth);
+                Array.Copy(front, y * SpriteWidth, sheet, y * SpriteWidth * 2 + SpriteWidth, SpriteWidth);
+            }
+            return sheet;
+        }
+
+        private void WriteGenderSheetIndices(bool female, byte[] sheetIndices)
+        {
+            var (backSlot, frontSlot) = GenderSlots(female);
+            var back = new byte[SpriteWidth * SpriteHeight];
+            var front = new byte[SpriteWidth * SpriteHeight];
+            for (int y = 0; y < SpriteHeight; y++)
+            {
+                Array.Copy(sheetIndices, y * SpriteWidth * 2, back, y * SpriteWidth, SpriteWidth);
+                Array.Copy(sheetIndices, y * SpriteWidth * 2 + SpriteWidth, front, y * SpriteWidth, SpriteWidth);
+            }
+            _rawSprites[backSlot] = back;
+            _rawSprites[frontSlot] = front;
+        }
+
+        /// <summary>One gender's artwork to edit: Back then Front, both animation frames of each, 320x80 total.</summary>
+        private RawImage ComposeGenderSheet(bool female, bool shiny)
+        {
+            uint[] pal = shiny ? _shinyPal : _normalPal;
+            byte[] indices = BuildGenderSheetIndices(female);
+            if (pal == null || indices == null) return null;
+
+            var sheet = new RawImage(SpriteWidth * 2, SpriteHeight);
+            for (int y = 0; y < SpriteHeight; y++)
+            {
+                for (int x = 0; x < SpriteWidth * 2; x++)
+                {
+                    int o = (y * sheet.Width + x) * 4;
+                    uint c = pal[indices[y * SpriteWidth * 2 + x] & 0xF];
+                    sheet.Bgra[o] = (byte)c;
+                    sheet.Bgra[o + 1] = (byte)(c >> 8);
+                    sheet.Bgra[o + 2] = (byte)(c >> 16);
+                    sheet.Bgra[o + 3] = (byte)(c >> 24);
+                }
+            }
+            return sheet;
+        }
+
+        public async Task ExportSpriteSheet(Window owner, bool female, bool shiny = false)
+        {
+            uint[] pal = shiny ? _shinyPal : _normalPal;
+            if (pal == null) { StatusText = "Load a Pokémon first."; return; }
+            string genderLabel = female ? "Female" : "Male";
+            string colorLabel = shiny ? "Shiny" : "Normal";
+            string path = await DialogHelper.SaveFile(owner, $"Export {genderLabel} {colorLabel} Sprite Sheet",
+                new[] { DialogHelper.PngFilter, DialogHelper.AllFilter },
+                $"mon{_currentId:D3}_{genderLabel}_{colorLabel}_sheet.png");
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                var sheet = ComposeGenderSheet(female, shiny);
+                if (sheet == null) { StatusText = "Export failed: nothing to export."; return; }
+                ImageConverter.ToAvaloniaBitmap(sheet).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                StatusText = $"Exported {genderLabel}'s {colorLabel.ToLowerInvariant()} sprite sheet: Back and Front, both frames.";
+            }
+            catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
+        }
+
+        private async Task<RawImage> OpenGenderSheet(Window owner, string title)
+        {
+            string path = await DialogHelper.OpenFile(owner, title, new[] { DialogHelper.PngFilter, DialogHelper.AllFilter });
+            if (string.IsNullOrEmpty(path)) return null;
+            RawImage imported;
+            using (var fs = File.OpenRead(path))
+                imported = ImageConverter.DecodeRawImage(fs);
+            if (imported == null) { StatusText = "Image could not be decoded."; return null; }
+            if (imported.Width != SpriteWidth * 2 || imported.Height != SpriteHeight)
+            {
+                StatusText = $"Sprite sheet must be {SpriteWidth * 2}×{SpriteHeight} pixels: Back on the left, Front on the right, each with both animation frames (got {imported.Width}×{imported.Height}).";
+                return null;
+            }
+            return imported;
+        }
+
+        public async Task ImportSpriteSheet(Window owner, bool female)
+        {
+            string genderLabel = female ? "Female" : "Male";
+            try
+            {
+                var imported = await OpenGenderSheet(owner, $"Import {genderLabel} Sprite Sheet");
+                if (imported == null) return;
+                if (!TryReadImageColors(imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
+                {
+                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    return;
+                }
+
+                bool[] newUsed = MakeUsedMask(usedCount);
+                if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
+                {
+                    bool keepExisting = await DialogHelper.AskYesNo(
+                        $"This sheet uses different colors than the palette already saved for {genderLabel}.\n\n" +
+                        "Keep the saved palette and match the sheet's colors to it? Choosing No replaces the saved palette with the sheet's own colors instead.",
+                        "Palette mismatch");
+                    if (keepExisting)
+                    {
+                        newIndices = RemapToExistingPalette(newIndices, newPalette, usedCount, _normalPal, _normalPalUsed, out uint[] merged, out bool[] mergedUsed);
+                        _normalPal = merged;
+                        _normalPalUsed = mergedUsed;
+                    }
+                    else
+                    {
+                        _normalPal = newPalette;
+                        _normalPalUsed = newUsed;
+                    }
+                }
+                else if (_normalPal == null)
+                {
+                    _normalPal = newPalette;
+                    _normalPalUsed = newUsed;
+                }
+
+                WriteGenderSheetIndices(female, newIndices);
+                ApplyPalettesAndPublish();
+                _dirty = true;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                StatusText = $"Imported {genderLabel}'s Back and Front from the sheet. Save to write it to the ROM.";
+            }
+            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+        }
+
+        /// <summary>Gets the shiny palette from a sheet; doesn't touch pixels, since shiny shares artwork with Normal.</summary>
+        public async Task ImportShinySpriteSheet(Window owner, bool female)
+        {
+            string genderLabel = female ? "Female" : "Male";
+            try
+            {
+                byte[] parentIndices = BuildGenderSheetIndices(female);
+                if (parentIndices == null)
+                {
+                    StatusText = $"Import {genderLabel}'s Back and Front artwork first, then you can get the shiny palette from a reference sheet.";
+                    return;
+                }
+                var imported = await OpenGenderSheet(owner, $"Import {genderLabel} Shiny Reference Sheet");
+                if (imported == null) return;
+                if (!TryReadImageColors(imported, out byte[] childIndices, out uint[] childPalette, out _))
+                {
+                    StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
+                    return;
+                }
+
+                uint[] derived = DeriveAlternatePalette(parentIndices, childIndices, childPalette, out bool[] derivedUsed);
+                if (derived == null) { StatusText = "Could not get a shiny palette from this image."; return; }
+
+                uint[] pal = _shinyPal ??= new uint[16];
+                for (int i = 0; i < 16; i++)
+                {
+                    if (derivedUsed[i]) { pal[i] = derived[i]; _shinyPalUsed[i] = true; }
+                }
+                ApplyPalettesAndPublish();
+                _dirty = true;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                StatusText = $"Got {genderLabel}'s shiny palette from the reference sheet. Save to write it to the ROM.";
+            }
+            catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
+        }
+
         // --- Helpers -----------------------------------------------------------------
         private static void RefreshSwatches(ObservableCollection<PaletteSwatch> target, uint[] palette, bool[] used)
         {
@@ -877,6 +1059,14 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         private bool HasSlot(int slot) => _rawSprites[slot] != null;
+
+        // --- Export Wizard support -----------------------------------------------------
+        public int CurrentId => _currentId;
+        public bool HasSpriteSlot(int slot) => HasSlot(slot);
+        public bool HasPalette(bool shiny) => (shiny ? _shinyPal : _normalPal) != null;
+        public string SpritePoseLabel(int slot) => SpriteImportWizardViewModel.AllPoses[slot];
+        public RawImage ComposeSpriteRaw(int slot, bool shiny) => ComposeSprite(slot, shiny ? _shinyPal : _normalPal, transparentIndex0: false, frame: -1);
+        public RawImage ComposeSheetRaw(bool female, bool shiny) => ComposeGenderSheet(female, shiny);
         private int SlotWidth(int slot) => _rawSprites[slot] != null ? SpriteWidth : 0;
 
         // Renders all `count` 80×80 frames of a sprite slot (null list if the slot is empty).
@@ -1269,12 +1459,12 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Builds a color index (0-15) per pixel plus the list of colors used, in the order they first appear. Fails past 16 distinct colors, the ROM format's own limit.</summary>
         private static bool TryReadImageColors(RawImage img, out byte[] indices, out uint[] palette, out int usedCount)
         {
-            indices = new byte[SpriteWidth * SpriteHeight];
+            int n = img.Width * img.Height;
+            indices = new byte[n];
             palette = new uint[16];
             usedCount = 0;
 
             var seen = new System.Collections.Generic.Dictionary<uint, byte>();
-            int n = SpriteWidth * SpriteHeight;
             for (int p = 0; p < n; p++)
             {
                 int o = p * 4;

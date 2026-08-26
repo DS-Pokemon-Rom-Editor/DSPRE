@@ -6,7 +6,7 @@
         x:Class="DSPRE.Avalonia.Views.PokemonEditorView"
         x:DataType="vm:PokemonEditorViewModel"
         Title="{Binding Title}"
-        Width="1240" Height="780" MinWidth="980" MinHeight="640"
+        Width="1080" Height="860" MinWidth="900" MinHeight="640"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
     <vm:PokemonEditorViewModel/>

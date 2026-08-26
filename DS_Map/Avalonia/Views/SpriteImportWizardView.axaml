@@ -13,6 +13,7 @@
       <RadioButton GroupName="mode" Content="Change image, keep palettes" IsChecked="True" Click="ModeImage_Click"/>
       <RadioButton GroupName="mode" Content="Change palette, keep image" Click="ModePalette_Click"/>
       <RadioButton GroupName="mode" Content="Change full artwork (image and palette together)" Click="ModeFull_Click"/>
+      <RadioButton GroupName="mode" Content="Import a sprite sheet (Back + Front together)" Click="ModeSheet_Click"/>
     </StackPanel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">
@@ -41,6 +42,24 @@
       <CheckBox Content="Shiny" IsChecked="{Binding IncludeShinyPalette}"/>
       <TextBlock Text="Based on which pose's reference image?" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
       <ComboBox ItemsSource="{Binding AvailableRefPoses}" SelectedItem="{Binding RefPose}" HorizontalAlignment="Stretch"/>
+    </StackPanel>
+
+    <StackPanel Spacing="8" IsVisible="{Binding ShowSheetScope}">
+      <Border Height="1" Background="{DynamicResource Editor.Border}"/>
+      <TextBlock Text="One image with Back and Front (both animation frames of each) side by side." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Text="Which color?" FontWeight="SemiBold"/>
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <RadioButton GroupName="sheetcolor" Content="Normal (the artwork itself)" IsChecked="True" Click="SheetColorNormal_Click"/>
+        <RadioButton GroupName="sheetcolor" Content="Shiny (colors only, from a shiny-colored sheet)" Click="SheetColorShiny_Click"/>
+      </StackPanel>
+      <TextBlock Text="{Binding ExistingGender, StringFormat='Only {0} sprites exist for this species right now.'}"
+                 IsVisible="{Binding GenderGapActive}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Text="Gender" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !GenderGapActive}"/>
+      <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !GenderGapActive}">
+        <RadioButton GroupName="sheetgender" Content="Female" Click="SheetGenderFemale_Click"/>
+        <RadioButton GroupName="sheetgender" Content="Male" Click="SheetGenderMale_Click"/>
+        <RadioButton GroupName="sheetgender" Content="Both" IsChecked="True" Click="SheetGenderBoth_Click"/>
+      </StackPanel>
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

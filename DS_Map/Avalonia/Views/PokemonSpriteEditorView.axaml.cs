@@ -24,6 +24,13 @@ namespace DSPRE.Avalonia.Views
             await wizard.ShowDialog(OwnerWindow);
         }
 
+        private async void OpenExportWizard_Click(object sender, RoutedEventArgs e)
+        {
+            var wizardVm = new SpriteExportWizardViewModel(VM, OwnerWindow);
+            var wizard = new SpriteExportWizardView(wizardVm);
+            await wizard.ShowDialog(OwnerWindow);
+        }
+
         // --- Frame preview controls: each pose/color picks its frame independently ---------------
         private void FemaleBackNormalFrame1_Click(object sender, RoutedEventArgs e) => VM.FemaleBackNormalFrame.Frame = 0;
         private void FemaleBackNormalFrame2_Click(object sender, RoutedEventArgs e) => VM.FemaleBackNormalFrame.Frame = 1;
@@ -90,5 +97,23 @@ namespace DSPRE.Avalonia.Views
         // --- Mono-gender / genderless sprite gap -------------------------------------
         private async void AddOppositeGenderSprites_Click(object sender, RoutedEventArgs e)
             => await VM.AddOppositeGenderSprites(OwnerWindow);
+
+        // --- Sprite sheet (Back+Front, one gender, art only) --------------------------
+        private async void ImportFemaleSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportSpriteSheet(OwnerWindow, female: true);
+        private async void ImportMaleSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportSpriteSheet(OwnerWindow, female: false);
+        private async void ExportFemaleSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportSpriteSheet(OwnerWindow, female: true);
+        private async void ExportMaleSheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportSpriteSheet(OwnerWindow, female: false);
+        private async void ImportFemaleShinySheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportShinySpriteSheet(OwnerWindow, female: true);
+        private async void ImportMaleShinySheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ImportShinySpriteSheet(OwnerWindow, female: false);
+        private async void ExportFemaleShinySheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportSpriteSheet(OwnerWindow, female: true, shiny: true);
+        private async void ExportMaleShinySheet_Click(object sender, RoutedEventArgs e)
+            => await VM.ExportSpriteSheet(OwnerWindow, female: false, shiny: true);
     }
 }

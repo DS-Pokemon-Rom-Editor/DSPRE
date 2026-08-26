@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         // ---- What to change ----
-        private string _mode = "image"; // image | palette | full
+        private string _mode = "image"; // image | palette | full | sheet
         public string Mode
         {
             get => _mode;
@@ -52,11 +52,19 @@ namespace DSPRE.Avalonia.ViewModels
                 if (!Set(ref _mode, value)) return;
                 OnPropertyChanged(nameof(ShowArtworkScope));
                 OnPropertyChanged(nameof(ShowPaletteScope));
+                OnPropertyChanged(nameof(ShowSheetScope));
                 OnPropertyChanged(nameof(RunButtonText));
             }
         }
         public bool ShowArtworkScope => Mode == "image" || Mode == "full";
         public bool ShowPaletteScope => Mode == "palette";
+        public bool ShowSheetScope => Mode == "sheet";
+
+        // ---- Sheet scope: one image holds Back+Front together, so it only needs a gender and a color ----
+        private string _sheetColorMode = "normal"; // normal | shiny
+        public string SheetColorMode { get => _sheetColorMode; set => Set(ref _sheetColorMode, value); }
+        private string _sheetGenderMode = "Both"; // Female | Male | Both
+        public string SheetGenderMode { get => _sheetGenderMode; set => Set(ref _sheetGenderMode, value); }
 
         // ---- Artwork scope: facing x gender are independent axes ----
         private string _faceMode = "Front"; // Back | Front | Both
@@ -72,7 +80,7 @@ namespace DSPRE.Avalonia.ViewModels
         private string _refPose;
         public string RefPose { get => _refPose; set => Set(ref _refPose, value); }
 
-        public string RunButtonText => Mode == "palette" ? "Import Palette" : "Import Artwork";
+        public string RunButtonText => Mode switch { "palette" => "Import Palette", "sheet" => "Import Sheet", _ => "Import Artwork" };
 
         public List<string> ComputePoseList()
         {
@@ -96,6 +104,16 @@ namespace DSPRE.Avalonia.ViewModels
                 int refSlot = SlotFor(RefPose);
                 if (IncludeNormalPalette) await _sprite.ImportNormalPalette(refSlot, _owner);
                 if (IncludeShinyPalette) await _sprite.ImportShinyPalette(refSlot, _owner);
+            }
+            else if (Mode == "sheet")
+            {
+                var genders = GenderGapActive ? new[] { ExistingGender } : (SheetGenderMode == "Both" ? new[] { "Female", "Male" } : new[] { SheetGenderMode });
+                foreach (var gender in genders)
+                {
+                    bool female = gender == "Female";
+                    if (SheetColorMode == "shiny") await _sprite.ImportShinySpriteSheet(_owner, female);
+                    else await _sprite.ImportSpriteSheet(_owner, female);
+                }
             }
             else
             {

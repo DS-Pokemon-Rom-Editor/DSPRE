@@ -182,6 +182,9 @@ namespace DSPRE.Avalonia
         public static readonly FilePickerFileType AllFilter =
             new FilePickerFileType("All Files") { Patterns = new[] { "*.*" } };
 
+        public static readonly FilePickerFileType ZipFilter =
+            new FilePickerFileType("ZIP Archive") { Patterns = new[] { "*.zip" } };
+
         // ----------------------------------------------------------------
         // Internal: lightweight dialog window built in code (no AXAML)
         // ----------------------------------------------------------------
