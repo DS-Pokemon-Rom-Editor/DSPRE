@@ -32,6 +32,9 @@ namespace DSPRE.Avalonia.ViewModels
         // ─── Shared lists ─────────────────────────────────────────────────────────
         public ObservableCollection<string> PokemonNames { get; } = new();
 
+        private Window _owner;
+        public void SetOwner(Window owner) => _owner = owner;
+
         // ─── Sub-ViewModels ───────────────────────────────────────────────────────
         public PersonalDataEditorViewModel  PersonalVM  { get; }
         public LearnsetEditorViewModel      LearnsetVM  { get; }
@@ -263,7 +266,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             var yes = await DialogHelper.AskYesNo(
                 "There are unsaved changes. Switch Pokémon and discard them?",
-                "Unsaved Changes");
+                "Unsaved Changes", _owner);
             if (!yes) return;
             DiscardChanges();
             _selectedMonIndex = pendingIndex;

@@ -699,6 +699,18 @@ namespace DSPRE.Avalonia.ViewModels
                     StatusText = $"Sprite must be {SpriteWidth}×{SpriteHeight} pixels (got {imported.Width}×{imported.Height}).";
                     return;
                 }
+
+                if (_rawSprites[slot] != null && TryDeriveRecolorPalette(_rawSprites[slot], imported, out uint[] recolorPal, out bool[] recolorUsed))
+                {
+                    uint[] pal = _normalPal ??= new uint[16];
+                    for (int i = 0; i < 16; i++) if (recolorUsed[i]) { pal[i] = recolorPal[i]; _normalPalUsed[i] = true; }
+                    ApplyPalettesAndPublish();
+                    _dirty = true;
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
+                    StatusText = $"{SpriteLabels[slot]}'s artwork didn't change, just the colors, so only the palette was updated.";
+                    return;
+                }
+
                 if (!TryReadImageColors(imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
                 {
                     StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
@@ -711,16 +723,26 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     bool keepExisting = await DialogHelper.AskYesNo(
                         $"{SpriteLabels[slot]}'s image uses different colors than the palette already saved for this sprite.\n\n" +
-                        "Keep the saved palette and match this image's colors to it? Choosing No replaces the saved palette with this image's own colors instead.",
-                        "Palette mismatch");
+                        "Keep the saved palette and match this image's colors to it? Choosing No replaces the saved palette with this image's own colors instead, which affects every other sprite using it too.",
+                        "Palette mismatch", owner);
                     if (keepExisting)
                     {
+                        if (!await ConfirmOverwriteIfNeeded(newPalette, usedCount, _normalPal, _normalPalUsed, owner))
+                        {
+                            StatusText = "Import cancelled.";
+                            return;
+                        }
                         newIndices = RemapToExistingPalette(newIndices, newPalette, usedCount, _normalPal, _normalPalUsed, out uint[] merged, out bool[] mergedUsed);
                         _normalPal = merged;
                         _normalPalUsed = mergedUsed;
                     }
                     else
                     {
+                        if (!await ConfirmFullPaletteReplace(owner))
+                        {
+                            StatusText = "Import cancelled.";
+                            return;
+                        }
                         _normalPal = newPalette;
                         _normalPalUsed = newUsed;
                     }
@@ -821,7 +843,7 @@ namespace DSPRE.Avalonia.ViewModels
                 bool fillBlack = await DialogHelper.AskYesNo(
                     $"This image has a palette of {usedCount} colors, not the full 16.\n\n" +
                     "Fill in the blanks with black? Choosing No keeps it as a " + usedCount + "-color palette.",
-                    "Palette isn't full");
+                    "Palette isn't full", owner);
                 if (fillBlack)
                 {
                     for (int i = 0; i < 16; i++) used[i] = true;
@@ -847,9 +869,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         // --- Sprite sheet export/import ------------------------------------------------
 
-        // Sheet layout is 320x80: Back (both its frames, 160x80) then Front (both its frames, 160x80),
-        // side by side. That's exactly _rawSprites[backSlot] followed by _rawSprites[frontSlot] as-is,
-        // so building/reading the sheet is just concatenating/splitting those two 160-wide arrays.
+        // Sheet is Back's raw array (both frames) then Front's, side by side: 320x80.
         private static (int backSlot, int frontSlot) GenderSlots(bool female) => female ? (0, 2) : (1, 3);
 
         private byte[] BuildGenderSheetIndices(bool female)
@@ -946,6 +966,19 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 var imported = await OpenGenderSheet(owner, $"Import {genderLabel} Sprite Sheet");
                 if (imported == null) return;
+
+                byte[] oldSheetIndices = BuildGenderSheetIndices(female);
+                if (oldSheetIndices != null && TryDeriveRecolorPalette(oldSheetIndices, imported, out uint[] recolorPal, out bool[] recolorUsed))
+                {
+                    uint[] pal = _normalPal ??= new uint[16];
+                    for (int i = 0; i < 16; i++) if (recolorUsed[i]) { pal[i] = recolorPal[i]; _normalPalUsed[i] = true; }
+                    ApplyPalettesAndPublish();
+                    _dirty = true;
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
+                    StatusText = $"{genderLabel}'s artwork didn't change, just the colors, so only the palette was updated.";
+                    return;
+                }
+
                 if (!TryReadImageColors(imported, out byte[] newIndices, out uint[] newPalette, out int usedCount))
                 {
                     StatusText = "This image has more than 16 colors. Reduce it to 16 or fewer and try again.";
@@ -957,16 +990,26 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     bool keepExisting = await DialogHelper.AskYesNo(
                         $"This sheet uses different colors than the palette already saved for {genderLabel}.\n\n" +
-                        "Keep the saved palette and match the sheet's colors to it? Choosing No replaces the saved palette with the sheet's own colors instead.",
-                        "Palette mismatch");
+                        "Keep the saved palette and match the sheet's colors to it? Choosing No replaces the saved palette with the sheet's own colors instead, which affects every other sprite using it too.",
+                        "Palette mismatch", owner);
                     if (keepExisting)
                     {
+                        if (!await ConfirmOverwriteIfNeeded(newPalette, usedCount, _normalPal, _normalPalUsed, owner))
+                        {
+                            StatusText = "Import cancelled.";
+                            return;
+                        }
                         newIndices = RemapToExistingPalette(newIndices, newPalette, usedCount, _normalPal, _normalPalUsed, out uint[] merged, out bool[] mergedUsed);
                         _normalPal = merged;
                         _normalPalUsed = mergedUsed;
                     }
                     else
                     {
+                        if (!await ConfirmFullPaletteReplace(owner))
+                        {
+                            StatusText = "Import cancelled.";
+                            return;
+                        }
                         _normalPal = newPalette;
                         _normalPalUsed = newUsed;
                     }
@@ -1496,7 +1539,66 @@ namespace DSPRE.Avalonia.ViewModels
             return a;
         }
 
-        /// <summary>Points the new image's pixels at the palette that's already saved: matching colors reuse their existing slot, new colors take a genuine placeholder slot rather than overwriting a real existing color the current import just doesn't happen to need.</summary>
+        // Same old index showing two different colors here means the artwork's shape changed, not just its colors.
+        private static bool TryDeriveRecolorPalette(byte[] oldIndices, RawImage newImg, out uint[] palette, out bool[] used)
+        {
+            palette = new uint[16];
+            used = new bool[16];
+            if (oldIndices == null || newImg == null || oldIndices.Length != newImg.Width * newImg.Height) return false;
+            for (int p = 0; p < oldIndices.Length; p++)
+            {
+                int idx = oldIndices[p] & 0xF;
+                int o = p * 4;
+                uint c = 0xFF000000u | ((uint)newImg.Bgra[o + 2] << 16) | ((uint)newImg.Bgra[o + 1] << 8) | newImg.Bgra[o];
+                if (!used[idx]) { palette[idx] = c; used[idx] = true; }
+                else if (palette[idx] != c) return false; // same old index shows two colors -> real shape change
+            }
+            return true;
+        }
+
+        // Colors here with no exact match in the existing palette would need a free slot to be added.
+        private static int CountUnmatchedColors(uint[] newPalette, int usedCount, uint[] existingPalette)
+        {
+            int unmatched = 0;
+            for (int i = 0; i < usedCount; i++)
+            {
+                bool found = false;
+                for (int j = 0; j < 16; j++) if (existingPalette[j] == newPalette[i]) { found = true; break; }
+                if (!found) unmatched++;
+            }
+            return unmatched;
+        }
+
+        private static int CountFreeSlots(bool[] used)
+        {
+            int free = 0;
+            foreach (bool u in used) if (!u) free++;
+            return free;
+        }
+
+        // Always this destructive (one shared palette, every pose), so this always asks, no threshold.
+        private async Task<bool> ConfirmFullPaletteReplace(Window owner)
+        {
+            return await DialogHelper.AskYesNo(
+                "Replacing the palette changes every Normal sprite that uses it, not just this one, " +
+                "and can also change how the shiny sprites look since they're drawn from the same artwork. Continue anyway?",
+                "This will change other sprites too", owner);
+        }
+
+        // Only warns when there isn't enough free room; filling genuine placeholders alone is always safe.
+        private async Task<bool> ConfirmOverwriteIfNeeded(uint[] newPalette, int usedCount, uint[] existingPalette, bool[] existingUsed, Window owner)
+        {
+            int unmatched = CountUnmatchedColors(newPalette, usedCount, existingPalette);
+            int free = CountFreeSlots(existingUsed);
+            if (unmatched <= free) return true;
+            int overwrite = unmatched - free;
+            return await DialogHelper.AskYesNo(
+                $"This image has {overwrite} color(s) that don't match the saved palette and won't fit in the free slots.\n\n" +
+                "Continuing will overwrite existing colors to make room, which can also change the shiny sprites since they're drawn from this same artwork. Continue anyway?",
+                "This will overwrite existing colors", owner);
+        }
+
+        // Matches colors by value first; a color with no match takes a genuine placeholder slot, never a used one, if any remain.
         private static byte[] RemapToExistingPalette(byte[] newIndices, uint[] newPalette, int usedCount, uint[] existingPalette, bool[] existingUsed, out uint[] mergedPalette, out bool[] mergedUsed)
         {
             var indexMap = new byte[16];

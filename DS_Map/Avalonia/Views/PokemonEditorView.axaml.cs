@@ -21,6 +21,7 @@ namespace DSPRE.Avalonia.Views
         {
             InitializeComponent();
             DataContext = vm;
+            vm.SetOwner(this);
             // VM owns the bound Title (+ marker); chrome adds Ctrl+S + the close guard (Detach on close).
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
