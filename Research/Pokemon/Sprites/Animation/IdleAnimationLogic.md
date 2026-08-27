@@ -1,6 +1,6 @@
 # Pokémon Battle Idle Animation System, HeartGold/SoulSilver
 
-Source: `pokeheartgold` decomp only (`C:\Romhacking\ROMs\NDS\pokeheartgold`). This was structured into a document with AI.
+Source: [pokeheartgold decomp](https://github.com/pret/pokeheartgold). This was structured into a document with AI.
 
 ## Archives
 

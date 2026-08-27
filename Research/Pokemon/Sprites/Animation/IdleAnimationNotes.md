@@ -1,4 +1,4 @@
-pokeheartgold only. Notes for IdleAnimationLogic.md.
+Notes for [IdleAnimationLogic.md](IdleAnimationLogic.md).
 
 a/1/1/1 - exists in files/ tree, no symbolic name
 a/0/9/0 - exists in files/ tree, no symbolic name
