@@ -5,3 +5,7 @@
 ## Sprites Research
 
 - [Sprites Research](Sprites/SpritesResearch.md)
+
+## Icons
+
+- [Icons Logic](Icons/IconsLogic.md)
