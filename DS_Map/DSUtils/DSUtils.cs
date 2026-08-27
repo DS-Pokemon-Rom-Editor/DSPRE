@@ -1058,6 +1058,24 @@ namespace DSPRE {
         /// </summary>
         public static Func<RawImage> MonIconFallbackHook = null;
 
+        /// <summary>Alt-form pseudo-ids (personalExtraFiles list position, vanilla-only) aren't icon indices;
+        /// <summary>Alt-form pseudo-ids aren't icon indices; resolves one to the real icon id.</summary>
+        public static int ResolveIconId(int id) {
+            string[] names = GetPokemonNames();
+            // Bad Egg has no icon of its own; shows the plain egg icon.
+            if (id == names.Length - 1) id = names.Length - 2;
+            int excess = id - names.Length;
+            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            return (excess >= 0 && excess < extras.Length) ? extras[excess].iconId : id;
+        }
+
+        /// <summary>Sprite-offset and animation NARCs hold one record per real species; alt-form pseudo-ids share their base species' record.</summary>
+        public static int ResolveBaseSpeciesId(int id) {
+            int excess = id - GetPokemonNames().Length;
+            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            return (excess >= 0 && excess < extras.Length) ? extras[excess].monId : id;
+        }
+
         /// <summary>GDI-free twin of <see cref="GetPokePic"/> — composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
         public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
             LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);

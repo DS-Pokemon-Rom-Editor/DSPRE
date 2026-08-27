@@ -767,13 +767,9 @@ namespace DSPRE.Avalonia.ViewModels
             _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             // Load sprite icon
-            int iconId = id;
-            int excess = iconId - GetPokemonNames().Length;
-            if (excess >= 0 && excess < PokeDatabase.PersonalData.personalExtraFiles.Length)
-                iconId = PokeDatabase.PersonalData.personalExtraFiles[excess].iconId;
             try
             {
-                var drawingImg = DSUtils.GetPokePicRaw(iconId, 64, 64);
+                var drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(id), 64, 64);
                 MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
             }
             catch { MonIconBitmap = null; }

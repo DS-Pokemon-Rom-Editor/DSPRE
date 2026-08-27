@@ -192,7 +192,7 @@ namespace DSPRE
             pokeShadowOfx,          // DP /poketool/pokegra/poke_shadow_ofx.narc — signed shadow X, 1 B/mon
             pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc — shadow size, 1 B/mon
             pokeHeight,             // DP+Plat /poketool/pokegra/height.narc — 4 files/mon (F-back,M-back,F-front,M-front), heights
-            pokeHeightForms,        // DP+Plat /poketool/pokegra/height_o.narc — 2 files/form (back, front; both genders)
+            pokeHeightForms,        // /poketool/pokegra/height_o.narc, alt-form heights (record index matches the otherpoke sprite index)
             pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc — 28 B/mon battle-animation table (POKE_ANM_DATA)
             pokeAnimDefs,           // DP /pokeanime/poke_anm.narc — the PAST program-animation scripts (referenced by prg_anm)
 
@@ -2358,6 +2358,7 @@ namespace DSPRE
                         [DirNames.personalPokeData] = $@"{dataFolderName}\a\0\0\2",
                         [DirNames.pokemonBattleSprites] = $@"{dataFolderName}\a\0\0\4",
                         [DirNames.otherPokemonBattleSprites] = $@"{dataFolderName}\a\1\1\4",
+                        [DirNames.pokeHeightForms] = $@"{dataFolderName}\a\1\1\7",
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
                         [DirNames.pokeHeight] = $@"{dataFolderName}\a\0\0\5",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\a\1\1\1",   // Pokeanm.narc (28 B/mon POKE_ANM_DATA table)

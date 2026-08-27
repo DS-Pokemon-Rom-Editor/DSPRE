@@ -237,6 +237,19 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Index into _currentFormData; only meaningful while IsAlternateForms is true (BattleDisplayEditorViewModel mirrors both).</summary>
         public int SelectedFormIndex { get => _selectedFormIndex; private set => Set(ref _selectedFormIndex, value); }
 
+        /// <summary>The current form's back/front otherpoke sprite indices, which are also the correct height_o.narc record indices (same charDataID/fileId formula per species in the real game).</summary>
+        public bool TryGetCurrentFormHeightIndices(out int backIndex, out int frontIndex)
+        {
+            backIndex = frontIndex = -1;
+            if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length)
+                return false;
+            var f = _currentFormData[_selectedFormIndex];
+            if (f.BackSpriteIndex < 0 || f.FrontSpriteIndex < 0) return false; // hg-engine-native entries have no vanilla index
+            backIndex = f.BackSpriteIndex;
+            frontIndex = f.FrontSpriteIndex;
+            return true;
+        }
+
         /// <summary>Every alternate form name for the current species. No separate "Base Sprites" entry; the first one already is the real base sprite (see LoadMon).</summary>
         public ObservableCollection<string> VariantNames { get; } = new();
 

@@ -413,7 +413,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int ActBackO(bool f) => (_formMode && _hasFormHeights) ? _oFormBackH : (f ? _oBackHeightF : _oBackHeightM);
 
         // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
-        private double FrontTopFor(int curH, int origH) => 24 + _spriteY + (HeightsActive ? (curH - origH) : 0);
+        private double FrontTopFor(int curH, int origH) => 24 - _spriteY + (HeightsActive ? (curH - origH) : 0);
         private double BackTopFor(int curH, int origH) => 84 + (HeightsActive ? (curH - origH) : 0);
 
         public double EnemyLeft => 152;
@@ -474,7 +474,7 @@ namespace DSPRE.Avalonia.ViewModels
                     IconPreview = DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(_pendingIconGraphic);
                     return;
                 }
-                var gdi = DSPRE.DSUtils.GetPokePicRaw(_currentId, 64, 64, paletteIdOverride: _partyPaletteIndex);
+                var gdi = DSPRE.DSUtils.GetPokePicRaw(IconIdFor(_currentId), 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
             catch { IconPreview = null; }
@@ -483,13 +483,16 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _fullPaletteExport;
         public bool FullPaletteExport { get => _fullPaletteExport; set => Set(ref _fullPaletteExport, value); }
 
+        private static int IconIdFor(int id) => DSPRE.DSUtils.ResolveIconId(id);
+        private static int BaseSpeciesIdFor(int id) => DSPRE.DSUtils.ResolveBaseSpeciesId(id);
+
         /// <summary>Exports the icon's current raw graphic (on-disk, or the pending import if one hasn't
         /// been saved yet) at native resolution: no OAM padding, suitable for round-tripping.</summary>
         public RawImage ExportIconGraphic()
         {
             if (!IsAvailable || _currentId < 0) return null;
             if (_pendingIconGraphic != null) return _pendingIconGraphic;
-            try { return DSPRE.DSUtils.GetMonIconGraphicRaw(_currentId, _partyPaletteIndex); }
+            try { return DSPRE.DSUtils.GetMonIconGraphicRaw(IconIdFor(_currentId), _partyPaletteIndex); }
             catch { return null; }
         }
 
@@ -502,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || _currentId < 0 || _pendingIconGraphic != null) return null;
             try
             {
-                if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(_currentId, _partyPaletteIndex, out byte[] indices, out int w, out int h, out var palette))
+                if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(IconIdFor(_currentId), _partyPaletteIndex, out byte[] indices, out int w, out int h, out var palette))
                     return null;
                 return DSPRE.Avalonia.IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
             }
@@ -514,7 +517,7 @@ namespace DSPRE.Avalonia.ViewModels
         public string ImportIconGraphic(RawImage newImage)
         {
             if (!IsAvailable || _currentId < 0) return "No Pokémon selected.";
-            string error = DSPRE.DSUtils.ValidateMonIconGraphic(_currentId, newImage);
+            string error = DSPRE.DSUtils.ValidateMonIconGraphic(IconIdFor(_currentId), newImage);
             if (error != null) return error;
 
             _pendingIconGraphic = newImage;
@@ -577,7 +580,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int _movementType;
         public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && CanEditSprite) SetDirty(); } }
 
-        private int _spriteY;   // signed −128..127 (positive = down, negative = up)
+        private int _spriteY;   // signed −128..127, additive (positive = up, negative = down)
         public int SpriteY { get => _spriteY; set { if (Set(ref _spriteY, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
 
         private int _shadowX;   // signed −128..127 (negative = left, positive = right)
@@ -602,10 +605,7 @@ namespace DSPRE.Avalonia.ViewModels
         public int FrontHeightUnified { get => _frontHeightM; set { FrontHeightM = value; FrontHeightF = value; } }
         public int BackHeightUnified { get => _backHeightM; set { BackHeightM = value; BackHeightF = value; } }
 
-        // ── Alternate-form sprite heights (height_o.narc; DP/Plat), follows the Sprite tab's form selector ──
-        // height_o: 2 files/form: (formIndex*2) = back (both genders), (formIndex*2 + 1) = front. Signed. The
-        // form index mirrors the Sprites tab's global alternate-form list (SelectedFormIndex). [ASSUMPTION: the
-        // two lists share an ordering; verify the read values match the form before trusting writes.]
+        // Alt-form heights (height_o.narc), indexed by the form's otherpoke sprite index.
         private OffsetNarc _formHeightNarc;
         private bool _formNarcTried;
         private bool _formMode;       // mirrors SpriteVM.IsAlternateForms
@@ -625,8 +625,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (_formNarcTried) return;
             _formNarcTried = true;
-            if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
-                _formHeightNarc = new OffsetNarc(DirNames.pokeHeightForms, 1);
+            _formHeightNarc = new OffsetNarc(DirNames.pokeHeightForms, 1);
         }
 
         private void LoadFormHeights()
@@ -635,12 +634,13 @@ namespace DSPRE.Avalonia.ViewModels
             if (!IsAvailable || !_formMode || _formIndex < 0) return;
             EnsureFormNarc();
             if (_formHeightNarc == null) return;
+            if (_sprites == null || !_sprites.TryGetCurrentFormHeightIndices(out int backIdx, out int frontIdx)) return;
             try
             {
-                var b = _formHeightNarc.GetRecord(_formIndex * 2);
-                var f = _formHeightNarc.GetRecord(_formIndex * 2 + 1);
+                var b = _formHeightNarc.GetRecord(backIdx);
+                var f = _formHeightNarc.GetRecord(frontIdx);
                 if (b == null || f == null || b.Length < 1 || f.Length < 1) return;
-                _formBackH = (sbyte)b[0]; _formFrontH = (sbyte)f[0];
+                _formBackH = b[0]; _formFrontH = f[0];
                 _oFormBackH = _formBackH; _oFormFrontH = _formFrontH;
                 OnPropertyChanged(nameof(FormFrontHeight)); OnPropertyChanged(nameof(FormBackHeight));
                 HasFormHeights = true;
@@ -651,8 +651,9 @@ namespace DSPRE.Avalonia.ViewModels
         private void SaveFormHeights()
         {
             if (_formHeightNarc == null || !_hasFormHeights || _formIndex < 0) return;
-            WriteForm(_formIndex * 2, _formBackH);
-            WriteForm(_formIndex * 2 + 1, _formFrontH);
+            if (_sprites == null || !_sprites.TryGetCurrentFormHeightIndices(out int backIdx, out int frontIdx)) return;
+            WriteForm(backIdx, _formBackH);
+            WriteForm(frontIdx, _formFrontH);
         }
         // An unused slot is a real but empty (0-byte) file, not a missing one - grow it instead of skipping the write.
         private void WriteForm(int idx, int v) { var r = _formHeightNarc.GetRecord(idx); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = (byte)v; _formHeightNarc.PutRecord(idx, r); }
@@ -707,7 +708,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (HgEngineProject.IsActive) { LoadAnimFromHgeSource(_currentHgeSpeciesId); return; }
 
             EnsureAnimNarc();
-            var r = _animNarc?.GetRecord(id);
+            var r = _animNarc?.GetRecord(BaseSpeciesIdFor(id));
             if (r == null || r.Length < ANIM_REC_LEN) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             _animFrontProg = r[0]; _animFrontWait = r[1];
             for (int i = 0; i < 3; i++) AddBackStep(r[2 + i * 2], r[3 + i * 2]);
@@ -763,7 +764,8 @@ namespace DSPRE.Avalonia.ViewModels
             }
 
             if (_animNarc == null) return;
-            var r = _animNarc.GetRecord(_currentId);
+            int animId = BaseSpeciesIdFor(_currentId);
+            var r = _animNarc.GetRecord(animId);
             if (r == null || r.Length < ANIM_REC_LEN) return;
             r[0] = (byte)_animFrontProg; r[1] = (byte)_animFrontWait;
             for (int i = 0; i < 3 && i < AnimBack.Count; i++) { r[2 + i * 2] = (byte)AnimBack[i].Number; r[3 + i * 2] = (byte)AnimBack[i].Wait; }
@@ -772,7 +774,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (i < AnimSteps.Count) { r[ANIM_PAT_OFFSET + i * 2] = (byte)(sbyte)AnimSteps[i].Frame; r[ANIM_PAT_OFFSET + i * 2 + 1] = (byte)AnimSteps[i].Wait; }
                 else { r[ANIM_PAT_OFFSET + i * 2] = 0xFF; r[ANIM_PAT_OFFSET + i * 2 + 1] = 0; }   // terminator + pad
             }
-            _animNarc.PutRecord(_currentId, r);
+            _animNarc.PutRecord(animId, r);
         }
 
         private void AddBackStep(int num, int wait) { var s = new AnimProgStep { Number = num, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimBack.Add(s); }
@@ -1163,7 +1165,7 @@ namespace DSPRE.Avalonia.ViewModels
 
                 EnsureSource();
                 if (_src == null) return;
-                if (!_src.TryLoad(id, out BattleRec rec)) return;
+                if (!_src.TryLoad(BaseSpeciesIdFor(id), out BattleRec rec)) return;
                 _spriteY = rec.FrontY; _shadowX = rec.ShadowX; _shadowSize = rec.ShadowSize; _movementType = rec.Movement;
                 _backHeightF = rec.BackF; _backHeightM = rec.BackM; _frontHeightF = rec.FrontF; _frontHeightM = rec.FrontM;
                 _oFrontHeightM = rec.FrontM; _oFrontHeightF = rec.FrontF; _oBackHeightM = rec.BackM; _oBackHeightF = rec.BackF;   // baseline for the delta-preview
@@ -1235,7 +1237,7 @@ namespace DSPRE.Avalonia.ViewModels
                 FrontM = _frontHeightM,
                 HasHeights = _hasHeights,
             };
-            _src.Save(_currentId, in rec);
+            _src.Save(BaseSpeciesIdFor(_currentId), in rec);
         }
 
         // ── Per-family storage backends ──────────────────────────────────────────────────────
@@ -1322,12 +1324,10 @@ namespace DSPRE.Avalonia.ViewModels
                 var a = _n.GetRecord(id * 4 + FB); var b = _n.GetRecord(id * 4 + MB);
                 var c = _n.GetRecord(id * 4 + FF); var d = _n.GetRecord(id * 4 + MF);
                 if (a == null && b == null && c == null && d == null) { backF = backM = frontF = frontM = 0; return false; }
-                // Signed: in practice these read as signed offsets (e.g. 0xE0 = −32), so reading them unsigned
-                // pushed sprites far off-screen by an amount that scaled per-mon.
-                backF = (a != null && a.Length >= 1) ? (sbyte)a[0] : 0;
-                backM = (b != null && b.Length >= 1) ? (sbyte)b[0] : 0;
-                frontF = (c != null && c.Length >= 1) ? (sbyte)c[0] : 0;
-                frontM = (d != null && d.Length >= 1) ? (sbyte)d[0] : 0;
+                backF = (a != null && a.Length >= 1) ? a[0] : 0;
+                backM = (b != null && b.Length >= 1) ? b[0] : 0;
+                frontF = (c != null && c.Length >= 1) ? c[0] : 0;
+                frontM = (d != null && d.Length >= 1) ? d[0] : 0;
                 return true;
             }
 
@@ -1520,7 +1520,7 @@ namespace DSPRE.Avalonia.ViewModels
                 {
                     // monIconPalTableAddress is a vanilla-only ARM9 offset; hg-engine uses IconPaletteTable.c instead.
                     if (!(HgEngineProject.IsActive && HgEngineIconPalette.TryGetPaletteId(id, out pal)))
-                        pal = DSPRE.DSUtils.GetMonIconPaletteId(id);
+                        pal = DSPRE.DSUtils.GetMonIconPaletteId(IconIdFor(id));
                 }
                 _partyPaletteIndex = (pal >= 0 && pal < PartyPalettes.Count) ? pal : 0;
             }
@@ -1549,10 +1549,10 @@ namespace DSPRE.Avalonia.ViewModels
                 if (HgEngineProject.IsActive)
                     HgEngineIconPalette.TrySetPaletteId(_currentId, _partyPaletteIndex, out _);
                 else
-                    DSPRE.DSUtils.SetMonIconPaletteId(_currentId, (byte)_partyPaletteIndex);
+                    DSPRE.DSUtils.SetMonIconPaletteId(IconIdFor(_currentId), (byte)_partyPaletteIndex);
                 if (_pendingIconGraphic != null)
                 {
-                    DSPRE.DSUtils.SetMonIconGraphic(_currentId, _partyPaletteIndex, _pendingIconGraphic);
+                    DSPRE.DSUtils.SetMonIconGraphic(IconIdFor(_currentId), _partyPaletteIndex, _pendingIconGraphic);
                     _pendingIconGraphic = null;
                 }
                 SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames(); SetClean();
