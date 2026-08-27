@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Cross-platform ROM core: file formats, ROM data, script system, databases. No WinForms,
-       no Avalonia. Sources are linked from DS_Map\ via CoreFiles.props during the transition.
+       no Avalonia.
        System.Drawing.Common compiles on net8.0 but throws at runtime off-Windows — the GDI
        code paths in here are only reachable from the WinForms shell. -->
 
@@ -13,7 +13,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <!-- GDI (System.Drawing.Common) paths are WinForms-shell-only; the cross-platform shells use the RawImage twins. -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
     <!-- Pre-existing code warnings in legacy files (same set DS_Map suppresses) -->
@@ -24,13 +23,6 @@
     <!-- BDHCAMPatchDB.resx embeds byte[] file refs (non-string resources). -->
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
-
-  <Import Project="..\CoreFiles.props" />
-
-  <ItemGroup>
-    <Compile Include="@(CoreCompile)" />
-    <EmbeddedResource Include="@(CoreEmbeddedResource)" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- UI code in DSPRE and the tests still touch internal core types from the one-project era. -->

@@ -425,7 +425,7 @@
     <value>..\Resources\Graphics\Area Icons\hgssforest.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="appIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\app.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+    <value>..\..\app.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="IconPokeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Graphics\Program Icons\IconPokeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -635,7 +635,7 @@
     <value>..\Resources\Graphics\Weather\DPPt\ptheavyrain.gif;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ndstool" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Tools\ndstool.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\..\Tools\ndstool.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="blue_sign" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Graphics\Event Icons\blue_sign.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -671,7 +671,7 @@
     <value>..\Resources\Graphics\Weather\DPPt\dphail.gif;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="blz" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Tools\blz.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\..\Tools\blz.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="ptcamera7" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Graphics\Camera Angles\DPPt\ptcamera7.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

@@ -6,7 +6,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>DSPRE</AssemblyName>
     <RootNamespace>DSPRE</RootNamespace>
-    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationIcon>../app.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Nullable>disable</Nullable>
@@ -55,26 +55,13 @@
   </ItemGroup>
 
   <!-- The Avalonia UI layer (code, axaml, avares assets, TextMate grammar) compiles into the
-       cross-platform DSPRE.Avalonia project (see AvaloniaFiles.props); this exe hosts it via the
+       cross-platform DSPRE.Avalonia project; this exe hosts it via the
        project reference below and only keeps the WinForms shell + editors. -->
-  <Import Project="..\AvaloniaFiles.props" />
-  <ItemGroup>
-    <Compile Remove="@(AvaloniaLayerCompile)" />
-    <AvaloniaXaml Remove="@(AvaloniaLayerXaml)" />
-    <AvaloniaResource Remove="@(AvaloniaLayerAsset)" />
-  </ItemGroup>
 
   <!-- ============================================================
        Project references — cross-platform ROM core + Ekona/Images
-       image libraries. The core source files still live under this
-       folder but compile into DSPRE.Core (see CoreFiles.props) —
-       they are removed from this project's compile set below.
+       image libraries.
        ============================================================ -->
-  <Import Project="..\CoreFiles.props" />
-  <ItemGroup>
-    <Compile Remove="@(CoreCompile)" />
-    <EmbeddedResource Remove="@(CoreEmbeddedResource)" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DSPRE.Core\DSPRE.Core.csproj" />
     <ProjectReference Include="..\DSPRE.Avalonia\DSPRE.Avalonia.csproj" />
@@ -88,35 +75,45 @@
        charmap.json is loaded by TextConverter.
        ============================================================ -->
   <ItemGroup>
-    <Content Include="Tools\apicula.exe">
+    <Content Include="../Tools/apicula.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\apicula.exe</Link>
     </Content>
-    <Content Include="Tools\blz.exe">
+    <Content Include="../Tools/blz.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\blz.exe</Link>
     </Content>
-    <Content Include="Tools\ndstool.exe">
+    <Content Include="../Tools/ndstool.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\ndstool.exe</Link>
     </Content>
-    <Content Include="Tools\dsrom.exe">
+    <Content Include="../Tools/dsrom.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\dsrom.exe</Link>
     </Content>
-    <Content Include="Tools\chatot.exe">
+    <Content Include="../Tools/chatot.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\chatot.exe</Link>
     </Content>
-    <Content Include="Tools\rotom.exe">
+    <Content Include="../Tools/rotom.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\rotom.exe</Link>
     </Content>
-    <Content Include="Tools\rotom-lsp.exe">
+    <Content Include="../Tools/rotom-lsp.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\rotom-lsp.exe</Link>
     </Content>
-    <Content Include="Tools\nitroarc_ffi.dll">
+    <Content Include="../Tools/nitroarc_ffi.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\nitroarc_ffi.dll</Link>
     </Content>
-    <Content Include="Tools\pokefatcs.txt">
+    <Content Include="../Tools/pokefatcs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\pokefatcs.txt</Link>
     </Content>
-    <Content Include="Tools\charmap.json">
+    <Content Include="../Tools/charmap.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>Tools\charmap.json</Link>
     </Content>
   </ItemGroup>
 

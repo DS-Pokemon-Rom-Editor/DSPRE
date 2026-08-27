@@ -12,7 +12,7 @@
     <Configurations>Debug;Release;Debug-Linux;Release-Linux</Configurations>
     <AssemblyName>DSPRE.Avalonia</AssemblyName>
     <RootNamespace>DSPRE</RootNamespace>
-    <ApplicationIcon>..\DS_Map\app.ico</ApplicationIcon>
+    <ApplicationIcon>../app.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -34,12 +34,10 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
 
-  <Import Project="..\AvaloniaFiles.props" />
-
   <ItemGroup>
-    <Compile Include="@(AvaloniaLayerCompile)" LinkBase="Avalonia" />
-    <AvaloniaXaml Include="@(AvaloniaLayerXaml)" LinkBase="Avalonia" />
-    <AvaloniaResource Include="@(AvaloniaLayerAsset)" />
+    <AvaloniaResource Include="Avalonia\Assets\**" />
+    <!-- Also embedded via DS_Map\Properties\Resources.resx for the legacy WinForms shell; shared, not moved. -->
+    <AvaloniaResource Include="..\DS_Map\Resources\Graphics\**" Link="Resources\Graphics\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -70,11 +68,11 @@
 
   <ItemGroup>
     <!-- Script editor grammar; flows to referencing projects' output too. -->
-    <Content Include="..\DS_Map\Avalonia\TextMate\rotom.tmLanguage.json" Link="Avalonia\TextMate\rotom.tmLanguage.json">
+    <Content Include="Avalonia\TextMate\rotom.tmLanguage.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <!-- Native tools (Windows builds; swap per-OS binaries in later). -->
-    <Content Include="..\DS_Map\Tools\**" LinkBase="Tools">
+    <Content Include="../Tools/**" LinkBase="Tools">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
