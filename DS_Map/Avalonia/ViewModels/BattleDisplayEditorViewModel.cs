@@ -412,9 +412,9 @@ namespace DSPRE.Avalonia.ViewModels
         private int ActBackH(bool f) => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
         private int ActBackO(bool f) => (_formMode && _hasFormHeights) ? _oFormBackH : (f ? _oBackHeightF : _oBackHeightM);
 
-        // Per the Platinum source (PokeHeightGet → pos_y = appearPos + height), the height is added ×1.
-        private double FrontTopFor(int curH, int origH) => 24 - _spriteY + (HeightsActive ? (curH - origH) : 0);
-        private double BackTopFor(int curH, int origH) => HeightsActive ? 84 + (curH - origH) : 84 - _spriteY;
+        // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
+        private double FrontTopFor(int curH, int origH) => 24 + _spriteY + (HeightsActive ? (curH - origH) : 0);
+        private double BackTopFor(int curH, int origH) => 84 + (HeightsActive ? (curH - origH) : 0);
 
         public double EnemyLeft => 152;
         public double PlayerLeft => 23;
@@ -577,7 +577,7 @@ namespace DSPRE.Avalonia.ViewModels
         private int _movementType;
         public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && CanEditSprite) SetDirty(); } }
 
-        private int _spriteY;   // signed −128..127 (negative = down, positive = up)
+        private int _spriteY;   // signed −128..127 (positive = down, negative = up)
         public int SpriteY { get => _spriteY; set { if (Set(ref _spriteY, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
 
         private int _shadowX;   // signed −128..127 (negative = left, positive = right)
@@ -654,7 +654,8 @@ namespace DSPRE.Avalonia.ViewModels
             WriteForm(_formIndex * 2, _formBackH);
             WriteForm(_formIndex * 2 + 1, _formFrontH);
         }
-        private void WriteForm(int idx, int v) { var r = _formHeightNarc.GetRecord(idx); if (r == null || r.Length < 1) return; r[0] = (byte)v; _formHeightNarc.PutRecord(idx, r); }
+        // An unused slot is a real but empty (0-byte) file, not a missing one - grow it instead of skipping the write.
+        private void WriteForm(int idx, int v) { var r = _formHeightNarc.GetRecord(idx); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = (byte)v; _formHeightNarc.PutRecord(idx, r); }
 
         private void OnSpriteFormChanged()
         {
@@ -1334,7 +1335,8 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 Put(id * 4 + FB, rec.BackF); Put(id * 4 + MB, rec.BackM); Put(id * 4 + FF, rec.FrontF); Put(id * 4 + MF, rec.FrontM);
             }
-            private void Put(int idx, int v) { var r = _n.GetRecord(idx); if (r == null || r.Length < 1) return; r[0] = (byte)v; _n.PutRecord(idx, r); }
+            // An unused slot is a real but empty (0-byte) file, not a missing one - grow it instead of skipping the write.
+            private void Put(int idx, int v) { var r = _n.GetRecord(idx); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = (byte)v; _n.PutRecord(idx, r); }
         }
 
         /// <summary>HGSS / Platinum: one combined record per mon; the 3 fields are the LAST 3 bytes (size last),
@@ -1405,7 +1407,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (rec.HasHeights) _heights.Save(id, in rec);
             }
             private static void WriteByte(OffsetNarc narc, int id, byte v)
-            { var r = narc.GetRecord(id); if (r == null || r.Length < 1) return; r[0] = v; narc.PutRecord(id, r); }
+            { var r = narc.GetRecord(id); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = v; narc.PutRecord(id, r); }
         }
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────

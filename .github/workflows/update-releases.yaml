@@ -72,11 +72,13 @@ jobs:
               semver_version="$dotnet_version"
               display_version="$dotnet_version"
               patch=0
+              revision=0
           fi
 
           echo "semver_version=$semver_version" >> $GITHUB_OUTPUT
           echo "display_version=$display_version" >> $GITHUB_OUTPUT
           echo "patch=$patch" >> $GITHUB_OUTPUT
+          echo "revision=$revision" >> $GITHUB_OUTPUT
           echo "major_minor=${major}.${minor}" >> $GITHUB_OUTPUT
           # dotnet_version stays raw, no "v" prefix. release_tag below is the only place "v" gets added.
           # It has to stay the full 4-part version (not display_version) because Helpers.FetchChangelogForTag
@@ -151,14 +153,12 @@ jobs:
             exit 0
           fi
 
-          # A patch release (2.1.1, 2.1.2, ...) gets just its own "## major.minor.patch" section, not the
-          # whole file: the in-app update dialog is a plain, non-scrolling message box, and the full
-          # changelog for a minor version is too long to read there.
-          heading="## ${major_minor}.${patch}"
+          # display_version includes the revision (2.2.2.1), so a hotfix release finds its own heading instead of its parent patch's.
+          heading="## ${{ steps.get_version.outputs.display_version }}"
           if [ "$patch" != "0" ] && grep -qF "$heading" "$notes_file"; then
             awk -v heading="$heading" '
               $0 == heading { found=1; print; next }
-              found && /^---/ { exit }
+              found && (/^---/ || /^## /) { exit }
               found { print }
             ' "$notes_file" > patch_notes.md
             gh release edit "${{ steps.get_version.outputs.release_tag }}" --repo "${{ github.repository }}" --notes-file patch_notes.md
