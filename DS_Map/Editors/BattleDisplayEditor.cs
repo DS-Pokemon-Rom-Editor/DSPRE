@@ -115,7 +115,8 @@ namespace DSPRE.Editors {
             public void Save(int id, in BattleRec rec) {
                 Put(id * 4 + FB, rec.BackF); Put(id * 4 + MB, rec.BackM); Put(id * 4 + FF, rec.FrontF); Put(id * 4 + MF, rec.FrontM);
             }
-            private void Put(int idx, int v) { var r = _n.GetRecord(idx); if (r == null || r.Length < 1) return; r[0] = (byte)v; _n.PutRecord(idx, r); }
+            // An unused slot is a real but empty (0-byte) file, not a missing one - grow it instead of skipping the write.
+            private void Put(int idx, int v) { var r = _n.GetRecord(idx); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = (byte)v; _n.PutRecord(idx, r); }
         }
 
         /// <summary>HGSS / Platinum: one combined record per mon; the 3 fields are the LAST 3 bytes (size
@@ -175,7 +176,7 @@ namespace DSPRE.Editors {
                 WriteByte(_sz, id, (byte)rec.ShadowSize);
                 if (rec.HasHeights) _heights.Save(id, in rec);
             }
-            private static void WriteByte(OffsetNarc narc, int id, byte v) { var r = narc.GetRecord(id); if (r == null || r.Length < 1) return; r[0] = v; narc.PutRecord(id, r); }
+            private static void WriteByte(OffsetNarc narc, int id, byte v) { var r = narc.GetRecord(id); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = v; narc.PutRecord(id, r); }
         }
 
         private IBattleOffsetSource _src;
@@ -403,8 +404,9 @@ namespace DSPRE.Editors {
             int frontH = female ? frontHeightF : frontHeightM, frontO = female ? oFrontHeightF : oFrontHeightM;
             int backH = female ? backHeightF : backHeightM, backO = female ? oBackHeightF : oBackHeightM;
 
-            double enemyTop = 24 - spriteY + (hasHeights ? (frontH - frontO) : 0);
-            double playerTop = hasHeights ? 84 + (backH - backO) : 84 - spriteY;
+            // Global Y offset (front/enemy sprite only) moves it down as it grows; per-gender height moves it up.
+            double enemyTop = 24 + spriteY - (hasHeights ? (frontH - frontO) : 0);
+            double playerTop = 84 - (hasHeights ? (backH - backO) : 0);
 
             Bitmap enemy = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 2 : 3], frameIndex);
             Bitmap player = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 0 : 1], frameIndex);
