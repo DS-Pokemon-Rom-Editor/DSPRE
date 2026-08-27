@@ -4,6 +4,12 @@
 
 ---
 
+## 2.2.2.1
+- Fixed the Battle Display preview moving the sprite the wrong way vertically for the Front/Back height
+  fields, a regression introduced by the direction fix in 2.2.2 itself: raising those values moved the
+  sprite up in the preview instead of down. The Front sprite Y offset direction fixed in 2.2.2 was correct
+  and is unchanged. As before, this only affected the on-screen preview, not the saved values.
+
 ## 2.2.2
 - Fixed Battle Display height edits for the gender a species didn't originally have. If you gave a
   single-gender species (or any species that started out male-only or female-only) a mixed gender ratio

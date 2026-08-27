@@ -404,9 +404,9 @@ namespace DSPRE.Editors {
             int frontH = female ? frontHeightF : frontHeightM, frontO = female ? oFrontHeightF : oFrontHeightM;
             int backH = female ? backHeightF : backHeightM, backO = female ? oBackHeightF : oBackHeightM;
 
-            // Global Y offset (front/enemy sprite only) moves it down as it grows; per-gender height moves it up.
-            double enemyTop = 24 + spriteY - (hasHeights ? (frontH - frontO) : 0);
-            double playerTop = 84 - (hasHeights ? (backH - backO) : 0);
+            // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
+            double enemyTop = 24 + spriteY + (hasHeights ? (frontH - frontO) : 0);
+            double playerTop = 84 + (hasHeights ? (backH - backO) : 0);
 
             Bitmap enemy = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 2 : 3], frameIndex);
             Bitmap player = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 0 : 1], frameIndex);
