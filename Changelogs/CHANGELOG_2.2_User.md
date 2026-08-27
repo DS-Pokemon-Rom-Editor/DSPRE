@@ -4,6 +4,23 @@
 
 ---
 
+## 2.2.2
+- Fixed Battle Display height edits for the gender a species didn't originally have. If you gave a
+  single-gender species (or any species that started out male-only or female-only) a mixed gender ratio
+  and added sprites for the new gender, the Front/Back height fields for that gender could not actually
+  be changed: whatever you typed and saved reverted back to 0 the moment you switched to another Pokémon
+  and came back. The value was never written at all, since the game's own data format leaves that
+  gender's height as a genuinely empty entry until you touch it, and DSPRE was treating "empty" the same
+  as "doesn't exist" and skipping the write.
+- Fixed the Battle Display preview shifting the back (player-side) sprite when changing the "Front sprite
+  Y offset" field on Diamond/Pearl ROMs. That field only ever affects the front-facing sprite in the real
+  games; the preview was applying it to both.
+- Fixed the Battle Display preview moving sprites the wrong way vertically. Raising the Front/Back height
+  values moved the sprite up in the preview and down in the actual game, and raising the Front sprite Y
+  offset did the opposite of the two. This made the preview actively misleading rather than just
+  approximate, and is likely why in-game sprite positions have needed so much extra trial-and-error to
+  get right. The saved values themselves were never affected, only the preview.
+
 ## 2.2.1
 - Fixed a crash opening the TM/HM Bulk Editor on Diamond/Pearl ROMs. The editor tried to load every
   Pokémon form up through the ones Platinum introduced, but Diamond/Pearl's own data was never extended
