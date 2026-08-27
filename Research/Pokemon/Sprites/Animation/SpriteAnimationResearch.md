@@ -3,3 +3,4 @@
 # Sprite Animation Research
 
 - [Idle Animation Logic](IdleAnimationLogic.md)
+- [Frame Animation Logic](FrameAnimationLogic.md)

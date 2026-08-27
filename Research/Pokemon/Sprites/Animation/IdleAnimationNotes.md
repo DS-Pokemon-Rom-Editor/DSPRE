@@ -20,9 +20,30 @@ no function in src/ references Pokeanm, PokeanmSub, or UnkStruct_02069038
 
 pokemon.h: NATURE_HARDY=0 ... NATURE_QUIRKY=24, NATURE_NUM=25, fully named
 
+== separate, already-consumed system: Pokepic (not the same as Pokeanm above) ==
+pokepic.h: struct PokepicAnimScript { s8 next; u8 duration; s8 xOffset; s8 unk_3; }   4 bytes
+unk_02016EDC.h:
+  struct UnkStruct_02072914_sub { u8 unk_0; u8 unk_1; u8 unk_2; PokepicAnimScript unk_3[10]; }   3+40 = 43 bytes
+  struct UnkStruct_02072914 { struct UnkStruct_02072914_sub unk0[2]; s8 unk_56; s8 unk_57; u8 unk_58; }   2*43+3 = 89 bytes
+
+NARC_a_1_8_0 = single-file NARC, member size 43966 bytes (read directly from its own FATB header)
+  43966 / 89 = 494 exact -> one 89-byte record per species, same species count as a/1/1/1
+
+NARC_ReadPokepicAnimScript (pokemon.c:2188): reads one species record, copies one of unk0[2] (front/back) into PokepicAnimScript[10]
+  called from register_hall_of_fame.c:2023 for both front and back sprite per party member
+
+Pokepic_RunAnimInternal (pokepic.c:997) = real per-frame stepper
+  animStepDelay counts down to 0, then advances whichAnim
+  each step: duration (hold frames), xOffset (pixel shift while active), next
+    next == -1 -> animation ends
+    next >= 0 -> real next-step index
+    next < -1 -> loop: bump loop counter, repeat from step (-2 - next) until counter == duration (or duration==0 = infinite until reset)
+
+Pokepic also used in src/battle/battle_command.c, inside Task_GetPokemon (post-catch nickname/PC screen), not confirmed for the normal standing-in-battle sprite
+
 not decompiled:
-- loader/consumer function for Pokeanm
-- archive name/constant for a/1/1/1, a/0/9/0
+- loader/consumer function for Pokeanm (a/1/1/1) - still unconfirmed, NOT the same as Pokepic above
+- archive name/constant for a/1/1/1, a/0/9/0, a/1/8/0
 - format of the 143 files in a/0/9/0
 - nature -> unk0[4] link
 
