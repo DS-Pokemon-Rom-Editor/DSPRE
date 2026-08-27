@@ -1,3 +1,5 @@
+[Research](../../../ResearchNotes.md) / [Pokemon Resear…](../../PokemonResearch.md) / [Sprites Resear…](../SpritesResearch.md) / [Sprite Animati…](SpriteAnimationResearch.md) / Idle Animation…
+
 # Pokémon Battle Idle Animation System, HeartGold/SoulSilver
 
 Source: [pokeheartgold decomp](https://github.com/pret/pokeheartgold). This was structured into a document with AI.

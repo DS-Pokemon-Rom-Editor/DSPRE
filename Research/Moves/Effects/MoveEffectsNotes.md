@@ -1,3 +1,5 @@
+[Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Effects N…
+
 Notes for [MoveEffectsLogic.md](MoveEffectsLogic.md).
 
 == move data ==

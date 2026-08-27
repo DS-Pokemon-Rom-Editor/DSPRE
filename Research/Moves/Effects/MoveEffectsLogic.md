@@ -1,3 +1,5 @@
+[Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Effects L…
+
 # Move Effects Logic, HeartGold/SoulSilver
 
 Source: [pokeheartgold decomp](https://github.com/pret/pokeheartgold). This was structured into a document with AI.

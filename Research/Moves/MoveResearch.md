@@ -1,3 +1,5 @@
+[Research](../ResearchNotes.md) / Move Research
+
 # Move Research
 
 ## Effects

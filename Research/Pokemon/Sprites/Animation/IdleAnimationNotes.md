@@ -1,3 +1,5 @@
+[Research](../../../ResearchNotes.md) / [Pokemon Resear…](../../PokemonResearch.md) / [Sprites Resear…](../SpritesResearch.md) / [Sprite Animati…](SpriteAnimationResearch.md) / Idle Animation…
+
 Notes for [IdleAnimationLogic.md](IdleAnimationLogic.md).
 
 a/1/1/1 - exists in files/ tree, no symbolic name

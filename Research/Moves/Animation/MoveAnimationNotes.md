@@ -1,3 +1,5 @@
+[Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Animation…
+
 Notes for [MoveAnimationLogic.md](MoveAnimationLogic.md).
 
 PlayMoveAnimation (opcode 23) -> BtlCmd_PlayMoveAnimation (battle_command.c:879)
