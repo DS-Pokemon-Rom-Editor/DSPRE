@@ -43,23 +43,43 @@ namespace DSPRE.Avalonia
             return true;
         }
 
+        /// <summary>Runs unpack-heavy file I/O off the UI thread behind the app's busy overlay. Only pass plain file I/O, not UI/bitmap work.</summary>
+        private static async System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
+        {
+            var app = global::Avalonia.Application.Current?.ApplicationLifetime
+                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+            var vm = app?.MainWindow?.DataContext as MainWindowViewModel;
+            if (vm != null) { vm.BusyText = busyText; vm.BusyHint = busyHint; vm.IsBusy = true; }
+            try { await System.Threading.Tasks.Task.Run(work); }
+            finally { if (vm != null) vm.IsBusy = false; }
+        }
+
         // ── Pokémon-related editors ────────────────────────────────────────────
-        public static void OpenPokemonEditor(int initialMon = 1)
+        public static async System.Threading.Tasks.Task OpenPokemonEditorAsync(int initialMon = 1)
         {
             if (!IsRomLoaded || BlockedForHge("The Pokémon Editor", HgEngineDomain.Species)) return;
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> {
-                DirNames.personalPokeData, DirNames.learnsets,
-                DirNames.evolutions, DirNames.monIcons });
-            SetMonIconsPalTableAddress();
+            try
+            {
+                await RunBusyAsync("Opening Pokémon Editor…",
+                    "First-time opens unpack the ROM's data and can take a while, especially for a WSL-hosted project.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> {
+                        DirNames.personalPokeData, DirNames.learnsets,
+                        DirNames.evolutions, DirNames.monIcons }));
+                SetMonIconsPalTableAddress();
 
-            // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
-            string[] fullList = GetPokemonNamesWithForms(GetPersonalFilesCount());
-            string[] moveNames = GetAttackNames();
+                // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
+                string[] fullList = GetPokemonNamesWithForms(GetPersonalFilesCount());
+                string[] moveNames = GetAttackNames();
 
-            int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
-            var vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
-            new PokemonEditorView(vm).ShowManaged();
+                int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
+                var vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
+                new PokemonEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Pokémon Editor: " + ex.Message, "Pokémon Editor");
+            }
         }
 
         /// <summary>hg-engine-only: which form species exist per base Pokémon (data/PokeFormDataTbl.c).
@@ -499,7 +519,7 @@ namespace DSPRE.Avalonia
 
             (string label, string keywords, System.Action run)[] jumps =
             {
-                ($"Go to Pokémon #{n}",        "pokemon species mon personal", () => OpenPokemonEditor(n)),
+                ($"Go to Pokémon #{n}",        "pokemon species mon personal", () => { _ = OpenPokemonEditorAsync(n); }),
                 ($"Go to Move #{n}",           "move attack",                  () => OpenMoveDataEditor(n)),
                 ($"Go to TM / HM #{n}",        "tm hm machine",                () => OpenTMEditor(n)),
                 ($"Go to Item #{n}",           "item",                         () => OpenItemEditor(n)),
@@ -527,7 +547,7 @@ namespace DSPRE.Avalonia
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
         public static List<CommandItem> BuildCommands() => new()
         {
-            new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => OpenPokemonEditor() },
+            new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },

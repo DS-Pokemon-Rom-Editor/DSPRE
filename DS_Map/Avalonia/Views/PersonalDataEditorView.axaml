@@ -182,9 +182,16 @@
               <StackPanel Spacing="6" Margin="4">
                 <TextBlock Text="{Binding OwStatusText}" FontStyle="Italic"/>
                 <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding OwHasEntry}">
-                  <Image Source="{Binding OwFollowerPreview}" Width="64" Height="64" Stretch="Uniform"
-                         HorizontalAlignment="Left" VerticalAlignment="Top"
-                         RenderOptions.BitmapInterpolationMode="None"/>
+                  <StackPanel Spacing="4" HorizontalAlignment="Left">
+                    <Image Source="{Binding OwFollowerPreview}" Width="64" Height="64" Stretch="Uniform"
+                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                           RenderOptions.BitmapInterpolationMode="None"/>
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding OwCanAnimate}">
+                      <NumericUpDown Value="{Binding OwFrameIndex}" Minimum="0" Maximum="{Binding OwMaxFrameIndex}"
+                                     Width="80" FontSize="11" FormatString="0"/>
+                      <Button Content="{Binding OwAnimateButtonText}" Click="ToggleOwAnimate_Click" Padding="8,2" FontSize="11"/>
+                    </StackPanel>
+                  </StackPanel>
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <TextBlock Text="Size Class:" Classes="label"/>

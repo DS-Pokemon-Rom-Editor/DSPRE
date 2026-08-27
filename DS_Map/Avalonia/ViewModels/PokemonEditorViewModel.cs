@@ -160,6 +160,11 @@ namespace DSPRE.Avalonia.ViewModels
             PersonalVM.PropertyChanged   += OnChildUndoState;
             EvolutionsVM.PropertyChanged += OnChildUndoState;
 
+            // Picking a form in the Sprites tab that has its own main-list entry (e.g. Deoxys - Attack) should
+            // move the main selector there too, so Personal Data/Learnset/Evolutions and Save all agree on
+            // which form is actually loaded instead of quietly staying on the base species.
+            SpriteVM.FormPseudoIdSelected += pseudoId => { if (pseudoId != _selectedMonIndex) SelectedMonIndex = pseudoId; };
+
             _selectedMonIndex = initialMon;
             LoadMon(initialMon);
         }

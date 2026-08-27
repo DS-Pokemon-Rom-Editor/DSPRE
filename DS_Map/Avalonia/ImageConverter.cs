@@ -70,6 +70,34 @@ namespace DSPRE.Avalonia
             return ToAvaloniaBitmap(frame);
         }
 
+        /// <summary>Loads a vertical N-frame overworld sprite strip (same layout as icon.png: each frame
+        /// Width×Width, color-keyed, no real alpha) and returns every frame instead of just the first.</summary>
+        public static AvaloniaBitmap[] LoadHgeOverworldFrames(string pngPath)
+        {
+            using var fs = System.IO.File.OpenRead(pngPath);
+            var raw = DecodeRawImage(fs);
+            if (raw == null || raw.Width <= 0) return Array.Empty<AvaloniaBitmap>();
+
+            int frameSize = raw.Width;
+            if (raw.Height <= frameSize || raw.Height % frameSize != 0)
+            {
+                ApplyCornerColorKeyTransparency(raw);
+                return new[] { ToAvaloniaBitmap(raw) };
+            }
+
+            int count = raw.Height / frameSize;
+            int frameBytes = raw.Stride * frameSize;
+            var frames = new AvaloniaBitmap[count];
+            for (int i = 0; i < count; i++)
+            {
+                var frame = new DSPRE.RawImage(frameSize, frameSize);
+                Array.Copy(raw.Bgra, i * frameBytes, frame.Bgra, 0, frameBytes);
+                ApplyCornerColorKeyTransparency(frame);
+                frames[i] = ToAvaloniaBitmap(frame);
+            }
+            return frames;
+        }
+
         private static void ApplyCornerColorKeyTransparency(DSPRE.RawImage img)
         {
             if (img.IsEmpty) return;

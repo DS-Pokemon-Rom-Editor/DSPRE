@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels
         private readonly int _index;
         private readonly uint _initialArgb;
 
-        public string Title => $"{(_shiny ? "Shiny" : "Normal")} Palette — Color {_index}";
+        public string Title => $"{(_shiny ? "Shiny" : "Normal")} Palette, Color {_index}";
 
         public ObservableCollection<FavoriteSlotVM> Favorites { get; } = new ObservableCollection<FavoriteSlotVM>();
         public ObservableCollection<RecentColorVM> LastUsed { get; } = new ObservableCollection<RecentColorVM>();

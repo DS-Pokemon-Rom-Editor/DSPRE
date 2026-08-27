@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.Views
             bool? reExtract = await CheckExtractedDataChoiceAsync(path);
             if (reExtract == null) return;   // user aborted
             OpenEditors.CloseEditorWindows(this);
-            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
+            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; }, sourcePath: path);
         }
 
         /// <summary>
@@ -255,12 +255,12 @@ namespace DSPRE.Avalonia.Views
                 bool? reExtractHge = await CheckExtractedDataChoiceAsync(romPath);
                 if (reExtractHge == null) return;
                 OpenEditors.CloseEditorWindows(this);
-                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(romPath, out var er, reExtractHge.Value); err0(er); return ok; }, autoLinkHgEnginePath: path);
+                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(romPath, out var er, reExtractHge.Value); err0(er); return ok; }, sourcePath: path, autoLinkHgEnginePath: path);
                 return;
             }
 
             OpenEditors.CloseEditorWindows(this);
-            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
+            await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; }, sourcePath: path);
         }
 
         /// <summary>Open a recent-projects entry: a .nds file or an extracted folder.</summary>
@@ -273,12 +273,12 @@ namespace DSPRE.Avalonia.Views
                 bool? reExtract = await CheckExtractedDataChoiceAsync(path);
                 if (reExtract == null) return;   // user aborted
                 OpenEditors.CloseEditorWindows(this);
-                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; });
+                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out var er, reExtract.Value); err0(er); return ok; }, sourcePath: path);
             }
             else if (System.IO.Directory.Exists(path))
             {
                 OpenEditors.CloseEditorWindows(this);
-                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; });
+                await LoadRom(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out var er); err0(er); return ok; }, sourcePath: path);
             }
             else
             {
@@ -288,17 +288,25 @@ namespace DSPRE.Avalonia.Views
             }
         }
 
+        /// <summary>True for a path served over WSL's network redirector (\\wsl.localhost\... or \\wsl$\...), where every file operation pays extra latency compared to a local drive.</summary>
+        private static bool IsWslPath(string path) =>
+            path != null && (path.StartsWith(@"\\wsl.localhost\", System.StringComparison.OrdinalIgnoreCase)
+                           || path.StartsWith(@"\\wsl$\", System.StringComparison.OrdinalIgnoreCase));
+
         // Runs a ROM load off the UI thread (unpacking blocks), then refreshes the menus/title and reports errors.
+        // sourcePath: the picked .nds/folder, used only to detect a WSL path for the busy hint.
         // autoLinkHgEnginePath: set when the user explicitly opened an hg-engine checkout folder (its rom.nds
         // was opened on their behalf), so link it immediately instead of asking since they already chose it.
-        private async System.Threading.Tasks.Task LoadRom(System.Func<System.Action<string>, bool> load, string autoLinkHgEnginePath = null)
+        private async System.Threading.Tasks.Task LoadRom(System.Func<System.Action<string>, bool> load, string sourcePath = null, string autoLinkHgEnginePath = null)
         {
             var vm = DataContext as MainWindowViewModel;
             if (vm != null)
             {
                 vm.BusyText = "Opening ROM…";
-                vm.BusyHint = "First-time opens unpack the ROM and can take a little while.";
-                vm.IsLoadingRom = true;
+                vm.BusyHint = IsWslPath(sourcePath)
+                    ? "This project is hosted in WSL, so load times are noticeably higher than on a local drive. Please be patient while everything unpacks."
+                    : "First-time opens unpack the ROM and can take a little while.";
+                vm.IsBusy = true;
             }
             string error = null;
             bool ok;
@@ -308,7 +316,7 @@ namespace DSPRE.Avalonia.Views
             }
             finally
             {
-                if (vm != null) vm.IsLoadingRom = false;
+                if (vm != null) vm.IsBusy = false;
             }
             vm?.RefreshRomState();
             if (!ok)
@@ -380,7 +388,10 @@ namespace DSPRE.Avalonia.Views
             if (HgEngineProject.TryLink(path, out string error))
             {
                 vm?.RefreshHgEngineState();
-                await DialogHelper.ShowInfo("Linked. The 5 editors above now read and write this checkout's source.", "hg-engine checkout linked");
+                await DialogHelper.ShowInfo(
+                    "Linked. The Pokémon, Move Data, Item, Trainer and Wild Pokémon editors now read and write " +
+                    "this checkout's source directly.",
+                    "hg-engine checkout linked");
             }
             else
             {
@@ -411,7 +422,7 @@ namespace DSPRE.Avalonia.Views
             {
                 vm.BusyText = "Saving ROM…";
                 vm.BusyHint = "Repacking the project into a playable .nds file.";
-                vm.IsLoadingRom = true;
+                vm.IsBusy = true;
             }
             string error = null;
             bool ok;
@@ -451,7 +462,7 @@ namespace DSPRE.Avalonia.Views
             }
             finally
             {
-                if (vm != null) vm.IsLoadingRom = false;
+                if (vm != null) vm.IsBusy = false;
             }
             if (vm != null) vm.StatusText = ok ? "ROM built: " + path : "ROM build failed.";
             if (ok)
@@ -487,8 +498,8 @@ namespace DSPRE.Avalonia.Views
         }
 
         // ── Pokémon ─────────────────────────────────────────────────────────
-        private void PokemonEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenPokemonEditor();
+        private async void PokemonEditor_Click(object sender, RoutedEventArgs e)
+            => await AvaloniaEditorLauncher.OpenPokemonEditorAsync();
 
         private void HgEngineFormEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHgEngineFormEditor();

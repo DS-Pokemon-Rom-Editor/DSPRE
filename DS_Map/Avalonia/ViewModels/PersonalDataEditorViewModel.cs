@@ -275,8 +275,45 @@ namespace DSPRE.Avalonia.ViewModels
         private string _owStatusText = "";
         public string OwStatusText { get => _owStatusText; private set => Set(ref _owStatusText, value); }
 
-        private Bitmap _owFollowerPreview;
-        public Bitmap OwFollowerPreview { get => _owFollowerPreview; private set => Set(ref _owFollowerPreview, value); }
+        private Bitmap[] _owFrames = Array.Empty<Bitmap>();
+        public Bitmap OwFollowerPreview => _owFrameIndex >= 0 && _owFrameIndex < _owFrames.Length ? _owFrames[_owFrameIndex] : null;
+
+        public int OwFrameCount => _owFrames.Length;
+        public int OwMaxFrameIndex => Math.Max(0, _owFrames.Length - 1);
+
+        private int _owFrameIndex;
+        public int OwFrameIndex
+        {
+            get => _owFrameIndex;
+            set
+            {
+                if (_owFrames.Length == 0) return;
+                int clamped = Math.Clamp(value, 0, _owFrames.Length - 1);
+                if (!Set(ref _owFrameIndex, clamped)) return;
+                OnPropertyChanged(nameof(OwFollowerPreview));
+            }
+        }
+
+        private bool _owAnimating;
+        public bool OwAnimating
+        {
+            get => _owAnimating;
+            set { if (Set(ref _owAnimating, value)) OnPropertyChanged(nameof(OwAnimateButtonText)); }
+        }
+        public string OwAnimateButtonText => OwAnimating ? "Stop" : "Animate";
+        public bool OwCanAnimate => _owFrames.Length > 1;
+
+        private readonly global::Avalonia.Threading.DispatcherTimer _owFrameTimer =
+            new() { Interval = TimeSpan.FromMilliseconds(150) };
+
+        private void WireOwFrameTimer()
+        {
+            _owFrameTimer.Tick += (_, _) =>
+            {
+                if (OwAnimating) OwFrameIndex = (OwFrameIndex + 1) % Math.Max(1, _owFrames.Length);
+            };
+            _owFrameTimer.Start();
+        }
 
         // Only shown/needed when this species' sprite files don't exist yet: cloning metadata from an
         // existing entry is the only supported way to create them (see HgEngineOverworldFollowerSprite).
@@ -298,9 +335,21 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        private void SetOwFrames(Bitmap[] frames)
+        {
+            _owFrames = frames;
+            _owFrameIndex = 0;
+            OwAnimating = false;
+            OnPropertyChanged(nameof(OwFollowerPreview));
+            OnPropertyChanged(nameof(OwFrameIndex));
+            OnPropertyChanged(nameof(OwFrameCount));
+            OnPropertyChanged(nameof(OwMaxFrameIndex));
+            OnPropertyChanged(nameof(OwCanAnimate));
+        }
+
         private void LoadOwFollower()
         {
-            OwFollowerPreview = null;
+            SetOwFrames(Array.Empty<Bitmap>());
             _owHasSpriteFiles = false;
 
             if (!DSPRE.HgEngine.HgEngineProject.IsActive)
@@ -326,17 +375,16 @@ namespace DSPRE.Avalonia.ViewModels
             _owSizeClassIndex = _owSizeClassValues.IndexOf(sizeClass);
             OnPropertyChanged(nameof(OwSizeClassIndex));
 
-            string pngPath = HgEngineOverworldFollowerSprite.TryGetSpritePngPath(_owGfxIndex);
+            // The species' own data/graphics/sprites/<name>/overworld.png (same convention as icon.png)
+            // is the real, populated walk sprite; the newer per-form gfx-index table is a fallback for
+            // species that only have art registered there.
+            string pngPath = HgEngineOverworldSprite.TryGetSpritePngPath(_currentId, out string ownPath) ? ownPath
+                : HgEngineOverworldFollowerSprite.TryGetSpritePngPath(_owGfxIndex);
             _owHasSpriteFiles = pngPath != null;
             if (pngPath != null)
             {
-                try
-                {
-                    using var fs = File.OpenRead(pngPath);
-                    var raw = DSPRE.Avalonia.ImageConverter.DecodeRawImage(fs);
-                    OwFollowerPreview = raw != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw) : null;
-                }
-                catch { OwFollowerPreview = null; }
+                try { SetOwFrames(DSPRE.Avalonia.ImageConverter.LoadHgeOverworldFrames(pngPath)); }
+                catch { SetOwFrames(Array.Empty<Bitmap>()); }
             }
             OwStatusText = $"Overworld gfx #{_owGfxIndex}" + (_owHasSpriteFiles ? "" : " (no sprite art yet, import one below)");
             OnPropertyChanged(nameof(OwNeedsTemplate));
@@ -445,6 +493,7 @@ namespace DSPRE.Avalonia.ViewModels
                 return;
             }
 
+            WireOwFrameTimer();
             _typeNamesArr    = GetTypeNames();
             _abilityNamesArr = GetAbilityNames();
             _itemNamesArr    = GetItemNames();
@@ -468,6 +517,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// </summary>
         internal PersonalDataEditorViewModel(string[] pokemonNames)
         {
+            WireOwFrameTimer();
             _typeNamesArr     = GetTypeNames();
             _abilityNamesArr  = GetAbilityNames();
             _itemNamesArr     = GetItemNames();
@@ -516,7 +566,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>Unsubscribes from app-wide events; called when the host window closes.</summary>
-        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; _owFrameTimer.Stop(); }
 
         // ── Commands ──────────────────────────────────────────────────────────
 

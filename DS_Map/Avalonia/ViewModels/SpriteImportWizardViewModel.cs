@@ -34,8 +34,9 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _sprite = sprite;
             _owner = owner;
-            GenderGapActive = sprite.CanAddOppositeGenderSprites;
-            ExistingGender = sprite.ExistingGenderName;
+            // Two reasons only one gender is really importable: a genuine mono-gender/genderless species, or an alternate form (only Male is ever actually saved, see SaveAlternateForm).
+            GenderGapActive = sprite.CanAddOppositeGenderSprites || sprite.IsAlternateForms;
+            ExistingGender = sprite.IsAlternateForms ? "Male" : sprite.ExistingGenderName;
             AvailableRefPoses = GenderGapActive
                 ? new[] { ExistingGender + " Back", ExistingGender + " Front" }
                 : AllPoses;

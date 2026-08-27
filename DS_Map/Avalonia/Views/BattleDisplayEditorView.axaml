@@ -8,6 +8,11 @@
     <vm:BattleDisplayEditorViewModel/>
   </Design.DataContext>
 
+  <UserControl.Styles>
+    <Style Selector="TextBlock.frame-note"><Setter Property="Foreground" Value="#C9A227"/></Style>
+    <Style Selector="TextBlock.frame-note.severe"><Setter Property="Foreground" Value="#DC2626"/></Style>
+  </UserControl.Styles>
+
   <ScrollViewer>
     <StackPanel Margin="14" Spacing="12" HorizontalAlignment="Left">
 
@@ -23,12 +28,13 @@
         <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Top">
           <TextBlock Text="Battle preview (this Pokémon vs itself)" FontWeight="SemiBold"/>
           <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <CheckBox Content="Show both genders" IsChecked="{Binding UnifiedDisplay}"
+            <CheckBox Content="Show both genders" IsChecked="{Binding UnifiedDisplay}" IsVisible="{Binding HasGenderChoice}"
                       ToolTip.Tip="Show Male and Female battle scenes side by side."/>
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding !UnifiedDisplay}">
-              <TextBlock Text="Gender" VerticalAlignment="Center"/>
+              <TextBlock Text="Gender" VerticalAlignment="Center" IsVisible="{Binding HasGenderChoice}"/>
               <ComboBox ItemsSource="{Binding Genders}" SelectedIndex="{Binding GenderIndex}" Width="100"
-                        ToolTip.Tip="Which gender's sprites to show (falls back to the other if absent)."/>
+                        IsVisible="{Binding HasGenderChoice}"
+                        ToolTip.Tip="Which gender's sprites to show."/>
             </StackPanel>
             <CheckBox Content="Pause frames" IsChecked="{Binding FramePaused}"
                       ToolTip.Tip="Freeze the sprite-frame (pattern) animation to inspect a single frame."/>
@@ -55,10 +61,15 @@
           </StackPanel>
 
           <!-- Separate display: one scene of the selected gender. -->
-          <views:BattleSceneControl Width="512" Height="384" HorizontalAlignment="Left"
-                                    IsVisible="{Binding !UnifiedDisplay}"
-                                    Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
-                                    EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
+          <StackPanel Spacing="2" IsVisible="{Binding !UnifiedDisplay}">
+            <views:BattleSceneControl Width="512" Height="384" HorizontalAlignment="Left"
+                                      Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
+                                      EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
+            <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarning}" Classes.severe="{Binding EnemyFrameWarningSevere}" FontSize="10" TextWrapping="Wrap"
+                       Text="{Binding EnemyFrameWarningText, StringFormat='Enemy: {0}'}"/>
+            <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarning}" Classes.severe="{Binding PlayerFrameWarningSevere}" FontSize="10" TextWrapping="Wrap"
+                       Text="{Binding PlayerFrameWarningText, StringFormat='Player: {0}'}"/>
+          </StackPanel>
 
           <!-- Unified display: Male + Female scenes side by side. -->
           <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UnifiedDisplay}">
@@ -66,11 +77,19 @@
               <TextBlock Text="Male" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
               <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteM}" Player="{Binding PlayerSpriteM}"
                                         EnemyY="{Binding EnemyTopM}" PlayerY="{Binding PlayerTopM}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarningM}" Classes.severe="{Binding EnemyFrameWarningSevereM}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding EnemyFrameWarningTextM, StringFormat='Enemy: {0}'}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarningM}" Classes.severe="{Binding PlayerFrameWarningSevereM}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding PlayerFrameWarningTextM, StringFormat='Player: {0}'}"/>
             </StackPanel>
             <StackPanel Spacing="2">
               <TextBlock Text="Female" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
               <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteF}" Player="{Binding PlayerSpriteF}"
                                         EnemyY="{Binding EnemyTopF}" PlayerY="{Binding PlayerTopF}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarningF}" Classes.severe="{Binding EnemyFrameWarningSevereF}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding EnemyFrameWarningTextF, StringFormat='Enemy: {0}'}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarningF}" Classes.severe="{Binding PlayerFrameWarningSevereF}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding PlayerFrameWarningTextF, StringFormat='Player: {0}'}"/>
             </StackPanel>
           </StackPanel>
 
@@ -210,7 +229,7 @@
 
                   <!-- hg-engine: the real frame data (data/SpriteOffsets.c), 10 fixed slots each. -->
                   <StackPanel IsVisible="{Binding HasHgeFrameData}" Spacing="8">
-                    <TextBlock Text="Which raw sprite frame to show, how long (in 1/60 s), and its per-frame pixel shift. Frame −1 = unused, and stops the idle-cycle loop there."
+                    <TextBlock Text="Which raw sprite frame to show, how long (in 1/30 s), and its per-frame pixel shift. Frame −1 = unused, and stops the idle-cycle loop there."
                                FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
                     <TextBlock Text="Front frames" FontWeight="SemiBold"/>
@@ -256,7 +275,7 @@
                     <TextBlock Text="This Pokémon has no animation record." IsVisible="{Binding !HasAnimData}"
                                FontSize="12" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
                     <StackPanel IsVisible="{Binding HasAnimData}" Spacing="4">
-                      <TextBlock Text="Pattern steps: the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/60 s."
+                      <TextBlock Text="Pattern steps: the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/30 s."
                                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                       <ItemsControl ItemsSource="{Binding AnimSteps}">
                         <ItemsControl.ItemTemplate>

@@ -3,12 +3,15 @@ using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.Editors.Utils;
 using DSPRE.HgEngine;
+using DSPRE.Resources;
+using DSPRE.ROMFiles;
 using NarcAPI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
@@ -91,6 +94,7 @@ namespace DSPRE.Avalonia.ViewModels
         public class FrameCellState : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;
+            private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             private int _frame;
             public Action<int> OnChanged;
             public int Frame
@@ -101,14 +105,28 @@ namespace DSPRE.Avalonia.ViewModels
                     int v = ((value % 2) + 2) % 2;
                     if (_frame == v) return;
                     _frame = v;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Frame)));
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFrame1)));
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFrame2)));
+                    Raise(nameof(Frame)); Raise(nameof(IsFrame1)); Raise(nameof(IsFrame2));
                     OnChanged?.Invoke(_frame);
                 }
             }
             public bool IsFrame1 => Frame == 0;
             public bool IsFrame2 => Frame == 1;
+
+            private bool _hasFrame1 = true, _hasFrame2 = true;
+            public bool HasFrame1 => _hasFrame1;
+            public bool HasFrame2 => _hasFrame2;
+            // Some ROM sprites (e.g. Deoxys's back sprite) only ever had one frame drawn, the rest is blank padding.
+            public bool ShowFrameToggle => _hasFrame1 && _hasFrame2;
+
+            // Locks Frame onto the real one when only one exists.
+            public void SetFrameAvailability(bool hasFrame1, bool hasFrame2)
+            {
+                if (_hasFrame1 == hasFrame1 && _hasFrame2 == hasFrame2) return;
+                _hasFrame1 = hasFrame1; _hasFrame2 = hasFrame2;
+                Raise(nameof(ShowFrameToggle));
+                if (!hasFrame1 && hasFrame2) Frame = 1;
+                else if (hasFrame1 && !hasFrame2) Frame = 0;
+            }
         }
 
         public FrameCellState FemaleBackNormalFrame  { get; } = new();
@@ -164,10 +182,14 @@ namespace DSPRE.Avalonia.ViewModels
         // 16 colors as packed ARGB (0xAARRGGBB), always opaque (alpha byte FF)
         private uint[] _normalPal;
         private uint[] _shinyPal;
-        // True only when THIS species actually loaded from hg-engine source, not just "a checkout is linked" -- a species missing from pokegra.mk falls back to the NARC and keeps every button.
+        // True only when this species itself loaded from hg-engine source, not just when a checkout is linked.
         private bool _loadedFromHgEngine;
         public bool IsHgEngineSourced => _loadedFromHgEngine;
         public bool ShowShinyFullSheetImport => CanUseFullSheet && !IsHgEngineSourced;
+
+        // Alternate forms only store one shared back/front sprite in the ROM, so Male is the one place that saves.
+        public bool ShowFemaleFormImport => !IsAlternateForms;
+        public bool ShowFemaleShinyFormImport => !IsHgEngineSourced && !IsAlternateForms;
 
         private const int SpriteWidth = 160;
         private const int SpriteHeight = 80;
@@ -187,40 +209,92 @@ namespace DSPRE.Avalonia.ViewModels
             public int FrontSpriteIndex;
             public int NormalPaletteIndex;
             public int ShinyPaletteIndex;
-            public bool HasGenderDifference;
+            // >= 0 for an hg-engine-native form (Mega/Gigantamax/regional/etc, no vanilla otherpoke equivalent at all): jump straight to this species id instead of reading otherpoke.
+            public int HgEngineSpeciesId;
 
-            public FormSpriteData(string name, int backIdx, int frontIdx, int normalPal, int shinyPal, bool genderDiff = false)
+            public FormSpriteData(string name, int backIdx, int frontIdx, int normalPal, int shinyPal)
             {
                 Name = name;
                 BackSpriteIndex = backIdx;
                 FrontSpriteIndex = frontIdx;
                 NormalPaletteIndex = normalPal;
                 ShinyPaletteIndex = shinyPal;
-                HasGenderDifference = genderDiff;
+                HgEngineSpeciesId = -1;
+            }
+
+            public FormSpriteData(string name, int hgEngineSpeciesId)
+            {
+                Name = name;
+                BackSpriteIndex = FrontSpriteIndex = NormalPaletteIndex = ShinyPaletteIndex = -1;
+                HgEngineSpeciesId = hgEngineSpeciesId;
             }
         }
 
         private bool _isAlternateForms = false;
         public bool IsAlternateForms { get => _isAlternateForms; private set => Set(ref _isAlternateForms, value); }
 
-        public ObservableCollection<string> AlternateFormNames { get; } = new();
-
         private int _selectedFormIndex = 0;
-        public int SelectedFormIndex
+        /// <summary>Index into _currentFormData; only meaningful while IsAlternateForms is true (BattleDisplayEditorViewModel mirrors both).</summary>
+        public int SelectedFormIndex { get => _selectedFormIndex; private set => Set(ref _selectedFormIndex, value); }
+
+        /// <summary>Every alternate form name for the current species. No separate "Base Sprites" entry; the first one already is the real base sprite (see LoadMon).</summary>
+        public ObservableCollection<string> VariantNames { get; } = new();
+
+        /// <summary>Fires with the main-list id that should be showing for the picked form: its own pl_personal_extra entry if it has one, otherwise the base species id.</summary>
+        public event Action<int> FormPseudoIdSelected;
+
+        private int _selectedVariantIndex = 0;
+        /// <summary>Index into _currentFormData. Picking any entry loads straight into that form.</summary>
+        public int SelectedVariantIndex
         {
-            get => _selectedFormIndex;
+            get => _selectedVariantIndex;
             set
             {
-                if (!Set(ref _selectedFormIndex, value)) return;
-                if (_isAlternateForms && value >= 0 && _currentFormData != null && value < _currentFormData.Length)
-                    LoadAlternateForm(value);
+                if (!Set(ref _selectedVariantIndex, value)) return;
+                if (_currentFormData == null || value < 0 || value >= _currentFormData.Length) return;
+
+                // hg-engine-native form entry (Mega/Gigantamax/etc, no otherpoke equivalent at all): jump straight there. Its own species id (index 0, "no transformation") is a no-op, already loaded.
+                int nativeId = _currentFormData[value].HgEngineSpeciesId;
+                if (nativeId >= 0)
+                {
+                    if (nativeId != _currentId) JumpToSpecies(nativeId);
+                    return;
+                }
+
+                // hg-engine may have moved this form to its own real species; if so, follow it there instead of reading its now-dead otherpoke entry.
+                int migratedId = HgEngineProject.IsActive ? ResolveHgEngineMigratedFormId(_currentFormFamilyBaseId, value) : -1;
+                if (migratedId >= 0)
+                {
+                    JumpToSpecies(migratedId);
+                    return;
+                }
+
+                IsAlternateForms = true;
+                SelectedFormIndex = value;
+                LoadAlternateForm(value);
+                int pseudoId = ResolveFormPseudoId(_currentId, _currentFormData[value].Name);
+                FormSharesBaseData = pseudoId < 0;
+                FormPseudoIdSelected?.Invoke(pseudoId >= 0 ? pseudoId : _currentId);
             }
         }
 
-        public string ToggleButtonText => _isAlternateForms ? "← Main Sprites" : "Alternate Forms →";
+        // Jumping to a different species rebuilds VariantNames for that species, but this is called from
+        // inside the very ComboBox item click that's still resolving selection against the OLD list --
+        // mutating it synchronously here crashed the app for real (confirmed live). Posting defers the
+        // rebuild to the next UI dispatch, after the click has fully finished.
+        private void JumpToSpecies(int id) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            FormPseudoIdSelected?.Invoke(id);
+            LoadMon(id);
+        });
+
+        private bool _formSharesBaseData;
+        /// <summary>True when the selected form has no entry of its own in the main species list, so Personal Data/Learnset/Evolutions still read and save against the base species while only the sprite itself is form-specific (Unown, Castform, Cherrim, Shellos/Gastrodon, Arceus, Pichu, the egg forms).</summary>
+        public bool FormSharesBaseData { get => _formSharesBaseData; private set => Set(ref _formSharesBaseData, value); }
+        public string FormSharesBaseDataText => "Stats, type, and other Personal Data are shared with the base Pokémon and will be saved there. Only this sprite belongs to the form.";
 
         private bool _hasAlternateForms;
-        /// <summary>True when the current species has its own entries in the alternate-forms table (Deoxys, Unown, etc.), so the toggle only shows up when it's actually useful.</summary>
+        /// <summary>True when the current species has its own entries in the alternate-forms table (Deoxys, Unown, etc.), so the variant dropdown only shows up when it's actually useful.</summary>
         public bool HasAlternateForms { get => _hasAlternateForms; private set => Set(ref _hasAlternateForms, value); }
 
         private FormSpriteData[] _currentFormData;
@@ -232,51 +306,127 @@ namespace DSPRE.Avalonia.ViewModels
             return dash < 0 ? null : formName.Substring(0, dash);
         }
 
+        private static bool FormNameMatchesDescription(string formName, string description)
+        {
+            int dash = formName.IndexOf(" - ", StringComparison.Ordinal);
+            return dash >= 0 && string.Equals(formName.Substring(dash + 3), description, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // pl_personal_extra pseudo-species run consecutively right after the real Pokédex; resolves one back to its base species + form name.
+        // Vanilla-only: under hg-engine that same numeric range is real species (Mega/Gigantamax/etc, see GetPokemonNamesWithForms), not pseudo-forms.
+        private static (int baseId, string description)? ResolvePseudoFormId(int id)
+        {
+            if (HgEngineProject.IsActive) return null;
+            int extraIndex = id - RomInfo.GetPokemonNames().Length;
+            var extras = PokeDatabase.PersonalData.personalExtraFiles;
+            if (extraIndex < 0 || extraIndex >= extras.Length) return null;
+            return (extras[extraIndex].monId, extras[extraIndex].description);
+        }
+
+        // Reverse of ResolvePseudoFormId: not every form has its own main-list entry (Unown letters, Castform weather, etc. don't), so -1 is a normal result.
+        private static int ResolveFormPseudoId(int baseId, string formName)
+        {
+            if (HgEngineProject.IsActive) return -1;
+            var extras = PokeDatabase.PersonalData.personalExtraFiles;
+            for (int i = 0; i < extras.Length; i++)
+                if (extras[i].monId == baseId && FormNameMatchesDescription(formName, extras[i].description))
+                    return RomInfo.GetPokemonNames().Length + i;
+            return -1;
+        }
+
+        // formIndex equals the real form_no (table entries are written in form order); PokeFormDataTbl.c itself is 1-indexed, so form_no 0 is never in it. -1 means hg-engine hasn't touched this form.
+        private static int ResolveHgEngineMigratedFormId(int baseId, int formIndex)
+        {
+            if (formIndex <= 0) return -1;
+            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) return -1;
+            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out var slots)) return -1;
+            int slotIndex = formIndex - 1;
+            if (slotIndex >= slots.Count) return -1;
+            return speciesTable.TryGetValue(slots[slotIndex].SpeciesSymbol, out int migratedId) ? migratedId : -1;
+        }
+
+        // The species _currentFormData was actually built for. Usually == _currentId, except when viewing a form target directly (Castform Sunny, Mega Venusaur), where it's the family's real base.
+        private int _currentFormFamilyBaseId = -1;
+
         private FormSpriteData[] GetAlternateFormsForCurrentSpecies()
         {
+            _currentFormFamilyBaseId = _currentId;
             if (_currentId <= 0) return Array.Empty<FormSpriteData>();
-            string[] names = RomInfo.GetPokemonNames();
+            // Under hg-engine, real species can sit past the raw name archive's length; the padded list resolves those too.
+            string[] names = HgEngineProject.IsActive
+                ? RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount())
+                : RomInfo.GetPokemonNames();
             if (_currentId >= names.Length) return Array.Empty<FormSpriteData>();
-            string mySpecies = names[_currentId];
 
-            var matches = new System.Collections.Generic.List<FormSpriteData>();
-            foreach (var f in GetFormDataForCurrentGame())
+            var matches = BuildFamilyForms(_currentId, names[_currentId], names);
+            if (matches.Count == 0 && HgEngineProject.IsActive)
             {
-                string prefix = SpeciesNamePrefix(f.Name);
-                if (prefix != null && string.Equals(prefix, mySpecies, StringComparison.OrdinalIgnoreCase))
-                    matches.Add(f);
+                int? baseId = FindHgEngineFormFamilyBase(_currentId);
+                if (baseId.HasValue && baseId.Value != _currentId && baseId.Value < names.Length)
+                {
+                    var familyMatches = BuildFamilyForms(baseId.Value, names[baseId.Value], names);
+                    if (familyMatches.Count > 0) { matches = familyMatches; _currentFormFamilyBaseId = baseId.Value; }
+                }
             }
             return matches.ToArray();
         }
 
-        /// <summary>
-        /// Switches between the main sprite NARC and the alternate-forms NARC, scoped to whichever
-        /// entries belong to the currently-loaded species.
-        /// </summary>
-        public void ToggleAlternateFormsMode()
+        private List<FormSpriteData> BuildFamilyForms(int baseId, string baseName, string[] names)
         {
-            _isAlternateForms = !_isAlternateForms;
-            OnPropertyChanged(nameof(IsAlternateForms));
-            OnPropertyChanged(nameof(ToggleButtonText));
-
-            if (_isAlternateForms)
+            var matches = new List<FormSpriteData>();
+            foreach (var f in GetFormDataForCurrentGame())
             {
-                _currentFormData = GetAlternateFormsForCurrentSpecies();
-                AlternateFormNames.Clear();
-                for (int i = 0; i < _currentFormData.Length; i++)
-                    AlternateFormNames.Add($"{i:D3} {_currentFormData[i].Name}");
+                string prefix = SpeciesNamePrefix(f.Name);
+                if (prefix != null && string.Equals(prefix, baseName, StringComparison.OrdinalIgnoreCase))
+                    matches.Add(f);
+            }
+            // Only species outside the vanilla table (Megas, Gigantamax, regional forms, ...) fall here; the vanilla table already wins for the 13 species it covers, so there's no double-listing.
+            if (matches.Count == 0 && HgEngineProject.IsActive)
+                matches.AddRange(GetHgEngineNativeForms(baseId, baseName, names));
+            return matches;
+        }
 
-                // ComboBox selection doesn't reliably pick up SelectedIndex=0 set in the same tick as
-                // repopulating ItemsSource, so force a real 0->0 transition via -1 on the next UI tick.
-                _selectedFormIndex = -1;
-                OnPropertyChanged(nameof(SelectedFormIndex));
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => SelectedFormIndex = 0);
-            }
-            else
+        private static IEnumerable<FormSpriteData> GetHgEngineNativeForms(int baseId, string baseName, string[] names)
+        {
+            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) yield break;
+            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out var slots) || slots.Count == 0) yield break;
+
+            yield return new FormSpriteData(baseName, baseId);
+            foreach (var slot in slots)
             {
-                // Return to main sprites
-                LoadMon(_currentId);
+                if (speciesTable.TryGetValue(slot.SpeciesSymbol, out int formId) && formId >= 0 && formId < names.Length)
+                    yield return new FormSpriteData(names[formId], formId);
             }
+        }
+
+        // Reverse of the id resolution GetHgEngineNativeForms/ResolveHgEngineMigratedFormId do: given a
+        // species id that's itself a form target, finds which base species' PokeFormDataTbl.c entry lists it.
+        private static int? FindHgEngineFormFamilyBase(int id)
+        {
+            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            if (speciesTable == null) return null;
+            foreach (var kvp in HgEngineFormRegistry.LoadAll())
+            {
+                if (!speciesTable.TryGetValue(kvp.Key, out int baseId)) continue;
+                foreach (var slot in kvp.Value)
+                    if (speciesTable.TryGetValue(slot.SpeciesSymbol, out int slotId) && slotId == id)
+                        return baseId;
+            }
+            return null;
+        }
+
+        // Populates VariantNames once per LoadMon (not lazily on first dropdown open), so the dropdown never needs to be cleared/repopulated mid-interaction.
+        private void PopulateVariantList()
+        {
+            _currentFormData = HasAlternateForms ? GetAlternateFormsForCurrentSpecies() : Array.Empty<FormSpriteData>();
+            // ListSync, not Clear()+Add(): Clear() fires a Reset that crashed the app for real when it ran while the ComboBox was still handling the click that triggered this rebuild.
+            DSPRE.Avalonia.Data.ListSync.Apply(VariantNames, _currentFormData.Select(f => f.Name).ToList());
+            // -1, not 0: LoadMon always assigns SelectedVariantIndex right after this, and it needs to
+            // register as a real change even when the target index is 0, so the form actually loads.
+            _selectedVariantIndex = -1;
+            OnPropertyChanged(nameof(SelectedVariantIndex));
         }
 
         private void LoadAlternateForm(int formIndex)
@@ -311,7 +461,7 @@ namespace DSPRE.Avalonia.ViewModels
                     var backSprite = MakeImage(narc.fs);
                     narc.Close();
                     rawBmps[0] = backSprite;
-                    rawBmps[1] = backSprite; // same for both genders unless HasGenderDifference
+                    rawBmps[1] = backSprite;
                 }
 
                 // Load front sprite
@@ -348,6 +498,7 @@ namespace DSPRE.Avalonia.ViewModels
                     return;
                 }
                 if (shinyPal == null) shinyPal = normalPal;
+                ApplyFormGenderGap(rawBmps, _currentId);
 
                 _rawSprites = rawBmps;
                 _normalPal  = normalPal;
@@ -363,6 +514,26 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 StatusText = $"Error loading alternate form: {ex.Message}";
             }
+        }
+
+        // Alt forms only ever store one shared sprite, so a genuinely single-gender base species (Wormadam is female-only, Deoxys/Unown/Rotom/Giratina/Shaymin are genderless) should show that gap here too, matching how the base species view already does via its own real NARC stub sizes.
+        private static void ApplyFormGenderGap(byte[][] rawBmps, int baseSpeciesId)
+        {
+            byte ratio = ReadGenderRatio(baseSpeciesId);
+            if (ratio == SpeciesFile.GENDER_RATIO_FEMALE) { rawBmps[1] = null; rawBmps[3] = null; }
+            else if (ratio == SpeciesFile.GENDER_RATIO_MALE || ratio == SpeciesFile.GENDER_RATIO_GENDERLESS) { rawBmps[0] = null; rawBmps[2] = null; }
+        }
+
+        private static byte ReadGenderRatio(int speciesId)
+        {
+            try
+            {
+                string path = Path.Combine(RomInfo.gameDirs[DirNames.personalPokeData].unpackedDir, speciesId.ToString("D4"));
+                if (!File.Exists(path)) return 127;
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+                return new SpeciesFile(fs).GenderRatioMaleToFemale;
+            }
+            catch { return 127; }
         }
 
         private FormSpriteData[] GetFormDataForCurrentGame()
@@ -407,12 +578,12 @@ namespace DSPRE.Avalonia.ViewModels
             new("Wormadam - Plant", 78, 79, 152, 153),
             new("Wormadam - Sandy", 80, 81, 154, 155),
             new("Wormadam - Trash", 82, 83, 156, 157),
-            new("Shellos - West",   84, 86, 158, 159, true),
-            new("Shellos - East",   85, 87, 160, 161, true),
-            new("Gastrodon - West", 88, 90, 162, 163, true),
-            new("Gastrodon - East", 89, 91, 164, 165, true),
-            new("Cherrim - Overcast",  92, 94, 166, 168, true),
-            new("Cherrim - Sunshine",  93, 95, 167, 169, true),
+            new("Shellos - West",   84, 86, 158, 159),
+            new("Shellos - East",   85, 87, 160, 161),
+            new("Gastrodon - West", 88, 90, 162, 163),
+            new("Gastrodon - East", 89, 91, 164, 165),
+            new("Cherrim - Overcast",  92, 94, 166, 168),
+            new("Cherrim - Sunshine",  93, 95, 167, 169),
             new("Arceus - Normal",   96,  97, 170, 171),
             new("Arceus - Fighting", 98,  99, 172, 173),
             new("Arceus - Flying",  100, 101, 174, 175),
@@ -431,8 +602,9 @@ namespace DSPRE.Avalonia.ViewModels
             new("Arceus - Ice",     126, 127, 200, 201),
             new("Arceus - Dragon",  128, 129, 202, 203),
             new("Arceus - Dark",    130, 131, 204, 205),
-            new("Egg",         132, 132, 206, 206),
-            new("Manaphy Egg", 133, 133, 207, 207),
+            new("Egg - Normal",  132, 132, 206, 206),
+            new("Egg - Manaphy", 133, 133, 207, 207),
+            new("Bad Egg - Normal", 132, 132, 206, 206),
         };
 
         private static FormSpriteData[] GetFormDataPt() => new FormSpriteData[]
@@ -465,12 +637,12 @@ namespace DSPRE.Avalonia.ViewModels
             new("Wormadam - Plant", 78, 79, 172, 173),
             new("Wormadam - Sandy", 80, 81, 174, 175),
             new("Wormadam - Trash", 82, 83, 176, 177),
-            new("Shellos - West",   84, 86, 178, 179, true),
-            new("Shellos - East",   85, 87, 180, 181, true),
-            new("Gastrodon - West", 88, 90, 182, 183, true),
-            new("Gastrodon - East", 89, 91, 184, 185, true),
-            new("Cherrim - Overcast", 92, 94, 186, 188, true),
-            new("Cherrim - Sunshine", 93, 95, 187, 189, true),
+            new("Shellos - West",   84, 86, 178, 179),
+            new("Shellos - East",   85, 87, 180, 181),
+            new("Gastrodon - West", 88, 90, 182, 183),
+            new("Gastrodon - East", 89, 91, 184, 185),
+            new("Cherrim - Overcast", 92, 94, 186, 188),
+            new("Cherrim - Sunshine", 93, 95, 187, 189),
             new("Arceus - Normal",   96,  97, 190, 191),
             new("Arceus - Fighting", 98,  99, 192, 193),
             new("Arceus - Flying",  100, 101, 194, 195),
@@ -489,8 +661,9 @@ namespace DSPRE.Avalonia.ViewModels
             new("Arceus - Ice",     126, 127, 220, 221),
             new("Arceus - Dragon",  128, 129, 222, 223),
             new("Arceus - Dark",    130, 131, 224, 225),
-            new("Egg",         132, 132, 226, 226),
-            new("Manaphy Egg", 133, 133, 227, 227),
+            new("Egg - Normal",  132, 132, 226, 226),
+            new("Egg - Manaphy", 133, 133, 227, 227),
+            new("Bad Egg - Normal", 132, 132, 226, 226),
             new("Shaymin - Land", 134, 135, 228, 229),
             new("Shaymin - Sky",  136, 137, 230, 231),
             new("Rotom - Normal", 138, 139, 232, 233),
@@ -533,12 +706,12 @@ namespace DSPRE.Avalonia.ViewModels
             new("Wormadam - Plant", 78, 79, 176, 177),
             new("Wormadam - Sandy", 80, 81, 178, 179),
             new("Wormadam - Trash", 82, 83, 180, 181),
-            new("Shellos - West",   84, 86, 182, 183, true),
-            new("Shellos - East",   85, 87, 184, 185, true),
-            new("Gastrodon - West", 88, 90, 186, 187, true),
-            new("Gastrodon - East", 89, 91, 188, 189, true),
-            new("Cherrim - Overcast", 92, 94, 190, 192, true),
-            new("Cherrim - Sunshine", 93, 95, 191, 193, true),
+            new("Shellos - West",   84, 86, 182, 183),
+            new("Shellos - East",   85, 87, 184, 185),
+            new("Gastrodon - West", 88, 90, 186, 187),
+            new("Gastrodon - East", 89, 91, 188, 189),
+            new("Cherrim - Overcast", 92, 94, 190, 192),
+            new("Cherrim - Sunshine", 93, 95, 191, 193),
             new("Arceus - Normal",   96,  97, 194, 195),
             new("Arceus - Fighting", 98,  99, 196, 197),
             new("Arceus - Flying",  100, 101, 198, 199),
@@ -557,8 +730,9 @@ namespace DSPRE.Avalonia.ViewModels
             new("Arceus - Ice",     126, 127, 224, 225),
             new("Arceus - Dragon",  128, 129, 226, 227),
             new("Arceus - Dark",    130, 131, 228, 229),
-            new("Egg",         132, 132, 230, 230),
-            new("Manaphy Egg", 133, 133, 231, 231),
+            new("Egg - Normal",  132, 132, 230, 230),
+            new("Egg - Manaphy", 133, 133, 231, 231),
+            new("Bad Egg - Normal", 132, 132, 230, 230),
             new("Shaymin - Land", 134, 135, 232, 233),
             new("Shaymin - Sky",  136, 137, 234, 235),
             new("Rotom - Normal", 138, 139, 236, 237),
@@ -596,7 +770,7 @@ namespace DSPRE.Avalonia.ViewModels
             _frameTimer.Tick += (_, __) =>
             {
                 if (!AnimateFrames) return;
-                foreach (var cell in AllFrameCells) cell.Frame = 1 - cell.Frame;
+                foreach (var cell in AllFrameCells) if (cell.ShowFrameToggle) cell.Frame = 1 - cell.Frame;
             };
             _frameTimer.Start();
         }
@@ -604,10 +778,46 @@ namespace DSPRE.Avalonia.ViewModels
         // --- Load --------------------------------------------------------------------
         public void LoadMon(int id)
         {
-            _currentId = id;
             ClearBitmaps();
             StatusText = "";
-            HasAlternateForms = id > 0 && GetAlternateFormsForCurrentSpecies().Length > 0;
+            IsAlternateForms = false;
+            FormSharesBaseData = false;
+
+            // Ids past the real Pokédex are pseudo-species (Deoxys/Wormadam/Giratina/Shaymin/Rotom formes); redirect straight to that form.
+            var pseudo = ResolvePseudoFormId(id);
+            _currentId = pseudo?.baseId ?? id;
+            // This applies under hg-engine too: it only intercepts sprite loading for the handful of species
+            // in its own PokeFormDataTbl.c (Castform/Cherrim/Shellos/Gastrodon's newest forms); everything
+            // else, including form 0, still falls through to vanilla otherpoke.narc unchanged.
+            HasAlternateForms = _currentId > 0 && GetAlternateFormsForCurrentSpecies().Length > 0;
+            PopulateVariantList();
+
+            if (pseudo.HasValue)
+            {
+                int formIdx = Array.FindIndex(_currentFormData, f => FormNameMatchesDescription(f.Name, pseudo.Value.description));
+                if (formIdx >= 0) { SelectedVariantIndex = formIdx; return; }
+                StatusText = "This form doesn't have its own sprite data.";
+                return;
+            }
+
+            // Species with form-table entries also store their default form there, not in the main NARC (confirmed against real GameFreak source, PokeGraArcDataGet in poke_tool.c).
+            // If the loaded species already IS one of the entries (viewing Castform Sunny or Mega Venusaur directly), select it in place instead of redirecting back into itself.
+            int selfIndex = -1;
+            for (int i = 0; i < _currentFormData.Length; i++)
+            {
+                if (_currentFormData[i].HgEngineSpeciesId == _currentId) { selfIndex = i; break; }
+                if (HgEngineProject.IsActive && ResolveHgEngineMigratedFormId(_currentFormFamilyBaseId, i) == _currentId) { selfIndex = i; break; }
+            }
+            if (selfIndex >= 0)
+            {
+                _selectedVariantIndex = selfIndex;
+                OnPropertyChanged(nameof(SelectedVariantIndex));
+            }
+            else if (_currentFormData.Length > 0)
+            {
+                SelectedVariantIndex = 0;
+                return;
+            }
 
             if (id <= 0)
             {
@@ -685,7 +895,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
-        // Reads hg-engine's own source PNGs (male front = Normal palette, male back = Shiny) instead of pokegra.narc; returns false if this species has no hg-engine sprite entry.
+        // Reads hg-engine's own source PNGs instead of pokegra.narc. Front is Normal palette, back is Shiny, taken from whichever gender's poses are the real ones; the absent gender's placeholder file is skipped, not read.
         private bool LoadMonFromHgEngineSource(int id)
         {
             string[] posePaths = HgEnginePokemonBattleSprites.TryGetPosePaths(id);
@@ -694,10 +904,20 @@ namespace DSPRE.Avalonia.ViewModels
 
             try
             {
+                byte ratio = ReadGenderRatio(id);
+                bool skipFemale = ratio == SpeciesFile.GENDER_RATIO_MALE || ratio == SpeciesFile.GENDER_RATIO_GENDERLESS;
+                bool skipMale = ratio == SpeciesFile.GENDER_RATIO_FEMALE;
+                int normalSlot = skipMale ? 2 : 3;   // Front: Female or Male
+                int shinySlot  = skipMale ? 0 : 1;   // Back: Female or Male
+
                 var rawBmps = new byte[4][];
+                var hasRealSprite = new bool[4];
                 uint[] normalPal = null, shinyPal = null;
                 for (int i = 0; i < 4; i++)
                 {
+                    bool isFemaleSlot = i == 0 || i == 2;
+                    if ((isFemaleSlot && skipFemale) || (!isFemaleSlot && skipMale)) continue;
+
                     byte[] pngBytes = File.ReadAllBytes(posePaths[i]);
                     if (!IndexedPng.TryRead(pngBytes, out byte[] indices, out uint[] pal, out int w, out int h) ||
                         w != SpriteWidth || h != SpriteHeight || pal.Length > 16)
@@ -706,11 +926,12 @@ namespace DSPRE.Avalonia.ViewModels
                         return true;
                     }
                     rawBmps[i] = indices;
-                    if (i == 3) normalPal = Pad16(pal);
-                    if (i == 1) shinyPal = Pad16(pal);
+                    hasRealSprite[i] = true;
+                    if (i == normalSlot) normalPal = Pad16(pal);
+                    if (i == shinySlot) shinyPal = Pad16(pal);
                 }
 
-                UpdateOppositeGenderGap(new[] { true, true, true, true });
+                UpdateOppositeGenderGap(hasRealSprite);
                 _rawSprites = rawBmps;
                 _normalPal = normalPal;
                 _shinyPal = shinyPal ?? normalPal;
@@ -965,7 +1186,7 @@ namespace DSPRE.Avalonia.ViewModels
         private void WriteFullSheetIndices(byte[] sheetIndices) => WriteSheetIndices(sheetIndices, 0, 1, 2, 3);
 
         /// <summary>True only when this species genuinely has separate Male and Female sprites (not the mono-gender/genderless placeholder case), so combining both into one sheet actually makes sense.</summary>
-        public bool CanUseFullSheet => _rawSprites[0] != null && _rawSprites[1] != null && _rawSprites[2] != null && _rawSprites[3] != null && !CanAddOppositeGenderSprites;
+        public bool CanUseFullSheet => _rawSprites[0] != null && _rawSprites[1] != null && _rawSprites[2] != null && _rawSprites[3] != null && !CanAddOppositeGenderSprites && !IsAlternateForms;
 
         public async Task ExportSpriteSheet(Window owner, bool female, bool shiny = false)
         {
@@ -1268,6 +1489,7 @@ namespace DSPRE.Avalonia.ViewModels
             RefreshSwatches(NormalSwatches, _normalPal, _normalPalUsed, false);
             RefreshSwatches(ShinySwatches, _shinyPal, _shinyPalUsed, true);
 
+            UpdateFrameAvailability();
             RenderCurrentFrameForAllCells();
 
             // Battle-mock sprites per gender: a LIST of N 80×80 frames (N = sheet width / 80). The pattern
@@ -1281,6 +1503,41 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(CanUseFullSheet));
             OnPropertyChanged(nameof(IsHgEngineSourced));
             OnPropertyChanged(nameof(ShowShinyFullSheetImport));
+            OnPropertyChanged(nameof(ShowFemaleFormImport));
+            OnPropertyChanged(nameof(ShowFemaleShinyFormImport));
+        }
+
+        // Some real ROM sprites only ever had one frame drawn (Deoxys's back sprite, several Unown letters); the rest is zero-filled padding, not a real second pose.
+        private void UpdateFrameAvailability()
+        {
+            for (int slot = 0; slot < 4; slot++)
+            {
+                byte[] indices = _rawSprites[slot];
+                bool hasFrame1 = indices != null && !IsFrameBlank(indices, 0);
+                bool hasFrame2 = indices != null && !IsFrameBlank(indices, 1);
+                if (!hasFrame1 && !hasFrame2) hasFrame1 = true; // nothing loaded at all: don't hide both toggle buttons
+                FrameCellForSlot(slot, false).SetFrameAvailability(hasFrame1, hasFrame2);
+                FrameCellForSlot(slot, true).SetFrameAvailability(hasFrame1, hasFrame2);
+            }
+        }
+
+        private FrameCellState FrameCellForSlot(int slot, bool shiny) => slot switch
+        {
+            0 => shiny ? FemaleBackShinyFrame  : FemaleBackNormalFrame,
+            1 => shiny ? MaleBackShinyFrame    : MaleBackNormalFrame,
+            2 => shiny ? FemaleFrontShinyFrame : FemaleFrontNormalFrame,
+            3 => shiny ? MaleFrontShinyFrame   : MaleFrontNormalFrame,
+            _ => throw new ArgumentOutOfRangeException(nameof(slot))
+        };
+
+        private static bool IsFrameBlank(byte[] indices, int frame)
+        {
+            const int fw = 80, h = 80, srcW = 160;
+            int x0 = frame * fw;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < fw; x++)
+                    if (indices[y * srcW + x0 + x] != 0) return false;
+            return true;
         }
 
         // Live palette edit from the swatch color picker; writes straight into the same array every import path already mutates, so Save persists it exactly like an imported palette.
@@ -1599,6 +1856,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (!_dirty || _currentId <= 0) return;
 
+            if (_isAlternateForms) { SaveAlternateForm(); return; }
+
             if (HgEngineProject.IsActive && SaveToHgEngineSource()) return;
 
             string packedPath = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
@@ -1634,6 +1893,46 @@ namespace DSPRE.Avalonia.ViewModels
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Saved.";
+        }
+
+        // Writes back into otherPokemonBattleSprites at this form's own indices; Male Back/Front (_rawSprites[1]/[3]) are the only slots actually persisted, matching ShowFemaleFormImport.
+        private void SaveAlternateForm()
+        {
+            if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length) return;
+            var form = _currentFormData[_selectedFormIndex];
+
+            string packedPath = RomInfo.gameDirs[DirNames.otherPokemonBattleSprites].packedDir;
+            if (!File.Exists(packedPath))
+            {
+                StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
+                return;
+            }
+
+            var narc = new NarcReader(packedPath);
+            WriteFormSprite(narc, form.BackSpriteIndex, _rawSprites[1]);
+            WriteFormSprite(narc, form.FrontSpriteIndex, _rawSprites[3]);
+            WriteFormPalette(narc, form.NormalPaletteIndex, _normalPal);
+            WriteFormPalette(narc, form.ShinyPaletteIndex, _shinyPal);
+
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            StatusText = "Saved.";
+        }
+
+        private static void WriteFormSprite(NarcReader narc, int idx, byte[] indices)
+        {
+            if (indices == null || idx < 0 || idx >= narc.fe.Length || narc.fe[idx].Size != 6448) return;
+            narc.OpenEntry(idx);
+            WriteSpriteEntry(narc.fs, indices);
+            narc.Close();
+        }
+
+        private static void WriteFormPalette(NarcReader narc, int idx, uint[] palette)
+        {
+            if (palette == null || idx < 0 || idx >= narc.fe.Length || narc.fe[idx].Size != 72) return;
+            narc.OpenEntry(idx);
+            WritePaletteEntry(narc.fs, palette);
+            narc.Close();
         }
 
         // Writes straight to hg-engine's source PNGs (front = Normal palette, back = Shiny), mirroring LoadMonFromHgEngineSource, so the edit survives the next make.

@@ -54,6 +54,9 @@ namespace DSPRE.Avalonia.Views
         private void CreateOwEntry_Click(object sender, RoutedEventArgs e)
             => ViewModel.CreateOwFollowerEntry();
 
+        private void ToggleOwAnimate_Click(object sender, RoutedEventArgs e)
+            => ViewModel.OwAnimating = !ViewModel.OwAnimating;
+
         private async void ImportOwSprite_Click(object sender, RoutedEventArgs e)
         {
             var top = TopLevel.GetTopLevel(this);

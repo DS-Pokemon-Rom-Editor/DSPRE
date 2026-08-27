@@ -90,10 +90,6 @@ namespace DSPRE.Avalonia.Views
         private async void ExportMaleFrontShiny_Click(object sender, RoutedEventArgs e)
             => await VM.ExportSprite(3, OwnerWindow, shiny: true);
 
-        // --- Alternate forms toggle --------------------------------------------------
-        private void ToggleAlternateForms_Click(object sender, RoutedEventArgs e)
-            => VM.ToggleAlternateFormsMode();
-
         // --- Mono-gender / genderless sprite gap -------------------------------------
         private async void AddOppositeGenderSprites_Click(object sender, RoutedEventArgs e)
             => await VM.AddOppositeGenderSprites(OwnerWindow);

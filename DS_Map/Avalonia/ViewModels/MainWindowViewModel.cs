@@ -66,12 +66,12 @@ namespace DSPRE.Avalonia.ViewModels
         // are Plat+HGSS; nothing in it exists on DP.
         public bool CanUseMiscTables    => IsRomLoaded && gameFamily != GameFamilies.DP;
 
-        // ── Busy state while a ROM is being opened/unpacked or saved/repacked ──
-        private bool _isLoadingRom;
-        public bool IsLoadingRom
+        // ── Busy state while a ROM is being opened/unpacked/saved, or an editor is unpacking its own data ──
+        private bool _isBusy;
+        public bool IsBusy
         {
-            get => _isLoadingRom;
-            set { if (_isLoadingRom != value) { _isLoadingRom = value; OnPropertyChanged(); } }
+            get => _isBusy;
+            set { if (_isBusy != value) { _isBusy = value; OnPropertyChanged(); } }
         }
 
         private string _busyText = "Opening ROM…";

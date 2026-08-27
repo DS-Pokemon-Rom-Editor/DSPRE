@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using static DSPRE.RomInfo;
 using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
@@ -238,12 +239,34 @@ namespace DSPRE.Avalonia.ViewModels
 
         private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
 
-        // Display mode: "separate" shows one gender (the GenderIndex pick); "unified" shows Male + Female
-        // scenes side by side (the view swaps which block is visible). Genders without a sprite fall back.
+        // Display mode: "separate" shows one gender; "unified" shows Male + Female side by side. Genders rebuilds to just the real one(s) per species (see RefreshGenderChoices).
         public ObservableCollection<string> Genders { get; } = new ObservableCollection<string> { "Male", "Female" };
         private int _genderIndex;
         public int GenderIndex { get => _genderIndex; set { if (Set(ref _genderIndex, value)) RaiseSprites(); } }
-        private bool ShowFemale => _genderIndex == 1;
+        private bool ShowFemale => _genderIndex >= 0 && _genderIndex < Genders.Count && Genders[_genderIndex] == "Female";
+        public bool HasGenderChoice => Genders.Count > 1;
+
+        // Updates Genders in place via ListSync, never Clear(). Clear() fires a Reset that nulls the ComboBox's SelectedIndex and re-enters this method through the GenderIndex setter, which crashed the app.
+        private void RefreshGenderChoices()
+        {
+            bool hasMale = _sprites?.HasSpriteSlot(1) ?? true;
+            bool hasFemale = _sprites?.HasSpriteSlot(0) ?? true;
+            var wanted = new System.Collections.Generic.List<string>();
+            if (hasMale) wanted.Add("Male");
+            if (hasFemale) wanted.Add("Female");
+            if (wanted.Count == 0) wanted.Add("Male");
+
+            if (!Genders.SequenceEqual(wanted))
+            {
+                string current = _genderIndex >= 0 && _genderIndex < Genders.Count ? Genders[_genderIndex] : null;
+                ListSync.Apply(Genders, wanted);
+                int keep = current != null ? Genders.IndexOf(current) : -1;
+                int newIndex = keep >= 0 ? keep : 0;
+                if (_genderIndex != newIndex) { _genderIndex = newIndex; OnPropertyChanged(nameof(GenderIndex)); }
+            }
+            OnPropertyChanged(nameof(HasGenderChoice));
+            if (!HasGenderChoice) UnifiedDisplay = false;
+        }
 
         private bool _unifiedDisplay;
         public bool UnifiedDisplay { get => _unifiedDisplay; set => Set(ref _unifiedDisplay, value); }
@@ -279,6 +302,102 @@ namespace DSPRE.Avalonia.ViewModels
         public Bitmap PlayerSpriteM => Back(false);
         public Bitmap EnemySpriteF => Front(true);
         public Bitmap PlayerSpriteF => Back(true);
+
+        // Frame-integrity warnings: reuses the Sprite Editor's own blank-frame detection (FrameCellState), cross-checked against whichever pattern data actually drives this preview.
+        private PokemonSpriteEditorViewModel.FrameCellState PoseCell(bool front, bool female)
+        {
+            if (_sprites == null) return null;
+            if (front) return female ? _sprites.FemaleFrontNormalFrame : _sprites.MaleFrontNormalFrame;
+            return female ? _sprites.FemaleBackNormalFrame : _sprites.MaleBackNormalFrame;
+        }
+
+        private static int BlankFrameIndex(PokemonSpriteEditorViewModel.FrameCellState cell)
+        {
+            if (cell == null) return -1;
+            if (!cell.HasFrame1) return 0;
+            if (!cell.HasFrame2) return 1;
+            return -1;
+        }
+
+        // The one real (non-blank) frame index, or -1 when both are real (no issue) or both are blank.
+        private static int RealFrameIndex(PokemonSpriteEditorViewModel.FrameCellState cell)
+        {
+            if (cell == null) return -1;
+            if (cell.HasFrame1 && !cell.HasFrame2) return 0;
+            if (!cell.HasFrame1 && cell.HasFrame2) return 1;
+            return -1;
+        }
+
+        private int ClampFrame(int frame)
+        {
+            int max = MaxFrameIndex;
+            return frame < 0 ? 0 : (frame > max ? max : frame);
+        }
+
+        private System.Collections.Generic.List<int> ActivePatternFrames(bool front)
+        {
+            System.Collections.Generic.IEnumerable<int> raw = HgEngineProject.IsActive
+                ? (front ? _hgeFrontSteps : _hgeBackSteps)?.Select(s => s.Frame) ?? Enumerable.Empty<int>()
+                : AnimSteps.Select(s => s.Frame);
+            var visited = raw.Select(ClampFrame).Distinct().ToList();
+            if (visited.Count == 0) visited.Add(0);   // no pattern data -> AnimTick holds a static frame 0
+            return visited;
+        }
+
+        private bool FrameWarning(bool front, bool female) => BlankFrameIndex(PoseCell(front, female)) >= 0;
+
+        // True only when the animation never shows the real frame, so the sprite would be invisible the whole loop.
+        private bool FrameWarningSevere(bool front, bool female)
+        {
+            var cell = PoseCell(front, female);
+            int blank = BlankFrameIndex(cell);
+            if (blank < 0) return false;
+            int real = RealFrameIndex(cell);
+            var visited = ActivePatternFrames(front);
+            return visited.Contains(blank) && (real < 0 || !visited.Contains(real));
+        }
+
+        private string FrameWarningText(bool front, bool female)
+        {
+            var cell = PoseCell(front, female);
+            int blank = BlankFrameIndex(cell);
+            if (blank < 0) return null;
+            int real = RealFrameIndex(cell);
+            var visited = ActivePatternFrames(front);
+            if (!visited.Contains(blank)) return "only has one real frame";
+            if (real >= 0 && visited.Contains(real))
+                return "animation flickers to a blank frame, may be intentional";
+            return "animation never shows a real frame, likely a mistake";
+        }
+
+        public bool EnemyFrameWarning => FrameWarning(true, ShowFemale);
+        public bool EnemyFrameWarningSevere => FrameWarningSevere(true, ShowFemale);
+        public string EnemyFrameWarningText => FrameWarningText(true, ShowFemale);
+        public bool PlayerFrameWarning => FrameWarning(false, ShowFemale);
+        public bool PlayerFrameWarningSevere => FrameWarningSevere(false, ShowFemale);
+        public string PlayerFrameWarningText => FrameWarningText(false, ShowFemale);
+        public bool EnemyFrameWarningM => FrameWarning(true, false);
+        public bool EnemyFrameWarningSevereM => FrameWarningSevere(true, false);
+        public string EnemyFrameWarningTextM => FrameWarningText(true, false);
+        public bool EnemyFrameWarningF => FrameWarning(true, true);
+        public bool EnemyFrameWarningSevereF => FrameWarningSevere(true, true);
+        public string EnemyFrameWarningTextF => FrameWarningText(true, true);
+        public bool PlayerFrameWarningM => FrameWarning(false, false);
+        public bool PlayerFrameWarningSevereM => FrameWarningSevere(false, false);
+        public string PlayerFrameWarningTextM => FrameWarningText(false, false);
+        public bool PlayerFrameWarningF => FrameWarning(false, true);
+        public bool PlayerFrameWarningSevereF => FrameWarningSevere(false, true);
+        public string PlayerFrameWarningTextF => FrameWarningText(false, true);
+
+        private void RaiseFrameWarnings()
+        {
+            OnPropertyChanged(nameof(EnemyFrameWarning)); OnPropertyChanged(nameof(EnemyFrameWarningSevere)); OnPropertyChanged(nameof(EnemyFrameWarningText));
+            OnPropertyChanged(nameof(PlayerFrameWarning)); OnPropertyChanged(nameof(PlayerFrameWarningSevere)); OnPropertyChanged(nameof(PlayerFrameWarningText));
+            OnPropertyChanged(nameof(EnemyFrameWarningM)); OnPropertyChanged(nameof(EnemyFrameWarningSevereM)); OnPropertyChanged(nameof(EnemyFrameWarningTextM));
+            OnPropertyChanged(nameof(EnemyFrameWarningF)); OnPropertyChanged(nameof(EnemyFrameWarningSevereF)); OnPropertyChanged(nameof(EnemyFrameWarningTextF));
+            OnPropertyChanged(nameof(PlayerFrameWarningM)); OnPropertyChanged(nameof(PlayerFrameWarningSevereM)); OnPropertyChanged(nameof(PlayerFrameWarningTextM));
+            OnPropertyChanged(nameof(PlayerFrameWarningF)); OnPropertyChanged(nameof(PlayerFrameWarningSevereF)); OnPropertyChanged(nameof(PlayerFrameWarningTextF));
+        }
 
         // The sprite IMAGE already bakes in the mon's vertical position, so at LOAD the sprite sits correctly
         // with no extra displacement. To still PREVIEW edits, the heights are applied as a DELTA from the
@@ -322,9 +441,11 @@ namespace DSPRE.Avalonia.ViewModels
         }
         private void RaiseSprites()
         {
+            RefreshGenderChoices();
             OnPropertyChanged(nameof(EnemySprite)); OnPropertyChanged(nameof(PlayerSprite));
             OnPropertyChanged(nameof(EnemySpriteM)); OnPropertyChanged(nameof(PlayerSpriteM));
             OnPropertyChanged(nameof(EnemySpriteF)); OnPropertyChanged(nameof(PlayerSpriteF));
+            RaiseFrameWarnings();
         }
 
         private int _partyPaletteIndex;
@@ -1316,8 +1437,7 @@ namespace DSPRE.Avalonia.ViewModels
                         OnSpriteFormChanged();
                 };
 
-            // Drive the preview from the pokeanm pattern steps (≈60 fps; wait values are frames). When a mon has
-            // no pattern data, fall back to a simple two-frame toggle so the preview still animates.
+            // Timer stays at 60fps (TickProgramAnim's PAST VM needs that rate); PatternTicksPerWaitUnit scales the pokeanm pattern loop down to its real 1/30s wait unit.
             _animTimer = new global::Avalonia.Threading.DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(1000.0 / 60)
@@ -1331,6 +1451,8 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
         public void Detach() => _animTimer?.Stop();
 
+        // pokeanm's "wait" field is in 1/30s units; the timer ticks at 60fps, so each wait unit is 2 ticks.
+        private const int PatternTicksPerWaitUnit = 2;
         private int _patIndex = -1, _patCountdown;
         private void RestartAnimPreview()
         {
@@ -1361,7 +1483,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (--_patCountdown > 0) return;
             _patIndex = (_patIndex + 1) % AnimSteps.Count;
             var step = AnimSteps[_patIndex];
-            _patCountdown = Math.Max(1, step.Wait);
+            _patCountdown = Math.Max(1, step.Wait) * PatternTicksPerWaitUnit;
             int max = MaxFrameIndex;
             int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
             if (newFrame != _frame) { _frame = newFrame; RaiseSprites(); }
@@ -1378,7 +1500,7 @@ namespace DSPRE.Avalonia.ViewModels
             if (--countdown > 0) return;
             stepIndex = (stepIndex + 1) % steps.Count;
             var step = steps[stepIndex];
-            countdown = Math.Max(1, step.Duration);
+            countdown = Math.Max(1, step.Duration) * PatternTicksPerWaitUnit;
             int max = MaxFrameIndex;
             int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
             if (newFrame != frame) { frame = newFrame; RaiseSprites(); }
@@ -1438,8 +1560,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
     }
 
-    /// <summary>One pattern-animation step (pokeanm ssanm): which sprite frame to show and for how many
-    /// 60 fps frames. <see cref="Frame"/> is the cell/pattern number (the sheet has frames 0 and 1).</summary>
+    /// <summary>One pattern-animation step (pokeanm ssanm): which sprite frame to show and for how many 1/30s units. <see cref="Frame"/> is the cell/pattern number (the sheet has frames 0 and 1).</summary>
     public sealed class AnimPatternStep : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

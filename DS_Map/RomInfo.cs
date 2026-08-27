@@ -2047,6 +2047,19 @@ namespace DSPRE
             var names = new List<string>(targetCount);
             names.AddRange(GetPokemonNames());
 
+            // Under hg-engine this range is real species (Mega/Gigantamax/etc), not personalExtraFiles pseudo-forms.
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                var species = HgEngine.HgEngineSymbolTable.Load("include/constants/species.h");
+                while (names.Count < targetCount)
+                {
+                    int id = names.Count;
+                    names.Add(species != null && HgEngine.HgEngineFormNames.TryReadableNameFromConstant(id, species, out string readable)
+                        ? readable : $"Extra entry {id}");
+                }
+                return names.ToArray();
+            }
+
             foreach (var extra in PokeDatabase.PersonalData.personalExtraFiles)
             {
                 if (names.Count >= targetCount) break;
