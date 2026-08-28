@@ -227,7 +227,6 @@ namespace DSPRE.Editors {
         private bool hasSpriteData, hasMovementType, hasHeights;
         private int spriteY, shadowX, shadowSize, movementType;
         private int frontHeightM, frontHeightF, backHeightM, backHeightF;
-        private int oFrontHeightM, oFrontHeightF, oBackHeightM, oBackHeightF;   // baseline at load, for the delta preview
         private int frameIndex = 0;
         private int iconFrameIndex = 0;
         private int partyPaletteIndex = 0;
@@ -290,13 +289,11 @@ namespace DSPRE.Editors {
                 hasSpriteData = hasMovementType = hasHeights = false;
                 spriteY = shadowX = shadowSize = movementType = 0;
                 frontHeightM = frontHeightF = backHeightM = backHeightF = 0;
-                oFrontHeightM = oFrontHeightF = oBackHeightM = oBackHeightF = 0;
 
                 EnsureSource();
                 if (_src != null && _src.TryLoad(id, out BattleRec rec)) {
                     spriteY = rec.FrontY; shadowX = rec.ShadowX; shadowSize = rec.ShadowSize; movementType = rec.Movement;
                     backHeightF = rec.BackF; backHeightM = rec.BackM; frontHeightF = rec.FrontF; frontHeightM = rec.FrontM;
-                    oFrontHeightM = rec.FrontM; oFrontHeightF = rec.FrontF; oBackHeightM = rec.BackM; oBackHeightF = rec.BackF;
                     hasMovementType = rec.HasMovement; hasHeights = rec.HasHeights;
                     hasSpriteData = true;
                 }
@@ -401,12 +398,12 @@ namespace DSPRE.Editors {
                     g.FillEllipse(b, left * Scale, top * Scale, w * Scale, (w / 2) * Scale);
             }
 
-            int frontH = female ? frontHeightF : frontHeightM, frontO = female ? oFrontHeightF : oFrontHeightM;
-            int backH = female ? backHeightF : backHeightM, backO = female ? oBackHeightF : oBackHeightM;
+            int frontH = female ? frontHeightF : frontHeightM;
+            int backH = female ? backHeightF : backHeightM;
 
-            // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
-            double enemyTop = 24 + spriteY + (hasHeights ? (frontH - frontO) : 0);
-            double playerTop = 84 + (hasHeights ? (backH - backO) : 0);
+            // Base 11, not the 10 the engine source implies: measured against real battles.
+            double enemyTop = 11 + (hasHeights ? frontH : 0) - spriteY;
+            double playerTop = 72 + (hasHeights ? backH : 0);
 
             Bitmap enemy = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 2 : 3], frameIndex);
             Bitmap player = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 0 : 1], frameIndex);
@@ -419,6 +416,39 @@ namespace DSPRE.Editors {
                 DrawGauge(g, _gaugeEnemy, name);
                 DrawGauge(g, _gaugeMine, name);
             }
+
+            DrawMessageBox(g);
+        }
+
+        // The battle text box covers the bottom 48px of the top screen.
+        private const int MessageBoxTop = 144;
+        private const int MessageBoxHeight = 48;
+
+        private static readonly Color MsgOuter = Color.FromArgb(0x20, 0x20, 0x20);
+        private static readonly Color MsgFrame = Color.FromArgb(0x49, 0x41, 0x41);
+        private static readonly Color MsgFill = Color.FromArgb(0xFB, 0xFB, 0xFB);
+        private static readonly Color MsgAccentTop = Color.FromArgb(0xFB, 0xDB, 0x69);
+        private static readonly Color MsgAccentBottom = Color.FromArgb(0xEB, 0xA2, 0x38);
+
+        private static readonly Font MessageFont = new Font(FontFamily.GenericSansSerif, 9f);
+
+        private void DrawMessageBox(Graphics g) {
+            void Band(Color c, int top, int height, int left = 0, int width = 256) {
+                using (Brush b = new SolidBrush(c))
+                    g.FillRectangle(b, left * Scale, top * Scale, width * Scale, height * Scale);
+            }
+
+            Band(MsgFrame, MessageBoxTop, MessageBoxHeight);
+            Band(MsgFill, MessageBoxTop + 2, MessageBoxHeight - 5, 2, 252);
+            Band(MsgAccentTop, MessageBoxTop + 3, 1, 2, 252);
+            Band(MsgAccentBottom, MessageBoxTop + MessageBoxHeight - 4, 1, 2, 252);
+            Band(MsgOuter, MessageBoxTop, 1);
+            Band(MsgOuter, MessageBoxTop + MessageBoxHeight - 1, 1);
+
+            string name = (currentLoadedId >= 0 && currentLoadedId < pokenames.Length) ? pokenames[currentLoadedId] : "";
+            if (string.IsNullOrEmpty(name)) return;
+            using (Brush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
+                g.DrawString($"What will {name} do?", MessageFont, fg, 10 * Scale, (MessageBoxTop + 9) * Scale);
         }
 
         private void DrawGround(Graphics g, BattleGroundRenderer.GroundImage ground) {
