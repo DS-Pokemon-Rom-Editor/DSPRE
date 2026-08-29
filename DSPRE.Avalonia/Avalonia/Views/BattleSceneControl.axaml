@@ -63,10 +63,39 @@
           </Rectangle>
         </Grid>
 
-        <!-- Battle UI chrome -->
-        <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"/>
-        <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"/>
-        <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
+        <!-- Battle UI chrome: the real pl_batt_obj gauge frames so an edited gauge graphic shows here,
+             falling back to the bundled placeholders when the NARC can't be decoded. -->
+        <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+               IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
+        <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
+               IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
+        <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"
+               IsVisible="{Binding PlaceholderGaugesVisible}"/>
+        <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
+               IsVisible="{Binding PlaceholderGaugesVisible}"/>
+
+        <!-- Name / level / HP readout. Positions measured off real battles; the frame graphic already
+             carries the "HP" label and the empty bar, so only the fill and the text go on top. -->
+        <Canvas IsVisible="{Binding HasRealGauges}">
+          <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <Rectangle Canvas.Left="50"  Canvas.Top="42"  Width="48" Height="4" Fill="#38C838"/>
+          <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
+        </Canvas>
+
+        <!-- The battle text box covers the bottom 48px of the top screen. -->
+        <Canvas Canvas.Left="0" Canvas.Top="144">
+          <Rectangle Width="256" Height="48" Fill="#494141"/>
+          <Rectangle Canvas.Left="2" Canvas.Top="2" Width="252" Height="43" Fill="#FBFBFB"/>
+          <Rectangle Canvas.Left="2" Canvas.Top="3" Width="252" Height="1"  Fill="#FBDB69"/>
+          <Rectangle Canvas.Left="2" Canvas.Top="44" Width="252" Height="1" Fill="#EBA238"/>
+          <Rectangle Width="256" Height="1" Fill="#202020"/>
+          <Rectangle Canvas.Top="47" Width="256" Height="1" Fill="#202020"/>
+          <TextBlock Canvas.Left="8" Canvas.Top="8" Width="242" FontSize="8" Foreground="#3C3C3C" TextWrapping="Wrap"
+                     Text="This message box is here to show how much of the battle screen it covers, so the preview matches what you see in game."/>
+        </Canvas>
       </Canvas>
     </Viewbox>
   </Border>

@@ -188,6 +188,52 @@ namespace DSPRE.Avalonia.ViewModels
                 HasArenaGraphics = ok;
             }
             catch { HasArenaGraphics = false; }
+            RenderGauges();
+        }
+
+        // Real HP-gauge frames out of the ROM, so a hack's own edited gauge graphic shows here. Same
+        // decode as BattleScriptEditorViewModel.RenderGauges; the placeholder art covers a failed decode.
+        private Bitmap _gaugePlayerImage, _gaugeEnemyImage;
+        public Bitmap GaugePlayerImage { get => _gaugePlayerImage; private set => Set(ref _gaugePlayerImage, value); }
+        public Bitmap GaugeEnemyImage { get => _gaugeEnemyImage; private set => Set(ref _gaugeEnemyImage, value); }
+        public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
+        public bool PlaceholderGaugesVisible => !HasRealGauges;
+
+        // HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.
+        public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
+            ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x50, 0x50, 0x50))
+            : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
+
+        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch { return Array.Empty<string>(); } }
+        public string GaugeNameText
+        {
+            get
+            {
+                var names = SafeSpeciesNames();
+                return (_currentId >= 0 && _currentId < names.Length) ? names[_currentId] : string.Empty;
+            }
+        }
+        public string GaugeLevelText => "Lv5";
+
+        private void RenderGauges()
+        {
+            try
+            {
+                var r = _groundRenderer ??= new BattleGroundRenderer();
+                GaugePlayerImage = GaugeToBitmap(r.BuildGauge(true));
+                GaugeEnemyImage = GaugeToBitmap(r.BuildGauge(false));
+            }
+            catch { GaugePlayerImage = GaugeEnemyImage = null; }
+            OnPropertyChanged(nameof(HasRealGauges));
+            OnPropertyChanged(nameof(PlaceholderGaugesVisible));
+            OnPropertyChanged(nameof(GaugeTextBrush));
+        }
+
+        // GroundImage (256² straight RGBA) -> unpremultiplied BGRA; the frame has transparency.
+        private static Bitmap GaugeToBitmap(BattleGroundRenderer.GroundImage g)
+        {
+            if (g?.Rgba == null) return null;
+            return RgbaToBitmap(g.Rgba, g.Width, g.Height);
         }
 
         // RGBA w×h (battle BG, usually 256×256 or taller) -> exactly 256×192 (top-left crop, black-padded
@@ -1501,6 +1547,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _loading = true;
             _currentId = id;
+            OnPropertyChanged(nameof(GaugeNameText));
             _pendingIconGraphic = null;   // drop any unsaved icon-graphic import from the previous mon
             try
             {
