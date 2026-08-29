@@ -95,8 +95,13 @@ namespace MKDS_Course_Editor.NSBTA {
             }
         }
 
-        public static NSBTA_File Read(string Filename) {
-            EndianBinaryReader er = new EndianBinaryReader(File.OpenRead(Filename), Endianness.LittleEndian);
+        /// <summary>Parse from memory, for animations that live inside a NARC rather than on disk.</summary>
+        public static NSBTA_File Read(byte[] data) => Read(new MemoryStream(data));
+
+        public static NSBTA_File Read(string Filename) => Read(File.OpenRead(Filename));
+
+        public static NSBTA_File Read(Stream stream) {
+            EndianBinaryReader er = new EndianBinaryReader(stream, Endianness.LittleEndian);
             NSBTA_File ns = new NSBTA_File();
             ns.Header.ID = er.ReadString(Encoding.ASCII, 4);
             if (ns.Header.ID == "BTA0") {
@@ -255,17 +260,17 @@ namespace MKDS_Course_Editor.NSBTA {
                             }
                         }
                     } else {
-                        AppMessages.Error("Error");
+                        AppLogger.Error("Not a texture animation (NSBTA): " + ns.Header.ID + "/" + ns.SRT0.ID);
                         er.Close();
                         return ns;
                     }
                 } else {
-                    AppMessages.Error("Error");
+                    AppLogger.Error("Not a texture animation (NSBTA): " + ns.Header.ID + "/" + ns.SRT0.ID);
                     er.Close();
                     return ns;
                 }
             } else {
-                AppMessages.Error("Error");
+                AppLogger.Error("Not a texture animation (NSBTA): " + ns.Header.ID + "/" + ns.SRT0.ID);
                 er.Close();
                 return ns;
             }

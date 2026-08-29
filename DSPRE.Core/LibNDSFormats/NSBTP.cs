@@ -99,8 +99,13 @@ namespace MKDS_Course_Editor.NSBTP {
                 }
             }
         }
-        public static NSBTP_File Read(string Filename) {
-            EndianBinaryReader er = new EndianBinaryReader(File.OpenRead(Filename), Endianness.LittleEndian);
+        /// <summary>Parse from memory, for animations that live inside a NARC rather than on disk.</summary>
+        public static NSBTP_File Read(byte[] data) => Read(new MemoryStream(data));
+
+        public static NSBTP_File Read(string Filename) => Read(File.OpenRead(Filename));
+
+        public static NSBTP_File Read(Stream stream) {
+            EndianBinaryReader er = new EndianBinaryReader(stream, Endianness.LittleEndian);
             NSBTP_File ns = new NSBTP_File();
             ns.Header.ID = er.ReadString(Encoding.ASCII, 4);
 

@@ -18,15 +18,17 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int CullMode; }
 
         private GlFunctions _f;
-        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc;
+        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc;
         private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
 
-        // Per-tile permission tint of the map textures (mesh overlay mode). A 32×32 collision-colour texture is
-        // sampled in the fragment shader; only the tint texture is re-uploaded on paint (cheap).
+        // Per-tile permission tint of the map textures (mesh overlay mode). A 32×32 colour texture is
+        // sampled in the fragment shader; only the tint texture is re-uploaded on paint (cheap). A tile
+        // whose texel is transparent is left alone, so the same mechanism can colour one tile as easily
+        // as the whole grid, and anything outside the grid is never touched.
         private int _collTex;
         private bool _tintOn;
         private float _tintStrength = 0.5f;
@@ -61,6 +63,67 @@ namespace DSPRE.Avalonia.Gl
         // to that flat per-material colour instead of reloading the model.
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
+
+        // ── Terrain animation ────────────────────────────────────────────────────────────
+        // Per-material texture matrices, keyed the same way as the model's materials. Materials with
+        // no entry render with an identity matrix, so only the animated ones (water, waterfalls) move.
+        private Dictionary<int, float[]> _texMatrices;
+        private static readonly float[] IdentityTexMatrix = { 1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f };
+
+        /// <summary>Supplies this frame's texture transforms. Pass null to stop animating.</summary>
+        public void SetTextureMatrices(Dictionary<int, float[]> byMaterialKey)
+        {
+            _texMatrices = byMaterialKey;
+            RequestNextFrameRendering();
+        }
+
+        // Texture swapping (a building's sign flashing). The model carries every texture a material can
+        // switch to; this says which one to show, and the ids are uploaded the first time each is asked for.
+        private Dictionary<int, string> _texSwaps;
+        private readonly Dictionary<(int key, string name), int> _swapTexIds = new Dictionary<(int, string), int>();
+
+        // Buildings whose parts move: their triangles are rebuilt each frame and re-uploaded in place.
+        private Dictionary<int, float[]> _movedParts;
+
+        /// <summary>Replaces the triangles of some materials for this frame. Pass null to stop.</summary>
+        public void SetMovedParts(Dictionary<int, float[]> byMaterialKey)
+        {
+            _movedParts = byMaterialKey;
+            _movedPartsDirty = true;
+            RequestNextFrameRendering();
+        }
+        private bool _movedPartsDirty;
+
+        // Materials that fade in and out. The renderer already has a per-part alpha, so this just
+        // replaces it for the frame.
+        private Dictionary<int, float> _fadedMaterials;
+
+        /// <summary>Supplies this frame's material fades, keyed by material. Pass null to stop fading.</summary>
+        public void SetMaterialFades(Dictionary<int, float> byMaterialKey)
+        {
+            _fadedMaterials = byMaterialKey;
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>Supplies this frame's texture swaps, keyed by material. Pass null to stop swapping.</summary>
+        public void SetTextureSwaps(Dictionary<int, string> byMaterialKey)
+        {
+            _texSwaps = byMaterialKey;
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>The uploaded id for a swapped-in texture, uploading it the first time it is needed.</summary>
+        private int SwapTexture(int materialKey, string name)
+        {
+            if (_swapTexIds.TryGetValue((materialKey, name), out int hit)) return hit;
+            int id = 0;
+            if (_model != null
+                && _model.SwappableTextures.TryGetValue(materialKey, out var byName)
+                && byName.TryGetValue(name, out var tex))
+                id = UploadTexture(tex);
+            _swapTexIds[(materialKey, name)] = id;
+            return id;
+        }
 
         // One-shot framebuffer capture: callback receives raw RGBA (bottom-up) + pixel width/height.
         private Action<byte[], int, int> _captureCb;
@@ -156,10 +219,34 @@ namespace DSPRE.Avalonia.Gl
 
         // ── Camera ───────────────────────────────────────────────────────────────────
         private float _yaw = 30f, _pitch = 20f, _distance = 4f;
+        private bool _orthographic;
+
+        /// <summary>Flat 2D view: no perspective, so tiles keep their true proportions at any zoom.</summary>
+        public bool Orthographic
+        {
+            get => _orthographic;
+            set { if (_orthographic != value) { _orthographic = value; RequestNextFrameRendering(); } }
+        }
         private float _targetX, _targetY, _targetZ;   // pivot the orbit looks at (for panning)
         public float Yaw { get => _yaw; set { _yaw = value; RequestNextFrameRendering(); } }
         public float Pitch { get => _pitch; set { _pitch = Math.Max(-89f, Math.Min(89f, value)); RequestNextFrameRendering(); } }
         public float Distance { get => _distance; set { _distance = Math.Max(0.2f, value); RequestNextFrameRendering(); } }
+
+        private float _fovDegrees = DefaultFovDegrees;
+
+        /// <summary>The everyday editor view, wide enough to see a whole map at a sensible distance.</summary>
+        public const float DefaultFovDegrees = 45f;
+
+        /// <summary>
+        /// How wide the view is, top to bottom, in degrees. The field camera uses a much narrower angle
+        /// than the editor does, and setting the distance without this leaves everything looking far
+        /// further away than it does in game.
+        /// </summary>
+        public float VerticalFieldOfViewDegrees
+        {
+            get => _fovDegrees;
+            set { float v = Math.Max(1f, Math.Min(120f, value)); if (_fovDegrees != v) { _fovDegrees = v; RequestNextFrameRendering(); } }
+        }
 
         /// <summary>Pans the camera pivot across the ground plane by a screen-space delta.</summary>
         public void PanByScreen(float dx, float dy)
@@ -175,6 +262,13 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>Recentres the camera pivot.</summary>
         public void ResetView() { _targetX = _targetY = _targetZ = 0f; RequestNextFrameRendering(); }
+
+        /// <summary>Moves the camera pivot onto a point so the view centres on it.</summary>
+        public void LookAt(float x, float y, float z)
+        {
+            _targetX = x; _targetY = y; _targetZ = z;
+            RequestNextFrameRendering();
+        }
 
         // ── Mouse-driven camera input (honours the user's camera preferences) ─────────────
         // All host views route their right-drag / left-drag / wheel gestures through these so the
@@ -276,6 +370,18 @@ namespace DSPRE.Avalonia.Gl
         private struct GpuSprite { public int Tex; public float Cx, Cy, Cz, HalfW, HalfH; }
 
         /// <summary>Sets the textured billboard sprites (or null to clear).</summary>
+        private bool _spritesSeeThrough = true;
+
+        /// <summary>
+        /// Whether people show through walls. The editor wants that so no placed event can hide; a
+        /// preview of the map as it plays wants buildings to cover whoever is behind them.
+        /// </summary>
+        public bool SpritesSeeThroughGeometry
+        {
+            get => _spritesSeeThrough;
+            set { if (_spritesSeeThrough != value) { _spritesSeeThrough = value; RequestNextFrameRendering(); } }
+        }
+
         public void SetSprites(IReadOnlyList<SpriteInstance> sprites)
         {
             _sprites = sprites;
@@ -297,8 +403,11 @@ namespace DSPRE.Avalonia.Gl
                     "layout(location=1) in vec2 aUv;\n" +
                     "layout(location=2) in vec3 aColor;\n" +
                     "uniform mat4 uMvp;\n" +
+                    // Terrain animation (NSBTA) scrolls a material's texture coordinates.
+                    // Identity for every material the animation does not target.
+                    "uniform mat3 uTexMtx;\n" +
                     "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\n" +
-                    "void main(){ vUv = aUv; vColor = aColor; vWorld = aPos.xz; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
+                    "void main(){ vUv = (uTexMtx * vec3(aUv, 1.0)).xy; vColor = aColor; vWorld = aPos.xz; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
                 string fs = header +
                     "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform float uAlpha;\n" +
                     // Per-tile permission tint (uTint>0): sample a 32x32 collision-colour texture by the fragment's
@@ -309,8 +418,10 @@ namespace DSPRE.Avalonia.Gl
                     "vec3 tintRgb(vec3 c){\n" +
                     "  if (uTint <= 0.0) return c;\n" +
                     "  vec2 tc = (vWorld - uTileOrigin) / uTileSize;\n" +
-                    "  vec2 cuv = (clamp(floor(tc), 0.0, 31.0) + 0.5) / 32.0;\n" +
-                    "  return mix(c, texture(uColl, cuv).rgb, uTint);\n" +
+                    "  if (tc.x < 0.0 || tc.y < 0.0 || tc.x >= 32.0 || tc.y >= 32.0) return c;\n" +
+                    "  vec2 cuv = (floor(tc) + 0.5) / 32.0;\n" +
+                    "  vec4 t = texture(uColl, cuv);\n" +
+                    "  return mix(c, t.rgb, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
                     "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(tintRgb(t.rgb), uAlpha); }\n" +
@@ -321,6 +432,7 @@ namespace DSPRE.Avalonia.Gl
                 int f = _f.CompileShaderOrThrow(GlFunctions.GL_FRAGMENT_SHADER, fs);
                 _program = _f.LinkProgramOrThrow(v, f);
                 _mvpLoc = _f.GetUniformLocation(_program, "uMvp");
+                _texMtxLoc = _f.GetUniformLocation(_program, "uTexMtx");
                 _texLoc = _f.GetUniformLocation(_program, "uTex");
                 _hasTexLoc = _f.GetUniformLocation(_program, "uHasTex");
                 _alphaLoc = _f.GetUniformLocation(_program, "uAlpha");
@@ -376,6 +488,11 @@ namespace DSPRE.Avalonia.Gl
                 if (p.TextureId != 0) _f.DeleteTextures(1, new[] { p.TextureId });
             }
             _parts.Clear();
+
+            // Swapped-in textures belong to the model that just went away.
+            foreach (int id in _swapTexIds.Values)
+                if (id != 0) _f.DeleteTextures(1, new[] { id });
+            _swapTexIds.Clear();
         }
 
         // Sprite GPU textures are cached by their pixel-buffer reference (OverworldSprites.Get returns the
@@ -440,9 +557,41 @@ namespace DSPRE.Avalonia.Gl
                 if (_model.Textures != null && _model.Textures.TryGetValue(part.MaterialIndex, out var tex) && tex?.Rgba != null)
                     texId = UploadTexture(tex);
 
-                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId, Alpha = part.Alpha });
+                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId, Alpha = part.Alpha, MaterialKey = part.MaterialIndex, CullMode = part.CullMode });
             }
             _uploadPending = false;
+        }
+
+        /// <summary>
+        /// Re-uploads the triangles of the parts a joint animation has moved. Only those parts are
+        /// touched; everything else keeps the buffer it already has.
+        /// </summary>
+        private void UploadMovedParts()
+        {
+            _movedPartsDirty = false;
+            if (_movedParts == null || _movedParts.Count == 0) return;
+
+            for (int i = 0; i < _parts.Count; i++)
+            {
+                var part = _parts[i];
+                if (part.Vbo == 0) continue;
+                if (!_movedParts.TryGetValue(part.MaterialKey, out var verts) || verts == null) continue;
+
+                int count = verts.Length / 8;
+                if (count == 0) continue;
+
+                _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, part.Vbo);
+                var h = GCHandle.Alloc(verts, GCHandleType.Pinned);
+                try
+                {
+                    _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(verts.Length * sizeof(float)),
+                        h.AddrOfPinnedObject(), GlFunctions.GL_DYNAMIC_DRAW);
+                }
+                finally { h.Free(); }
+
+                part.VertexCount = count;
+                _parts[i] = part;
+            }
         }
 
         private int UploadTexture(NsbmdTextureData tex)
@@ -465,6 +614,7 @@ namespace DSPRE.Avalonia.Gl
         {
             if (_f == null || _program == 0) return;
             if (_uploadPending) Upload();
+            if (_movedPartsDirty) UploadMovedParts();
 
             double scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
             int pw = Math.Max(1, (int)(Bounds.Width * scaling));
@@ -478,7 +628,12 @@ namespace DSPRE.Avalonia.Gl
             if (_parts.Count == 0) return;
 
             float aspect = ph == 0 ? 1f : (float)pw / ph;
-            var proj = Mat4.Perspective(45f * (float)Math.PI / 180f, aspect, 0.05f, 1000f);
+            // The flat view frames the same amount as the perspective one does at the target, so
+            // switching between them keeps the same zoom instead of jumping.
+            float halfFov = _fovDegrees * 0.5f * (float)Math.PI / 180f;
+            var proj = _orthographic
+                ? Mat4.Ortho(_distance * (float)Math.Tan(halfFov), aspect, -1000f, 1000f)
+                : Mat4.Perspective(_fovDegrees * (float)Math.PI / 180f, aspect, 0.05f, 1000f);
             var view = Mat4.Multiply(Mat4.OrbitView(_distance, _yaw, _pitch), Mat4.Translate(-_targetX, -_targetY, -_targetZ));
             var mvp = Mat4.Multiply(proj, view);
             _lastMvp = mvp; _lastLogW = (float)Math.Max(1.0, Bounds.Width); _lastLogH = (float)Math.Max(1.0, Bounds.Height);
@@ -525,9 +680,17 @@ namespace DSPRE.Avalonia.Gl
                 _f.EnableVertexAttribArray(2);
                 _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
 
-                if (part.TextureId != 0 && _showTextures)
+                int texId = part.TextureId;
+                if (_texSwaps != null && _texSwaps.TryGetValue(part.MaterialKey, out string swapName)
+                    && !string.IsNullOrEmpty(swapName))
                 {
-                    _f.BindTexture(GlFunctions.GL_TEXTURE_2D, part.TextureId);
+                    int swapped = SwapTexture(part.MaterialKey, swapName);
+                    if (swapped != 0) texId = swapped;
+                }
+
+                if (texId != 0 && _showTextures)
+                {
+                    _f.BindTexture(GlFunctions.GL_TEXTURE_2D, texId);
                     _f.Uniform1i(_hasTexLoc, 1);
                 }
                 else _f.Uniform1i(_hasTexLoc, 0);
@@ -541,12 +704,33 @@ namespace DSPRE.Avalonia.Gl
                     _f.Enable(GlFunctions.GL_BLEND);
                     _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
                 }
-                _f.Uniform1f(_alphaLoc, part.Alpha);
+                float alpha = part.Alpha;
+                if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
+                    alpha = faded;
+                _f.Uniform1f(_alphaLoc, alpha);
 
-                _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, part.VertexCount);
+                float[] texMtx = IdentityTexMatrix;
+                if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out var m) && m != null && m.Length == 9)
+                    texMtx = m;
+                if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, texMtx);
 
+                // Only the faces the DS would have drawn. A material that asks for one side gets one
+                // side, which is what stops a backdrop showing its inside over the map. Anything that
+                // asks for both sides is left alone, and that is most of a map.
+                bool cull = part.CullMode == NsbmdCull.Front || part.CullMode == NsbmdCull.Back;
+                if (cull)
+                {
+                    _f.Enable(GlFunctions.GL_CULL_FACE);
+                    _f.CullFace(part.CullMode == NsbmdCull.Front ? GlFunctions.GL_FRONT : GlFunctions.GL_BACK);
+                }
+
+                if (part.CullMode != NsbmdCull.Nothing)
+                    _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, part.VertexCount);
+
+                if (cull) _f.Disable(GlFunctions.GL_CULL_FACE);
                 if (blend) _f.Disable(GlFunctions.GL_BLEND);
             }
+            if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
             _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
@@ -744,10 +928,12 @@ namespace DSPRE.Avalonia.Gl
             _f.Enable(GlFunctions.GL_BLEND);
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
             _f.DepthMask(false);                 // sit in the scene but don't write depth
-            // Like markers, sprites always render even through geometry: an NPC standing behind a tall
-            // counter/wall prop (e.g. a Pokémon Center nurse) would otherwise be silently depth-tested
-            // away by that geometry, which is unhelpful in an editor where you need to see every placed event.
-            _f.Disable(GlFunctions.GL_DEPTH_TEST);
+            // In the editor a sprite shows through geometry on purpose: an NPC behind a tall counter or
+            // wall prop would otherwise be hidden, and you need to see every event you have placed. A
+            // preview meant to look like the game wants the opposite, so buildings cover who is behind
+            // them, which is what SpritesSeeThroughGeometry switches.
+            if (_spritesSeeThrough) _f.Disable(GlFunctions.GL_DEPTH_TEST);
+            else _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.Uniform1f(_alphaLoc, 1f);
             _f.Uniform1i(_texLoc, 0);
             _f.ActiveTexture(GlFunctions.GL_TEXTURE0);

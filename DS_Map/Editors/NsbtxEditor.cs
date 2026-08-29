@@ -338,7 +338,7 @@ namespace DSPRE.Editors
             {
                 return;
             }
-            currentAreaData.dynamicTextureType = (ushort)areaDataDynamicTexturesNumericUpDown.Value;
+            currentAreaData.groundAnimation = (ushort)areaDataDynamicTexturesNumericUpDown.Value;
         }
         private void areaDataLightTypeComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -371,7 +371,7 @@ namespace DSPRE.Editors
             Helpers.DisableHandlers();
             if (RomInfo.gameFamily == GameFamilies.HGSS)
             {
-                areaDataDynamicTexturesNumericUpDown.Value = currentAreaData.dynamicTextureType;
+                areaDataDynamicTexturesNumericUpDown.Value = currentAreaData.groundAnimation;
 
                 bool interior = currentAreaData.areaType == 0;
                 indoorAreaRadioButton.Checked = interior;

@@ -43,6 +43,9 @@ namespace LibNDSFormats.NSBMD
         public Color SpecularColor;
         public Color EmissionColor;
         public uint PolyAttrib;
+        /// <summary>Which bits of <see cref="PolyAttrib"/> this material actually sets. A bit that is
+        /// not in here was never specified, so reading it would be reading nothing.</summary>
+        public uint PolyAttribMask;
         public int Alpha;
         public bool diffuseColor;
 		public bool shine;

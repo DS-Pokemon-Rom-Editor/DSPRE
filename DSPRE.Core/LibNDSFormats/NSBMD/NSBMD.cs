@@ -691,6 +691,7 @@ namespace LibNDSFormats.NSBMD {
                     int a = (int)((unknown3 >> 16) & 31);
                     mod.Materials[j].Alpha = a;//a * 2 + 1;//a * 2 + (a + 31) / 32;
                     mod.Materials[j].PolyAttrib = (uint)unknown3;
+                    mod.Materials[j].PolyAttribMask = (uint)constant2;
                     mod.Materials[j].diffuseColor = (unknown1 >> 15 & 1) == 1;
                     mod.Materials[j].shine = (unknown2 >> 15 & 1) == 1;
                     stream.Seek(blockptr + 4, SeekOrigin.Begin);

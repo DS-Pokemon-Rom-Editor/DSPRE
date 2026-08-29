@@ -1,10 +1,11 @@
-using DSPRE.ROMFiles;
+﻿using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Gl
@@ -111,7 +112,8 @@ namespace DSPRE.Avalonia.Gl
             if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
                 BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
 
-            var buildings = new List<(NSBMDModel, float[])>();
+            var buildings = new List<PlacedBuilding>();
+            var swappable = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
             string btexPath = Path.Combine(bldTexDir, area.buildingsTileset.ToString("D4"));
             byte[] bldTex = System.IO.File.Exists(btexPath) ? System.IO.File.ReadAllBytes(btexPath) : null;
 
@@ -135,13 +137,22 @@ namespace DSPRE.Avalonia.Gl
                         }
                         catch { /* pack mismatch, leave untextured */ }
                     }
-                    buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));
+                    buildings.Add(new PlacedBuilding
+                    {
+                        Model = b.NSBMDFile.models[0],
+                        Transform = MapGeometry.BuildingTransform(b),
+                        ModelId = (int)b.modelID,
+                        TileX = cellX * MapFile.mapSize + b.xPosition,
+                        TileZ = cellY * MapFile.mapSize + b.zPosition,
+                    });
+                    CollectSwappableTextures(b.NSBMDFile, (int)b.modelID, interior, swappable);
                 }
 
             return new NsbmdGeometry.MatrixCellGeometry
             {
                 Map = map.mapModel?.models?.Length > 0 ? map.mapModel.models[0] : null,
                 Buildings = buildings,
+                SwappableTextures = swappable,
                 CellX = cellX,
                 CellY = cellY,
                 Bdhc = bdhc,
@@ -180,5 +191,59 @@ namespace DSPRE.Avalonia.Gl
             }
             catch (Exception ex) { AppLogger.Error("Matrix tileset bind failed: " + ex.Message); }
         }
-    }
+    
+        /// <summary>
+        /// Decodes every texture a building's swapping animations can put on screen, keyed by model id
+        /// then by texture name. Done once at build time so nothing has to decode mid-animation.
+        /// </summary>
+        private static void CollectSwappableTextures(NSBMD file, int modelId, bool indoor,
+            Dictionary<int, Dictionary<string, NsbmdTextureData>> into)
+        {
+            if (file?.models == null || file.models.Length == 0 || into.ContainsKey(modelId)) return;
+
+            var patterns = BuildingAnimationSet.PatternsFor(modelId, indoor);
+            if (patterns.Count == 0) return;
+
+            var model = file.models[0];
+            var wanted = new Dictionary<string, string>();       // texture name → palette name
+            foreach (var anim in patterns)
+                for (int m = 0; m < anim.MaterialNames.Count; m++)
+                    foreach (var swap in anim.AllSwaps(m))
+                        if (swap.IsSet) wanted[swap.TextureName] = swap.PaletteName;
+            if (wanted.Count == 0) return;
+
+            var decoded = new Dictionary<string, NsbmdTextureData>();
+            foreach (var kv in wanted)
+            {
+                try
+                {
+                    var tex = file.Textures?.FirstOrDefault(t => t.texname == kv.Key);
+                    if (tex == null) continue;
+                    var pal = file.Palettes?.FirstOrDefault(pp => pp.palname == kv.Value);
+
+                    // Borrow one of the model's materials for its render flags, then point it at this
+                    // texture and palette so the normal decoder can do the work.
+                    var basis = model.Materials.Count > 0 ? model.Materials[0] : null;
+                    if (basis == null) continue;
+                    var stand_in = new NSBMDMaterial
+                    {
+                        texdata = tex.texdata, spdata = tex.spdata, texname = tex.texname,
+                        texoffset = tex.texoffset, texsize = tex.texsize,
+                        width = tex.width, height = tex.height, format = tex.format, color0 = tex.color0,
+                        repeatS = basis.repeatS, repeatT = basis.repeatT,
+                        flipS = basis.flipS, flipT = basis.flipT,
+                    };
+                    if (pal != null)
+                    {
+                        stand_in.paldata = pal.paldata; stand_in.palname = pal.palname;
+                        stand_in.paloffset = pal.paloffset; stand_in.palsize = pal.palsize;
+                    }
+                    var data = NsbmdTextureDecoder.Decode(stand_in);
+                    if (data != null) decoded[kv.Key] = data;
+                }
+                catch (Exception ex) { AppLogger.Error($"Building {modelId} texture {kv.Key} failed: {ex.Message}"); }
+            }
+            if (decoded.Count > 0) into[modelId] = decoded;
+        }
+}
 }

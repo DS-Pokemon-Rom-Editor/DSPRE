@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using global::Avalonia.OpenGL;
@@ -40,6 +40,7 @@ namespace DSPRE.Avalonia.Gl
         public delegate void EnableVertexAttribArrayDelegate(int index);
         public delegate void VertexAttribPointerDelegate(int index, int size, int type, bool normalized, int stride, IntPtr pointer);
         public delegate void UniformMatrix4fvDelegate(int location, int count, bool transpose, float[] value);
+        public delegate void UniformMatrix3fvDelegate(int location, int count, bool transpose, float[] value);
         public delegate void Uniform3fDelegate(int location, float x, float y, float z);
 
         public delegate void Uniform1iDelegate(int location, int v);
@@ -57,6 +58,8 @@ namespace DSPRE.Avalonia.Gl
         public delegate void TexImage2DDelegate(int target, int level, int internalFormat, int width, int height, int border, int format, int type, byte[] pixels);
         public delegate void TexParameteriDelegate(int target, int pname, int param);
         public delegate void BlendFuncDelegate(int sfactor, int dfactor);
+        public delegate void CullFaceDelegate(int mode);
+        public delegate void FrontFaceDelegate(int mode);
         public delegate void Uniform1fDelegate(int location, float v);
         public delegate void Uniform2fDelegate(int location, float v0, float v1);
         public delegate void DepthMaskDelegate(bool flag);
@@ -85,6 +88,7 @@ namespace DSPRE.Avalonia.Gl
         public readonly EnableVertexAttribArrayDelegate EnableVertexAttribArray;
         public readonly VertexAttribPointerDelegate VertexAttribPointer;
         public readonly UniformMatrix4fvDelegate UniformMatrix4fv;
+        public readonly UniformMatrix3fvDelegate UniformMatrix3fv;
         public readonly Uniform3fDelegate Uniform3f;
         public readonly Uniform1iDelegate Uniform1i;
         public readonly DrawArraysDelegate DrawArrays;
@@ -100,6 +104,8 @@ namespace DSPRE.Avalonia.Gl
         public readonly TexImage2DDelegate TexImage2D;
         public readonly TexParameteriDelegate TexParameteri;
         public readonly BlendFuncDelegate BlendFunc;
+        public readonly CullFaceDelegate CullFace;
+        public readonly FrontFaceDelegate FrontFace;
         public readonly Uniform1fDelegate Uniform1f;
         public readonly Uniform2fDelegate Uniform2f;
         public readonly DepthMaskDelegate DepthMask;
@@ -108,6 +114,7 @@ namespace DSPRE.Avalonia.Gl
         // ── GL constants ─────────────────────────────────────────────────────────────
         public const int GL_ARRAY_BUFFER = 0x8892;
         public const int GL_STATIC_DRAW = 0x88E4;
+        public const int GL_DYNAMIC_DRAW = 0x88E8;
         public const int GL_FRAGMENT_SHADER = 0x8B30;
         public const int GL_VERTEX_SHADER = 0x8B31;
         public const int GL_COMPILE_STATUS = 0x8B81;
@@ -116,6 +123,10 @@ namespace DSPRE.Avalonia.Gl
         public const int GL_TRIANGLES = 0x0004;
         public const int GL_DEPTH_TEST = 0x0B71;
         public const int GL_CULL_FACE = 0x0B44;
+        public const int GL_FRONT = 0x0404;
+        public const int GL_BACK = 0x0405;
+        public const int GL_CW = 0x0900;
+        public const int GL_CCW = 0x0901;
         public const int GL_BLEND = 0x0BE2;
         public const int GL_COLOR_BUFFER_BIT = 0x4000;
         public const int GL_DEPTH_BUFFER_BIT = 0x0100;
@@ -169,6 +180,7 @@ namespace DSPRE.Avalonia.Gl
             EnableVertexAttribArray = Bind<EnableVertexAttribArrayDelegate>(gl, "glEnableVertexAttribArray");
             VertexAttribPointer = Bind<VertexAttribPointerDelegate>(gl, "glVertexAttribPointer");
             UniformMatrix4fv = Bind<UniformMatrix4fvDelegate>(gl, "glUniformMatrix4fv");
+            UniformMatrix3fv = Bind<UniformMatrix3fvDelegate>(gl, "glUniformMatrix3fv");
             Uniform3f = Bind<Uniform3fDelegate>(gl, "glUniform3f");
             Uniform1i = Bind<Uniform1iDelegate>(gl, "glUniform1i");
             GenTextures = Bind<GenTexturesDelegate>(gl, "glGenTextures");
@@ -178,6 +190,8 @@ namespace DSPRE.Avalonia.Gl
             TexImage2D = Bind<TexImage2DDelegate>(gl, "glTexImage2D");
             TexParameteri = Bind<TexParameteriDelegate>(gl, "glTexParameteri");
             BlendFunc = Bind<BlendFuncDelegate>(gl, "glBlendFunc");
+            CullFace = Bind<CullFaceDelegate>(gl, "glCullFace");
+            FrontFace = Bind<FrontFaceDelegate>(gl, "glFrontFace");
             Uniform1f = Bind<Uniform1fDelegate>(gl, "glUniform1f");
             Uniform2f = Bind<Uniform2fDelegate>(gl, "glUniform2f");
             DepthMask = Bind<DepthMaskDelegate>(gl, "glDepthMask");
