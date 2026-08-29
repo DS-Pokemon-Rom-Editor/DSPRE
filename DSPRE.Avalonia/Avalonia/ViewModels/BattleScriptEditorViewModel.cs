@@ -880,7 +880,7 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
         public string GaugeLevelText => "Lv" + _gaugeLevel;
-        public double GaugeHpBarWidth => 50.0 * _gaugeHpPercent / 100.0;        // bar groove ≈ 50px at full (tunable)
+        public double GaugeHpBarWidth => 48.0 * _gaugeHpPercent / 100.0;        // groove is 48px, measured off real battles
         public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? Brushes.LimeGreen : _gaugeHpPercent > 20 ? Brushes.Gold : Brushes.OrangeRed;
         /// <summary>HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.</summary>
         public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
