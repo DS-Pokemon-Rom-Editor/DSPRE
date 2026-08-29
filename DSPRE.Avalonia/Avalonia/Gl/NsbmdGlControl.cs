@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using global::Avalonia;
@@ -331,7 +331,14 @@ namespace DSPRE.Avalonia.Gl
 
                 var arr = new int[1];
                 _f.GenVertexArrays(1, arr); _vao = arr[0];
+                // Deinit threw away every GPU object, which happens whenever the control leaves the visual
+                // tree, so flag all the still-held CPU meshes for re-upload, not just the model.
                 _uploadPending = true;
+                _markerDirty = true;
+                _spritesDirty = true;
+                _overlayDirty = true;
+                _gizmoDirty = true;
+                _collDirty = true;
                 SetError(null);
             }
             catch (Exception ex)
