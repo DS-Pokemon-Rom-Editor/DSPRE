@@ -42,14 +42,11 @@ namespace DSPRE.Avalonia
                 }
 
                 string currentVersion = AppInfo.GetDSPREVersion();
-                string availableVersion = newVersion.TargetFullRelease.Version.ToString();
+                string velopackVersion = newVersion.TargetFullRelease.Version.ToString();
+                string availableVersion = ToDotNetVersion(velopackVersion);
 
-                bool install = await DialogHelper.AskYesNo(
-                    "A new DSPRE version is available!\n\n" +
-                    $"Current: {currentVersion}\n" +
-                    $"Available: {availableVersion}\n\n" +
-                    "Do you want to install it now?",
-                    "New Update Available");
+                string notes = await Task.Run(() => FetchReleaseNotes($"v{availableVersion}"));
+                bool install = await ShowUpdatePrompt(currentVersion, availableVersion, notes);
 
                 if (install)
                 {
@@ -71,6 +68,69 @@ namespace DSPRE.Avalonia
                 if (!silent)
                     await DialogHelper.ShowError($"Error checking for updates: {ex.Message}", "Error");
             }
+        }
+
+        /// <summary>Shows the prompt with the release notes. Public so the dev preview can reuse it.</summary>
+        public static async Task<bool> ShowUpdatePrompt(string currentVersion, string availableVersion, string notes, bool preview = false)
+        {
+            var owner = (global::Avalonia.Application.Current?.ApplicationLifetime
+                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+            var dlg = new Views.UpdateAvailableWindow(currentVersion, availableVersion, notes, preview);
+            if (owner != null) await dlg.ShowDialog(owner);
+            else dlg.Show();
+            return dlg.Install;
+        }
+
+        // Velopack strips trailing zero parts and turns a revision into "-revN"; the release tag keeps the
+        // original 4-part AssemblyVersion, so it has to be rebuilt before the notes can be looked up.
+        private static string ToDotNetVersion(string velopackVersion)
+        {
+            try
+            {
+                if (velopackVersion.Contains("-rev"))
+                {
+                    string[] parts = velopackVersion.Split('-');
+                    string[] nums = parts[0].Split('.');
+                    int revision = int.Parse(parts[1].Replace("rev", ""));
+                    int patch = int.Parse(nums[2]) - 1;
+                    return $"{nums[0]}.{nums[1]}.{patch}.{revision}";
+                }
+                string[] v = velopackVersion.Split('.');
+                return v.Length >= 3 ? $"{v[0]}.{v[1]}.{v[2]}.0" : velopackVersion;
+            }
+            catch { return velopackVersion; }
+        }
+
+        /// <summary>Reads a release's notes off GitHub. Returns null when there are none to show.</summary>
+        private static string FetchReleaseNotes(string tag)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "DSPRE");
+                client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+
+                var response = client.GetAsync(
+                    $"https://api.github.com/repos/DS-Pokemon-Rom-Editor/DSPRE/releases/tags/{tag}").Result;
+                if (!response.IsSuccessStatusCode)
+                {
+                    AppLogger.Warn($"Release notes for '{tag}' returned {(int)response.StatusCode}.");
+                    return null;
+                }
+
+                using var doc = System.Text.Json.JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
+                if (doc.RootElement.TryGetProperty("body", out var body) &&
+                    body.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    string text = body.GetString();
+                    return string.IsNullOrWhiteSpace(text) ? null : text;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Couldn't fetch release notes: " + ex.Message);
+            }
+            return null;
         }
     }
 }
