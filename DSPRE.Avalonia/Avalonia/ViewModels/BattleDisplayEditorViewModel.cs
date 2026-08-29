@@ -399,31 +399,23 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(PlayerFrameWarningF)); OnPropertyChanged(nameof(PlayerFrameWarningSevereF)); OnPropertyChanged(nameof(PlayerFrameWarningTextF));
         }
 
-        // The sprite IMAGE already bakes in the mon's vertical position, so at LOAD the sprite sits correctly
-        // with no extra displacement. To still PREVIEW edits, the heights are applied as a DELTA from the
-        // loaded value (×2 per the "half the empty space" research): zero at load, then the sprite tracks the
-        // change as you edit. The explicit signed Y offset (HGSS byte / DP poke_yofs) is applied absolutely.
-        // Bases 24 / 84 fold in the rest of the scene's constants; calibrate per family if needed.
-        private int _oFrontHeightM, _oFrontHeightF, _oBackHeightM, _oBackHeightF;   // values at load
         // When viewing an alternate FORM, the form's height_o values (gender-agnostic) drive the preview instead.
         private bool HeightsActive => _hasHeights || (_formMode && _hasFormHeights);
         private int ActFrontH(bool f) => (_formMode && _hasFormHeights) ? _formFrontH : (f ? _frontHeightF : _frontHeightM);
-        private int ActFrontO(bool f) => (_formMode && _hasFormHeights) ? _oFormFrontH : (f ? _oFrontHeightF : _oFrontHeightM);
         private int ActBackH(bool f) => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
-        private int ActBackO(bool f) => (_formMode && _hasFormHeights) ? _oFormBackH : (f ? _oBackHeightF : _oBackHeightM);
 
-        // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
-        private double FrontTopFor(int curH, int origH) => 24 - _spriteY + (HeightsActive ? (curH - origH) : 0);
-        private double BackTopFor(int curH, int origH) => 84 + (HeightsActive ? (curH - origH) : 0);
+        // Base 11, not the 10 the engine source implies: measured against real battles.
+        private double FrontTopFor(int h) => 11 - _spriteY + (HeightsActive ? h : 0);
+        private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
 
         public double EnemyLeft => 152;
         public double PlayerLeft => 23;
-        public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale), ActFrontO(ShowFemale));
-        public double PlayerTop => BackTopFor(ActBackH(ShowFemale), ActBackO(ShowFemale));
-        public double EnemyTopM => FrontTopFor(ActFrontH(false), ActFrontO(false));
-        public double EnemyTopF => FrontTopFor(ActFrontH(true), ActFrontO(true));
-        public double PlayerTopM => BackTopFor(ActBackH(false), ActBackO(false));
-        public double PlayerTopF => BackTopFor(ActBackH(true), ActBackO(true));
+        public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale));
+        public double PlayerTop => BackTopFor(ActBackH(ShowFemale));
+        public double EnemyTopM => FrontTopFor(ActFrontH(false));
+        public double EnemyTopF => FrontTopFor(ActFrontH(true));
+        public double PlayerTopM => BackTopFor(ActBackH(false));
+        public double PlayerTopF => BackTopFor(ActBackH(true));
 
         public bool ShadowSmallVisible => HasSpriteData && _shadowSize == 1;
         public bool ShadowMediumVisible => HasSpriteData && _shadowSize == 2;
@@ -610,7 +602,7 @@ namespace DSPRE.Avalonia.ViewModels
         private bool _formNarcTried;
         private bool _formMode;       // mirrors SpriteVM.IsAlternateForms
         private int _formIndex = -1;  // mirrors SpriteVM.SelectedFormIndex
-        private int _formFrontH, _formBackH, _oFormFrontH, _oFormBackH;
+        private int _formFrontH, _formBackH;
 
         private bool _hasFormHeights;
         public bool HasFormHeights { get => _hasFormHeights; private set { if (Set(ref _hasFormHeights, value)) OnPropertyChanged(nameof(ShowBaseHeights)); } }
@@ -641,7 +633,6 @@ namespace DSPRE.Avalonia.ViewModels
                 var f = _formHeightNarc.GetRecord(frontIdx);
                 if (b == null || f == null || b.Length < 1 || f.Length < 1) return;
                 _formBackH = b[0]; _formFrontH = f[0];
-                _oFormBackH = _formBackH; _oFormFrontH = _formFrontH;
                 OnPropertyChanged(nameof(FormFrontHeight)); OnPropertyChanged(nameof(FormBackHeight));
                 HasFormHeights = true;
             }
@@ -1168,7 +1159,6 @@ namespace DSPRE.Avalonia.ViewModels
                 if (!_src.TryLoad(BaseSpeciesIdFor(id), out BattleRec rec)) return;
                 _spriteY = rec.FrontY; _shadowX = rec.ShadowX; _shadowSize = rec.ShadowSize; _movementType = rec.Movement;
                 _backHeightF = rec.BackF; _backHeightM = rec.BackM; _frontHeightF = rec.FrontF; _frontHeightM = rec.FrontM;
-                _oFrontHeightM = rec.FrontM; _oFrontHeightF = rec.FrontF; _oBackHeightM = rec.BackM; _oBackHeightF = rec.BackF;   // baseline for the delta-preview
                 OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize)); OnPropertyChanged(nameof(MovementType));
                 OnPropertyChanged(nameof(FrontHeightM)); OnPropertyChanged(nameof(FrontHeightF)); OnPropertyChanged(nameof(BackHeightM)); OnPropertyChanged(nameof(BackHeightF));
                 OnPropertyChanged(nameof(FrontHeightUnified)); OnPropertyChanged(nameof(BackHeightUnified));
@@ -1194,7 +1184,6 @@ namespace DSPRE.Avalonia.ViewModels
             bool hasHeights = HgEngineHeightTable.TryGet(id, out int femaleBack, out int maleBack, out int femaleFront, out int maleFront);
             _backHeightF = hasHeights ? femaleBack : 0; _backHeightM = hasHeights ? maleBack : 0;
             _frontHeightF = hasHeights ? femaleFront : 0; _frontHeightM = hasHeights ? maleFront : 0;
-            _oFrontHeightM = _frontHeightM; _oFrontHeightF = _frontHeightF; _oBackHeightM = _backHeightM; _oBackHeightF = _backHeightF;
 
             OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize)); OnPropertyChanged(nameof(MovementType));
             OnPropertyChanged(nameof(FrontHeightM)); OnPropertyChanged(nameof(FrontHeightF)); OnPropertyChanged(nameof(BackHeightM)); OnPropertyChanged(nameof(BackHeightF));
