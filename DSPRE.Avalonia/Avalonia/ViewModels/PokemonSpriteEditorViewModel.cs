@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.Editors.Utils;
@@ -286,7 +286,9 @@ namespace DSPRE.Avalonia.ViewModels
                 SelectedFormIndex = value;
                 LoadAlternateForm(value);
                 int pseudoId = ResolveFormPseudoId(_currentId, _currentFormData[value].Name);
-                FormSharesBaseData = pseudoId < 0;
+                // Index 0 is the species' own default form, so its stats are the base species' stats and
+                // the note only confuses there.
+                FormSharesBaseData = value > 0 && pseudoId < 0;
                 FormPseudoIdSelected?.Invoke(pseudoId >= 0 ? pseudoId : _currentId);
             }
         }
