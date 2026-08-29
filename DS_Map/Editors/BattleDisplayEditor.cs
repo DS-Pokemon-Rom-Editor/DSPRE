@@ -448,10 +448,9 @@ namespace DSPRE.Editors {
             Band(MsgOuter, MessageBoxTop, 1);
             Band(MsgOuter, MessageBoxTop + MessageBoxHeight - 1, 1);
 
-            string name = (currentLoadedId >= 0 && currentLoadedId < pokenames.Length) ? pokenames[currentLoadedId] : "";
-            if (string.IsNullOrEmpty(name)) return;
             using (Brush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
-                g.DrawString($"What will {name} do?", MessageFont, fg, 10 * Scale, (MessageBoxTop + 9) * Scale);
+                g.DrawString("This message box is here to show how much of the battle screen it\ncovers, so the preview matches what you see in game.",
+                    MessageFont, fg, 8 * Scale, (MessageBoxTop + 8) * Scale);
         }
 
         private void DrawGround(Graphics g, BattleGroundRenderer.GroundImage ground) {
