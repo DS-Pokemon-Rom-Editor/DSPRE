@@ -23,6 +23,9 @@ namespace DSPRE.Avalonia.Views
         public MainWindowView()
         {
             InitializeComponent();
+#if DEBUG
+            AddChangelogPreviewMenuItem();
+#endif
             // Ctrl+P → quick-open command palette (jump to any editor by name).
             KeyDown += (s, e) =>
             {
@@ -165,6 +168,19 @@ namespace DSPRE.Avalonia.Views
             string parent = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/')) ?? "");
             return string.IsNullOrEmpty(parent) ? name : parent + System.IO.Path.DirectorySeparatorChar + name;
         }
+
+#if DEBUG
+        // Debug builds get an entry under Tools for checking how a release's notes will read before tagging.
+        private void AddChangelogPreviewMenuItem()
+        {
+            var menu = this.FindControl<MenuItem>("ToolsMenu");
+            if (menu == null) return;
+            var item = new MenuItem { Header = "Generate Update Prompt Preview…" };
+            item.Click += async (_, _) => await new ChangelogPreviewWindow().ShowDialog(this);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(item);
+        }
+#endif
 
         private void CommandPalette_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCommandPalette(this);
