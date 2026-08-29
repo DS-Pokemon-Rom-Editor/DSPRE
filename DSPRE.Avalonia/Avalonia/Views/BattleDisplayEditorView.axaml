@@ -107,10 +107,18 @@
                        TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
-              <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
-                      ToolTip.Tip="Live preview with the selected palette (before saving)">
-                <Image Source="{Binding IconPreview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
-              </Border>
+              <StackPanel Spacing="4" VerticalAlignment="Center">
+                <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
+                        ToolTip.Tip="Live preview with the selected palette (before saving)">
+                  <Image Source="{Binding IconPreview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                </Border>
+                <ComboBox SelectedIndex="{Binding IconFrame}" Width="86" FontSize="11"
+                          HorizontalAlignment="Center" IsVisible="{Binding ShowIconFrames}"
+                          ToolTip.Tip="Which of the icon's animation frames to preview">
+                  <ComboBoxItem Content="Frame 1"/>
+                  <ComboBoxItem Content="Frame 2"/>
+                </ComboBox>
+              </StackPanel>
               <StackPanel Spacing="6" VerticalAlignment="Center">
                 <Button Content="Import PNG…" Click="ImportIcon_Click" Width="110"
                         ToolTip.Tip="Replace the icon graphic. Must match the icon's exact pixel size; colors are matched to the palette selected above (pixels below 50% alpha become transparent)."/>

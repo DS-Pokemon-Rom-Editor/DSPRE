@@ -1,4 +1,4 @@
-using Avalonia.Media;
+﻿using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
@@ -502,20 +502,59 @@ namespace DSPRE.Avalonia.ViewModels
         // PartyPaletteIndex afterward does not automatically re-quantize a pending import.
         private RawImage _pendingIconGraphic;
 
+        // A party icon holds its animation frames stacked vertically, 32px each, so the preview can show
+        // either one. Most icons have two; anything with a single frame hides the picker.
+        private const int IconFrameSize = 32;
+
+        private int _iconFrameCount = 1;
+        public int IconFrameCount { get => _iconFrameCount; private set { if (Set(ref _iconFrameCount, value)) OnPropertyChanged(nameof(ShowIconFrames)); } }
+        public bool ShowIconFrames => _iconFrameCount > 1;
+
+        private int _iconFrame;
+        public int IconFrame
+        {
+            get => _iconFrame;
+            set { if (Set(ref _iconFrame, value)) RefreshPreview(); }
+        }
+
         private void RefreshPreview()
         {
-            if (!IsAvailable || _currentId <= 0) { IconPreview = null; return; }
+            if (!IsAvailable || _currentId <= 0) { IconPreview = null; IconFrameCount = 1; return; }
             try
             {
+                RawImage full = _pendingIconGraphic
+                    ?? DSPRE.DSUtils.GetMonIconGraphicRaw(IconIdFor(_currentId), _partyPaletteIndex);
+
+                if (full != null && full.Height >= IconFrameSize * 2)
+                {
+                    IconFrameCount = full.Height / IconFrameSize;
+                    if (_iconFrame >= _iconFrameCount) { _iconFrame = 0; OnPropertyChanged(nameof(IconFrame)); }
+                    IconPreview = DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(CropIconFrame(full, _iconFrame));
+                    return;
+                }
+
+                IconFrameCount = 1;
                 if (_pendingIconGraphic != null)
                 {
                     IconPreview = DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(_pendingIconGraphic);
                     return;
                 }
+                // Single-frame icon: fall back to the game's own OAM-composed render.
                 var gdi = DSPRE.DSUtils.GetPokePicRaw(IconIdFor(_currentId), 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
-            catch { IconPreview = null; }
+            catch { IconPreview = null; IconFrameCount = 1; }
+        }
+
+        private static RawImage CropIconFrame(RawImage full, int frame)
+        {
+            int top = frame * IconFrameSize;
+            if (top + IconFrameSize > full.Height) top = 0;
+            var outImg = new RawImage(full.Width, IconFrameSize);
+            int rowBytes = full.Width * 4;
+            for (int y = 0; y < IconFrameSize; y++)
+                System.Array.Copy(full.Bgra, (top + y) * rowBytes, outImg.Bgra, y * rowBytes, rowBytes);
+            return outImg;
         }
 
         private bool _fullPaletteExport;
