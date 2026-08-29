@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.IO;
 using System.Windows.Forms;
 using DSPRE.Editors.Utils;
@@ -227,7 +228,6 @@ namespace DSPRE.Editors {
         private bool hasSpriteData, hasMovementType, hasHeights;
         private int spriteY, shadowX, shadowSize, movementType;
         private int frontHeightM, frontHeightF, backHeightM, backHeightF;
-        private int oFrontHeightM, oFrontHeightF, oBackHeightM, oBackHeightF;   // baseline at load, for the delta preview
         private int frameIndex = 0;
         private int iconFrameIndex = 0;
         private int partyPaletteIndex = 0;
@@ -290,13 +290,11 @@ namespace DSPRE.Editors {
                 hasSpriteData = hasMovementType = hasHeights = false;
                 spriteY = shadowX = shadowSize = movementType = 0;
                 frontHeightM = frontHeightF = backHeightM = backHeightF = 0;
-                oFrontHeightM = oFrontHeightF = oBackHeightM = oBackHeightF = 0;
 
                 EnsureSource();
                 if (_src != null && _src.TryLoad(id, out BattleRec rec)) {
                     spriteY = rec.FrontY; shadowX = rec.ShadowX; shadowSize = rec.ShadowSize; movementType = rec.Movement;
                     backHeightF = rec.BackF; backHeightM = rec.BackM; frontHeightF = rec.FrontF; frontHeightM = rec.FrontM;
-                    oFrontHeightM = rec.FrontM; oFrontHeightF = rec.FrontF; oBackHeightM = rec.BackM; oBackHeightF = rec.BackF;
                     hasMovementType = rec.HasMovement; hasHeights = rec.HasHeights;
                     hasSpriteData = true;
                 }
@@ -378,6 +376,8 @@ namespace DSPRE.Editors {
         private void PreviewPanel_Paint(object sender, PaintEventArgs e) {
             Graphics g = e.Graphics;
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            // hard edges, so the text sits with the pixel art instead of blurring against it
+            g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
 
             EnsureArena();
 
@@ -401,12 +401,12 @@ namespace DSPRE.Editors {
                     g.FillEllipse(b, left * Scale, top * Scale, w * Scale, (w / 2) * Scale);
             }
 
-            int frontH = female ? frontHeightF : frontHeightM, frontO = female ? oFrontHeightF : oFrontHeightM;
-            int backH = female ? backHeightF : backHeightM, backO = female ? oBackHeightF : oBackHeightM;
+            int frontH = female ? frontHeightF : frontHeightM;
+            int backH = female ? backHeightF : backHeightM;
 
-            // Global Y offset only applies to the front (enemy) sprite; both it and per-gender height move the sprite down as they grow.
-            double enemyTop = 24 + spriteY + (hasHeights ? (frontH - frontO) : 0);
-            double playerTop = 84 + (hasHeights ? (backH - backO) : 0);
+            // Base 11, not the 10 the engine source implies: measured against real battles.
+            double enemyTop = 11 + (hasHeights ? frontH : 0) - spriteY;
+            double playerTop = 72 + (hasHeights ? backH : 0);
 
             Bitmap enemy = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 2 : 3], frameIndex);
             Bitmap player = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 0 : 1], frameIndex);
@@ -416,9 +416,41 @@ namespace DSPRE.Editors {
 
             if (_hasArenaGraphics) {
                 string name = (currentLoadedId >= 0 && currentLoadedId < pokenames.Length) ? pokenames[currentLoadedId] : "";
-                DrawGauge(g, _gaugeEnemy, name);
-                DrawGauge(g, _gaugeMine, name);
+                DrawGauge(g, _gaugeEnemy, name, player: false);
+                DrawGauge(g, _gaugeMine, name, player: true);
             }
+
+            DrawMessageBox(g);
+        }
+
+        // The battle text box covers the bottom 48px of the top screen.
+        private const int MessageBoxTop = 144;
+        private const int MessageBoxHeight = 48;
+
+        private static readonly Color MsgOuter = Color.FromArgb(0x20, 0x20, 0x20);
+        private static readonly Color MsgFrame = Color.FromArgb(0x49, 0x41, 0x41);
+        private static readonly Color MsgFill = Color.FromArgb(0xFB, 0xFB, 0xFB);
+        private static readonly Color MsgAccentTop = Color.FromArgb(0xFB, 0xDB, 0x69);
+        private static readonly Color MsgAccentBottom = Color.FromArgb(0xEB, 0xA2, 0x38);
+
+        private static readonly Font MessageFont = new Font(FontFamily.GenericSansSerif, 9f);
+
+        private void DrawMessageBox(Graphics g) {
+            void Band(Color c, int top, int height, int left = 0, int width = 256) {
+                using (Brush b = new SolidBrush(c))
+                    g.FillRectangle(b, left * Scale, top * Scale, width * Scale, height * Scale);
+            }
+
+            Band(MsgFrame, MessageBoxTop, MessageBoxHeight);
+            Band(MsgFill, MessageBoxTop + 2, MessageBoxHeight - 5, 2, 252);
+            Band(MsgAccentTop, MessageBoxTop + 3, 1, 2, 252);
+            Band(MsgAccentBottom, MessageBoxTop + MessageBoxHeight - 4, 1, 2, 252);
+            Band(MsgOuter, MessageBoxTop, 1);
+            Band(MsgOuter, MessageBoxTop + MessageBoxHeight - 1, 1);
+
+            using (Brush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
+                g.DrawString("This message box is here to show how much of the battle screen it\ncovers, so the preview matches what you see in game.",
+                    MessageFont, fg, 8 * Scale, (MessageBoxTop + 8) * Scale);
         }
 
         private void DrawGround(Graphics g, BattleGroundRenderer.GroundImage ground) {
@@ -426,19 +458,35 @@ namespace DSPRE.Editors {
             g.DrawImage(ground.Image, ground.Left * Scale, ground.Top * Scale, ground.Image.Width * Scale, ground.Image.Height * Scale);
         }
 
-        private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 9.5f, FontStyle.Bold);
-        private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName) {
+        private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 12f, FontStyle.Bold);
+        private static readonly Font GaugeHpFont = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold);
+        private static readonly Color HpGreen = Color.FromArgb(0x38, 0xC8, 0x38);
+
+        // Measured off real battles; the gauge graphic already has the "HP" label and empty bar.
+        private const int NameEnemyX = 3, NameEnemyY = 24, LevelEnemyX = 78;
+        private const int NameMineX = 149, NameMineY = 102, LevelMineX = 210;
+        private const int BarEnemyX = 50, BarEnemyY = 42, BarMineX = 200, BarMineY = 118;
+        private const int BarW = 48, BarH = 4;
+        private const int HpTextX = 210, HpTextY = 126;
+
+        private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName, bool player) {
             if (gauge?.Image == null) return;
             g.DrawImage(gauge.Image, gauge.Left * Scale, gauge.Top * Scale, gauge.Image.Width * Scale, gauge.Image.Height * Scale);
             if (string.IsNullOrEmpty(speciesName)) return;
 
-            // Anchor off the gauge's real screen center, not the render canvas' corner.
-            int centerX = gauge.Left + gauge.Image.Width / 2, centerY = gauge.Top + gauge.Image.Height / 2;
-            float textX = (centerX - 34) * Scale, textY = (centerY - 8) * Scale;
-            string label = $"{speciesName} Lv5";
-            Color textColor = RomInfo.gameFamily == GameFamilies.Plat ? Color.White : Color.FromArgb(235, 40, 40, 40);
-            using (Brush fg = new SolidBrush(textColor))
-                g.DrawString(label, GaugeFont, fg, textX, textY);
+            using (Brush hp = new SolidBrush(HpGreen))
+                g.FillRectangle(hp, (player ? BarMineX : BarEnemyX) * Scale, (player ? BarMineY : BarEnemyY) * Scale,
+                                BarW * Scale, BarH * Scale);
+
+            int nameX = player ? NameMineX : NameEnemyX;
+            int nameY = player ? NameMineY : NameEnemyY;
+            int levelX = player ? LevelMineX : LevelEnemyX;
+            Color textColor = RomInfo.gameFamily == GameFamilies.HGSS ? Color.FromArgb(80, 80, 80) : Color.White;
+            using (Brush fg = new SolidBrush(textColor)) {
+                g.DrawString(speciesName, GaugeFont, fg, nameX * Scale, nameY * Scale);
+                g.DrawString("Lv5", GaugeFont, fg, levelX * Scale, nameY * Scale);
+                if (player) g.DrawString("20/20", GaugeHpFont, fg, HpTextX * Scale, HpTextY * Scale);
+            }
         }
 
         private void SaveChangesInternal() {

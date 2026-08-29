@@ -4,11 +4,26 @@
 
 ---
 
+## 2.2.3
+- Fixed the Battle Display preview drawing the front (enemy) sprite one pixel too high. Checked
+  against real battles in both games, so both sprites now match the game pixel for pixel.
+- The Battle Display preview now draws the battle message box along the bottom, the way the game
+  does. The canvas was always the right size, but without the box the full height looked usable for
+  the scene when the bottom 48 pixels are actually covered.
+- Fixed the Battle Display preview drawing sprites too low, and moving the sprite the wrong way for
+  the Front sprite Y offset field. That field only affects the front sprite, never the back one.
+- Fixed the Battle Display preview reverting a species' height to its unedited position after saving
+  and reopening it.
+
+---
+
 ## 2.2.2.1
 - Fixed the Battle Display preview moving the sprite the wrong way vertically for the Front/Back height
   fields, a regression introduced by the direction fix in 2.2.2 itself: raising those values moved the
   sprite up in the preview instead of down. The Front sprite Y offset direction fixed in 2.2.2 was correct
   and is unchanged. As before, this only affected the on-screen preview, not the saved values.
+
+---
 
 ## 2.2.2
 - Fixed Battle Display height edits for the gender a species didn't originally have. If you gave a
@@ -26,6 +41,8 @@
   offset did the opposite of the two. This made the preview actively misleading rather than just
   approximate, and is likely why in-game sprite positions have needed so much extra trial-and-error to
   get right. The saved values themselves were never affected, only the preview.
+
+---
 
 ## 2.2.1
 - Fixed a crash opening the TM/HM Bulk Editor on Diamond/Pearl ROMs. The editor tried to load every
