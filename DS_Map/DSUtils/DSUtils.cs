@@ -305,6 +305,8 @@ namespace DSPRE {
                 return false;
             }
 
+            YamlUtils.EnsureConfigPaddingFields(Path.Combine(workDir, "config.yaml"));
+
             if (!File.Exists(Path.Combine(workDir, "arm9", "arm9.bin")))
             {
                 AppLogger.Error("Validation failed: arm9/arm9.bin not found after extraction");
@@ -335,6 +337,8 @@ namespace DSPRE {
                     "Couldn't repack ROM", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
+
+            YamlUtils.EnsureConfigPaddingFields(configPath);
 
             Process repack = new Process();
             repack.StartInfo.FileName = @"Tools\dsrom.exe";

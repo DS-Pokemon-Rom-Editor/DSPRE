@@ -1,10 +1,73 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using YamlDotNet.Serialization;
 
 namespace DSPRE {
     public static class YamlUtils {
+        private const string LegacyPaddingFields =
+            "file_image_padding_value: 255\n" +
+            "section_padding_value: 255\n";
+
+        private const string PaddingBlock =
+            "padding:\n" +
+            "  arm9: 0\n" +
+            "  arm9_overlay_table: 255\n" +
+            "  arm9_overlays: 255\n" +
+            "  arm7: 255\n" +
+            "  arm7_overlay_table: 255\n" +
+            "  arm7_overlays: 255\n" +
+            "  fnt: 255\n" +
+            "  fat: 255\n" +
+            "  banner: 255\n" +
+            "  file_image: 255\n" +
+            "  rom: 255\n";
+
+        /// <summary>
+        /// Writes the padding fields of every ds-rom version DSPRE ships, so a project built by one
+        /// version still builds in the other. Unknown fields are ignored by both.
+        /// </summary>
+        /// <param name="configPath">Path to the project's config.yaml.</param>
+        public static void EnsureConfigPaddingFields(string configPath) {
+            try {
+                if (!File.Exists(configPath)) {
+                    return;
+                }
+
+                string text = File.ReadAllText(configPath);
+                bool hasLegacy = false;
+                bool hasBlock = false;
+                foreach (string line in text.Split('\n')) {
+                    if (line.StartsWith("file_image_padding_value:") || line.StartsWith("section_padding_value:")) {
+                        hasLegacy = true;
+                    } else if (line.StartsWith("padding:")) {
+                        hasBlock = true;
+                    }
+                }
+
+                if (hasLegacy && hasBlock) {
+                    return;
+                }
+
+                StringBuilder sb = new StringBuilder(text);
+                if (text.Length > 0 && !text.EndsWith("\n")) {
+                    sb.Append('\n');
+                }
+                if (!hasLegacy) {
+                    sb.Append(LegacyPaddingFields);
+                }
+                if (!hasBlock) {
+                    sb.Append(PaddingBlock);
+                }
+
+                File.WriteAllText(configPath, sb.ToString());
+                AppLogger.Info("Added the missing ds-rom padding fields to " + configPath);
+            } catch (Exception ex) {
+                AppLogger.Error("Couldn't update the padding fields in config.yaml: " + ex.Message);
+            }
+        }
+
         private class HeaderYaml {
             public string title { get; set; }
             public string gamecode { get; set; }
