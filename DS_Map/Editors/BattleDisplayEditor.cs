@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.IO;
 using System.Windows.Forms;
 using DSPRE.Editors.Utils;
@@ -375,6 +376,8 @@ namespace DSPRE.Editors {
         private void PreviewPanel_Paint(object sender, PaintEventArgs e) {
             Graphics g = e.Graphics;
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            // hard edges, so the text sits with the pixel art instead of blurring against it
+            g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
 
             EnsureArena();
 
@@ -413,8 +416,8 @@ namespace DSPRE.Editors {
 
             if (_hasArenaGraphics) {
                 string name = (currentLoadedId >= 0 && currentLoadedId < pokenames.Length) ? pokenames[currentLoadedId] : "";
-                DrawGauge(g, _gaugeEnemy, name);
-                DrawGauge(g, _gaugeMine, name);
+                DrawGauge(g, _gaugeEnemy, name, player: false);
+                DrawGauge(g, _gaugeMine, name, player: true);
             }
 
             DrawMessageBox(g);
@@ -456,19 +459,35 @@ namespace DSPRE.Editors {
             g.DrawImage(ground.Image, ground.Left * Scale, ground.Top * Scale, ground.Image.Width * Scale, ground.Image.Height * Scale);
         }
 
-        private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 9.5f, FontStyle.Bold);
-        private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName) {
+        private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 12f, FontStyle.Bold);
+        private static readonly Font GaugeHpFont = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold);
+        private static readonly Color HpGreen = Color.FromArgb(0x38, 0xC8, 0x38);
+
+        // Measured off real battles; the gauge graphic already has the "HP" label and empty bar.
+        private const int NameEnemyX = 3, NameEnemyY = 24, LevelEnemyX = 78;
+        private const int NameMineX = 149, NameMineY = 102, LevelMineX = 210;
+        private const int BarEnemyX = 50, BarEnemyY = 42, BarMineX = 200, BarMineY = 118;
+        private const int BarW = 48, BarH = 4;
+        private const int HpTextX = 210, HpTextY = 126;
+
+        private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName, bool player) {
             if (gauge?.Image == null) return;
             g.DrawImage(gauge.Image, gauge.Left * Scale, gauge.Top * Scale, gauge.Image.Width * Scale, gauge.Image.Height * Scale);
             if (string.IsNullOrEmpty(speciesName)) return;
 
-            // Anchor off the gauge's real screen center, not the render canvas' corner.
-            int centerX = gauge.Left + gauge.Image.Width / 2, centerY = gauge.Top + gauge.Image.Height / 2;
-            float textX = (centerX - 34) * Scale, textY = (centerY - 8) * Scale;
-            string label = $"{speciesName} Lv5";
-            Color textColor = RomInfo.gameFamily == GameFamilies.Plat ? Color.White : Color.FromArgb(235, 40, 40, 40);
-            using (Brush fg = new SolidBrush(textColor))
-                g.DrawString(label, GaugeFont, fg, textX, textY);
+            using (Brush hp = new SolidBrush(HpGreen))
+                g.FillRectangle(hp, (player ? BarMineX : BarEnemyX) * Scale, (player ? BarMineY : BarEnemyY) * Scale,
+                                BarW * Scale, BarH * Scale);
+
+            int nameX = player ? NameMineX : NameEnemyX;
+            int nameY = player ? NameMineY : NameEnemyY;
+            int levelX = player ? LevelMineX : LevelEnemyX;
+            Color textColor = RomInfo.gameFamily == GameFamilies.HGSS ? Color.FromArgb(80, 80, 80) : Color.White;
+            using (Brush fg = new SolidBrush(textColor)) {
+                g.DrawString(speciesName, GaugeFont, fg, nameX * Scale, nameY * Scale);
+                g.DrawString("Lv5", GaugeFont, fg, levelX * Scale, nameY * Scale);
+                if (player) g.DrawString("20/20", GaugeHpFont, fg, HpTextX * Scale, HpTextY * Scale);
+            }
         }
 
         private void SaveChangesInternal() {
