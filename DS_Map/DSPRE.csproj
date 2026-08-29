@@ -104,8 +104,10 @@
       <DependentUpon>AddressHelper.cs</DependentUpon>
     </Compile>
     <Compile Include="AppLogger.cs" />
+    <Compile Include="ReleaseNotes.cs" />
     <Compile Include="MarkdownRichText.cs" />
     <Compile Include="UpdateAvailableForm.cs" />
+    <Compile Include="ChangelogPreviewTool.cs" />
     <Compile Include="CrashReporter.cs" />
     <Compile Include="DocTool.cs" />
     <Compile Include="DSUtils\ARM9.cs" />
