@@ -55,6 +55,9 @@ namespace DSPRE
 
 #endif
             InitializeComponent();
+#if DEBUG
+            AddChangelogPreviewMenuItem();
+#endif
             Program.SetupDatabase();
 
             EditorPanels.Initialize(this);
@@ -371,6 +374,23 @@ namespace DSPRE
             Advanced = 2,
             Complete = 3
         }
+
+#if DEBUG
+        // Debug builds get an entry under Tools for checking how a release's notes will read before tagging.
+        private void AddChangelogPreviewMenuItem()
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem("Generate Update Prompt Preview");
+            item.Click += delegate
+            {
+                using (ChangelogPreviewTool tool = new ChangelogPreviewTool())
+                {
+                    tool.ShowDialog(this);
+                }
+            };
+            aboutToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            aboutToolStripMenuItem.DropDownItems.Add(item);
+        }
+#endif
 
         private void SetMenuLayout(LayoutStyle layoutStyle)
         {

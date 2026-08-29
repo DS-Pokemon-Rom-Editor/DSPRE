@@ -2157,6 +2157,31 @@ namespace DSPRE
 
         public static string[] GetPokemonNames() => new TextArchive(pokemonNamesTextNumbers[0]).messages.ToArray();
 
+        /// <summary>
+        /// Pokémon names plus the extra form entries that sit right after the Pokédex (Deoxys' Attack
+        /// forme and the like), so those ids can be picked by name like any other species. The offset
+        /// comes from the ROM's own name count, so it lands correctly in every game.
+        /// </summary>
+        public static string[] GetPokemonNamesWithForms() {
+            string[] names = GetPokemonNames();
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.personalExtraFiles;
+
+            int extraCount = Math.Min(GetPersonalFilesCount() - names.Length, extras.Length);
+            if (extraCount <= 0) {
+                return names;
+            }
+
+            string[] result = new string[names.Length + extraCount];
+            Array.Copy(names, result, names.Length);
+            for (int i = 0; i < extraCount; i++) {
+                string baseName = extras[i].monId >= 0 && extras[i].monId < names.Length
+                    ? names[extras[i].monId]
+                    : "UNKNOWN";
+                result[names.Length + i] = baseName + " - " + extras[i].description;
+            }
+            return result;
+        }
+
         public static string[] GetAbilityNames() => new TextArchive(abilityNamesTextNumber).messages.ToArray();
 
         public static string[] GetAttackNames() => new TextArchive(attackNamesTextNumber).messages.ToArray();

@@ -39,6 +39,9 @@ partial class PokemonSpriteEditor {
             this.lblNormal = new System.Windows.Forms.Label();
             this.lblShiny = new System.Windows.Forms.Label();
             this.IndexBox = new DSPRE.InputComboBox();
+            this.FormBox = new System.Windows.Forms.ComboBox();
+            this.lblForm = new System.Windows.Forms.Label();
+            this.lblFormSharesBase = new System.Windows.Forms.Label();
             this.BasePalette = new System.Windows.Forms.ComboBox();
             this.ShinyPalette = new System.Windows.Forms.ComboBox();
             this.SaveBox = new System.Windows.Forms.ComboBox();
@@ -68,6 +71,7 @@ partial class PokemonSpriteEditor {
             this.OpenPngs.Size = new System.Drawing.Size(100, 25);
             this.OpenPngs.TabIndex = 3;
             this.OpenPngs.Text = "Load Sprite Set";
+            this.OpenPngs.Visible = false;
             // 
             // LoadSheet
             // 
@@ -76,6 +80,7 @@ partial class PokemonSpriteEditor {
             this.LoadSheet.Size = new System.Drawing.Size(100, 25);
             this.LoadSheet.TabIndex = 9;
             this.LoadSheet.Text = "Load Sprite Sheet";
+            this.LoadSheet.Visible = false;
             this.LoadSheet.Click += new System.EventHandler(this.btnLoadSheet_Click);
             // 
             // SaveSingle
@@ -100,6 +105,7 @@ partial class PokemonSpriteEditor {
             this.OpenOther.Location = new System.Drawing.Point(12, 8);
             this.OpenOther.Name = "OpenOther";
             this.OpenOther.Size = new System.Drawing.Size(100, 25);
+            this.OpenOther.Visible = false;
             this.OpenOther.TabIndex = 12;
             this.OpenOther.Text = "Open Forms";
             this.OpenOther.Click += new System.EventHandler(this.btnOpenOther_Click);
@@ -125,7 +131,8 @@ partial class PokemonSpriteEditor {
             //
             // lblMale
             // 
-            this.lblMale.Location = new System.Drawing.Point(564, 36);
+            this.lblMale.Location = new System.Drawing.Point(330, 40);
+            this.lblMale.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.lblMale.Name = "lblMale";
             this.lblMale.Size = new System.Drawing.Size(100, 23);
             this.lblMale.TabIndex = 1;
@@ -133,7 +140,8 @@ partial class PokemonSpriteEditor {
             // 
             // lblFemale
             // 
-            this.lblFemale.Location = new System.Drawing.Point(232, 36);
+            this.lblFemale.Location = new System.Drawing.Point(126, 40);
+            this.lblFemale.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.lblFemale.Name = "lblFemale";
             this.lblFemale.Size = new System.Drawing.Size(100, 23);
             this.lblFemale.TabIndex = 0;
@@ -196,6 +204,40 @@ partial class PokemonSpriteEditor {
             this.IndexBox.Size = new System.Drawing.Size(160, 21);
             this.IndexBox.TabIndex = 6;
             this.IndexBox.SelectedIndexChanged += new System.EventHandler(this.IndexBox_SelectedIndexChanged);
+            // 
+            // lblForm
+            // 
+            this.lblForm.AutoSize = true;
+            this.lblForm.Location = new System.Drawing.Point(14, 12);
+            this.lblForm.Name = "lblForm";
+            this.lblForm.Size = new System.Drawing.Size(34, 13);
+            this.lblForm.TabIndex = 30;
+            this.lblForm.Text = "Form:";
+            this.lblForm.Visible = false;
+            // 
+            // FormBox
+            // 
+            this.FormBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.FormBox.DropDownWidth = 180;
+            this.FormBox.Location = new System.Drawing.Point(52, 8);
+            this.FormBox.MaxDropDownItems = 16;
+            this.FormBox.Name = "FormBox";
+            this.FormBox.Size = new System.Drawing.Size(114, 21);
+            this.FormBox.TabIndex = 31;
+            this.FormBox.Visible = false;
+            this.FormBox.SelectedIndexChanged += new System.EventHandler(this.FormBox_SelectedIndexChanged);
+            // 
+            // lblFormSharesBase
+            // 
+            this.lblFormSharesBase.AutoSize = false;
+            this.lblFormSharesBase.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.lblFormSharesBase.Location = new System.Drawing.Point(760, 40);
+            this.lblFormSharesBase.Name = "lblFormSharesBase";
+            this.lblFormSharesBase.Size = new System.Drawing.Size(250, 90);
+            this.lblFormSharesBase.TabIndex = 32;
+            this.lblFormSharesBase.Text = "Stats, type, and other Personal Data are shared with the base Pokémon and will be s" +
+                "aved there. Only this sprite belongs to the form.";
+            this.lblFormSharesBase.Visible = false;
             // 
             // BasePalette
             // 
@@ -333,6 +375,9 @@ partial class PokemonSpriteEditor {
             this.Controls.Add(this.lblNormal);
             this.Controls.Add(this.lblShiny);
             this.Controls.Add(this.IndexBox);
+            this.Controls.Add(this.lblForm);
+            this.Controls.Add(this.FormBox);
+            this.Controls.Add(this.lblFormSharesBase);
             this.Controls.Add(this.BasePalette);
             this.Controls.Add(this.ShinyPalette);
             this.Controls.Add(this.SaveBox);
@@ -367,6 +412,9 @@ partial class PokemonSpriteEditor {
         private System.Windows.Forms.Button SaveSingle;
         private System.Windows.Forms.Button MakeShiny;
         private System.Windows.Forms.Button OpenOther;
+        private System.Windows.Forms.ComboBox FormBox;
+        private System.Windows.Forms.Label lblForm;
+        private System.Windows.Forms.Label lblFormSharesBase;
         private System.Windows.Forms.Button SaveChanges;
         private System.Windows.Forms.Button AddOppositeGenderButton;
         private System.Windows.Forms.Label lblMale;

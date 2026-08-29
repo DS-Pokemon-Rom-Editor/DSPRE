@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 using DSPRE.Editors;
+using DSPRE.Resources;
 
 namespace DSPRE {
     public partial class EvolutionsEditor : Form, IEditorWithUnsavedChanges {
 
         private readonly string[] fileNames;
+        private Label altFormNoticeLabel;
         private PokemonEditor _parent;
         private readonly string[] pokeNames;
         private readonly string[] moveNames;
@@ -37,6 +39,19 @@ namespace DSPRE {
             List<string> fileNames = new List<string>(count);
             fileNames.AddRange(pokeNames);
 
+            // The alternate formes have evolution files of their own sitting right after the Pokédex,
+            // but no name in the ROM, so name them after the Pokémon they belong to.
+            for (int i = 0; i < PokeDatabase.PersonalData.personalExtraFiles.Length; i++) {
+                PokeDatabase.PersonalData.PersonalExtraFiles altFormEntry = PokeDatabase.PersonalData.personalExtraFiles[i];
+                if (altFormEntry.monId >= 0 && altFormEntry.monId < pokeNames.Length) {
+                    fileNames.Add(pokeNames[altFormEntry.monId] + " - " + altFormEntry.description);
+                }
+            }
+
+            for (int i = 0; i < count - fileNames.Count; i++) {
+                fileNames.Add($"Extra entry {fileNames.Count}");
+            }
+
             this.fileNames = fileNames.ToArray();
             InitializeComponent();
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
@@ -54,7 +69,9 @@ namespace DSPRE {
                 (evoMethodComboBox7, descLabel7, evoParamUpDown7, evoTargetMonComboBox7),
             };
 
-            BindingList<string> listMons = new BindingList<string>(fileNames);
+            // What a Pokémon evolves into is a real species, so this list stays on the Pokédex names;
+            // only the file picker above offers the alternate formes.
+            BindingList<string> listMons = new BindingList<string>(new List<string>(pokeNames));
 
             // Create as many rows as there are evolution types
             for (int i = 0; i < EvolutionFile.numEvolutions; i++) {
@@ -62,6 +79,18 @@ namespace DSPRE {
                 evoRows[i].m.DataSource = new BindingSource(Enum.GetNames(typeof(EvolutionMethod)), string.Empty);
                 evoRows[i].t.DataSource = new BindingSource(listMons, string.Empty);
             }
+
+            altFormNoticeLabel = new Label();
+            altFormNoticeLabel.AutoSize = false;
+            altFormNoticeLabel.Size = new System.Drawing.Size(560, 18);
+            // Sits under the picker, taken from the control itself so form scaling can't shift it.
+            altFormNoticeLabel.Location = new System.Drawing.Point(
+                pokemonNameInputComboBox.Left, pokemonNameInputComboBox.Bottom + 8);
+            altFormNoticeLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+            altFormNoticeLabel.Text = "Alternate forms have no evolutions of their own. Set them on the base Pokémon's entry instead.";
+            altFormNoticeLabel.Visible = false;
+            Controls.Add(altFormNoticeLabel);
+            altFormNoticeLabel.BringToFront();
 
             monNumberNumericUpDown.Maximum = fileNames.Count - 1;
 
@@ -105,6 +134,12 @@ namespace DSPRE {
         public void ChangeLoadedFile(int toLoad) {
             currentLoadedId = toLoad;
             currentLoadedFile = new EvolutionFile(currentLoadedId);
+
+            // Entries past the Pokedex are the alternate forms, whose evolution files are empty in
+            // every game; the base Pokemon's own entry is what the game reads.
+            if (altFormNoticeLabel != null) {
+                altFormNoticeLabel.Visible = toLoad >= pokeNames.Length;
+            }
 
             for (int i = 0; i < EvolutionFile.numEvolutions; i++) {
                 (ComboBox m, Label l, NumericUpDown p, ComboBox t) = evoRows[i];

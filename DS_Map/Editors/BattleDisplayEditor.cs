@@ -459,7 +459,6 @@ namespace DSPRE.Editors {
         }
 
         private static readonly Font GaugeFont = new Font(FontFamily.GenericSansSerif, 12f, FontStyle.Bold);
-        private static readonly Font GaugeHpFont = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold);
         private static readonly Color HpGreen = Color.FromArgb(0x38, 0xC8, 0x38);
 
         // Measured off real battles; the gauge graphic already has the "HP" label and empty bar.
@@ -467,7 +466,6 @@ namespace DSPRE.Editors {
         private const int NameMineX = 149, NameMineY = 102, LevelMineX = 210;
         private const int BarEnemyX = 50, BarEnemyY = 42, BarMineX = 200, BarMineY = 118;
         private const int BarW = 48, BarH = 4;
-        private const int HpTextX = 210, HpTextY = 126;
 
         private void DrawGauge(Graphics g, BattleGroundRenderer.GroundImage gauge, string speciesName, bool player) {
             if (gauge?.Image == null) return;
@@ -485,7 +483,6 @@ namespace DSPRE.Editors {
             using (Brush fg = new SolidBrush(textColor)) {
                 g.DrawString(speciesName, GaugeFont, fg, nameX * Scale, nameY * Scale);
                 g.DrawString("Lv5", GaugeFont, fg, levelX * Scale, nameY * Scale);
-                if (player) g.DrawString("20/20", GaugeHpFont, fg, HpTextX * Scale, HpTextY * Scale);
             }
         }
 

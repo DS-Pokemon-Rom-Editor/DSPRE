@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -104,6 +104,10 @@
       <DependentUpon>AddressHelper.cs</DependentUpon>
     </Compile>
     <Compile Include="AppLogger.cs" />
+    <Compile Include="ReleaseNotes.cs" />
+    <Compile Include="MarkdownRichText.cs" />
+    <Compile Include="UpdateAvailableForm.cs" />
+    <Compile Include="ChangelogPreviewTool.cs" />
     <Compile Include="CrashReporter.cs" />
     <Compile Include="DocTool.cs" />
     <Compile Include="DSUtils\ARM9.cs" />
@@ -303,6 +307,13 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Editors\Utils\IndexedBitmapHandler.cs" />
+    <Compile Include="Editors\Utils\IndexedPng.cs" />
+    <Compile Include="Editors\PokemonSpriteEditorParity.cs" />
+    <Compile Include="Editors\PaletteColorDialog.cs" />
+    <Compile Include="Editors\SpriteWizardDialogs.cs" />
+    <Compile Include="Editors\Utils\RawImage.cs" />
+    <Compile Include="Editors\Utils\PokemonSpriteModel.cs" />
+    <Compile Include="Editors\Utils\PokemonFormTables.cs" />
     <Compile Include="Editors\Utils\NitroBgCodec.cs" />
     <Compile Include="Editors\Utils\EntryNarc.cs" />
     <Compile Include="Editors\Utils\BattleGroundRenderer.cs" />

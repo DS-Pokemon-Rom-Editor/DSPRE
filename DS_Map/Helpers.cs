@@ -73,23 +73,11 @@ namespace DSPRE
                 // Fetch changelog for this release
                 string changelog = FetchChangelogForTag($"v{displayVersion}");
 
-                // Build update message
-                string updateMessage = $"A new DSPRE version is available!\n\n" +
-                                      $"Current: {currentVersion}\n" +
-                                      $"Available: {displayVersion}\n" +
-                                      $"Update Type: {updateType}\n\n";
-
-                if (!string.IsNullOrEmpty(changelog))
+                DialogResult update;
+                using (UpdateAvailableForm prompt = new UpdateAvailableForm(currentVersion, displayVersion, updateType, changelog, false))
                 {
-                    updateMessage += $"Changelog:\n{changelog}\n\n";
+                    update = prompt.ShowDialog();
                 }
-
-                updateMessage += "Do you want to install it now?";
-
-                DialogResult update = MessageBox.Show(updateMessage,
-                    "New Update Available",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Information);
 
                 if (update == DialogResult.Yes)
                 {
