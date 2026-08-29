@@ -94,6 +94,41 @@ namespace DSPRE
             toolTip1.SetToolTip(syncChangesCheckbox, "When this CheckBox is marked, mon selection will be synchronized accross all tabs below.");
         }
 
+        /// <summary>
+        /// Moves the other tabs to the entry a picked sprite form actually saves to, so Personal Data and
+        /// Learnsets don't stay on a different Pokémon than the sprite on screen.
+        /// </summary>
+        public void JumpToSpecies(int id)
+        {
+            if (!syncChangesCheckbox.Checked)
+            {
+                return;
+            }
+
+            Helpers.BackUpDisableHandler();
+            Helpers.DisableHandlers();
+            if (personalEditor.CheckDiscardChanges() && id < personalEditor.pokemonNameInputComboBox.Items.Count)
+            {
+                personalEditor.pokemonNameInputComboBox.SelectedIndex = id;
+                personalEditor.monNumberNumericUpDown.Value = id;
+                personalEditor.ChangeLoadedFile(id);
+            }
+            if (learnsetEditor.CheckDiscardChanges() && id < learnsetEditor.pokemonNameInputComboBox.Items.Count)
+            {
+                learnsetEditor.pokemonNameInputComboBox.SelectedIndex = id;
+                learnsetEditor.monNumberNumericUpDown.Value = id;
+                learnsetEditor.ChangeLoadedFile(id);
+            }
+            if (evoEditor.CheckDiscardChanges() && id < evoEditor.pokemonNameInputComboBox.Items.Count)
+            {
+                evoEditor.pokemonNameInputComboBox.SelectedIndex = id;
+                evoEditor.monNumberNumericUpDown.Value = id;
+                evoEditor.ChangeLoadedFile(id);
+            }
+            Helpers.RestoreDisableHandler();
+            UpdateTabPageNames();
+        }
+
         public void TrySyncIndices(ComboBox sender)
         {
             if (!syncChangesCheckbox.Checked)

@@ -1,4 +1,5 @@
 ﻿using DSPRE.Editors.Utils;
+using DSPRE.ROMFiles;
 using NarcAPI;
 using System;
 using System.Collections.Generic;
@@ -17,28 +18,6 @@ namespace DSPRE.Editors {
         private static readonly string[] spriteTypeNames = { 
             "Female backsprite", "Male backsprite", "Female frontsprite", "Male frontsprite", "Shiny" 
         };
-
-        /// <summary>
-        /// Represents sprite template data for a Pokemon form.
-        /// Based on game's BuildPokemonSpriteTemplate functions.
-        /// </summary>
-        private struct FormSpriteData {
-            public string Name;
-            public int BackSpriteIndex;   // character index for back sprite (face/2 = 0)
-            public int FrontSpriteIndex;  // character index for front sprite (face/2 = 1)
-            public int NormalPaletteIndex;
-            public int ShinyPaletteIndex;
-            public bool HasGenderDifference; // If true, uses 4 sprites; otherwise back=front for both genders
-            
-            public FormSpriteData(string name, int backIdx, int frontIdx, int normalPal, int shinyPal, bool genderDiff = false) {
-                Name = name;
-                BackSpriteIndex = backIdx;
-                FrontSpriteIndex = frontIdx;
-                NormalPaletteIndex = normalPal;
-                ShinyPaletteIndex = shinyPal;
-                HasGenderDifference = genderDiff;
-            }
-        }
 
         private readonly int[] validPalettesHGSS = new int[]
         {
@@ -80,347 +59,13 @@ namespace DSPRE.Editors {
             206, 207, 210, 212
         };
 
-        /// <summary>
-        /// Form sprite data for Diamond/Pearl's OTHERPOKE NARC.
-        /// Based on BuildPokemonSpriteTemplateDP from game code.
-        /// Format: character = base + (face/2) where face: 0=FBack, 1=MBack, 2=FFront, 3=MFront
-        /// So back sprites use base+0, front sprites use base+1
-        /// </summary>
-        private FormSpriteData[] GetFormDataDP() {
-            return new FormSpriteData[] {
-                // Deoxys: character = 0 + (face/2) + form*2, palette = 134 + shiny (shared palette for all forms)
-                new FormSpriteData("Deoxys - Normal",   0,  1, 134, 135),
-                new FormSpriteData("Deoxys - Attack",   2,  3, 134, 135),
-                new FormSpriteData("Deoxys - Defense",  4,  5, 134, 135),
-                new FormSpriteData("Deoxys - Speed",    6,  7, 134, 135),
-                
-                // Unown: character = 8 + (face/2) + form*2, palette = 136 + shiny (shared palette)
-                new FormSpriteData("Unown - A",  8,  9, 136, 137),
-                new FormSpriteData("Unown - B", 10, 11, 136, 137),
-                new FormSpriteData("Unown - C", 12, 13, 136, 137),
-                new FormSpriteData("Unown - D", 14, 15, 136, 137),
-                new FormSpriteData("Unown - E", 16, 17, 136, 137),
-                new FormSpriteData("Unown - F", 18, 19, 136, 137),
-                new FormSpriteData("Unown - G", 20, 21, 136, 137),
-                new FormSpriteData("Unown - H", 22, 23, 136, 137),
-                new FormSpriteData("Unown - I", 24, 25, 136, 137),
-                new FormSpriteData("Unown - J", 26, 27, 136, 137),
-                new FormSpriteData("Unown - K", 28, 29, 136, 137),
-                new FormSpriteData("Unown - L", 30, 31, 136, 137),
-                new FormSpriteData("Unown - M", 32, 33, 136, 137),
-                new FormSpriteData("Unown - N", 34, 35, 136, 137),
-                new FormSpriteData("Unown - O", 36, 37, 136, 137),
-                new FormSpriteData("Unown - P", 38, 39, 136, 137),
-                new FormSpriteData("Unown - Q", 40, 41, 136, 137),
-                new FormSpriteData("Unown - R", 42, 43, 136, 137),
-                new FormSpriteData("Unown - S", 44, 45, 136, 137),
-                new FormSpriteData("Unown - T", 46, 47, 136, 137),
-                new FormSpriteData("Unown - U", 48, 49, 136, 137),
-                new FormSpriteData("Unown - V", 50, 51, 136, 137),
-                new FormSpriteData("Unown - W", 52, 53, 136, 137),
-                new FormSpriteData("Unown - X", 54, 55, 136, 137),
-                new FormSpriteData("Unown - Y", 56, 57, 136, 137),
-                new FormSpriteData("Unown - Z", 58, 59, 136, 137),
-                new FormSpriteData("Unown - !", 60, 61, 136, 137),
-                new FormSpriteData("Unown - ?", 62, 63, 136, 137),
-                
-                // Castform: character = 64 + (face*2) + form, palette = 138 + (shiny*4) + form
-                // face*2 means: back=0,2 front=4,6 - but this doesn't fit standard pattern
-                // Actually: character = 64 + (face * 2) + form where face is 0-3
-                // So Normal form back is 64, front is 68; Sunny back is 65, front is 69, etc.
-                new FormSpriteData("Castform - Normal", 64, 68, 138, 142),
-                new FormSpriteData("Castform - Sunny",  65, 69, 139, 143),
-                new FormSpriteData("Castform - Rainy",  66, 70, 140, 144),
-                new FormSpriteData("Castform - Snowy",  67, 71, 141, 145),
-                
-                // Burmy: character = 72 + (face/2) + form*2, palette = 146 + shiny + form*2
-                new FormSpriteData("Burmy - Plant", 72, 73, 146, 147),
-                new FormSpriteData("Burmy - Sandy", 74, 75, 148, 149),
-                new FormSpriteData("Burmy - Trash", 76, 77, 150, 151),
-                
-                // Wormadam: character = 78 + (face/2) + form*2, palette = 152 + shiny + form*2
-                new FormSpriteData("Wormadam - Plant", 78, 79, 152, 153),
-                new FormSpriteData("Wormadam - Sandy", 80, 81, 154, 155),
-                new FormSpriteData("Wormadam - Trash", 82, 83, 156, 157),
-                
-                // Shellos: character = 84 + face + form (has gender sprites), palette = 158 + shiny + form*2
-                new FormSpriteData("Shellos - West", 84, 86, 158, 159, true),  // 84=FBack, 85=MBack, 86=FFront, 87=MFront
-                new FormSpriteData("Shellos - East", 85, 87, 160, 161, true),  // Actually face + form, so East adds 1
-                
-                // Gastrodon: character = 88 + face + form, palette = 162 + shiny + form*2
-                new FormSpriteData("Gastrodon - West", 88, 90, 162, 163, true),
-                new FormSpriteData("Gastrodon - East", 89, 91, 164, 165, true),
-                
-                // Cherrim: character = 92 + face + form, palette = 166 + (shiny*2) + form
-                new FormSpriteData("Cherrim - Overcast",  92, 94, 166, 168, true),
-                new FormSpriteData("Cherrim - Sunshine",  93, 95, 167, 169, true),
-                
-                // Arceus: character = 96 + (face/2) + form*2, palette = 170 + shiny + form*2
-                new FormSpriteData("Arceus - Normal",   96,  97, 170, 171),
-                new FormSpriteData("Arceus - Fighting", 98,  99, 172, 173),
-                new FormSpriteData("Arceus - Flying",  100, 101, 174, 175),
-                new FormSpriteData("Arceus - Poison",  102, 103, 176, 177),
-                new FormSpriteData("Arceus - Ground",  104, 105, 178, 179),
-                new FormSpriteData("Arceus - Rock",    106, 107, 180, 181),
-                new FormSpriteData("Arceus - Bug",     108, 109, 182, 183),
-                new FormSpriteData("Arceus - Ghost",   110, 111, 184, 185),
-                new FormSpriteData("Arceus - Steel",   112, 113, 186, 187),
-                new FormSpriteData("Arceus - ???",     114, 115, 188, 189),
-                new FormSpriteData("Arceus - Fire",    116, 117, 190, 191),
-                new FormSpriteData("Arceus - Water",   118, 119, 192, 193),
-                new FormSpriteData("Arceus - Grass",   120, 121, 194, 195),
-                new FormSpriteData("Arceus - Electric",122, 123, 196, 197),
-                new FormSpriteData("Arceus - Psychic", 124, 125, 198, 199),
-                new FormSpriteData("Arceus - Ice",     126, 127, 200, 201),
-                new FormSpriteData("Arceus - Dragon",  128, 129, 202, 203),
-                new FormSpriteData("Arceus - Dark",    130, 131, 204, 205),
-                
-                // Egg: character = 132 + form, palette = 206 + form (no back/front distinction)
-                new FormSpriteData("Egg",         132, 132, 206, 206),
-                new FormSpriteData("Manaphy Egg", 133, 133, 207, 207),
-            };
-        }
-
-        /// <summary>
-        /// Form sprite data for Platinum's PL_OTHERPOKE NARC.
-        /// Based on BuildPokemonSpriteTemplate from game code.
-        /// </summary>
-        private FormSpriteData[] GetFormDataPt() {
-            return new FormSpriteData[] {
-                // Deoxys: character = 0 + (face/2) + form*2, palette = 154 + shiny
-                new FormSpriteData("Deoxys - Normal",   0,  1, 154, 155),
-                new FormSpriteData("Deoxys - Attack",   2,  3, 154, 155),
-                new FormSpriteData("Deoxys - Defense",  4,  5, 154, 155),
-                new FormSpriteData("Deoxys - Speed",    6,  7, 154, 155),
-                
-                // Unown: character = 8 + (face/2) + form*2, palette = 156 + shiny
-                new FormSpriteData("Unown - A",  8,  9, 156, 157),
-                new FormSpriteData("Unown - B", 10, 11, 156, 157),
-                new FormSpriteData("Unown - C", 12, 13, 156, 157),
-                new FormSpriteData("Unown - D", 14, 15, 156, 157),
-                new FormSpriteData("Unown - E", 16, 17, 156, 157),
-                new FormSpriteData("Unown - F", 18, 19, 156, 157),
-                new FormSpriteData("Unown - G", 20, 21, 156, 157),
-                new FormSpriteData("Unown - H", 22, 23, 156, 157),
-                new FormSpriteData("Unown - I", 24, 25, 156, 157),
-                new FormSpriteData("Unown - J", 26, 27, 156, 157),
-                new FormSpriteData("Unown - K", 28, 29, 156, 157),
-                new FormSpriteData("Unown - L", 30, 31, 156, 157),
-                new FormSpriteData("Unown - M", 32, 33, 156, 157),
-                new FormSpriteData("Unown - N", 34, 35, 156, 157),
-                new FormSpriteData("Unown - O", 36, 37, 156, 157),
-                new FormSpriteData("Unown - P", 38, 39, 156, 157),
-                new FormSpriteData("Unown - Q", 40, 41, 156, 157),
-                new FormSpriteData("Unown - R", 42, 43, 156, 157),
-                new FormSpriteData("Unown - S", 44, 45, 156, 157),
-                new FormSpriteData("Unown - T", 46, 47, 156, 157),
-                new FormSpriteData("Unown - U", 48, 49, 156, 157),
-                new FormSpriteData("Unown - V", 50, 51, 156, 157),
-                new FormSpriteData("Unown - W", 52, 53, 156, 157),
-                new FormSpriteData("Unown - X", 54, 55, 156, 157),
-                new FormSpriteData("Unown - Y", 56, 57, 156, 157),
-                new FormSpriteData("Unown - Z", 58, 59, 156, 157),
-                new FormSpriteData("Unown - !", 60, 61, 156, 157),
-                new FormSpriteData("Unown - ?", 62, 63, 156, 157),
-                
-                // Castform: character = 64 + (face*2) + form, palette = 158 + (shiny*4) + form
-                new FormSpriteData("Castform - Normal", 64, 68, 158, 162),
-                new FormSpriteData("Castform - Sunny",  65, 69, 159, 163),
-                new FormSpriteData("Castform - Rainy",  66, 70, 160, 164),
-                new FormSpriteData("Castform - Snowy",  67, 71, 161, 165),
-                
-                // Burmy: character = 72 + (face/2) + form*2, palette = 166 + shiny + form*2
-                new FormSpriteData("Burmy - Plant", 72, 73, 166, 167),
-                new FormSpriteData("Burmy - Sandy", 74, 75, 168, 169),
-                new FormSpriteData("Burmy - Trash", 76, 77, 170, 171),
-                
-                // Wormadam: character = 78 + (face/2) + form*2, palette = 172 + shiny + form*2
-                new FormSpriteData("Wormadam - Plant", 78, 79, 172, 173),
-                new FormSpriteData("Wormadam - Sandy", 80, 81, 174, 175),
-                new FormSpriteData("Wormadam - Trash", 82, 83, 176, 177),
-                
-                // Shellos: character = 84 + face + form, palette = 178 + shiny + form*2
-                new FormSpriteData("Shellos - West", 84, 86, 178, 179, true),
-                new FormSpriteData("Shellos - East", 85, 87, 180, 181, true),
-                
-                // Gastrodon: character = 88 + face + form, palette = 182 + shiny + form*2
-                new FormSpriteData("Gastrodon - West", 88, 90, 182, 183, true),
-                new FormSpriteData("Gastrodon - East", 89, 91, 184, 185, true),
-                
-                // Cherrim: character = 92 + face + form, palette = 186 + (shiny*2) + form
-                new FormSpriteData("Cherrim - Overcast", 92, 94, 186, 188, true),
-                new FormSpriteData("Cherrim - Sunshine", 93, 95, 187, 189, true),
-                
-                // Arceus: character = 96 + (face/2) + form*2, palette = 190 + shiny + form*2
-                new FormSpriteData("Arceus - Normal",   96,  97, 190, 191),
-                new FormSpriteData("Arceus - Fighting", 98,  99, 192, 193),
-                new FormSpriteData("Arceus - Flying",  100, 101, 194, 195),
-                new FormSpriteData("Arceus - Poison",  102, 103, 196, 197),
-                new FormSpriteData("Arceus - Ground",  104, 105, 198, 199),
-                new FormSpriteData("Arceus - Rock",    106, 107, 200, 201),
-                new FormSpriteData("Arceus - Bug",     108, 109, 202, 203),
-                new FormSpriteData("Arceus - Ghost",   110, 111, 204, 205),
-                new FormSpriteData("Arceus - Steel",   112, 113, 206, 207),
-                new FormSpriteData("Arceus - ???",     114, 115, 208, 209),
-                new FormSpriteData("Arceus - Fire",    116, 117, 210, 211),
-                new FormSpriteData("Arceus - Water",   118, 119, 212, 213),
-                new FormSpriteData("Arceus - Grass",   120, 121, 214, 215),
-                new FormSpriteData("Arceus - Electric",122, 123, 216, 217),
-                new FormSpriteData("Arceus - Psychic", 124, 125, 218, 219),
-                new FormSpriteData("Arceus - Ice",     126, 127, 220, 221),
-                new FormSpriteData("Arceus - Dragon",  128, 129, 222, 223),
-                new FormSpriteData("Arceus - Dark",    130, 131, 224, 225),
-                
-                // Egg: character = 132 + form, palette = 226 + form
-                new FormSpriteData("Egg",         132, 132, 226, 226),
-                new FormSpriteData("Manaphy Egg", 133, 133, 227, 227),
-                
-                // Shaymin: character = 134 + (face/2) + form*2, palette = 228 + shiny + form*2
-                new FormSpriteData("Shaymin - Land", 134, 135, 228, 229),
-                new FormSpriteData("Shaymin - Sky",  136, 137, 230, 231),
-                
-                // Rotom: character = 138 + (face/2) + form*2, palette = 232 + shiny + form*2
-                new FormSpriteData("Rotom - Normal", 138, 139, 232, 233),
-                new FormSpriteData("Rotom - Heat",   140, 141, 234, 235),
-                new FormSpriteData("Rotom - Wash",   142, 143, 236, 237),
-                new FormSpriteData("Rotom - Frost",  144, 145, 238, 239),
-                new FormSpriteData("Rotom - Fan",    146, 147, 240, 241),
-                new FormSpriteData("Rotom - Mow",    148, 149, 242, 243),
-                
-                // Giratina: character = 150 + (face/2) + form*2, palette = 244 + shiny + form*2
-                new FormSpriteData("Giratina - Altered", 150, 151, 244, 245),
-                new FormSpriteData("Giratina - Origin",  152, 153, 246, 247),
-            };
-        }
-
-        // Current form data based on game family
-        private FormSpriteData[] currentFormData;
-
-        /// <summary>
-        /// Form sprite data for HeartGold/SoulSilver's OTHERPOKE NARC.
-        /// Based on GetMonSpriteCharAndPlttNarcIdsEx from game code.
-        /// Hex values from code: 0x48=72, 0x4E=78, 0x54=84, 0x58=88, 0x5C=92, 0x60=96, 0x40=64
-        /// Palettes: 0x9E=158, 0xA0=160, 0xA2=162, 0xAA=170, 0xB0=176, 0xB6=182, 0xBA=186, 0xBE=190, 0xC2=194
-        /// 0x84=132, 0x86=134, 0x8A=138, 0x96=150, 0x9A=154, 0xE6=230, 0xE8=232, 0xEC=236, 0xF8=248, 0xFC=252
-        /// </summary>
-        private FormSpriteData[] GetFormDataHGSS() {
-            return new FormSpriteData[] {
-                // Deoxys: character = 0 + (face/2) + form*2, palette = 0x9E (158) + shiny
-                new FormSpriteData("Deoxys - Normal",   0,  1, 158, 159),
-                new FormSpriteData("Deoxys - Attack",   2,  3, 158, 159),
-                new FormSpriteData("Deoxys - Defense",  4,  5, 158, 159),
-                new FormSpriteData("Deoxys - Speed",    6,  7, 158, 159),
-                
-                // Unown: character = 0x8 (8) + (face/2) + form*2, palette = 0xA0 (160) + shiny
-                new FormSpriteData("Unown - A",  8,  9, 160, 161),
-                new FormSpriteData("Unown - B", 10, 11, 160, 161),
-                new FormSpriteData("Unown - C", 12, 13, 160, 161),
-                new FormSpriteData("Unown - D", 14, 15, 160, 161),
-                new FormSpriteData("Unown - E", 16, 17, 160, 161),
-                new FormSpriteData("Unown - F", 18, 19, 160, 161),
-                new FormSpriteData("Unown - G", 20, 21, 160, 161),
-                new FormSpriteData("Unown - H", 22, 23, 160, 161),
-                new FormSpriteData("Unown - I", 24, 25, 160, 161),
-                new FormSpriteData("Unown - J", 26, 27, 160, 161),
-                new FormSpriteData("Unown - K", 28, 29, 160, 161),
-                new FormSpriteData("Unown - L", 30, 31, 160, 161),
-                new FormSpriteData("Unown - M", 32, 33, 160, 161),
-                new FormSpriteData("Unown - N", 34, 35, 160, 161),
-                new FormSpriteData("Unown - O", 36, 37, 160, 161),
-                new FormSpriteData("Unown - P", 38, 39, 160, 161),
-                new FormSpriteData("Unown - Q", 40, 41, 160, 161),
-                new FormSpriteData("Unown - R", 42, 43, 160, 161),
-                new FormSpriteData("Unown - S", 44, 45, 160, 161),
-                new FormSpriteData("Unown - T", 46, 47, 160, 161),
-                new FormSpriteData("Unown - U", 48, 49, 160, 161),
-                new FormSpriteData("Unown - V", 50, 51, 160, 161),
-                new FormSpriteData("Unown - W", 52, 53, 160, 161),
-                new FormSpriteData("Unown - X", 54, 55, 160, 161),
-                new FormSpriteData("Unown - Y", 56, 57, 160, 161),
-                new FormSpriteData("Unown - Z", 58, 59, 160, 161),
-                new FormSpriteData("Unown - !", 60, 61, 160, 161),
-                new FormSpriteData("Unown - ?", 62, 63, 160, 161),
-                
-                // Castform: character = 0x40 (64) + (face*2) + form, palette = 0xA2 (162) + (shiny*4) + form
-                new FormSpriteData("Castform - Normal", 64, 68, 162, 166),
-                new FormSpriteData("Castform - Sunny",  65, 69, 163, 167),
-                new FormSpriteData("Castform - Rainy",  66, 70, 164, 168),
-                new FormSpriteData("Castform - Snowy",  67, 71, 165, 169),
-                
-                // Burmy: character = 0x48 (72) + (face/2) + form*2, palette = 0xAA (170) + shiny + form*2
-                new FormSpriteData("Burmy - Plant", 72, 73, 170, 171),
-                new FormSpriteData("Burmy - Sandy", 74, 75, 172, 173),
-                new FormSpriteData("Burmy - Trash", 76, 77, 174, 175),
-                
-                // Wormadam: character = 0x4E (78) + (face/2) + form*2, palette = 0xB0 (176) + shiny + form*2
-                new FormSpriteData("Wormadam - Plant", 78, 79, 176, 177),
-                new FormSpriteData("Wormadam - Sandy", 80, 81, 178, 179),
-                new FormSpriteData("Wormadam - Trash", 82, 83, 180, 181),
-                
-                // Shellos: character = 0x54 (84) + face + form, palette = 0xB6 (182) + shiny + form*2
-                new FormSpriteData("Shellos - West", 84, 86, 182, 183, true),
-                new FormSpriteData("Shellos - East", 85, 87, 184, 185, true),
-                
-                // Gastrodon: character = 0x58 (88) + face + form, palette = 0xBA (186) + shiny + form*2
-                new FormSpriteData("Gastrodon - West", 88, 90, 186, 187, true),
-                new FormSpriteData("Gastrodon - East", 89, 91, 188, 189, true),
-                
-                // Cherrim: character = 0x5C (92) + face + form, palette = 0xBE (190) + (shiny*2) + form
-                new FormSpriteData("Cherrim - Overcast", 92, 94, 190, 192, true),
-                new FormSpriteData("Cherrim - Sunshine", 93, 95, 191, 193, true),
-                
-                // Arceus: character = 0x60 (96) + (face/2) + form*2, palette = 0xC2 (194) + shiny + form*2
-                new FormSpriteData("Arceus - Normal",   96,  97, 194, 195),
-                new FormSpriteData("Arceus - Fighting", 98,  99, 196, 197),
-                new FormSpriteData("Arceus - Flying",  100, 101, 198, 199),
-                new FormSpriteData("Arceus - Poison",  102, 103, 200, 201),
-                new FormSpriteData("Arceus - Ground",  104, 105, 202, 203),
-                new FormSpriteData("Arceus - Rock",    106, 107, 204, 205),
-                new FormSpriteData("Arceus - Bug",     108, 109, 206, 207),
-                new FormSpriteData("Arceus - Ghost",   110, 111, 208, 209),
-                new FormSpriteData("Arceus - Steel",   112, 113, 210, 211),
-                new FormSpriteData("Arceus - ???",     114, 115, 212, 213),
-                new FormSpriteData("Arceus - Fire",    116, 117, 214, 215),
-                new FormSpriteData("Arceus - Water",   118, 119, 216, 217),
-                new FormSpriteData("Arceus - Grass",   120, 121, 218, 219),
-                new FormSpriteData("Arceus - Electric",122, 123, 220, 221),
-                new FormSpriteData("Arceus - Psychic", 124, 125, 222, 223),
-                new FormSpriteData("Arceus - Ice",     126, 127, 224, 225),
-                new FormSpriteData("Arceus - Dragon",  128, 129, 226, 227),
-                new FormSpriteData("Arceus - Dark",    130, 131, 228, 229),
-                
-                // Egg: character = 0x84 (132) + form, palette = 0xE6 (230) + form
-                new FormSpriteData("Egg",         132, 132, 230, 230),
-                new FormSpriteData("Manaphy Egg", 133, 133, 231, 231),
-                
-                // Shaymin: character = 0x86 (134) + (face/2) + form*2, palette = 0xE8 (232) + shiny + form*2
-                new FormSpriteData("Shaymin - Land", 134, 135, 232, 233),
-                new FormSpriteData("Shaymin - Sky",  136, 137, 234, 235),
-                
-                // Rotom: character = 0x8A (138) + (face/2) + form*2, palette = 0xEC (236) + shiny + form*2
-                new FormSpriteData("Rotom - Normal", 138, 139, 236, 237),
-                new FormSpriteData("Rotom - Heat",   140, 141, 238, 239),
-                new FormSpriteData("Rotom - Wash",   142, 143, 240, 241),
-                new FormSpriteData("Rotom - Frost",  144, 145, 242, 243),
-                new FormSpriteData("Rotom - Fan",    146, 147, 244, 245),
-                new FormSpriteData("Rotom - Mow",    148, 149, 246, 247),
-                
-                // Giratina: character = 0x96 (150) + (face/2) + form*2, palette = 0xF8 (248) + shiny + form*2
-                new FormSpriteData("Giratina - Altered", 150, 151, 248, 249),
-                new FormSpriteData("Giratina - Origin",  152, 153, 250, 251),
-                
-                // Pichu (Spiky-ear): character = 0x9A (154) + (face/2) + form*2, palette = 0xFC (252) + shiny + form*2
-                // Note: form 0 is normal Pichu (uses main NARC), form 1 is Spiky-ear
-                new FormSpriteData("Pichu - Normal",    154, 155, 252, 253),
-                new FormSpriteData("Pichu - Spiky-ear", 156, 157, 254, 255),
-            };
-        }
+        // Form tables live in PokemonFormTables now, shared with the sprite model.
         #endregion
 
         #region Instance Fields
         private readonly string[] pokenames;
         private readonly PokemonEditor parentEditor;
-        
+
         private NarcReader narcReader;
         private PictureBox[,] displayPictureBoxes;
         private bool[] usedEntries;
@@ -430,6 +75,10 @@ namespace DSPRE.Editors {
         private int currentLoadedId;
         private bool isLoadingOtherForms = false;
         private bool missingGenderIsFemale;
+
+        // Forms for the species currently shown, and which one of them is on screen.
+        private PokemonSpriteModel.FormSpriteData[] currentFormData = new PokemonSpriteModel.FormSpriteData[0];
+        private int selectedFormIndex = -1;
 
         public bool dirty = false;
         #endregion
@@ -444,7 +93,7 @@ namespace DSPRE.Editors {
         #region Constructor
         public PokemonSpriteEditor(Control parent, PokemonEditor pokeEditor) {
             this.parentEditor = pokeEditor;
-            this.pokenames = RomInfo.GetPokemonNames();
+            this.pokenames = RomInfo.GetPokemonNamesWithForms();
             
             InitializeComponent();
             
@@ -455,6 +104,7 @@ namespace DSPRE.Editors {
             
             SetupPictureBoxes();
             InitializePaletteComboBoxes();
+            BuildParityUi();
             
             Helpers.DisableHandlers();
             LoadSprites();
@@ -535,26 +185,123 @@ namespace DSPRE.Editors {
 
         #region File Loading
         public void ChangeLoadedFile(int toLoad) {
-            currentLoadedId = toLoad;
-            
+            // Ids past the Pokédex are the extra form entries (Deoxys-Attack and friends); they load as
+            // their base species with that form picked.
+            int baseId;
+            string formDescription;
+            bool isPseudo = PokemonSpriteModel.TryResolvePseudoFormId(toLoad, out baseId, out formDescription);
+            currentLoadedId = isPseudo ? baseId : toLoad;
+
             Helpers.DisableHandlers();
-            IndexBox.SelectedIndex = toLoad;
+            int shown = isPseudo ? toLoad : currentLoadedId;
+            if (shown >= 0 && shown < IndexBox.Items.Count) {
+                IndexBox.SelectedIndex = shown;
+            }
             Helpers.EnableHandlers();
-            
+
+            currentFormData = PokemonSpriteModel.GetAlternateFormsFor(currentLoadedId);
+            PopulateFormBox();
+
+            int formToLoad = -1;
+            if (isPseudo) {
+                formToLoad = PokemonSpriteModel.FindFormByDescription(currentFormData, formDescription);
+            } else if (currentFormData.Length > 0) {
+                // These species keep their default form in the alternate-forms NARC too, so the main
+                // NARC entry is never read by the game. Confirmed against PokeGraArcDataGet.
+                formToLoad = 0;
+            }
+
+            LoadIntoView(formToLoad);
+        }
+
+        private void LoadIntoView(int formIndex) {
+            selectedFormIndex = formIndex;
+            isLoadingOtherForms = formIndex >= 0;
+
             currentSprites = new SpriteSet();
             usedEntries = null;
             shinyImported = false;
             shinyResolved = new bool[16];
 
-            if (!isLoadingOtherForms) {
-                LoadMainSprites(toLoad);
+            OpenNarcForCurrentView();
+
+            if (isLoadingOtherForms) {
+                LoadOtherFormSprites(formIndex);
             } else {
-                LoadOtherFormSprites(toLoad);
+                LoadMainSprites(currentLoadedId);
             }
-            
+
+            Helpers.DisableHandlers();
+            if (FormBox.Items.Count > 0 && formIndex >= 0 && formIndex < FormBox.Items.Count) {
+                FormBox.SelectedIndex = formIndex;
+            }
+            Helpers.EnableHandlers();
+
+            UpdateFormNoticeVisibility();
             LoadImages();
             OpenPngs.Enabled = true;
             SetDirty(false);
+        }
+
+        private void OpenNarcForCurrentView() {
+            DirNames dir = isLoadingOtherForms ? DirNames.otherPokemonBattleSprites : DirNames.pokemonBattleSprites;
+            narcReader = new NarcReader(RomInfo.gameDirs[dir].packedDir);
+        }
+
+        private DirNames CurrentSpriteDir {
+            get { return isLoadingOtherForms ? DirNames.otherPokemonBattleSprites : DirNames.pokemonBattleSprites; }
+        }
+
+        private void PopulateFormBox() {
+            Helpers.DisableHandlers();
+            FormBox.Items.Clear();
+            foreach (PokemonSpriteModel.FormSpriteData f in currentFormData) {
+                FormBox.Items.Add(f.Name);
+            }
+            FormBox.Visible = currentFormData.Length > 0;
+            lblForm.Visible = currentFormData.Length > 0;
+            Helpers.EnableHandlers();
+        }
+
+        private void UpdateFormNoticeVisibility() {
+            bool showsForm = isLoadingOtherForms && selectedFormIndex >= 0 && selectedFormIndex < currentFormData.Length;
+            // Only worth saying for a form that piggybacks on the base species' data. Index 0 is the
+            // species' own default form, so its stats are the base species' stats by definition, and
+            // forms with their own entry in the species list (Deoxys' Attack/Defense/Speed and the
+            // like) keep their own stats.
+            bool sharesBase = showsForm && selectedFormIndex > 0 &&
+                PokemonSpriteModel.ResolveFormPseudoId(currentLoadedId, currentFormData[selectedFormIndex].Name) < 0;
+            lblFormSharesBase.Visible = sharesBase;
+
+            // A form has one sprite slot per pose, so there is nowhere to put separate female art.
+            if (showsForm) {
+                AddOppositeGenderButton.Visible = false;
+            }
+        }
+
+        private void FormBox_SelectedIndexChanged(object sender, EventArgs e) {
+            if (Helpers.HandlersDisabled) {
+                return;
+            }
+            int picked = FormBox.SelectedIndex;
+            if (picked < 0 || picked >= currentFormData.Length) {
+                return;
+            }
+
+            Helpers.DisableHandlers();
+            if (CheckDiscardChanges()) {
+                LoadIntoView(picked);
+
+                // Keep the rest of the Pokémon Editor on whatever entry this form saves to, so Personal
+                // Data and Learnsets don't stay on a different Pokémon than the sprite being shown.
+                int pseudoId = PokemonSpriteModel.ResolveFormPseudoId(currentLoadedId, currentFormData[picked].Name);
+                int target = pseudoId >= 0 ? pseudoId : currentLoadedId;
+                if (target >= 0 && target < IndexBox.Items.Count) {
+                    IndexBox.SelectedIndex = target;
+                }
+                parentEditor.JumpToSpecies(target);
+            }
+            Helpers.EnableHandlers();
         }
         
         private void LoadMainSprites(int selectedIndex) {
@@ -693,35 +440,51 @@ namespace DSPRE.Editors {
             File.WriteAllBytes(entryPath, data);
         }
         
+        // Showing the one shared form sprite under both genders is misleading for a species that only has
+        // one: Deoxys and Unown are genderless, Wormadam is female-only. Blank the gender that isn't real.
+        private void ApplyFormGenderGap() {
+            byte ratio = PokemonSpriteModel.ReadGenderRatio(currentLoadedId);
+            if (ratio == SpeciesFile.GENDER_RATIO_FEMALE) {
+                currentSprites.Sprites[1] = null;
+                currentSprites.Sprites[3] = null;
+            } else if (ratio == SpeciesFile.GENDER_RATIO_MALE || ratio == SpeciesFile.GENDER_RATIO_GENDERLESS) {
+                currentSprites.Sprites[0] = null;
+                currentSprites.Sprites[2] = null;
+            }
+        }
+
         private void LoadOtherFormSprites(int selectedIndex) {
             if (currentFormData == null || selectedIndex >= currentFormData.Length) {
                 MessageBox.Show($"Invalid form index: {selectedIndex}", "Error");
                 return;
             }
             
-            FormSpriteData formData = currentFormData[selectedIndex];
+            PokemonSpriteModel.FormSpriteData formData = currentFormData[selectedIndex];
             
-            // Load back sprite
-            if (narcReader.fe[formData.BackSpriteIndex].Size == 6448) {
+            // A form has one back and one front sprite shared by both genders, so the same image goes in
+            // both slots and the gender the species doesn't actually have is blanked out below.
+            if (formData.BackSpriteIndex >= 0 && formData.BackSpriteIndex < narcReader.fe.Length
+                && narcReader.fe[formData.BackSpriteIndex].Size == 6448) {
                 narcReader.OpenEntry(formData.BackSpriteIndex);
                 Bitmap backSprite = MakeImage(narcReader.fs);
                 narcReader.Close();
-                
-                // For forms without gender difference, use same sprite for both genders
-                currentSprites.Sprites[0] = backSprite; // Female back
-                currentSprites.Sprites[1] = backSprite; // Male back (same as female for most forms)
+
+                currentSprites.Sprites[0] = backSprite;
+                currentSprites.Sprites[1] = backSprite;
             }
-            
-            // Load front sprite
-            if (narcReader.fe[formData.FrontSpriteIndex].Size == 6448) {
+
+            if (formData.FrontSpriteIndex >= 0 && formData.FrontSpriteIndex < narcReader.fe.Length
+                && narcReader.fe[formData.FrontSpriteIndex].Size == 6448) {
                 narcReader.OpenEntry(formData.FrontSpriteIndex);
                 Bitmap frontSprite = MakeImage(narcReader.fs);
                 narcReader.Close();
-                
-                currentSprites.Sprites[2] = frontSprite; // Female front
-                currentSprites.Sprites[3] = frontSprite; // Male front (same as female for most forms)
+
+                currentSprites.Sprites[2] = frontSprite;
+                currentSprites.Sprites[3] = frontSprite;
             }
-            
+
+            ApplyFormGenderGap();
+
             // Load normal palette
             if (narcReader.fe[formData.NormalPaletteIndex].Size == 72) {
                 narcReader.OpenEntry(formData.NormalPaletteIndex);
@@ -798,32 +561,19 @@ namespace DSPRE.Editors {
 
         #region Image Display
         private void LoadImages() {
-            // Clear all displays first
-            for (int i = 0; i < displayPictureBoxes.GetLength(0); i++) {
-                for (int j = 0; j < displayPictureBoxes.GetLength(1); j++) {
-                    displayPictureBoxes[i, j].Image = null;
-                }
-            }
-            
-            if (currentSprites.Normal == null) {
-                return;
-            }
-            
-            if (currentSprites.Shiny == null) {
+            StopAnimation();
+
+            if (currentSprites.Normal != null && currentSprites.Shiny == null) {
                 currentSprites.Shiny = currentSprites.Normal;
             }
-            
-            for (int i = 0; i < 4; i++) {
-                if (currentSprites.Sprites[i] != null) {
-                    // Display shiny version
-                    currentSprites.Sprites[i].Palette = currentSprites.Shiny;
-                    displayPictureBoxes[(i % 2), ((i / 2) + 2)].Image = new Bitmap(currentSprites.Sprites[i], 320, 160);
-                    
-                    // Display normal version
-                    currentSprites.Sprites[i].Palette = currentSprites.Normal;
-                    displayPictureBoxes[(i % 2), (i / 2)].Image = new Bitmap(currentSprites.Sprites[i], 320, 160);
-                }
+
+            // A freshly loaded Pokémon starts on frame 1 everywhere; RenderCells moves any pose whose
+            // first frame is blank onto the one that isn't.
+            for (int cell = 0; cell < CellCount; cell++) {
+                cellFrame[cell] = 0;
             }
+
+            RenderCells();
         }
         #endregion
 
@@ -914,88 +664,112 @@ namespace DSPRE.Editors {
             if (!OpenPngs.Enabled) {
                 return;
             }
-            
-            OpenPngs.Enabled = false;
+
             PictureBox source = sender as PictureBox;
+            if (source == null) {
+                return;
+            }
             int index = Convert.ToInt32(source.Name);
-            
+
             using (OpenFileDialog openFileDialog = new OpenFileDialog()) {
-                openFileDialog.Title = "Choose an image";
+                openFileDialog.Title = "Choose an image for " + SlotCaption(index);
                 openFileDialog.CheckPathExists = true;
                 openFileDialog.Filter = "Supported formats: *.bmp, *.gif, *.png | *.bmp; *.gif; *.png";
-                
+
                 if (openFileDialog.ShowDialog() != DialogResult.OK) {
-                    OpenPngs.Enabled = true;
                     return;
                 }
-                
-                Bitmap image = new Bitmap(openFileDialog.FileName);
-                IndexedBitmapHandler handler = new IndexedBitmapHandler();
-                
-                if (index > 3) {
-                    // Loading shiny palette
-                    image = CheckSize(image, openFileDialog.FileName, "Shiny");
-                    if (image == null) {
-                        OpenPngs.Enabled = true;
-                        return;
-                    }
 
-                    // Sprites[] holds one pixel-index bitmap per pose that LoadImages renders for BOTH
-                    // Normal and Shiny (it just swaps .Palette), so a shiny color has to land at the
-                    // exact slot number that pose's own pixel data already uses for it, derived
-                    // positionally against Sprites[], never taken from this file's own local palette
-                    // numbering (two separately-exported images can number the same colors differently).
-                    Bitmap parent = currentSprites.Sprites[index % 4];
-                    bool[] resolved = null;
-                    ColorPalette candidate = parent == null ? null : handler.AlternatePalette(parent, image, out resolved);
-                    if (candidate == null) {
-                        currentSprites.Shiny = PadPaletteTo16(image.Palette);
-                        shinyResolved = PadBoolTo16(handler.IsUsed(image));
-                    } else {
-                        currentSprites.Shiny = handler.MergeByIndex(currentSprites.Shiny, shinyResolved, candidate, resolved);
-                        bool[] padResolved = PadBoolTo16(resolved);
-                        for (int i = 0; i < 16; i++) {
-                            shinyResolved[i] = shinyResolved[i] || padResolved[i];
-                        }
-                    }
-                    shinyImported = true;
-                } else {
-                    // Loading normal sprite
-                    image = CheckSize(image, openFileDialog.FileName, spriteTypeNames[index], index);
-                    if (image == null) {
-                        OpenPngs.Enabled = true;
-                        return;
-                    }
-
-                    bool match = handler.PaletteEquals(currentSprites.Normal, image);
-                    if (!match) {
-                        if (usedEntries == null) {
-                            // First normal image for this species this session: just take its colors.
-                            usedEntries = handler.IsUsed(image);
-                        } else {
-                            // A later pose needs to share the same palette as the one already
-                            // imported, so merge instead of overwriting it.
-                            Bitmap matched = handler.PaletteMatch(currentSprites.Normal, image, usedEntries);
-                            if (matched == null) {
-                                MessageBox.Show(
-                                    "This image's colors don't fit alongside the existing palette (16 colors max combined). " +
-                                    "Replacing the whole palette with this image's own colors instead.",
-                                    "Palette Match", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                usedEntries = handler.IsUsed(image);
-                            } else {
-                                image = matched;
-                                usedEntries = handler.IsUsed(image, usedEntries);
-                            }
-                        }
-                        currentSprites.Normal = PadPaletteTo16(image.Palette);
-                    }
-                    currentSprites.Sprites[index] = image;
+                if (ImportImageIntoSlot(openFileDialog.FileName, index)) {
+                    RenderCells();
+                    SetDirty(true);
                 }
             }
-            
-            OpenPngs.Enabled = true;
-            LoadImages();
-            SetDirty(true);
+        }
+
+        /// <summary>Human name for one of the eight display cells; 4-7 are the shiny-palette views.</summary>
+        public static string SlotCaption(int index) {
+            string[] names = { "Female Back", "Male Back", "Female Front", "Male Front" };
+            return names[index % 4] + (index > 3 ? " (shiny palette)" : "");
+        }
+
+        /// <summary>
+        /// Loads one image into a pose. Cells 4-7 take the shiny palette from the image instead of
+        /// replacing the artwork, since shiny is the same pixels under a second palette.
+        /// </summary>
+        public bool ImportImageIntoSlot(string path, int index) {
+            Bitmap image;
+            try {
+                image = new Bitmap(path);
+            } catch (Exception ex) {
+                MessageBox.Show("Couldn't read " + Path.GetFileName(path) + ": " + ex.Message,
+                    "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            IndexedBitmapHandler handler = new IndexedBitmapHandler();
+
+            if (index > 3) {
+                image = CheckSize(image, path, "Shiny");
+                if (image == null) {
+                    return false;
+                }
+
+                // Sprites[] holds one pixel-index bitmap per pose that both the Normal and Shiny views
+                // render, so a shiny colour has to land at the slot number that pose's own pixels
+                // already use for it, matched positionally rather than taken from this file's own
+                // palette order.
+                Bitmap parent = currentSprites.Sprites[index % 4];
+                bool[] resolved = null;
+                ColorPalette candidate = parent == null ? null : handler.AlternatePalette(parent, image, out resolved);
+                if (candidate == null) {
+                    currentSprites.Shiny = PadPaletteTo16(image.Palette);
+                    shinyResolved = PadBoolTo16(handler.IsUsed(image));
+                } else {
+                    currentSprites.Shiny = handler.MergeByIndex(currentSprites.Shiny, shinyResolved, candidate, resolved);
+                    bool[] padResolved = PadBoolTo16(resolved);
+                    for (int i = 0; i < 16; i++) {
+                        shinyResolved[i] = shinyResolved[i] || padResolved[i];
+                    }
+                }
+                shinyImported = true;
+                return true;
+            }
+
+            image = CheckSize(image, path, spriteTypeNames[index], index);
+            if (image == null) {
+                return false;
+            }
+
+            bool match = handler.PaletteEquals(currentSprites.Normal, image);
+            if (!match) {
+                if (usedEntries == null) {
+                    usedEntries = handler.IsUsed(image);
+                } else {
+                    Bitmap matched = handler.PaletteMatch(currentSprites.Normal, image, usedEntries);
+                    if (matched == null) {
+                        // The shiny sprites are the same artwork under a second palette, so
+                        // renumbering the colours here changes how they look too.
+                        DialogResult replace = MessageBox.Show(
+                            "This image's colours don't fit alongside the existing palette (16 colours max combined)." +
+                            Environment.NewLine + Environment.NewLine +
+                            "Continuing replaces the whole palette with this image's own colours, which also changes " +
+                            "how the shiny sprites look, because they are drawn from this same artwork." +
+                            Environment.NewLine + Environment.NewLine + "Continue anyway?",
+                            "This will change the shiny sprites too", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                        if (replace != DialogResult.Yes) {
+                            return false;
+                        }
+                        usedEntries = handler.IsUsed(image);
+                    } else {
+                        image = matched;
+                        usedEntries = handler.IsUsed(image, usedEntries);
+                    }
+                }
+                currentSprites.Normal = PadPaletteTo16(image.Palette);
+            }
+            currentSprites.Sprites[index] = image;
+            return true;
         }
 
         private void SaveChanges_Click(object sender, EventArgs e) {
@@ -1010,7 +784,7 @@ namespace DSPRE.Editors {
 
             // If editing main sprites, files are organized as groups of 6 entries per pokemon
             if (!isLoadingOtherForms) {
-                int baseOffset = selectedIndex * 6;
+                int baseOffset = currentLoadedId * 6;
 
                 for (int i = 0; i < 4; i++) {
                     if (currentSprites.Sprites[i] == null) continue;
@@ -1038,51 +812,50 @@ namespace DSPRE.Editors {
             }
             else {
                 // Other-forms NARC uses arbitrary indices defined in currentFormData
-                if (currentFormData == null || selectedIndex < 0 || selectedIndex >= currentFormData.Length) {
+                if (selectedFormIndex < 0 || selectedFormIndex >= currentFormData.Length) {
                     MessageBox.Show("Invalid form data selected. Save aborted.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                FormSpriteData form = currentFormData[selectedIndex];
+                PokemonSpriteModel.FormSpriteData form = currentFormData[selectedFormIndex];
 
-                // Back sprite index -> write appropriate image. Many forms reuse same file for both genders.
-                if (form.BackSpriteIndex >= 0 && form.BackSpriteIndex < narcReader.fe.Length && currentSprites.Sprites[0] != null) {
+                // Whichever gender this species actually has holds the form's art; the other slot is blank.
+                Bitmap formBack = currentSprites.Sprites[1] ?? currentSprites.Sprites[0];
+                Bitmap formFront = currentSprites.Sprites[3] ?? currentSprites.Sprites[2];
+
+                if (form.BackSpriteIndex >= 0 && form.BackSpriteIndex < narcReader.fe.Length && formBack != null) {
                     if (narcReader.fe[form.BackSpriteIndex].Size == 6448) {
                         narcReader.OpenEntry(form.BackSpriteIndex);
-                        // Some forms store a single image used for both back slots; write using Sprites[0] which was loaded
-                        SaveBin(narcReader.fs, currentSprites.Sprites[0]);
+                        SaveBin(narcReader.fs, formBack);
                         narcReader.Close();
-                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.BackSpriteIndex);
+                        SyncUnpackedEntryIfPresent(DirNames.otherPokemonBattleSprites, form.BackSpriteIndex);
                     }
                 }
 
-                // Front sprite index
-                if (form.FrontSpriteIndex >= 0 && form.FrontSpriteIndex < narcReader.fe.Length && currentSprites.Sprites[2] != null) {
+                if (form.FrontSpriteIndex >= 0 && form.FrontSpriteIndex < narcReader.fe.Length && formFront != null) {
                     if (narcReader.fe[form.FrontSpriteIndex].Size == 6448) {
                         narcReader.OpenEntry(form.FrontSpriteIndex);
-                        SaveBin(narcReader.fs, currentSprites.Sprites[2]);
+                        SaveBin(narcReader.fs, formFront);
                         narcReader.Close();
-                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.FrontSpriteIndex);
+                        SyncUnpackedEntryIfPresent(DirNames.otherPokemonBattleSprites, form.FrontSpriteIndex);
                     }
                 }
 
-                // Normal palette
                 if (form.NormalPaletteIndex >= 0 && form.NormalPaletteIndex < narcReader.fe.Length && currentSprites.Normal != null) {
                     if (narcReader.fe[form.NormalPaletteIndex].Size == 72) {
                         narcReader.OpenEntry(form.NormalPaletteIndex);
                         SavePal(narcReader.fs, currentSprites.Normal);
                         narcReader.Close();
-                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.NormalPaletteIndex);
+                        SyncUnpackedEntryIfPresent(DirNames.otherPokemonBattleSprites, form.NormalPaletteIndex);
                     }
                 }
 
-                // Shiny palette
                 if (form.ShinyPaletteIndex >= 0 && form.ShinyPaletteIndex < narcReader.fe.Length && currentSprites.Shiny != null) {
                     if (narcReader.fe[form.ShinyPaletteIndex].Size == 72) {
                         narcReader.OpenEntry(form.ShinyPaletteIndex);
                         SavePal(narcReader.fs, currentSprites.Shiny);
                         narcReader.Close();
-                        SyncUnpackedEntryIfPresent(DirNames.pokemonBattleSprites, form.ShinyPaletteIndex);
+                        SyncUnpackedEntryIfPresent(DirNames.otherPokemonBattleSprites, form.ShinyPaletteIndex);
                     }
                 }
             }
@@ -1174,33 +947,7 @@ namespace DSPRE.Editors {
         }
 
         private void btnOpenOther_Click(object sender, EventArgs e) {
-            if (!CheckDiscardChanges()) {
-                return;
-            }
-            
-            Helpers.DisableHandlers();
-            
-            // Clear dirty state since we're switching modes (user already confirmed discard)
-            SetDirty(false);
-            
-            isLoadingOtherForms = !isLoadingOtherForms; // Toggle between main and forms view
-            
-            // Update button text based on mode
-            OpenOther.Text = isLoadingOtherForms ? "Main Sprites" : "Open Forms";
-            
-            // Hide palette controls - they're no longer needed since we handle them automatically
-            BasePalette.Visible = false;
-            ShinyPalette.Visible = false;
-            BasePalette.Enabled = false;
-            ShinyPalette.Enabled = false;
-
-            // Forms mode doesn't recompute this (LoadOtherFormSprites, not LoadMainSprites); hide it
-            // until we're back in main-sprites mode, where LoadMainSprites recalculates it.
-            AddOppositeGenderButton.Visible = false;
-
-            LoadSprites();
-            
-            Helpers.EnableHandlers();
+            // Superseded by the Form dropdown, which is always visible for species that have forms.
         }
 
         private void btnLoadSheet_Click(object sender, EventArgs e) {
@@ -1496,43 +1243,15 @@ namespace DSPRE.Editors {
         }
 
         private void LoadSprites() {
-            if (!isLoadingOtherForms) {
-                narcReader = new NarcReader(RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir);
+            narcReader = new NarcReader(RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir);
 
-                IndexBox.Items.Clear();
-                for (int i = 0; i < pokenames.Length; i++) {
-                    IndexBox.Items.Add($"{i:D3} {pokenames[i]}");
-                }
-                
-                // Load first entry (index 1 to skip "None/Egg" at 0)
-                ChangeLoadedFile(1);
-            } else {
-                // Load form data based on game family
-                switch (RomInfo.gameFamily) {
-                    case RomInfo.GameFamilies.DP:
-                        currentFormData = GetFormDataDP();
-                        break;
-                    case RomInfo.GameFamilies.Plat:
-                        currentFormData = GetFormDataPt();
-                        break;
-                    case RomInfo.GameFamilies.HGSS:
-                        currentFormData = GetFormDataHGSS();
-                        break;
-                    default:
-                        currentFormData = GetFormDataPt(); // Fallback to Platinum
-                        break;
-                }
-                
-                narcReader = new NarcReader(RomInfo.gameDirs[DirNames.otherPokemonBattleSprites].packedDir);
-
-                IndexBox.Items.Clear();
-                for (int i = 0; i < currentFormData.Length; i++) {
-                    IndexBox.Items.Add($"{i:D3} {currentFormData[i].Name}");
-                }
-                
-                // Load first form entry
-                ChangeLoadedFile(0);
+            IndexBox.Items.Clear();
+            for (int i = 0; i < pokenames.Length; i++) {
+                IndexBox.Items.Add($"{i:D3} {pokenames[i]}");
             }
+
+            // Load first entry (index 1 to skip "None/Egg" at 0)
+            ChangeLoadedFile(1);
         }
 
         private void SaveBin(FileStream fs, Bitmap source) {
