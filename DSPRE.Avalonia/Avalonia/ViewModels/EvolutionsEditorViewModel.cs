@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using System;
@@ -243,6 +243,12 @@ namespace DSPRE.Avalonia.ViewModels
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private int _currentId = -1;
+
+        // Entries past the Pokedex are the alternate forms, whose evolution files are empty in every
+        // game; the base Pokemon's own entry is what the game reads.
+        private bool _isAltForm;
+        public bool IsAltForm { get => _isAltForm; private set { if (_isAltForm != value) { _isAltForm = value; OnPropertyChanged(); } } }
+        public string AltFormNotice => "Alternate forms have no evolutions of their own. Set them on the base Pokémon's entry instead.";
         private EvolutionFile _current;
         private bool _loading;
 
@@ -342,6 +348,7 @@ namespace DSPRE.Avalonia.ViewModels
             try
             {
                 _currentId = id;
+                IsAltForm = id >= DSPRE.RomInfo.GetPokemonNames().Length;
 
                 if (UseHgEngineSource)
                 {

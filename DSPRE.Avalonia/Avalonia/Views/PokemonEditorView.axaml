@@ -75,6 +75,8 @@
           <Button DockPanel.Dock="Bottom" Content="Save Evolutions" Click="SaveEvolutions_Click" HorizontalAlignment="Right" Width="140" Margin="0,6,0,0"/>
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="6">
+              <TextBlock Text="{Binding AltFormNotice}" IsVisible="{Binding IsAltForm}"
+                         TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
                 <TextBlock Grid.Column="0" Text="Method"         FontWeight="SemiBold" FontSize="12"/>
                 <TextBlock Grid.Column="2" Text="Param"          FontWeight="SemiBold" FontSize="12"/>
