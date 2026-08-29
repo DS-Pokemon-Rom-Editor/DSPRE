@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -314,7 +314,6 @@ namespace DSPRE.Avalonia.ViewModels
                 if (h.wildPokemon != MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID)
                 {
                     if (!locationMap.ContainsKey(h.wildPokemon)) locationMap[h.wildPokemon] = new System.Collections.Generic.List<string>();
-                    int locIdx = h.wildPokemon < locationNames.Count ? h.wildPokemon : 0;
                     locationMap[h.wildPokemon].Add(locationNames[((HeaderHGSS)h).locationName]);
                 }
             }

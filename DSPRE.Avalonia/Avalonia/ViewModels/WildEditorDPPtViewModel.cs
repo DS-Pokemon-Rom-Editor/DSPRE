@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -383,7 +383,10 @@ namespace DSPRE.Avalonia.ViewModels
                     if (h.wildPokemon != 0xFFFF)
                     {
                         if (!locationMap.ContainsKey(h.wildPokemon)) locationMap[h.wildPokemon] = new System.Collections.Generic.List<string>();
-                        locationMap[h.wildPokemon].Add(locationNames[h.wildPokemon < locationNames.Count ? h.wildPokemon : 0]);
+                        // Names come from the header's own location; the encounter file id is an unrelated
+                        // number and using it labels every entry with a different area.
+                        int locIdx = gameFamily == GameFamilies.DP ? ((HeaderDP)h).locationName : ((HeaderPt)h).locationName;
+                        locationMap[h.wildPokemon].Add(locIdx < locationNames.Count ? locationNames[locIdx] : "Unknown");
                     }
                 }
             }
