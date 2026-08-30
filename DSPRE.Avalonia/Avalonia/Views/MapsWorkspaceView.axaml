@@ -1,7 +1,8 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        xmlns:ava="clr-namespace:DSPRE.Avalonia"
         x:Class="DSPRE.Avalonia.Views.MapsWorkspaceView"
         x:DataType="vm:HeaderEditorViewModel"
         x:Name="MapsRoot">
@@ -81,36 +82,99 @@
         </Border>
 
         <TabControl x:Name="MapTabs">
-          <TabItem Header="Header" ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses.">
+          <TabItem ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses." AutomationProperties.Name="Header">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Header}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Header" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:HeaderFieldsView/>
           </TabItem>
-          <TabItem Header="Map" ToolTip.Tip="The 3D terrain and buildings of the selected map.">
+          <TabItem ToolTip.Tip="The 3D terrain and buildings of the selected map." AutomationProperties.Name="Map">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Map}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Map" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:MapEditorView x:Name="MapEmbed" DataContext="{Binding #MapsRoot.MapVM}"/>
           </TabItem>
           <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
-          <TabItem Header="Events" ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map.">
+          <TabItem ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map." AutomationProperties.Name="Events">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Events}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Events" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
-          <TabItem Header="Matrix" ToolTip.Tip="The grid that stitches individual maps into the seamless world.">
+          <TabItem ToolTip.Tip="The grid that stitches individual maps into the seamless world." AutomationProperties.Name="Matrix">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Matrix}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Matrix" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:MatrixEditorView x:Name="MatrixEmbed" DataContext="{Binding #MapsRoot.MatrixVM}"/>
           </TabItem>
-          <TabItem Header="Area Data" ToolTip.Tip="Which texture and building set this area uses.">
+          <TabItem ToolTip.Tip="Which texture and building set this area uses." AutomationProperties.Name="Area Data">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.AreaData}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Area Data" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:AreaDataEditorView x:Name="AreaDataEmbed" DataContext="{Binding #MapsRoot.AreaDataVM}"/>
           </TabItem>
-          <TabItem x:Name="EncountersTab" Header="Encounters" ToolTip.Tip="Wild Pokémon that appear in this area.">
+          <TabItem x:Name="EncountersTab" ToolTip.Tip="Wild Pokémon that appear in this area." AutomationProperties.Name="Encounters">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Encounters}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Encounters" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Wild Encounters"/>
               <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
                          Text="This header has no wild encounters (255)." IsVisible="{Binding !CanOpenEncounters}"/>
             </StackPanel>
           </TabItem>
-          <TabItem Header="Scripts" ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers.">
+          <TabItem ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers." AutomationProperties.Name="Scripts">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Scripts}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Scripts" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:ScriptEditorView x:Name="ScriptsEmbed" DataContext="{Binding #MapsRoot.ScriptsVM}"/>
           </TabItem>
-          <TabItem Header="Level Scripts" ToolTip.Tip="Scripts that run automatically when the map loads.">
+          <TabItem ToolTip.Tip="Scripts that run automatically when the map loads." AutomationProperties.Name="Level Scripts">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.LevelScripts}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Level Scripts" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:LevelScriptEditorView x:Name="LevelScriptsEmbed" DataContext="{Binding #MapsRoot.LevelScriptsVM}"/>
           </TabItem>
-          <TabItem Header="Text" ToolTip.Tip="Dialogue and signs used by this area.">
+          <TabItem ToolTip.Tip="Dialogue and signs used by this area." AutomationProperties.Name="Text">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Text}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Text" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
             <views:TextEditorView x:Name="TextEmbed" DataContext="{Binding #MapsRoot.TextVM}"/>
           </TabItem>
         </TabControl>

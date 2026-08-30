@@ -18,26 +18,67 @@ namespace DSPRE.Avalonia
 
         private static readonly Dictionary<(ushort, ushort), SpritePixels> _cache = new Dictionary<(ushort, ushort), SpritePixels>();
 
-        public static SpritePixels Get(ushort eventEntryID, ushort orientation)
+        /// <summary>
+        /// One tile is sixteen pixels of overworld art, so a 32 by 32 sprite stands two tiles tall.
+        /// </summary>
+        public const int PixelsPerTile = 16;
+
+        /// <summary>
+        /// One picture out of a sprite bank. The bank holds a group of pictures for each way of facing,
+        /// in the order up, down, left, right; <paramref name="picture"/> says which of that group to
+        /// show, and <see cref="DSPRE.ROMFiles.FieldSpriteAnimation"/> works that out from how long the
+        /// person has been walking.
+        /// </summary>
+        public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = 0)
         {
-            var key = (eventEntryID, orientation);
+            // The picture is part of what is being cached, so it gets its own room in the key.
+            ushort cacheDir = (ushort)(orientation | ((picture & 0x1F) << 8));
+            return GetCached(eventEntryID, cacheDir, orientation, picture);
+        }
+
+        /// <summary>How many pictures the bank has for each way of facing, so a caller can pace them.</summary>
+        public static int FrameCount(ushort eventEntryID)
+        {
+            if (_frameCounts.TryGetValue(eventEntryID, out int n)) return n;
+            n = 0;
+            try
+            {
+                if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
+                if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out var r) && r.spriteID != 0x3D3D)
+                {
+                    using var s = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
+                    n = new NSBTX_File(s).texInfo.num_objs;
+                }
+            }
+            catch { }
+            if (n > 0) _frameCounts[eventEntryID] = n;
+            return n;
+        }
+
+        private static readonly Dictionary<ushort, int> _frameCounts = new Dictionary<ushort, int>();
+
+        private static SpritePixels GetCached(ushort eventEntryID, ushort cacheDir, ushort orientation, int picture)
+        {
+            var key = (eventEntryID, cacheDir);
             if (_cache.TryGetValue(key, out var cached)) return cached;
             SpritePixels result = null;
             try
             {
-                var raw = LoadRaw(eventEntryID, orientation);
+                var raw = LoadRaw(eventEntryID, orientation, picture);
                 if (raw != null) result = ToRgba(raw);
             }
             catch (Exception ex) { AppLogger.Error("OW sprite load failed: " + ex.Message); }
-            _cache[key] = result;
+            // Only keep what actually loaded. A sprite asked for before the ROM's folders are ready
+            // comes back empty, and remembering that would leave the person invisible from then on.
+            if (result != null) _cache[key] = result;
             return result;
         }
 
-        public static void ClearCache() => _cache.Clear();
+        public static void ClearCache() { _cache.Clear(); _frameCounts.Clear(); }
 
         // Mirrors EventEditor.GetOverworldImage. NSBTX (ROM) frames decode GDI-free via GetRawImage;
         // the fixed fallback images come from the avares assets (see ResourceImages), no GDI anywhere.
-        private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation)
+        private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
             if (ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch { }
@@ -55,15 +96,38 @@ namespace DSPRE.Avalonia
                 var nsbtx = new NSBTX_File(stream);
                 int n = nsbtx.texInfo.num_objs;
                 if (n <= 1) return nsbtx.GetRawImage(0, 0).bmp;
-                if (n <= 4) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 1, 2 => 2, _ => 3 }, 0).bmp;
-                if (n <= 8) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 2, 2 => 4, _ => 6 }, 0).bmp;
-                if (n <= 16) return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 11, 2 => 2, _ => 4 }, 0).bmp;
-                return nsbtx.GetRawImage(orientation switch { 0 => 0, 1 => 27, 2 => 2, _ => 4 }, 0).bmp;
+                if (n < 8) return nsbtx.GetRawImage(Math.Min(orientation, (ushort)(n - 1)), 0).bmp;
+
+                // The pictures are named "thing.1" upwards but the bank stores them sorted as text, so
+                // ".10" sits before ".2". Put them back in the artist's order before picking one.
+                int at = picture;
+                if (at < 0 || at >= n) at = 0;
+                return nsbtx.GetRawImage(NumericOrder(nsbtx)[at], 0).bmp;
             }
             catch
             {
                 return ResourceImages.GetRaw("overworldUnreadable");
             }
+        }
+
+        /// <summary>
+        /// The bank's pictures in the order their names number them, since the file keeps them sorted
+        /// as text and ".10" then lands before ".2". A name without a number keeps where it already was.
+        /// </summary>
+        private static int[] NumericOrder(NSBTX_File nsbtx)
+        {
+            int n = nsbtx.texInfo.num_objs;
+            var order = new int[n];
+            var rank = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                string name = nsbtx.texInfo.names[i] ?? "";
+                int dot = name.LastIndexOf('.');
+                rank[i] = dot >= 0 && int.TryParse(name.Substring(dot + 1), out int v) ? v : i;
+                order[i] = i;
+            }
+            Array.Sort(rank, order);
+            return order;
         }
 
         // Convert to RGBA (top row first), treating the top-left pixel's colour as transparent

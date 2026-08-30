@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
@@ -76,6 +76,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         // ── Camera presets ───────────────────────────────────────────────────────────────
+        /// <summary>2D locks the camera flat and drops perspective; 3D restores a normal orbit camera.</summary>
+        private void ApplyViewMode()
+        {
+            if (VM == null) return;
+            GlView.Orthographic = VM.Flat2D;
+            if (VM.Flat2D) GlView.SetOrientation(0f, 90f);
+        }
+
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);
         private void CamFront_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 8f);
@@ -120,6 +128,7 @@ namespace DSPRE.Avalonia.Views
                     GlView.SetTileTint(VM.TintOn, VM.TintStrength, VM.TintOx, VM.TintOz, VM.TintSx, VM.TintSz, VM.TintRgba);
                 };
                 vm.PaintModeChanged += (_, _) => { if (VM.PaintMode) GlView.SetOrientation(0f, 89f); };   // lock to Top
+                vm.ViewModeChanged += (_, _) => ApplyViewMode();
                 vm.PaintedTile += (_, _) => { CollisionGrid.SetData(VM.Collisions); TypeGrid.SetData(VM.Types); };
                 vm.PropertyChanged += OnVmPropertyChanged;
                 GlView.ShowTextures = vm.ShowTextures;
@@ -127,6 +136,7 @@ namespace DSPRE.Avalonia.Views
                 vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
             }
             await vm.SetupAsync(owner);
+            ApplyViewMode();
         }
 
         private void OnMapLoaded(object sender, EventArgs e)
@@ -185,6 +195,18 @@ namespace DSPRE.Avalonia.Views
         private void Gizmos_Toggled(object sender, RoutedEventArgs e)
         {
             if (sender is CheckBox cb) GlView.ShowGizmos = cb.IsChecked == true;
+        }
+
+        private async void AnimatedPreview_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM?.Model3D == null)
+            {
+                await DialogHelper.ShowError("Load a map first, so there is something to animate.", "Animated preview");
+                return;
+            }
+            var win = new AnimatedPreviewWindow();
+            win.ShowFor(TopLevel.GetTopLevel(this) as Window, VM.Model3D, VM.Area, null, null, VM.Collision,
+                        cameraId: VM.CameraId, musicDayId: VM.MusicDayId, musicNightId: VM.MusicNightId);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();

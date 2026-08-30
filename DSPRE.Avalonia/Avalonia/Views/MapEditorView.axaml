@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
@@ -26,6 +26,9 @@
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+          <Button Content="▶ Animate" Click="AnimatedPreview_Click"
+                  ToolTip.Tip="Opens a look-only window that runs the map, so its water moves the way it does in game."/>
+          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="📥 Import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="📤 Export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
@@ -39,8 +42,10 @@
           <TextBlock Text="Bld tex:" VerticalAlignment="Center"/>
           <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
-          <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
+            <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
+          </StackPanel>
           <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
                     ToolTip.Tip="Show collision painted on the actual map mesh (conforms to the surface). Uncheck for a flat plane you can raise. Needs an Overlay mode selected above; not available in 'This header' / 'Full matrix' view (always shown as a flat plane there)."/>
           <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
@@ -63,12 +68,16 @@
           <CheckBox Content="Snap to tile" IsChecked="{Binding SnapToTile}" VerticalAlignment="Center"
                     ToolTip.Tip="Snap building dragging to whole tiles (arrow keys always snap; the input boxes still do fine sub-tile adjustment)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <TextBlock Text="View:" VerticalAlignment="Center"/>
-          <Button Content="Top" Click="CamTop_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Top-down camera"/>
-          <Button Content="Iso" Click="CamIso_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Isometric (3/4) camera"/>
-          <Button Content="Front" Click="CamFront_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Front camera"/>
-          <Button Content="Side" Click="CamSide_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Side camera"/>
-          <Button Content="⟲" Click="CamReset_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Reset camera"/>
+          <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Text="View:" VerticalAlignment="Center"/>
+            <ToggleButton Content="2D" IsChecked="{Binding Flat2D}" VerticalAlignment="Center" Padding="6,2"
+                          ToolTip.Tip="Flat top-down view with no perspective, the way the old editor drew permissions. Easier to paint accurately."/>
+            <Button Content="Top" Click="CamTop_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Top-down camera" IsEnabled="{Binding !Flat2D}"/>
+            <Button Content="Iso" Click="CamIso_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Isometric (3/4) camera" IsEnabled="{Binding !Flat2D}"/>
+            <Button Content="Front" Click="CamFront_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Front camera" IsEnabled="{Binding !Flat2D}"/>
+            <Button Content="Side" Click="CamSide_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Side camera" IsEnabled="{Binding !Flat2D}"/>
+            <Button Content="⟲" Click="CamReset_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Reset camera"/>
+          </StackPanel>
         </WrapPanel>
       </StackPanel>
     </Border>
@@ -86,6 +95,7 @@
       <!-- Editing panels (single map + "This header" view; Full matrix is render-only) -->
       <TabControl Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
         <TabItem Header="Permissions">
+          <ScrollViewer>
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <TextBlock Text="Collision painter" FontWeight="Bold"/>
@@ -100,10 +110,10 @@
                 <CheckBox Content="Raw value" IsChecked="{Binding UseRawType}"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
               </StackPanel>
-              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,4">
-                <TextBlock Text="Click/drag a grid to paint." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
-                <TextBlock Text="Use 🖌 Paint in the 3D view, click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
-                <Button Content="🔎 Scan used types" Click="ScanTypes_Click"/>
+              <StackPanel Spacing="4" Margin="0,4,0,4">
+                <TextBlock Text="Click/drag a grid to paint." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" IsVisible="{Binding IsSingleMap}"/>
+                <TextBlock Text="Use 🖌 Paint in the 3D view, click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
+                <Button Content="🔎 Scan used types" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
             <Grid RowDefinitions="Auto,*,Auto,*" IsVisible="{Binding IsSingleMap}">
@@ -113,6 +123,7 @@
               <gl:PermissionGridControl Grid.Row="3" x:Name="TypeGrid" MinHeight="180"/>
             </Grid>
           </DockPanel>
+          </ScrollViewer>
         </TabItem>
         <TabItem Header="Buildings">
           <DockPanel Margin="4">

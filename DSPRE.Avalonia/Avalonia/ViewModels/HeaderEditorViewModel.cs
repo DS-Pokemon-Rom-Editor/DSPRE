@@ -471,6 +471,13 @@ namespace DSPRE.Avalonia.ViewModels
         {
             if (InitialHeaderId >= 0 && InitialHeaderId < _locationIndexByHeader.Count)
                 return (ushort)InitialHeaderId;
+
+            // Open where a new game starts, which is far more useful than whichever header happens to
+            // sort first. The games keep the town in location.c: New Bark for HeartGold and SoulSilver,
+            // Twinleaf for the Sinnoh pair.
+            int start = FieldStartLocation.HeaderFor(gameFamily, _headerListNames);
+            if (start >= 0 && start < _locationIndexByHeader.Count) return (ushort)start;
+
             int mystery = FindMysteryZoneIndex();
             for (ushort id = 0; id < _locationIndexByHeader.Count; id++)
                 if (_locationIndexByHeader[id] != mystery)

@@ -109,6 +109,10 @@ namespace DSPRE.Avalonia.Views
             AreaDataVM.InitialIndex = (int)vm.AreaDataId;
             ScriptsVM.InitialIndex = (int)vm.ScriptFileId;
             LevelScriptsVM.InitialIndex = (int)vm.LevelScriptId;
+            // The preview runs what the map runs by itself, so the events tab needs to know which
+            // level script file the header points at.
+            EventVM.LevelScriptId = (int)vm.LevelScriptId;
+            EventVM.TextArchiveId = (int)vm.TextArchiveId;
             TextVM.InitialIndex = (int)vm.TextArchiveId;
             MapVM.HeaderId = -1;
             MapVM.HeaderId = vm.CurrentHeaderId;

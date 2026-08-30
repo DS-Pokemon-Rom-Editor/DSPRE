@@ -83,7 +83,132 @@ namespace DSPRE.Avalonia.ViewModels
         public int SelectedLineIndex
         {
             get => _selectedLineIndex;
-            set { if (Set(ref _selectedLineIndex, value)) { OnPropertyChanged(nameof(CanMoveUp)); OnPropertyChanged(nameof(CanMoveDown)); } }
+            set
+            {
+                if (!Set(ref _selectedLineIndex, value)) return;
+                OnPropertyChanged(nameof(CanMoveUp));
+                OnPropertyChanged(nameof(CanMoveDown));
+                RefreshPreview();
+            }
+        }
+
+        // ── seeing the line the way the game shows it ────────────────────────
+        private readonly List<FieldMessageFrame> _previewFrames = new List<FieldMessageFrame>();
+        private int _previewFrame;
+
+        /// <summary>Measures a run of letters, pointed at the ROM's own font by the view.</summary>
+        public Func<string, int> MeasureText { get; set; } = t => (t ?? "").Length * 6;
+
+        private bool _showPreview = true;
+
+        /// <summary>Whether the message box preview is on show under the list.</summary>
+        public bool ShowPreview
+        {
+            get => _showPreview;
+            set { if (Set(ref _showPreview, value)) RefreshPreview(); }
+        }
+
+        private FieldMessageFrame CurrentPreview =>
+            _previewFrame >= 0 && _previewFrame < _previewFrames.Count ? _previewFrames[_previewFrame] : null;
+
+        /// <summary>What the box would be showing at this point in the message.</summary>
+        public string PreviewText => CurrentPreview?.Text;
+
+        public bool HasPreview => CurrentPreview != null;
+
+        /// <summary>Whether the box is waiting on the player here rather than finishing.</summary>
+        public bool PreviewHasMore => CurrentPreview != null && CurrentPreview.Wait != MessageWait.None;
+
+        /// <summary>Which of the message's stops this is.</summary>
+        public string PreviewStepText => _previewFrames.Count > 1
+            ? $"Stop {_previewFrame + 1} of {_previewFrames.Count}" : "";
+
+        /// <summary>What the player pressing A or B would do next.</summary>
+        public string PreviewWaitText
+        {
+            get
+            {
+                var f = CurrentPreview;
+                if (f == null) return "";
+                switch (f.Wait)
+                {
+                    case MessageWait.Clear: return "Waits, then clears the box and starts again";
+                    case MessageWait.Scroll: return "Waits, then scrolls up one line and carries on";
+                    case MessageWait.Simple: return "Waits, then carries on where it left off";
+                    default: return "The end of the message";
+                }
+            }
+        }
+
+        /// <summary>Says so when the line will not fit the box the way it is written.</summary>
+        public string PreviewWarning
+        {
+            get
+            {
+                var f = CurrentPreview;
+                if (f == null) return null;
+                if (f.TooWide && f.TooManyLines) return "This runs past the right edge and past the bottom of the box.";
+                if (f.TooWide) return "A line here runs past the right edge of the box.";
+                if (f.TooManyLines) return "There are more lines here than the box can show.";
+                return null;
+            }
+        }
+
+        public bool HasPreviewWarning => PreviewWarning != null;
+
+        /// <summary>The twenty borders the player can pick between in the games' own Options.</summary>
+        public ObservableCollection<string> BorderNames { get; } = new ObservableCollection<string>();
+
+        private int _borderIndex;
+
+        /// <summary>Which border to draw the box with.</summary>
+        public int BorderIndex
+        {
+            get => _borderIndex;
+            set { if (Set(ref _borderIndex, value)) BorderChanged?.Invoke(this, EventArgs.Empty); }
+        }
+
+        /// <summary>Raised when a different border is picked, so the view can read it out of the ROM.</summary>
+        public event EventHandler BorderChanged;
+
+        /// <summary>Says when the letters are a stand-in rather than the game's own.</summary>
+        public string PreviewFontNote { get; set; }
+        public bool HasPreviewFontNote => !string.IsNullOrEmpty(PreviewFontNote);
+
+        /// <summary>Steps on to the message's next stop, wrapping round at the end.</summary>
+        public void NextPreviewStep()
+        {
+            if (_previewFrames.Count == 0) return;
+            _previewFrame = (_previewFrame + 1) % _previewFrames.Count;
+            RaisePreviewChanged();
+        }
+
+        /// <summary>Works the selected line out again, after picking a different one or editing it.</summary>
+        public void RefreshPreview()
+        {
+            _previewFrames.Clear();
+            _previewFrame = 0;
+
+            if (_showPreview && _selectedLineIndex >= 0 && _selectedLineIndex < Lines.Count)
+            {
+                string text = Lines[_selectedLineIndex]?.Text;
+                if (!string.IsNullOrEmpty(text))
+                    _previewFrames.AddRange(FieldMessageScript.Frames(text, MeasureText));
+            }
+            RaisePreviewChanged();
+        }
+
+        private void RaisePreviewChanged()
+        {
+            OnPropertyChanged(nameof(PreviewText));
+            OnPropertyChanged(nameof(HasPreview));
+            OnPropertyChanged(nameof(PreviewHasMore));
+            OnPropertyChanged(nameof(PreviewStepText));
+            OnPropertyChanged(nameof(PreviewWaitText));
+            OnPropertyChanged(nameof(PreviewWarning));
+            OnPropertyChanged(nameof(HasPreviewWarning));
+            OnPropertyChanged(nameof(PreviewFontNote));
+            OnPropertyChanged(nameof(HasPreviewFontNote));
         }
 
         public bool CanMoveUp => _selectedLineIndex > 0;
@@ -241,6 +366,7 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 RenumberLines();
                 SetClean();
+                RefreshPreview();
                 StatusText = $"Loaded Text Archive {id} ({_current.messages.Count} lines).";
                 OnPropertyChanged(nameof(Title));
             }
@@ -257,6 +383,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 _current.messages[line.Index] = line.Text ?? "";
                 SetDirty();
+                if (line.Index == _selectedLineIndex) RefreshPreview();
             }
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -137,6 +137,33 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        /// <summary>
+        /// The camera number this header asks for, so the preview frames the map the way the games do.
+        /// </summary>
+        public int CameraId
+        {
+            get
+            {
+                try { return _headerId < 0 ? 0 : MapHeader.GetMapHeader((ushort)_headerId).cameraAngleID; }
+                catch { return 0; }
+            }
+        }
+
+        /// <summary>The two music numbers this header carries, day and night.</summary>
+        public int MusicDayId => HeaderMusic(true);
+        public int MusicNightId => HeaderMusic(false);
+
+        private int HeaderMusic(bool day)
+        {
+            try
+            {
+                if (_headerId < 0) return 0;
+                var h = MapHeader.GetMapHeader((ushort)_headerId);
+                return day ? h.musicDayID : h.musicNightID;
+            }
+            catch { return 0; }
+        }
+
         /// <summary>ComboBox-friendly alias for <see cref="HeaderId"/>. Same backing value, so the
         /// embedded Maps-workspace instance (driven externally by the sidebar) and a standalone popup
         /// (driven by this combo, since it has no sidebar) share one code path.</summary>
@@ -264,6 +291,27 @@ namespace DSPRE.Avalonia.ViewModels
         public float TintSz { get; private set; }
         public byte[] TintRgba { get; private set; }
 
+        // Flat top-down with no perspective, the way the old editor drew permissions. Paint mode is the
+        // main reason to want it: perspective makes tiles at the far edge hard to hit accurately.
+        // Settings may not be loaded yet (a view model built before startup finishes, or in a
+        // test), so fall back to the default rather than throwing out of the constructor.
+        private bool _flat2D = SettingsManager.Settings?.mapEditorFlat2D ?? false;
+        public bool Flat2D
+        {
+            get => _flat2D;
+            set
+            {
+                if (!Set(ref _flat2D, value)) return;
+                if (SettingsManager.Settings != null)
+                {
+                    SettingsManager.Settings.mapEditorFlat2D = value;
+                    SettingsManager.Save();
+                }
+                ViewModeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        public event EventHandler ViewModeChanged;
+
         public void RebuildOverlay()
         {
             OverlayMesh = null; OverlayVertexCount = 0;
@@ -283,6 +331,7 @@ namespace DSPRE.Avalonia.ViewModels
                     if (!Model3D.TryCellPlacement(cellData.CellX, cellData.CellY, out var cp)) continue;
                     byte[,] grid = collision ? cellData.Map.collisions : cellData.Map.types;
                     AppendPlaneOverlay(v, cp, grid, collision, m, planeY + cp.Width * 0.0006f);
+                    AppendCellOutline(v, m, cp, planeY + cp.Width * 0.0012f);
                 }
                 OverlayMesh = v.ToArray();
                 OverlayVertexCount = v.Count / 8;
@@ -317,6 +366,12 @@ namespace DSPRE.Avalonia.ViewModels
                     TintOx = (ox - m.Cx) * m.Scale; TintOz = (oz - m.Cz) * m.Scale;
                     TintSx = tsx * m.Scale;         TintSz = tsz * m.Scale;
                     TintRgba = rgba; TintOn = true;
+
+                    var outline = new List<float>(48);
+                    AppendCellOutline(outline, m, cell,
+                        (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + cell.Width * 0.0012f);
+                    OverlayMesh = outline.ToArray();
+                    OverlayVertexCount = outline.Count / 8;
                 }
                 else
                 {
@@ -332,6 +387,7 @@ namespace DSPRE.Avalonia.ViewModels
                             AddQuad(v, m.ToNormalized(x0, planeY, z0), m.ToNormalized(x1, planeY, z0),
                                        m.ToNormalized(x1, planeY, z1), m.ToNormalized(x0, planeY, z1), cr, cg, cb);
                         }
+                    AppendCellOutline(v, m, cell, planeY + eps);
                     OverlayMesh = v.ToArray();
                     OverlayVertexCount = v.Count / 8;
                 }
@@ -360,6 +416,29 @@ namespace DSPRE.Avalonia.ViewModels
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
         // One flat-coloured quad (a→b→c→d) as two triangles.
+        /// <summary>
+        /// Draws the edge of the 32-tile cell the overlay is painted on. The permission grid is always a
+        /// fixed 32x32 whatever the map art covers, so on a map whose model is smaller the overlay hangs
+        /// past the scenery; this line shows where the tiles the game actually reads really end.
+        /// </summary>
+        private static void AppendCellOutline(List<float> v, NsbmdRenderModel m,
+            NsbmdRenderModel.CellPlacement cell, float y)
+        {
+            float w = cell.Width * 0.012f;      // thin enough to read as a line at any zoom
+            float x0 = cell.OriginX, x1 = x0 + cell.Width;
+            float z0 = cell.OriginZ, z1 = z0 + cell.Height;
+            const float r = 1f, g = 1f, b = 1f;
+
+            void Bar(float ax, float az, float bx, float bz)
+                => AddQuad(v, m.ToNormalized(ax, y, az), m.ToNormalized(bx, y, az),
+                              m.ToNormalized(bx, y, bz), m.ToNormalized(ax, y, bz), r, g, b);
+
+            Bar(x0, z0, x1, z0 + w);        // top
+            Bar(x0, z1 - w, x1, z1);        // bottom
+            Bar(x0, z0, x0 + w, z1);        // left
+            Bar(x1 - w, z0, x1, z1);        // right
+        }
+
         private static void AddQuad(List<float> v, (float x, float y, float z) a, (float x, float y, float z) b,
             (float x, float y, float z) c, (float x, float y, float z) d, float r, float g, float bl)
         {
@@ -1041,6 +1120,28 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         /// <summary>map index → area-data id via the reverse header/matrix lookup (or null).</summary>
+        /// <summary>Where the shown map is closed off, for the preview to walk its people against.</summary>
+        public MapCollisionGrid Collision
+        {
+            get
+            {
+                var grid = new MapCollisionGrid();
+                if (_map?.collisions != null) grid.Add(0, 0, _map.collisions);
+                if (_map?.types != null) grid.AddTypes(0, 0, _map.types);
+                return grid;
+            }
+        }
+
+        /// <summary>The area the shown map belongs to, which is what names its terrain animation.</summary>
+        public AreaData Area
+        {
+            get
+            {
+                try { return AreaForMap(_selectedMapIndex) is byte id ? new AreaData(id) : null; }
+                catch { return null; }
+            }
+        }
+
         private byte? AreaForMap(int mapIndex)
             => _mapToArea != null && _mapToArea.TryGetValue(mapIndex, out byte a) ? a : (byte?)null;
 
@@ -1177,7 +1278,7 @@ namespace DSPRE.Avalonia.ViewModels
                 // Load building models + bind building tileset, then collect transforms. Interior vs.
                 // exterior building set is a fact of the map's own area data (same rule as the stitched
                 // matrix/header views in MatrixSceneBuilder), not a user preference.
-                var buildings = new List<(NSBMDModel model, float[] transform)>();
+                var buildings = new List<PlacedBuilding>();
                 bool interior = false;
                 if (gameFamily == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels))
                 {
@@ -1214,7 +1315,14 @@ namespace DSPRE.Avalonia.ViewModels
                             catch { /* pack doesn't match this building, leave untextured */ }
                         }
 
-                        buildings.Add((b.NSBMDFile.models[0], MapGeometry.BuildingTransform(b)));
+                        buildings.Add(new PlacedBuilding
+                        {
+                            Model = b.NSBMDFile.models[0],
+                            Transform = MapGeometry.BuildingTransform(b),
+                            ModelId = (int)b.modelID,
+                            TileX = b.xPosition,
+                            TileZ = b.zPosition,
+                        });
                     }
 
                 Model3D = NsbmdGeometry.BuildScene(_map.mapModel?.models?.Length > 0 ? _map.mapModel.models[0] : null, buildings);

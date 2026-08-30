@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+             xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
@@ -26,6 +27,8 @@
         <Button Content="Export…" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
+        <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
+                  ToolTip.Tip="Show the selected line the way the game would, in its own message box."/>
       </WrapPanel>
     </Border>
 
@@ -69,6 +72,32 @@
           <Button Content="Move Up"   Click="MoveUp_Click"   IsEnabled="{Binding CanMoveUp}"/>
           <Button Content="Move Down" Click="MoveDown_Click" IsEnabled="{Binding CanMoveDown}"/>
         </StackPanel>
+      </Border>
+
+      <!-- What this line looks like in game -->
+      <Border DockPanel.Dock="Bottom" IsVisible="{Binding ShowPreview}" Padding="6"
+              Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+              BorderThickness="0,1,0,0">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <views:FieldMessageBoxView Grid.Column="0" x:Name="PreviewBox" FitToFrame="True"
+                                     Height="96" HorizontalAlignment="Stretch"
+                                     Text="{Binding PreviewText}" HasMore="{Binding PreviewHasMore}"/>
+          <StackPanel Grid.Column="1" Width="230" Spacing="4" VerticalAlignment="Center">
+            <TextBlock Text="{Binding PreviewWaitText}" TextWrapping="Wrap" FontSize="12"/>
+            <TextBlock Text="{Binding PreviewStepText}" FontSize="12"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+            <TextBlock Text="{Binding PreviewWarning}" IsVisible="{Binding HasPreviewWarning}"
+                       TextWrapping="Wrap" FontSize="12" Foreground="#D08A00"/>
+            <TextBlock Text="{Binding PreviewFontNote}" IsVisible="{Binding HasPreviewFontNote}"
+                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Border:" VerticalAlignment="Center" FontSize="12"/>
+              <ComboBox Width="110" ItemsSource="{Binding BorderNames}" SelectedIndex="{Binding BorderIndex}"
+                        ToolTip.Tip="The games let the player pick between twenty of these in Options."/>
+            </StackPanel>
+            <Button Content="Next stop" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
+          </StackPanel>
+        </Grid>
       </Border>
 
       <DataGrid x:Name="LinesGrid"

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views
 {
@@ -18,6 +19,34 @@ namespace DSPRE.Avalonia.Views
             InitializeComponent();
             Loaded += OnLoadedSetup;
         }
+
+        /// <summary>
+        /// Points the preview at the ROM's own font, so a line is shown with the letters the game would
+        /// really use, and says so plainly when that font could not be read.
+        /// </summary>
+        private void AttachPreviewFont()
+        {
+            if (VM == null) return;
+            FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
+
+            if (VM.BorderNames.Count == 0)
+            {
+                for (int i = 0; i < FieldWindowFrame.FrameCount; i++) VM.BorderNames.Add($"Frame {i}");
+                VM.BorderChanged += (_, _) =>
+                {
+                    FieldMessageBoxView.Frame = FieldWindowFrame.Load(VM.BorderIndex);
+                    PreviewBox.InvalidateVisual();
+                };
+            }
+            FieldMessageBoxView.Frame = FieldWindowFrame.Load(VM.BorderIndex);
+            VM.MeasureText = FieldMessageBoxView.Measure;
+            VM.PreviewFontNote = FieldMessageBoxView.Font == null
+                ? "Showing stand-in letters: the game's own font could not be read from this ROM."
+                : null;
+            VM.RefreshPreview();
+        }
+
+        private void PreviewNext_Click(object sender, RoutedEventArgs e) => VM?.NextPreviewStep();
 
         public TextEditorView(TextEditorViewModel vm) : this()
         {
@@ -48,6 +77,7 @@ namespace DSPRE.Avalonia.Views
             if (owner == null) return;
             _setupDone = true;
             await vm.SetupAsync(owner);
+            AttachPreviewFont();
         }
 
         // ── Archive toolbar ──────────────────────────────────────────────────
