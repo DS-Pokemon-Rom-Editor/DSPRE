@@ -22,8 +22,11 @@ namespace DSPRE
             AppDomain.CurrentDomain.UnhandledException += (s, e) => ReportCrash(e.ExceptionObject as Exception);
             TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                e.SetObserved(); // Prevents app from crashing
-                ReportCrash(e.Exception);
+                // Nobody was waiting on this one, so there is nothing to interrupt and nowhere to put a
+                // dialog: it arrives on the finalizer thread, where building a window throws and takes the
+                // whole application down with it. Write it to a report and carry on.
+                e.SetObserved();
+                LogHandled(e.Exception);
             };
         }
 

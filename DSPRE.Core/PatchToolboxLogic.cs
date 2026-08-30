@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -851,7 +851,7 @@ namespace DSPRE
             {
                 AreaData a = new AreaData(new FileStream(s, FileMode.Open))
                 {
-                    dynamicTextureType = 0xFFFF
+                    groundAnimation = 0xFFFF
                 };
                 a.SaveToFile(s, showSuccessMessage: false);
             }

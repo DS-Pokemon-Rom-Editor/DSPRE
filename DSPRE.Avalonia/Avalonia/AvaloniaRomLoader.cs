@@ -66,6 +66,15 @@ namespace DSPRE.Avalonia
             string gameCode = ReadGameCode(folder, type);
             if (string.IsNullOrEmpty(gameCode)) { error = "Could not read the game code from the ROM header."; return false; }
 
+            // Sprites are kept by overworld number, which means a different ROM's are a different
+            // picture under the same number.
+            OverworldSprites.ClearCache();
+            // The font and its letter numbering belong to the ROM that was open, not the new one.
+            Views.FieldMessageBoxView.Font = null;
+            Views.FieldMessageBoxView.Frame = null;
+            Data.SoundArchive.Reset();
+            ROMFiles.FieldFontCharacters.Reset();
+
             try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
             catch (Exception ex) { error = "Failed to initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
 

@@ -20,6 +20,75 @@ namespace DSPRE.Avalonia
 
         public enum MsgResult { Ok, Yes, No, Cancel }
 
+        /// <summary>
+        /// Asks for a colour as three numbers from 0 to 255, with a square showing what they make.
+        /// Kept to plain Avalonia controls so no extra package is needed. Returns null when cancelled.
+        /// </summary>
+        public static async Task<(byte R, byte G, byte B)?> PickColour(Window owner, string title)
+        {
+            byte r = 0, g = 0, b = 0;
+            (byte, byte, byte)? answer = null;
+
+            var preview = new Border { Width = 64, Height = 64, BorderThickness = new global::Avalonia.Thickness(1) };
+            var rBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            var gBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            var bBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+
+            void Refresh()
+            {
+                r = (byte)(rBox.Value ?? 0); g = (byte)(gBox.Value ?? 0); b = (byte)(bBox.Value ?? 0);
+                preview.Background = new global::Avalonia.Media.SolidColorBrush(
+                    global::Avalonia.Media.Color.FromRgb(r, g, b));
+            }
+            rBox.ValueChanged += (_, __) => Refresh();
+            gBox.ValueChanged += (_, __) => Refresh();
+            bBox.ValueChanged += (_, __) => Refresh();
+            Refresh();
+
+            var ok = new Button { Content = "Use this colour", MinWidth = 130, IsDefault = true };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+
+            var win = new Window
+            {
+                Title = title,
+                Width = 340, Height = 250,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = new StackPanel
+                {
+                    Margin = new global::Avalonia.Thickness(14),
+                    Spacing = 10,
+                    Children =
+                    {
+                        new TextBlock { Text = "How much red, green and blue, each from 0 to 255.",
+                                        TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, FontSize = 12 },
+                        new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children =
+                        {
+                            preview,
+                            new StackPanel { Spacing = 4, Children =
+                            {
+                                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children =
+                                    { new TextBlock { Text = "Red", Width = 44, VerticalAlignment = VerticalAlignment.Center }, rBox } },
+                                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children =
+                                    { new TextBlock { Text = "Green", Width = 44, VerticalAlignment = VerticalAlignment.Center }, gBox } },
+                                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children =
+                                    { new TextBlock { Text = "Blue", Width = 44, VerticalAlignment = VerticalAlignment.Center }, bBox } },
+                            } },
+                        } },
+                        new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8,
+                                         HorizontalAlignment = HorizontalAlignment.Right,
+                                         Children = { ok, cancel } },
+                    },
+                },
+            };
+
+            ok.Click += (_, __) => { answer = (r, g, b); win.Close(); };
+            cancel.Click += (_, __) => win.Close();
+
+            if (owner != null) await win.ShowDialog(owner); else win.Show();
+            return answer;
+        }
+
         // ----------------------------------------------------------------
         // Message Boxes (built from plain Avalonia Window, no 3rd-party dep)
         // ----------------------------------------------------------------

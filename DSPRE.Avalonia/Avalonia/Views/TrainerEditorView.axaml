@@ -163,7 +163,8 @@
                       <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,2">
                         <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding FormVisible}">
                           <TextBlock Text="Form" FontSize="10"/>
-                          <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding FormId}"/>
+                          <NumericUpDown Minimum="0" Maximum="63" Increment="1" Value="{Binding FormId}"
+                                         ToolTip.Tip="Which form the Pokemon takes. Six bits share the species word, so 63 is as high as it goes."/>
                         </StackPanel>
                         <StackPanel Width="120" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
                           <TextBlock Text="Gender" FontSize="10"/>

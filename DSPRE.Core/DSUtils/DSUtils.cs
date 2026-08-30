@@ -1306,30 +1306,7 @@ namespace DSPRE {
             }
 
             // Palette id: caller override (preview) or the value stored in the ARM9 table.
-            int paletteId = 0;
-            if (paletteIdOverride >= 0) {
-                paletteId = paletteIdOverride;
-            } else {
-                string iconTablePath;
-                int iconPalTableOffsetFromFileStart;
-                if (RomInfo.isHGE) {
-                    // if overlay 129 exists, read it from there
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
-                    iconTablePath = OverlayUtils.GetPath(129);
-                } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
-                    // if there is a synthetic overlay, read it from there
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
-                    iconTablePath = Filesystem.expArmPath;
-                } else {
-                    // default handling
-                    iconPalTableOffsetFromFileStart = (int)(RomInfo.monIconPalTableAddress - ARM9.address);
-                    iconTablePath = RomInfo.arm9Path;
-                }
-
-                using (DSUtils.EasyReader idReader = new DSUtils.EasyReader(iconTablePath, iconPalTableOffsetFromFileStart + species)) {
-                    paletteId = idReader.ReadByte();
-                }
-            }
+            int paletteId = paletteIdOverride >= 0 ? paletteIdOverride : GetMonIconPaletteId(species);
 
             if (paletteId != 0 && paletteId < paletteBase.Palette.Length) {
                 paletteBase.Palette[0] = paletteBase.Palette[paletteId]; // update pal 0 to be the new pal

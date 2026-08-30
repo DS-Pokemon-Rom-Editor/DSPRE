@@ -4,7 +4,7 @@ using System.IO;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
-    /* ---------------------- WILD POKÉMON DATA STRUCTURE (DPPt):----------------------------
+    /* ---------------------- MAP HEADER STRUCTURE (DPPt):----------------------------
         
        0x0  //  byte:       Walking encounter rate
        0x4  //  byte:       Level of
@@ -38,7 +38,7 @@ namespace DSPRE.ROMFiles {
        -----------------    7: Esc. Rope
        -----------------    8: ?
 
-    /* ---------------------- WILD POKÉMON DATA STRUCTURE (HGSS):----------------------------
+    /* ---------------------- MAP HEADER STRUCTURE (HGSS):----------------------------
         
        0x0  //  byte:       Wild Pokemon file number
        0x1  //  byte:       Area data value
@@ -70,7 +70,13 @@ namespace DSPRE.ROMFiles {
     ----------------------------------------------------------------------------------*/
 
     /// <summary>
-    /// General class to store common wild Pokemon data across all Gen IV Pokemon NDS games
+    /// The wild Pokemon a map holds, across all four Gen IV games.
+    ///
+    /// The block above documents the map header, which is a different file; it is kept because the header
+    /// is what points at the wild file. The wild file itself is GS_ENCOUNT_DATA in HeartGold
+    /// (encount_dat.h, 196 bytes) and ENCOUNT_DATA in Diamond, Pearl and Platinum (424 bytes), and the
+    /// two are laid out quite differently: HeartGold writes each fishing entry as min level, max level,
+    /// species, while Platinum writes max level, min level, species.
     /// </summary>
     public abstract class EncounterFile : RomFile {
         public const string msgFixed = " (already fixed)";

@@ -21,6 +21,7 @@ namespace DSPRE {
 
         public enum UnownTable
         {
+            NoUnown,
             MostForms,
             OnlyF,
             OnlyR,
@@ -32,6 +33,10 @@ namespace DSPRE {
         }
 
         #endregion
+
+        /// <summary>West sea is zero, east sea is anything else, so whatever was there is kept.</summary>
+        private static uint EastWestValue(int index, uint had) =>
+            index == (int)ShellosForm.WestSea ? 0u : (had != 0 ? had : 1u);
 
         public string encounterFileFolder { get; private set; }
         public bool walkingDirty { get; private set; } = false;
@@ -356,7 +361,7 @@ namespace DSPRE {
             /* Form data controls setup */
             shellosComboBox.SelectedIndex = (currentFile.regionalForms[0] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
             gastrodonComboBox.SelectedIndex = (currentFile.regionalForms[1] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
-            unownComboBox.SelectedIndex = (currentFile.unknownTable == 0) ? 0 : (int)currentFile.unknownTable - 1;
+            unownComboBox.SelectedIndex = (int)currentFile.unknownTable;
 
             SetDirtyWalking(false);
             SetDirtyWater(false);
@@ -573,9 +578,11 @@ namespace DSPRE {
             currentFile.radarPokemon[3] = (uint)radarFourthComboBox.SelectedIndex;
 
             /* Form Data */
-            currentFile.regionalForms[0] = (uint)(shellosComboBox.SelectedIndex);
-            currentFile.regionalForms[1] = (uint)(gastrodonComboBox.SelectedIndex);
-            currentFile.unknownTable = (uint)(unownComboBox.SelectedIndex + 1);
+            // The file holds a chance out of a hundred but the games only ask whether it is zero, so a
+            // number already there is kept rather than flattened to one.
+            currentFile.regionalForms[0] = EastWestValue(shellosComboBox.SelectedIndex, currentFile.regionalForms[0]);
+            currentFile.regionalForms[1] = EastWestValue(gastrodonComboBox.SelectedIndex, currentFile.regionalForms[1]);
+            currentFile.unknownTable = (uint)unownComboBox.SelectedIndex;
 
             /* Levels */
             currentFile.walkingLevels[0] = (byte)walkingTwentyFirstUpDown.Value;

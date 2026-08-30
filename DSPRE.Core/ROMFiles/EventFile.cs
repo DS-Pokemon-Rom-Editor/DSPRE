@@ -1,4 +1,4 @@
-using DSPRE.Resources;
+﻿using DSPRE.Resources;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -139,8 +139,6 @@ namespace DSPRE.ROMFiles {
         #region Fields (7)
         public ushort scriptNumber;
         public ushort type;
-        public ushort unknown2;
-        public ushort unknown4;
         public ushort dir;
         public ushort unknown5;
         #endregion
@@ -149,23 +147,23 @@ namespace DSPRE.ROMFiles {
         public Spawnable(Stream data) {
             evType = EventType.Spawnable;
             using (BinaryReader reader = new BinaryReader(data)) {
+                // Engine layout (BG_TALK_DATA): id, type, int gx, int gz, int height, dir, padding.
+                // gx/gz/height are each a full 32-bit field; reading them as 16-bit halves put the
+                // height read two bytes early, so editing it wrote into the top half of gz.
                 scriptNumber = reader.ReadUInt16();
                 type = reader.ReadUInt16();
 
                 /* Decompose x coordinate in matrix and map positions */
-                int xPosition = reader.ReadInt16();
+                int xPosition = reader.ReadInt32();
                 xMapPosition = (short)(xPosition % MapFile.mapSize);
                 xMatrixPosition = (ushort)(xPosition / MapFile.mapSize);
 
-                unknown2 = reader.ReadUInt16();
-
                 /* Decompose y coordinate in matrix and map positions */
-                int yPosition = reader.ReadInt16();
+                int yPosition = reader.ReadInt32();
                 yMapPosition = (short)(yPosition % MapFile.mapSize);
                 yMatrixPosition = (ushort)(yPosition / MapFile.mapSize);
 
                 zPosition = reader.ReadInt32();
-                unknown4 = reader.ReadUInt16();
                 dir = reader.ReadUInt16();
                 unknown5 = reader.ReadUInt16();
             }
@@ -175,8 +173,6 @@ namespace DSPRE.ROMFiles {
 
             scriptNumber = 0;
             type = 0;
-            unknown2 = 0;
-            unknown4 = 0;
             unknown5 = 0;
             dir = 0;
 
@@ -191,8 +187,6 @@ namespace DSPRE.ROMFiles {
 
             scriptNumber = toCopy.scriptNumber;
             type = toCopy.type;
-            unknown2 = toCopy.unknown2;
-            unknown4 = toCopy.unknown4;
             unknown5 = toCopy.unknown5;
             dir = toCopy.dir;
 
@@ -209,13 +203,9 @@ namespace DSPRE.ROMFiles {
             using (BinaryWriter writer = new BinaryWriter(new MemoryStream())) {
                 writer.Write(scriptNumber);
                 writer.Write(type);
-                short xCoordinate = (short)(xMapPosition + MapFile.mapSize * xMatrixPosition);
-                writer.Write(xCoordinate);
-                writer.Write(unknown2);
-                short yCoordinate = (short)(yMapPosition + MapFile.mapSize * yMatrixPosition);
-                writer.Write(yCoordinate);
+                writer.Write((int)(xMapPosition + MapFile.mapSize * xMatrixPosition));
+                writer.Write((int)(yMapPosition + MapFile.mapSize * yMatrixPosition));
                 writer.Write(zPosition);
-                writer.Write(unknown4);
                 writer.Write(dir);
                 writer.Write(unknown5);
 
@@ -254,12 +244,16 @@ namespace DSPRE.ROMFiles {
         public ushort type;
         public ushort flag;
         public ushort scriptNumber;
-        public ushort orientation;
+        public short orientation;   // dir; the engine allows -1 for "no direction"
         public ushort sightRange;
-        public ushort unknown1;
-        public ushort unknown2;
-        public ushort xRange;
-        public ushort yRange;
+        // param0/1/2 in the engine (FIELD_OBJ_H). param0 is the trainer sight range; param1 is the
+        // glance/spin interval for those trainer types; param2 has no reader in the field code.
+        public ushort param1;
+        public ushort param2;
+        // move_limit_x/z. Signed in the engine: -1 means it isn't fenced in on that axis at all,
+        // anything else is how many tiles either side of where it starts it may walk.
+        public short xRange;
+        public short yRange;
         public bool is3D = new bool();
         #endregion
 
@@ -273,12 +267,12 @@ namespace DSPRE.ROMFiles {
                 type = reader.ReadUInt16();
                 flag = reader.ReadUInt16();
                 scriptNumber = reader.ReadUInt16();
-                orientation = reader.ReadUInt16();
+                orientation = reader.ReadInt16();
                 sightRange = reader.ReadUInt16();
-                unknown1 = reader.ReadUInt16();
-                unknown2 = reader.ReadUInt16();
-                xRange = reader.ReadUInt16();
-                yRange = reader.ReadUInt16();
+                param1 = reader.ReadUInt16();
+                param2 = reader.ReadUInt16();
+                xRange = reader.ReadInt16();
+                yRange = reader.ReadInt16();
 
                 /* Decompose x-y coordinates in matrix and map positions */
                 int xPosition = reader.ReadInt16();
@@ -302,8 +296,8 @@ namespace DSPRE.ROMFiles {
             scriptNumber = 0;
             orientation = 1;
             sightRange = 0;
-            unknown1 = 0;
-            unknown2 = 0;
+            param1 = 0;
+            param2 = 0;
             xRange = 0;
             yRange = 0;
 
@@ -324,8 +318,8 @@ namespace DSPRE.ROMFiles {
             scriptNumber = toCopy.scriptNumber;
             orientation = toCopy.orientation;
             sightRange = toCopy.sightRange;
-            unknown1 = toCopy.unknown1;
-            unknown2 = toCopy.unknown2;
+            param1 = toCopy.param1;
+            param2 = toCopy.param2;
             xRange = toCopy.xRange;
             yRange = toCopy.yRange;
 
@@ -348,8 +342,8 @@ namespace DSPRE.ROMFiles {
                 writer.Write(scriptNumber);
                 writer.Write(orientation);
                 writer.Write(sightRange);
-                writer.Write(unknown1);
-                writer.Write(unknown2);
+                writer.Write(param1);
+                writer.Write(param2);
                 writer.Write(xRange);
                 writer.Write(yRange);
 
@@ -452,7 +446,8 @@ namespace DSPRE.ROMFiles {
         public ushort scriptNumber;
         public ushort widthX;
         public ushort heightY;
-        new public ushort zPosition;
+        // No zPosition of its own: it inherits Event.zPosition. A separate field here shadowed the base
+        // one, so anything holding the trigger as an Event wrote a value this class never saved.
         public ushort expectedVarValue;
         public ushort variableWatched;
         #endregion Fields
@@ -519,7 +514,7 @@ namespace DSPRE.ROMFiles {
                 writer.Write(yCoordinate);
                 writer.Write(widthX);
                 writer.Write(heightY);
-                writer.Write(zPosition);
+                writer.Write((ushort)zPosition);
                 writer.Write(expectedVarValue);
                 writer.Write(variableWatched);
 

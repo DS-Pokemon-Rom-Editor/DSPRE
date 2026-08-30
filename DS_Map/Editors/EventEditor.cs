@@ -312,7 +312,7 @@ namespace DSPRE.Editors
 
                         if (isEventOnCurrentMatrix(overworld))
                         { // Draw image only if event is in current map
-                            Bitmap sprite = GetOverworldImage(overworld.overlayTableEntry, overworld.orientation);
+                            Bitmap sprite = GetOverworldImage(overworld.overlayTableEntry, (ushort)Math.Max((short)0, overworld.orientation));
                             sprite.MakeTransparent();
                             g.DrawImage(sprite, (overworld.xMapPosition) * (tileSize + 1) - 7 + (32 - sprite.Width) / 2, (overworld.yMapPosition - 1) * (tileSize + 1) + (32 - sprite.Height));
 
@@ -588,54 +588,39 @@ namespace DSPRE.Editors
                             return nsbtx.GetBitmap(3, 0).bmp;
                     }
                 }
-                if (nsbtx.texInfo.num_objs <= 8)
-                { //Read nsbtx slot corresponding to overworld's movement
-                    switch (orientation)
-                    {
-                        case 0:
-                            return nsbtx.GetBitmap(0, 0).bmp;
-                        case 1:
-                            return nsbtx.GetBitmap(2, 0).bmp;
-                        case 2:
-                            return nsbtx.GetBitmap(4, 0).bmp;
-                        default:
-                            return nsbtx.GetBitmap(6, 0).bmp;
-                    }
-                }
-                if (nsbtx.texInfo.num_objs <= 16)
-                { // Read nsbtx slot corresponding to overworld's movement
-                    switch (orientation)
-                    {
-                        case 0:
-                            return nsbtx.GetBitmap(0, 0).bmp;
-                        case 1:
-                            return nsbtx.GetBitmap(11, 0).bmp;
-                        case 2:
-                            return nsbtx.GetBitmap(2, 0).bmp;
-                        default:
-                            return nsbtx.GetBitmap(4, 0).bmp;
-                    }
-                }
-                else
-                {
-                    switch (orientation)
-                    {
-                        case 0:
-                            return nsbtx.GetBitmap(0, 0).bmp;
-                        case 1:
-                            return nsbtx.GetBitmap(27, 0).bmp;
-                        case 2:
-                            return nsbtx.GetBitmap(2, 0).bmp;
-                        default:
-                            return nsbtx.GetBitmap(4, 0).bmp;
-                    }
-                }
+                // The pictures are named "thing.1" upwards but the file keeps them sorted as text, so
+                // ".10" lands before ".2". Put them back in the artist's order, then take the standing
+                // one for this way of facing: a bank holds a group per facing in the order up, down,
+                // left, right, two pictures to a group for a following Pokemon and four for a person.
+                return nsbtx.GetBitmap(StandingFrame(nsbtx, orientation), 0).bmp;
             }
             catch
             { // Load bounding box if sprite cannot be found
                 return (Bitmap)Properties.Resources.ResourceManager.GetObject("overworldUnreadable");
             }
         }
+        /// <summary>
+        /// Which picture in the bank shows this overworld standing still, facing this way.
+        /// </summary>
+        private static int StandingFrame(NSBTX_File nsbtx, ushort orientation)
+        {
+            int n = nsbtx.texInfo.num_objs;
+            var order = new int[n];
+            var rank = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                string name = nsbtx.texInfo.names[i] ?? "";
+                int dot = name.LastIndexOf('.');
+                rank[i] = dot >= 0 && int.TryParse(name.Substring(dot + 1), out int v) ? v : i;
+                order[i] = i;
+            }
+            Array.Sort(rank, order);
+
+            int perFacing = n == 8 ? 2 : 4;
+            int at = Math.Min(orientation, (ushort)3) * perFacing;
+            return at < n ? order[at] : 0;
+        }
+
         private void MarkUsedCells()
         {
             using (Graphics g = Graphics.FromImage(eventMatrixPictureBox.Image))
@@ -1954,7 +1939,7 @@ namespace DSPRE.Editors
             {
                 /* Sprite index and image controls */
                 owSpriteComboBox.SelectedIndex = Array.IndexOf(RomInfo.overworldTableKeys, selectedOw.overlayTableEntry);
-                owSpritePictureBox.BackgroundImage = GetOverworldImage(selectedOw.overlayTableEntry, selectedOw.orientation);
+                owSpritePictureBox.BackgroundImage = GetOverworldImage(selectedOw.overlayTableEntry, (ushort)Math.Max((short)0, selectedOw.orientation));
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -2085,7 +2070,7 @@ namespace DSPRE.Editors
 
                 if (Helpers.HandlersEnabled)
                 {
-                    currentEvFile.overworlds[selection].orientation = orientation;
+                    currentEvFile.overworlds[selection].orientation = (short)orientation;
                     DisplayActiveEvents();
                     SetDirty();
                 }
@@ -2138,7 +2123,7 @@ namespace DSPRE.Editors
 
             if (selection >= 0)
             {
-                owSpritePictureBox.BackgroundImage = GetOverworldImage(overlayTableEntryID, currentEvFile.overworlds[selection].orientation);
+                owSpritePictureBox.BackgroundImage = GetOverworldImage(overlayTableEntryID, (ushort)Math.Max((short)0, currentEvFile.overworlds[selection].orientation));
 
                 if (Helpers.HandlersEnabled)
                 {
@@ -2199,7 +2184,7 @@ namespace DSPRE.Editors
                 return;
             }
 
-            currentEvFile.overworlds[overworldsListBox.SelectedIndex].xRange = (ushort)owXRangeUpDown.Value;
+            currentEvFile.overworlds[overworldsListBox.SelectedIndex].xRange = (short)owXRangeUpDown.Value;
             SetDirty();
         }
         private void owYRangeUpDown_ValueChanged(object sender, EventArgs e)
@@ -2211,7 +2196,7 @@ namespace DSPRE.Editors
                 return;
             }
 
-            currentEvFile.overworlds[overworldsListBox.SelectedIndex].yRange = (ushort)owYRangeUpDown.Value;
+            currentEvFile.overworlds[overworldsListBox.SelectedIndex].yRange = (short)owYRangeUpDown.Value;
             SetDirty();
         }
         private void owYMapUpDown_ValueChanged(object sender, EventArgs e)

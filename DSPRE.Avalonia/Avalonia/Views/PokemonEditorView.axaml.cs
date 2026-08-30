@@ -1,6 +1,9 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia;
+using Avalonia.Platform.Storage;
+using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -34,6 +37,38 @@ namespace DSPRE.Avalonia.Views
 
         private async void AddSpecies_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewFakemonAsync(this);
+
+        /// <summary>
+        /// Plays the chosen Pokemon's cry. There is no sequence per Pokemon: the games play one shared
+        /// sequence with that Pokemon's own instruments in place of its (snd_play.c:1091), which is what
+        /// the sound archive does here too.
+        /// </summary>
+        private void PlayCry_Click(object sender, RoutedEventArgs e)
+        {
+            int species = ViewModel?.SelectedMonIndex ?? 0;
+            if (species <= 0) return;
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var pcm = SoundArchive.RenderCry(species);
+                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
+                }
+                catch { /* an editor should not put up a dialog because a sound would not play */ }
+            });
+        }
+
+        /// <summary>
+        /// Opens this cry in the Audio Editor, where saving it out and putting a new one in live alongside
+        /// every other sound in the ROM rather than being duplicated here.
+        /// </summary>
+        private void EditCry_Click(object sender, RoutedEventArgs e)
+        {
+            int species = ViewModel?.SelectedMonIndex ?? 0;
+            if (species <= 0) return;
+            _ = AvaloniaEditorLauncher.OpenAudioEditorAsync(species);
+        }
 
         private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();

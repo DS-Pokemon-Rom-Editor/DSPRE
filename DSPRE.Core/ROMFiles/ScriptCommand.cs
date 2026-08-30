@@ -1,4 +1,4 @@
-using DSPRE.Resources;
+﻿using DSPRE.Resources;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -51,6 +51,15 @@ namespace DSPRE.ROMFiles
                     name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
                 }
             }
+        }
+
+        /// <summary>Builds one directly from an already-known name and parameters, without going through
+        /// the command database. Used where a command is being described rather than assembled.</summary>
+        public ScriptCommand(string commandName, List<byte[]> parameterData, ushort? commandId = null)
+        {
+            name = commandName;
+            cmdParams = parameterData ?? new List<byte[]>();
+            id = commandId;
         }
 
         public ScriptCommand(string wholeLine, int lineNumber = 0)

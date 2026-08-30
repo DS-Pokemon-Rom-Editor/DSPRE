@@ -55,6 +55,12 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
+        public void Stop()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            lock (_gate) { _mixer?.RemoveAllMixerInputs(); }
+        }
+
         private void EnsureStarted(int sampleRate)
         {
             if (_mixer != null) return;

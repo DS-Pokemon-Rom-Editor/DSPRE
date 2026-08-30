@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -43,10 +43,17 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Area data entry to select once loaded (e.g. from the Header editor's "Open" button).</summary>
         public int InitialIndex { get; set; }
 
-        private decimal _mapTileset, _buildingsTileset, _dynamicTextureType, _lightType;
+        private decimal _mapTileset, _buildingsTileset, _thirdField, _lightType;
         public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.mapTileset = (ushort)value; if (!_suppress) Dirty(); } } }
         public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; if (!_suppress) Dirty(); } } }
-        public decimal DynamicTextureType { get => _dynamicTextureType; set { if (Set(ref _dynamicTextureType, value) && _area != null) { if (IsHGSS) _area.dynamicTextureType = (ushort)value; else _area.unknown1 = (ushort)value; if (!_suppress) Dirty(); } } }
+        /// <summary>Third field of the area's RESOURCE_PARAM. HGSS keeps the terrain animation index
+        /// here; DP/Pt keeps a model set index that nothing in the game reads, so the label follows the game.</summary>
+        public string ThirdFieldLabel => IsHGSS ? "Terrain animation" : "Unused";
+        public string ThirdFieldTip => IsHGSS
+            ? "Which terrain animation this area plays: the moving water, and nothing else in these games. 65535 means none."
+            : "Diamond, Pearl and Platinum store a model set number here but never read it, so changing it does nothing.";
+
+        public decimal ThirdField { get => _thirdField; set { if (Set(ref _thirdField, value) && _area != null) { if (IsHGSS) _area.groundAnimation = (ushort)value; else _area.movingModelSet = (ushort)value; if (!_suppress) Dirty(); } } }
         public decimal LightType { get => _lightType; set { if (Set(ref _lightType, value) && _area != null) { _area.lightType = (ushort)value; if (!_suppress) Dirty(); } } }
 
         private int _areaTypeIndex;
@@ -101,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             MapTileset = _area.mapTileset;
             BuildingsTileset = _area.buildingsTileset;
-            DynamicTextureType = IsHGSS ? _area.dynamicTextureType : _area.unknown1;
+            ThirdField = IsHGSS ? _area.groundAnimation : _area.movingModelSet;
             LightType = _area.lightType;
             AreaTypeIndex = _area.areaType == 0 ? 0 : 1;
         }

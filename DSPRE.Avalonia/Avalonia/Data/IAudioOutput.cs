@@ -6,6 +6,9 @@ namespace DSPRE.Avalonia.Data
     public interface IAudioOutput
     {
         void Play(short[] interleavedStereoPcm, int sampleRate);
+
+        /// <summary>Silences whatever is playing, for stopping the music or closing a preview.</summary>
+        void Stop();
     }
 
     /// <summary>Does nothing. The default until a shell wires in a real backend, so builds/shells that don't
@@ -13,6 +16,7 @@ namespace DSPRE.Avalonia.Data
     public sealed class NullAudioOutput : IAudioOutput
     {
         public void Play(short[] interleavedStereoPcm, int sampleRate) { }
+        public void Stop() { }
     }
 
     /// <summary>The active audio backend. Defaults to a silent no-op; a shell's startup code assigns a real

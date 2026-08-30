@@ -66,12 +66,26 @@ namespace DSPRE.Avalonia.Data
 
         private static void Register(LabelCategory c) => _cats[c.Key] = c;
 
+        /// <summary>The routine names as the games' own source has them, before anybody renames one.</summary>
+        private static string[] BuildRoutineDefaults()
+        {
+            var names = new string[WestRoutines.TableSize];
+            for (int i = 0; i < names.Length; i++) names[i] = WestRoutines.Get(i)?.Name ?? ("Routine " + i);
+            return names;
+        }
+
         // Built-in categories. Add a line here (+ swap the editor VM's source to LabelStore.Get) to make
         // another hardcoded dropdown customisable.
         private static void RegisterBuiltins()
         {
             void Reg(string key, string name, string group, string singular, string[] defaults)
                 => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults });
+
+            // The routines a move animation can call. Their names come from the games' own source, but
+            // somebody working on a hack may know a routine by what they use it for, so they are
+            // renameable like every other list here and every view picks the new name up.
+            Reg("west_routines", "Move animation routines", "Pokémon", "Routine",
+                BuildRoutineDefaults());
 
             // Pokémon: combos bind by SelectedIndex == enum position (these enums are sequential).
             // Evolution methods also carry a per-method "param meaning" attribute (what the parameter is).

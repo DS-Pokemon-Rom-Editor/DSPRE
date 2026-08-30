@@ -24,6 +24,9 @@ namespace DSPRE.ROMFiles {
         public string name;
         #endregion
 
+        /// <summary>An action built by hand, for callers that already know its name.</summary>
+        public ScriptAction() { }
+
         public ScriptAction(ushort id, ushort? repetitionCount = null) {
             this.id = id;
             this.repetitionCount = repetitionCount;

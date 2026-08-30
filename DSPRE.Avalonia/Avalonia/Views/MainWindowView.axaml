@@ -99,11 +99,18 @@
       </MenuItem>
 
       <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="All graphics…" Click="GraphicsBrowser_Click"/>
+        <MenuItem Header="All models and textures…" Click="ModelBrowser_Click"/>
+        <MenuItem Header="Battle scenes…" Click="BattleSceneBrowser_Click"/>
         <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}"/>
         <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}"/>
         <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsEnabled="{Binding CanUseTrainerCardEditor}"/>
         <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_Audio" x:Name="AudioMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Audio Editor…" Click="AudioEditor_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Tools" x:Name="ToolsMenu">

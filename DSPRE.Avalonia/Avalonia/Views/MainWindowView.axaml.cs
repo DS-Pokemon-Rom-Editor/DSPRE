@@ -514,6 +514,9 @@ namespace DSPRE.Avalonia.Views
         }
 
         // ── Pokémon ─────────────────────────────────────────────────────────
+        private void AudioEditor_Click(object sender, RoutedEventArgs e)
+            => _ = AvaloniaEditorLauncher.OpenAudioEditorAsync();
+
         private async void PokemonEditor_Click(object sender, RoutedEventArgs e)
             => await AvaloniaEditorLauncher.OpenPokemonEditorAsync();
 
@@ -583,6 +586,15 @@ namespace DSPRE.Avalonia.Views
 
         private void NsbtxEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNsbtxEditor();
+
+        private void GraphicsBrowser_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenGraphicsBrowser();
+
+        private void ModelBrowser_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenModelBrowser();
+
+        private void BattleSceneBrowser_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBattleSceneBrowser();
 
         private void AreaDataEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenAreaDataEditor();

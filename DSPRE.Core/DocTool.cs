@@ -567,7 +567,7 @@ namespace DSPRE
                             $"{eventFileId},{i}," +
                             $"{ow.owID},{ow.overlayTableEntry},{owSpriteIdStr}," +
                             $"{ow.movement},{ow.type},{ow.flag},{ow.scriptNumber}," +
-                            $"{ow.orientation},{ow.sightRange},{ow.unknown1},{ow.unknown2},{ow.xRange},{ow.yRange}," +
+                            $"{ow.orientation},{ow.sightRange},{ow.param1},{ow.param2},{ow.xRange},{ow.yRange}," +
                             $"{ow.xMatrixPosition},{ow.yMatrixPosition},{ow.xMapPosition},{ow.yMapPosition}," +
                             $"{xCoord},{yCoord},{ow.zPosition},{(isAlias ? 1 : 0)}"
                         );

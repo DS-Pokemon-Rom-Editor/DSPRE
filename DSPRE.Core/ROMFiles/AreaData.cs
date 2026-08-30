@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles {
@@ -12,8 +12,10 @@ namespace DSPRE.ROMFiles {
         #region Fields (2)
         public ushort buildingsTileset;
         public ushort mapTileset;
-        public ushort dynamicTextureType;
-        public ushort unknown1;
+        // Third field of the area's RESOURCE_PARAM. HGSS stores the terrain animation index here
+        // (0xFFFF for none); DP/Pt stores a model set index that nothing in the game ever reads.
+        public ushort groundAnimation;
+        public ushort movingModelSet;
         public byte areaType = TYPE_OUTDOOR; //HGSS ONLY
         public ushort lightType; //using an overabundant size. HGSS only needs a byte
         #endregion
@@ -25,11 +27,11 @@ namespace DSPRE.ROMFiles {
                 mapTileset = reader.ReadUInt16();
 
                 if (RomInfo.gameFamily == GameFamilies.HGSS) {
-                    dynamicTextureType = reader.ReadUInt16();
+                    groundAnimation = reader.ReadUInt16();
                     areaType = reader.ReadByte();
                     lightType = reader.ReadByte();
                 } else {
-                    unknown1 = reader.ReadUInt16();
+                    movingModelSet = reader.ReadUInt16();
                     lightType = reader.ReadUInt16();
                 }
             }
@@ -45,11 +47,11 @@ namespace DSPRE.ROMFiles {
                 writer.Write(mapTileset);
 
                 if (RomInfo.gameFamily == GameFamilies.HGSS) {
-                    writer.Write(dynamicTextureType);
+                    writer.Write(groundAnimation);
                     writer.Write(areaType);
                     writer.Write((byte)lightType);
                 } else {
-                    writer.Write(unknown1);
+                    writer.Write(movingModelSet);
                     writer.Write((ushort)lightType);
                 }
             }

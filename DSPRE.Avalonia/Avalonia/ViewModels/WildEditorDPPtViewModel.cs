@@ -182,31 +182,45 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Form data ─────────────────────────────────────────────────────
         public ObservableCollection<string> ShellosFormNames { get; } = new() { "West Sea", "East Sea" };
+        /// <summary>
+        /// Which Unown letters appear here. Zero in the file means no Unown at all, which is what most
+        /// maps hold, so the list starts with that rather than with the first table.
+        /// </summary>
         public ObservableCollection<string> UnownTableNames  { get; } = new()
         {
+            "No Unown",
             "Most Forms", "Only F", "Only R", "Only I", "Only N",
             "Only E", "Only D", "! and ?"
         };
+
+        // The file stores these as a chance out of a hundred, but the games only ask whether it is zero
+        // (encount_set.c:2580: "if it is not zero, change"), so the editor offers the two sea forms and
+        // keeps whatever number was already there when the choice has not changed.
+        private uint _shellosRaw, _gastrodonRaw;
 
         private int _shellosFormIndex;
         public int ShellosFormIndex
         {
             get => _shellosFormIndex;
-            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.regionalForms[0] = (uint)value; SetDirty(); } }
+            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.regionalForms[0] = EastWest(value, _shellosRaw); SetDirty(); } }
         }
 
         private int _gastrodonFormIndex;
         public int GastrodonFormIndex
         {
             get => _gastrodonFormIndex;
-            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.regionalForms[1] = (uint)value; SetDirty(); } }
+            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.regionalForms[1] = EastWest(value, _gastrodonRaw); SetDirty(); } }
         }
+
+        /// <summary>West sea is zero; east sea is anything else, so a number already there is kept.</summary>
+        private static uint EastWest(int index, uint had) =>
+            index == 0 ? 0u : (had != 0 ? had : 1u);
 
         private int _unownTableIndex;
         public int UnownTableIndex
         {
             get => _unownTableIndex;
-            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.unknownTable = (uint)(value + 1); SetDirty(); } }
+            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.unknownTable = (uint)value; SetDirty(); } }
         }
 
         // ── Title ────────────────────────────────────────────────────────
@@ -419,13 +433,15 @@ namespace DSPRE.Avalonia.ViewModels
             GoodRodRate  = _current.goodRodRate;
             SuperRodRate = _current.superRodRate;
 
-            // Form data: regionalForms[0]=Shellos, [1]=Gastrodon (0=West, 1=East)
-            // unknownTable: 0 or 1-based index into UnownTable enum; 0 maps to first entry
+            // Form data: regionalForms[0]=Shellos, [1]=Gastrodon (0=West, anything else=East)
+            // unknownTable: 0 is no Unown, 1..8 are the letter tables, so the list index is the value.
+            _shellosRaw = _current.regionalForms[0];
+            _gastrodonRaw = _current.regionalForms[1];
             _shellosFormIndex  = (int)(_current.regionalForms[0] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(ShellosFormIndex));
             _gastrodonFormIndex = (int)(_current.regionalForms[1] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(GastrodonFormIndex));
-            _unownTableIndex = _current.unknownTable == 0 ? 0 : (int)_current.unknownTable - 1;
+            _unownTableIndex = (int)_current.unknownTable;
             if (_unownTableIndex < 0) _unownTableIndex = 0;
             if (_unownTableIndex >= UnownTableNames.Count) _unownTableIndex = 0;
             OnPropertyChanged(nameof(UnownTableIndex));
@@ -527,9 +543,9 @@ namespace DSPRE.Avalonia.ViewModels
             for (int i = 0; i < LeafGreenRows.Count && i < 2; i++) _current.leafGreenPokemon[i] = (uint)LeafGreenRows[i].PokemonIndex;
 
             // Form data
-            _current.regionalForms[0] = (uint)_shellosFormIndex;
-            _current.regionalForms[1] = (uint)_gastrodonFormIndex;
-            _current.unknownTable     = (uint)(_unownTableIndex + 1);
+            _current.regionalForms[0] = EastWest(_shellosFormIndex, _shellosRaw);
+            _current.regionalForms[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
+            _current.unknownTable     = (uint)_unownTableIndex;
         }
 
         private void WriteWaterRowsToFile()

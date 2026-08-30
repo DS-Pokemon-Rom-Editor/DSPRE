@@ -19,6 +19,12 @@ namespace DSPRE
         public string lastColorTablePath { get; set; } = "";
         public bool textEditorPreferHex { get; set; } = false;
         public int scriptEditorFormatPreference { get; set; } = 0;
+        // Which of the move-animation editor's three ways of reading a script was last used:
+        // 0 guided, 1 script, 2 raw.
+        public int moveAnimationViewMode { get; set; } = 0;
+        // Flat 2D event view, off by default so the 3D scene stays the first impression.
+        public bool eventEditorFlat2D { get; set; } = false;
+        public bool mapEditorFlat2D { get; set; } = false;
         public bool renderSpawnables { get; set; } = true;
         public bool renderOverworlds { get; set; } = true;
         public bool renderWarps { get; set; } = true;

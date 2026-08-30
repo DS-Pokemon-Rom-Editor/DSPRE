@@ -13,7 +13,11 @@ namespace DSPRE.ROMFiles {
 
         #region Fields
         public ushort? pokeID = null;
-        public ushort formID = 0; //unused in DP
+        // Which form the Pokemon takes. It shares the species word: the low ten bits are the species
+        // and the top six are the form (tr_tool.c:308). Platinum reads it and its own trainers use it,
+        // which is how one gets an East Sea Gastrodon or a particular Rotom. Whether Diamond and Pearl
+        // ever set it has not been checked.
+        public ushort formID = 0;
         public ushort level = 0;
         public byte difficulty = 0;
         public GenderAndAbilityFlags genderAndAbilityFlags; //only used for HGSS, filler byte for the rest of the games
