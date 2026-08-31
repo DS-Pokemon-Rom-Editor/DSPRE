@@ -7,3 +7,7 @@
 ## Move Research
 
 - [Move Research](Moves/MoveResearch.md)
+
+## Field Research
+
+- [Field Research](Field/FieldResearch.md)
