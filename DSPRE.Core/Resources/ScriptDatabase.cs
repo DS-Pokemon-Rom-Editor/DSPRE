@@ -139,8 +139,16 @@ public static class ScriptDatabaseJsonLoader
                 }
 
                 // Store in unified dictionary
+                cmdInfo.LegacyName = cmdInfo.Name;
                 commandInfoDict[code] = cmdInfo;
             }
+
+            // The names come from the old database, where command 0 is "Nop". The script editor, the
+            // rotom formatter and the language server all use the newer names, where it is "Noop", so
+            // showing the old ones puts words on screen that a user cannot type. The v2 file beside the
+            // old one is keyed by the new name and carries the old one as legacy_name, so it is read
+            // here and the names swapped over in one place rather than at every call site.
+            ApplyRotomNames(expandedPath, commandInfoDict);
 
             // Load sounds
             if (root.TryGetProperty("sounds", out JsonElement soundsRoot))
@@ -170,7 +178,61 @@ public static class ScriptDatabaseJsonLoader
         }
     }
 
+        /// <summary>
+        /// Swaps in the rotom command names from <c>&lt;game&gt;_v2.json</c>, if it is there.
+        ///
+        /// Anything the v2 file does not name keeps the old name rather than losing its name altogether,
+        /// and <see cref="ScriptCommandInfo.LegacyName"/> always holds what the old database called it.
+        /// </summary>
+        internal static int ApplyRotomNames(string legacyJsonPath, Dictionary<ushort, ScriptCommandInfo> commands)
+        {
+            string dir = Path.GetDirectoryName(legacyJsonPath);
+            string file = Path.GetFileNameWithoutExtension(legacyJsonPath) ?? "";
+            // heartgold_soulsilver_scrcmd_database -> hgss_v2 is not derivable, so try the obvious pairs.
+            string stem = file.Replace("_scrcmd_database", "");
+            var candidates = new List<string>
+            {
+                Path.Combine(dir ?? "", stem + "_v2.json"),
+                Path.Combine(dir ?? "", file + "_v2.json"),
+            };
+            if (stem.StartsWith("heartgold", StringComparison.OrdinalIgnoreCase))
+                candidates.Add(Path.Combine(dir ?? "", "hgss_v2.json"));
+            if (stem.StartsWith("diamond", StringComparison.OrdinalIgnoreCase))
+                candidates.Add(Path.Combine(dir ?? "", "diamond_pearl_v2.json"));
 
+            string v2 = candidates.FirstOrDefault(File.Exists);
+            if (v2 == null) return 0;
+
+            int renamed = 0;
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(v2));
+                if (!doc.RootElement.TryGetProperty("commands", out JsonElement cmds)) return 0;
+
+                foreach (JsonProperty prop in cmds.EnumerateObject())
+                {
+                    // The v2 file holds script commands, movements and macros in one list, and their ids
+                    // overlap: script command 0 is Noop and movement 0 is FaceNorth. Without this the
+                    // movements overwrite the script commands and every early command gets the wrong name.
+                    if (!prop.Value.TryGetProperty("type", out JsonElement typeElem)) continue;
+                    if (typeElem.GetString() != "script_cmd") continue;
+
+                    if (!prop.Value.TryGetProperty("id", out JsonElement idElem)) continue;
+                    if (!idElem.TryGetInt32(out int id) || id < 0 || id > ushort.MaxValue) continue;
+                    if (!commands.TryGetValue((ushort)id, out var info)) continue;
+
+                    string rotom = prop.Name;
+                    if (string.IsNullOrWhiteSpace(rotom)) continue;
+                    if (!string.Equals(info.Name, rotom, StringComparison.Ordinal)) renamed++;
+                    info.Name = rotom;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Info("Could not read the rotom command names from " + v2 + ": " + ex.Message);
+            }
+            return renamed;
+        }
 }
 
 namespace DSPRE.Resources

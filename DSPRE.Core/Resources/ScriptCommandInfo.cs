@@ -8,7 +8,19 @@ namespace DSPRE.Resources
     public class ScriptCommandInfo
     {
         public ushort CommandId { get; set; }
+
+        /// <summary>
+        /// What the command is called. This is the rotom name, which is what the script editor, the
+        /// formatter and the language server all use, so it is what somebody sees and types.
+        /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// The name the old database used, kept only so a project written before the rename can still be
+        /// read back. Nothing should show this to anybody.
+        /// </summary>
+        public string LegacyName { get; set; }
+
         public string DecompName { get; set; }
         public byte[] ParameterSizes { get; set; }
         public List<ScriptParameter.ParameterType> ParameterTypes { get; set; }

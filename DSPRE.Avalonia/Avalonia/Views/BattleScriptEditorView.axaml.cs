@@ -82,9 +82,12 @@ namespace DSPRE.Avalonia.Views
         private async void EditorTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!ReferenceEquals(e.Source, EditorTabs) || EditorTabs == null || VM == null) return;   // ignore child selectors
-            if (EditorTabs.SelectedIndex == 0 && VM.HasTextErrors)
+            VM.OpenTab = EditorTabs.SelectedIndex;
+            // The tabs are Read, Cards, Text. Cards cannot be built while the text has errors, so that
+            // one bounces back to the text to fix them.
+            if (EditorTabs.SelectedIndex == 1 && VM.HasTextErrors)
             {
-                Dispatcher.UIThread.Post(() => EditorTabs.SelectedIndex = 1);
+                Dispatcher.UIThread.Post(() => EditorTabs.SelectedIndex = 2);
                 await DSPRE.Avalonia.DialogHelper.ShowInfo(
                     "Can't view the commands as cards while the text has errors. Fix the red-underlined line(s) first.",
                     "Fix errors first");

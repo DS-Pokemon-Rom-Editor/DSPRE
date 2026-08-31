@@ -29,20 +29,70 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock Text="One command per line, written like a command: 'CommandName label=value label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex; settings with named options use the option word (like target=Attacker). Labels can be given in any order; unlabeled values just fill whichever slots are left, in order. Lines starting with // are comments. The raw 'OPCODE 1 2 3' form is still accepted. Edits are shared with the cards and repacked into the ROM on save."
+      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, written like a command: 'CommandName label=value label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex; settings with named options use the option word (like target=Attacker). Labels can be given in any order; unlabeled values just fill whichever slots are left, in order. Lines starting with // are comments. The raw 'OPCODE 1 2 3' form is still accepted. Edits are shared with the cards and repacked into the ROM on save."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
-        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"/>
+        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"
+                ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
         <Button Content="❓ Command guide" Click="CommandGuide_Click"/>
       </StackPanel>
     </StackPanel>
 
     <!-- Command list + (WEST) storyboard. 50/50 split so the command-arg column can't expand and crowd out the
          preview-side controls (background selector etc.); each half scrolls independently. -->
-    <Grid Grid.Row="2" IsVisible="{Binding IsAvailable}" ColumnDefinitions="*,*">
+    <!-- The command list needs the room: its lines are wide and clipping them is what makes a script
+         unreadable. The preview keeps a sensible minimum and the splitter lets either side win. -->
+    <Grid Grid.Row="2" IsVisible="{Binding IsAvailable}" ColumnDefinitions="*,6,440">
       <Grid Grid.Column="0" RowDefinitions="*,Auto">
         <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
+          <!-- Three ways of reading the same commands. Nothing here writes a command out as a sentence:
+               these are instruction streams with timing in them, so what makes them readable is folding
+               the shorthands back up, naming the numbers, lining the columns up and indenting the loops. -->
+          <TabItem Header="Read">
+            <Panel>
+            <!-- The three reading views only exist for the move animations. On the other archives this tab
+                 used to be an empty box with nothing to say why, so it now says where to go instead. -->
+            <TextBlock IsVisible="{Binding !IsWest}" Margin="16" TextWrapping="Wrap"
+                       VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
+                       Text="The three reading views are for the move animations. Pick &quot;Move animation (WEST)&quot; in the Archive list above to use them. This archive is edited in the Cards and Text tabs."/>
+            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsWest}">
+              <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
+                <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
+                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center"
+                          ToolTip.Tip="Three ways of reading the same commands. Switching never changes them.">
+                  <ComboBoxItem Content="Guided"/>
+                  <ComboBoxItem Content="Script"/>
+                  <ComboBoxItem Content="Raw"/>
+                </ComboBox>
+                <TextBlock Text="{Binding ViewSummary}" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+              <TextBlock Grid.Row="1" Text="{Binding ViewNote}" TextWrapping="Wrap" Margin="4,0,4,4"
+                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Border Grid.Row="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                  <ListBox ItemsSource="{Binding ViewLines}" SelectedItem="{Binding PickedLine}"
+                           Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </ScrollViewer>
+              </Border>
+              <Border Grid.Row="3" Margin="4,4,4,0" Padding="6,4" IsVisible="{Binding HasPickedDetail}"
+                      Background="{DynamicResource Editor.StatusBg}" CornerRadius="3">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding PickedDetail}" TextWrapping="Wrap" FontSize="12"/>
+                  <TextBlock Text="{Binding PickedSource}" FontSize="11" FontStyle="Italic"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+            </Panel>
+          </TabItem>
           <!-- Card view: each command as a collapsible container -->
           <TabItem Header="Cards">
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
@@ -124,7 +174,13 @@
       </Grid>
 
       <!-- WEST side panel: cell-animation preview (Phase 2) + readable storyboard timeline -->
-      <Grid Grid.Column="1" IsVisible="{Binding ShowStoryboard}" MinWidth="320" Margin="10,0,0,0" RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <!-- The preview, its controls and the storyboard together are taller than a short window, and without
+           this the bottom of them was simply cut off with nothing to say so. -->
+      <GridSplitter Grid.Column="1" Width="6" Background="Transparent" ResizeDirection="Columns"
+                    HorizontalAlignment="Stretch"/>
+      <ScrollViewer Grid.Column="2" IsVisible="{Binding ShowStoryboard}" Margin="10,0,0,0"
+                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid MinHeight="420" RowDefinitions="Auto,Auto,Auto,Auto,*">
         <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4" IsVisible="{Binding HasPreview}">
           <TextBlock Text="Animation preview" FontWeight="SemiBold"/>
           <TextBlock Text="Reproduces the vanilla-game routines (particles, Pokémon move/rotate/scale/flash, shake, fade). Effects redefined in custom C code may differ."
@@ -166,18 +222,33 @@
                    gauge boxes: enemy ≈ x[-6..122] y[4..68] (center 58,36); player ≈ x[128..256] y[84..148] (center 192,116).
                    Values from gauge.c's gage_parts tile layout; pixel coords are TUNABLE. -->
               <Canvas IsVisible="{Binding GaugesVisible}">
-                <!-- Positions measured off real battles in both games; the frame graphic already carries the
-                     "HP" label and the empty bar groove, so only the fill and the text go on top. -->
+                <!-- Positions measured off real battles; the frame graphic already carries the "HP" label and
+                     the empty bar groove, so only the fill and the text go on top. The groove is drawn here
+                     rather than left to the frame: measured off a Platinum capture with a half-empty bar, it
+                     is a white row, two rows that are green where full and black where empty, another white
+                     row, then a black one. Painting a four-row bar covered the white rows and the empty
+                     part, and leaving the last row out let the frame's brown show where the game is black.
+                     Rows checked one at a time over 705 frames of real battles, both gauges. -->
                 <!-- enemy (upper-left) -->
                 <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
                 <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-                <Rectangle Canvas.Left="50" Canvas.Top="42" Width="{Binding GaugeHpBarWidth}" Height="4" Fill="{Binding GaugeHpBrush}"/>
+                <Rectangle Canvas.Left="50" Canvas.Top="42" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="50" Canvas.Top="43" Width="48" Height="2" Fill="#000000"/>
+                <Rectangle Canvas.Left="50" Canvas.Top="43" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
+                <Rectangle Canvas.Left="50" Canvas.Top="45" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="50" Canvas.Top="46" Width="48" Height="1" Fill="#000000"/>
                 <!-- player (lower-right) -->
                 <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
                 <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="118" Width="{Binding GaugeHpBarWidth}" Height="4" Fill="{Binding GaugeHpBrush}"/>
-                <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game -->
-                <TextBlock Canvas.Left="210" Canvas.Top="126" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+                <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="200" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
+                <Rectangle Canvas.Left="200" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
+                <Rectangle Canvas.Left="200" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="200" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
+                <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game.
+                     The game puts these glyphs on rows 125-131 and they were landing on 130-135, running
+                     over the bottom of the frame. Measured off a Platinum capture. -->
+                <TextBlock Canvas.Left="210" Canvas.Top="121" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
               </Canvas>
               <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
             </Canvas>
@@ -188,6 +259,9 @@
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                     ToolTip.Tip="Preview the move cast from the enemy (top) side: flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
+          <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}"
+                    IsVisible="{Binding HasTurnCheck}" VerticalAlignment="Center" Margin="0,2,6,2"
+                    ToolTip.Tip="This move holds two animations and the game alternates them by the battle's turn count. Tick this to watch the second one."/>
           <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
@@ -219,16 +293,22 @@
                     ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on: the tray some move animations interact with."/>
           <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
                      FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="{Binding PreviewNotes}" IsVisible="{Binding HasPreviewNotes}"
+                     VerticalAlignment="Center" TextWrapping="Wrap" FontSize="12" Margin="8,2,0,2"
+                     Foreground="{DynamicResource Editor.Subtle}"
+                     ToolTip.Tip="Parts of this move the preview cannot draw. The move itself is unchanged."/>
         </WrapPanel>
 
         <TextBlock Grid.Row="3" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
         <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
           <ScrollViewer>
-            <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+            <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True"
+                     TextWrapping="{Binding StoryboardWrap}" VerticalAlignment="Top"
                      FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
           </ScrollViewer>
         </Border>
       </Grid>
+      </ScrollViewer>
     </Grid>
   </Grid>
 </UserControl>

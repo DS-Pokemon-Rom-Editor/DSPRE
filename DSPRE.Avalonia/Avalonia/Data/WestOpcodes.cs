@@ -7,6 +7,12 @@
 // is an orchestration VM (loads particle archives, invokes built-in routines via FUNC_CALL, drives
 // backgrounds/camera/sound), so unlike the Pokémon sprite animation format it is not directly previewable
 // frame-by-frame; this table powers a structured script editor and storyboard. Generated, do not edit.
+//
+// One entry that west.h lists is deliberately NOT here. WEST_POKEOAM_CHECK sits inside
+// ".if PL_G0236_081028_FIX" and that flag is (0) in both games (pl_bugfix.h:737 in the HeartGold tree,
+// which even says not to turn it on, and pl_bugfix.h:944 in the Platinum one), so neither shipped game
+// has that opcode. Including it shifted every opcode after WEST_PT_DROP_RESET by one, which read the
+// two moves that use FLASH as something else and stopped decoding partway through them.
 // </auto-generated>
 namespace DSPRE.Avalonia.Data
 {
@@ -111,7 +117,6 @@ namespace DSPRE.Avalonia.Data
             new("WEST_POKE_OAM_ENABLE", 2, false, -1),
             new("WEST_PT_DROP", 3, false, -1),
             new("WEST_PT_DROP_RESET", 1, false, -1),
-            new("WEST_POKEOAM_CHECK", 0, false, -1),
             new("WEST_KEY_WAIT", 0, false, -1),
         };
 
@@ -201,7 +206,6 @@ namespace DSPRE.Avalonia.Data
             new("WEST_POKE_OAM_ENABLE", 2, false, -1),
             new("WEST_PT_DROP", 3, false, -1),
             new("WEST_PT_DROP_RESET", 1, false, -1),
-            new("WEST_POKEOAM_CHECK", 0, false, -1),
             new("WEST_KEY_WAIT", 0, false, -1),
             new("WEST_FLASH", 1, false, -1),
             new("WEST_HAIKEI_CHG_EX", 3, false, -1),

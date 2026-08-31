@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using DSPRE.Avalonia.Gl;
 using LibNDSFormats.NSBMD;
@@ -9,6 +9,7 @@ namespace DSPRE.Avalonia.Data
     public sealed class SpaTexture
     {
         public int Width, Height;
+        public int Format;    // the NDS texture format it is stored in, so a failure can be traced to a format
         public byte[] Rgba;   // width*height*4, or null if it couldn't be decoded
         // the texture parameters flip flags (bits 14-15): the texture is a quadrant the hardware reflects across the particle
         // centre to build a symmetric sprite (e.g. a ring stored as one quarter). Mirror it at draw time.
@@ -42,7 +43,14 @@ namespace DSPRE.Avalonia.Data
         public int BaseAlpha;       // 0..31 base alpha
         public int AirResist;       // 0..255 (1.0 ≈ 0x80) velocity damping
         public int TexNo;           // texture index in the archive's texture section
-        public bool UseScaleAnm, UseColorAnm, UseAlphaAnm, UseTexAnm, UseChild, SelfDestruct, FollowEmtr;
+        public bool UseScaleAnm, UseColorAnm, UseAlphaAnm, UseTexAnm, UseChild, FollowEmtr;
+
+        /// <summary>
+        /// The emitter throws itself away once it has finished emitting, rather than sitting there empty.
+        /// Read but not acted on: nothing here is drawn after its particles are gone, so the only thing it
+        /// would change is exactly when a preview decides the move has ended, by at most a frame or two.
+        /// </summary>
+        public bool SelfDestruct;
         // ptcl_random_loop_anm (base flag bit 20): for a LOOPING colour/texture anim, each particle starts at a random
         // phase, so the emitter shows the whole colour cycle at once and it "moves" (Aurora Beam's shifting rainbow).
         // Without it every particle animates in lockstep → the beam reads as one or two flat colours.
@@ -66,7 +74,7 @@ namespace DSPRE.Avalonia.Data
         public bool UseColl; public double CollY, CollBounce; public int CollEvent; // collision plane: kill(0)/bounce(1)
         // the child-resource block: parent particles spawn child particles (trails/sparks); half of all emitters use this.
         public int ChildLife, ChildGenNum, ChildGenStart, ChildGenIntvl, ChildTexNo;
-        public double ChildVelRatio, ChildSclRatio, ChildSclEnd;
+        public double ChildVelRatio, ChildSclEnd;
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
         public double Aspect = 1.0;     // base.aspect (fx16): billboard sclX = sclY × aspect (non-square sprites)
@@ -111,6 +119,16 @@ namespace DSPRE.Avalonia.Data
         public int TextureCount;
         public int TextureOffset, TextureSize;
         public List<SpaEmitter> Emitters { get; } = new List<SpaEmitter>();
+
+        /// <summary>
+        /// Where reading the emitters stopped. Every emitter is a fixed block plus whichever optional
+        /// blocks its flags switch on, so if any of those sizes were wrong the reader would drift and stop
+        /// somewhere other than the start of the textures. That makes this worth checking.
+        /// </summary>
+        public int EmittersEndAt;
+
+        /// <summary>How many emitters the header said there were, whether or not they all read.</summary>
+        public int EmitterCountInHeader;
         public List<SpaTexture> Textures { get; } = new List<SpaTexture>();
 
         // struct sizes (bytes) from / 
@@ -127,6 +145,7 @@ namespace DSPRE.Avalonia.Data
 
             // the archive header
             int resNum = U16(8);
+            a.EmitterCountInHeader = resNum;
             a.TextureCount = U16(10);
             a.Version = I32(4);
             a.TextureSize = I32(20);
@@ -281,6 +300,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 off = fp;
             }
+            a.EmittersEndAt = off;
             a.DecodeTextures(d);
             return a;
         }
@@ -315,7 +335,7 @@ namespace DSPRE.Avalonia.Data
                 if (overlapped && sharedNo >= 0 && sharedNo < Textures.Count)
                 {
                     var shared = Textures[sharedNo];
-                    tex = new SpaTexture { Width = shared.Width, Height = shared.Height, Rgba = shared.Rgba };
+                    tex = new SpaTexture { Width = shared.Width, Height = shared.Height, Rgba = shared.Rgba, Format = shared.Format };
                 }
                 else
                 {
@@ -342,10 +362,10 @@ namespace DSPRE.Avalonia.Data
                     repeatS = 0, repeatT = 0, flipS = 0, flipT = 0,
                 };
                 var dec = NsbmdTextureDecoder.Decode(mat);
-                if (dec != null) return new SpaTexture { Width = dec.Width, Height = dec.Height, Rgba = dec.Rgba };
+                if (dec != null) return new SpaTexture { Width = dec.Width, Height = dec.Height, Rgba = dec.Rgba, Format = fmt };
             }
             catch { }
-            return new SpaTexture { Width = w, Height = h, Rgba = null };
+            return new SpaTexture { Width = w, Height = h, Rgba = null, Format = fmt };
         }
 
         private static byte[] Slice(byte[] d, int off, int len)
@@ -419,7 +439,7 @@ namespace DSPRE.Avalonia.Data
             e.ChildSclEnd = (short)U16l(p + 4) / 4096.0;
             e.ChildLife = Math.Max(1, U16l(p + 6));
             int ratio = U16l(p + 8);
-            e.ChildVelRatio = (ratio & 0xFF) / 256.0; e.ChildSclRatio = ((ratio >> 8) & 0xFF) / 256.0;
+            e.ChildVelRatio = (ratio & 0xFF) / 256.0;   // the child's scale comes from ChildSclRatioRaw below
             int cc = U16l(p + 10);
             e.ChildR = Expand5(cc & 0x1F); e.ChildG = Expand5((cc >> 5) & 0x1F); e.ChildB = Expand5((cc >> 10) & 0x1F);
             int etc1 = U16l(p + 12) | (U16l(p + 14) << 16);

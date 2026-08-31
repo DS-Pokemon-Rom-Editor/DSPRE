@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
@@ -38,7 +38,12 @@ namespace DSPRE.Avalonia
         private const int FN_WE_T02 = 44, FN_WE_T22 = 45;   // background-scroll routines
         private const int FN_KAITEN = 60;   // mon traces an ellipse (dizzy/spin)
         // WE_TOOL flags: which Pokémon a routine targets.
-        private const int WE_TOOL_M1 = 0x0002, WE_TOOL_E1 = 0x0008, WE_TOOL_BG = 0x0400;   // target flags
+        // Which Pokemon a routine acts on, from we_def.h:137-159. The names are relative, not sides:
+        // WT_SSPointerGet (we_tool.c:1431) resolves M1 to the ATTACKER and E1 to the DEFENDER, M2 and E2
+        // to their allies, and it only looks those up in a double battle. So in a single battle an M2 or
+        // E2 target finds nobody and the routine does nothing at all.
+        private const int WE_TOOL_M1 = 0x0002, WE_TOOL_M2 = 0x0004, WE_TOOL_E1 = 0x0008, WE_TOOL_E2 = 0x0010,
+                          WE_TOOL_OTHER = 0x0020, WE_TOOL_STAGE = 0x0040, WE_TOOL_BG = 0x0400;
         // EMTFUNC_FIELD_OPERATOR, projectile/operator callback (uses the following EX_DATA).
         private const int EMTFUNC_FIELD_OPERATOR = 17;
 
@@ -173,6 +178,29 @@ namespace DSPRE.Avalonia
         // loaded NSCR transparent. (This is why a 512×256 water sheet does NOT tile straight into 2 bands.)
         private const int FX_BG_WRAP = 512;
         private double _bgX, _bgY, _bgSpdX, _bgSpdY;
+
+        /// <summary>Frames left before a background that runs for a set time starts washing off.
+        /// Below zero means it has no set time and something else ends it.</summary>
+        private int _bgHoldLeft = -1;
+
+        /// <summary>
+        /// Changes one setting of the background that is already scrolling (WEST_HAIKEI_PARA_CHG). The
+        /// numbers are from we_def.h:385-392: 0 and 1 are the two speeds, 2 and 3 the two positions. The
+        /// rest of them are fade and rotation settings this preview does not follow.
+        /// </summary>
+        private void SetBackgroundParam(int which, int value)
+        {
+            switch (which)
+            {
+                case 0: _bgSpdX = value; break;
+                case 1: _bgSpdY = value; break;
+                case 2: _bgX = value; break;
+                case 3: _bgY = value; break;
+                default:
+                    Note("This move changes a background setting part way through that the preview does not follow.");
+                    break;
+            }
+        }
         private double _bgOpacity, _bgPeak, _bgStopY; private int _bgFadeFrames; private bool _bgFadingOut, _bgOverlay, _bgUseStop;
         private readonly int[] _work = new int[16];   // WORK_SET gp work (WEDEF_GP_INDEX_*: [0]=SPEED_X,
                                                       // [1]=SPEED_Y, [2]=BGPOS_X, [3]=BGPOS_Y, [6]=SPEED_R)
@@ -249,6 +277,20 @@ namespace DSPRE.Avalonia
         private static readonly (int x, int y) WE057_DEF_PLAYER = (76, 120), WE057_DEF_ENEMY = (144, 64);
         private static double Lerp(double a, double b, double t) => a + (b - a) * Math.Clamp(t, 0, 1);
 
+        // Things this move does that the preview does not show. Said out loud rather than left for
+        // somebody to notice a difference and wonder whether it is a bug in their edit.
+        private readonly List<string> _notes = new List<string>();
+        public IReadOnlyList<string> Notes => _notes;
+
+        private readonly List<int> _routinesRun = new List<int>();
+        /// <summary>Which support routines this run actually reached, in order. Branches mean a script does not run all of its own.</summary>
+        public IReadOnlyList<int> RoutinesRun => _routinesRun;
+
+        private readonly List<int> _commandsRun = new List<int>();
+        /// <summary>Which commands this run actually executed, by position in the script.</summary>
+        public IReadOnlyList<int> CommandsRun => _commandsRun;
+        private void Note(string what) { if (!_notes.Contains(what)) _notes.Add(what); }
+
         // background palette fade (coloured overlay, black for darken, green for Mega Drain, etc.)
         private double _fadeCur, _fadeStart, _fadeEnd; private int _fadeFrames, _fadeFramesLeft;
         public double FadeOpacity => Math.Clamp(_fadeCur, 0, 1);
@@ -287,6 +329,13 @@ namespace DSPRE.Avalonia
             }
         }
 
+        /// <summary>
+        /// Which of the two animations a TURN_CHK move shows. The games pick by the parity of the battle's
+        /// own turn counter (we_sys.c:3018), so a move can have a second animation that only ever plays on
+        /// alternate turns. Set this to see that one.
+        /// </summary>
+        public bool SecondTurnVariant { get; set; }
+
         private readonly bool _attackerIsEnemy;
         private readonly Dictionary<int, int> _wordToIndex = new Dictionary<int, int>();
 
@@ -294,6 +343,12 @@ namespace DSPRE.Avalonia
         /// command's argument. The ViewModel wires this to actually render + play it; left null, playback just
         /// stays silent (the visual preview still runs normally).</summary>
         public Action<int> PlaySound;
+
+        /// <summary>Play the attacker's own cry (WEST_VOICE_PLAY). The host knows which Pokemon that is.</summary>
+        public Action PlayCry;
+
+        /// <summary>Stop one sound that is playing, by the sequence number it was started with.</summary>
+        public Action<int> StopSound;
 
         // Sounds scheduled by WEST_SE_WAITPLAY/WEST_SE_REPEAT to fire a real N-frame delay later instead of
         // immediately, ticked once per Step() alongside everything else on this same frame timeline.
@@ -323,6 +378,9 @@ namespace DSPRE.Avalonia
 
         public bool Finished => _scriptDone && _renderer.AllFinished && _fadeFramesLeft <= 0 && _monFx.Count == 0 && !HasBackground && _cellPhase < 0 && _pendingSounds.Count == 0;
         public WriteableBitmap RenderFrame() => _renderer.RenderFrame();
+
+        /// <summary>Every particle alive this frame, for checks that need to see them.</summary>
+        public IEnumerable<SpaParticleState> LiveParticles() => _renderer.LiveParticles();
 
         public void Step()
         {
@@ -361,6 +419,7 @@ namespace DSPRE.Avalonia
                 if (++_guard > 100000) { _scriptDone = true; return; }
                 var c = _cmds[_pc];
                 string name = WestOpcodes.Name(_version, c.OpId);
+                _commandsRun.Add(_pc);
                 _pc++;
 
                 switch (name)
@@ -401,9 +460,32 @@ namespace DSPRE.Avalonia
                     // waza_eff_cnt, for genuine two-turn moves (Fly/Dig) that's charge vs attack turn, but
                     // plenty of moves use it for alternating VARIANTS (Lunar Dance). A fresh battle previews
                     // with count 0 (even), taking the first branch, exactly like the game's first use.
+                    // TURN_CHK adrs_even, adrs_odd: the games alternate two animations by the battle's own
+                    // turn counter (we_sys.c WEST_TURN_CHK jumps from the first offset on an even count and
+                    // from the second on an odd one). A preview has no turn count, so it shows the even one,
+                    // which is what a move looks like the first time it is used, unless the second variant
+                    // is asked for.
                     case "WEST_TURN_CHK":
+                        if (SecondTurnVariant)
+                        {
+                            if (c.Args.Length >= 2 && JumpRelative(c.WordPos + 2, c.Args[1])) break;
+                        }
                         if (c.Args.Length >= 1 && JumpRelative(c.WordPos + 1, c.Args[0])) break;
                         if (c.Args.Length >= 2) JumpRelative(c.WordPos + 2, c.Args[1]);
+                        break;
+
+                    // TENKI_JP no_weather, rain, sandstorm, sun, hail: WEST_TENKI_JP always jumps, picking
+                    // the offset for whichever weather is up and the first one when there is none. Letting
+                    // this fall through ran the wrong branch of the one move that uses it, Weather Ball.
+                    case "WEST_TENKI_JP":
+                        if (c.Args.Length >= 1) JumpRelative(c.WordPos + 1, c.Args[0]);
+                        break;
+
+                    // CONTEST_JP jumps only in a Contest and PTAT_JP only when attacker and defender are on
+                    // the same side, which is a double battle helping your own partner. Neither is true of
+                    // this preview, so both carry on to the next command, which is what the games do too.
+                    case "WEST_CONTEST_JP":
+                    case "WEST_PTAT_JP":
                         break;
                     case "WEST_SEQ_JP":                                  // unconditional jump
                         if (c.Args.Length >= 1) JumpRelative(c.WordPos + 1, c.Args[0]);
@@ -593,6 +675,82 @@ namespace DSPRE.Avalonia
                     case "WEST_BATONTATTI_JP":
                         break;
 
+                    // Stops one sound that is already playing, by its number (Snd_SeStopBySeqNo). A sound
+                    // this script has queued but not started yet is simply dropped.
+                    case "WEST_SE_STOP":
+                        if (c.Args.Length >= 1)
+                        {
+                            int stopId = c.Args[0];
+                            _pendingSounds.RemoveAll(x => x.soundId == stopId);
+                            StopSound?.Invoke(stopId);
+                        }
+                        break;
+
+                    // Plays the attacking Pokemon's own cry, with a pan and a volume this preview does not
+                    // apply (WEST_VOICE_PLAY reads type, pan, volume; the cry itself is the attacker's).
+                    case "WEST_VOICE_PLAY":
+                        if (PlayCry != null) PlayCry();
+                        else Note("This move plays the Pokémon's cry, which the preview cannot play here.");
+                        break;
+
+                    // Waits for that cry to finish before carrying on. Nothing here holds a cry open, so
+                    // this waits the number of frames the script asks for and moves on.
+                    case "WEST_VOICE_WAIT_STOP":
+                        _wait = c.Args.Length > 0 ? Math.Max(0, c.Args[0]) : 0;
+                        return;
+
+                    // Shows or hides one of the dropped copies (CATS_ObjectEnableCap).
+                    case "WEST_POKE_OAM_ENABLE":
+                        if (c.Args.Length >= 2 && _caps.TryGetValue(c.Args[0], out var oamCap))
+                            oamCap.Visible = c.Args[1] != 0;
+                        break;
+
+                    // Swaps the Pokemon's graphic for another one: the Substitute doll, the Snatch figure,
+                    // or whatever Transform copied (WEST_HENSIN_ON reads which, then loads that graphic).
+                    // The preview draws the Pokemon it was given and has no second graphic to swap in.
+                    case "WEST_HENSIN_ON":
+                    case "WEST_HENSIN_ON_RC":
+                        Note("This move swaps the Pokémon's graphic for another one, which the preview keeps as it is.");
+                        break;
+
+                    // Copies the Pokemon into the background layer as tiles, and later clears it. The
+                    // preview draws Pokemon as sprites and has no background copy of them.
+                    case "WEST_POKEBG_DROP":
+                        Note("This move draws a copy of the Pokémon into the background, which the preview does not do.");
+                        break;
+                    case "WEST_POKEBG_DROP_RESET":
+                        break;   // nothing was drawn, so there is nothing to clear
+
+                    // Changes a scrolling background's speed or position while it is running. Only the
+                    // two speeds are followed here; the rest of the settings are left alone.
+                    case "WEST_HAIKEI_PARA_CHG":
+                        if (c.Args.Length >= 2) SetBackgroundParam(c.Args[0], c.Args[1]);
+                        break;
+
+                    // Set aside memory and load graphics into it. The preview draws from its own decoded
+                    // copies of those graphics, so there is nothing here to set aside or load. Written out
+                    // rather than left to fall through, so nothing is skipped without a reason.
+                    case "WEST_POKEOAM_RES_INIT":
+                    case "WEST_POKEOAM_RES_LOAD":
+                    case "WEST_CATS_RES_INIT":
+                    case "WEST_CATS_CAHR_RES_LOAD":
+                    case "WEST_CATS_PLTT_RES_LOAD":
+                    case "WEST_CATS_CELL_RES_LOAD":
+                    case "WEST_CATS_CELLANM_RES_LOAD":
+                        break;
+
+                    // Never run as a command. Its own handler in the games is an assertion saying so
+                    // (we_sys.c WEST_EX_DATA); it is read as data by the particle spawn before it, which
+                    // is what the particle-adding cases here already do.
+                    case "WEST_EX_DATA":
+                        break;
+
+                    // A pause the developers left in, waiting for L, R and X together (we_sys.c
+                    // WEST_KEY_WAIT). Only one script has one, and stopping a preview dead is not useful.
+                    case "WEST_KEY_WAIT":
+                        Note("This move has a developer's pause left in it, which the preview runs straight past.");
+                        break;
+
                     case "WEST_FUNC_CALL":
                     case "WEST_OLDACT_FUNC_CALL":
                         DoFuncCall(c.Args);
@@ -620,6 +778,15 @@ namespace DSPRE.Avalonia
             if (emitterNo < 0 || emitterNo >= arc.Emitters.Count) return null;
             var em = arc.Emitters[emitterNo];
             var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
+            // A particle whose picture could not be read is drawn as a plain round dot, which looks like
+            // a real effect and is not one. Say so rather than let it pass for the move's own graphics.
+            // No particle in either game fails today; this is for edited or added ones that might.
+            if (tex == null)
+                Note($"Particle {emitterNo} asks for picture {em.TexNo}, which is not in its file, so it "
+                     + "is drawn as a plain dot.");
+            else if (tex.Rgba == null)
+                Note($"Particle {emitterNo}'s picture is stored in a way DSPRE cannot read (format "
+                     + $"{tex.Format}), so it is drawn as a plain dot.");
             var (cx, cy, ax, ay, z) = Place(callback, sepIndex, sepCount);
             cx += em.PosX; cy -= em.PosY;   // emitter base offset (+Y up): hand-above (Karate Chop), L/R slap (Double Slap)
             // init_vel_axis needs an axis direction: the callback's (AXIS_ATTACK → toward defender) if it set one,
@@ -802,10 +969,27 @@ namespace DSPRE.Avalonia
         private static readonly (int x, int y)[] Pos226 = { (-11020, -3488), (10880, 7656) };
         private static readonly (int x, int y)[] Axis145 = { (2864, 3752), (-2944, 1456) };
 
+        /// <summary>How many work slots a routine can read, whatever the script passed it.</summary>
+        private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX, we_sys.h:92
+
         private void DoFuncCall(int[] a)
         {
             if (a.Length < 1) return;
-            int fn = a[0];   // FUNC_CALL layout: [funcId, cnt, p0, p1, ...]; params start at index 2.
+
+            // The games copy the script's words into the work array and then zero the rest of it
+            // (we_sys.c WEST_FUNC_CALL), so a routine handed fewer words than it reads sees zeros, and it
+            // still runs. Padding here is what makes a short call behave the same way. Across both ROMs no
+            // shipped call site is short enough to reach one of these zeros, so this changes nothing the
+            // games do; it is for scripts somebody writes here.
+            if (a.Length < 2 + WorkSlots)
+            {
+                var padded = new int[2 + WorkSlots];
+                Array.Copy(a, padded, a.Length);
+                a = padded;
+            }
+
+            int fn = a[0];
+            _routinesRun.Add(fn);   // FUNC_CALL layout: [funcId, cnt, p0, p1, ...]; params start at index 2.
             if (FN_WE_MOVE.Contains(fn)) { MoveMon(a); return; }
             if (fn == FN_WE_057)
             {
@@ -853,10 +1037,18 @@ namespace DSPRE.Avalonia
                 {   // GPWork [0]powX [1]powY [2]sync [3]num [4]mode. Shakes the mode-selected MON sprite
                     // (WE_TOOL_M1=attacker, else target), or the BG frame if WE_TOOL_BG. pow is raw pixels (1:1).
                     int mode = a.Length > 6 ? a[6] : WE_TOOL_E1;
-                    bool toScene = (mode & WE_TOOL_BG) != 0;
-                    int mon = toScene ? -1 : ((mode & WE_TOOL_M1) != 0 ? _atVis : _dfVis);
-                    _monFx.Add(new MonFx { Kind = 5, Mon = Math.Max(0, mon), ToScene = toScene,
-                        Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])), NumMax = 0 });
+                    if ((mode & WE_TOOL_BG) != 0)
+                    {
+                        _monFx.Add(new MonFx { Kind = 5, Mon = 0, ToScene = true,
+                            Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])), NumMax = 0 });
+                        break;
+                    }
+                    // The flag is a set, not a choice: STAGE shakes everybody. Nothing in either ROM asks
+                    // for the background here, and only one site asks for STAGE, but the game does what
+                    // the flag says rather than picking one.
+                    foreach (int t in TargetsFromFlags(mode))
+                        _monFx.Add(new MonFx { Kind = 5, Mon = t, ToScene = false,
+                            Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])), NumMax = 0 });
                     break;
                 }
                 case FN_BG_SHAKE when a.Length >= 6:
@@ -868,10 +1060,36 @@ namespace DSPRE.Avalonia
                     break;
                 }
 
+                // The two status overlays. Both scroll a background graphic behind the Pokemon and blend
+                // it at 12 out of 16 (wsp_steff.c:296-298). Getting better scrolls it down at 3 a frame,
+                // turning metallic scrolls it up at 6. GPWork[0] is which graphic, GPWork[1] is 0 for the
+                // attacker and anything else for the defender (StatusEffect_Param_SetUp, wsp_steff.c).
+                case 82:   // ST_EFF_RECOVER
+                case 83:   // ST_EFF_METAL
+                {
+                    double speed = fn == 82 ? 3 : -6;
+                    StartBackground(a[2], overlay: true, posX: 0, posY: 0, spdX: 0, spdY: speed,
+                        peak: 12 / 16.0, fadeFrames: 12, stopY: 0, useStop: false);
+                    // Its own task holds for STEFF_FADE_WAIT frames and then takes the blend down one
+                    // step a frame from 12 to nothing (wsp_steff.c:58, :154 and the step after it), so
+                    // about thirty-four frames all told. Without an end it would sit there for ever and
+                    // the move would never finish.
+                    _bgHoldLeft = 20;
+                    break;
+                }
+
                 case FN_HAIKEI_PAL_FADE when a.Length >= 6:
                 {   // Issues the palette-fade request (pfd, MAIN_BG, bit, WAIT=GPWork[1], START_EVY=GPWork[2],
                     // END_EVY=GPWork[3], COLOR=GPWork[4]). evy/16 = darkening toward COLOR; the fade ramps 1 evy step per
                     // `wait` frames so the duration = |end−start|·wait. (Was reading the args shifted, backgrounds didn't show.)
+                    // GPWork[0] picks the palette set: 0 the backdrop, 1 the first effect layer, 2 the
+                    // second. Only the backdrop is drawn here, so fading it for one of the others would
+                    // colour the wrong thing. Two of HeartGold's 274 calls ask for the second layer.
+                    if (a[2] != 0)
+                    {
+                        Note("This move fades an effect layer's colours, which the preview does not draw.");
+                        break;
+                    }
                     int wait = a[3];   // s8 in, may be NEGATIVE (Thunder uses -4)
                     int startEvy = a[4], endEvy = a.Length > 5 ? a[5] : 0;
                     _fadeStart = Math.Clamp(startEvy / 16.0, 0, 1);
@@ -899,7 +1117,7 @@ namespace DSPRE.Avalonia
                     int per = upF + wait + downF;
                     _monFx.Add(new MonFx
                     {
-                        Mon = MonFromFlag(a, 2), Kind = 1, Frames = num * per,
+                        Mon = Math.Max(0, MonFromFlag(a, 2)), Kind = 1, Frames = num * per,
                         Keys = new[] { sx, ex, sy, ey }, UpF = upF, WaitF = wait, DownF = downF, Cycles = num,
                     });
                     break;
@@ -921,12 +1139,16 @@ namespace DSPRE.Avalonia
                 }
                 case FN_POKE_VANISH:                                // GPWork [0]target [1]flag
                     // (0=show, 1=hide). An INSTANT, PERSISTENT visibility set, not a blink.
-                    _monVanish[MonFromFlag(a, 2)] = a.Length > 3 && a[3] != 0;
+                    {
+                        int vm = MonFromFlag(a, 2);
+                        if (vm >= 0) _monVanish[vm] = a.Length > 3 && a[3] != 0;
+                    }
                     break;
                 case FN_DISP_OUT:                                   // GPWork [0]target [1]wait. Slide
                     // the mon off-screen (X→−80 if on the bottom/own side, →336 if top) over `wait` frames; stays out.
                     {
                         int mon = MonFromFlag(a, 2), wait = Math.Max(1, a.Length > 3 ? a[3] : 1);
+                        if (mon < 0) break;   // the flag picked nobody, so nothing happens
                         double restX = mon == 0 ? _atX : _dfX;
                         _monFx.Add(new MonFx { Mon = mon, Kind = 4, Frames = wait, Dx = OffscreenX(mon) - restX, Dy = 0 });
                     }
@@ -935,13 +1157,17 @@ namespace DSPRE.Avalonia
                     // [1]target [2]wait. mode 0 slides off-screen; else snaps off-screen then slides back to default.
                     {
                         int mode = a.Length > 2 ? a[2] : 0, mon = MonFromFlag(a, 3), wait = Math.Max(1, a.Length > 4 ? a[4] : 1);
+                        if (mon < 0) break;   // the flag picked nobody, so nothing happens
                         double restX = mon == 0 ? _atX : _dfX, off = OffscreenX(mon) - restX;
                         if (mode == 0) _monFx.Add(new MonFx { Mon = mon, Kind = 4, Frames = wait, Dx = off, Dy = 0 });
                         else { MonDX[mon] = off; _monFx.Add(new MonFx { Mon = mon, Kind = 4, Frames = wait, Dx = -off, Dy = 0 }); }
                     }
                     break;
                 case FN_DISP_DEF:                                    // GPWork [0]target. Snap the mon
-                    MonDX[MonFromFlag(a, 2)] = MonDY[MonFromFlag(a, 2)] = 0;   // back to its default position, instantly.
+                    {
+                        int dm = MonFromFlag(a, 2);
+                        if (dm >= 0) MonDX[dm] = MonDY[dm] = 0;   // back to its default position, instantly.
+                    }
                     break;
                 case FN_PALCOL_CHANGE:                               // the grayscale-toggle handler: GPWork [0] !=0 → grayscale the
                     Grayscale = a.Length > 2 && a[2] != 0;           // scene palette, 0 → restore normal.
@@ -970,8 +1196,12 @@ namespace DSPRE.Avalonia
                 case 5:    // Strength: the attacker SQUASHES 1.0→GPWork[0]/100 (+ a light shake),
                 {          // pulses a colour WE070_FADE_CNT 3× (evy 10/16, col 0x1F = RED) while squashed, then STRETCHES to
                            // GPWork[1]/100 ("びよよーん" boing) and settles to 1.0. My old handler did ONLY the shake.
-                    int sq = a.Length > 2 ? a[2] : 70, st = a.Length > 3 ? a[3] : 120;   // GPWork[0] squash, [1] stretch (/100)
-                    int sqSync = a.Length > 4 ? Math.Max(1, a[4]) : 10, stSync = a.Length > 5 ? Math.Max(1, a[5]) : 5;
+                    // What the routine itself reads is only two of these: WestSp_WE_070 (wsp_goto.c) passes
+                    // GPWork[0] as the end scale and GPWork[2] as how many frames it takes, and never
+                    // touches [1] or [3]. The stretch below comes from the task that runs afterwards and
+                    // has not been re-checked against it.
+                    int sq = a.Length > 2 ? a[2] : 70, st = a.Length > 3 ? a[3] : 120;   // GPWork[0] end scale (/100)
+                    int sqSync = a.Length > 4 ? Math.Max(1, a[4]) : 10, stSync = a.Length > 5 ? Math.Max(1, a[5]) : 5;   // GPWork[2] frames
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(2, 0, 1, 4), NumMax = 0 });
                     AddScaleSeq(_atVis, new[] { new double[]{100,sq,100,sq,sqSync}, new double[]{sq,sq,sq,sq,18},
                         new double[]{sq,st,sq,st,stSync}, new double[]{st,100,st,100,5} });
@@ -1005,7 +1235,8 @@ namespace DSPRE.Avalonia
                     {
                         int rn = Math.Max(1, a[2]), sync = Math.Max(1, a[3]);
                         double dir = (a[4] & WE_TOOL_M1) != 0 ? -1 : 1;
-                        _monFx.Add(new MonFx { Mon = MonFromFlag(a, 4), Kind = 22, Frames = sync * rn, Cycles = rn, Dx = dir });
+                        int om = MonFromFlag(a, 4);
+                        if (om >= 0) _monFx.Add(new MonFx { Mon = om, Kind = 22, Frames = sync * rn, Cycles = rn, Dx = dir });
                     }
                     break;
                 case 58:   // defender shrinks to 20% (the scale-rate keyframe helper 100→20) over 10 (a vanish/shrink).
@@ -1057,6 +1288,21 @@ namespace DSPRE.Avalonia
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 5, Sh = new Shake(2, 0, 1, 6), NumMax = 0 });
                     AddScaleSeq(_dfVis, new[] { new double[]{100,120,100,150,7}, new double[]{120,100,150,100,4} });
                     break;
+                // WE_148: the background whitens and the attacker darkens together, both hold five frames,
+                // then both come back (We148_TCB, wsp_goto.c). The background colour is 0x7FFF (white) and
+                // the sprite's is 0x0000 (black); the background's wait of -2 means it steps fast rather
+                // than slowly, the same reading the palette-fade routine uses.
+                case 16:
+                {
+                    const int fadeIn = 8, hold = 5;
+                    _fadeStart = 0; _fadeEnd = 1; _fadeCur = 0;
+                    FadeR = FadeG = FadeB = 255;
+                    _fadeFrames = _fadeFramesLeft = fadeIn * 2 + hold;
+                    _monFx.Add(new MonFx { Mon = _atVis, Kind = 6, Frames = fadeIn * 2 + hold,
+                        UpF = fadeIn, WaitF = hold, Cycles = 1, Keys = new double[] { 16 },
+                        R = 0, G = 0, B = 0 });
+                    break;
+                }
                 case 17:   // attacker scales 1.4→1.0 (START14/END10) over SYNC 8 (appears + settles).
                     AddScaleSeq(_atVis, new[] { new double[]{140,100,140,100,8} });
                     break;
@@ -1106,6 +1352,7 @@ namespace DSPRE.Avalonia
                 case 67:   // the rectangular wipe-reveal handler: vertical wipe-reveal of the GPWork[0]-mon over `wait` (GPWork[4]); GPWork[3] sign = dir.
                 {   // my>0 → reveal top-down; my≤0 → bottom-up. SoftSpriteVisibleSet grows the visible band.
                     int mon = MonFromFlag(a, 2), wait = Math.Max(1, a.Length > 6 ? a[6] : 8);
+                        if (mon < 0) break;   // the flag picked nobody, so nothing happens
                     int my = a.Length > 5 ? a[5] : 1;
                     _monFx.Add(new MonFx { Mon = mon, Kind = 15, Frames = wait, Dx = my > 0 ? 1 : -1 });
                     break;
@@ -1199,17 +1446,25 @@ namespace DSPRE.Avalonia
                     int start = a.Length > 5 ? a[5] : 0, end = a.Length > 6 ? a[6] : 16, col = a.Length > 7 ? a[7] : 0;
                     int capId = CapIdFromToolFlag(mode);
                     DroppedCap cap = (capId >= 0 && _caps.TryGetValue(capId, out var dc)) ? dc : null;
-                    _monFx.Add(new MonFx { Mon = capId >= 0 ? 0 : MonFromFlag(a, 2), Cap = cap, Kind = 12, Frames = wait,
+                    _monFx.Add(new MonFx { Mon = capId >= 0 ? 0 : Math.Max(0, MonFromFlag(a, 2)), Cap = cap, Kind = 12, Frames = wait,
                         Keys = new double[] { start, end }, R = R5(col), G = G5(col), B = B5(col) });
                     break;
                 }
-                case 73:   // the emitter's simple up/down-scale handler: the emitter rises from the target mon to DispOutTop (screen y=−60, i.e.
-                {   // PT_LCD_T + 60·PT_LCD_DOT) and back, looping. GPWork [0]emit_id [1]target [2]mode [3]time [4]wait.
+                case 73:   // EMIT_SIMPLE_UD (wsp_tool.c:3881): move an emitter straight between the mon and a point
+                {   // 60px above the top of the screen, once, over `time` frames after `wait` frames of delay. Mode
+                    // picks the direction: 0 comes down onto the mon, anything else rises away from it. Both ends
+                    // share the mon's x, so nothing moves sideways. The tick is the same one EMIT_STRAIGHT uses.
                     var sim = FindEmitter(a.Length > 2 ? a[2] : 0);
-                    int time = Math.Max(1, a.Length > 5 ? a[5] : 16);
-                    double monY = (a.Length > 3 && a[3] == 0) ? _atY : _dfY;
-                    double amp = monY + 60;   // sim +Y-up distance from the mon (screen monY) up to off-top (screen −60)
-                    sim?.SetEmitterMotion(f => { double tt = (f % (2 * time)) / (double)time; double up = tt < 1 ? tt : 2 - tt; return (0, up * amp); });
+                    double monY73 = (a.Length > 3 && a[3] == 0) ? _atY : _dfY;
+                    int mode73 = a.Length > 4 ? a[4] : 0;
+                    int time73 = Math.Max(1, a.Length > 5 ? a[5] : 16);
+                    int wait73 = a.Length > 6 ? Math.Max(0, a[6]) : 0;
+                    double amp73 = monY73 + 60;   // +Y is up here: from the mon at screen monY to screen −60
+                    sim?.SetEmitterMotion(f =>
+                    {
+                        double t = Math.Clamp((f - wait73) / (double)time73, 0, 1);
+                        return (0, mode73 == 0 ? amp73 * (1 - t) : amp73 * t);
+                    });
                     break;
                 }
                 case 69:   // the mosaic-level handler: pixelate the mon, ramp level GPWork[2]→(15 if add>0 else 0) by add/frame.
@@ -1230,6 +1485,7 @@ namespace DSPRE.Avalonia
                     // x = 16·sin(θ), y = −4·cos(θ); base raised +8 (poke.p.y −= ROTA_W_Y=−8). θ advances 2π/sync per
                     // frame for rota_num revolutions (work[0]=sync·rota_num total). GPWork [0]target [1]rota_num [2]sync.
                     int mon = MonFromFlag(a, 2), rotaNum = Math.Max(1, a[3]), sync = Math.Max(1, a[4]);
+                        if (mon < 0) break;   // the flag picked nobody, so nothing happens
                     _monFx.Add(new MonFx { Mon = mon, Kind = 7, Frames = sync * rotaNum, Keys = new double[] { 16, -4, sync, 8 } });
                     break;
                 }
@@ -1246,7 +1502,7 @@ namespace DSPRE.Avalonia
                     int fadeWait = Math.Max(0, a[3]), count = Math.Max(1, a[4]), col = a[5];
                     int evyMax = a.Length > 6 ? a[6] : 8, wait = a.Length > 7 ? a[7] : 0;
                     int cyc = Math.Max(1, 2 * fadeWait + wait);
-                    _monFx.Add(new MonFx { Mon = MonFromFlag(a, 2), Kind = 6, Frames = count * cyc,
+                    _monFx.Add(new MonFx { Mon = Math.Max(0, MonFromFlag(a, 2)), Kind = 6, Frames = count * cyc,
                         UpF = fadeWait, WaitF = wait, Cycles = count, Keys = new[] { (double)evyMax },
                         R = R5(col), G = G5(col), B = B5(col) });
                     break;
@@ -1268,6 +1524,10 @@ namespace DSPRE.Avalonia
                     // (WET_PokeParticlePosGet(s_client)), which may differ from where the emitter spawned, e.g. Fire
                     // Screw (we_463) emits at the attacker but orbits the DEFENDER. Re-centre via a constant shift.
                     int rotTgt = a.Length > 10 ? a[10] : 0;
+                    // GPWork[9] picks which set of particles to swing. Nine of HeartGold's 105 calls ask
+                    // for one other than the first, and only the first is simulated.
+                    if (a.Length > 11 && a[11] != 0)
+                        Note("This move swings a second set of particles, which the preview does not show.");
                     double rtX = rotTgt == 0 ? _atX : _dfX, rtY = rotTgt == 0 ? _atY : _dfY;
                     double shX = rtX - sim.AnchorX, shY = sim.AnchorY - rtY;   // sim space (+Y up)
                     sim.SetEmitterMotion(f =>
@@ -1350,10 +1610,23 @@ namespace DSPRE.Avalonia
         private static byte B5(int c) => (byte)(((c >> 10) & 0x1F) << 3);
 
         // Which sprite a routine targets, from its WE_TOOL flag arg (M1=attacker, E1=defender; defaults to defender).
+        /// <summary>
+        /// Every Pokemon a target flag picks out, in the order WT_SSPointerGet (we_tool.c:1431) picks them.
+        ///
+        /// STAGE means all of them and OTHER means everyone but the attacker, which in a single battle is
+        /// just the defender. M2 and E2 are the allies and only exist in a double battle, so a flag asking
+        /// only for one of those comes back empty and the caller does nothing, the same as the game.
+        /// Across HeartGold's own scripts that is 37 call sites: 28 of WT_SHAKE, 4 of WE_T05, 5 of WE_T10.
+        /// Only the WT_SHAKE ones were being got wrong; MoveMon already stopped on an ally-only flag.
+        /// </summary>
+        private List<int> TargetsFromFlags(int flag) => WestTargetFlags.Targets(flag, _atVis, _dfVis);
+
+        /// <summary>The first Pokemon a target flag picks out, or -1 when it picks out none.</summary>
         private int MonFromFlag(int[] a, int idx)
         {
             int flag = idx < a.Length ? a[idx] : WE_TOOL_E1;
-            return (flag & WE_TOOL_M1) != 0 ? _atVis : _dfVis;
+            var t = TargetsFromFlags(flag);
+            return t.Count > 0 ? t[0] : -1;
         }
 
         // WEST_CATS_ACT_ADD[_EZ]: create a cell actor at the defender position. EZ keeps it in slot cap_id (a later
@@ -2049,11 +2322,19 @@ namespace DSPRE.Avalonia
                         break;
                     case 18:  // handler 289 (Snatch): 3 the straight-line sync-move helper segments of 15f each, home→Dx(off one edge),
                     {   // Dx→Dy (off the other, an invisible cross-screen), Dy→home. point_x[0,1,2] = Dx, Dy, home.
+                        // The step since last frame, not the position: MonDX is a running offset that
+                        // nothing clears, so adding a position every frame walks the sprite off screen.
                         double home = fx.Mon == 0 ? _atX : _dfX;
-                        int seg = Math.Min(2, fx.Frame / 15); double k = (fx.Frame % 15) / 15.0;
-                        double from = seg == 0 ? home : seg == 1 ? fx.Dx : fx.Dy;
-                        double to = seg == 0 ? fx.Dx : seg == 1 ? fx.Dy : home;
-                        MonDX[fx.Mon] += (from + (to - from) * k) - home;
+                        double Where(int f)
+                        {
+                            if (f < 0) return 0;
+                            int sg = Math.Min(2, f / 15); double kk = (f % 15) / 15.0;
+                            double a2 = sg == 0 ? home : sg == 1 ? fx.Dx : fx.Dy;
+                            double b2 = sg == 0 ? fx.Dx : sg == 1 ? fx.Dy : home;
+                            return (a2 + (b2 - a2) * kk) - home;
+                        }
+                        double at = fx.Frame >= fx.Frames - 1 ? 0.0 : Where(fx.Frame);
+                        MonDX[fx.Mon] += at - Where(fx.Frame - 1);
                         break;
                     }
                     case 17:  // handler 272 (Role Play): the attacker's white image appears at the defender (−32px), fading in
@@ -2062,12 +2343,22 @@ namespace DSPRE.Avalonia
                         break;
                     case 13:  // there-and-back move (jump): slide (Dx,Dy) out over UpF, hold WaitF at full, back over DownF.
                     {
+                        // MonDX is a running offset that nothing resets between frames, so what goes in here
+                        // is the STEP since last frame, not where the sprite should be. Adding the position
+                        // every frame made Megahorn's charge pile up to 480px off screen and stay there.
                         int up = Math.Max(1, fx.UpF), hold = Math.Max(0, fx.WaitF), down = Math.Max(1, fx.DownF);
-                        double k;
-                        if (fx.Frame < up) k = (double)fx.Frame / up;
-                        else if (fx.Frame < up + hold) k = 1.0;                          // hold at the extended position
-                        else k = 1 - (double)(fx.Frame - up - hold) / down;
-                        MonDX[fx.Mon] += fx.Dx * k; MonDY[fx.Mon] += fx.Dy * k;
+                        double At(int f)
+                        {
+                            if (f < 0) return 0;
+                            if (f < up) return (double)f / up;
+                            if (f < up + hold) return 1.0;
+                            return Math.Max(0, 1 - (double)(f - up - hold) / down);
+                        }
+                        // On the last frame it goes all the way home rather than wherever the ramp had got
+                        // to, otherwise the sprite is left a step short of where it started for ever.
+                        double now = fx.Frame >= fx.Frames - 1 ? 0.0 : At(fx.Frame);
+                        double step = now - At(fx.Frame - 1);
+                        MonDX[fx.Mon] += fx.Dx * step; MonDY[fx.Mon] += fx.Dy * step;
                         break;
                     }
                     case 22:  // the rotation-motion builder orbit (Rolling Kick 098 / Submission 066 / Vital Throw 233): SetSspMatrix
@@ -2075,9 +2366,18 @@ namespace DSPRE.Avalonia
                               // bobbing DOWN 0→16, completing Cycles full turns. Dx sign = rotation direction (vec_x). Reads
                               // as a roll/spin. (Was a bitmap self-rotation /, Submission, a scale; both unfaithful.)
                         double turns = fx.Cycles > 0 ? fx.Cycles : 1, dir = fx.Dx < 0 ? -1 : 1;
+                        // Steps again, for the same reason as the there-and-back move above.
+                        (double x, double y) Orbit(int f)
+                        {
+                            if (f < 0) return (0, 0);
+                            double a3 = 2 * Math.PI * turns * (f / (double)Math.Max(1, fx.Frames));
+                            return (Math.Sin(a3) * 32 * dir, 8 * (1 - Math.Cos(a3)));
+                        }
+                        var nowP = fx.Frame >= fx.Frames - 1 ? (0.0, 0.0) : Orbit(fx.Frame);
+                        var prevP = Orbit(fx.Frame - 1);
+                        MonDX[fx.Mon] += nowP.Item1 - prevP.Item1;
+                        MonDY[fx.Mon] += nowP.Item2 - prevP.Item2;
                         double ang = 2 * Math.PI * turns * ((double)fx.Frame / Math.Max(1, fx.Frames));
-                        MonDX[fx.Mon] += Math.Sin(ang) * 32 * dir;
-                        MonDY[fx.Mon] += 8 * (1 - Math.Cos(ang));
                         for (int gi = 0; gi < fx.NumMax; gi++)   // WE_098 zanzou: NumMax trails at the orbit pos DO_WAIT(2)·(i+1) frames back
                         {
                             int pf = fx.Frame - 2 * (gi + 1);
@@ -2183,6 +2483,7 @@ namespace DSPRE.Avalonia
             _bgWrapW = overlay ? FX_BG_WRAP : _bgW;
             _bgWrapH = overlay ? FX_BG_WRAP : _bgH;
             _bgX = posX; _bgY = posY; _bgSpdX = spdX; _bgSpdY = spdY;
+            _bgHoldLeft = -1;
             _bgOpacity = 0; _bgPeak = peak; _bgFadeFrames = Math.Max(1, fadeFrames);
             _bgStopY = stopY; _bgUseStop = useStop; _bgFadingOut = false; _bgOverlay = overlay;
         }
@@ -2190,6 +2491,7 @@ namespace DSPRE.Avalonia
         private void UpdateBackground()
         {
             if (_bgRgba == null) return;
+            if (_bgHoldLeft > 0 && --_bgHoldLeft == 0) _bgFadingOut = true;   // its time is up, wash it off
             _bgX += _bgSpdX; _bgY += _bgSpdY;                               // scroll every frame (even while fading out)
             if (_bgUseStop && !_bgFadingOut && ((_bgSpdY > 0 && _bgY >= _bgStopY) || (_bgSpdY < 0 && _bgY <= _bgStopY)))
                 _bgFadingOut = true;                                        // reached the stop line → wash off
@@ -2265,6 +2567,11 @@ namespace DSPRE.Avalonia
                           // variant BAKES its source + aim into base.pos/base.axis (Water Gun index0 base.pos = the
                           // player's mouth, index3 = the enemy's; Hyper Beam likewise), so anchor at the PARTICLE
                           // ORIGIN and let base.pos place it, NOT the attacker (that double-offset it off-screen).
+                    return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
+                case 0:   // DummyEmitCallback (wp_tbl.c:46 -> :111) does nothing at all: it never sets an
+                          // emitter position, so the emitter stays where its own data puts it, exactly like
+                          // SEP_POS below. Anchoring it to the defender moved every one of the 16 moves that
+                          // use it, Blizzard among them.
                     return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
                 case 1: case 3: case 19: case 21:                                   // attacker
                     return (_atX, _atY, 0, 0, ZOfVis(_atVis));

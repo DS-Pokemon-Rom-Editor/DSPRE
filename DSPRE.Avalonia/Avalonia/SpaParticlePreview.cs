@@ -81,6 +81,14 @@ namespace DSPRE.Avalonia
 
         public void Step() { foreach (var l in _layers) l.Sim.Step(); }
 
+        /// <summary>Where every live particle is, for anything that needs to look at them rather than draw them.</summary>
+        public IEnumerable<SpaParticleState> LiveParticles()
+        {
+            foreach (var l in _layers)
+                foreach (var p in l.Sim.Particles())
+                    yield return p;
+        }
+
         public WriteableBitmap RenderFrame()
         {
             Array.Clear(_buf, 0, _buf.Length);

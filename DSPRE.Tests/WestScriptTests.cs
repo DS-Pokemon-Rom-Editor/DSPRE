@@ -35,8 +35,11 @@ namespace DSPRE.Tests
         [Fact]
         public void OpcodeTable_VersionTail()
         {
-            Assert.Equal(86, WestOpcodes.Count(WazaSeqVersion.Plat));
-            Assert.Equal(89, WestOpcodes.Count(WazaSeqVersion.HGSS));
+            // One fewer than west.h lists in each game: WEST_POKEOAM_CHECK is behind
+            // ".if PL_G0236_081028_FIX", which is (0) in both trees, so neither game has it.
+            // See WestCorpusSweepTests for what counting it did to the two moves that use FLASH.
+            Assert.Equal(85, WestOpcodes.Count(WazaSeqVersion.Plat));
+            Assert.Equal(88, WestOpcodes.Count(WazaSeqVersion.HGSS));
             Assert.True(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_FLASH") >= 0);   // HGSS-only
             Assert.Equal(-1, WestOpcodes.Id(WazaSeqVersion.Plat, "WEST_FLASH"));
         }

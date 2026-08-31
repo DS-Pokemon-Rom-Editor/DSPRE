@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -77,7 +77,8 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (value != _archiveIndex) SelectArchive(value); }
         }
 
-        private bool IsWest => (Archive)_archiveIndex == Archive.MoveAnimation;
+        /// <summary>Whether the move-animation archive is the one open. The three views are for it.</summary>
+        public bool IsWest => (Archive)_archiveIndex == Archive.MoveAnimation;
         private ScriptNarc CurrentNarc => _narcs[_archiveIndex];
 
         /// <summary>Builds the reference data for the command guide window, for whichever command set this
@@ -129,6 +130,32 @@ namespace DSPRE.Avalonia.ViewModels
         /// each render allocates several MB on the Large Object Heap, and doing that on the UI dispatcher thread
         /// (which drives <see cref="WestPlayer"/>'s 60Hz preview timer) causes LOH-churn GC pauses that stall the
         /// animation loop.</summary>
+        /// <summary>
+        /// The cry of whichever Pokemon the preview is showing as the attacker. WEST_VOICE_PLAY hands the
+        /// games a pan and a volume as well; neither is applied here.
+        /// </summary>
+        private void PreviewCry()
+        {
+            int species = _gaugeSpeciesId;
+            if (species <= 0) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var pcm = SoundArchive.RenderCry(species);
+                    if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
+                }
+                catch { /* a preview should not put a dialog up because a sound would not play */ }
+            });
+        }
+
+        /// <summary>Stops what is playing. The output mixes everything together, so this stops all of it
+        /// rather than the one sound the script named.</summary>
+        private void PreviewStopSound(int soundId)
+        {
+            try { AudioOutput.Current.Stop(); } catch { }
+        }
+
         private void PreviewSound(int soundId)
         {
             var sdat = LoadSdat();
@@ -168,6 +195,97 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Friendly opcode titles (index = opcode id); drives the per-row opcode dropdown.</summary>
         public ObservableCollection<string> OpcodeDisplayNames { get; } = new ObservableCollection<string>();
 
+        // ── the three ways of reading a script ──────────────────────────────────────
+
+        /// <summary>The lines the chosen view shows. All three read the same commands.</summary>
+        public ObservableCollection<WestLine> ViewLines { get; } = new ObservableCollection<WestLine>();
+
+        private WestLine _pickedLine;
+        /// <summary>The line somebody clicked, which is what the panel beside it explains.</summary>
+        public WestLine PickedLine
+        {
+            get => _pickedLine;
+            set
+            {
+                if (!Set(ref _pickedLine, value)) return;
+                OnPropertyChanged(nameof(PickedDetail));
+                OnPropertyChanged(nameof(PickedSource));
+                OnPropertyChanged(nameof(HasPickedDetail));
+            }
+        }
+
+        public string PickedDetail => _pickedLine?.Detail ?? "";
+        public string PickedSource => string.IsNullOrEmpty(_pickedLine?.Source) ? "" : "From " + _pickedLine.Source;
+        public bool HasPickedDetail => !string.IsNullOrEmpty(PickedDetail);
+
+        /// <summary>Which view is showing. Remembered between sessions.</summary>
+        public int ViewMode
+        {
+            get => DSPRE.SettingsManager.Settings?.moveAnimationViewMode ?? 0;
+            set
+            {
+                int v = Math.Clamp(value, 0, 2);
+                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.moveAnimationViewMode == v) return;
+                DSPRE.SettingsManager.Settings.moveAnimationViewMode = v;
+                try { DSPRE.SettingsManager.Save(); } catch { }
+                OnPropertyChanged(nameof(ViewMode));
+                OnPropertyChanged(nameof(ViewNote));
+                RefreshViewLines();
+            }
+        }
+
+        public string ViewNote => ViewMode switch
+        {
+            0 => "Grouped by what part of the move each command belongs to, with the shorthands the scripts "
+               + "were written in folded back to one line.",
+            1 => "One command a line, lined up in columns, with loops and subroutine bodies indented.",
+            _ => "Every word as it sits in the ROM: where it is, its number, its name, its values and their hex. "
+               + "Nothing folded and nothing hidden.",
+        };
+
+        /// <summary>Builds the lines for whichever view is showing, from the commands as they stand now.</summary>
+        public void RefreshViewLines()
+        {
+            ViewLines.Clear();
+            if (!IsWest) { OnPropertyChanged(nameof(HasViewLines)); return; }
+
+            var cmds = Rows.Select(r => new WazaSeqCommand(r.OpId, r.Args.ToArray())).ToList();
+            int pos = 0;
+            foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
+
+            foreach (var l in WestScriptDisplay.Build(cmds, _version, (WestViewMode)ViewMode, SoundNameOf))
+                ViewLines.Add(l);
+            OnPropertyChanged(nameof(HasViewLines));
+            OnPropertyChanged(nameof(ViewSummary));
+        }
+
+        public bool HasViewLines => ViewLines.Count > 0;
+
+        private int _openTab;
+        /// <summary>Which of Read, Cards and Text is open, so help meant for one does not sit above them all.</summary>
+        public int OpenTab
+        {
+            get => _openTab;
+            set { if (Set(ref _openTab, value)) OnPropertyChanged(nameof(ShowTextHelp)); }
+        }
+
+        /// <summary>The note about how to write a command belongs to the text view, not to the others.</summary>
+        public bool ShowTextHelp => _openTab == 2 || !IsWest;
+
+        public string ViewSummary
+        {
+            get
+            {
+                int shown = ViewLines.Count(l => !l.IsHeading);
+                int commands = Rows.Count;
+                if (commands == 0) return "";
+                return shown == commands
+                    ? $"{commands} commands"
+                    : $"{shown} lines for {commands} commands";
+            }
+        }
+
+
         private void SelectArchive(int index)
         {
             _archiveIndex = Math.Clamp(index, 0, 3);
@@ -184,6 +302,7 @@ namespace DSPRE.Avalonia.ViewModels
 
             BuildFileList();
             OnPropertyChanged(nameof(IsWest));
+            OnPropertyChanged(nameof(ShowTextHelp));
             OnPropertyChanged(nameof(ArchiveNotAvailable));
             OnPropertyChanged(nameof(ArchiveUnavailableText));
             // Reset to the first entry of the new archive.
@@ -236,7 +355,11 @@ namespace DSPRE.Avalonia.ViewModels
         public bool HasRows => Rows.Count > 0;
 
         private bool _dirty;
-        public bool Dirty { get => _dirty; private set => Set(ref _dirty, value); }
+        public bool Dirty
+        {
+            get => _dirty;
+            private set { if (Set(ref _dirty, value)) OnPropertyChanged(nameof(SaveHint)); }
+        }
 
         private void LoadEntry()
         {
@@ -252,6 +375,7 @@ namespace DSPRE.Avalonia.ViewModels
             Dirty = false;
             TextErrors = Array.Empty<TextError>();
             SyncTextFromRows();   // seed the text view from the freshly-loaded cards
+            RefreshViewLines();
             RefreshStoryboard();
             SetupCellPreview();
             OnPropertyChanged(nameof(HasRows));
@@ -279,6 +403,7 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void OnRowEdited(ScriptCmdRow row)
         {
+            RefreshViewLines();
             Dirty = true;
             RefreshStoryboard();
             SyncTextFromRows();
@@ -594,10 +719,16 @@ namespace DSPRE.Avalonia.ViewModels
         public bool ShowStoryboard => IsAvailable && HasRows;
         public string StoryboardTitle => IsWest ? "Animation storyboard" : "Effect summary";
 
+        // The animation storyboard is a column of frame numbers and reads best left alone; the effect
+        // summary is prose and was running off the right-hand edge behind a scrollbar.
+        public global::Avalonia.Media.TextWrapping StoryboardWrap =>
+            IsWest ? global::Avalonia.Media.TextWrapping.NoWrap : global::Avalonia.Media.TextWrapping.Wrap;
+
         private void RefreshStoryboard()
         {
             OnPropertyChanged(nameof(ShowStoryboard));
             OnPropertyChanged(nameof(StoryboardTitle));
+            OnPropertyChanged(nameof(StoryboardWrap));
             if (!HasRows) { Storyboard = ""; return; }
             var cmds = BuildCommands();
             Storyboard = IsWest ? WestStoryboard.Build(cmds, _version) : WazaSeqStoryboard.Build(cmds, _version);
@@ -617,6 +748,22 @@ namespace DSPRE.Avalonia.ViewModels
         // Any WEST entry shows the battle scene, even moves with no particles still animate (lunge/shake/fade).
         public bool HasPreview => IsWest && _fileIndex >= 0;
         public string CellAnimNote { get; private set; } = "";
+
+        /// <summary>
+        /// What this move does that the preview does not show, gathered from the player while it runs.
+        /// Better said out loud than left for somebody to spot a difference and wonder whose fault it is.
+        /// </summary>
+        public string PreviewNotes => _west == null || _west.Notes.Count == 0
+            ? "" : "Not shown here: " + string.Join(" ", _west.Notes);
+
+        public bool HasPreviewNotes => PreviewNotes.Length > 0;
+
+        private int _notesShown;
+
+        /// <summary>Why Save is greyed out, so a disabled button is not left unexplained.</summary>
+        public string SaveHint => Dirty
+            ? "Write these commands back into the ROM."
+            : "Nothing has been changed yet, so there is nothing to write back.";
         private Bitmap _cellPreview;
         public Bitmap CellPreview { get => _cellPreview; private set => Set(ref _cellPreview, value); }
         private Bitmap _particlePreview;
@@ -693,6 +840,29 @@ namespace DSPRE.Avalonia.ViewModels
             set { if (Set(ref _attackerIsEnemy, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
         }
 
+        // Some moves hold two animations and the game alternates them by the battle's turn count
+        // (we_sys.c:3018). Only the first one plays here unless this is ticked, so the second was
+        // previously impossible to see or check.
+        private bool _secondTurnVariant;
+        public bool SecondTurnVariant
+        {
+            get => _secondTurnVariant;
+            set { if (Set(ref _secondTurnVariant, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
+        }
+
+        /// <summary>Whether the open move has a second animation at all, so the choice is only offered when it means something.</summary>
+        public bool HasTurnCheck
+        {
+            get
+            {
+                var cmds = BuildCommands();
+                if (cmds == null) return false;
+                foreach (var c in cmds)
+                    if (WestOpcodes.Name(_version, c.OpId) == "WEST_TURN_CHK") return true;
+                return false;
+            }
+        }
+
         private void EnsureScene()
         {
             if (_sceneLoaded) return;
@@ -756,7 +926,9 @@ namespace DSPRE.Avalonia.ViewModels
             for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop #{i}");
             return l;
         }
-        private int _backgroundIndex;
+        // A real battle always has a backdrop and a real ground, so start on grass rather than on black with
+        // placeholder platforms: on black, every move that swaps the backdrop looks brighter than it does in game.
+        private int _backgroundIndex = 1;
         public int BackgroundIndex
         {
             get => _backgroundIndex;
@@ -781,7 +953,7 @@ namespace DSPRE.Avalonia.ViewModels
             l.AddRange(DSPRE.Avalonia.Data.BattleGroundRenderer.TerrainNames);
             return l;
         }
-        private int _terrainIndex;
+        private int _terrainIndex = 3;   // Lawn, the ordinary grass battle
         public int TerrainIndex
         {
             get => _terrainIndex;
@@ -881,7 +1053,14 @@ namespace DSPRE.Avalonia.ViewModels
         }
         public string GaugeLevelText => "Lv" + _gaugeLevel;
         public double GaugeHpBarWidth => 48.0 * _gaugeHpPercent / 100.0;        // groove is 48px, measured off real battles
-        public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? Brushes.LimeGreen : _gaugeHpPercent > 20 ? Brushes.Gold : Brushes.OrangeRed;
+        // All three read off real Platinum battles, by watching the player's bar take damage across fourteen
+        // recordings. Gold and OrangeRed, which stood in for the last two, were both too bright.
+        private static IBrush Bar(byte r, byte g, byte b) =>
+            new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(r, g, b));
+        private static readonly IBrush GaugeGreen = Bar(0x18, 0xC3, 0x20);
+        private static readonly IBrush GaugeAmber = Bar(0xEB, 0xAA, 0x00);
+        private static readonly IBrush GaugeRed = Bar(0xFB, 0x41, 0x10);
+        public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? GaugeGreen : _gaugeHpPercent > 20 ? GaugeAmber : GaugeRed;
         /// <summary>HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.</summary>
         public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
             ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x28, 0x28, 0x28))
@@ -1109,10 +1288,14 @@ namespace DSPRE.Avalonia.ViewModels
             // Anchor the attacker on the chosen side: player (bottom) by default, enemy (top) when toggled.
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
+            _notesShown = 0;
             _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
-                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove());
+                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove())
+            { SecondTurnVariant = _secondTurnVariant };
             _west.Cells = _cellRenderer;   // general CATS engine: ACT_ADD opcodes spawn live cell actors from these
             _west.PlaySound = PreviewSound;   // WEST_SE-family opcodes audibly play their sound during preview
+            _west.PlayCry = PreviewCry;       // WEST_VOICE_PLAY plays the attacking Pokemon's own cry
+            _west.StopSound = PreviewStopSound;
             _west.MovePower = GetMovePower();   // real base power (MoveData.damage) for WE_222's power-scaled shake
             int moveFlag = GetMoveFlagField();  // WazaData byte 11: hide gauges unless FLAG_PUT_GAUGE, shadow if DEL_SHADOW
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
@@ -1139,9 +1322,12 @@ namespace DSPRE.Avalonia.ViewModels
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
             _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
-                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId));
+                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId))
+            { SecondTurnVariant = _secondTurnVariant };
             _west.Cells = _cellRenderer;
             _west.PlaySound = PreviewSound;
+            _west.PlayCry = PreviewCry;
+            _west.StopSound = PreviewStopSound;
             _west.MovePower = GetMovePower(moveId);
             int moveFlag = GetMoveFlagField(moveId);
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
@@ -1195,6 +1381,14 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 if (cellsViaCats && CellOpacity != 0) CellOpacity = 0;
                 _west.Step();
+                // A note is only found when the command that earns it runs, which is partway through,
+                // so the panel has to be told again rather than only when the preview was built.
+                if (_west.Notes.Count != _notesShown)
+                {
+                    _notesShown = _west.Notes.Count;
+                    OnPropertyChanged(nameof(PreviewNotes));
+                    OnPropertyChanged(nameof(HasPreviewNotes));
+                }
                 ParticlePreview = _west.RenderFrame();
                 SceneComposite = _compositor.Render(_west);   // backdrop + mons + cell actors + effect-BG, blended exactly
                 ShakeX = _west.ShakeX; ShakeY = _west.ShakeY;
@@ -1249,7 +1443,10 @@ namespace DSPRE.Avalonia.ViewModels
             OnPropertyChanged(nameof(HasCellAnimation));
             OnPropertyChanged(nameof(HasParticleAnimation));
             OnPropertyChanged(nameof(HasPreview));
+            OnPropertyChanged(nameof(HasTurnCheck));
             OnPropertyChanged(nameof(CellAnimNote));
+            OnPropertyChanged(nameof(PreviewNotes));
+            OnPropertyChanged(nameof(HasPreviewNotes));
             OnPropertyChanged(nameof(IsCellPlaying));
             OnPropertyChanged(nameof(CellPlayButtonText));
             OnPropertyChanged(nameof(GaugesVisible));
