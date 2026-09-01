@@ -1,0 +1,141 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.ModelBrowserView"
+        x:DataType="vm:ModelBrowserViewModel"
+        Title="Models and textures"
+        Width="980" Height="720" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:ModelBrowserViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <Grid ColumnDefinitions="*,8,Auto">
+        <TextBox Grid.Column="0" PlaceholderText="Search by name or number, like building or map"
+                 Text="{Binding Search}" FontSize="13"/>
+        <Button Grid.Column="2" Content="Close" Click="Close_Click" Width="66"/>
+      </Grid>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding FoundSummary}" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="300,6,*" Margin="6">
+
+      <DockPanel Grid.Column="0">
+        <!-- One tab per kind of 3D thing, so the models are not mixed in with the picture sets and the
+             animations when you are only after one of them. -->
+        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
+                 Background="Transparent" BorderThickness="0" Margin="0,0,0,6" MaxHeight="120"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="8,3"/>
+              <Setter Property="Margin" Value="0,0,3,3"/>
+              <Setter Property="CornerRadius" Value="3"/>
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModelBrowserViewModel+CategoryTab">
+              <TextBlock Text="{Binding Header}" FontSize="12" ToolTip.Tip="{Binding What}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ListBox ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModelBrowserViewModel+Item">
+              <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <GridSplitter Grid.Column="1" Width="6" Background="Transparent"/>
+
+      <DockPanel Grid.Column="2">
+
+        <Border DockPanel.Dock="Top" Padding="0,0,0,8">
+          <StackPanel Spacing="6">
+            <!-- An overworld person is a model, its pictures and its movement filed one after another.
+                 They are one row now, with the pieces offered here. -->
+            <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex, Mode=TwoWay}"
+                     IsVisible="{Binding HasParts}" Background="Transparent" BorderThickness="0"
+                     MaxHeight="72" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                  <Setter Property="Padding" Value="8,3"/>
+                  <Setter Property="Margin" Value="0,0,3,3"/>
+                  <Setter Property="CornerRadius" Value="3"/>
+                </Style>
+              </ListBox.Styles>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModelBrowserViewModel+Part">
+                  <TextBlock Text="{Binding Label}" FontSize="12"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{Binding Details}" FontSize="13" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding DeepEditorHint}" IsVisible="{Binding HasDeepEditor}"
+                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+            <WrapPanel Classes="toolbar" Orientation="Horizontal" IsVisible="{Binding HasTextureChoice}">
+              <TextBlock Text="Pictures" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+              <ComboBox ItemsSource="{Binding TextureChoices}" SelectedIndex="{Binding TextureChoice, Mode=TwoWay}"
+                        MinWidth="170" FontSize="12"
+                        ToolTip.Tip="Buildings and map scenery take their pictures from a set shared by a whole map, so the model does not say which one. Pick the set you want to see it in."/>
+            </WrapPanel>
+            <WrapPanel Classes="toolbar" Orientation="Horizontal" IsVisible="{Binding HasAnimationChoice}">
+              <TextBlock Text="Movement" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+              <ComboBox ItemsSource="{Binding AnimationChoices}" SelectedIndex="{Binding AnimationIndex, Mode=TwoWay}"
+                        MinWidth="170" FontSize="12"
+                        ToolTip.Tip="Which movement to put on this model. Buildings keep their movements in a separate archive and do not say which one is theirs, so this is a choice."/>
+              <Button Content="{Binding PlayLabel}" Click="Play_Click" Margin="6,0,0,0"
+                      IsEnabled="{Binding CanPlay}" ToolTip.Tip="{Binding PlayHelp}"/>
+            </WrapPanel>
+            <TextBlock Text="{Binding MovementNote}" IsVisible="{Binding HasMovementNote}"
+                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+            <WrapPanel Classes="toolbar" Orientation="Horizontal">
+              <Button Content="Save as a 3D file" Click="SaveDae_Click"
+                      IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
+              <Button Content="Save as glTF" Click="SaveGlb_Click"
+                      IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
+              <Button Content="Put a file in" Click="PutIn_Click"
+                      IsEnabled="{Binding CanPutFileIn}"
+                      ToolTip.Tip="{Binding PutFileInHelp}"/>
+              <Button Content="Save file as it is" Click="SaveRaw_Click"
+                      ToolTip.Tip="Save the whole entry exactly as it sits in the ROM. Always possible, and the only way to keep everything about an entry that is not a model."/>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="GlHost" Background="{DynamicResource Editor.PanelBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Panel>
+            <gl:NsbmdGlControl x:Name="GlView" IsVisible="{Binding HasModel}"/>
+            <TextBlock Text="{Binding Whynot}" IsVisible="{Binding HasNoModel}"
+                       TextWrapping="Wrap" MaxWidth="420" FontSize="13" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+          </Panel>
+        </Border>
+
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>
