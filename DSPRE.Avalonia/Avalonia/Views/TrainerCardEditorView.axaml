@@ -13,11 +13,13 @@
   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="12" Spacing="12">
 
-	<Grid ColumnDefinitions="Auto,Auto,*,Auto">
+	<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 	  <TextBlock Grid.Column="0" Text="Rank:" VerticalAlignment="Center" Margin="0,0,6,0"/>
 	  <ComboBox Grid.Column="1" ItemsSource="{Binding RankNames}" SelectedIndex="{Binding SelectedRankIndex}" Width="140"/>
 	  <TextBlock Grid.Column="2" Text="{Binding StatusText}" Foreground="OrangeRed" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	  <Button Grid.Column="3" Content="Revert Changes" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
+	  <Button Grid.Column="4" Content="Open in Graphics…" Click="OpenInGraphics_Click"
+	          ToolTip.Tip="Open the card in the Graphics window, where its drawing, its two arrangements and every rank's colours sit together."/>
 	</Grid>
 
 	<!-- Card design: shared tile/screen art, coloured by the selected rank's palette -->

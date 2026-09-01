@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using DSPRE.ROMFiles;
 using System.Drawing;
@@ -13,14 +13,74 @@ namespace DSPRE.Avalonia.Gl
         public float[] Vertices;      // interleaved pos.xyz, uv.st, col.rgb (8 floats/vertex)
         public int VertexCount;
         public float Alpha = 1f;      // material alpha (0-1); < 1 needs GL_BLEND when drawn
+
+        /// <summary>
+        /// Which faces the DS would draw, out of the material's polygon attribute: 0 draws neither,
+        /// 1 drops the front, 2 drops the back, 3 draws both. Bits 6 and 7 hold it
+        /// (REG_G3_POLYGON_ATTR_BK_SHIFT is 6 in the SDK's ioreg_G3.h, and the values are the GXCull
+        /// list in g3.h). Everything used to be drawn from both sides, which is why a map with a
+        /// backdrop drew the inside of it over the ground.
+        /// </summary>
+        public int CullMode = NsbmdCull.None;
+    }
+
+    /// <summary>Which faces of a polygon the hardware draws, straight out of GXCull.</summary>
+    public static class NsbmdCull
+    {
+        public const int Nothing = 0;   // GX_CULL_ALL
+        public const int Front = 1;     // GX_CULL_FRONT: the front face is dropped
+        public const int Back = 2;      // GX_CULL_BACK: the back face is dropped
+        public const int None = 3;      // GX_CULL_NONE: both sides drawn
+
+        /// <summary>
+        /// Reads the cull mode out of a material's polygon attribute. The mask says which bits the
+        /// material really sets: one material on every single map leaves these two alone, and reading
+        /// them anyway would say "draw nothing" and take it off the map.
+        /// </summary>
+        public static int FromPolyAttrib(uint attr, uint mask) =>
+            (mask & 0xC0) == 0 ? None : (int)((attr >> 6) & 3);
     }
 
     /// <summary>A model ready for GL: per-material triangle parts + decoded textures.</summary>
+    /// <summary>One building put into a scene: its model, where it goes, and which tile it stands on.</summary>
+    public sealed class PlacedBuilding
+    {
+        public NSBMDModel Model;
+        public float[] Transform;
+        public int ModelId;
+        public int TileX, TileZ;
+    }
+
     public sealed class NsbmdRenderModel
     {
         public List<NsbmdMeshPart> Parts = new List<NsbmdMeshPart>();
         public Dictionary<int, NsbmdTextureData> Textures = new Dictionary<int, NsbmdTextureData>();
         public Dictionary<int, float> MaterialAlphaByKey = new Dictionary<int, float>();
+        /// <summary>Which faces each material draws, so a backdrop does not show its inside.</summary>
+        public Dictionary<int, int> MaterialCullByKey = new Dictionary<int, int>();
+        // Material names, so a terrain animation (which targets materials by name, e.g. "river")
+        // can be matched to the parts it should move.
+        public Dictionary<int, string> MaterialNameByKey = new Dictionary<int, string>();
+
+        /// <summary>Which material keys came from which building, so a building's own animation can be
+        /// matched to just its parts rather than to every material in the scene with the same name.</summary>
+        public sealed class BuildingMaterials
+        {
+            public int ModelId; public int FirstKey, Count;
+            /// <summary>Where it stands, in tiles across the whole matrix.</summary>
+            public int TileX, TileZ;
+            // Kept so a joint animation can rebuild this building with its parts moved.
+            public NSBMDModel Model;
+            public float[] Transform;
+            public float OffsetX, OffsetY, OffsetZ;
+        }
+        public List<BuildingMaterials> Buildings = new List<BuildingMaterials>();
+
+        /// <summary>Extra textures a material can be switched to by a texture-swapping animation, by
+        /// the name the animation uses. Only filled for materials some animation actually swaps.</summary>
+        public Dictionary<int, Dictionary<string, NsbmdTextureData>> SwappableTextures
+            = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
+
         public int TotalVertices;
 
         // Normalization applied to fit the camera: normalized = (raw - Center) * Scale.
@@ -170,13 +230,16 @@ namespace DSPRE.Avalonia.Gl
         }
 
         /// <summary>Builds a single model, centred/scaled to fit (for the standalone viewer).</summary>
-        public static NsbmdRenderModel BuildModel(NSBMDModel model)
+        /// <summary>Builds one model on its own. A joint animation can be handed in to replace the parts'
+        /// own matrices for a frame, which is what makes a door swing or a windmill turn.</summary>
+        public static NsbmdRenderModel BuildModel(NSBMDModel model,
+            Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null)
         {
             var result = new NsbmdRenderModel();
             var byMat = new Dictionary<int, List<float>>();
-            Accumulate(model, null, 0, result, byMat);
+            Accumulate(model, null, 0, result, byMat, jointMatrix);
             Finalize(result, byMat);
-            NormalizePositions(result);
+            NormalizePositions(result, placeLike);
             return result;
         }
 
@@ -184,7 +247,7 @@ namespace DSPRE.Avalonia.Gl
         /// Builds a combined scene: the map model plus each building transformed into map
         /// space, with unique material keys per source model. Centred/scaled once at the end.
         /// </summary>
-        public static NsbmdRenderModel BuildScene(NSBMDModel map, IReadOnlyList<(NSBMDModel model, float[] transform)> buildings)
+        public static NsbmdRenderModel BuildScene(NSBMDModel map, IReadOnlyList<PlacedBuilding> buildings)
         {
             // Build the single map as a 1×1 matrix cell so it gets the SAME fixed 32-tile CellPlacement and
             // per-tile height grid the matrix/event editor uses. That gives the permission overlay a real tile
@@ -202,7 +265,9 @@ namespace DSPRE.Avalonia.Gl
         public sealed class MatrixCellGeometry
         {
             public NSBMDModel Map;
-            public IReadOnlyList<(NSBMDModel model, float[] transform)> Buildings;
+            public IReadOnlyList<PlacedBuilding> Buildings;
+            /// <summary>Textures a building's swapping animation can show, by model id then name.</summary>
+            public Dictionary<int, Dictionary<string, NsbmdTextureData>> SwappableTextures;
             public int CellX, CellY;
             public BdhcFile Bdhc;
             public float AltitudeY;
@@ -236,6 +301,7 @@ namespace DSPRE.Avalonia.Gl
         {
             var result = new NsbmdRenderModel { IsMatrix = true };
             int offset = 0;
+            var cellSwaps = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
 
             var stored = new List<CellBuild>();
             int minCx = int.MaxValue, minCy = int.MaxValue, maxCx = int.MinValue, maxCy = int.MinValue;
@@ -255,12 +321,23 @@ namespace DSPRE.Avalonia.Gl
                     }
                 }
                 var bldMats = new Dictionary<int, List<float>>();
+                if (cell.SwappableTextures != null)
+                    foreach (var kv in cell.SwappableTextures) cellSwaps[kv.Key] = kv.Value;
                 if (cell.Buildings != null)
                     foreach (var b in cell.Buildings)
                     {
-                        if (b.model == null) continue;
-                        Accumulate(b.model, b.transform, offset, result, bldMats);
-                        offset += Math.Max(1, b.model.Materials.Count);
+                        if (b.Model == null) continue;
+                        Accumulate(b.Model, b.Transform, offset, result, bldMats);
+                        result.Buildings.Add(new NsbmdRenderModel.BuildingMaterials
+                        {
+                            ModelId = b.ModelId, FirstKey = offset, Count = b.Model.Materials.Count,
+                            Model = b.Model, Transform = b.Transform,
+                            TileX = b.TileX, TileZ = b.TileZ,
+                        });
+                        if (cellSwaps.TryGetValue(b.ModelId, out var swaps))
+                            for (int k = 0; k < b.Model.Materials.Count; k++)
+                                result.SwappableTextures[offset + k] = swaps;
+                        offset += Math.Max(1, b.Model.Materials.Count);
                     }
                 stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Bdhc = cell.Bdhc, AltitudeY = cell.AltitudeY });
                 minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
@@ -283,6 +360,9 @@ namespace DSPRE.Avalonia.Gl
                 cb.OffX = ox + MapStride / 2f; cb.OffY = cb.AltitudeY; cb.OffZ = oz + MapStride / 2f;
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
                 MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
+                foreach (var bm in result.Buildings)
+                    if (cb.BldMats.ContainsKey(bm.FirstKey))
+                    { bm.OffsetX = cb.OffX; bm.OffsetY = cb.OffY; bm.OffsetZ = cb.OffZ; }
                 foreach (var list in cb.MapMats.Values)
                     for (int i = 0; i + 7 < list.Count; i += 8)
                     { mapSurf.Add(list[i] + cb.OffX); mapSurf.Add(list[i + 1] + cb.OffY); mapSurf.Add(list[i + 2] + cb.OffZ); }
@@ -507,8 +587,41 @@ namespace DSPRE.Avalonia.Gl
             }
         }
 
+        /// <summary>
+        /// Rebuilds one building's triangles with its parts moved to where a joint animation puts them on
+        /// this frame, in the same space the rest of the scene already sits in. Returns the vertices for
+        /// each of that building's materials, ready to hand straight back to the renderer.
+        /// </summary>
+        public static Dictionary<int, float[]> RebuildBuilding(NsbmdRenderModel scene,
+            NsbmdRenderModel.BuildingMaterials building, Func<int, NSBMDObject, float[]> jointMatrix)
+        {
+            var result = new Dictionary<int, float[]>();
+            if (scene == null || building?.Model == null) return result;
+
+            var raw = new Dictionary<int, List<float>>();
+            Accumulate(building.Model, building.Transform, building.FirstKey, scene, raw, jointMatrix);
+
+            foreach (var kv in raw)
+            {
+                var src = kv.Value;
+                var dst = new float[src.Count];
+                for (int i = 0; i + 7 < src.Count; i += 8)
+                {
+                    var (nx, ny, nz) = scene.ToNormalized(src[i] + building.OffsetX,
+                                                          src[i + 1] + building.OffsetY,
+                                                          src[i + 2] + building.OffsetZ);
+                    dst[i] = nx; dst[i + 1] = ny; dst[i + 2] = nz;
+                    dst[i + 3] = src[i + 3]; dst[i + 4] = src[i + 4];
+                    dst[i + 5] = src[i + 5]; dst[i + 6] = src[i + 6]; dst[i + 7] = src[i + 7];
+                }
+                result[kv.Key] = dst;
+            }
+            return result;
+        }
+
         private static void Accumulate(NSBMDModel model, float[] sceneTransform, int matOffset,
-            NsbmdRenderModel target, Dictionary<int, List<float>> byMat)
+            NsbmdRenderModel target, Dictionary<int, List<float>> byMat,
+            Func<int, NSBMDObject, float[]> jointMatrix = null)
         {
             if (model == null || model.Polygons.Count == 0) return;
 
@@ -522,7 +635,10 @@ namespace DSPRE.Avalonia.Gl
                 {
                     if (obj.visible)
                     {
-                        var b = new MTX44(); b.SetValues(obj.materix);
+                        // A joint animation replaces a part's own matrix for this frame, keeping
+                        // whatever the model says about anything the animation does not touch.
+                        float[] mtx = jointMatrix?.Invoke(model.Objects.IndexOf(obj), obj) ?? obj.materix;
+                        var b = new MTX44(); b.SetValues(mtx);
                         running = running.MultMatrix(b);
                     }
                     else { running = running.Clone(); running.Zero(); }
@@ -551,6 +667,12 @@ namespace DSPRE.Avalonia.Gl
                     // rather than being skipped and not drawn at all.
                     if (!target.MaterialAlphaByKey.ContainsKey(key))
                         target.MaterialAlphaByKey[key] = MaterialAlpha(mat);
+
+                    if (!target.MaterialNameByKey.ContainsKey(key) && !string.IsNullOrEmpty(mat.MaterialName))
+                        target.MaterialNameByKey[key] = mat.MaterialName;
+
+                    if (!target.MaterialCullByKey.ContainsKey(key))
+                        target.MaterialCullByKey[key] = NsbmdCull.FromPolyAttrib(mat.PolyAttrib, mat.PolyAttribMask);
 
                     if (!target.Textures.ContainsKey(key))
                     {
@@ -587,7 +709,8 @@ namespace DSPRE.Avalonia.Gl
             {
                 if (kv.Value.Count == 0) continue;
                 float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out var a) ? a : 1f;
-                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha });
+                int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out var c) ? c : NsbmdCull.None;
+                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull });
                 result.TotalVertices += kv.Value.Count / 8;
             }
         }
@@ -762,7 +885,13 @@ namespace DSPRE.Avalonia.Gl
             }
         }
 
-        private static void NormalizePositions(NsbmdRenderModel model)
+        /// <summary>Centres a model in view and scales it to fit.
+        ///
+        /// <paramref name="like"/> makes it use another model's centre and scale instead of working out
+        /// its own. That matters while an animation plays: a moving model has different bounds every
+        /// frame, so recentring each one made the whole thing slide about the screen instead of the
+        /// moving part moving. Every frame is placed the way the still model was placed.</summary>
+        private static void NormalizePositions(NsbmdRenderModel model, NsbmdRenderModel like = null)
         {
             float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
@@ -779,6 +908,11 @@ namespace DSPRE.Avalonia.Gl
             float extent = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
             if (extent < 1e-6f) extent = 1f;
             float scale = 2f / extent;
+
+            if (like != null && like.Scale > 0)
+            {
+                cx = like.Cx; cy = like.Cy; cz = like.Cz; scale = like.Scale;
+            }
 
             model.Cx = cx; model.Cy = cy; model.Cz = cz; model.Scale = scale;
             model.RawMinX = minX; model.RawMaxX = maxX;

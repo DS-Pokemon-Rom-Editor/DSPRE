@@ -360,27 +360,28 @@ namespace DSPRE.Avalonia.ViewModels
             Rows.Clear();
             try
             {
-                using var reader = new ARM9.Reader(ResolveTableOffset());
-                for (int i = 0; i < RowCount; i++)
+                // One read of the table, shared with the Graphics window, so the field order is not
+                // written out twice and cannot drift.
+                foreach (var t in Data.DungeonCutinTable.Read())
                 {
                     var row = new DungeonCutinRow(Headers)
                     {
-                        RowNumber = i + 1,
-                        HeaderIndex = reader.ReadInt32(),
-                        WipeType = reader.ReadInt32(),
-                        MorningPaletteId = reader.ReadInt32(),
-                        MorningTilesId = reader.ReadInt32(),
-                        MorningScreenId = reader.ReadInt32(),
-                        NoonPaletteId = reader.ReadInt32(),
-                        NoonTilesId = reader.ReadInt32(),
-                        NoonScreenId = reader.ReadInt32(),
-                        EveningPaletteId = reader.ReadInt32(),
-                        EveningTilesId = reader.ReadInt32(),
-                        EveningScreenId = reader.ReadInt32(),
-                        NightPaletteId = reader.ReadInt32(),
-                        NightTilesId = reader.ReadInt32(),
-                        NightScreenId = reader.ReadInt32(),
-                        NameMessageId = reader.ReadInt32(),
+                        RowNumber = t.Number,
+                        HeaderIndex = t.HeaderIndex,
+                        WipeType = t.WipeType,
+                        MorningPaletteId = t.Art[0].Palette,
+                        MorningTilesId = t.Art[0].Tiles,
+                        MorningScreenId = t.Art[0].Screen,
+                        NoonPaletteId = t.Art[1].Palette,
+                        NoonTilesId = t.Art[1].Tiles,
+                        NoonScreenId = t.Art[1].Screen,
+                        EveningPaletteId = t.Art[2].Palette,
+                        EveningTilesId = t.Art[2].Tiles,
+                        EveningScreenId = t.Art[2].Screen,
+                        NightPaletteId = t.Art[3].Palette,
+                        NightTilesId = t.Art[3].Tiles,
+                        NightScreenId = t.Art[3].Screen,
+                        NameMessageId = t.NameMessageId,
                     };
                     row.PropertyChanged += (_, __) => { SetDirty(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
                     Rows.Add(row);

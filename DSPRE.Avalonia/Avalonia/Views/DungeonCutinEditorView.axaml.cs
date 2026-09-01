@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
@@ -32,6 +33,22 @@ namespace DSPRE.Avalonia.Views
             }
             throw new InvalidOperationException("Parameterless constructor only for design time.");
         }
+        /// <summary>Hands the picked splash screen to the Graphics window, on its noon drawing, which is
+        /// the one most locations reuse for the other three times of day.</summary>
+        private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as DSPRE.Avalonia.ViewModels.DungeonCutinEditorViewModel;
+            int row = vm?.SelectedRow?.RowNumber ?? 0;
+            int drawing = row > 0
+                ? Data.DungeonCutinTable.DrawingFor(row, Data.DungeonCutinTable.TimeOfDay.Noon) : -1;
+            if (drawing < 0)
+            {
+                _ = DialogHelper.ShowInfo("Pick a splash screen first.", "Open in Graphics");
+                return;
+            }
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.dungeonCutinGraphics, drawing);
+        }
+
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await _vm.SaveCommand();

@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:v="clr-namespace:DSPRE.Avalonia.Views"
+        x:Class="DSPRE.Avalonia.Views.GraphicPainterView"
+        x:DataType="vm:GraphicPainterViewModel"
+        Title="{Binding Title}"
+        Width="760" Height="640" MinWidth="460" MinHeight="380"
+        WindowStartupLocation="CenterScreen">
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <StackPanel Spacing="6">
+        <TextBlock Text="{Binding Measurements}" FontSize="12" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding Explain}" TextWrapping="Wrap" FontSize="12"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+        <WrapPanel Classes="toolbar" Orientation="Horizontal">
+          <Button Content="Save into the game" Click="Save_Click"
+                  IsEnabled="{Binding CanPaint}"
+                  ToolTip.Tip="Write this back into the ROM. Save the ROM afterwards to keep it."/>
+          <Button Content="Change this colour" Click="ChangeColour_Click"
+                  IsEnabled="{Binding CanChangeColour}"
+                  ToolTip.Tip="{Binding ChangeColourHelp}"/>
+          <Button Content="Undo" Click="Undo_Click"
+                  IsEnabled="{Binding CanUndo}"
+                  ToolTip.Tip="{Binding UndoHelp}"/>
+          <Button Content="Close" Click="Close_Click"/>
+        </WrapPanel>
+        <WrapPanel Classes="toolbar" Orientation="Horizontal" IsVisible="{Binding CanPaint}">
+          <TextBlock Text="Frame" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"
+                     IsVisible="{Binding HasFrames}"/>
+          <ComboBox ItemsSource="{Binding Frames}" SelectedIndex="{Binding FrameIndex, Mode=TwoWay}"
+                    IsVisible="{Binding HasFrames}" MinWidth="120" FontSize="12" Margin="0,0,10,0"
+                    ToolTip.Tip="This file holds more than one picture. Pick which to paint, or All of it to see them together.">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:GraphicPainterViewModel+Frame">
+                <TextBlock Text="{Binding Name}"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="Zoom out" Click="ZoomOut_Click"
+                  IsEnabled="{Binding CanZoomOut}" ToolTip.Tip="{Binding ZoomOutHelp}"/>
+          <Button Content="Zoom in" Click="ZoomIn_Click"
+                  IsEnabled="{Binding CanZoomIn}" ToolTip.Tip="{Binding ZoomInHelp}"/>
+          <CheckBox Content="Pixel grid" IsChecked="{Binding ShowGrid, Mode=TwoWay}"
+                    VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12"
+                    ToolTip.Tip="{Binding GridHelp}"/>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <StackPanel Spacing="3">
+        <TextBlock Text="{Binding InkDescription}" FontSize="12"/>
+        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,4" Background="{DynamicResource Editor.PanelBg}">
+      <StackPanel Spacing="5">
+        <TextBlock Text="The colours. Click one to paint with it. With one picked, Change this colour above alters the colour itself, and every pixel already using it changes too."
+                   FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+        <ListBox ItemsSource="{Binding Colours}" SelectedItem="{Binding SelectedSwatch}"
+                 MaxHeight="96" Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.Styles>
+            <!-- The swatch fills its square, so the picked one is shown by the frame around it. -->
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="4"/>
+              <Setter Property="Margin" Value="1"/>
+              <Setter Property="CornerRadius" Value="4"/>
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:GraphicPainterViewModel+Swatch">
+              <Border Width="24" Height="24" BorderThickness="1"
+                      BorderBrush="{DynamicResource Editor.Border}"
+                      Background="{Binding Fill}"
+                      ToolTip.Tip="{Binding Tip}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+    </Border>
+
+    <Panel>
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                    IsVisible="{Binding CanPaint}">
+        <!-- Sized from the zoom rather than stretched to fit, so one pixel of the drawing is always a
+             whole number of screen pixels and the grid lines land on the edges. -->
+        <Panel x:Name="CanvasHost"
+               Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}" Margin="16"
+               HorizontalAlignment="Center" VerticalAlignment="Center"
+               PointerPressed="Canvas_PointerPressed"
+               PointerMoved="Canvas_PointerMoved"
+               PointerWheelChanged="Canvas_PointerWheelChanged">
+          <Image x:Name="Canvas" Source="{Binding Picture}" Stretch="Fill"
+                 RenderOptions.BitmapInterpolationMode="None"/>
+          <v:PixelGrid Cell="{Binding Zoom}" IsVisible="{Binding GridOn}" IsHitTestVisible="False"/>
+        </Panel>
+      </ScrollViewer>
+
+      <TextBlock Text="{Binding Trouble}" IsVisible="{Binding HasTrouble}"
+                 TextWrapping="Wrap" MaxWidth="420" FontSize="13" TextAlignment="Center"
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </Panel>
+
+  </DockPanel>
+</Window>

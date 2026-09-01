@@ -80,6 +80,16 @@ namespace DSPRE.Avalonia.Views
                 await DialogHelper.ShowError($"Save failed: {error}", owner: this);
         }
 
+        /// <summary>Hands this trainer class to the Graphics window. Five files a class, so the drawing
+        /// wanted is at the front of its run.</summary>
+        private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as DSPRE.Avalonia.ViewModels.TrainerSpriteEditorViewModel;
+            if (vm == null) return;
+            DSPRE.Avalonia.AvaloniaEditorLauncher.OpenGraphicAt(
+                DSPRE.RomInfo.DirNames.trainerGraphics, vm.SelectedClassIndex * 5);
+        }
+
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions

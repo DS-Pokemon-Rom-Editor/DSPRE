@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views
@@ -15,6 +16,14 @@ namespace DSPRE.Avalonia.Views
         }
 
         private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
+
+        /// <summary>Hands this Pokemon's sprites to the Graphics window, which can paint them by hand.
+        /// Six files a Pokemon, so the one wanted is at the front of its run.</summary>
+        private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.pokemonBattleSprites, VM.CurrentId * 6);
+        }
 
         // --- Import Wizard -------------------------------------------------------------
         private async void OpenImportWizard_Click(object sender, RoutedEventArgs e)

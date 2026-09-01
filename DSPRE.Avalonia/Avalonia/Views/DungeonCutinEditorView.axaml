@@ -16,6 +16,8 @@
 	  <Button Content="Export CSV…" Click="Export_Click"/>
 	  <Button Content="Import CSV…" Click="Import_Click"/>
 	  <Button Content="Save Changes" Click="Save_Click"/>
+	  <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
+	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
 	</StackPanel>
 

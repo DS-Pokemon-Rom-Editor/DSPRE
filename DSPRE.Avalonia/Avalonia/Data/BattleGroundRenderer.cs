@@ -44,6 +44,17 @@ namespace DSPRE.Avalonia.Data
         // are set independently per-zone in the game data, so there is no canonical 1:1; this reuses the GROUND##
         // graphic number (which parallels the BATTLE_BG## scene numbering) as a sensible default; the Backdrop
         // selector still overrides it. Returns -1 for none.
+        /// <summary>Which files make up the ground one Pokemon stands on. Both sides share their cell
+        /// layout with every other terrain; only the drawing and the colours change, and there are three
+        /// sets of colours for the three times of day.</summary>
+        public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
+            TerrainFiles(int terrainId)
+        {
+            if (terrainId < 0 || terrainId >= GroundGfx.Length) return null;
+            int gg = GroundGfx[terrainId];
+            return (MineNcgr(gg), EnemyNcgr(gg), MineNcer, EnemyNcer, PalDay(gg));
+        }
+
         public static int BackdropForTerrain(int terrainId)
             => terrainId >= 0 && terrainId < GroundGfx.Length ? Math.Min(GroundGfx[terrainId], 22) : -1;
 

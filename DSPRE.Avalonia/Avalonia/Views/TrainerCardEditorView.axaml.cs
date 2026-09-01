@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
@@ -98,6 +99,20 @@ namespace DSPRE.Avalonia.Views
             if (error != null)
                 await DialogHelper.ShowError($"Export failed: {error}", "Export Error", this);
         }
+        /// <summary>Hands the card to the Graphics window, where its drawing, its two arrangements and
+        /// every rank's colours are one row.</summary>
+        private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
+        {
+            int drawing = Data.GraphicUnits.TrainerCardDrawing();
+            if (drawing < 0)
+            {
+                _ = DialogHelper.ShowInfo("This game does not lay its trainer card out in a way DSPRE knows.",
+                                          "Open in Graphics");
+                return;
+            }
+            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.trainerCardGraphics, drawing);
+        }
+
 
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {

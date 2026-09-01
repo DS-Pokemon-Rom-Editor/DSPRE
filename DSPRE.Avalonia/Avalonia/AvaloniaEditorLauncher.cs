@@ -5,6 +5,7 @@ using DSPRE.HgEngine;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
+using System.Linq;
 
 namespace DSPRE.Avalonia
 {
@@ -52,6 +53,33 @@ namespace DSPRE.Avalonia
             if (vm != null) { vm.BusyText = busyText; vm.BusyHint = busyHint; vm.IsBusy = true; }
             try { await System.Threading.Tasks.Task.Run(work); }
             finally { if (vm != null) vm.IsBusy = false; }
+        }
+
+        /// <summary>
+        /// Everything in the ROM that makes a noise: the cries, the music, the fanfares and the sound
+        /// effects, listed out of the sound archive's own names.
+        /// </summary>
+        /// <param name="showCryFor">A species to open on, for the Pokemon editor's own Edit cry button.
+        /// Zero opens on nothing in particular.</param>
+        public static async System.Threading.Tasks.Task OpenAudioEditorAsync(int showCryFor = 0)
+        {
+            if (!IsRomLoaded) return;
+
+            try
+            {
+                string[] names;
+                try { names = GetPokemonNamesWithForms(GetPersonalFilesCount()); }
+                catch { names = System.Array.Empty<string>(); }
+
+                await System.Threading.Tasks.Task.Yield();
+                var vm = new ViewModels.AudioEditorViewModel(names);
+                if (showCryFor > 0) vm.ShowCryFor(showCryFor);
+                new Views.AudioEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("The Audio Editor could not be opened:" + System.Environment.NewLine + ex.Message, "Audio Editor");
+            }
         }
 
         // ── Pokémon-related editors ────────────────────────────────────────────
@@ -131,7 +159,7 @@ namespace DSPRE.Avalonia
                 if (entryIndex > 0 && vm.FileItems.Count > 0)
                     vm.SelectedFileIndex = System.Math.Min(entryIndex, vm.FileItems.Count - 1);
             }
-            new EditorHostWindow("Battle Scripts", view, 1000, 720).ShowManaged();
+            new EditorHostWindow("Battle Scripts", view, 1320, 800).ShowManaged();
         }
 
         public static void OpenItemEditor(int initialIndex = 1)
@@ -287,16 +315,31 @@ namespace DSPRE.Avalonia
             new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
         }
 
-        public static void OpenTrainerFlagBulkEditor()
+        public static void OpenTrainerFlagBulkEditor() => _ = OpenTrainerFlagBulkEditorAsync();
+
+        // Reads one file per trainer, so it takes a visible moment on a full ROM. Built off the UI
+        // thread behind the busy overlay, since neither this VM nor VsSeeker's touches any UI type.
+        public static async System.Threading.Tasks.Task OpenTrainerFlagBulkEditorAsync()
         {
             if (!IsRomLoaded || BlockedForHge("The Trainer Flag Bulk Editor", HgEngineDomain.Trainers)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+
+            TrainerFlagBulkEditorViewModel vm = null;
+            await RunBusyAsync("Opening Trainer Flag Bulk Editor…",
+                "Reading every trainer's AI flags.",
+                () =>
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                    vm = new TrainerFlagBulkEditorViewModel();
+                });
+            if (vm == null) return;
+
             new EditorHostWindow("Trainer Flag Bulk Editor",
-                new TrainerFlagBulkEditorView(new TrainerFlagBulkEditorViewModel()),
-                1050, 700).ShowManaged();
+                new TrainerFlagBulkEditorView(vm), 1050, 700).ShowManaged();
         }
 
-        public static void OpenVsSeekerRematchEditor(int initialRowIndex = -1)
+        public static void OpenVsSeekerRematchEditor(int initialRowIndex = -1) => _ = OpenVsSeekerRematchEditorAsync(initialRowIndex);
+
+        public static async System.Threading.Tasks.Task OpenVsSeekerRematchEditorAsync(int initialRowIndex = -1)
         {
             if (!IsRomLoaded) return;
             if (!VsSeekerRematchTable.IsSupported)
@@ -305,9 +348,15 @@ namespace DSPRE.Avalonia
                     "Not Supported");
                 return;
             }
+
+            VsSeekerRematchViewModel vm = null;
+            await RunBusyAsync("Opening Vs. Seeker Rematch Editor…",
+                "Reading the rematch table and trainer names.",
+                () => vm = new VsSeekerRematchViewModel(initialRowIndex));
+            if (vm == null) return;
+
             new EditorHostWindow("Vs. Seeker Rematch Editor",
-                new VsSeekerRematchView(new VsSeekerRematchViewModel(initialRowIndex)),
-                900, 600).ShowManaged();
+                new VsSeekerRematchView(vm), 900, 600).ShowManaged();
         }
 
         public static void OpenStarterEditor()
@@ -544,9 +593,148 @@ namespace DSPRE.Avalonia
                     yield return new CommandItem { Name = label, Run = run };
         }
 
+        /// <summary>Opens the one place that lists every 2D graphic in the game.</summary>
+        public static void OpenGraphicsBrowser()
+        {
+            try
+            {
+                new Views.GraphicsBrowserView(new ViewModels.GraphicsBrowserViewModel()).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenGraphicsBrowser failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+            }
+        }
+
+        /// <summary>
+        /// Opens the graphics window already looking at one file.
+        ///
+        /// For the editors that already know which graphic they are showing: the Pokemon Editor knows the
+        /// icon it just drew, the Trainer Editor knows the class. Handing that over beats making somebody
+        /// find it again among six thousand rows.
+        /// </summary>
+        public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex)
+        {
+            try
+            {
+                var a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
+                if (a == null)
+                {
+                    _ = DialogHelper.ShowInfo("That kind of graphic is not one this window lists yet.", "Graphics");
+                    return;
+                }
+
+                var vm = new ViewModels.GraphicsBrowserViewModel();
+                bool found = vm.JumpTo(a, fileIndex);
+                new Views.GraphicsBrowserView(vm).ShowManaged();
+                if (!found)
+                    vm.Status = "That graphic could not be found in this game, so the whole list is shown instead.";
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenGraphicAt failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+            }
+        }
+
+        /// <summary>
+        /// The editor that owns a graphic, and what to call it.
+        ///
+        /// The hand-off runs both ways: an editor can send a graphic to the brush, and the brush can send
+        /// you back to whatever decides that graphic's numbers. A Pokemon's sprite belongs to the Pokemon
+        /// Sprite Editor, a battle backdrop to the place that fights on it. Where nothing owns a graphic,
+        /// this says so rather than offering a dead button.
+        /// </summary>
+        public static (string Name, System.Action Open)? EditorForGraphic(RomInfo.DirNames archive, int fileIndex)
+        {
+            switch (archive)
+            {
+                case RomInfo.DirNames.pokemonBattleSprites:
+                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(fileIndex / 6); });
+
+                case RomInfo.DirNames.monIcons:
+                    // Seven files come before the run of one per Pokemon.
+                    int species = fileIndex - 7;
+                    if (species < 0) return null;
+                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(species); });
+
+                case RomInfo.DirNames.trainerGraphics:
+                    return ("Trainer Sprite Editor", () => OpenTrainerSpriteEditor(fileIndex / 5));
+
+                case RomInfo.DirNames.itemIcons:
+                {
+                    int item = ItemUsingDrawing(fileIndex);
+                    if (item < 0) return null;
+                    return ("Item Editor", () => OpenItemEditor(item));
+                }
+
+                case RomInfo.DirNames.battleBg:
+                    return ("Battle scenes", OpenBattleSceneBrowser);
+
+                case RomInfo.DirNames.dungeonCutinGraphics:
+                    return ("Dungeon Cutin Editor", OpenDungeonCutinEditor);
+
+                case RomInfo.DirNames.trainerCardGraphics:
+                    return ("Trainer Card Editor", OpenTrainerCardEditor);
+
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>The first item that uses a drawing, since several can share one.</summary>
+        private static int ItemUsingDrawing(int fileIndex)
+        {
+            try
+            {
+                var names = RomInfo.GetItemNames();
+                for (int item = 0; item < names.Length; item++)
+                    if (Data.GraphicAssets.DrawingForItem(item) == fileIndex) return item;
+            }
+            catch { }
+            return -1;
+        }
+
+        /// <summary>
+        /// Opens the battle scenes list: the scenery every place in the game fights on, with the header
+        /// number that chooses it. Its own window rather than a tab of the graphics list, because a row
+        /// here is a scene and a place rather than a picture.
+        /// </summary>
+        public static void OpenBattleSceneBrowser()
+        {
+            try
+            {
+                new Views.BattleSceneBrowserView(new ViewModels.BattleSceneBrowserViewModel()).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenBattleSceneBrowser failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The battle scenes could not be opened. Open a ROM first.",
+                                          "Battle scenes");
+            }
+        }
+
+        /// <summary>Opens the models and textures list, which is its own place, not part of the flat one.</summary>
+        public static void OpenModelBrowser()
+        {
+            try
+            {
+                new Views.ModelBrowserView(new ViewModels.ModelBrowserViewModel()).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenModelBrowser failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The models list could not be opened. Open a ROM first.", "Models");
+            }
+        }
+
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
         public static List<CommandItem> BuildCommands() => new()
         {
+            new() { Name = "Graphics",              Keywords = "sprite picture image texture palette colour color icon font paint draw", Run = OpenGraphicsBrowser },
+            new() { Name = "Models and textures",   Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
+            new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },

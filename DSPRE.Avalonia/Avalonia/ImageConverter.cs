@@ -15,6 +15,23 @@ namespace DSPRE.Avalonia
         /// no PNG round-trip. This is the permanent cross-platform render seam; as decoders start emitting
         /// <see cref="DSPRE.RawImage"/>, they render through here directly.
         /// </summary>
+        /// <summary>Builds a bitmap from plain red, green, blue, alpha bytes, which is what the graphic
+        /// browser's decoders hand back. RawImage wants them the other way round, so swap as we go.</summary>
+        public static AvaloniaBitmap FromRgba(byte[] rgba, int width, int height)
+        {
+            if (rgba == null || width <= 0 || height <= 0) return null;
+            int n = width * height;
+            var bgra = new byte[n * 4];
+            for (int i = 0; i < n && i * 4 + 3 < rgba.Length; i++)
+            {
+                bgra[i * 4] = rgba[i * 4 + 2];
+                bgra[i * 4 + 1] = rgba[i * 4 + 1];
+                bgra[i * 4 + 2] = rgba[i * 4];
+                bgra[i * 4 + 3] = rgba[i * 4 + 3];
+            }
+            return ToAvaloniaBitmap(new DSPRE.RawImage(width, height, bgra));
+        }
+
         public static AvaloniaBitmap ToAvaloniaBitmap(DSPRE.RawImage img)
         {
             if (img == null || img.IsEmpty) return null;

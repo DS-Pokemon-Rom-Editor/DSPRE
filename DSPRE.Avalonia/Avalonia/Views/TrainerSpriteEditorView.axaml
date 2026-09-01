@@ -32,6 +32,8 @@
             <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Import PNG…" Click="Import_Click"/>
             <Button Content="Export PNG…" Click="Export_Click"/>
+            <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
+                    ToolTip.Tip="Open this trainer class in the Graphics window, where its drawing, colours and layout sit together and can be painted by hand."/>
             <TextBlock Text="Palette-exact PNG import only, can't add new colors. Export first for a correctly-sized template." FontSize="11"
                        Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" Margin="8,0,0,0"/>
           </StackPanel>

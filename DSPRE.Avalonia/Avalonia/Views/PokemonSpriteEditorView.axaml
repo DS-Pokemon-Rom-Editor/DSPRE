@@ -81,6 +81,9 @@
                     Padding="14,8" FontWeight="Bold" FontSize="14"/>
             <Button Content="Export Wizard…" Click="OpenExportWizard_Click"
                     Padding="14,8" FontSize="14"/>
+            <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
+                    Padding="14,8" FontSize="14"
+                    ToolTip.Tip="Open this Pokemon's sprites in the Graphics window, where the drawing, its colours and its shiny colours can be painted by hand."/>
           </StackPanel>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">

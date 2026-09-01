@@ -30,6 +30,8 @@
                 <Separator Width="12"/>
                 <Button x:Name="SaveAllButton">💾 Save All</Button>
                 <Button x:Name="ExportButton" Click="Export_Click">📤 Export…</Button>
+                <Button Content="Open icon in Graphics…" Click="OpenInGraphics_Click"
+                        ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="+ Add New Item…" IsVisible="{Binding ShowHgEngineBanner}"
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
             </StackPanel>
