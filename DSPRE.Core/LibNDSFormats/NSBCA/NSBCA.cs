@@ -202,8 +202,10 @@ namespace MKDS_Course_Editor.NSBCA {
         Scale		 [1|0|07|2|0] 28/07 - 07 Frames
         ===========================================================
          */
-        public static NSBCA_File Read(string Filename) {
-            byte[] file_ = File.ReadAllBytes(Filename);
+        public static NSBCA_File Read(string Filename) => Read(File.ReadAllBytes(Filename));
+
+        /// <summary>Parse from memory, for animations that live inside a NARC rather than on disk.</summary>
+        public static NSBCA_File Read(byte[] file_) {
             if (file_[0] == 76 && file_[1] == 90 && file_[2] == 55 && file_[3] == 55) {
             }
             EndianBinaryReader er = new EndianBinaryReader(new MemoryStream(file_), Endianness.LittleEndian);
