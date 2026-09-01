@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
@@ -21,6 +21,24 @@
         <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="📥 Import" Click="Import_Click"/>
         <Button Content="📤 Export" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2"
+                PointerPressed="Pegman_PointerPressed"
+                PointerMoved="Pegman_PointerMoved"
+                PointerReleased="Pegman_PointerReleased"
+                ToolTip.Tip="Drag me onto the map and let go, and the walk starts from there.">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <Image x:Name="PegmanIcon" Width="26" Height="26"
+                   RenderOptions.BitmapInterpolationMode="None"/>
+            <TextBlock Text="Drag to walk" VerticalAlignment="Center"/>
+          </StackPanel>
+        </Border>
+        <Button Content="▶ Step in here" Click="StepInHere_Click"
+                ToolTip.Tip="Walk the map starting next to the selected event, so you can talk to them or set the trigger off straight away."/>
+        <Button Content="▶ Animate" Click="AnimatedPreview_Click"
+                ToolTip.Tip="Opens a look-only window that runs the map: the water moves and the people turn and wander the way their movement code says. Scripts are not run."/>
+        <Button Content="📷 Screenshot" Click="Screenshot_Click"
+                ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="🐞 Export 3D debug" Click="ExportDebug_Click"
                 ToolTip.Tip="Dumps the matrix layout, exact per-cell map placements (origins/sizes/gaps), every event's computed world position, AND a PNG of the current render, for diagnosing stitching/placement issues."/>
@@ -59,15 +77,38 @@
                             ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
-              <Button Content="Top" Click="CamTop_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Top-down camera"/>
-              <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"/>
+              <ToggleButton x:Name="Mode2DToggle" Content="2D" IsChecked="{Binding Flat2D}" FontSize="12" Padding="6,2"
+                            ToolTip.Tip="Flat top-down view with no perspective, the way the old editor looked. Still shows every map in the header at once."/>
+              <Button Content="Top" Click="CamTop_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Top-down camera"
+                      IsEnabled="{Binding !Flat2D}"/>
+              <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"
+                      IsEnabled="{Binding !Flat2D}"/>
               <Button Content="⟲" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
+              <Button Content="🎯 Centre" Click="CenterOnEvent_Click" FontSize="12" Padding="6,2"
+                      ToolTip.Tip="Moves the camera onto the selected event."/>
             </WrapPanel>
           </StackPanel>
         </Border>
-        <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
-          <gl:NsbmdGlControl x:Name="GlView"/>
-        </Border>
+        <Panel>
+          <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
+            <gl:NsbmdGlControl x:Name="GlView"/>
+          </Border>
+          <Border IsVisible="{Binding IsCatchAllHeader}" Background="#1F1F23"
+                  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <TextBlock Text="{Binding CatchAllNote}" TextWrapping="Wrap" MaxWidth="420"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextAlignment="Center" FontSize="13"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+          </Border>
+          <Canvas x:Name="DragOverlay" IsHitTestVisible="False">
+            <Image x:Name="DragGhost" Width="44" Height="44" IsVisible="False"
+                   RenderOptions.BitmapInterpolationMode="None"/>
+            <Border x:Name="DropLabel" IsVisible="False" Background="#CC000000" Padding="5,2"
+                    CornerRadius="3">
+              <TextBlock x:Name="DropText" FontSize="12" Foreground="#FFF"/>
+            </Border>
+          </Canvas>
+        </Panel>
       </DockPanel>
 
       <!-- Editing panels -->
@@ -87,7 +128,7 @@
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}" SelectedIndex="{Binding SelectedOverworldIndex}"/>
-              <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
+              <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasOw}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
                   <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
@@ -96,7 +137,13 @@
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
+                      <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                      <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
+                                 TextWrapping="Wrap"
+                                 ToolTip.Tip="{Binding ZPosNoteTip}"
+                                 Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
@@ -116,16 +163,20 @@
 
                   <TextBlock Text="Movement" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding OwMovementNames}" SelectedIndex="{Binding OwMovementIndex}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="{Binding OwMovementUnknownNote}" FontSize="10" Foreground="Orange"
+                             TextWrapping="Wrap" IsVisible="{Binding OwMovementUnknown}"/>
 
                   <TextBlock Text="Orientation" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding OwOrientationNames}" SelectedIndex="{Binding OwOrientationIndex}" HorizontalAlignment="Stretch"/>
 
                   <TextBlock Text="Type" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <StackPanel Orientation="Horizontal" Spacing="12">
-                    <RadioButton GroupName="OwKind" Content="Standard" IsChecked="{Binding OwIsNormal}"/>
-                    <RadioButton GroupName="OwKind" Content="Item" IsChecked="{Binding OwIsItem}"/>
-                    <RadioButton GroupName="OwKind" Content="Trainer" IsChecked="{Binding OwIsTrainer}"/>
-                  </StackPanel>
+                  <ComboBox ItemsSource="{Binding OwEventTypes}" SelectedIndex="{Binding OwEventTypeIndex}"
+                            HorizontalAlignment="Stretch"
+                            ToolTip.Tip="Every type the game defines. The trainer variants all fight and see the player the same way; the type changes how the NPC turns or moves."/>
+                  <TextBlock Text="{Binding OwTypeNote}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"
+                             TextWrapping="Wrap" IsVisible="{Binding OwHasTypeNote}"/>
+                  <TextBlock Text="{Binding OwTypeUnknownNote}" FontSize="10" Foreground="Orange"
+                             TextWrapping="Wrap" IsVisible="{Binding OwTypeUnknown}"/>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleVanilla}" Margin="0,4,0,0">
                     <TextBlock Text="Item" FontWeight="Bold"/>
@@ -133,8 +184,8 @@
                       <ComboBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
                       <Button Grid.Column="1" Content="Manage…" Click="ManageGroundItems_Click" Margin="4,0,0,0"/>
                     </Grid>
-                    <TextBlock Text="Script number doesn't match a known item (edit Script below directly)"
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwItemIndexOutOfRange}"/>
+                    <!-- No warning here: the dropdown itself shows whether the item resolved, and the
+                         raw Script field appears below when it didn't. -->
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleHGE}" Margin="0,4,0,0">
@@ -148,24 +199,54 @@
                     <ComboBox ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
+                    <TextBlock Text="Trainer 0 is the empty slot, not a real trainer. Pick another one or the battle has nobody in it."
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
-                    <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"/>
+                    <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
+                               ToolTip.Tip="How many tiles ahead the trainer notices the player (the engine's param0)."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                   </StackPanel>
 
+                  <StackPanel Spacing="3" IsVisible="{Binding OwIsApricornTree}" Margin="0,4,0,0">
+                    <TextBlock Text="Apricorn bed" FontWeight="Bold"
+                               ToolTip.Tip="Which apricorn bed this tree belongs to. The same field a trainer uses for sight range (the engine's param0)."/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
+                    <TextBlock Text="{Binding OwApricornNote}" FontSize="10" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Editor.Subtle}"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="3" IsVisible="{Binding OwParam1Visible}" Margin="0,4,0,0">
+                    <TextBlock Text="{Binding OwParam1Label}" FontWeight="Bold"
+                               ToolTip.Tip="How long this trainer waits between turns (the engine's param1)."/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam1}"/>
+                  </StackPanel>
+
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
-                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
-                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding OwScriptSectionLabel}" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                    <TextBlock Text="This type runs the game's shared message script, so this number picks the message, not a script."
+                               FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
+                               IsVisible="{Binding OwScriptIsMessageId}"/>
+                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"
+                              IsVisible="{Binding !OwScriptIsMessageId}"/>
                     <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
                     <TextBlock Text="{Binding OwScriptCommonInfo}"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptHasCommonInfo}"/>
-                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
+                      <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToOwScript_Click"
+                              ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                    </Grid>
                   </StackPanel>
 
                   <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
-                  <TextBlock Text="X range / Y range" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Param 2" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="Stored and preserved with the event, but nothing in the field code reads it."/>
+                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
+
+                  <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="How far the NPC may wander from its position (the engine's move_limit_x / move_limit_z)."/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
@@ -192,7 +273,7 @@
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}"/>
-              <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
+              <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasWarp}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
                   <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
@@ -200,12 +281,11 @@
                     <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
+                    <!-- No Z row: the warp record has no z field. Height below is the warp's elevation. -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
                   <TextBlock Text="Destination header" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
@@ -230,7 +310,7 @@
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
-              <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
+              <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasTrig}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
                   <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
@@ -239,7 +319,13 @@
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
+                      <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                      <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
+                                 TextWrapping="Wrap"
+                                 ToolTip.Tip="{Binding ZPosNoteTip}"
+                                 Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
@@ -248,8 +334,14 @@
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptIndexOutOfRange}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
+                  <TextBlock Text="{Binding TrScriptCommonInfo}"
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptHasCommonInfo}"/>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
+                    <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToTrScript_Click"
+                            ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                  </Grid>
                   <TextBlock Text="Width / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="Width" VerticalAlignment="Center"/>
@@ -260,10 +352,18 @@
                   <TextBlock Text="Variable watched / expected value" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="Variable" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding TrVar}"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding TrVar}"
+                                   IsVisible="{Binding TrDecimal}"/>
+                    <TextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding TrVarHex}"
+                             IsVisible="{Binding TrHex}"/>
                     <TextBlock Grid.Column="2" Text="Expected" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TrVarValue}"/>
+                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding TrVarValue}"
+                                   IsVisible="{Binding TrDecimal}"/>
+                    <TextBox Grid.Column="3" Text="{Binding TrVarValueHex}" IsVisible="{Binding TrHex}"/>
                   </Grid>
+                  <ToggleButton Content="Hex" IsChecked="{Binding TrHex}" HorizontalAlignment="Left"
+                                FontSize="12" Padding="8,2"
+                                ToolTip.Tip="Type the variable and expected value in hex instead of decimal."/>
                 </StackPanel>
               </ScrollViewer>
             </Grid>
@@ -281,7 +381,7 @@
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>
-              <ScrollViewer Grid.Column="1" Margin="6,0,0,0">
+              <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasSpawn}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
                   <Grid ColumnDefinitions="72,*,72,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0">
@@ -290,7 +390,13 @@
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32768" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
+                      <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                      <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
+                                 TextWrapping="Wrap"
+                                 ToolTip.Tip="{Binding ZPosNoteTip}"
+                                 Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Matrix X" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding XMatrix}"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
@@ -299,8 +405,14 @@
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptIndexOutOfRange}"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
+                  <TextBlock Text="{Binding SpScriptCommonInfo}"
+                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
+                    <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToSpScript_Click"
+                            ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                  </Grid>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="Type" VerticalAlignment="Center"/>

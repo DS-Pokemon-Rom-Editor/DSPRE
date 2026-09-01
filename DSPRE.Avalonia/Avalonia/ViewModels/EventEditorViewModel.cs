@@ -1,4 +1,4 @@
-using DSPRE.Avalonia;
+﻿using DSPRE.Avalonia;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
@@ -11,7 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
@@ -27,6 +29,87 @@ namespace DSPRE.Avalonia.ViewModels
     /// </summary>
     public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
+
+        /// <summary>
+        /// The level script file the selected header points at, so the preview can run what the map
+        /// runs by itself. -1 when nothing set it, which is what happens outside the maps workspace.
+        /// </summary>
+        public int LevelScriptId { get; set; } = -1;
+
+        private bool _isCatchAllHeader;
+
+        /// <summary>
+        /// Whether the chosen header is the one every unwalked square belongs to. Nothing is drawn for
+        /// it and the view says why, rather than stitching hundreds of maps to show an empty place.
+        /// </summary>
+        public bool IsCatchAllHeader
+        {
+            get => _isCatchAllHeader;
+            private set { if (Set(ref _isCatchAllHeader, value)) OnPropertyChanged(nameof(CatchAllNote)); }
+        }
+
+        public string CatchAllNote => FieldCatchAllHeader.Explanation;
+
+        /// <summary>The text archive the selected header points at. -1 when nothing set it.</summary>
+        public int TextArchiveId { get; set; } = -1;
+
+        /// <summary>
+        /// The gaps the map's messages leave for words the game fills in, so the preview can show real
+        /// words instead of the tag. Every script in the map's script file is walked to find which
+        /// script shows which message, and the messages come from the header's own text archive.
+        /// </summary>
+        public System.Collections.Generic.List<FieldStringVar> GatherStringVars()
+        {
+            var none = new System.Collections.Generic.List<FieldStringVar>();
+            if (TextArchiveId < 0) return none;
+
+            System.Collections.Generic.List<string> lines;
+            try { lines = new TextArchive(TextArchiveId).messages; }
+            catch { return none; }
+            if (lines == null) return none;
+
+            // Which scripts show which message. A script that could not be read is skipped rather than
+            // stopping the rest.
+            var showsMessage = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+            try
+            {
+                var header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
+                if (header != null)
+                {
+                    var sf = new ScriptFile(header.scriptFileID);
+                    for (int i = 0; i < (sf.allScripts?.Count ?? 0); i++)
+                    {
+                        int scriptNumber = i + 1;          // scripts are counted from one
+                        foreach (var cmd in sf.allScripts[i].commands ?? new System.Collections.Generic.List<ScriptCommand>())
+                        {
+                            // A command's name carries its parameters too ("Message 0x6"), so compare the
+                            // first word. Several commands put something in the box, not just Message.
+                            string full = cmd?.name ?? "";
+                            int space = full.IndexOf(' ');
+                            string name = space > 0 ? full.Substring(0, space) : full;
+                            if (name.IndexOf("Message", System.StringComparison.Ordinal) < 0) continue;
+                            if (name == "CloseMessage" || name == "OpenMessage"
+                             || name == "GetCommonMessageArchive" || name == "FreezeMessage") continue;
+                            if (cmd.cmdParams == null || cmd.cmdParams.Count == 0) continue;
+                            // A parameter arrives as its raw bytes, smallest first.
+                            var raw = cmd.cmdParams[0];
+                            if (raw == null || raw.Length == 0) continue;
+                            int id = raw.Length >= 2 ? raw[0] | (raw[1] << 8) : raw[0];
+                            if (id < 0 || id >= lines.Count) continue;
+                            if (!showsMessage.TryGetValue(id, out var who)) showsMessage[id] = who = new System.Collections.Generic.List<int>();
+                            if (!who.Contains(scriptNumber)) who.Add(scriptNumber);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            var numbered = new System.Collections.Generic.List<(int, string)>(lines.Count);
+            for (int i = 0; i < lines.Count; i++) numbered.Add((i, lines[i]));
+
+            return FieldStringVars.Gather(numbered,
+                id => showsMessage.TryGetValue(id, out var who) ? who : (System.Collections.Generic.IEnumerable<int>)new int[0]);
+        }
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -38,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels
         private EventFile _file;
 
         // ── 3D map view ────────────────────────────────────────────────────────────────
-        private Dictionary<int, (ushort matrixId, byte areaId, ushort scriptFileId)> _eventToHeader; // event file → its header's matrix + area + paired script file
+        private Dictionary<int, (ushort matrixId, byte areaId, ushort scriptFileId, ushort headerId)> _eventToHeader; // event file -> its header's matrix + area + paired script file + the header itself
         private GameMatrix _matrix;
         private byte _areaDataId;
         private readonly Dictionary<long, byte[,]> _collisionCache = new Dictionary<long, byte[,]>();
@@ -67,7 +150,16 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Overworld sprite/movement/orientation dropdowns (mirrors WinForms EventEditor) ──
         public ObservableCollection<string> OwSpriteEntries { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> OwMovementNames { get; } = new ObservableCollection<string>(DSPRE.Resources.PokeDatabase.EventEditor.Overworlds.movementTypesArray);
+        // Only the movement codes the games actually define (0x00-0x38). The old list ran to 71, so a
+        // third of it wrote codes no game has a handler for.
+        public ObservableCollection<string> OwMovementNames { get; } =
+            new ObservableCollection<string>(OverworldMovements.All.Select(m => m.ToString()));
+
+        /// <summary>The event's movement code isn't one the games define, so leave it alone.</summary>
+        public bool OwMovementUnknown => _ow != null && !OverworldMovements.IsDefined((byte)_owMove);
+        public string OwMovementUnknownNote => OwMovementUnknown
+            ? $"Movement code {(int)_owMove} isn't one this game defines. It is kept as-is unless you pick another."
+            : null;
         public ObservableCollection<string> OwOrientationNames { get; } = new ObservableCollection<string> { "Up", "Down", "Left", "Right" };
 
         private global::Avalonia.Media.Imaging.Bitmap _owSpritePreview;
@@ -81,9 +173,76 @@ namespace DSPRE.Avalonia.ViewModels
         private enum OwKind { Normal, Trainer, Item }
         private OwKind _owKind;
 
-        public bool OwIsNormal { get => _owKind == OwKind.Normal; set { if (value) SetOwKind(OwKind.Normal); } }
-        public bool OwIsTrainer { get => _owKind == OwKind.Trainer; set { if (value) SetOwKind(OwKind.Trainer); } }
-        public bool OwIsItem { get => _owKind == OwKind.Item; set { if (value) SetOwKind(OwKind.Item); } }
+        // ── Event type ────────────────────────────────────────────────────────────────
+        // The full set the game defines, not just Standard/Trainer/Item. Every trainer variant is a
+        // real trainer to the engine; the type only changes how it moves and which extra parameter it
+        // reads, so they all share the trainer dropdown and sight range.
+        private ushort _owRawType;
+        public ObservableCollection<string> OwEventTypes { get; } = new ObservableCollection<string>();
+        private IReadOnlyList<OverworldEventType> _owTypeTable = new List<OverworldEventType>();
+
+        public int OwEventTypeIndex
+        {
+            get
+            {
+                for (int i = 0; i < _owTypeTable.Count; i++) if (_owTypeTable[i].Value == _owRawType) return i;
+                return -1;
+            }
+            set
+            {
+                if (value < 0 || value >= _owTypeTable.Count) return;
+                ushort v = _owTypeTable[value].Value;
+                if (v == _owRawType) return;
+                _owRawType = v;
+                SetOwKind(KindOfType(v));
+                if (!_suppress && _ow != null) { _ow.type = v; Dirty(); }
+                RaiseOwTypeInfoChanged();
+            }
+        }
+
+        /// <summary>True when the loaded event's type isn't one this game family defines at all.</summary>
+        public bool OwTypeUnknown => _ow != null && OwEventTypeIndex < 0;
+        public string OwTypeUnknownNote => OwTypeUnknown
+            ? $"This event's type is {_owRawType}, which this game doesn't define. It is left untouched unless you pick a type above."
+            : null;
+
+        private OverworldEventType CurrentOwType =>
+            _owTypeTable.FirstOrDefault(t => t.Value == _owRawType);
+        public string OwTypeNote => CurrentOwType?.Note;
+        public bool OwHasTypeNote => !string.IsNullOrEmpty(OwTypeNote);
+
+        /// <summary>param1's meaning depends on the type; hidden when the engine never reads it.</summary>
+        public string OwParam1Label => CurrentOwType?.Param1Label;
+        public bool OwParam1Visible => !string.IsNullOrEmpty(OwParam1Label);
+
+        /// <summary>Type 9 runs the shared message script, so its number is a message, not a script.</summary>
+        public bool OwScriptIsMessageId => _owRawType == 9;
+        public string OwScriptSectionLabel => OwScriptIsMessageId ? "Message ID" : "Script";
+
+        private static OwKind KindOfType(ushort t)
+            => t == (ushort)Overworld.OwType.ITEM ? OwKind.Item
+             : (OverworldEventTypes.Find(RomInfo.gameFamily, t)?.IsTrainer == true ? OwKind.Trainer : OwKind.Normal);
+
+        private void RaiseOwTypeInfoChanged()
+        {
+            OnPropertyChanged(nameof(OwEventTypeIndex)); OnPropertyChanged(nameof(OwTypeUnknown));
+            OnPropertyChanged(nameof(OwTypeUnknownNote)); OnPropertyChanged(nameof(OwTypeNote));
+            OnPropertyChanged(nameof(OwHasTypeNote)); OnPropertyChanged(nameof(OwParam1Label));
+            OnPropertyChanged(nameof(OwParam1Visible)); OnPropertyChanged(nameof(OwScriptIsMessageId));
+            OnPropertyChanged(nameof(OwScriptSectionLabel));
+            OnPropertyChanged(nameof(OwScriptGenericWarningVisible)); OnPropertyChanged(nameof(OwScriptCommonInfo)); OnPropertyChanged(nameof(OwScriptHasCommonInfo));
+        }
+
+        public decimal OwParam1
+        {
+            get => _ow?.param1 ?? 0;
+            set { if (_ow == null || _suppress) return; if (_ow.param1 == (ushort)value) return; _ow.param1 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam1)); }
+        }
+        public decimal OwParam2
+        {
+            get => _ow?.param2 ?? 0;
+            set { if (_ow == null || _suppress) return; if (_ow.param2 == (ushort)value) return; _ow.param2 = (ushort)value; Dirty(); OnPropertyChanged(nameof(OwParam2)); }
+        }
 
         // Script is normally locked when Trainer/Item drives it, but if the current script number
         // doesn't resolve to any entry in that list (out-of-range/hand-edited data), unlock it so the
@@ -96,6 +255,38 @@ namespace DSPRE.Avalonia.ViewModels
         public bool OwScriptSectionVisible => _owKind != OwKind.Item || OwItemIndexOutOfRange;
 
         public bool OwTrainerFieldsVisible => _owKind == OwKind.Trainer;
+
+        // ── apricorn trees ──────────────────────────────────────────────────────────
+        //
+        // The field DSPRE calls Sight range is the engine's param0, and param0 is a general one. In
+        // HeartGold's own field code only two things read it: ev_trainer.c, which takes it as how far a
+        // trainer can see, and bong_sys.c, which takes it as which apricorn bed a tree belongs to. Nothing
+        // else reads it at all.
+        //
+        // An apricorn tree's colour is not in the map. bong_sys.c looks the bed up by param0 and asks the
+        // save what is growing there, and field/fieldobj_bong.c then picks the sprite from that. So
+        // changing this number moves the tree to another bed, and the tree comes out a different colour.
+        // The sprite put in the map is only what it looks like before the game replaces it.
+        //
+        // Sprite codes from field/fieldobj_code.h: BONGURI 0x0106 is a tree with nothing on it,
+        // BONGURI01 to 07 are 0x0107 to 0x010D, and the fruit are 0x010E onwards.
+        private const int FirstApricornSprite = 0x0106, LastApricornSprite = 0x0114;
+
+        public bool OwIsApricornTree
+        {
+            get
+            {
+                if (_ow == null) return false;
+                int sprite = _ow.overlayTableEntry;
+                return sprite >= FirstApricornSprite && sprite <= LastApricornSprite;
+            }
+        }
+
+        public string OwApricornNote =>
+            "This is an apricorn tree. What colour it grows is not stored here: the game looks up the "
+            + "apricorn bed this number picks and asks the save what is in it, so changing the number "
+            + "moves the tree to another bed and it comes out a different apricorn. The sprite chosen "
+            + "above is only what it looks like before the game replaces it.";
 
         /// <summary>HG Engine (community HeartGold decompilation, <see cref="RomInfo.isHGE"/>) uses a
         /// single generic item script (always exactly 7000) whose behavior reads the item ID straight
@@ -120,6 +311,9 @@ namespace DSPRE.Avalonia.ViewModels
         // number that doesn't correspond to any known trainer, e.g. hand-edited data or a ROM-specific
         // reserved value); show that clearly instead of a silently-blank dropdown.
         public bool OwTrainerIndexOutOfRange => _owKind == OwKind.Trainer && (_owTrainerIndex < 0 || _owTrainerIndex >= OwTrainerEntries.Count);
+
+        /// <summary>Trainer 0 is the empty slot the games never use; picking it gives a battle with nobody.</summary>
+        public bool OwTrainerIsDummy => _owKind == OwKind.Trainer && _owTrainerIndex == 0;
 
         private bool _owPartnerTrainer;
         public bool OwPartnerTrainer
@@ -157,10 +351,10 @@ namespace DSPRE.Avalonia.ViewModels
 
         private void RaiseOwKindChanged()
         {
-            OnPropertyChanged(nameof(OwIsNormal)); OnPropertyChanged(nameof(OwIsTrainer)); OnPropertyChanged(nameof(OwIsItem));
             OnPropertyChanged(nameof(OwTrainerFieldsVisible));
+            OnPropertyChanged(nameof(OwIsApricornTree)); OnPropertyChanged(nameof(OwApricornNote));
             OnPropertyChanged(nameof(OwItemFieldsVisibleVanilla)); OnPropertyChanged(nameof(OwItemFieldsVisibleHGE));
-            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
             OnPropertyChanged(nameof(OwItemIdHGE));
             OnPropertyChanged(nameof(OwScriptEnabled));
             OnPropertyChanged(nameof(OwScriptSectionVisible));
@@ -189,9 +383,12 @@ namespace DSPRE.Avalonia.ViewModels
             ForceOwScript(scriptNum);
         }
 
+        /// <summary>Keeps the script field consistent with the kind of event this now is. The type value
+        /// itself belongs to the type picker; this only deals with the script number the kind implies.</summary>
         private void SetOwKind(OwKind kind)
         {
-            bool changed = _owKind != kind;
+            OwKind previous = _owKind;
+            bool changed = previous != kind;
             _owKind = kind;
             RaiseOwKindChanged();
             if (!changed || _suppress || _ow == null) return;
@@ -199,11 +396,11 @@ namespace DSPRE.Avalonia.ViewModels
             switch (kind)
             {
                 case OwKind.Normal:
-                    _ow.type = (ushort)Overworld.OwType.NORMAL;
-                    ForceOwScript(0);
+                    // Only clear a script that the trainer/item dropdown owned. A message id or a
+                    // hand-written script number belongs to the user and must survive a type change.
+                    if (previous == OwKind.Trainer || previous == OwKind.Item) ForceOwScript(0);
                     break;
                 case OwKind.Item:
-                    _ow.type = (ushort)Overworld.OwType.ITEM;
                     if (IsHGE)
                     {
                         // Item ID lives in sightRange/param0, already whatever it was, just lock the script.
@@ -213,11 +410,18 @@ namespace DSPRE.Avalonia.ViewModels
                     else ForceOwScript((ushort)(7000 + Math.Max(_owItemIndex, 0)));
                     break;
                 case OwKind.Trainer:
-                    _ow.type = (ushort)Overworld.OwType.TRAINER;
-                    if (_owTrainerIndex < 0 && OwTrainerEntries.Count > 0) OwTrainerIndex = 0;
-                    else RecomputeTrainerScript();
+                    // Don't pick a trainer for them: entry 0 is the dummy slot, not a real trainer, and no
+                    // retail event uses it. Leave it unselected so the warning prompts a real choice.
+                    if (_owTrainerIndex >= 0) RecomputeTrainerScript();
                     break;
             }
+        }
+
+        private void PopulateOwEventTypes()
+        {
+            _owTypeTable = OverworldEventTypes.For(RomInfo.gameFamily);
+            OwEventTypes.Clear();
+            foreach (var t in _owTypeTable) OwEventTypes.Add(t.ToString());
         }
 
         private void PopulateOwTrainerAndItemEntries()
@@ -291,13 +495,112 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── Shared position (map + matrix) ──────────────────────────────────────────
         private decimal _xMap, _yMap, _zPos, _xMat, _yMat;
-        public decimal XMap { get => _xMap; set { if (Set(ref _xMap, value) && !_suppress && _current != null) { _current.xMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
-        public decimal YMap { get => _yMap; set { if (Set(ref _yMap, value) && !_suppress && _current != null) { _current.yMapPosition = (short)value; Dirty(); RefreshMarkers(); } } }
-        // zPosition is a 16.16 fixed-point value (1 tile = 65536 units); WinForms' owZPositionUpDown shows/edits
-        // the whole-tile part only (-32768..32768, no sub-tile Z control from this field).
-        public decimal ZPos { get => _zPos; set { if (Set(ref _zPos, value) && !_suppress && _current != null) { _current.zPosition = (int)(value * 65536m); Dirty(); RefreshMarkers(); } } }
-        public decimal XMatrix { get => _xMat; set { if (Set(ref _xMat, value) && !_suppress && _current != null) { _current.xMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
-        public decimal YMatrix { get => _yMat; set { if (Set(ref _yMat, value) && !_suppress && _current != null) { _current.yMatrixPosition = (ushort)value; Dirty(); DisplayMap(); } } }
+        // These five are shared by all four event kinds, so the box keeps a backing field that outlives
+        // any one selection. Deciding whether to write from that field meant a value already sitting in
+        // the box was never pushed down to a newly selected event; compare against the event instead.
+        public decimal XMap
+        {
+            get => _xMap;
+            set
+            {
+                Set(ref _xMap, value);
+                if (_suppress || _current == null) return;
+                short v = (short)value;
+                if (_current.xMapPosition == v) return;
+                _current.xMapPosition = v; Dirty(); RefreshMarkers();
+            }
+        }
+        public decimal YMap
+        {
+            get => _yMap;
+            set
+            {
+                Set(ref _yMap, value);
+                if (_suppress || _current == null) return;
+                short v = (short)value;
+                if (_current.yMapPosition == v) return;
+                _current.yMapPosition = v; Dirty(); RefreshMarkers();
+            }
+        }
+        // Only overworlds store z as 16.16 fixed point (1 tile = 65536 units). Triggers and spawnables
+        // store a plain value, so scaling those would truncate anything the user types to zero.
+        /// <summary>
+        /// Whether this kind of event keeps its height as a fixed-point world value rather than a plain
+        /// number. Only an overworld does, and that is settled: FIELD_OBJ_H.gy is commented "Y値 fx32型",
+        /// the engine uses it as the world Y outright (fieldobj.c:1614), and every one of the 2667
+        /// overworld heights in HeartGold is an exact multiple of 65536.
+        ///
+        /// Warps and signs are less clear and are left as plain numbers. Their height fields are 32 bits
+        /// wide like the overworld one (CONNECT_DATA and BG_TALK_DATA in check_data.h) and the single
+        /// non-zero sign height in HeartGold is 131072, which would be exactly two tiles read as fixed
+        /// point, but nothing in the engine reads either field: warp arrival takes only x and z
+        /// (ev_mapchange.c:276). One value and no reader is not enough to change how they are shown.
+        /// A trigger is settled the other way: POS_EVENT_DATA gives it a u16, too narrow for one tile.
+        /// </summary>
+        private static bool ZIsFixedPointFor(Event e) => e is Overworld;
+        private bool ZIsFixedPoint => ZIsFixedPointFor(_current);
+        private decimal ToDisplayZ(int raw) => ZIsFixedPoint ? raw / 65536m : raw;
+        private int FromDisplayZ(decimal v) => ZIsFixedPoint ? (int)(v * 65536m) : (int)v;
+        /// <summary>The event's height in the same units the 3D scene uses, whichever way its z is stored.</summary>
+        private static float HeightHint(Event e) => ZIsFixedPointFor(e) ? e.zPosition / 262144f : e.zPosition * 0.25f;
+        /// <summary>
+        /// What the height would be in tiles if it were read the way an overworld's is. Nothing in the
+        /// engine reads a warp's or a sign's height: arriving through a warp takes only x and z
+        /// (ev_mapchange.c:276) and talking to a sign matches only gx and gz (sxy.c:206). So the number
+        /// is shown as it is stored, with this beside it, rather than asserting a unit.
+        /// </summary>
+        public string ZPosNote
+        {
+            get
+            {
+                if (_current == null || ZIsFixedPoint || _current.zPosition == 0) return "";
+                double tiles = _current.zPosition / 65536.0;
+                return $"= {tiles:0.###} tiles";
+            }
+        }
+
+        /// <summary>The long version of the note, for hovering.</summary>
+        public string ZPosNoteTip =>
+            "Nothing in the games reads this height: arriving through a warp uses only x and z, and "
+            + "talking to a sign matches only its square. This is what the number would be in tiles if "
+            + "it were read the way an overworld's height is.";
+
+        public decimal ZPos
+        {
+            get => _zPos;
+            set
+            {
+                Set(ref _zPos, value);
+                if (_suppress || _current == null) return;
+                int v = FromDisplayZ(value);
+                if (_current.zPosition == v) return;
+                _current.zPosition = v; Dirty(); RefreshMarkers(); OnPropertyChanged(nameof(ZPosNote));
+            }
+        }
+        public decimal XMatrix
+        {
+            get => _xMat;
+            set
+            {
+                Set(ref _xMat, value);
+                if (_suppress || _current == null) return;
+                ushort v = (ushort)value;
+                if (_current.xMatrixPosition == v) return;
+                _current.xMatrixPosition = v; Dirty(); DisplayMap();
+            }
+        }
+        public decimal YMatrix
+        {
+            get => _yMat;
+            set
+            {
+                Set(ref _yMat, value);
+                if (_suppress || _current == null) return;
+                ushort v = (ushort)value;
+                if (_current.yMatrixPosition == v) return;
+                _current.yMatrixPosition = v; Dirty(); DisplayMap();
+            }
+        }
 
         // ── Spawnable fields ────────────────────────────────────────────────────────
         private decimal _spScript, _spType, _spDir;
@@ -309,7 +612,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (Set(ref _spScript, value) && !_suppress && _spawn != null)
                 {
                     _spawn.scriptNumber = (ushort)value; Dirty();
-                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
+                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
                 }
             }
         }
@@ -329,7 +632,10 @@ namespace DSPRE.Avalonia.ViewModels
         public decimal OwSprite
         {
             get => _owSprite;
-            set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.overlayTableEntry = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
+            set { if (Set(ref _owSprite, value) && !_suppress && _ow != null) { _ow.overlayTableEntry = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview();
+                  // Whether this is an apricorn tree is decided by the sprite, so the panel has to
+                  // follow when the sprite changes.
+                  OnPropertyChanged(nameof(OwIsApricornTree)); } }
         }
         public decimal OwMovement { get => _owMove; set { if (Set(ref _owMove, value) && !_suppress && _ow != null) { _ow.movement = (ushort)value; Dirty(); } } }
         public decimal OwType { get => _owType; set { if (Set(ref _owType, value) && !_suppress && _ow != null) { _ow.type = (ushort)value; Dirty(); } } }
@@ -364,7 +670,7 @@ namespace DSPRE.Avalonia.ViewModels
         {
             get
             {
-                if (_ow == null || _owKind != OwKind.Normal || !OwScriptIndexOutOfRange) return null;
+                if (_ow == null || _owKind != OwKind.Normal || OwScriptIsMessageId || !OwScriptIndexOutOfRange) return null;
 
                 var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
                 switch (result.Kind)
@@ -379,16 +685,63 @@ namespace DSPRE.Avalonia.ViewModels
             }
         }
 
+        /// <summary>Shared by every event type: a script number that isn't in this header's own script
+        /// file may still be a valid common/global script rather than a mistake.</summary>
+        private static string CommonScriptInfo(int scriptNumber)
+        {
+            var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
+            switch (result.Kind)
+            {
+                case CommonScriptId.Kind.Resolved:
+                    return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
+                case CommonScriptId.Kind.Discrepancy:
+                    return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
+                default:
+                    return null;
+            }
+        }
+
+        public string TrScriptCommonInfo => _trig != null && TrScriptIndexOutOfRange ? CommonScriptInfo((int)_trScript) : null;
+        public bool TrScriptHasCommonInfo => !string.IsNullOrEmpty(TrScriptCommonInfo);
+        public bool TrScriptGenericWarningVisible => TrScriptIndexOutOfRange && !TrScriptHasCommonInfo;
+
+        public string SpScriptCommonInfo => _spawn != null && SpScriptIndexOutOfRange ? CommonScriptInfo((int)_spScript) : null;
+        public bool SpScriptHasCommonInfo => !string.IsNullOrEmpty(SpScriptCommonInfo);
+        public bool SpScriptGenericWarningVisible => SpScriptIndexOutOfRange && !SpScriptHasCommonInfo;
+
+        /// <summary>Open the Script Editor on the given script, following a common script to its real
+        /// archive the way the old editor's per-event "go to script" buttons did.</summary>
+        public void GoToScript(int scriptNumber)
+        {
+            var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
+            if (result.Kind == CommonScriptId.Kind.Resolved)
+            {
+                AvaloniaEditorLauncher.OpenScriptEditor(result.ScriptArchiveId);
+                StatusText = $"Common Script {result.ManualUserId} lives in script file {result.ScriptArchiveId}.";
+                return;
+            }
+            if (result.Kind == CommonScriptId.Kind.Discrepancy)
+            {
+                StatusText = $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
+                return;
+            }
+            AvaloniaEditorLauncher.OpenScriptEditor(_pairedScriptFileId);
+        }
+
+        public void GoToOverworldScript() { if (_ow != null) GoToScript(_ow.scriptNumber); }
+        public void GoToTriggerScript()   { if (_trig != null) GoToScript(_trig.scriptNumber); }
+        public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.scriptNumber); }
+
         public bool OwScriptHasCommonInfo => !string.IsNullOrEmpty(OwScriptCommonInfo);
-        public bool OwScriptGenericWarningVisible => OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
+        public bool OwScriptGenericWarningVisible => !OwScriptIsMessageId && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
         public decimal OwOrientation
         {
             get => _owOrient;
-            set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.orientation = (ushort)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
+            set { if (Set(ref _owOrient, value) && !_suppress && _ow != null) { _ow.orientation = (short)value; Dirty(); RefreshMarkers(); UpdateOwSpritePreview(); } }
         }
         public decimal OwSight { get => _owSight; set { if (Set(ref _owSight, value) && !_suppress && _ow != null) { _ow.sightRange = (ushort)value; Dirty(); } } }
-        public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.xRange = (ushort)value; Dirty(); } } }
-        public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.yRange = (ushort)value; Dirty(); } } }
+        public decimal OwXRange { get => _owXr; set { if (Set(ref _owXr, value) && !_suppress && _ow != null) { _ow.xRange = (short)value; Dirty(); } } }
+        public decimal OwYRange { get => _owYr; set { if (Set(ref _owYr, value) && !_suppress && _ow != null) { _ow.yRange = (short)value; Dirty(); } } }
 
         // Dropdown-friendly wrappers: the sprite entry list is the sparse set of valid overlay-table
         // keys (RomInfo.overworldTableKeys), so its ComboBox index isn't the same as the raw value;
@@ -403,7 +756,13 @@ namespace DSPRE.Avalonia.ViewModels
                 OnPropertyChanged();
             }
         }
-        public int OwMovementIndex { get => (int)_owMove; set => OwMovement = value; }
+        // index == code for the whole defined range, so an out-of-range code simply shows nothing
+        // selected rather than silently snapping to a different movement.
+        public int OwMovementIndex
+        {
+            get => OverworldMovements.IsDefined((byte)_owMove) ? (int)_owMove : -1;
+            set { if (value >= 0) OwMovement = value; }
+        }
         public int OwOrientationIndex { get => (int)_owOrient; set => OwOrientation = value; }
 
         private void UpdateOwSpritePreview()
@@ -413,7 +772,7 @@ namespace DSPRE.Avalonia.ViewModels
             {
                 try
                 {
-                    var pix = OverworldSprites.Get(_ow.overlayTableEntry, _ow.orientation);
+                    var pix = OverworldSprites.Get(_ow.overlayTableEntry, (ushort)Math.Max((short)0, _ow.orientation));
                     if (pix != null && pix.Width > 0 && pix.Height > 0)
                     {
                         var bgra = new byte[pix.Rgba.Length];
@@ -447,7 +806,7 @@ namespace DSPRE.Avalonia.ViewModels
                 if (Set(ref _trScript, value) && !_suppress && _trig != null)
                 {
                     _trig.scriptNumber = (ushort)value; Dirty();
-                    OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
+                    OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
                 }
             }
         }
@@ -459,8 +818,39 @@ namespace DSPRE.Avalonia.ViewModels
         public bool TrScriptIndexOutOfRange => _trig != null && TrScriptIndex < 0;
         public decimal TrWidth { get => _trW; set { if (Set(ref _trW, value) && !_suppress && _trig != null) { _trig.widthX = (ushort)value; Dirty(); } } }
         public decimal TrHeight { get => _trH; set { if (Set(ref _trH, value) && !_suppress && _trig != null) { _trig.heightY = (ushort)value; Dirty(); } } }
-        public decimal TrVarValue { get => _trVarVal; set { if (Set(ref _trVarVal, value) && !_suppress && _trig != null) { _trig.expectedVarValue = (ushort)value; Dirty(); } } }
-        public decimal TrVar { get => _trVar; set { if (Set(ref _trVar, value) && !_suppress && _trig != null) { _trig.variableWatched = (ushort)value; Dirty(); } } }
+        public decimal TrVarValue
+        {
+            get => _trVarVal;
+            set { if (Set(ref _trVarVal, value) && !_suppress && _trig != null) { _trig.expectedVarValue = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarValueHex)); }
+        }
+        public decimal TrVar
+        {
+            get => _trVar;
+            set { if (Set(ref _trVar, value) && !_suppress && _trig != null) { _trig.variableWatched = (ushort)value; Dirty(); } OnPropertyChanged(nameof(TrVarHex)); }
+        }
+
+        // Script variables are normally written in hex, so the two variable fields can be typed either way.
+        private bool _trHex;
+        public bool TrHex { get => _trHex; set { if (Set(ref _trHex, value)) OnPropertyChanged(nameof(TrDecimal)); } }
+        public bool TrDecimal => !_trHex;
+        public string TrVarHex
+        {
+            get => ((ushort)_trVar).ToString("X4");
+            set { if (TryParseHex(value, out ushort v)) TrVar = v; else OnPropertyChanged(nameof(TrVarHex)); }
+        }
+        public string TrVarValueHex
+        {
+            get => ((ushort)_trVarVal).ToString("X4");
+            set { if (TryParseHex(value, out ushort v)) TrVarValue = v; else OnPropertyChanged(nameof(TrVarValueHex)); }
+        }
+        private static bool TryParseHex(string s, out ushort value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            s = s.Trim();
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
+            return ushort.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
+        }
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
@@ -475,7 +865,27 @@ namespace DSPRE.Avalonia.ViewModels
         public int SelectedEventIndex
         {
             get => _selectedIndex;
-            set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadFile(value); }
+            set
+            {
+                if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0 && value != _selectedIndex)
+                {
+                    // Ask before dropping edits. Snap the box back to the current file until they answer.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedEventIndex));
+                    _ = ConfirmEventFileSwitchAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadFile(value);
+            }
+        }
+
+        private async Task ConfirmEventFileSwitchAsync(int requested)
+        {
+            bool discard = await DialogHelper.AskYesNo(
+                $"There are unsaved changes in event file {_selectedIndex}. Discard them?", "Unsaved changes");
+            if (!discard) return;
+            SetClean();
+            if (Set(ref _selectedIndex, requested)) LoadFile(requested);
         }
 
         public int InitialIndex { get; set; }
@@ -487,6 +897,28 @@ namespace DSPRE.Avalonia.ViewModels
 
         // ── 3D marker visibility toggles (per event type) ────────────────────────────────
         private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true, _showGrid;
+
+        // Flat 2D view. Remembered across sessions so whoever prefers the old look only picks it once.
+        // Settings may not be loaded yet (a view model built before startup finishes, or in a
+        // test), so fall back to the default rather than throwing out of the constructor.
+        private bool _flat2D = SettingsManager.Settings?.eventEditorFlat2D ?? false;
+        public bool Flat2D
+        {
+            get => _flat2D;
+            set
+            {
+                if (!Set(ref _flat2D, value)) return;
+                if (SettingsManager.Settings != null)
+                {
+                    SettingsManager.Settings.eventEditorFlat2D = value;
+                    SettingsManager.Save();
+                }
+                ViewModeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        /// <summary>Raised when the 2D/3D choice changes, so the view can reconfigure the GL control.</summary>
+        public event EventHandler ViewModeChanged;
         public bool ShowOverworlds { get => _showOw; set { if (Set(ref _showOw, value)) RefreshMarkers(); } }
         public bool ShowWarps { get => _showWarp; set { if (Set(ref _showWarp, value)) RefreshMarkers(); } }
         public bool ShowTriggers { get => _showTrig; set { if (Set(ref _showTrig, value)) RefreshMarkers(); } }
@@ -526,6 +958,7 @@ namespace DSPRE.Avalonia.ViewModels
                 OwSpriteEntries.Clear();
                 if (overworldTableKeys != null)
                     foreach (uint key in overworldTableKeys) OwSpriteEntries.Add("OW Entry " + key);
+                PopulateOwEventTypes();
                 PopulateOwTrainerAndItemEntries();
                 EventNames.Clear();
                 int count = Filesystem.GetEventFileCount();
@@ -574,7 +1007,8 @@ namespace DSPRE.Avalonia.ViewModels
         {
             _current = e;
             if (e == null) return;
-            XMap = e.xMapPosition; YMap = e.yMapPosition; ZPos = e.zPosition / 65536m;
+            XMap = e.xMapPosition; YMap = e.yMapPosition; ZPos = ToDisplayZ(e.zPosition);
+            OnPropertyChanged(nameof(ZPosNote));
             XMatrix = e.xMatrixPosition; YMatrix = e.yMatrixPosition;
         }
 
@@ -587,7 +1021,7 @@ namespace DSPRE.Avalonia.ViewModels
             LoadPosition(_spawn);
             SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
             _suppress = false;
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
             RefreshMarkers();
         }
 
@@ -601,7 +1035,8 @@ namespace DSPRE.Avalonia.ViewModels
             OwId = _ow.owID; OwSprite = _ow.overlayTableEntry; OwMovement = _ow.movement; OwType = _ow.type;
             OwFlag = _ow.flag; OwScript = _ow.scriptNumber; OwOrientation = _ow.orientation; OwSight = _ow.sightRange;
             OwXRange = _ow.xRange; OwYRange = _ow.yRange;
-            OnPropertyChanged(nameof(OwSpriteIndex)); OnPropertyChanged(nameof(OwMovementIndex)); OnPropertyChanged(nameof(OwOrientationIndex));
+            OnPropertyChanged(nameof(OwSpriteIndex)); OnPropertyChanged(nameof(OwMovementIndex));
+            OnPropertyChanged(nameof(OwMovementUnknown)); OnPropertyChanged(nameof(OwMovementUnknownNote)); OnPropertyChanged(nameof(OwOrientationIndex));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
 
             // Derive the Standard/Trainer/Item radio selection + locked-script dropdown index from the
@@ -609,7 +1044,8 @@ namespace DSPRE.Avalonia.ViewModels
             // the trainerFunnyScriptNumber-aware inverse (see NavigateToOverworldTarget in the WinForms
             // EventEditor) instead of WinForms' own display-only reverse mapping, which is off by one
             // past that threshold.
-            if (_ow.type == (ushort)Overworld.OwType.TRAINER)
+            _owRawType = _ow.type;
+            if (KindOfType(_ow.type) == OwKind.Trainer)
             {
                 _owKind = OwKind.Trainer;
                 bool partner = _ow.scriptNumber >= 4999;
@@ -632,7 +1068,8 @@ namespace DSPRE.Avalonia.ViewModels
             }
             RaiseOwKindChanged();
             OnPropertyChanged(nameof(OwTrainerIndex)); OnPropertyChanged(nameof(OwPartnerTrainer)); OnPropertyChanged(nameof(OwItemIndex));
-            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwItemIndexOutOfRange)); OnPropertyChanged(nameof(OwScriptEnabled));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwItemIndexOutOfRange)); OnPropertyChanged(nameof(OwScriptEnabled));
+            RaiseOwTypeInfoChanged(); OnPropertyChanged(nameof(OwParam1)); OnPropertyChanged(nameof(OwParam2));
 
             _suppress = false;
             RefreshMarkers();
@@ -661,18 +1098,36 @@ namespace DSPRE.Avalonia.ViewModels
             TrScript = _trig.scriptNumber; TrWidth = _trig.widthX; TrHeight = _trig.heightY;
             TrVarValue = _trig.expectedVarValue; TrVar = _trig.variableWatched;
             _suppress = false;
-            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
             RefreshMarkers();
         }
 
         // ── Add / remove ────────────────────────────────────────────────────────────
-        public void AddSpawnable() { if (_file == null) return; _file.spawnables.Add(new Spawnable(0, 0)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
+        // New events go on the cell the view is showing, not (0,0) which is usually another header's map.
+        private (int x, int y) NewEventCell()
+        {
+            if (_current != null) return (_current.xMatrixPosition, _current.yMatrixPosition);
+            var cells = HeaderCells();
+            if (cells != null)
+                foreach (var c in cells) return c;
+            return (0, 0);
+        }
+
+        public void AddSpawnable() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.spawnables.Add(new Spawnable(cx, cy)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
         public void RemoveSpawnable() { if (_file == null || _selSpawn < 0 || _selSpawn >= _file.spawnables.Count) return; _file.spawnables.RemoveAt(_selSpawn); RefreshLists(); Dirty(); SelectedSpawnableIndex = -1; RefreshMarkers(); }
-        public void AddOverworld() { if (_file == null) return; _file.overworlds.Add(new Overworld(0, 0, 0)); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1; }
+        public void AddOverworld()
+        {
+            if (_file == null) return;
+            var (cx, cy) = NewEventCell();
+            int newID = 0;                                   // smallest id nothing else is using
+            while (_file.overworlds.Any(o => o.owID == newID)) newID++;
+            _file.overworlds.Add(new Overworld(newID, cx, cy));
+            RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1;
+        }
         public void RemoveOverworld() { if (_file == null || _selOw < 0 || _selOw >= _file.overworlds.Count) return; _file.overworlds.RemoveAt(_selOw); RefreshLists(); Dirty(); SelectedOverworldIndex = -1; RefreshMarkers(); }
-        public void AddWarp() { if (_file == null) return; _file.warps.Add(new Warp(0, 0)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
+        public void AddWarp() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.warps.Add(new Warp(cx, cy)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
         public void RemoveWarp() { if (_file == null || _selWarp < 0 || _selWarp >= _file.warps.Count) return; _file.warps.RemoveAt(_selWarp); RefreshLists(); Dirty(); SelectedWarpIndex = -1; RefreshMarkers(); }
-        public void AddTrigger() { if (_file == null) return; _file.triggers.Add(new Trigger(0, 0)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
+        public void AddTrigger() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.triggers.Add(new Trigger(cx, cy)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
         public void RemoveTrigger() { if (_file == null || _selTrig < 0 || _selTrig >= _file.triggers.Count) return; _file.triggers.RemoveAt(_selTrig); RefreshLists(); Dirty(); SelectedTriggerIndex = -1; RefreshMarkers(); }
 
         // ── Duplicate selected (copy ctors) ──────────────────────────────────────────────
@@ -738,9 +1193,9 @@ namespace DSPRE.Avalonia.ViewModels
         /// references it (<see cref="MapHeader.eventFileID"/>). This is the real ROM linkage
         /// the WinForms editor uses to pick the correct map + texture packs for an event file.
         /// </summary>
-        private static Dictionary<int, (ushort, byte, ushort)> BuildEventHeaderLookup()
+        private static Dictionary<int, (ushort, byte, ushort, ushort)> BuildEventHeaderLookup()
         {
-            var lookup = new Dictionary<int, (ushort, byte, ushort)>();
+            var lookup = new Dictionary<int, (ushort, byte, ushort, ushort)>();
             try
             {
                 int headerCount = GetHeaderCount();
@@ -751,7 +1206,7 @@ namespace DSPRE.Avalonia.ViewModels
                         var header = MapHeader.GetMapHeader(h);
                         if (header == null) continue;
                         if (!lookup.ContainsKey(header.eventFileID))
-                            lookup[header.eventFileID] = (header.matrixID, header.areaDataID, header.scriptFileID);
+                            lookup[header.eventFileID] = (header.matrixID, header.areaDataID, header.scriptFileID, h);
                     }
                     catch { /* skip bad header */ }
                 }
@@ -763,7 +1218,7 @@ namespace DSPRE.Avalonia.ViewModels
         /// <summary>Resolves the matrix + area for the loaded event file, then renders the whole matrix.</summary>
         private void ResolveMatrixForFile(int eventIndex)
         {
-            _matrix = null; _areaDataId = 0; _matrixId = -1;
+            _matrix = null; _areaDataId = 0; _matrixId = -1; _headerId = -1;
             _collisionCache.Clear();
             int pairedScriptFileId = -1;
             try
@@ -774,6 +1229,7 @@ namespace DSPRE.Avalonia.ViewModels
                     _matrix = new GameMatrix(hdr.Item1);
                     _areaDataId = hdr.Item2;
                     pairedScriptFileId = hdr.Item3;
+                    _headerId = hdr.Item4;
                 }
             }
             catch (Exception ex) { AppLogger.Error("Matrix resolve failed: " + ex.Message); }
@@ -790,8 +1246,10 @@ namespace DSPRE.Avalonia.ViewModels
         public ObservableCollection<string> AvailableScripts { get; } = new ObservableCollection<string>();
         private readonly List<uint> _availableScriptIds = new List<uint>();
 
+        private int _pairedScriptFileId = -1;
         private void PopulateAvailableScripts(int scriptFileId)
         {
+            _pairedScriptFileId = scriptFileId;
             AvailableScripts.Clear();
             _availableScriptIds.Clear();
             if (scriptFileId >= 0)
@@ -807,8 +1265,8 @@ namespace DSPRE.Avalonia.ViewModels
                 }
                 catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
             }
-            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange));
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange));
+            OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
             OnPropertyChanged(nameof(OwScriptCommonInfo));
             OnPropertyChanged(nameof(OwScriptHasCommonInfo));
@@ -825,6 +1283,7 @@ namespace DSPRE.Avalonia.ViewModels
         }
 
         private int _matrixId = -1;
+        private int _headerId = -1;
 
         /// <summary>
         /// Renders only the maps this event file's events actually sit on (the cells they
@@ -843,15 +1302,35 @@ namespace DSPRE.Avalonia.ViewModels
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
-                // Small matrices (interiors / routes / regions) render in full, exactly like the
-                // map editor's working full-matrix view, so the per-cell stride is derived from the
-                // whole matrix (correct true map size) and maps stitch seamlessly. Only a giant world
-                // matrix falls back to the bounding box of the event's own cells (to avoid loading it all).
-                int total = _matrix.width * _matrix.height;
-                ISet<(int x, int y)> include = total <= 256 ? null : EventCells();
+                // Prefer the cells this event file's own header owns, the same rule the map editor's
+                // "This header" view uses. The old fallback drew the bounding box around the events,
+                // which pulled in whatever neighbouring maps happened to sit inside that rectangle.
+                ISet<(int x, int y)> include = HeaderCells();
+                string scopeName = "this header";
+
+                // The catch-all header owns every square nobody walks on, hundreds of them, and has
+                // nothing in it to edit. Stitching all that is a long wait for an empty answer.
+                if (include != null && FieldCatchAllHeader.IsCatchAll(include.Count))
+                {
+                    Model3D = null;
+                    IsCatchAllHeader = true;
+                    StatusText = FieldCatchAllHeader.Explanation;
+                    MapLoaded?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+                IsCatchAllHeader = false;
+
+                if (include == null)
+                {
+                    // No headers section to go on: small matrices render whole, big ones fall back to
+                    // the events' own bounding box so a world-sized matrix isn't loaded entirely.
+                    int total = _matrix.width * _matrix.height;
+                    include = total <= 256 ? null : EventCells();
+                    scopeName = "events";
+                }
 
                 Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include, mode: StitchMode);
-                string scope = include == null ? "full" : $"{include.Count}-cell region";
+                string scope = include == null ? "full" : $"{include.Count} maps, {scopeName}";
                 MapInfo = Model3D != null
                     ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height} ({scope})  ·  area {_areaDataId}"
                     : $"Matrix {_matrixId}: no renderable maps.";
@@ -871,6 +1350,21 @@ namespace DSPRE.Avalonia.ViewModels
         /// surface (rather than just the exact occupied cells, which leaves holes where an event
         /// skips a cell). Capped so a stray far-flung event can't pull in a whole world matrix.
         /// </summary>
+        /// <summary>
+        /// The matrix cells belonging to this event file's header, or null when the matrix has no
+        /// headers section to identify them by.
+        /// </summary>
+        private HashSet<(int x, int y)> HeaderCells()
+        {
+            if (_matrix == null || !_matrix.hasHeadersSection || _headerId < 0) return null;
+            var set = new HashSet<(int x, int y)>();
+            for (int y = 0; y < _matrix.height; y++)
+                for (int x = 0; x < _matrix.width; x++)
+                    if (_matrix.headers[y, x] == _headerId)
+                        set.Add((x, y));
+            return set.Count > 0 ? set : null;
+        }
+
         private HashSet<(int x, int y)> EventCells()
         {
             var set = new HashSet<(int x, int y)>();
@@ -996,7 +1490,7 @@ namespace DSPRE.Avalonia.ViewModels
                         bool sel = ReferenceEquals(ow, _current);
                         if (sel) Quad(ow, (1f, 1f, 1f));
 
-                        var pix = OverworldSprites.Get(ow.overlayTableEntry, ow.orientation);
+                        var pix = OverworldSprites.Get(ow.overlayTableEntry, (ushort)Math.Max((short)0, ow.orientation));
                         var foot = Foot(ow);
                         if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
@@ -1038,10 +1532,192 @@ namespace DSPRE.Avalonia.ViewModels
 
         private float EventSurfaceY(NsbmdRenderModel m, float rawX, float rawZ, Event e)
         {
-            // zPosition is an FX32 height hint. BDHC/mesh lookup chooses the actual floor near it.
-            float yHint = e.zPosition / 262144f;
+            // A height hint only; BDHC/mesh lookup chooses the actual floor near it.
+            float yHint = HeightHint(e);
             if (m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rawX, rawZ, yHint, out var bdhcY)) return bdhcY;
             return e.zPosition == 0 ? m.SurfaceY(rawX, rawZ) : m.SurfaceY(rawX, rawZ, yHint);
+        }
+
+        // ── Animated preview handoff ──────────────────────────────────────────────────────
+        /// <summary>The events being edited, for the preview window to animate.</summary>
+        public EventFile Events => _file;
+
+        /// <summary>
+        /// The camera number this header asks for. The games look it up in their own camera table, so
+        /// a gym or an indoor map is framed differently from an ordinary route.
+        /// </summary>
+        public int CameraId
+        {
+            get
+            {
+                try { return _headerId < 0 ? 0 : MapHeader.GetMapHeader((ushort)_headerId).cameraAngleID; }
+                catch { return 0; }
+            }
+        }
+
+        /// <summary>The two music numbers this header carries, day and night.</summary>
+        public int MusicDayId => HeaderValue(h => h.musicDayID);
+        public int MusicNightId => HeaderValue(h => h.musicNightID);
+
+        private int HeaderValue(Func<MapHeader, int> pick)
+        {
+            try { return _headerId < 0 ? 0 : pick(MapHeader.GetMapHeader((ushort)_headerId)); }
+            catch { return 0; }
+        }
+
+        /// <summary>The movements in this header's script file, so the preview can play them out.</summary>
+        public IReadOnlyList<ScriptAction> ActionsFor(int movementNumber)
+        {
+            try
+            {
+                var header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
+                if (header == null) return null;
+                var actions = new ScriptFile(header.scriptFileID)?.allActions;
+                // Movements count from zero, unlike scripts, so the number is the position already.
+                return actions != null && movementNumber >= 0 && movementNumber < actions.Count
+                    ? actions[movementNumber].commands : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>The area the scene belongs to, which is what names its terrain animation.</summary>
+        public AreaData Area
+        {
+            get { try { return new AreaData(_areaDataId); } catch { return null; } }
+        }
+
+        /// <summary>Where the maps this event file spans are closed off, for the preview to walk against.</summary>
+        public MapCollisionGrid Collision
+        {
+            get
+            {
+                var grid = new MapCollisionGrid();
+                if (_matrix == null) return grid;
+                foreach (var (x, y) in (HeaderCells() ?? (ISet<(int x, int y)>)EventCells()))
+                {
+                    long key = ((long)y << 32) | (uint)x;
+                    byte[,] col = null, types = null;
+                    try
+                    {
+                        int map = _matrix.maps[y, x];
+                        if (map != GameMatrix.EMPTY)
+                        {
+                            var mf = new MapFile(map, gameFamily, false, false);
+                            col = mf.collisions;
+                            types = mf.types;
+                        }
+                    }
+                    catch { }
+                    _collisionCache[key] = col;
+                    grid.Add(x, y, col);
+                    grid.AddTypes(x, y, types);
+                }
+                return grid;
+            }
+        }
+
+        /// <summary>Where a whole-matrix tile sits in the scene, for standing the player on it.</summary>
+        public (float x, float y, float z) TileFoot(float tileX, float tileZ)
+        {
+            var m = Model3D;
+            if (m == null) return (0f, 0f, 0f);
+
+            // Whole tiles pick the cell; the fraction is how far across it the walker has got.
+            int cellX = (int)Math.Floor(tileX / MapTiles), cellZ = (int)Math.Floor(tileZ / MapTiles);
+            float inX = tileX - cellX * MapTiles, inZ = tileZ - cellZ * MapTiles;
+
+            float rawX, rawZ;
+            if (m.TryCellPlacement(cellX, cellZ, out var p))
+            {
+                rawX = p.OriginX + (inX + 0.5f) / MapTiles * p.Width;
+                rawZ = p.OriginZ + (inZ + 0.5f) / MapTiles * p.Height;
+            }
+            else
+            {
+                rawX = m.CellBaseX + (cellX + (inX + 0.5f) / MapTiles) * m.CellStrideX;
+                rawZ = m.CellBaseZ + (cellZ + (inZ + 0.5f) / MapTiles) * m.CellStrideZ;
+            }
+
+            float rawY = m.TryBdhcSurfaceY(cellX, cellZ, rawX, rawZ, 0f, out var y) ? y : m.SurfaceY(rawX, rawZ);
+            return m.ToNormalized(rawX, rawY, rawZ);
+        }
+
+        /// <summary>
+        /// Builds a walker for one of this header's scripts, with the header's own text archive so
+        /// message commands can quote what they actually say.
+        /// </summary>
+        public ScriptWalker WalkerFor(int scriptNumber)
+        {
+            try
+            {
+                // A script id above 2000 does not live in the map's own file at all: the games keep
+                // whole separate files for common scripts, trainers, hidden items and the rest, and read
+                // the id relative to where that range starts (SetScriptDataSub in script.c).
+                var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+                if (common.Kind == CommonScriptId.Kind.Discrepancy) return null;
+
+                int scriptArchive, textArchive;
+                if (common.Kind == CommonScriptId.Kind.Resolved)
+                {
+                    scriptArchive = common.ScriptArchiveId;
+                    textArchive = common.TextArchiveId;
+                }
+                else
+                {
+                    var header = MapHeader.GetMapHeader((ushort)_headerId);
+                    if (header == null) return null;
+                    scriptArchive = header.scriptFileID;
+                    textArchive = header.textArchiveID;
+                }
+
+                var file = new ScriptFile(scriptArchive);
+                TextArchive text = null;
+                try { text = new TextArchive(textArchive); } catch { }
+
+                return new ScriptWalker(file.allScripts, file.allFunctions,
+                    id => text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null,
+                    // The file's movements sit alongside its scripts, so a Movement can say what it does.
+                    // They count from zero, so the number is the position in the list already.
+                    n => file.allActions != null && n >= 0 && n < file.allActions.Count
+                         ? file.allActions[n].commands : null);
+            }
+            catch (Exception ex) { AppLogger.Error("Script walker failed: " + ex.Message); return null; }
+        }
+
+        /// <summary>
+        /// The number to start the walker at. A script from one of the shared files is numbered from where
+        /// its range begins, so script 2000 is the first one in the common file.
+        /// </summary>
+        public int WalkerStartId(int scriptNumber)
+        {
+            var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            return common.Kind == CommonScriptId.Kind.Resolved ? common.ManualUserId : scriptNumber;
+        }
+
+        /// <summary>Which file a script id really lives in, for the viewer to say so.</summary>
+        public string ScriptHome(int scriptNumber)
+        {
+            var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            switch (common.Kind)
+            {
+                case CommonScriptId.Kind.Resolved:
+                    return $"Script {scriptNumber} lives in shared script file {common.ScriptArchiveId}, "
+                         + $"as its script {common.ManualUserId}.";
+                case CommonScriptId.Kind.Discrepancy:
+                    return $"Script {scriptNumber} is in a range whose file DSPRE has conflicting records for "
+                         + $"({string.Join(", ", common.CandidateArchives)}), so it cannot be read.";
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>Where an event's feet sit in the scene, the same placement the markers use.</summary>
+        public (float x, float y, float z) EventFoot(Event e)
+        {
+            var m = Model3D;
+            if (m == null || e == null) return (0f, 0f, 0f);
+            var (rx, rz) = EventCellRaw(m, e);
+            return m.ToNormalized(rx, EventSurfaceY(m, rx, rz, e), rz);
         }
 
         // ── 3D edit mode (drag the selected event with the translate gizmo) ───────────────
@@ -1054,6 +1730,72 @@ namespace DSPRE.Avalonia.ViewModels
         public event EventHandler EditModeChanged;
         public event EventHandler GizmoTargetChanged;
         public float ModelScale => Model3D?.Scale ?? 1f;
+
+        private (int x, int z)? _walkTile;
+
+        /// <summary>
+        /// The tile the dragged player is hovering over. It colours the ground itself rather than
+        /// laying a shape over it: the map's own texels are tinted through the tile grid the shader
+        /// already uses for permissions, so the highlight takes the shape of whatever is really there,
+        /// slopes and steps included. Null while nothing is being dragged.
+        /// </summary>
+        public (int x, int z)? WalkTile
+        {
+            get => _walkTile;
+            set
+            {
+                if (_walkTile == value) return;
+                _walkTile = value;
+                BuildWalkTint();
+                WalkTileChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        public event EventHandler WalkTileChanged;
+
+        /// <summary>The tile grid and colours the shader tints the ground with. Off when nothing is hovered.</summary>
+        public bool WalkTintOn { get; private set; }
+        public float WalkTintStrength => 0.55f;
+        public float WalkTintOx { get; private set; }
+        public float WalkTintOz { get; private set; }
+        public float WalkTintSx { get; private set; }
+        public float WalkTintSz { get; private set; }
+        public byte[] WalkTintRgba { get; private set; }
+
+        /// <summary>
+        /// A tile grid for the map the hovered tile belongs to, with every texel clear except that one.
+        /// The shader leaves a clear texel alone, so only the tile under the pointer takes the colour.
+        /// </summary>
+        private void BuildWalkTint()
+        {
+            WalkTintOn = false;
+            var m = Model3D;
+            if (_walkTile == null || m == null || m.CellStrideX == 0) return;
+
+            int n = MapFile.mapSize;
+            int gcx = FloorDiv(_walkTile.Value.x, n), gcy = FloorDiv(_walkTile.Value.z, n);
+            if (!m.TryCellPlacement(gcx, gcy, out var cp)) return;
+
+            int tx = _walkTile.Value.x - gcx * n, ty = _walkTile.Value.z - gcy * n;
+            if (tx < 0 || ty < 0 || tx >= 32 || ty >= 32) return;
+
+            var rgba = new byte[32 * 32 * 4];        // all clear to start, so nothing else is touched
+            int i = (ty * 32 + tx) * 4;
+            rgba[i] = 255; rgba[i + 1] = 214; rgba[i + 2] = 79; rgba[i + 3] = 255;
+
+            float tsx = cp.Width / n, tsz = cp.Height / n;
+            WalkTintOx = (cp.OriginX - m.Cx) * m.Scale;
+            WalkTintOz = (cp.OriginZ - m.Cz) * m.Scale;
+            WalkTintSx = tsx * m.Scale;
+            WalkTintSz = tsz * m.Scale;
+            WalkTintRgba = rgba;
+            WalkTintOn = true;
+        }
+
+        /// <summary>The tile the selected event stands on, or null when nothing is selected.</summary>
+        public (int x, int z)? SelectedEventTile => _current == null
+            ? ((int, int)?)null
+            : (FieldInteraction.TileX(_current), FieldInteraction.TileZ(_current));
 
         public bool TrySelectedEventAnchorNorm(out float nx, out float ny, out float nz)
             => EventAnchorNorm(_current, out nx, out ny, out nz);
@@ -1095,8 +1837,8 @@ namespace DSPRE.Avalonia.ViewModels
         // Event positions are INTEGER tiles (no fraction field), so a mouse drag accumulates sub-tile
         // movement here and only steps the tile when it crosses a whole-tile boundary, exactly how the
         // building gizmo carries its fraction. Reset at the start of each drag via BeginGizmoDrag().
-        private float _dragAccumX, _dragAccumZ;
-        public void BeginGizmoDrag() { _dragAccumX = 0f; _dragAccumZ = 0f; }
+        private float _dragAccumX, _dragAccumY, _dragAccumZ;
+        public void BeginGizmoDrag() { _dragAccumX = 0f; _dragAccumY = 0f; _dragAccumZ = 0f; }
 
         /// <summary>Moves the selected event by a raw-space delta along one world axis (0=X,1=Y,2=Z).
         /// X/Z step the in-map tile in whole-tile increments (carrying the remainder), rolling over into
@@ -1107,8 +1849,21 @@ namespace DSPRE.Avalonia.ViewModels
             if (m == null || _current == null || rawDelta == 0f) return;
             if (axis == 1)
             {
-                long nz = _current.zPosition + (long)Math.Round(rawDelta * 262144f);
-                _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+                if (ZIsFixedPoint)
+                {
+                    long nz = _current.zPosition + (long)Math.Round(rawDelta * 262144f);
+                    _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+                }
+                else
+                {
+                    // Triggers and spawnables store whole height units, so collect the drag until it makes one.
+                    _dragAccumY += rawDelta * 4f;
+                    int step = (int)_dragAccumY;
+                    if (step == 0) return;
+                    _dragAccumY -= step;
+                    long nz = _current.zPosition + step;
+                    _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+                }
             }
             else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out var p))
             {
@@ -1128,7 +1883,8 @@ namespace DSPRE.Avalonia.ViewModels
                 }
             }
             _suppress = true;
-            XMap = _current.xMapPosition; YMap = _current.yMapPosition; ZPos = _current.zPosition;
+            XMap = _current.xMapPosition; YMap = _current.yMapPosition; ZPos = ToDisplayZ(_current.zPosition);
+            OnPropertyChanged(nameof(ZPosNote));
             XMatrix = _current.xMatrixPosition; YMatrix = _current.yMatrixPosition;
             _suppress = false;
             Dirty();
@@ -1177,6 +1933,9 @@ namespace DSPRE.Avalonia.ViewModels
             Vtx(a); Vtx(b); Vtx(c);
             Vtx(a); Vtx(c); Vtx(d);
         }
+
+        /// <summary>Whole-number division that keeps going the right way for tiles left of the origin.</summary>
+        private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -(((-a) + b - 1) / b);
 
         private static void AddFlatQuad(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y,
             (float r, float g, float b) col)
@@ -1269,7 +2028,7 @@ namespace DSPRE.Avalonia.ViewModels
                     foreach (Event e in list)
                     {
                         var (rx, rz) = EventCellRaw(m, e);
-                        float yHint = e.zPosition / 262144f;
+                        float yHint = HeightHint(e);
                         bool bdhc = m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rx, rz, yHint, out var sy);
                         if (!bdhc) sy = EventSurfaceY(m, rx, rz, e);
                         sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {yHint,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3} {(bdhc ? "bdhc" : "mesh")}");
