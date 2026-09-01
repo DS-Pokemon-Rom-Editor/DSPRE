@@ -588,10 +588,8 @@ namespace DSPRE.Editors
                             return nsbtx.GetBitmap(3, 0).bmp;
                     }
                 }
-                // The pictures are named "thing.1" upwards but the file keeps them sorted as text, so
-                // ".10" lands before ".2". Put them back in the artist's order, then take the standing
-                // one for this way of facing: a bank holds a group per facing in the order up, down,
-                // left, right, two pictures to a group for a following Pokemon and four for a person.
+                // The pictures are named "thing.1" upwards but the file keeps them sorted as text, so ".10"
+                // lands before ".2".
                 return nsbtx.GetBitmap(StandingFrame(nsbtx, orientation), 0).bmp;
             }
             catch

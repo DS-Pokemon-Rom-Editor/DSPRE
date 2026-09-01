@@ -4,13 +4,8 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Where a new game begins, so an editor can open somewhere useful instead of whatever header
-    /// happens to come first.
-    ///
-    /// The games keep these in location.c. HeartGold and SoulSilver start indoors at T20R0202, the
-    /// player's bedroom, and outdoors at T20, which is New Bark Town. Platinum starts at T01R0202 and
-    /// T01, which is Twinleaf Town. Diamond and Pearl share Twinleaf with Platinum; their own leak was
-    /// not to hand, so that pair is taken from Platinum rather than read directly.
+    /// Where a new game begins, so an editor can open somewhere useful instead of whatever header happens
+    /// to come first.
     /// </summary>
     public static class FieldStartLocation
     {
@@ -38,11 +33,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// The header to open on, given every header's internal name. The starting town comes first,
-        /// then the room it begins in, and failing both it says so by handing back -1 so the caller can
-        /// fall back to whatever it did before.
-        /// </summary>
+        /// <summary>The header to open on, given every header's internal name. </summary>
         public static int HeaderFor(RomInfo.GameFamilies family, IReadOnlyList<string> internalNames)
         {
             if (internalNames == null || internalNames.Count == 0) return -1;
@@ -57,11 +48,7 @@ namespace DSPRE.ROMFiles
             return -1;
         }
 
-        /// <summary>
-        /// The internal name out of whatever the caller had to hand. A list meant for showing people
-        /// reads like "060 -   T20", and a name read straight out of the ROM is padded with zero bytes,
-        /// so both are reduced to the last real word.
-        /// </summary>
+        /// <summary>The internal name out of whatever the caller had to hand. </summary>
         private static string InternalPart(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";

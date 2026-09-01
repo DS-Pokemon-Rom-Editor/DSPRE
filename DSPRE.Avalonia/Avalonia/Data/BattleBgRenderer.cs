@@ -63,9 +63,7 @@ namespace DSPRE.Avalonia.Data
         private const int BackdropChr0 = 3, BackdropScr = 2;
         private static int BackdropPal0 => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? 176 : 172;
 
-        /// <summary>Which files in the archive make up one backdrop. Every backdrop shares one tilemap and
-        /// has three sets of colours, one for each time of day. Said here so the Graphics window can list a
-        /// backdrop as one thing rather than as five unrelated files.</summary>
+        /// <summary>Which files in the archive make up one backdrop. </summary>
         public static (int Drawing, int Tilemap, int PaletteDay) BackdropFiles(int bgId)
             => (BackdropChr0 + bgId, BackdropScr, BackdropPal0 + bgId * 3);
 

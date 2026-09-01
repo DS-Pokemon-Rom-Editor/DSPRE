@@ -1,4 +1,4 @@
-// Vectors.cs — lightweight value types replacing WPF/OpenTK geometry types.
+// Vectors.cs, lightweight value types replacing WPF/OpenTK geometry types.
 // TODO (Avalonia migration - step 33): Replace with OpenTK 4.x equivalents when
 //      the renderer rewrite is complete.
 namespace MKDS_Course_Editor.Export3DTools

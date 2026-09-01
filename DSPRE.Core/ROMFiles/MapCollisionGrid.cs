@@ -3,11 +3,8 @@
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Where you can and cannot walk across a set of maps, in whole-matrix tile coordinates so a step
-    /// from one map into the next is answered the same way as a step inside one.
-    ///
-    /// The engine reads a tile as one 16-bit attribute and treats bit 15 as "you cannot go here"
-    /// (GetHitAttr in map_tool.c). In a map file that bit is the top bit of the tile's collision byte.
+    /// Where you can and cannot walk across a set of maps, in whole-matrix tile coordinates so a step from
+    /// one map into the next is answered the same way as a step inside one.
     /// </summary>
     public sealed class MapCollisionGrid
     {
@@ -28,10 +25,7 @@ namespace DSPRE.ROMFiles
             if (collisions != null) _cells[(cellX, cellY)] = collisions;
         }
 
-        /// <summary>
-        /// Every tile the grid holds, in whole-matrix tiles. Somewhere that wants to work out which tile
-        /// a click landed on has to have something to compare against, and this is the list.
-        /// </summary>
+        /// <summary>Every tile the grid holds, in whole-matrix tiles. </summary>
         public IEnumerable<(int x, int z)> Tiles
         {
             get
@@ -55,8 +49,8 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// A counter is the shop-desk tile: talking reaches one tile further so you can speak to whoever
-        /// is standing behind it (SXY_HeroFrontObjGet).
+        /// A counter is the shop-desk tile: talking reaches one tile further so you can speak to whoever is
+        /// standing behind it (SXY_HeroFrontObjGet).
         /// </summary>
         public bool IsCounter(int tileX, int tileZ) => TypeAt(tileX, tileZ) == CounterType;
 
@@ -74,11 +68,7 @@ namespace DSPRE.ROMFiles
 
         public bool IsEmpty => _cells.Count == 0;
 
-        /// <summary>
-        /// Whether a tile is closed off, in tiles across the whole matrix. A tile on a map that isn't
-        /// here counts as closed off, since walking off the edge of what is loaded is not a thing the
-        /// games let you do either.
-        /// </summary>
+        /// <summary>Whether a tile is closed off, in tiles across the whole matrix. </summary>
         public bool IsBlocked(int tileX, int tileZ)
         {
             int size = MapFile.mapSize;

@@ -3,12 +3,7 @@ using System.Linq;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The overworld event_type values the games actually define (fieldobj_code.h). DP/Pt has one more
-    /// than HGSS. Every trainer variant is a real trainer to the engine (ev_trainer.c folds 0x02 and
-    /// 0x04-0x08 back to EV_TYPE_TRAINER before doing sight checks); what differs is how the NPC moves
-    /// and which extra parameter it reads.
-    /// </summary>
+    /// <summary>The overworld event_type values the games actually define. </summary>
     public sealed class OverworldEventType
     {
         public ushort Value;

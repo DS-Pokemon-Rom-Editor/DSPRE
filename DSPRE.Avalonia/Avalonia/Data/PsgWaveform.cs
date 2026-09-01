@@ -6,16 +6,6 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// The sound of the DS's own tone generators, written out as a short looping clip so the ordinary note
     /// machinery can play it like any other sample.
-    ///
-    /// A square wave is one cycle of 256 points, high for as much of it as the duty setting asks for. The
-    /// clip is given a rate of 256 times the frequency of its own base note, so playing it at that note
-    /// comes out at that frequency and every other note lands where it should. Noise is the console's
-    /// fifteen-bit shift register written out in full, one cycle of it, clocked eight times per wave cycle
-    /// the way the square's eight-step counter is.
-    ///
-    /// The duty steps and the shift register are how the hardware is documented to behave; they are not
-    /// from any leaked source. What is from source is that this is used at all: snd_system.c:1292 keeps a
-    /// PSG-only bank loaded so the Game Boy music can play, and without this those tracks are silent.
     /// </summary>
     public static class PsgWaveform
     {

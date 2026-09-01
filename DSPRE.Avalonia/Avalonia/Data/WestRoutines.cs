@@ -19,18 +19,6 @@ namespace DSPRE.Avalonia.Data
 
     /// <summary>
     /// Every routine a move-effect script can call, read out of the games' own C rather than guessed.
-    ///
-    /// A script calls one with FUNC_CALL id, count, words. The id is the routine's index in
-    /// WeSysSP_FuncTable (west_sp.c:218 indexes it directly, no offset), and the words land in
-    /// waza_eff_gp_wk. WEST_FUNC_CALL copies count words in and zeros the remaining slots of the ten
-    /// (we_sys.h:92), so a routine handed too few words still runs and reads zeros for the rest.
-    ///
-    /// Where a word picks out Pokemon it is a target flag; see <see cref="WestTargetFlags"/>, whose names
-    /// are relative to the move rather than to the sides of the field.
-    ///
-    /// Many of these are one move's own effect and take nothing at all. Where the summary says only that,
-    /// it is because the routine is written for a single move and its behaviour lives in the task it hands
-    /// off to, not in anything the script tells it.
     /// </summary>
     public static class WestRoutines
     {

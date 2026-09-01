@@ -5,15 +5,7 @@ using DSPRE;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Which files in the alternate form archive belong to which form.
-    ///
-    /// That archive is not laid out one thing per file the way the main battle sprites are: a form's
-    /// back and front sit next to each other near the front of the archive while its colours sit a
-    /// hundred files further on, and which pair goes with which set is not recoverable from the bytes.
-    /// The tables below say it. They were written for the Pokemon Sprite Editor and now live here so the
-    /// Graphics window reads the same ones rather than a second copy that could drift.
-    /// </summary>
+    /// <summary>Which files in the alternate form archive belong to which form.</summary>
     public static class AlternateFormSprites
     {
         /// <summary>One form: what it is called and the four files that make it up.</summary>
@@ -70,8 +62,7 @@ namespace DSPRE.Avalonia.Data
             var spokenFor = new HashSet<int>();
 
             // Several forms can share one pair of drawings: the table gives Egg and Bad Egg the same art,
-            // and listing them as separate rows showing the same picture helps nobody. Forms that draw the
-            // same thing become one row named for all of them.
+            // and listing them as separate rows showing the same picture helps nobody.
             var byDrawing = new Dictionary<(int, int), List<Form>>();
             foreach (var f in ForCurrentGame())
             {

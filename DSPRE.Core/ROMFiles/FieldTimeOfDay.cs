@@ -12,16 +12,12 @@ namespace DSPRE.ROMFiles
         Midnight = 4,
     }
 
-    /// <summary>
-    /// What time of day it is, and which animation that picks. A building that changes with the time
-    /// carries up to four animations, one per part of the day, and the games swap between them as the
-    /// clock rolls over (TimeZoneAnmIdxTbl in time_anm.c).
-    /// </summary>
+    /// <summary>What time of day it is, and which animation that picks. </summary>
     public static class FieldTimeOfDay
     {
         /// <summary>
-        /// The hour of the day each part covers, straight from GF_RTC_ConvertHourToTimeZone:
-        /// midnight until 4, morning until 10, noon until 17, evening until 20, then night.
+        /// The hour of the day each part covers, straight from GF_RTC_ConvertHourToTimeZone: midnight until
+        /// 4, morning until 10, noon until 17, evening until 20, then night.
         /// </summary>
         private static readonly FieldTimeZone[] ByHour =
         {
@@ -34,10 +30,7 @@ namespace DSPRE.ROMFiles
             FieldTimeZone.Night, FieldTimeZone.Night, FieldTimeZone.Night, FieldTimeZone.Night,                // 20:00-23:59
         };
 
-        /// <summary>
-        /// Which of a model's four animations each part of the day shows. Night and the small hours share
-        /// one, so a model only ever needs four.
-        /// </summary>
+        /// <summary>Which of a model's four animations each part of the day shows. </summary>
         private static readonly int[] AnimationForZone = { 0, 1, 2, 3, 3 };
 
         /// <summary>The part of the day an hour falls in.</summary>

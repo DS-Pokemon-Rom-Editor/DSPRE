@@ -5,15 +5,6 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// The border the games draw round a message box, read out of the ROM so an edited one shows.
-    ///
-    /// window.c:331 loads it from ARC_WINFRAME with TalkWinCgxArcGet for the picture and
-    /// TalkWinPalArcGet for the colours, both of which are the archive's first talk frame plus the
-    /// number the player chose in Options. winframe.naix puts the pictures at 2 to 21 and the colours at
-    /// 26 to 45, so there are twenty to choose from.
-    ///
-    /// Each one is eighteen eight by eight tiles, six across and three down, and BmpTalkWinWriteMain in
-    /// window.c:356 lays them out round the writing: two columns to its left, three to its right, and a
-    /// row above and below, with the middle tiles repeated to whatever length is needed.
     /// </summary>
     public sealed class FieldWindowFrame
     {
@@ -55,17 +46,11 @@ namespace DSPRE.ROMFiles
             catch { return null; }
         }
 
-        /// <summary>
-        /// The paper the writing sits on, as 0xAARRGGBB. talk_msg.c:121 fills the box with colour 15
-        /// before it writes anything, and the border itself never covers that middle part: the tile the
-        /// layout would use for it, number 8, is the one BmpTalkWinWriteMain leaves out.
-        /// </summary>
+        /// <summary>The paper the writing sits on, as 0xAARRGGBB. </summary>
         public uint PaperArgb => _colours.Length > 15 ? _colours[15] : 0xFFFFFFFFu;
 
         /// <summary>
         /// Paints the whole border round a writing area of the given size in tiles, as straight RGBA.
-        /// The middle of it is left see-through, because that is where the writing goes and the paper
-        /// under it is painted separately.
         /// </summary>
         public byte[] Compose(int tilesWide, int tilesHigh, out int width, out int height)
         {

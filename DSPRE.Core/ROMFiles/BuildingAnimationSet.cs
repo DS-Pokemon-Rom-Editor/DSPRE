@@ -6,12 +6,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The animations a building model plays. The game keeps one list entry per model (separate lists
-    /// for outdoor and indoor buildings), and each entry names up to four animations in the building
-    /// animation archive. Those come in four kinds: texture scrolling, joint movement, texture swapping
-    /// and material colour. Only the scrolling ones are played back here.
-    /// </summary>
+    /// <summary>The animations a building model plays. </summary>
     public static class BuildingAnimationSet
     {
         private static readonly Dictionary<(bool indoor, int model), BuildingAnimationInfo> InfoCache
@@ -58,10 +53,7 @@ namespace DSPRE.ROMFiles
             return info;
         }
 
-        /// <summary>
-        /// The texture-scrolling animations a building model plays. Its other animation kinds (joints,
-        /// texture swapping, material colour) are skipped, so this can come back empty.
-        /// </summary>
+        /// <summary>The texture-scrolling animations a building model plays. </summary>
         public static IReadOnlyList<TextureSrtAnimation> ScrollingFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
             var result = new List<TextureSrtAnimation>();
@@ -99,10 +91,7 @@ namespace DSPRE.ROMFiles
             return result;
         }
 
-        /// <summary>
-        /// Which of a model's animation slots actually run. One that changes with the clock has a slot per
-        /// part of the day and plays just that one; anything conditional waits to be set off and plays none.
-        /// </summary>
+        /// <summary>Which of a model's animation slots actually run. </summary>
         public static IEnumerable<int> CodesToPlay(int modelId, bool indoor, FieldTimeZone? timeOfDay)
         {
             var info = InfoFor(modelId, indoor);
@@ -168,10 +157,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// A door's animations, which the games only play when somebody goes through. These come back even
-        /// though the model is conditional, because the caller is the thing setting it off.
-        /// </summary>
+        /// <summary>A door's animations, which the games only play when somebody goes through. </summary>
         public static (IReadOnlyList<JointAnimation> Joints, IReadOnlyList<TexturePatternAnimation> Patterns)
             DoorAnimations(int modelId, bool indoor)
         {

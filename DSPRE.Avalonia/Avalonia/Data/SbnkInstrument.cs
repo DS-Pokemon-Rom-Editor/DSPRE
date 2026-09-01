@@ -29,10 +29,7 @@ namespace DSPRE.Avalonia.Data
     }
 
     /// <summary>
-    /// The DS can make a note without any recorded sound, either as a square wave or as noise. HeartGold
-    /// uses this for its Game Boy music: snd_system.c:1292 says the PSG-only bank is kept loaded so the
-    /// Game Boy sound can be reproduced, and that bank (BANK_GAMEBOY) is 121 square programs and 7 noise
-    /// programs with no samples at all.
+    /// The DS can make a note without any recorded sound, either as a square wave or as noise.
     /// </summary>
     public enum PsgKind { None = 0, Square = 1, Noise = 2 }
 
@@ -156,10 +153,7 @@ namespace DSPRE.Avalonia.Data
                         break;
                     }
 
-                    // Square wave (2) and noise (3). Same ten bytes as a single-region instrument, except
-                    // the first field is the duty setting rather than a sample number and there is no wave
-                    // archive to look in. Checked across all 128 programs of HeartGold's BANK_GAMEBOY: every
-                    // one is [duty, 0, 0, 0, 60, attack, decay, sustain, release, 64].
+                    // Square wave (2) and noise (3).
                     case 2 when at + 5 <= d.Length:
                     case 3 when at + 5 <= d.Length:
                     {

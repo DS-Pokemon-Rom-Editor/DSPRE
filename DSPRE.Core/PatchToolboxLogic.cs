@@ -16,11 +16,11 @@ namespace DSPRE
     /// <summary>
     /// Shared, UI-agnostic apply-logic for the ROM Patch Toolbox: both the WinForms
     /// <see cref="PatchToolboxDialog"/> and the native Avalonia Patch Toolbox call byte-for-byte
-    /// identical patch code (no ROM-writing divergence). Core — no UI-toolkit dependency.
+    /// identical patch code (no ROM-writing divergence). Core, no UI-toolkit dependency.
     ///
     /// All user prompts go through the pluggable <see cref="ConfirmYesNo"/> / <see cref="ShowInfo"/> /
     /// <see cref="ShowError"/> / <see cref="PickSyntheticOverlayOffset"/> hooks (defaults route through
-    /// <see cref="AppMessages"/>; each shell installs its own dialogs — WinForms via
+    /// <see cref="AppMessages"/>; each shell installs its own dialogs, WinForms via
     /// <c>PatchToolboxDialog.UseWinFormsPrompts()</c>, Avalonia via <c>PatchDialogs.Install()</c>).
     /// The methods set the shared <see cref="RomPatchState"/> flags and return whether the patch was
     /// applied so each shell can refresh its own button/status UI.
@@ -39,7 +39,7 @@ namespace DSPRE
         /// <summary>
         /// Ask the user for the synthetic-overlay file offset a payload (<paramref name="expectedBytes"/>
         /// long) should be written to, showing the affected file range / runtime address / whether the
-        /// range already contains data. Returns null if cancelled (or headless — default is a no-op so a
+        /// range already contains data. Returns null if cancelled (or headless, default is a no-op so a
         /// synthetic-overlay patch never silently overwrites data without a real UI to confirm it).
         /// Args: patchName, synthetic-overlay file path, default offset, expected payload bytes, load address.
         /// </summary>
@@ -154,7 +154,7 @@ namespace DSPRE
             }
 
             // HGSS ties this patch to overlay 1, whose compression state a legacy ndstool project
-            // can't reliably track (see RomInfo.IsDsRomProject) — require ds-rom format there.
+            // can't reliably track (see RomInfo.IsDsRomProject), require ds-rom format there.
             if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject)
             {
                 return false;
@@ -465,7 +465,7 @@ namespace DSPRE
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
             if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
             {
-                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
                 return false;
             }
 
@@ -658,7 +658,7 @@ namespace DSPRE
                 ARM9.WriteBytes(DSUtils.HexStringToByteArray(data.initString), data.initOffset); //Write new initOffset
 
                 // The synthetic overlay's backing NARC has to actually be unpacked on disk before its
-                // file #0 can be checked/created — on a fresh project (Header Editor never opened) this
+                // file #0 can be checked/created, on a fresh project (Header Editor never opened) this
                 // directory doesn't exist yet, which used to make the block below a silent no-op while
                 // still reporting success.
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
@@ -748,7 +748,7 @@ namespace DSPRE
             {
                 ShowError("Operation failed. It is strongly advised that you restore the arm9 backup (arm9.bin" + BackupSuffix + ").", "Something went wrong");
             }
-            // NOTE: preserving original behaviour — the patch is marked applied even if the write threw.
+            // NOTE: preserving original behaviour, the patch is marked applied even if the write threw.
             RomPatchState.flag_MatrixExpansionApplied = true;
             ShowInfo("Matrix 0 can now be freely expanded up to twice its size.", "Operation successful.");
             return true;
@@ -907,7 +907,7 @@ namespace DSPRE
             string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
             if (!File.Exists(expandedPath))
             {
-                ShowError("Apply the ARM9 expansion patch first — the synthetic overlay file is missing.", "ARM9 not expanded");
+                ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing.", "ARM9 not expanded");
                 return false;
             }
 
@@ -1106,7 +1106,7 @@ namespace DSPRE
 
         // ── Patch catalogue / status (read-only, UI-agnostic) ────────────────────────────────────
         // Lets a non-WinForms shell (the Avalonia Patch Toolbox) list the patches, show each one's
-        // applied/supported state, and apply it — mirroring the gating the WinForms constructor does.
+        // applied/supported state, and apply it, mirroring the gating the WinForms constructor does.
 
         public enum PatchState { Available, Applied, Unsupported }
 
@@ -1123,7 +1123,7 @@ namespace DSPRE
         /// <summary>
         /// Computes the current status of every toolbox patch for the loaded ROM, without touching
         /// any WinForms control. Mirrors the enable/disable + Check* logic in the dialog constructor.
-        /// Some checks (BDHCam) decompress an overlay as a side effect — same as the WinForms dialog.
+        /// Some checks (BDHCam) decompress an overlay as a side effect, same as the WinForms dialog.
         /// </summary>
         public static List<PatchInfo> GetPatchStatuses()
         {
@@ -1148,7 +1148,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("arm9", "Expand ARM9 (synthetic overlay)",
-                "Add ~88 KB of usable ARM9 memory. Required by the BDHCam / script-command patches. Advanced — can break the game if misused.",
+                "Add ~88 KB of usable ARM9 memory. Required by the BDHCam / script-command patches. Advanced, can break the game if misused.",
                 () =>
                 {
                     if (!ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
@@ -1227,7 +1227,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("owSpriteExpansion", "Custom Overworld Sprites (hzla PlatPatches)",
-                "Detects hzla's PlatPatches \"overworld sprites\" expansion (github.com/hzla/PlatPatches), which relocates and expands the field-object tables to allow custom overworld appearance IDs. DSPRE only detects this patch — it is applied externally by that tool, not by DSPRE.",
+                "Detects hzla's PlatPatches \"overworld sprites\" expansion (github.com/hzla/PlatPatches), which relocates and expands the field-object tables to allow custom overworld appearance IDs. DSPRE only detects this patch, it is applied externally by that tool, not by DSPRE.",
                 () =>
                 {
                     if (RomInfo.gameFamily != GameFamilies.Plat) return Unsupported("Platinum only");

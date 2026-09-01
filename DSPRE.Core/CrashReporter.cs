@@ -24,7 +24,7 @@ namespace DSPRE
             {
                 // Nobody was waiting on this one, so there is nothing to interrupt and nowhere to put a
                 // dialog: it arrives on the finalizer thread, where building a window throws and takes the
-                // whole application down with it. Write it to a report and carry on.
+                // whole application down with it.
                 e.SetObserved();
                 LogHandled(e.Exception);
             };
@@ -33,7 +33,7 @@ namespace DSPRE
         /// <summary>
         /// Writes a crash-report file for a NON-fatal, already-handled exception (e.g. one caught by the
         /// Avalonia UI-thread net) and returns the file path. Unlike <see cref="ReportCrash"/> it does
-        /// NOT show the "application crashed" dialog — the caller surfaces a friendlier message and keeps
+        /// NOT show the "application crashed" dialog, the caller surfaces a friendlier message and keeps
         /// the app running. Returns null if the report could not be written.
         /// </summary>
         public static string LogHandled(Exception ex)

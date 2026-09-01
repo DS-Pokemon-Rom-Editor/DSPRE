@@ -24,22 +24,7 @@ namespace DSPRE.Avalonia.Data
         public WestMacroStep[] Steps = Array.Empty<WestMacroStep>();
     }
 
-    /// <summary>
-    /// The shorthands the games' move scripts are actually written in.
-    ///
-    /// A move script in the leak is not the list of commands the editor shows. `LOAD_PARTICLE_DROP 0, X`
-    /// is one line somebody wrote and seventeen commands in the ROM, and it appears 476 times, so on its
-    /// own it accounts for 8,092 of the 18,641 commands across the 501 scripts: 43 of every 100 things on
-    /// screen are that one line. Showing it back as one line is the difference between a script somebody
-    /// can read and a wall.
-    ///
-    /// Folding only ever happens on an exact match: the run of commands must be the right ones in the
-    /// right order, and every word that the shorthand fixes must hold that exact value. Only the words
-    /// the shorthand leaves open are read back out as its settings. Anything else stays as it is, so a
-    /// script that merely looks similar is never quietly rewritten.
-    ///
-    /// The shapes here were taken from west.h's own macro bodies rather than written by hand.
-    /// </summary>
+    /// <summary>The shorthands the games' move scripts are actually written in.</summary>
     public static class WestMacros
     {
         private static WestMacroStep S(string op, params int[] words)
@@ -118,7 +103,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// Every run of commands that is exactly one of the shorthands, earliest first and never
-        /// overlapping. Anything not returned here is left exactly as it was.
+        /// overlapping.
         /// </summary>
         public static List<Folded> Find(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
         {

@@ -3,20 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Getting a Pokemon's cry out of the ROM and putting a new one back.
-    ///
-    /// A cry is one sample sitting in its own wave archive. What comes out here is that sample itself,
-    /// not the sound the game makes with it. An ordinary WAV file is used both ways.
-    ///
-    /// Anything written back is squeezed down to four bits a sample, which is how the games keep their
-    /// own cries and how hg-engine puts new ones in, so a replaced cry takes about the same room as the
-    /// one it replaces rather than making the sound file bigger.
-    ///
-    /// That squeezing is not exact. Putting a cry back that was taken out of the same ROM leaves it a
-    /// little rougher than it was, by around five percent of its loudest point, because it is being
-    /// squeezed a second time. It is fine to do once; doing it over and over will wear the sound down.
-    /// </summary>
+    /// <summary>Getting a Pokemon's cry out of the ROM and putting a new one back.</summary>
     public static class CryFiles
     {
         /// <summary>What a WAV has to be for this to read it.</summary>
@@ -26,10 +13,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── reading a WAV ────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Reads a WAV into plain samples. Comes back null with a reason when the file is not something
-        /// this can use, so a caller can say what was wrong instead of failing quietly.
-        /// </summary>
+        /// <summary>Reads a WAV into plain samples. </summary>
         public static short[] ReadWav(byte[] file, out int sampleRate, out string problem)
         {
             sampleRate = 0;
@@ -113,11 +97,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── building a wave archive ──────────────────────────────────────────────────
 
-        /// <summary>
-        /// Wraps samples back up as a wave archive, uncompressed at sixteen bits. The layout is the one
-        /// the reader expects: the file header, a DATA block, thirty-two bytes the hardware keeps for
-        /// itself, the count, an offset for each wave, then the waves.
-        /// </summary>
+        /// <summary>Wraps samples back up as a wave archive, uncompressed at sixteen bits. </summary>
         public static byte[] BuildArchive(IReadOnlyList<SwavSample> samples, bool squeeze = true)
         {
             const int header = 16, blockHeader = 8, reserved = 32;
@@ -158,9 +138,7 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] BuildWave(SwavSample s, bool squeeze)
         {
-            // A sample that came out of the ROM and was not replaced goes back exactly as it was. Squeezing
-            // it again would lose a little of it for no reason, and one sample being replaced must not make
-            // every other sample in the same archive worse.
+            // A sample that came out of the ROM and was not replaced goes back exactly as it was.
             if (s?.Raw != null && s.Raw.Length >= 12) return s.Raw;
 
             var pcm = s?.Pcm ?? Array.Empty<short>();
@@ -218,10 +196,6 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// Squeezes samples down to four bits each, the way the games keep their cries: one small header
         /// holding where the sound starts and how big its steps are, then a nibble a sample.
-        ///
-        /// Each nibble says how far to move from where the decoder currently thinks it is, so the encoder
-        /// has to decode its own output as it goes and keep in step with it. Doing anything else would
-        /// drift further from the real sound with every sample.
         /// </summary>
         public static byte[] EncodeAdpcm(short[] pcm)
         {

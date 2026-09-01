@@ -5,9 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// One place a message leaves a gap for a word the game fills in when it is shown.
-    /// </summary>
+    /// <summary>One place a message leaves a gap for a word the game fills in when it is shown.</summary>
     public sealed class FieldStringVar
     {
         /// <summary>Which STRVAR family the tag belongs to. Nearly everything is 1.</summary>
@@ -51,17 +49,6 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// The gaps a message leaves for words the game fills in, and what to put in them so a preview reads
     /// like the real thing instead of showing the tag.
-    ///
-    /// A message holds a tag: the word 0xFFFE, then the tag type, then how many parameters follow, then
-    /// the parameters (fntsys.c:20-62). It counts as a word gap when the top byte of the type is 0x01,
-    /// 0x03 or 0x04 (STRCODE_CheckWordSetTagType, fntsys.c:37), and the first parameter says which of the
-    /// game's word slots to read, which is what WORDSET_ExpandStr swaps in (wordset.c:1654).
-    ///
-    /// The text converter writes all that out as "{STRVAR_1, 3, 0, 0}": the family from the top byte, the
-    /// kind from the bottom byte, then the two parameters. Checked against the raw bytes of HeartGold
-    /// text archive 542 message 1, which reads FFFE 0103 0002 0000 0000. Across all 829 archives and
-    /// 49984 messages there are 9150 of these tags in 6635 messages; every one carries exactly two
-    /// parameters and every second parameter is zero, so only the first one means anything.
     /// </summary>
     public static class FieldStringVars
     {
@@ -83,10 +70,7 @@ namespace DSPRE.ROMFiles
         public static bool Any(string message) =>
             !string.IsNullOrEmpty(message) && message.Contains("{STRVAR_") && TagPattern.IsMatch(message);
 
-        /// <summary>
-        /// What kind of word a gap wants. The numbers are the bottom byte of the tag type and the
-        /// meanings come from the reference DSPRE already ships in its string buffer help.
-        /// </summary>
+        /// <summary>What kind of word a gap wants. </summary>
         public static string KindName(int kind)
         {
             switch (kind)
@@ -113,11 +97,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// What to put in a gap before anybody types anything. A name gap starts as PLAYER, because that
-        /// is the one people want to read back. Anything whose kind is not known says which slot it is
-        /// and where it came from, so the box stays readable and the gap is obvious.
-        /// </summary>
+        /// <summary>What to put in a gap before anybody types anything. </summary>
         public static string SuggestFor(int kind, int buffer, IReadOnlyList<int> scripts)
         {
             switch (kind)
@@ -144,10 +124,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// Puts the words into a message. Anything the caller has nothing for is left as it was, so a
-        /// gap nobody has filled still shows rather than disappearing.
-        /// </summary>
+        /// <summary>Puts the words into a message. </summary>
         public static string Expand(string message, Func<int, int, int, string> valueFor)
         {
             if (string.IsNullOrEmpty(message) || valueFor == null) return message;
@@ -159,10 +136,7 @@ namespace DSPRE.ROMFiles
             });
         }
 
-        /// <summary>
-        /// Gathers the gaps out of a run of messages. <paramref name="scriptOf"/> says which script shows
-        /// a message, when that is known, so a gap can point back at where it is used.
-        /// </summary>
+        /// <summary>Gathers the gaps out of a run of messages. </summary>
         public static List<FieldStringVar> Gather(IEnumerable<(int message, string text)> messages,
                                                   Func<int, IEnumerable<int>> scriptOf = null)
         {

@@ -123,7 +123,7 @@ namespace DSPRE.Editors
 
         Dictionary<byte, (uint entryOffset, ushort musicD, ushort? musicN)> trainerClassEncounterMusicDict;
 
-        /// <summary>Which file trainerClassEncounterMusicDict's entryOffsets are relative to — the
+        /// <summary>Which file trainerClassEncounterMusicDict's entryOffsets are relative to, the
         /// table may have been repointed into the synthetic overlay (e.g. by hand, following the
         /// "adding a new trainer class" community write-up); reading/writing it as if it were still
         /// at its vanilla arm9.bin location corrupts data or crashes. Same pattern already used for

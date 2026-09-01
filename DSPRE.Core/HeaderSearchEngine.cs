@@ -9,7 +9,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// Advanced map-header search (field / operator / value) — extracted from the WinForms
+    /// Advanced map-header search (field / operator / value), extracted from the WinForms
     /// <c>HeaderSearch</c> form so both shells share the same query logic. Core, UI-free.
     /// </summary>
     public static class HeaderSearchEngine

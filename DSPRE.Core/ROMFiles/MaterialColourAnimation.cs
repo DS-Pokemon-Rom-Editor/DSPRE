@@ -6,12 +6,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// A material animation (NSBMA): it fades a material in and out over time, which is what makes a
-    /// shop sign glow and a waterfall's spray come and go.
-    ///
-    /// The file names its materials the same way the other animations do, and each one carries four
-    /// channels. The last is see-through-ness, stored as one byte per frame from 31 (solid) down to 0
-    /// (gone), which is the same 0-31 range a model's own materials use.
+    /// A material animation (NSBMA): it fades a material in and out over time, which is what makes a shop
+    /// sign glow and a waterfall's spray come and go.
     /// </summary>
     public sealed class MaterialColourAnimation
     {
@@ -83,12 +79,7 @@ namespace DSPRE.ROMFiles
         private const int AlphaFramesOffset = 14;     // the see-through channel's frame count
         private const int AlphaValueOffset = 16;      // and its value, which points at the track
 
-        /// <summary>
-        /// Reads the materials one chunk fades. They are listed the usual way, with one 20-byte record
-        /// each followed by the names. A record is ten 16-bit values: a flag, four channels of a frame
-        /// count and a value, then the frame count again. The last channel is see-through-ness, and its
-        /// value says where in the chunk the one-byte-per-frame track lives.
-        /// </summary>
+        /// <summary>Reads the materials one chunk fades. </summary>
         private static void ReadMaterials(byte[] d, int chunk, int frames, MaterialColourAnimation into)
         {
             int p = chunk + 8;

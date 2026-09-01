@@ -3,12 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// One row of the games' field camera table.
-    ///
-    /// The numbers are stored the way the hardware wants them, distances in sixteenths of a unit and
-    /// angles as a whole turn split into 65536, so they are converted here once.
-    /// </summary>
+    /// <summary>One row of the games' field camera table.</summary>
     public sealed class FieldCameraEntry
     {
         private const float FixedPointOne = 4096f;
@@ -23,11 +18,7 @@ namespace DSPRE.ROMFiles
         public int RawPitch { get; }
         public bool Orthographic { get; }
 
-        /// <summary>
-        /// PerspWay. This is half the vertical view angle, not the whole of it. GFC_SetCameraView works
-        /// the orthographic box out of it as tan(PerspWay) * Distance and uses that for the top and the
-        /// bottom alike, which only lines up with the perspective view if it is the half angle.
-        /// </summary>
+        /// <summary>PerspWay. </summary>
         public int RawHalfFieldOfView { get; }
 
         public int NearClip { get; }
@@ -67,29 +58,14 @@ namespace DSPRE.ROMFiles
         public float VisibleTilesAtTarget =>
             2f * DistanceInTiles * (float)Math.Tan(HalfFieldOfViewDegrees * Math.PI / 180.0);
 
-        /// <summary>
-        /// Half the height of the flat view, for the two entries that use one. Worked out the same way
-        /// GFC_SetCameraView does it, tan of the angle times the distance.
-        /// </summary>
+        /// <summary>Half the height of the flat view, for the two entries that use one. </summary>
         public float OrthoHalfHeightInTiles => VisibleTilesAtTarget / 2f;
 
         /// <summary>The camera distance in the units the preview's scene uses.</summary>
         public float DistanceForScene(float tileSize) => DistanceInTiles * tileSize;
     }
 
-    /// <summary>
-    /// Where the games put the camera while you walk about a map. The rows come from the camera table in
-    /// field_camera.dat.
-    ///
-    /// Take them from the .dat and not from field_camera.c: that file has an older copy of the same table
-    /// sitting inside an "#if 0" block, which is switched off and disagrees with the real one on the
-    /// angle and the shift.
-    ///
-    /// A map header picks its row by number. ZoneData_GetCameraID hands the header's camera field to
-    /// Situation_SetCameraID (ev_mapchange.c:377) and FieldCameraInit looks it up in this table
-    /// (field_camera.c:242). It only changes when you warp; walking from one zone to another keeps the
-    /// camera it had, which ev_mapchange.c:374 asserts.
-    /// </summary>
+    /// <summary>Where the games put the camera while you walk about a map. </summary>
     public static class FieldCamera
     {
         // id, name, distance, pitch, orthographic, half view angle, near, far, shift x/y/z
@@ -125,11 +101,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The ordinary walking-about camera, which is what most maps use.</summary>
         public static FieldCameraEntry Normal => Table[0];
 
-        /// <summary>
-        /// Which way the camera faces. It does not turn: the only two calls in field_camera.c that set
-        /// the angle, at :407 and :542, write the downward tilt and leave the turn at the zero their
-        /// CAMERA_ANGLE starts with, and both come from an area override rather than from the player.
-        /// </summary>
+        /// <summary>Which way the camera faces. </summary>
         public const float YawDegrees = 0f;
 
         /// <summary>
@@ -137,12 +109,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public const int TrailFrames = 6;
 
-        /// <summary>
-        /// Only the height is delayed. The field camera is set up with CAM_TRACE_MASK_Y, and
-        /// UpdateTraceData in camera.c takes the current position for every axis the mask leaves out,
-        /// so the camera keeps up with the player across the ground and only eases up and down. That is
-        /// what stops a flight of steps making the whole view bob.
-        /// </summary>
+        /// <summary>Only the height is delayed. </summary>
         public const bool HeightLagsBehind = true;
 
         // Kept so callers that only ever wanted the ordinary camera read the same as before.

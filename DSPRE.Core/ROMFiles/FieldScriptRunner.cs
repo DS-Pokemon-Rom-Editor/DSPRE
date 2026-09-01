@@ -6,10 +6,6 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// Plays a script's steps out on the field's own clock instead of reporting them all at once, so a
     /// movement can be watched happening and a wait actually waits.
-    ///
-    /// Everything is counted in frames at the field's thirty a second. A step that starts something with
-    /// a length, a movement or a shake, holds the script until it has run its course, which is what the
-    /// games' own wait commands do.
     /// </summary>
     public sealed class FieldScriptRunner
     {
@@ -24,11 +20,7 @@ namespace DSPRE.ROMFiles
             public Action<int, int, int, int> ShakeCamera;
             /// <summary>Move the view to one of the alternative settings. Returns how long it takes.</summary>
             public Func<int, int> MoveCamera;
-            /// <summary>
-            /// Show a line of dialogue. Returns whether a box actually opened: the script only holds
-            /// when one did, because otherwise there is nothing for the reader to press on and the
-            /// script would sit there forever.
-            /// </summary>
+            /// <summary>Show a line of dialogue. </summary>
             public Func<string, bool> ShowMessage;
             /// <summary>Anything else, reported so the panel can list it.</summary>
             public Action<ScriptStep> Report;
@@ -137,13 +129,6 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// Moves the view to one of the alternative camera settings, the way EvCmdMoveSeamlessCamera does.
-    ///
-    /// SMLS_CamCnt_Request picks a row of SmlsParam (field_camera.c:330) and SMLS_CamCnt_Main eases into
-    /// it: ChangeCamAngle walks the downward tilt from where it was to where it is going, and ShiftCamPos
-    /// slides the view across, both over the row's own number of frames. This build has one row, which
-    /// tilts to -0x1a9e and shifts back by 0x6c000 over twenty four frames.
-    ///
-    /// Worth knowing: no script in the retail game asks for this, so it is here for hacks that do.
     /// </summary>
     public sealed class FieldCameraMove
     {
@@ -193,11 +178,7 @@ namespace DSPRE.ROMFiles
         public void Advance(int frames) => _at = Math.Min(_frames, _at + Math.Max(0, frames));
     }
 
-    /// <summary>
-    /// Shakes the view the way EventCmd_ZishinEffect does. FDemoShake_Main in field_demo.c:1057 turns a
-    /// full circle of sine over each pass, moving what the camera looks at by the given distance across
-    /// and down, then snaps back and goes round again.
-    /// </summary>
+    /// <summary>Shakes the view the way EventCmd_ZishinEffect does. </summary>
     public sealed class FieldCameraShake
     {
         private readonly float _width, _height;

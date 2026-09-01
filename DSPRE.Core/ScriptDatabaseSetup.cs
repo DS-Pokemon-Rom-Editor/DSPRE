@@ -9,7 +9,7 @@ namespace DSPRE
 {
     /// <summary>
     /// Script-command database bootstrap: pulls updates from the scrcmd-database git repo and
-    /// initializes the per-ROM database JSONs. Moved out of the WinForms <c>Helpers</c> class —
+    /// initializes the per-ROM database JSONs. Moved out of the WinForms <c>Helpers</c> class, 
     /// this is core logic (LibGit2Sharp is cross-platform; user messages go through
     /// <see cref="AppMessages"/>).
     /// </summary>
@@ -133,7 +133,7 @@ namespace DSPRE
             {
                 // The base databases come from the scrcmd-database git repo (cloned into
                 // AppPaths.DatabasePath) or from a bundled databases/ folder copied by
-                // DatabaseSetup. On a fresh machine with no network, neither may exist —
+                // DatabaseSetup. On a fresh machine with no network, neither may exist, 
                 // degrade gracefully instead of failing the whole ROM load.
                 if (!File.Exists(databaseJsonPath) && SettingsManager.Settings?.automaticallyUpdateDBs != true)
                 {

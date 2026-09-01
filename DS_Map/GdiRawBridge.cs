@@ -30,7 +30,7 @@ namespace DSPRE
             {
                 int w = bmp.Width, h = bmp.Height;
                 var rect = new Rectangle(0, 0, w, h);
-                // Format32bppArgb is B,G,R,A byte order in memory (little-endian) with straight alpha —
+                // Format32bppArgb is B,G,R,A byte order in memory (little-endian) with straight alpha, 
                 // exactly what RawImage/Avalonia Bgra8888 expect.
                 BitmapData data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
                 try

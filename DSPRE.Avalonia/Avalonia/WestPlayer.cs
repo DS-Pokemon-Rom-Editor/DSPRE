@@ -38,10 +38,6 @@ namespace DSPRE.Avalonia
         private const int FN_WE_T02 = 44, FN_WE_T22 = 45;   // background-scroll routines
         private const int FN_KAITEN = 60;   // mon traces an ellipse (dizzy/spin)
         // WE_TOOL flags: which Pokémon a routine targets.
-        // Which Pokemon a routine acts on, from we_def.h:137-159. The names are relative, not sides:
-        // WT_SSPointerGet (we_tool.c:1431) resolves M1 to the ATTACKER and E1 to the DEFENDER, M2 and E2
-        // to their allies, and it only looks those up in a double battle. So in a single battle an M2 or
-        // E2 target finds nobody and the routine does nothing at all.
         private const int WE_TOOL_M1 = 0x0002, WE_TOOL_M2 = 0x0004, WE_TOOL_E1 = 0x0008, WE_TOOL_E2 = 0x0010,
                           WE_TOOL_OTHER = 0x0020, WE_TOOL_STAGE = 0x0040, WE_TOOL_BG = 0x0400;
         // EMTFUNC_FIELD_OPERATOR, projectile/operator callback (uses the following EX_DATA).
@@ -184,9 +180,7 @@ namespace DSPRE.Avalonia
         private int _bgHoldLeft = -1;
 
         /// <summary>
-        /// Changes one setting of the background that is already scrolling (WEST_HAIKEI_PARA_CHG). The
-        /// numbers are from we_def.h:385-392: 0 and 1 are the two speeds, 2 and 3 the two positions. The
-        /// rest of them are fade and rotation settings this preview does not follow.
+        /// Changes one setting of the background that is already scrolling (WEST_HAIKEI_PARA_CHG).
         /// </summary>
         private void SetBackgroundParam(int which, int value)
         {
@@ -329,11 +323,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>
-        /// Which of the two animations a TURN_CHK move shows. The games pick by the parity of the battle's
-        /// own turn counter (we_sys.c:3018), so a move can have a second animation that only ever plays on
-        /// alternate turns. Set this to see that one.
-        /// </summary>
+        /// <summary>Which of the two animations a TURN_CHK move shows. </summary>
         public bool SecondTurnVariant { get; set; }
 
         private readonly bool _attackerIsEnemy;
@@ -475,15 +465,13 @@ namespace DSPRE.Avalonia
                         break;
 
                     // TENKI_JP no_weather, rain, sandstorm, sun, hail: WEST_TENKI_JP always jumps, picking
-                    // the offset for whichever weather is up and the first one when there is none. Letting
-                    // this fall through ran the wrong branch of the one move that uses it, Weather Ball.
+                    // the offset for whichever weather is up and the first one when there is none.
                     case "WEST_TENKI_JP":
                         if (c.Args.Length >= 1) JumpRelative(c.WordPos + 1, c.Args[0]);
                         break;
 
                     // CONTEST_JP jumps only in a Contest and PTAT_JP only when attacker and defender are on
-                    // the same side, which is a double battle helping your own partner. Neither is true of
-                    // this preview, so both carry on to the next command, which is what the games do too.
+                    // the same side, which is a double battle helping your own partner.
                     case "WEST_CONTEST_JP":
                     case "WEST_PTAT_JP":
                         break;
@@ -707,7 +695,6 @@ namespace DSPRE.Avalonia
 
                     // Swaps the Pokemon's graphic for another one: the Substitute doll, the Snatch figure,
                     // or whatever Transform copied (WEST_HENSIN_ON reads which, then loads that graphic).
-                    // The preview draws the Pokemon it was given and has no second graphic to swap in.
                     case "WEST_HENSIN_ON":
                     case "WEST_HENSIN_ON_RC":
                         Note("This move swaps the Pokémon's graphic for another one, which the preview keeps as it is.");
@@ -727,9 +714,7 @@ namespace DSPRE.Avalonia
                         if (c.Args.Length >= 2) SetBackgroundParam(c.Args[0], c.Args[1]);
                         break;
 
-                    // Set aside memory and load graphics into it. The preview draws from its own decoded
-                    // copies of those graphics, so there is nothing here to set aside or load. Written out
-                    // rather than left to fall through, so nothing is skipped without a reason.
+                    // Set aside memory and load graphics into it.
                     case "WEST_POKEOAM_RES_INIT":
                     case "WEST_POKEOAM_RES_LOAD":
                     case "WEST_CATS_RES_INIT":
@@ -739,9 +724,7 @@ namespace DSPRE.Avalonia
                     case "WEST_CATS_CELLANM_RES_LOAD":
                         break;
 
-                    // Never run as a command. Its own handler in the games is an assertion saying so
-                    // (we_sys.c WEST_EX_DATA); it is read as data by the particle spawn before it, which
-                    // is what the particle-adding cases here already do.
+                    // Never run as a command.
                     case "WEST_EX_DATA":
                         break;
 
@@ -778,9 +761,8 @@ namespace DSPRE.Avalonia
             if (emitterNo < 0 || emitterNo >= arc.Emitters.Count) return null;
             var em = arc.Emitters[emitterNo];
             var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
-            // A particle whose picture could not be read is drawn as a plain round dot, which looks like
-            // a real effect and is not one. Say so rather than let it pass for the move's own graphics.
-            // No particle in either game fails today; this is for edited or added ones that might.
+            // A particle whose picture could not be read is drawn as a plain round dot, which looks like a
+            // real effect and is not one.
             if (tex == null)
                 Note($"Particle {emitterNo} asks for picture {em.TexNo}, which is not in its file, so it "
                      + "is drawn as a plain dot.");
@@ -976,11 +958,8 @@ namespace DSPRE.Avalonia
         {
             if (a.Length < 1) return;
 
-            // The games copy the script's words into the work array and then zero the rest of it
-            // (we_sys.c WEST_FUNC_CALL), so a routine handed fewer words than it reads sees zeros, and it
-            // still runs. Padding here is what makes a short call behave the same way. Across both ROMs no
-            // shipped call site is short enough to reach one of these zeros, so this changes nothing the
-            // games do; it is for scripts somebody writes here.
+            // The games copy the script's words into the work array and then zero the rest of it (we_sys.c
+            // WEST_FUNC_CALL), so a routine handed fewer words than it reads sees zeros, and it still runs.
             if (a.Length < 2 + WorkSlots)
             {
                 var padded = new int[2 + WorkSlots];
@@ -1043,9 +1022,7 @@ namespace DSPRE.Avalonia
                             Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])), NumMax = 0 });
                         break;
                     }
-                    // The flag is a set, not a choice: STAGE shakes everybody. Nothing in either ROM asks
-                    // for the background here, and only one site asks for STAGE, but the game does what
-                    // the flag says rather than picking one.
+                    // The flag is a set, not a choice: STAGE shakes everybody.
                     foreach (int t in TargetsFromFlags(mode))
                         _monFx.Add(new MonFx { Kind = 5, Mon = t, ToScene = false,
                             Sh = new Shake(a[2], a[3], Math.Max(1, a[4]), Math.Max(1, a[5])), NumMax = 0 });
@@ -1060,20 +1037,16 @@ namespace DSPRE.Avalonia
                     break;
                 }
 
-                // The two status overlays. Both scroll a background graphic behind the Pokemon and blend
-                // it at 12 out of 16 (wsp_steff.c:296-298). Getting better scrolls it down at 3 a frame,
-                // turning metallic scrolls it up at 6. GPWork[0] is which graphic, GPWork[1] is 0 for the
-                // attacker and anything else for the defender (StatusEffect_Param_SetUp, wsp_steff.c).
+                // The two status overlays.
                 case 82:   // ST_EFF_RECOVER
                 case 83:   // ST_EFF_METAL
                 {
                     double speed = fn == 82 ? 3 : -6;
                     StartBackground(a[2], overlay: true, posX: 0, posY: 0, spdX: 0, spdY: speed,
                         peak: 12 / 16.0, fadeFrames: 12, stopY: 0, useStop: false);
-                    // Its own task holds for STEFF_FADE_WAIT frames and then takes the blend down one
-                    // step a frame from 12 to nothing (wsp_steff.c:58, :154 and the step after it), so
-                    // about thirty-four frames all told. Without an end it would sit there for ever and
-                    // the move would never finish.
+                    // Its own task holds for STEFF_FADE_WAIT frames and then takes the blend down one step
+                    // a frame from 12 to nothing (wsp_steff.c:58, :154 and the step after it), so about
+                    // thirty-four frames all told.
                     _bgHoldLeft = 20;
                     break;
                 }
@@ -1195,11 +1168,7 @@ namespace DSPRE.Avalonia
                     break;
                 case 5:    // Strength: the attacker SQUASHES 1.0→GPWork[0]/100 (+ a light shake),
                 {          // pulses a colour WE070_FADE_CNT 3× (evy 10/16, col 0x1F = RED) while squashed, then STRETCHES to
-                           // GPWork[1]/100 ("びよよーん" boing) and settles to 1.0. My old handler did ONLY the shake.
-                    // What the routine itself reads is only two of these: WestSp_WE_070 (wsp_goto.c) passes
-                    // GPWork[0] as the end scale and GPWork[2] as how many frames it takes, and never
-                    // touches [1] or [3]. The stretch below comes from the task that runs afterwards and
-                    // has not been re-checked against it.
+                           // GPWork[1]/100 ("びよよーん" boing) and settles to 1.0.
                     int sq = a.Length > 2 ? a[2] : 70, st = a.Length > 3 ? a[3] : 120;   // GPWork[0] end scale (/100)
                     int sqSync = a.Length > 4 ? Math.Max(1, a[4]) : 10, stSync = a.Length > 5 ? Math.Max(1, a[5]) : 5;   // GPWork[2] frames
                     _monFx.Add(new MonFx { Mon = _atVis, Kind = 5, Sh = new Shake(2, 0, 1, 4), NumMax = 0 });
@@ -1289,9 +1258,7 @@ namespace DSPRE.Avalonia
                     AddScaleSeq(_dfVis, new[] { new double[]{100,120,100,150,7}, new double[]{120,100,150,100,4} });
                     break;
                 // WE_148: the background whitens and the attacker darkens together, both hold five frames,
-                // then both come back (We148_TCB, wsp_goto.c). The background colour is 0x7FFF (white) and
-                // the sprite's is 0x0000 (black); the background's wait of -2 means it steps fast rather
-                // than slowly, the same reading the palette-fade routine uses.
+                // then both come back (We148_TCB, wsp_goto.c).
                 case 16:
                 {
                     const int fadeIn = 8, hold = 5;
@@ -1612,12 +1579,6 @@ namespace DSPRE.Avalonia
         // Which sprite a routine targets, from its WE_TOOL flag arg (M1=attacker, E1=defender; defaults to defender).
         /// <summary>
         /// Every Pokemon a target flag picks out, in the order WT_SSPointerGet (we_tool.c:1431) picks them.
-        ///
-        /// STAGE means all of them and OTHER means everyone but the attacker, which in a single battle is
-        /// just the defender. M2 and E2 are the allies and only exist in a double battle, so a flag asking
-        /// only for one of those comes back empty and the caller does nothing, the same as the game.
-        /// Across HeartGold's own scripts that is 37 call sites: 28 of WT_SHAKE, 4 of WE_T05, 5 of WE_T10.
-        /// Only the WT_SHAKE ones were being got wrong; MoveMon already stopped on an ally-only flag.
         /// </summary>
         private List<int> TargetsFromFlags(int flag) => WestTargetFlags.Targets(flag, _atVis, _dfVis);
 
@@ -2343,9 +2304,8 @@ namespace DSPRE.Avalonia
                         break;
                     case 13:  // there-and-back move (jump): slide (Dx,Dy) out over UpF, hold WaitF at full, back over DownF.
                     {
-                        // MonDX is a running offset that nothing resets between frames, so what goes in here
-                        // is the STEP since last frame, not where the sprite should be. Adding the position
-                        // every frame made Megahorn's charge pile up to 480px off screen and stay there.
+                        // MonDX is a running offset that nothing resets between frames, so what goes in
+                        // here is the STEP since last frame, not where the sprite should be.
                         int up = Math.Max(1, fx.UpF), hold = Math.Max(0, fx.WaitF), down = Math.Max(1, fx.DownF);
                         double At(int f)
                         {
@@ -2570,8 +2530,7 @@ namespace DSPRE.Avalonia
                     return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
                 case 0:   // DummyEmitCallback (wp_tbl.c:46 -> :111) does nothing at all: it never sets an
                           // emitter position, so the emitter stays where its own data puts it, exactly like
-                          // SEP_POS below. Anchoring it to the defender moved every one of the 16 moves that
-                          // use it, Blizzard among them.
+                          // SEP_POS below.
                     return (PARTICLE_ORIGIN_X, PARTICLE_ORIGIN_Y, 0, 0, 0);
                 case 1: case 3: case 19: case 21:                                   // attacker
                     return (_atX, _atY, 0, 0, ZOfVis(_atVis));

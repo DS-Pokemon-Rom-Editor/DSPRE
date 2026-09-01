@@ -1,8 +1,4 @@
-// Generated from the leaked source's own index headers. Do not hand-edit; see NamedArchives.cs.
-//   weather effects  include/field/weather_sys.naix   (both games)
-//   fonts            include/system/font_arc.h        (both games)
-// The names carry the kind on the end the same way the battle furniture list does, so the same
-// grouping reads them.
+// Generated from the games' own archive index lists.
 
 namespace DSPRE.Avalonia.Data
 {

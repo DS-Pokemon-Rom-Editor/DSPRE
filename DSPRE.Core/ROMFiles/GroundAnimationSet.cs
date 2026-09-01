@@ -5,11 +5,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// The terrain animations an area can play. Each area's RESOURCE_PARAM names one by index, and the
-    /// game loops it forever while you are on the map. HeartGold and SoulSilver are the only games that
-    /// have any: two animations covering the moving water. Diamond, Pearl and Platinum have none.
-    /// </summary>
+    /// <summary>The terrain animations an area can play. </summary>
     public static class GroundAnimationSet
     {
         /// <summary>An area with this in its terrain animation slot plays nothing.</summary>

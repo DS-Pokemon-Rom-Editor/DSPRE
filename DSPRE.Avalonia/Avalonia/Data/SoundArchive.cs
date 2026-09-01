@@ -5,11 +5,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Finds and reads the ROM's own sound archive. Verified against snd_system.c in both leaks: HeartGold
-    /// and SoulSilver keep it at data/sound/gs_sound_data.sdat and Platinum at pl_sound_data.sdat, as plain
-    /// files inside the ROM's filesystem.
-    /// </summary>
+    /// <summary>Finds and reads the ROM's own sound archive. </summary>
     public static class SoundArchive
     {
         private static SdatArchive _cached;
@@ -35,11 +31,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Forgets what was read, for when a different ROM is opened.</summary>
         public static void Reset() { _cached = null; _cachedFor = null; _crySequence = null; }
 
-        /// <summary>
-        /// The one short sequence every cry is played from. The games always play this and swap the
-        /// instruments for the Pokemon's own (snd_play.c:1091). It is called SEQ_PV, and in HeartGold it
-        /// is sequence 2.
-        /// </summary>
+        /// <summary>The one short sequence every cry is played from. </summary>
         public const string CrySequenceName = "SEQ_PV";
 
         private static int? _crySequence;
@@ -68,12 +60,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The cries this ROM actually has, as the bank numbers the game plays them with, in order.
-        ///
-        /// The game plays a cry by handing SEQ_PV a bank number in place of a species (snd_play.c:1091), so
-        /// the bank number is the cry number. Which banks those are comes from their own names: HeartGold
-        /// names them BANK_PV001 through BANK_PV516_SKY, 494 of them, and its other 284 banks are the music
-        /// and sound-effect banks. Going by "every bank that exists" instead listed BANK_GAMEBOY and every
-        /// music bank as though each were a Pokemon.
         /// </summary>
         public static List<int> CryBanks()
         {
@@ -100,10 +86,7 @@ namespace DSPRE.Avalonia.Data
             return -1;
         }
 
-        /// <summary>
-        /// The sample a species' cry is made from, as it sits in the ROM. This is the sound on its own,
-        /// without the volume and pan the sequence puts on it.
-        /// </summary>
+        /// <summary>The sample a species' cry is made from, as it sits in the ROM. </summary>
         public static SwavSample CrySample(int species)
         {
             var sdat = Load();
@@ -123,8 +106,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Puts a WAV in as a species' cry, writing the sound archive back to the ROM folder. Comes back
-        /// with a reason when it could not, so the caller can say what was wrong.
+        /// Puts a WAV in as a species' cry, writing the sound archive back to the ROM folder.
         /// </summary>
         public static bool ImportCry(int species, string path, out string problem)
         {
@@ -165,7 +147,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// A Pokemon's cry, as sound ready to play, or null when this ROM has nothing for that species.
-        /// The species number is also the bank number, which is what the games hand the sequence.
         /// </summary>
         public static short[] RenderCry(int species, int sampleRate = 32000)
         {
@@ -183,16 +164,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── the samples that are not cries ─────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Every wave archive that is not a cry bank's, with how many sounds it holds.
-        ///
-        /// A cry is one sample in an archive of its own, which is why it was the only thing that could be
-        /// replaced. It is not the only sample in the ROM. HeartGold keeps 608 more across 66 archives and
-        /// Platinum 380 across 27, named for what they are for: WAVE_ARC_BASIC is the general instrument
-        /// set, the WAVE_ARC_BGM_ ones hold the instruments a group of tunes plays, and the WAVE_ARC_SE_
-        /// ones hold the actual noises the sound effects are made of. All of them are samples, so all of
-        /// them can be taken out and put back the same way a cry can.
-        /// </summary>
+        /// <summary>Every wave archive that is not a cry bank's, with how many sounds it holds.</summary>
         public static List<(int Arc, string Name, int Count)> SampleArchives()
         {
             var found = new List<(int, string, int)>();
@@ -240,14 +212,7 @@ namespace DSPRE.Avalonia.Data
             return true;
         }
 
-        /// <summary>
-        /// Puts a WAV in over one sample, keeping the rest of its archive as it was. Comes back with a
-        /// reason when it could not, so the caller can say what was wrong.
-        ///
-        /// A sample is shared: an instrument used by twenty tunes is one sample, and replacing it changes
-        /// all twenty. That is how the games are built, so the window says so rather than the write being
-        /// a surprise.
-        /// </summary>
+        /// <summary>Puts a WAV in over one sample, keeping the rest of its archive as it was. </summary>
         public static bool ImportSample(int waveArc, int index, string path, out string problem)
         {
             problem = null;

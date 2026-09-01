@@ -2,15 +2,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Tells a plain number in a script apart from a variable.
-    ///
-    /// GetEventWorkValue in script.c:1144 asks GetEventWorkAdrs for the address a number names, and when
-    /// there is none it hands the number straight back as the value. GetEventWorkAdrs at :1122 draws the
-    /// line: anything below SVWK_START is not a variable at all, from there to SCWK_START is a saved
-    /// variable, and from SCWK_START up it is one of the script's own working slots. Those last ones have
-    /// names in usescript.h, and 0x800c is the answer a menu or a yes-or-no question left behind.
-    /// </summary>
+    /// <summary>Tells a plain number in a script apart from a variable.</summary>
     public static class FieldScriptValues
     {
         /// <summary>SVWK_START. Below this a number is just a number.</summary>
@@ -34,10 +26,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The script slot's own name, or null when the number is not one of them.</summary>
         public static string NameOf(int value) => Named.TryGetValue(value, out string n) ? n : null;
 
-        /// <summary>
-        /// How to write a number that may be either. A plain number reads as itself; a variable reads as
-        /// what it is, so a reader can tell the two apart at a glance.
-        /// </summary>
+        /// <summary>How to write a number that may be either. </summary>
         public static string Describe(int value)
         {
             if (!IsVariable(value)) return value.ToString();
@@ -53,13 +42,7 @@ namespace DSPRE.ROMFiles
             IsVariable(value) ? Describe(value) : $"0x{value:X4}";
     }
 
-    /// <summary>
-    /// The four message archives a script can ask for by number.
-    ///
-    /// EvCmdGetOtherMsgArcID in scr_msg.c:103 keeps them in a table of four and puts the archive's own
-    /// number into the variable it is given, so a later message command can read from it. The command
-    /// shows nothing itself.
-    /// </summary>
+    /// <summary>The four message archives a script can ask for by number.</summary>
     public static class FieldSharedMessageArchives
     {
         private static readonly string[] Names =

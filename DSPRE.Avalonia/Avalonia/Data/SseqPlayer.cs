@@ -28,9 +28,7 @@ namespace DSPRE.Avalonia.Data
 
             /// <summary>
             /// The note was written with no length at all, so nothing ever tells it to stop and it sounds
-            /// until its sample runs out. The hardware only counts a note down when its length is above
-            /// zero (snd_exchannel.c:505), so a length of zero is never released. Every Pokemon cry is
-            /// written this way: SEQ_PV is one note with a length of zero.
+            /// until its sample runs out.
             /// </summary>
             public bool NoLengthGiven;
             public int Note;
@@ -79,10 +77,7 @@ namespace DSPRE.Avalonia.Data
             public readonly Stack<int> CallStack = new Stack<int>();
         }
 
-        /// <summary>One note as the sequence wrote it. This is what the sequence actually says, before any
-        /// of it is turned into sound, so the same reading drives playing it, saving it as a MIDI and
-        /// drawing it as a note track. Keeping those on one reading is deliberate: two readings of the
-        /// same bytes drift apart, and then a picture and a sound disagree about the same file.</summary>
+        /// <summary>One note as the sequence wrote it. </summary>
         public sealed class Note
         {
             public double StartSeconds;
@@ -150,8 +145,10 @@ namespace DSPRE.Avalonia.Data
             return voices;
         }
 
-        /// <summary>Renders sequence <paramref name="seqIndex"/> from <paramref name="sdat"/> to interleaved
-        /// stereo 16-bit PCM at <paramref name="sampleRate"/>, or null if the sequence/bank can't be resolved.</summary>
+        /// <summary>
+        /// Renders sequence <paramref name="seqIndex"/> from <paramref name="sdat"/> to interleaved stereo
+        /// 16-bit PCM at <paramref name="sampleRate"/>, or null if the sequence/bank can't be resolved.
+        /// </summary>
         /// <param name="bankOverride">
         /// Play the sequence with somebody else's instruments instead of its own. A cry works this way:
         /// there is one short sequence for all of them, and the games hand it the bank belonging to the

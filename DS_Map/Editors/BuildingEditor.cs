@@ -47,7 +47,7 @@ namespace DSPRE {
             buildingOpenGLControl.InitializeContexts();
             buildingOpenGLControl.MakeCurrent();
             buildingOpenGLControl.MouseWheel += new MouseEventHandler(buildingOpenGLControl_MouseWheel);
-            // Gl.glEnable(Gl.GL_TEXTURE_2D) stubbed — awaiting OpenTK 4 rewrite
+            // Gl.glEnable(Gl.GL_TEXTURE_2D) stubbed, awaiting OpenTK 4 rewrite
 
             if (RomInfo.gameFamily == GameFamilies.HGSS) {
                 interiorCheckBox.Enabled = true;
@@ -113,7 +113,7 @@ namespace DSPRE {
             int[] aniframeS = new int[0];
 
             buildingOpenGLControl.Invalidate(); // Invalidate drawing surface
-            // SetupRenderer and Gl calls stubbed — awaiting OpenTK 4 rewrite (migration step 33)
+            // SetupRenderer and Gl calls stubbed, awaiting OpenTK 4 rewrite (migration step 33)
             renderer.Model = currentNSBMD.models[0];
             // Gl.glScalef stubbed
             renderer.RenderModel("", bta, aniframeS, aniframeS, aniframeS, aniframeS, aniframeS, bca, false, -1, 0.0f, 0.0f, dist, elev, ang, true, btp, currentNSBMD);

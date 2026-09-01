@@ -43,7 +43,7 @@ namespace DSPRE {
         MoveName,
         PokemonName,
         BeautyValue,
-        CustomNumber,   // a raw number within the field's range — used by custom/added evolution methods
+        CustomNumber,   // a raw number within the field's range, used by custom/added evolution methods
     }
     
     public struct EvolutionData {

@@ -25,10 +25,7 @@ namespace DSPRE.Avalonia.Gl
         private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
 
-        // Per-tile permission tint of the map textures (mesh overlay mode). A 32×32 colour texture is
-        // sampled in the fragment shader; only the tint texture is re-uploaded on paint (cheap). A tile
-        // whose texel is transparent is left alone, so the same mechanism can colour one tile as easily
-        // as the whole grid, and anything outside the grid is never touched.
+        // Per-tile permission tint of the map textures (mesh overlay mode).
         private int _collTex;
         private bool _tintOn;
         private float _tintStrength = 0.5f;
@@ -64,9 +61,8 @@ namespace DSPRE.Avalonia.Gl
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
 
-        // ── Terrain animation ────────────────────────────────────────────────────────────
-        // Per-material texture matrices, keyed the same way as the model's materials. Materials with
-        // no entry render with an identity matrix, so only the animated ones (water, waterfalls) move.
+        // ── Terrain animation ──────────────────────────────────────────────────────────── Per-material
+        // texture matrices, keyed the same way as the model's materials.
         private Dictionary<int, float[]> _texMatrices;
         private static readonly float[] IdentityTexMatrix = { 1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f };
 
@@ -237,11 +233,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>The everyday editor view, wide enough to see a whole map at a sensible distance.</summary>
         public const float DefaultFovDegrees = 45f;
 
-        /// <summary>
-        /// How wide the view is, top to bottom, in degrees. The field camera uses a much narrower angle
-        /// than the editor does, and setting the distance without this leaves everything looking far
-        /// further away than it does in game.
-        /// </summary>
+        /// <summary>How wide the view is, top to bottom, in degrees. </summary>
         public float VerticalFieldOfViewDegrees
         {
             get => _fovDegrees;
@@ -372,10 +364,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Sets the textured billboard sprites (or null to clear).</summary>
         private bool _spritesSeeThrough = true;
 
-        /// <summary>
-        /// Whether people show through walls. The editor wants that so no placed event can hide; a
-        /// preview of the map as it plays wants buildings to cover whoever is behind them.
-        /// </summary>
+        /// <summary>Whether people show through walls. </summary>
         public bool SpritesSeeThroughGeometry
         {
             get => _spritesSeeThrough;
@@ -562,10 +551,7 @@ namespace DSPRE.Avalonia.Gl
             _uploadPending = false;
         }
 
-        /// <summary>
-        /// Re-uploads the triangles of the parts a joint animation has moved. Only those parts are
-        /// touched; everything else keeps the buffer it already has.
-        /// </summary>
+        /// <summary>Re-uploads the triangles of the parts a joint animation has moved. </summary>
         private void UploadMovedParts()
         {
             _movedPartsDirty = false;
@@ -714,9 +700,7 @@ namespace DSPRE.Avalonia.Gl
                     texMtx = m;
                 if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, texMtx);
 
-                // Only the faces the DS would have drawn. A material that asks for one side gets one
-                // side, which is what stops a backdrop showing its inside over the map. Anything that
-                // asks for both sides is left alone, and that is most of a map.
+                // Only the faces the DS would have drawn.
                 bool cull = part.CullMode == NsbmdCull.Front || part.CullMode == NsbmdCull.Back;
                 if (cull)
                 {
@@ -929,9 +913,7 @@ namespace DSPRE.Avalonia.Gl
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
             _f.DepthMask(false);                 // sit in the scene but don't write depth
             // In the editor a sprite shows through geometry on purpose: an NPC behind a tall counter or
-            // wall prop would otherwise be hidden, and you need to see every event you have placed. A
-            // preview meant to look like the game wants the opposite, so buildings cover who is behind
-            // them, which is what SpritesSeeThroughGeometry switches.
+            // wall prop would otherwise be hidden, and you need to see every event you have placed.
             if (_spritesSeeThrough) _f.Disable(GlFunctions.GL_DEPTH_TEST);
             else _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.Uniform1f(_alphaLoc, 1f);

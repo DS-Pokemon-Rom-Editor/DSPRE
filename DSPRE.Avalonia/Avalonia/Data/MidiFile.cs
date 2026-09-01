@@ -8,16 +8,6 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// Writes a sequence out as a MIDI file, so the game's music can be opened in an ordinary music
     /// program.
-    ///
-    /// What comes out is the notes, not the sound. The games play their notes on their own instruments,
-    /// which are samples living in the ROM, and a MIDI file cannot carry those. So the file says which
-    /// instrument number each track asked for and the receiving program picks whatever it has under that
-    /// number, which will not sound the same. The notes, their timing, how hard they are hit and where
-    /// they sit left to right are all exact.
-    ///
-    /// Timing is written at a fixed hundred and twenty beats a minute and every note is placed by the
-    /// second it actually starts at. That keeps the timing right even for a sequence that changes speed
-    /// part way through, at the cost of the file not carrying those speed changes as speed changes.
     /// </summary>
     public static class MidiFile
     {

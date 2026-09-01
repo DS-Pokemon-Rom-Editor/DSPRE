@@ -113,7 +113,7 @@ namespace DSPRE.LibNDSFormats
                 System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             try
             {
-                // Format32bppArgb memory layout is B,G,R,A little-endian — same as RawImage.Bgra.
+                // Format32bppArgb memory layout is B,G,R,A little-endian, same as RawImage.Bgra.
                 for (int y = 0; y < raw.Height; y++)
                 {
                     System.Runtime.InteropServices.Marshal.Copy(

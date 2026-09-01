@@ -484,7 +484,7 @@ namespace DSPRE.ROMFiles
                 FriendshipHigh = (b6 & (1 << 3)) != 0;
                 // bits 4-7 unused
 
-                // Remaining bytes (7–18): values
+                // Remaining bytes (7 to 18): values
                 EVHpValue = reader.ReadSByte();
                 EVAtkValue = reader.ReadSByte();
                 EVDefValue = reader.ReadSByte();
@@ -565,7 +565,7 @@ namespace DSPRE.ROMFiles
                 // bits 4-7 unused
                 writer.Write(b6);
 
-                // Bytes 7–18: raw values
+                // Bytes 7 to 18: raw values
                 writer.Write(EVHpValue);
                 writer.Write(EVAtkValue);
                 writer.Write(EVDefValue);
@@ -578,7 +578,7 @@ namespace DSPRE.ROMFiles
                 writer.Write(FriendshipMidValue);
                 writer.Write(FriendshipHighValue);
 
-                // Bytes 19–20: padding
+                // Bytes 19 to 20: padding
                 writer.Write((byte)0);
                 writer.Write((byte)0);
             }

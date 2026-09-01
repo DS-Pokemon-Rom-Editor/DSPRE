@@ -43,15 +43,7 @@ namespace DSPRE.Avalonia.Data
         public string Source = "";
     }
 
-    /// <summary>
-    /// Turns a move script into lines somebody can read, three different ways.
-    ///
-    /// These are instruction streams with timing in them, so none of the three writes a command out as a
-    /// sentence. What makes them readable instead is that the shorthands the scripts were written in are
-    /// folded back up, the numbers carry the names the games give them, the columns line up so a run of
-    /// near-identical commands shows its one difference at a glance, and loop and subroutine bodies are
-    /// indented so the shape of the script is visible.
-    /// </summary>
+    /// <summary>Turns a move script into lines somebody can read, three different ways.</summary>
     public static class WestScriptDisplay
     {
         /// <summary>The part of a move a command belongs to, in the order they happen.</summary>
@@ -89,13 +81,7 @@ namespace DSPRE.Avalonia.Data
             _ => "What happens",
         };
 
-        /// <summary>
-        /// Which part of the move a routine call belongs to, from who it acts on.
-        ///
-        /// A routine that takes a target flag says in that flag whether it is doing something to the
-        /// attacker or to the Pokemon on the receiving end, so the call itself decides which group it
-        /// goes in rather than a list written out by hand here.
-        /// </summary>
+        /// <summary>Which part of the move a routine call belongs to, from who it acts on.</summary>
         private static string GroupOfCall(int[] args)
         {
             if (args.Length < 1) return "What happens";
@@ -226,8 +212,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             // A fixed order, so "Where it ends" is at the end rather than wherever the first SEQEND
-            // happened to sit. A move that branches has a spare SEQEND early on, and ordering by first
-            // appearance put the ending in the middle of the move.
+            // happened to sit.
             var order = new[]
             {
                 "What it loads", "Which version plays", "Settings for the next command",
@@ -269,9 +254,7 @@ namespace DSPRE.Avalonia.Data
 
         private static string CommandText(string opName, int[] args, WazaSeqVersion version, Func<int, string> soundName)
         {
-            // A routine call names the routine and then just lists its values. Labelling each one here
-            // would push the line off the side, and the panel below already says what every one means,
-            // which is where an explanation belongs.
+            // A routine call names the routine and then just lists its values.
             if (opName is "WEST_FUNC_CALL" or "WEST_OLDACT_FUNC_CALL" && args.Length >= 2)
             {
                 var call = new StringBuilder(Short(opName).PadRight(22));
@@ -291,9 +274,8 @@ namespace DSPRE.Avalonia.Data
             {
                 string label = WestParamSchema.ParamName(opName, i) ?? ("arg " + i);
                 string shown = Value(opName, i, args, version, soundName);
-                // A setting switched off says nothing, and printing all of them made this the longest
-                // line in either game. The raw view still shows every word, and the panel below spells
-                // out the selected command in full.
+                // A setting switched off says nothing, and printing all of them made this the longest line
+                // in either game.
                 if (shown == "None") continue;
                 sb.Append($"  {label}={shown}");
             }
@@ -361,10 +343,7 @@ namespace DSPRE.Avalonia.Data
             => (opName is "WEST_FUNC_CALL" or "WEST_OLDACT_FUNC_CALL") && args.Length > 0
                ? WestRoutines.Get(args[0])?.Source ?? "" : "";
 
-        /// <summary>
-        /// What to call a routine. The games' own name unless somebody has renamed it, in which case
-        /// theirs, so a rename made in the raw view shows up in the other two straight away.
-        /// </summary>
+        /// <summary>What to call a routine. </summary>
         public static string RoutineName(int id)
         {
             string custom = LabelStore.GetLabel("west_routines", id);

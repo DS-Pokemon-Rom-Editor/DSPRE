@@ -89,8 +89,8 @@ namespace DSPRE
 
         /// <summary>The full byte range this patch owns in <see cref="Filesystem.expArmPath"/> (marker
         /// + header + all 4 tables, including their still-zero-filled unused capacity headroom).
-        /// Other synthetic-overlay writers that scan for "free" (zero) space — see
-        /// <see cref="TrainerClassTableExpansion.RepointByteArrayTable"/> — must skip this range even
+        /// Other synthetic-overlay writers that scan for "free" (zero) space, see
+        /// <see cref="TrainerClassTableExpansion.RepointByteArrayTable"/>, must skip this range even
         /// where it reads as zero, since it's pre-reserved for future <see cref="AddEntry"/> calls,
         /// not actually free. Returns null when the patch isn't detected.</summary>
         public static (long Start, long End)? GetReservedByteRange() =>

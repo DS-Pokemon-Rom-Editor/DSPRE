@@ -40,13 +40,6 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// Reads a movement the way the games do, so the preview can play it out rather than just name it.
-    ///
-    /// The action names say what they do. A walk is one tile and the number on the end is how many frames
-    /// it takes, so WalkNorth8 is the ordinary walking pace of a tile every eight frames. On-the-spot
-    /// versions cover no ground. The names that do not carry a number are in the leak's own action list
-    /// with the grid and frame count spelled out: a dash is AC_DASH_x_4F, so a tile in four frames; a far
-    /// jump is AC_JUMP_x_2G_16F, two tiles in sixteen; a very far one is AC_JUMPHI_x_3G_32F, three in
-    /// thirty two; and an ordinary jump is AC_JUMP_x_1G_8F.
     /// </summary>
     public static class FieldMovementScript
     {

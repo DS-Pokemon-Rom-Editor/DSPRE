@@ -183,7 +183,6 @@ namespace DSPRE.Editors
                 AppLogger.Error($"Failed to load color table at path \"{SettingsManager.Settings.lastColorTablePath}\". Default will be used instead.");
                 _parent.romInfo.ResetMapCellsColorDictionary();
             }
-            RomInfo.SetupSpawnSettings();
 
             Helpers.EnableHandlers();
             selectMatrixComboBox.SelectedIndex = 0;
@@ -660,7 +659,7 @@ namespace DSPRE.Editors
             int matrixX = selectedCell.ColumnIndex;
             int matrixY = selectedCell.RowIndex;
 
-            new DSPRE.Avalonia.Views.SpawnEditorView(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY).Show();
+            new DSPRE.Avalonia.Views.World.SpawnEditorView(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY).Show();
         }
         private void selectMatrixComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {

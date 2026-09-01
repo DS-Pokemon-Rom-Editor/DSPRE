@@ -997,7 +997,7 @@ namespace DSPRE {
                 return;
             }
             // hg-engine-owned domains are always rebuilt fresh from source (cheap: 0.5-3s each), never
-            // read from the packed ROM's NARC — see HgEngineSync.
+            // read from the packed ROM's NARC, see HgEngineSync.
             IDs = HgEngineSync.SyncOwnedAndReturnRemaining(IDs);
             Parallel.ForEach(IDs, id => {
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {
@@ -1041,11 +1041,11 @@ namespace DSPRE {
         }
 
         /// <summary>GDI twin of <see cref="MonIconFallbackHook"/> for the WinForms-only <see cref="GetPokePic"/>
-        /// path — installed by the WinForms shell (resx Pokéball); never runs off-Windows.</summary>
+        /// path, installed by the WinForms shell (resx Pokéball); never runs off-Windows.</summary>
         public static Func<Image> MonIconFallbackGdiHook = null;
 
         /// <param name="paletteIdOverride">When &gt;= 0, render with this icon-palette id (0/1/2) instead of
-        /// the one stored in the ARM9 table — used to PREVIEW a palette change before it is saved.</param>
+        /// the one stored in the ARM9 table, used to PREVIEW a palette change before it is saved.</param>
         public static Image GetPokePic(int species, int w, int h, int paletteIdOverride = -1) {
             LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
             try {
@@ -1080,7 +1080,7 @@ namespace DSPRE {
             return (excess >= 0 && excess < extras.Length) ? extras[excess].monId : id;
         }
 
-        /// <summary>GDI-free twin of <see cref="GetPokePic"/> — composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
+        /// <summary>GDI-free twin of <see cref="GetPokePic"/>, composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
         public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
             LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);
             try {
@@ -1093,7 +1093,7 @@ namespace DSPRE {
         /// <summary>GDI-free item icon lookup, same NCLR/NCGR/NCER decode as the WinForms <c>GetItemPic</c>
         /// (item icon table entry → palette/sprite/cell files in the itemIcons NARC), returned as a
         /// <see cref="RawImage"/> instead of a System.Drawing Image. Returns null (not a placeholder) on
-        /// failure — callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
+        /// failure, callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
         public static RawImage GetItemPicRaw(int itemId, int w, int h) {
             try {
                 uint entryOffset = (uint)(RomInfo.itemTableOffset + itemId * 8);
@@ -1117,7 +1117,7 @@ namespace DSPRE {
         }
 
         // Icon NCGRs store nTilesX/nTilesY as the 0xFFFF "unspecified" sentinel, so ImageBase.Read falls
-        // back to Actions.Get_Size's generic square/0x100-wide guess — which produces a nonsensical shape
+        // back to Actions.Get_Size's generic square/0x100-wide guess, which produces a nonsensical shape
         // (e.g. 256×8 for a real 32×64 icon) totally unrelated to how the game actually reads this data.
         // The OAM-based renderer used everywhere else (SpriteBase.Get_RawImage, via GetPokePicRaw) never
         // hits this bug because it addresses tiles directly by index and ignores ImageBase.Width/Height
@@ -1130,7 +1130,7 @@ namespace DSPRE {
 
         /// <summary>
         /// The icon's raw graphic, decoded directly from tile data at its real dimensions (32px wide;
-        /// height from tile count) — the exact bitmap an icon-graphic editor should export/reimport.
+        /// height from tile count), the exact bitmap an icon-graphic editor should export/reimport.
         /// Rendered with the currently-assigned (or overridden) palette bank.
         /// </summary>
         public static RawImage GetMonIconGraphicRaw(int species, int paletteIdOverride = -1) {
@@ -1246,7 +1246,7 @@ namespace DSPRE {
             byte[] newTiles = EncodeMonIconTiles(imageBase, palette, newImage);
 
             // The no-side-effect overload: swaps the tile bytes only, leaving the (already-wrong, but
-            // irrelevant here — nothing downstream uses them) auto-detected Width/Height/FormTile alone.
+            // irrelevant here, nothing downstream uses them) auto-detected Width/Height/FormTile alone.
             imageBase.Set_Tiles(newTiles);
 
             string path = Path.Combine(gameDirs[DirNames.monIcons].unpackedDir, imageBase.FileName);

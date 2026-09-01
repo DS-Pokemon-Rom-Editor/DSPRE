@@ -4,18 +4,8 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Drives one overworld's idle motion for a preview, following what the games do rather than
-    /// inventing something.
-    ///
-    /// An overworld lives on the map's tile grid and never jumps between tiles. It waits where it is for
-    /// one of 16/32/48/64 frames (DATA_MvDirRndWaitTbl), then walks to the next tile over eight frames
-    /// (AC_WALK_U_8F), sliding across the gap as it goes. Spins turn every 24 frames (MV_SPIN_WAIT_FRAME).
-    ///
-    /// A step is refused for the same reasons the engine refuses one (FieldOBJ_MoveHitCheck): outside the
-    /// event's movement range, or the tile ahead is blocked. When a step is refused the sprite still turns
-    /// to face that way and goes back to waiting, which is what the engine does too.
-    ///
-    /// Seeded so a preview can be replayed exactly.
+    /// Drives one overworld's idle motion for a preview, following what the games do rather than inventing
+    /// something.
     /// </summary>
     public sealed class OverworldAnimator
     {
@@ -44,18 +34,12 @@ namespace DSPRE.ROMFiles
         /// <summary>Which way the sprite currently faces.</summary>
         public MoveFacing Facing { get; private set; }
 
-        /// <summary>
-        /// The tile it belongs to, in tiles from where it was placed. While it is walking this is already
-        /// the tile it is heading for, the same way the engine books a move before finishing it.
-        /// </summary>
+        /// <summary>The tile it belongs to, in tiles from where it was placed. </summary>
         public int OffsetX { get; private set; }
         public int OffsetZ { get; private set; }
 
         /// <summary>
         /// The tile it is coming from, which is the same as <see cref="OffsetX"/> unless it is mid-step.
-        /// Somebody walking takes up both tiles until they arrive, so nobody else can cut through the
-        /// gap behind them (FieldOBJ_MoveHitCheckFellowMust compares the old position as well as the new,
-        /// fieldobj_move.c:1577).
         /// </summary>
         public int FromOffsetX => _scripted != null ? _scriptFromX : _fromX;
         public int FromOffsetZ => _scripted != null ? _scriptFromZ : _fromZ;
@@ -63,10 +47,7 @@ namespace DSPRE.ROMFiles
         /// <summary>True while it is part way between two tiles.</summary>
         public bool IsWalking => _stepFramesLeft > 0 || (_scripted != null && _scriptFramesLeft > 0);
 
-        /// <summary>
-        /// Where to draw it, in tiles from where it was placed. Whole numbers while it stands still, and
-        /// somewhere in between while it walks.
-        /// </summary>
+        /// <summary>Where to draw it, in tiles from where it was placed. </summary>
         public float DrawOffsetX =>
             _scripted != null ? ScriptBlend(_scriptFromX, _scriptToX) : Blend(_fromX, OffsetX);
         public float DrawOffsetZ =>
@@ -126,8 +107,7 @@ namespace DSPRE.ROMFiles
         public float HopHeight => _hop;
 
         /// <summary>
-        /// How many frames it has spent moving, which is what picks the walking picture. It keeps
-        /// counting across steps so the feet alternate from one tile to the next.
+        /// How many frames it has spent moving, which is what picks the walking picture.
         /// </summary>
         public int AnimationCell => _animCell;
         private int _animCell;
@@ -142,10 +122,7 @@ namespace DSPRE.ROMFiles
         public FieldMovementStep CurrentScriptStep =>
             _scripted != null && _scriptStep < _scripted.Count ? _scripted[_scriptStep] : null;
 
-        /// <summary>
-        /// Hands this overworld a movement to play out. It takes over from whatever the event's own
-        /// movement code was doing, and hands back when it runs out.
-        /// </summary>
+        /// <summary>Hands this overworld a movement to play out. </summary>
         public void PlayScript(List<FieldMovementStep> steps)
         {
             StopScript();
@@ -323,7 +300,6 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// A route walks the way it faces until it can go no further, then turns back the way it came.
-        /// A route with its own direction list moves on to the next direction each time it turns round.
         /// </summary>
         private void WalkRoute()
         {
@@ -345,10 +321,7 @@ namespace DSPRE.ROMFiles
             BeginStep(Facing);
         }
 
-        /// <summary>
-        /// Starts walking one tile if the engine would allow it. False when the step is refused, in which
-        /// case nothing moves and the sprite just keeps facing that way.
-        /// </summary>
+        /// <summary>Starts walking one tile if the engine would allow it. </summary>
         private bool BeginStep(MoveFacing dir)
         {
             var (dx, dz) = Step(dir);

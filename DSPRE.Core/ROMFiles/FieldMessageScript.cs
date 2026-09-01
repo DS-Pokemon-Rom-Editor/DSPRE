@@ -41,31 +41,12 @@ namespace DSPRE.ROMFiles
         public override string ToString() => Text;
     }
 
-    /// <summary>
-    /// Works out what the message box shows, step by step, the way the games do it.
-    ///
-    /// PokeFontPrint in pmfprint.c reads three different breaks out of a message and they do different
-    /// things. A line break (CR_, 0xe000, which DSPRE writes as "\n") just drops to the next line and
-    /// does not stop. A "▼" (NORMAL_WAIT_, 0x25bc, written "\r") waits for the player and then wipes the
-    /// box out and starts again at the top. A "▽" (SCROLL_WAIT_, 0x25bd, written "\f") waits and then
-    /// slides everything up one line and carries on underneath, which is not the same as starting a
-    /// fresh page. There is also a "■" (SIMPLE_WAIT_, 0x25a0) that only waits.
-    ///
-    /// The player gets past a wait with A or B, or by touching the screen: input_check_trg in
-    /// pmfprint.c:105 takes PAD_BUTTON_DECIDE or PAD_BUTTON_CANCEL.
-    ///
-    /// The games never fit text to the box for you. Writing past the right edge or past the bottom line
-    /// draws outside the window and is lost, so rather than quietly tidying it up this says so, and the
-    /// preview can point it out.
-    /// </summary>
+    /// <summary>Works out what the message box shows, step by step, the way the games do it.</summary>
     public static class FieldMessageScript
     {
         private enum Token { Text, LineBreak, WaitClear, WaitScroll, WaitSimple }
 
-        /// <summary>
-        /// The frames a message plays out as. <paramref name="measure"/> says how wide a run of letters
-        /// comes out so an over-long line can be reported.
-        /// </summary>
+        /// <summary>The frames a message plays out as. </summary>
         public static List<FieldMessageFrame> Frames(string text, Func<string, int> measure,
                                                      int width = FieldMessageWindow.TextWidth,
                                                      int linesPerBox = FieldMessageWindow.LinesPerPage,

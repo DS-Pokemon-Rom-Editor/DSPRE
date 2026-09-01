@@ -12,7 +12,7 @@ namespace DSPRE.ROMFiles
     /// routine, the rival's early-game team, tag-battle partners, the starter-cries table (HGSS), and the
     /// professor/rival dialogue that names the chosen species.
     ///
-    /// Starters aren't a NARC table in Gen 4 — DP/Pt keep them as a fixed word-table in an overlay, HGSS bakes
+    /// Starters aren't a NARC table in Gen 4, DP/Pt keep them as a fixed word-table in an overlay, HGSS bakes
     /// them straight into compiled ARM9 code. This is a from-scratch port of Universal Pokémon Randomizer
     /// FVX's <c>Gen4RomHandler.getStarters</c>/<c>setStarters</c> (byte offsets/patterns verified against its
     /// gen4_offsets.ini and Gen4Constants.java), adapted to two DSPRE-specific improvements: dialogue text is
@@ -24,7 +24,7 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public static class StarterPokemonData
     {
-        // ── Byte patterns (species bytes are placeholders — always rebuilt from the CURRENT starters via
+        // ── Byte patterns (species bytes are placeholders, always rebuilt from the CURRENT starters via
         //    BuildPatternWithSpeciesAt before use, per the repeat-edit-safe design above). ────────────────────
         private static readonly byte[] HgssRivalScriptMagicTemplate =
             { 0xCE, 0x00, 0x0C, 0x80, 0x11, 0x00, 0x0C, 0x80, 0x98, 0x00, 0x1C, 0x00, 0x05 };
@@ -56,7 +56,7 @@ namespace DSPRE.ROMFiles
                 if (matches.Count != 1)
                 {
                     AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
-                        "than once) — showing the vanilla starters. The ARM9 may already be modified by another tool.");
+                        "than once), showing the vanilla starters. The ARM9 may already be modified by another tool.");
                     return (int[])VanillaHgssStarters.Clone();
                 }
                 int baseOffset = matches[0] - 13;
@@ -71,7 +71,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>Reads the DP/Pt starter's held item (HGSS starters never carry one — returns 0).</summary>
+        /// <summary>Reads the DP/Pt starter's held item (HGSS starters never carry one, returns 0).</summary>
         public static int GetHeldItem()
         {
             if (RomInfo.starterHeldItemScriptFileID < 0) return 0;
@@ -83,7 +83,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// Writes the DP/Pt starter's held item. No-op on HGSS. The touched script file's <c>.rotom</c>
-        /// source (if any) is left for the caller to refresh via <see cref="RefreshRotomSourcesAsync"/> —
+        /// source (if any) is left for the caller to refresh via <see cref="RefreshRotomSourcesAsync"/>, 
         /// see that method's remarks for why this can't happen synchronously here.
         /// </summary>
         public static void SetHeldItem(int itemId)
@@ -100,11 +100,11 @@ namespace DSPRE.ROMFiles
         /// Applies a new set of 3 starter species: species table (+ DP/Pt selection-scene ASM patch, HGSS
         /// starter cries), the rival's early-game team and tag-battle partners, and the professor/rival
         /// dialogue that names the species. Returns false (nothing was written) only if the species table
-        /// itself couldn't be safely located/written — see <see cref="GetStarters"/>'s HGSS ARM9-signature
+        /// itself couldn't be safely located/written, see <see cref="GetStarters"/>'s HGSS ARM9-signature
         /// guard.
         /// </summary>
         /// <param name="scriptFilesTouched">Script file IDs whose raw bytes were patched (rival/tag-battle
-        /// scripts) — pass these to <see cref="RefreshRotomSourcesAsync"/> afterward (not done here; that
+        /// scripts), pass these to <see cref="RefreshRotomSourcesAsync"/> afterward (not done here; that
         /// call shells out to an external process per file and must not block the caller's UI thread).</param>
         public static bool ApplyStarters(int[] newSpecies, out List<int> scriptFilesTouched)
         {
@@ -115,10 +115,10 @@ namespace DSPRE.ROMFiles
             int[] oldSpecies = GetStarters();
 
             if (!SetSpeciesAndGraphics(newSpecies))
-                return false; // couldn't safely locate the species table — leave everything else untouched
+                return false; // couldn't safely locate the species table, leave everything else untouched
 
             // The species table (the part that actually matters for gameplay) is already written at this
-            // point. Everything below is best-effort follow-up — a failure in one (a malformed script file,
+            // point. Everything below is best-effort follow-up, a failure in one (a malformed script file,
             // a text archive that fails to decode, ...) must not make it look like the save itself failed.
             RunBestEffort("starter cries", () =>
             {
@@ -138,7 +138,7 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception ex)
             {
-                AppLogger.Warn($"StarterPokemonData: {stepName} patch failed ({ex.GetType().Name}: {ex.Message}) — " +
+                AppLogger.Warn($"StarterPokemonData: {stepName} patch failed ({ex.GetType().Name}: {ex.Message}), " +
                     "the starter species itself was still changed successfully.");
             }
         }
@@ -155,7 +155,7 @@ namespace DSPRE.ROMFiles
                 if (matches.Count != 1)
                 {
                     AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
-                        "than once) — starters were NOT changed. The ARM9 may already be modified by another tool.");
+                        "than once), starters were NOT changed. The ARM9 may already be modified by another tool.");
                     return false;
                 }
                 int baseOffset = matches[0] - 13;
@@ -187,7 +187,7 @@ namespace DSPRE.ROMFiles
         /// Rewrites the Thumb instructions the DP/Pt starter-selection 3D minigame uses to pick which model to
         /// render, so it can show any species instead of only the 3 vanilla ones (their original layout only
         /// supported a narrow, contiguous species range via a single fixed pointer offset). Byte-for-byte port
-        /// of UPR-FVX's <c>Gen4RomHandler.setStarters</c> DP/Pt graphics block — without this, the minigame
+        /// of UPR-FVX's <c>Gen4RomHandler.setStarters</c> DP/Pt graphics block, without this, the minigame
         /// keeps rendering the vanilla starter model even though the player ends up receiving the right species.
         /// </summary>
         private static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
@@ -304,7 +304,7 @@ namespace DSPRE.ROMFiles
                     byte[] data = File.ReadAllBytes(path);
 
                     var offsets = DSUtils.SearchBytes(data, magic);
-                    if (offsets.Count != 1) continue; // ambiguous/not found — skip this file, like UPR does
+                    if (offsets.Count != 1) continue; // ambiguous/not found, skip this file, like UPR does
 
                     int baseOffset = offsets[0];
                     WriteWord(data, baseOffset + 8, newSpecies[0]);
@@ -406,19 +406,19 @@ namespace DSPRE.ROMFiles
         /// <summary>
         /// Rotom-format projects (<see cref="RomInfo.hasRotomProject"/>) keep a decompiled <c>.rotom</c> text
         /// source per script file (<c>expanded/scripts/&lt;id&gt;.rotom</c>) that the Script Editor reads
-        /// directly off disk — it is only ever decompiled from the binary ONCE, the very first time the
+        /// directly off disk, it is only ever decompiled from the binary ONCE, the very first time the
         /// project has no <c>.rotom</c> files at all, and never reconciled against the binary again after
         /// that. Since <see cref="PatchRivalAndTagBattleScripts"/>/<see cref="SetHeldItem"/> only touch the
-        /// raw <c>.bin</c>, an existing <c>.rotom</c> source would otherwise go stale — showing the OLD
+        /// raw <c>.bin</c>, an existing <c>.rotom</c> source would otherwise go stale, showing the OLD
         /// species literal in the editor, and silently reverting this fix the next time anyone hits
         /// "Compile" for any unrelated script edit (project-wide recompile from the stale text).
         ///
-        /// This is genuinely async (properly awaited, never <c>.GetAwaiter().GetResult()</c>'d) — each file
+        /// This is genuinely async (properly awaited, never <c>.GetAwaiter().GetResult()</c>'d), each file
         /// spawns a real <c>rotom.exe</c> process, and calling this synchronously from a UI-thread call chain
         /// (as the first version of this fix did) deadlocks Avalonia's dispatcher: the awaited
         /// <c>Process.WaitForExitAsync</c> needs the UI thread to resume on, but the UI thread would be
         /// blocked waiting for this call to return. Callers must `await` this from an async context (or fire
-        /// it in the background) rather than block on it — see <see cref="StarterEditorViewModel"/>'s
+        /// it in the background) rather than block on it, see <see cref="StarterEditorViewModel"/>'s
         /// SaveChanges, which runs it after the synchronous save returns so the UI never freezes.
         /// Best-effort throughout: a failure here only affects the Script Editor's display / future
         /// recompiles, not the ROM data itself (already correctly patched by the time this runs).
@@ -428,12 +428,12 @@ namespace DSPRE.ROMFiles
             if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
 
             // rotom's single-file decompile mode (-i/-o) doesn't auto-discover the command database from
-            // rotom.toml the way whole-project mode does — it must be passed explicitly.
+            // rotom.toml the way whole-project mode does, it must be passed explicitly.
             string databaseDir = Path.Combine(RomInfo.workDir, ".rotom", "command_database");
             string databasePath = Directory.Exists(databaseDir) ? Directory.GetFiles(databaseDir, "*.json").FirstOrDefault() : null;
             if (databasePath == null)
             {
-                AppLogger.Warn($"StarterPokemonData: no rotom command database found under {databaseDir} — .rotom sources left stale.");
+                AppLogger.Warn($"StarterPokemonData: no rotom command database found under {databaseDir}, .rotom sources left stale.");
                 return;
             }
 
@@ -460,7 +460,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// Surgically swaps the old starters' species name (and, where the template embeds it, primary-type
-        /// name) for the new ones inside the professor/rival dialogue — never a hardcoded English rewrite, so
+        /// name) for the new ones inside the professor/rival dialogue, never a hardcoded English rewrite, so
         /// localized ROMs keep their own language for everything except the species/type words themselves.
         /// </summary>
         private static void PatchStarterText(int[] oldSpecies, int[] newSpecies)

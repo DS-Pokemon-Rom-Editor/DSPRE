@@ -244,7 +244,7 @@ namespace DSPRE.Editors
 
         private void SetItemParamRanges()
         {
-            // Stat stage modifiers: range -6 to +6 in gameplay, stored as 0–15 in data (encoded with +6 offset)
+            // Stat stage modifiers: range -6 to +6 in gameplay, stored as 0 to 15 in data (encoded with +6 offset)
             foreach (var n in new NumericUpDown[] {
                 atkStagesNumeric, defStagesNumeric, spAtkStagesNumeric,
                 spDefStagesNumeric, speedStagesNumeric, accuracyStagesNumeric })
@@ -253,7 +253,7 @@ namespace DSPRE.Editors
                 n.Maximum = 6;
             }
 
-            // HP and PP restore parameters: stored as byte (0–255)
+            // HP and PP restore parameters: stored as byte (0 to 255)
             foreach (var n in new NumericUpDown[] {
                 hpRestoreParamNumeric, ppRestoreParamNumeric })
             {
@@ -271,7 +271,7 @@ namespace DSPRE.Editors
                 n.Maximum = 127;
             }
 
-            // Crit rate stages: 2-bit unsigned, range 0–3
+            // Crit rate stages: 2-bit unsigned, range 0 to 3
             critRateStagesNumeric.Minimum = 0;
             critRateStagesNumeric.Maximum = 3;
         }

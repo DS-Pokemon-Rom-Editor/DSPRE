@@ -18,7 +18,7 @@ namespace DSPRE {
         }
         // NOTE: the UI-free extensions (SubArray, ContainsNumber, IgnoreCaseEquals, Move, Reverse,
         // ToByteArrayChooseSize, PurgeSpecial, GetNumberStyle, IndexOfFirstNumber) moved to the core
-        // CoreExtensions class (Ekona project, same namespace) — this class keeps only WinForms helpers.
+        // CoreExtensions class (Ekona project, same namespace), this class keeps only WinForms helpers.
         public static void FadeIn(this Form o, int framelength = 16, int frames = 10) {
             //Object is not fully invisible. Fade it in
             while (o != null && !o.IsDisposed && o.Opacity < 1.0) {

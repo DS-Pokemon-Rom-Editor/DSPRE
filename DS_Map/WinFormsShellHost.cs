@@ -7,7 +7,7 @@ namespace DSPRE
     /// <summary>
     /// Hosts the legacy WinForms MainProgram inside the Avalonia application lifetime (both toolkits
     /// share the same Win32 message pump / STA thread) and installs the WinForms implementations of
-    /// the UI-layer hooks. This file belongs to the Windows DSPRE exe only — the cross-platform
+    /// the UI-layer hooks. This file belongs to the Windows DSPRE exe only, the cross-platform
     /// Avalonia exe never references it.
     /// </summary>
     internal static class WinFormsShellHost
@@ -41,11 +41,11 @@ namespace DSPRE
             CrashReporter.RomPathProvider = () => mainProgram.romInfo?.GetRomNameFromWorkdir();
             WinForms.Application.ThreadException += (_, e) => CrashReporter.ReportCrash(e.Exception);
 
-            // Show the WinForms form independently — it owns its own Win32 HWND.
+            // Show the WinForms form independently, it owns its own Win32 HWND.
             // Avalonia's Win32 backend pumps the same message loop so both stay alive.
             mainProgram.Show();
 
-            // Before the app quits, warn if any open Avalonia editor still holds unsaved changes —
+            // Before the app quits, warn if any open Avalonia editor still holds unsaved changes, 
             // quitting force-closes every editor window, bypassing their individual close guards.
             mainProgram.FormClosing += (_, e) =>
             {

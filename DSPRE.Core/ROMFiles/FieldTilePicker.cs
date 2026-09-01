@@ -4,17 +4,12 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Working out which tile a point on screen is over, by projecting the tiles the map actually has
-    /// and taking the nearest. Dropping somebody onto the map needs this, and so does dragging the spot
-    /// a walk starts from.
+    /// Working out which tile a point on screen is over, by projecting the tiles the map actually has and
+    /// taking the nearest.
     /// </summary>
     public static class FieldTilePicker
     {
-        /// <summary>
-        /// The tile nearest a point on screen, or null when nothing is close enough.
-        /// <paramref name="tileToWorld"/> says where a tile sits, and <paramref name="project"/> turns
-        /// that into screen pixels, handing back null for anything behind the camera.
-        /// </summary>
+        /// <summary>The tile nearest a point on screen, or null when nothing is close enough. </summary>
         public static (int x, int z)? NearestTile(MapCollisionGrid map,
                                                   Func<float, float, (float x, float y, float z)> tileToWorld,
                                                   Func<float, float, float, (float sx, float sy)?> project,
@@ -40,13 +35,9 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// A picker that has already worked out where every tile lands on screen, for when the same
-        /// question gets asked over and over: dragging something across the map asks once per twitch of
-        /// the pointer, and a header that stitches the whole matrix has getting on for three hundred
-        /// thousand tiles, which is too many to walk that often.
-        ///
-        /// The tiles are sorted into buckets by where they landed, so a look-up only reads the bucket
-        /// under the pointer and the ring around it. It holds good only while the camera stays put,
-        /// which is exactly the case it is built for.
+        /// question gets asked over and over: dragging something across the map asks once per twitch of the
+        /// pointer, and a header that stitches the whole matrix has getting on for three hundred thousand
+        /// tiles, which is too many to walk that often.
         /// </summary>
         public sealed class Prepared
         {
@@ -110,7 +101,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// The tile itself when somebody could stand on it, otherwise the closest one nearby that they
-        /// could. Null when everything within reach is closed off.
+        /// could.
         /// </summary>
         public static (int x, int z)? NearestFree(MapCollisionGrid map, int x, int z,
                                                   Func<int, int, bool> alsoTaken = null, int reach = 3)

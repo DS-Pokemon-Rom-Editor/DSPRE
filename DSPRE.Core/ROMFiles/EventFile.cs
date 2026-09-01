@@ -148,8 +148,6 @@ namespace DSPRE.ROMFiles {
             evType = EventType.Spawnable;
             using (BinaryReader reader = new BinaryReader(data)) {
                 // Engine layout (BG_TALK_DATA): id, type, int gx, int gz, int height, dir, padding.
-                // gx/gz/height are each a full 32-bit field; reading them as 16-bit halves put the
-                // height read two bytes early, so editing it wrote into the top half of gz.
                 scriptNumber = reader.ReadUInt16();
                 type = reader.ReadUInt16();
 

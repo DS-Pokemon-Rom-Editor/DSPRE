@@ -8,11 +8,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// A terrain animation (NSBTA) ready to play: it scrolls, scales and rotates a material's texture
-    /// coordinates over time. The games pick one of these per area (RESOURCE_PARAM.ground_anm) and loop
-    /// it forever, which is what makes water and waterfalls move.
-    ///
-    /// Each material carries five tracks. A track is either a single constant or one value per frame,
-    /// so playing it back is just looking up the frame, wrapping at the end of the track.
+    /// coordinates over time.
     /// </summary>
     public sealed class TextureSrtAnimation
     {
@@ -26,9 +22,8 @@ namespace DSPRE.ROMFiles
             public static Srt Identity => new Srt { ScaleS = 1f, ScaleT = 1f, CosRotation = 1f };
 
             /// <summary>
-            /// The transform as a 3x3 matrix in OpenGL's column-major order, ready to multiply a
-            /// texture coordinate by. Every terrain animation in the games only ever translates, so
-            /// the scale and rotation terms are here for completeness rather than because water uses them.
+            /// The transform as a 3x3 matrix in OpenGL's column-major order, ready to multiply a texture
+            /// coordinate by.
             /// </summary>
             public float[] ToMatrix3() => new[]
             {
@@ -104,9 +99,7 @@ namespace DSPRE.ROMFiles
                 TranslateT = At(d.translateT, frame, 0f),
             };
 
-            // A rotating material stores a sine and a cosine per frame, side by side. A material that
-            // never rotates stores two marker values instead, which is every terrain animation in
-            // HeartGold and SoulSilver, so this branch is the one that actually runs.
+            // A rotating material stores a sine and a cosine per frame, side by side.
             if (d.rotate != null && d.rotate.Length > 2)
             {
                 int pairs = d.rotate.Length / 2;

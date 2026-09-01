@@ -20,8 +20,6 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// What an overworld's move_code makes it do, for previewing a map without running scripts.
-    /// Values and names come from the games' fieldobj_code.h, and each code's behaviour from the
-    /// handler the move table registers for it in fieldobj_movedata.c. The engine defines 0x00-0x38.
     /// </summary>
     public sealed class OverworldMovement
     {

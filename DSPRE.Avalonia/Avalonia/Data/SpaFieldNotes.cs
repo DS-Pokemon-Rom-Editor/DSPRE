@@ -5,11 +5,6 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// The parts of a particle emitter this preview reads but does not act on, and what each would change.
-    ///
-    /// A field pulled out of the ROM and then dropped on the floor is the quiet way for a preview to be
-    /// wrong, so each one is written down here with what would look different if it were simulated.
-    /// Research/Moves/Animation/MoveAnimationParticleFields.md is generated from this, and a test keeps
-    /// the two in step.
     /// </summary>
     public static class SpaFieldNotes
     {
@@ -35,11 +30,7 @@ namespace DSPRE.Avalonia.Data
             },
         };
 
-        /// <summary>
-        /// Read by the drawing code rather than by the movement code. These are not gaps: where a particle
-        /// goes and how it is drawn are separate jobs, and this list exists so that a field turning up in
-        /// neither place is noticed.
-        /// </summary>
+        /// <summary>Read by the drawing code rather than by the movement code. </summary>
         public static readonly IReadOnlyList<string> DrawnNotMoved = new[]
         {
             "DrawType", "PosX", "PosY", "PosZ", "RepeatS", "RepeatT", "Aspect", "FlipS", "FlipT",

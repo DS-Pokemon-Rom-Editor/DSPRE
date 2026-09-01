@@ -6,22 +6,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// The scripts a map runs by itself, rather than because you talked to somebody or walked onto a
-    /// trigger. Each entry in the header's level script file says what has to happen for its script to
-    /// start.
-    ///
-    /// The engine calls these special scripts and looks them up with SpScriptSearch. Where each kind is
-    /// asked for says when it runs:
-    ///
-    ///   type 1, SP_SCRID_SCENE_CHANGE: checked every step you take, in the event check that also does
-    ///           trainer line of sight (ev_check.c:505). It only starts when a variable holds a
-    ///           particular value, which is the condition check in script.c:1865.
-    ///   type 2, SP_SCRID_FLAG_CHANGE: run while the map changes, as you arrive (ev_mapchange.c:391).
-    ///   type 3, SP_SCRID_OBJ_CHANGE: run while the field sets up, just after the music starts, and is
-    ///           what puts the map's people into the right state (fieldmap.c:479).
-    ///   type 4, SP_SCRID_INIT_CHANGE: run earlier in that same field setup (fieldmap.c:401).
-    ///
-    /// So arriving on a map runs the last three, in the order 4, 3, 2, and then every step you take
-    /// gives the type 1 entries a chance to fire.
+    /// trigger.
     /// </summary>
     public static class FieldLevelScripts
     {
@@ -53,11 +38,7 @@ namespace DSPRE.ROMFiles
                        .ToList();
         }
 
-        /// <summary>
-        /// The watchers whose variable now holds what they are waiting for. The engine takes the first
-        /// one it finds and stops there, so the list comes back in file order and the caller runs the
-        /// first.
-        /// </summary>
+        /// <summary>The watchers whose variable now holds what they are waiting for. </summary>
         public static List<VariableValueTrigger> ReadyToFire(LevelScriptFile file,
                                                              Func<int, int> valueOf)
         {

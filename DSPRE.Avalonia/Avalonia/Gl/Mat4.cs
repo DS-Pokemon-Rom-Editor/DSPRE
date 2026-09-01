@@ -34,11 +34,7 @@ namespace DSPRE.Avalonia.Gl
             return m;
         }
 
-        /// <summary>
-        /// Orthographic projection, for the flat 2D map view. <paramref name="halfHeight"/> is how much
-        /// of the scene fits above the centre, so it plays the same role the camera distance does under
-        /// perspective and zooming keeps working unchanged.
-        /// </summary>
+        /// <summary>Orthographic projection, for the flat 2D map view. </summary>
         public static float[] Ortho(float halfHeight, float aspect, float near, float far)
         {
             float halfWidth = halfHeight * aspect;

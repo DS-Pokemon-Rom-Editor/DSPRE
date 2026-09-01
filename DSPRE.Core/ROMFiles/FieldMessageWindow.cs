@@ -6,10 +6,6 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// Where the games put the box an NPC talks to you from, and how the words are laid out in it.
-    ///
-    /// talk_msg.c:79 adds the window with FLD_MSG_WIN_PX, PY, SX and SY from fld_bmp.h, which are tile
-    /// 2,19 and 27 by 4 tiles. Tiles are eight pixels, so the writing sits in 216 by 32 pixels starting
-    /// at 16,152 on the 256 by 192 screen, with the frame drawn around the outside of that.
     /// </summary>
     public static class FieldMessageWindow
     {
@@ -31,9 +27,8 @@ namespace DSPRE.ROMFiles
         public const int LinesPerPage = 2;
         public const int LineHeight = TextHeight / LinesPerPage;
 
-        // BmpTalkWinWriteMain in window.c:356 lays the frame out in eighteen tiles: two columns to the
-        // left of the writing, three to the right, and a row above and below. With this window that
-        // comes to the whole width of the screen and the bottom six rows of tiles.
+        // BmpTalkWinWriteMain in window.c:356 lays the frame out in eighteen tiles: two columns to the left
+        // of the writing, three to the right, and a row above and below.
         public const int FrameTilesLeft = 2;
         public const int FrameTilesRight = 3;
 
@@ -43,12 +38,7 @@ namespace DSPRE.ROMFiles
         public const int FrameHeight = (TilesHigh + 2) * TileSize;
     }
 
-    /// <summary>
-    /// Fits a run of words to the width of the box.
-    ///
-    /// It measures with whatever hands it a width, so the same layout works whether the letters are
-    /// being drawn with the game's own font or a stand-in.
-    /// </summary>
+    /// <summary>Fits a run of words to the width of the box.</summary>
     public sealed class FieldTextLayout
     {
         private readonly Func<string, int> _measure;
@@ -96,9 +86,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The text fitted into boxfuls, for text that carries none of the games' own breaks. Anything
-        /// that does have them goes through FieldMessageScript instead, because the two waiting codes
-        /// mean different things and neither is a plain page turn.
+        /// The text fitted into boxfuls, for text that carries none of the games' own breaks.
         /// </summary>
         public List<string> Pages(string text)
         {

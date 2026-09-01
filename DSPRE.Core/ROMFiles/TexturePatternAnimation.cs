@@ -6,11 +6,7 @@ using MKDS_Course_Editor.NSBTP;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// A texture-swapping animation (NSBTP) ready to play. Instead of moving a texture about, it changes
-    /// which texture a material shows: this is what makes signs flash and shop doors light up. Each
-    /// material has a list of key frames, and a frame shows the texture of the last key frame reached.
-    /// </summary>
+    /// <summary>A texture-swapping animation (NSBTP) ready to play. </summary>
     public sealed class TexturePatternAnimation
     {
         public struct Swap

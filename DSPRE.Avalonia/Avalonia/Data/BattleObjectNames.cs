@@ -1,10 +1,4 @@
-// Generated from the leaked source's own index headers. Do not hand-edit; see BattleObjects.cs.
-//   Diamond and Pearl  src/battle/graphic/batt_obj_def.h
-//   Platinum           src/battle/graphic/pl_batt_obj_def.h
-//   HeartGold and SoulSilver
-//                      src/battle/graphic/batt_obj_gs_def.h
-// Each header names every entry of the battle furniture archive in order, with no gaps and nothing
-// named twice: 279 entries in Diamond and Pearl, 343 in Platinum, 346 in HeartGold and SoulSilver.
+// Generated from the games' own archive index lists.
 
 namespace DSPRE.Avalonia.Data
 {

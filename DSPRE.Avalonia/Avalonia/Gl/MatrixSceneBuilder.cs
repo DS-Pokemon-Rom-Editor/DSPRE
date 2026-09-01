@@ -193,8 +193,8 @@ namespace DSPRE.Avalonia.Gl
         }
     
         /// <summary>
-        /// Decodes every texture a building's swapping animations can put on screen, keyed by model id
-        /// then by texture name. Done once at build time so nothing has to decode mid-animation.
+        /// Decodes every texture a building's swapping animations can put on screen, keyed by model id then
+        /// by texture name.
         /// </summary>
         private static void CollectSwappableTextures(NSBMD file, int modelId, bool indoor,
             Dictionary<int, Dictionary<string, NsbmdTextureData>> into)

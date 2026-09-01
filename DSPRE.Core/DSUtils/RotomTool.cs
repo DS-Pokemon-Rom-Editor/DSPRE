@@ -60,7 +60,7 @@ namespace DSPRE
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             // ConfigureAwait(false): some callers (StarterPokemonData) run this from a synchronous UI-thread
-            // call chain via .GetAwaiter().GetResult() — capturing the UI SynchronizationContext here would
+            // call chain via .GetAwaiter().GetResult(), capturing the UI SynchronizationContext here would
             // deadlock (this await's continuation would need the UI thread, which is blocked waiting for it).
             // Existing `await RotomTool.RunAsync(...)` callers are unaffected: this only changes which thread
             // THIS method's own continuation runs on, not where the caller's own await resumes.

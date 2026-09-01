@@ -2,17 +2,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Which Pokémon a move-effect routine acts on, and what to call the flag on screen.
-    ///
-    /// The bits are from we_def.h:137-159. Their names read like sides but they are relative to the move:
-    /// WT_SSPointerGet (we_tool.c:1431) looks M1 up as the attacker and E1 as the defender, and M2 and E2
-    /// as their allies. It only looks the allies up in a double battle, so in a single battle a flag that
-    /// asks only for M2 or E2 finds nobody and the routine does nothing at all. HeartGold's own scripts do
-    /// that at 37 call sites, 28 of them WT_SHAKE.
-    ///
-    /// A flag is a set, not a choice. STAGE means everybody and OTHER means everybody except the attacker.
-    /// </summary>
+    /// <summary>Which Pokémon a move-effect routine acts on, and what to call the flag on screen.</summary>
     public static class WestTargetFlags
     {
         public const int M1 = 0x0002, M2 = 0x0004, E1 = 0x0008, E2 = 0x0010;

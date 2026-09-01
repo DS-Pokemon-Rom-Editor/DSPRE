@@ -2,15 +2,7 @@ using System;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>
-    /// Turns real elapsed time into whole field frames.
-    ///
-    /// Windows only wakes a timer every 15.6ms, so a timer asked for 33.3ms actually fires at 31.25 or
-    /// 46.875. Rounding each of those to a whole number of frames on its own throws away the part left
-    /// over, which ran the preview at roughly seven tenths of proper speed. Keeping the remainder and
-    /// paying it out on a later tick makes the preview keep time with the real thing no matter how
-    /// raggedly the timer fires.
-    /// </summary>
+    /// <summary>Turns real elapsed time into whole field frames.</summary>
     public sealed class FieldFrameClock
     {
         /// <summary>The field runs at thirty frames a second.</summary>

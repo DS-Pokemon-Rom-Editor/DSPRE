@@ -47,8 +47,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The emitter throws itself away once it has finished emitting, rather than sitting there empty.
-        /// Read but not acted on: nothing here is drawn after its particles are gone, so the only thing it
-        /// would change is exactly when a preview decides the move has ended, by at most a frame or two.
         /// </summary>
         public bool SelfDestruct;
         // ptcl_random_loop_anm (base flag bit 20): for a LOOPING colour/texture anim, each particle starts at a random
@@ -120,11 +118,7 @@ namespace DSPRE.Avalonia.Data
         public int TextureOffset, TextureSize;
         public List<SpaEmitter> Emitters { get; } = new List<SpaEmitter>();
 
-        /// <summary>
-        /// Where reading the emitters stopped. Every emitter is a fixed block plus whichever optional
-        /// blocks its flags switch on, so if any of those sizes were wrong the reader would drift and stop
-        /// somewhere other than the start of the textures. That makes this worth checking.
-        /// </summary>
+        /// <summary>Where reading the emitters stopped. </summary>
         public int EmittersEndAt;
 
         /// <summary>How many emitters the header said there were, whether or not they all read.</summary>

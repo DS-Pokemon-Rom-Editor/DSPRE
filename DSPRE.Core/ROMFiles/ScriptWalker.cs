@@ -78,13 +78,7 @@ namespace DSPRE.ROMFiles
         public bool AcceptsAnyNumber => Kind == QuestionKind.Variable;
     }
 
-    /// <summary>
-    /// Walks an event's script and says what would happen, without running anything. Text commands quote
-    /// the real message, movement commands name the movement, and everything else reports itself. When the
-    /// script tests a variable or a flag there is nothing here that knows the answer, so it stops and asks.
-    ///
-    /// Nothing is executed and nothing is written; this only reads the script that is already loaded.
-    /// </summary>
+    /// <summary>Walks an event's script and says what would happen, without running anything. </summary>
     public sealed class ScriptWalker
     {
         /// <summary>How the game orders two values. The script stores this, then a later jump tests it.</summary>
@@ -129,7 +123,7 @@ namespace DSPRE.ROMFiles
 
         // A script file keeps its movements alongside its scripts, but the two are numbered differently:
         // scripts count from one and movements count from zero, so a movement number is already the
-        // position in the list. Taking one off it, the way a script number needs, reads the wrong one.
+        // position in the list.
         private static Func<int, IReadOnlyList<ScriptAction>> ActionsFrom(ScriptFile file)
         {
             var actions = file?.allActions;
@@ -426,11 +420,7 @@ namespace DSPRE.ROMFiles
             _index++;
         }
 
-        /// <summary>
-        /// The sound and camera commands the preview can act on. The names are DSPRE's own; the leak's
-        /// table calls 0x49 SePlay and 0x4e MePlay, so what DSPRE labels a fanfare is the sound effect
-        /// and what it labels a sound is the fanfare, which is why they are mapped across here.
-        /// </summary>
+        /// <summary>The sound and camera commands the preview can act on. </summary>
         private static ScriptEffect EffectFor(string name, ScriptCommand cmd)
         {
             switch (name)
@@ -500,8 +490,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// Spells out what a movement actually does, rather than just naming its number. A movement is a
-        /// list of actions, each of which may be repeated, and the list ends with its own end marker.
+        /// Spells out what a movement actually does, rather than just naming its number.
         /// </summary>
         private string DescribeMovement(int movementNumber)
         {
@@ -584,7 +573,9 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>The readable form of one parameter, taken from the name the command already carries.</summary>
+        /// <summary>
+        /// The readable form of one parameter, taken from the name the command already carries.
+        /// </summary>
         /// <summary>
         /// A parameter that names a variable, written as what it is rather than a raw number. The
         /// command's own text wins when it already has a name for it, since that is the one the person

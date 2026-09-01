@@ -59,7 +59,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Resolves a species' current gfx index (sprite-file number) and size class. Fails (does
-        /// NOT synthesize a value) if the species has no MON_FOLLOWER_ENTRY line yet — use
+        /// NOT synthesize a value) if the species has no MON_FOLLOWER_ENTRY line yet, use
         /// <see cref="TryEnsureEntry"/> first if the caller wants to create one.</summary>
         public static bool TryGetAssignment(int speciesId, out int gfxIndex, out string sizeClassName, out string error)
         {

@@ -79,7 +79,7 @@ public static class ScriptDatabaseJsonLoader
                 default:
                     throw new ArgumentOutOfRangeException(nameof(gameVersion), gameVersion, "Unsupported game");
             }
-            // Clear first — this dict is shared across every ROM of the same family, and custom command
+            // Clear first, this dict is shared across every ROM of the same family, and custom command
             // entries from a PREVIOUSLY loaded ROM's scrcmd_database.json (edited via the Custom Scrcmd
             // Manager) would otherwise stick around forever if a later, different ROM's JSON doesn't
             // happen to redefine the same codes.
@@ -143,11 +143,7 @@ public static class ScriptDatabaseJsonLoader
                 commandInfoDict[code] = cmdInfo;
             }
 
-            // The names come from the old database, where command 0 is "Nop". The script editor, the
-            // rotom formatter and the language server all use the newer names, where it is "Noop", so
-            // showing the old ones puts words on screen that a user cannot type. The v2 file beside the
-            // old one is keyed by the new name and carries the old one as legacy_name, so it is read
-            // here and the names swapped over in one place rather than at every call site.
+            // The names come from the old database, where command 0 is "Nop".
             ApplyRotomNames(expandedPath, commandInfoDict);
 
             // Load sounds
@@ -180,9 +176,6 @@ public static class ScriptDatabaseJsonLoader
 
         /// <summary>
         /// Swaps in the rotom command names from <c>&lt;game&gt;_v2.json</c>, if it is there.
-        ///
-        /// Anything the v2 file does not name keeps the old name rather than losing its name altogether,
-        /// and <see cref="ScriptCommandInfo.LegacyName"/> always holds what the old database called it.
         /// </summary>
         internal static int ApplyRotomNames(string legacyJsonPath, Dictionary<ushort, ScriptCommandInfo> commands)
         {
@@ -212,8 +205,7 @@ public static class ScriptDatabaseJsonLoader
                 foreach (JsonProperty prop in cmds.EnumerateObject())
                 {
                     // The v2 file holds script commands, movements and macros in one list, and their ids
-                    // overlap: script command 0 is Noop and movement 0 is FaceNorth. Without this the
-                    // movements overwrite the script commands and every early command gets the wrong name.
+                    // overlap: script command 0 is Noop and movement 0 is FaceNorth.
                     if (!prop.Value.TryGetProperty("type", out JsonElement typeElem)) continue;
                     if (typeElem.GetString() != "script_cmd") continue;
 

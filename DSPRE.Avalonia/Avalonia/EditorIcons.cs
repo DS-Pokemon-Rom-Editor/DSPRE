@@ -3,10 +3,8 @@ using Avalonia.Media.Imaging;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// The editor icons the WinForms shell used, exposed as bindable properties so XAML can reach them
-    /// with <c>{x:Static}</c>. The images themselves already ship with this project (see the
-    /// <c>Resources\Graphics</c> AvaloniaResource entry in DSPRE.Avalonia.csproj) and are resolved and
-    /// cached by <see cref="ResourceImages"/>; a missing one just renders nothing.
+    /// The editor icons the WinForms shell used, exposed as bindable properties so XAML can reach them with
+    /// <c>{x:Static}</c>.
     /// </summary>
     public static class EditorIcons
     {

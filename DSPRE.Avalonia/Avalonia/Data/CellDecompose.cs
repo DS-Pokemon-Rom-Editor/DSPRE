@@ -6,21 +6,6 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Taking a painted picture of an assembled sprite apart again, back into the tiles it is drawn from.
-    ///
-    /// The browser can show a thing the way the game puts it together: an HP bar is a box with a bar and a
-    /// name plate in it, drawn by laying twenty-odd pieces of one tile sheet onto a screen. Painting the
-    /// tile sheet directly means working on a heap of pieces in no particular order. Painting the picture
-    /// and putting it back means the edit is made on the thing itself.
-    ///
-    /// The rule followed here is the exact inverse of Actions.Get_RawImage, which is what draws them: each
-    /// piece is read from the tile sheet at (tileOffset shifted by the bank's block size) times 0x20, is
-    /// flipped if it says so, and lands at the middle of the canvas plus its own offset. Anything that
-    /// took a different route would drift from the picture on screen, which is the same fault as having
-    /// two readers for one file.
-    ///
-    /// Pieces overlap, and where they do only the last one drawn is visible. Reading a covered piece back
-    /// off the screen would fill it with its neighbour, so a piece only takes back the pixels it can
-    /// actually be seen at, and keeps what it had everywhere else.
     /// </summary>
     public static class CellDecompose
     {
@@ -61,13 +46,7 @@ namespace DSPRE.Avalonia.Data
             return owner;
         }
 
-        /// <summary>
-        /// Puts a painted picture back into the tile sheet it was drawn from.
-        ///
-        /// The picture has to be the same size the browser showed, and every colour in it has to be one
-        /// the sprite's own colours already hold, because the pixels are numbers pointing at those.
-        /// Comes back with a reason when it could not, and changes nothing in that case.
-        /// </summary>
+        /// <summary>Puts a painted picture back into the tile sheet it was drawn from.</summary>
         /// <param name="canvas">How wide and tall the pieces were laid out on, before the blank border
         /// around the picture was trimmed off. The pieces sit relative to the middle of that, not the
         /// middle of what is shown.</param>
@@ -120,13 +99,6 @@ namespace DSPRE.Avalonia.Data
                         int at = (py * width + px) * 4;
 
                         // Keep the number that is already there when it is already the right colour.
-                        //
-                        // These palettes hold the same colour in more than one slot, so asking which slot
-                        // a colour is in can answer with a different one that looks identical. That would
-                        // be harmless except that the drawing is made see-through by matching the first
-                        // colour rather than by the number being zero, so swapping one slot for another
-                        // of the same colour can make a pixel vanish. Only change a number when the
-                        // colour it points at is actually wrong.
                         int already = GetPixel(outp, startByte, oam.width, x, y, fourBit);
                         if (already >= 0 && already < colours.Length
                             && Matches(colours[already], painted[at], painted[at + 1], painted[at + 2],
@@ -149,13 +121,7 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        /// <summary>
-        /// Where one pixel of a piece sits in the tile sheet.
-        ///
-        /// A piece is stored as a run of eight by eight tiles, left to right then down, and each tile is
-        /// its own run of pixels. So a piece sixteen wide is two tiles across and the pixel at (8,0) is in
-        /// the second tile, not eight bytes along the first.
-        /// </summary>
+        /// <summary>Where one pixel of a piece sits in the tile sheet.</summary>
         private static bool PutPixel(byte[] tiles, int startByte, int pieceWidth, int x, int y,
                                      int index, bool fourBit)
         {
@@ -180,9 +146,7 @@ namespace DSPRE.Avalonia.Data
             return true;
         }
 
-        /// <summary>Whether a colour already in the drawing is the one that was painted. A pixel painted
-        /// away matches any colour the drawing shows as see-through, which is any colour equal to the
-        /// first one.</summary>
+        /// <summary>Whether a colour already in the drawing is the one that was painted. </summary>
         private static bool Matches(System.Drawing.Color have, byte r, byte g, byte b, byte a,
                                     System.Drawing.Color[] colours)
         {
@@ -212,10 +176,7 @@ namespace DSPRE.Avalonia.Data
             return tiles[flat];
         }
 
-        /// <summary>
-        /// Which of a sprite's own colours a painted pixel is. Colour zero is the see-through one, so a
-        /// pixel that was painted away goes back to it.
-        /// </summary>
+        /// <summary>Which of a sprite's own colours a painted pixel is. </summary>
         private static int NearestColour(System.Drawing.Color[] colours, byte r, byte g, byte b, byte a)
         {
             if (colours == null || colours.Length == 0) return -1;

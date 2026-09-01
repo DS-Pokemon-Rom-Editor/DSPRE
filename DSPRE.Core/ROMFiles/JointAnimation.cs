@@ -10,10 +10,6 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// A joint animation (NSBCA) ready to play: it moves, turns and resizes the separate parts a model is
     /// built from, which is what makes a windmill turn and a lift platform rise.
-    ///
-    /// Each part can have a value that never changes or one value per frame. Turning is stored as a "pivot":
-    /// a small record naming which way the part turns plus the sine and cosine of the angle, which the model
-    /// loader already knows how to turn back into a matrix.
     /// </summary>
     public sealed class JointAnimation
     {
@@ -93,11 +89,7 @@ namespace DSPRE.ROMFiles
 
         /// <summary>
         /// The matrix to use for one model part on one frame, or null when this animation leaves that part
-        /// alone. Built the same way the model builds its own, move then turn then resize, and a part of
-        /// that the animation says nothing about keeps whatever the model gave it.
-        ///
-        /// That last bit matters: most of these animations only turn something, and a windmill's sails
-        /// still have to stay up on top of their post rather than dropping to where the post begins.
+        /// alone.
         /// </summary>
         /// <param name="modelObject">The part as the model has it, for whatever the animation leaves alone.</param>
         /// <param name="modelScale">
@@ -175,10 +167,7 @@ namespace DSPRE.ROMFiles
             return fallback;
         }
 
-        /// <summary>
-        /// The turn for one frame, read out of the animation's pivot pool. Every turn in the games' own
-        /// building animations is stored this way; the other form (a whole matrix) is left as no turn.
-        /// </summary>
+        /// <summary>The turn for one frame, read out of the animation's pivot pool. </summary>
         private static float[] Rotation(NSBCA.NSBCA_File.J_AC jac, NSBCA.NSBCA_File.J_AC.objInfo o, int frame)
         {
             var indices = o.rotate_keyframes?[0];

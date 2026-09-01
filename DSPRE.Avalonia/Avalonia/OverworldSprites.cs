@@ -23,12 +23,7 @@ namespace DSPRE.Avalonia
         /// </summary>
         public const int PixelsPerTile = 16;
 
-        /// <summary>
-        /// One picture out of a sprite bank. The bank holds a group of pictures for each way of facing,
-        /// in the order up, down, left, right; <paramref name="picture"/> says which of that group to
-        /// show, and <see cref="DSPRE.ROMFiles.FieldSpriteAnimation"/> works that out from how long the
-        /// person has been walking.
-        /// </summary>
+        /// <summary>One picture out of a sprite bank. </summary>
         public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = 0)
         {
             // The picture is part of what is being cached, so it gets its own room in the key.
@@ -111,8 +106,8 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>
-        /// The bank's pictures in the order their names number them, since the file keeps them sorted
-        /// as text and ".10" then lands before ".2". A name without a number keeps where it already was.
+        /// The bank's pictures in the order their names number them, since the file keeps them sorted as
+        /// text and ".10" then lands before ".2".
         /// </summary>
         private static int[] NumericOrder(NSBTX_File nsbtx)
         {

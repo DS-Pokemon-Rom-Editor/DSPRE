@@ -14,14 +14,7 @@ namespace DSPRE.ROMFiles
         Walking,     // still part way through the last step, so nothing new happened
     }
 
-    /// <summary>
-    /// The player walking a map in the preview. Movement is one tile at a time, and a tile is refused for
-    /// the reasons the engine refuses one (FieldOBJ_MoveHitCheck): the map says it is closed off, or
-    /// somebody is already standing on it.
-    ///
-    /// Pressing a direction the player isn't facing turns on the spot first, the way the games do, so a
-    /// person can be turned towards without walking into them.
-    /// </summary>
+    /// <summary>The player walking a map in the preview. </summary>
     public sealed class FieldPlayer
     {
         /// <summary>One tile of walking takes the same eight frames an overworld's does.</summary>
@@ -66,16 +59,13 @@ namespace DSPRE.ROMFiles
         public bool IsWalking => _stepFramesLeft > 0;
 
         /// <summary>
-        /// The tile being left, which is the same as <see cref="TileX"/> unless a step is running. A
-        /// walker holds both tiles until they arrive, the way the engine does
-        /// (FieldOBJ_MoveHitCheckFellowMust, fieldobj_move.c:1577).
+        /// The tile being left, which is the same as <see cref="TileX"/> unless a step is running.
         /// </summary>
         public int FromX => _fromX;
         public int FromZ => _fromZ;
 
         /// <summary>
-        /// How many frames have been spent walking, which is what picks the walking picture. It keeps
-        /// counting across steps so the feet alternate from one tile to the next.
+        /// How many frames have been spent walking, which is what picks the walking picture.
         /// </summary>
         public int AnimationCell => _animCell;
         private int _animCell;
@@ -117,9 +107,7 @@ namespace DSPRE.ROMFiles
             get { var (dx, dz) = Step(Facing); return (TileX + dx, TileZ + dz); }
         }
 
-        /// <summary>
-        /// Presses a direction. Turns to face it if it isn't already, otherwise tries to walk one tile.
-        /// </summary>
+        /// <summary>Presses a direction. </summary>
         public StepResult Go(MoveFacing dir)
         {
             // A step already running has to finish before another can start.
@@ -145,15 +133,12 @@ namespace DSPRE.ROMFiles
         public void Face(MoveFacing dir) => Facing = dir;
     }
 
-    /// <summary>
-    /// What a spawnable is. The engine reads the type to decide how it is reached: a hidden item only
-    /// answers while it has not been picked up, everything else answers when you face it.
-    /// </summary>
+    /// <summary>What a spawnable is. </summary>
     public enum SpawnableKind { Normal = 0, Signboard = 1, HiddenItem = 2 }
 
     /// <summary>
-    /// Which way you have to be standing to talk to a spawnable, as the games number it: the direction
-    /// you approach it FROM (TalkBgDirCheck in sxy.c).
+    /// Which way you have to be standing to talk to a spawnable, as the games number it: the direction you
+    /// approach it FROM (TalkBgDirCheck in sxy.c).
     /// </summary>
     public enum SpawnableApproach
     {
@@ -161,10 +146,7 @@ namespace DSPRE.ROMFiles
         AnyWay = 4, FromTheSides = 5, FromAboveOrBelow = 6,
     }
 
-    /// <summary>
-    /// A trainer's number is a script id like any other event's. The games work the trainer out from it
-    /// (GetTrainerIdByScriptId in script.c), so nothing should ever read the number as a trainer directly.
-    /// </summary>
+    /// <summary>A trainer's number is a script id like any other event's. </summary>
     public static class TrainerScripts
     {
         public const int SingleFirst = 3000;      // ID_TRAINER_OFFSET
@@ -192,8 +174,6 @@ namespace DSPRE.ROMFiles
     /// Finding what the player is interacting with, following the games' own checks: an overworld or a
     /// spawnable on the tile in front (TalkObjEventCheck and TalkBgEventCheck in sxy.c), a trigger under
     /// the player's feet (PosEventCheck), and a warp on the tile they stepped onto.
-    ///
-    /// Every one of these hands back a script id. Nothing here decides what a script does.
     /// </summary>
     public static class FieldInteraction
     {
@@ -201,11 +181,7 @@ namespace DSPRE.ROMFiles
         public static int TileX(Event e) => e.xMatrixPosition * MapFile.mapSize + e.xMapPosition;
         public static int TileZ(Event e) => e.yMatrixPosition * MapFile.mapSize + e.yMapPosition;
 
-        /// <summary>
-        /// Whether an overworld is on the map at all. The games only add one whose flag is clear, so a
-        /// set flag means it is not there to talk to or bump into. FldOBJ_AddFileProc in fieldobj.c:1423
-        /// adds it when CheckEventFlag comes back FALSE, and nothing puts it back afterwards.
-        /// </summary>
+        /// <summary>Whether an overworld is on the map at all. </summary>
         public static bool IsPresent(Overworld o, Func<ushort, bool> flagIsSet) =>
             o != null && (flagIsSet == null || !flagIsSet(o.flag));
 
@@ -225,10 +201,7 @@ namespace DSPRE.ROMFiles
             return set;
         }
 
-        /// <summary>
-        /// The tile a talk reaches. Normally the one in front, but a counter tile lets it carry one
-        /// further so you can talk to whoever is behind the shop desk.
-        /// </summary>
+        /// <summary>The tile a talk reaches. </summary>
         public static (int x, int z) TalkTile(FieldPlayer player, MapCollisionGrid map)
         {
             var (x, z) = player.TileAhead;
@@ -240,10 +213,7 @@ namespace DSPRE.ROMFiles
             return (x, z);
         }
 
-        /// <summary>
-        /// The spawnable on a tile that answers to someone facing this way, or null. A hidden item only
-        /// answers while its flag says it has not been taken, which the caller decides.
-        /// </summary>
+        /// <summary>The spawnable on a tile that answers to someone facing this way, or null. </summary>
         public static Spawnable SpawnableAt(EventFile events, int tileX, int tileZ,
                                             MoveFacing playerFacing, Func<Spawnable, bool> hiddenStillThere = null)
         {
@@ -280,10 +250,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>
-        /// The trigger the player is standing in, or null. A trigger covers a rectangle from where it is
-        /// placed, and only fires while its watched variable holds the value it is waiting for.
-        /// </summary>
+        /// <summary>The trigger the player is standing in, or null. </summary>
         public static Trigger TriggerAt(EventFile events, int tileX, int tileZ, Func<ushort, int> variableValue)
         {
             if (events?.triggers == null) return null;

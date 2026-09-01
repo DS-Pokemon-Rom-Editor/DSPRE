@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Gl
             return new SolidColorBrush(Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255)));
         }
 
-        /// <summary>Normalized (0–1) RGB for a permission value, shared by the 2D grid and the 3D overlay.</summary>
+        /// <summary>Normalized (0 to 1) RGB for a permission value, shared by the 2D grid and the 3D overlay.</summary>
         public static (float r, float g, float b) Rgb(byte value, bool isCollision)
         {
             if (isCollision)
