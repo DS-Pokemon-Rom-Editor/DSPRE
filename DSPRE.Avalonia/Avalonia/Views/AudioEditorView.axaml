@@ -1,0 +1,112 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views"
+        x:Class="DSPRE.Avalonia.Views.AudioEditorView"
+        x:DataType="vm:AudioEditorViewModel"
+        Title="Audio Editor"
+        Width="860" Height="700"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:AudioEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <Grid ColumnDefinitions="*,8,Auto">
+        <TextBox Grid.Column="0" Watermark="Search every tab by name or number"
+                 Text="{Binding Search}" FontSize="13"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+          <Button Content="Export WAV" Click="Export_Click" Width="94" IsEnabled="{Binding CanPlay}"
+                  ToolTip.Tip="Save this as a WAV. A cry is saved as its own sample; everything else is saved as it sounds when played."/>
+          <Button Content="Export MIDI" Click="ExportMidi_Click" Width="94" IsEnabled="{Binding CanSaveMidi}"
+                  ToolTip.Tip="{Binding SaveMidiHelp}"/>
+          <Button Content="Import" Click="Import_Click" Width="66" IsEnabled="{Binding CanImport}"
+                  ToolTip.Tip="{Binding ImportHelp}"/>
+          <Button Content="Close" Click="Close_Click" Width="66"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <StackPanel Spacing="6">
+
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                Background="{DynamicResource Editor.PanelBg}" Height="118">
+          <views:NoteTrackView x:Name="Notes"
+                               PointerPressed="Notes_PointerPressed"
+                               ToolTip.Tip="The notes the sequence plays, time across and pitch up, one colour per track. Click anywhere to play from there."/>
+        </Border>
+
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                Background="{DynamicResource Editor.PanelBg}" Height="88">
+          <views:WaveformView x:Name="Wave"
+                              WaveBrush="{DynamicResource Editor.Subtle}"
+                              PointerPressed="Wave_PointerPressed"
+                              ToolTip.Tip="The two channels, loudest to quietest. Click anywhere to play from there."/>
+        </Border>
+
+        <Grid ColumnDefinitions="Auto,6,Auto,10,Auto,12,Auto,*">
+          <Button Grid.Column="0" Content="▶  Play" Click="Play_Click" Width="86" IsEnabled="{Binding CanPlay}"/>
+          <Button Grid.Column="2" Content="■  Stop" Click="Stop_Click" Width="86"/>
+          <CheckBox Grid.Column="4" x:Name="LoopBox" Content="Loop"
+                    ToolTip.Tip="Keep playing it round until you press Stop."/>
+          <TextBlock Grid.Column="6" x:Name="TimeText" Text="0:00.0 / 0:00.0" VerticalAlignment="Center"
+                     FontFamily="Consolas,monospace" FontSize="12"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="7" Margin="14,0,0,0" Text="{Binding SelectedDescription}"
+                     VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"/>
+        </Grid>
+
+        <StackPanel Spacing="2">
+          <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="{Binding FoundSummary}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TabControl Margin="6" SelectedIndex="{Binding SelectedTab}">
+      <TabItem Header="Cries">
+        <ListBox ItemsSource="{Binding Cries}" SelectedItem="{Binding SelectedCry}"
+                 DoubleTapped="List_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Music">
+        <ListBox ItemsSource="{Binding Music}" SelectedItem="{Binding SelectedMusic}"
+                 DoubleTapped="List_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Fanfares">
+        <ListBox ItemsSource="{Binding Fanfares}" SelectedItem="{Binding SelectedFanfare}"
+                 DoubleTapped="List_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Sound effects">
+        <ListBox ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
+                 DoubleTapped="List_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Sounds"
+               ToolTip.Tip="The sounds the music and the sound effects are made of. Each one can be heard, saved and replaced.">
+        <ListBox ItemsSource="{Binding Sounds}" SelectedItem="{Binding SelectedSound}"
+                 DoubleTapped="List_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

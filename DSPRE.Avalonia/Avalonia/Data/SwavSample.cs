@@ -10,6 +10,17 @@ namespace DSPRE.Avalonia.Data
         public short[] Pcm;           // mono 16-bit samples
 
         /// <summary>
+        /// The wave exactly as it sat in the file, kept so a sample nobody touched can be written back
+        /// untouched.
+        ///
+        /// These are squeezed down to four bits a sample. Decoding one and squeezing it again is not the
+        /// same sound: it loses a little every time. Replacing one instrument in WAVE_ARC_BASIC rebuilds
+        /// the whole archive, so without this all 157 others would come out slightly worse each time
+        /// anybody changed one.
+        /// </summary>
+        public byte[] Raw;
+
+        /// <summary>
         /// Parses a SWAR wave archive (public Nitro sound format: a file header, one DATA block holding a count
         /// then an offset table, each entry a small SWAV record: wave type / loop flag / sample rate / loop point
         /// / length, followed by the raw sample data) into its individual waves, decoding PCM8/PCM16/IMA-ADPCM to
@@ -46,6 +57,23 @@ namespace DSPRE.Avalonia.Data
                 // SBNK's instrument offset table).
                 int at = relOff;
                 var wav = ParseOne(d, at);
+                if (wav != null)
+                {
+                    // Up to where the next wave starts, or the end of the archive for the last one.
+                    int ends = d.Length;
+                    for (int j = 0; j < count; j++)
+                    {
+                        int other = blockStart + 8 + reservedSize + 4 + j * 4;
+                        if (other + 4 > d.Length) break;
+                        int off = (int)U32(other);
+                        if (off > at && off < ends) ends = off;
+                    }
+                    if (ends > at && ends <= d.Length)
+                    {
+                        wav.Raw = new byte[ends - at];
+                        System.Buffer.BlockCopy(d, at, wav.Raw, 0, ends - at);
+                    }
+                }
                 list.Add(wav);
             }
             return list;

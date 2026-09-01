@@ -20,7 +20,21 @@ namespace DSPRE.Avalonia.Data
         // record that (for whatever reason) didn't carry real envelope bytes rather than silently applying a
         // slow ramp or an inaudible decay.
         public int Attack = 127, Decay = 127, Sustain = 127, Release = 127;
+
+        /// <summary>Which of the DS's own tone generators plays this region, when no sample does.</summary>
+        public PsgKind Psg = PsgKind.None;
+
+        /// <summary>How much of each cycle the square wave spends high, 0 to 7. Only read for a square.</summary>
+        public int PsgDuty;
     }
+
+    /// <summary>
+    /// The DS can make a note without any recorded sound, either as a square wave or as noise. HeartGold
+    /// uses this for its Game Boy music: snd_system.c:1292 says the PSG-only bank is kept loaded so the
+    /// Game Boy sound can be reproduced, and that bank (BANK_GAMEBOY) is 121 square programs and 7 noise
+    /// programs with no samples at all.
+    /// </summary>
+    public enum PsgKind { None = 0, Square = 1, Noise = 2 }
 
     /// <summary>An instrument resolved from an SBNK record: one or more <see cref="SbnkRegion"/>s covering the
     /// playable key range between them.</summary>
@@ -44,8 +58,8 @@ namespace DSPRE.Avalonia.Data
     /// sits between the block header and the real instrument count.
     ///
     /// Decodes the PCM-backed record types: single-region (one-shot SFX), key-split (several regions,
-    /// each its own note range) and drum set (one region per key, for percussion). PSG tone/noise record
-    /// types synthesize rather than play a sample and have no wave to resolve, so they're unsupported.
+    /// each its own note range) and drum set (one region per key, for percussion), and the two that make
+    /// their sound without a recording: square wave and noise.
     /// </summary>
     public static class SbnkBank
     {
@@ -142,8 +156,26 @@ namespace DSPRE.Avalonia.Data
                         break;
                     }
 
+                    // Square wave (2) and noise (3). Same ten bytes as a single-region instrument, except
+                    // the first field is the duty setting rather than a sample number and there is no wave
+                    // archive to look in. Checked across all 128 programs of HeartGold's BANK_GAMEBOY: every
+                    // one is [duty, 0, 0, 0, 60, attack, decay, sustain, release, 64].
+                    case 2 when at + 5 <= d.Length:
+                    case 3 when at + 5 <= d.Length:
+                    {
+                        var rgn = new SbnkRegion
+                        {
+                            LowKey = 0, HighKey = 127, BaseNote = d[at + 4],
+                            Psg = recordType == 2 ? PsgKind.Square : PsgKind.Noise,
+                            PsgDuty = U16(at) & 7,
+                        };
+                        if (at + 9 <= d.Length) { rgn.Attack = d[at + 5]; rgn.Decay = d[at + 6]; rgn.Sustain = d[at + 7]; rgn.Release = d[at + 8]; }
+                        inst.Regions.Add(rgn);
+                        break;
+                    }
+
                     default:
-                        inst = null;   // PSG tone (2) / noise (3) / anything else: no PCM wave to resolve
+                        inst = null;   // nothing else is a playable record
                         break;
                 }
                 list.Add(inst);

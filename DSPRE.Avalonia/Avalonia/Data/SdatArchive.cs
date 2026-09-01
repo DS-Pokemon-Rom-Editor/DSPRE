@@ -51,6 +51,10 @@ namespace DSPRE.Avalonia.Data
         // seq number -> name (from SYMB), only entries that had a name are present.
         public Dictionary<int, string> SeqNames { get; } = new Dictionary<int, string>();
 
+        // The same, for banks and wave archives. A bank's name is what says whether it is a cry bank.
+        public Dictionary<int, string> BankNames { get; } = new Dictionary<int, string>();
+        public Dictionary<int, string> WaveArcNames { get; } = new Dictionary<int, string>();
+
         public static SdatArchive Parse(byte[] d)
         {
             var a = new SdatArchive();
@@ -130,29 +134,33 @@ namespace DSPRE.Avalonia.Data
             }
 
             // ── SYMB block (optional): mirrors INFO's per-category offset tables, entries point at C strings ──
-            if (symbOffset > 0 && symbOffset + symbSize <= d.Length && symbOffset + 12 <= d.Length)
+            if (symbOffset > 0 && symbOffset + symbSize <= d.Length && symbOffset + 40 <= d.Length)
             {
-                int symbSeqTableOff = (int)U32(symbOffset + 8);
-                if (symbSeqTableOff != 0)
+                void ReadNames(int tableRel, Dictionary<int, string> into)
                 {
-                    int tableAt = symbOffset + symbSeqTableOff;
-                    if (tableAt + 4 <= d.Length)
+                    if (tableRel == 0) return;
+                    int tableAt = symbOffset + tableRel;
+                    if (tableAt + 4 > d.Length) return;
+                    int count = (int)U32(tableAt);
+                    for (int i = 0; i < count; i++)
                     {
-                        int count = (int)U32(tableAt);
-                        for (int i = 0; i < count; i++)
-                        {
-                            int entryAt = tableAt + 4 + i * 4;
-                            if (entryAt + 4 > d.Length) break;
-                            int strRel = (int)U32(entryAt);
-                            if (strRel == 0) continue;
-                            int strAt = symbOffset + strRel;
-                            if (strAt >= d.Length) continue;
-                            int end = strAt;
-                            while (end < d.Length && d[end] != 0) end++;
-                            a.SeqNames[i] = System.Text.Encoding.ASCII.GetString(d, strAt, end - strAt);
-                        }
+                        int entryAt = tableAt + 4 + i * 4;
+                        if (entryAt + 4 > d.Length) break;
+                        int strRel = (int)U32(entryAt);
+                        if (strRel == 0) continue;
+                        int strAt = symbOffset + strRel;
+                        if (strAt >= d.Length) continue;
+                        int end = strAt;
+                        while (end < d.Length && d[end] != 0) end++;
+                        into[i] = System.Text.Encoding.ASCII.GetString(d, strAt, end - strAt);
                     }
                 }
+
+                // The block's own table order: sequences, sequence archives, banks, wave archives, then
+                // the player and group tables this does not need.
+                ReadNames((int)U32(symbOffset + 8), a.SeqNames);
+                ReadNames((int)U32(symbOffset + 16), a.BankNames);
+                ReadNames((int)U32(symbOffset + 20), a.WaveArcNames);
             }
 
             return a;
@@ -160,6 +168,65 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Raw bytes of sub-file <paramref name="fileId"/> (an SSEQ/SBNK/SWAR), or null if out of range.
         /// FAT offsets are absolute from the start of the .sdat file, not relative to any block.</summary>
+        /// <summary>
+        /// Puts different bytes in one of the archive's sub-files and hands back the whole archive as it
+        /// now stands, ready to write to disk. The original is left alone.
+        ///
+        /// Something the same size or smaller goes back where it was. Anything bigger is put on the end
+        /// and the table entry pointed at the new place, because moving everything after it would mean
+        /// fixing up every other offset in the file.
+        /// </summary>
+        public byte[] ReplaceFile(int fileId, byte[] newBytes)
+        {
+            if (_d == null || _fatOffset <= 0 || newBytes == null) return null;
+
+            int countAt = _fatOffset + 8;
+            if (countAt + 4 > _d.Length) return null;
+            int count = _d[countAt] | (_d[countAt + 1] << 8) | (_d[countAt + 2] << 16) | (_d[countAt + 3] << 24);
+            if (fileId < 0 || fileId >= count) return null;
+
+            int entryAt = _fatOffset + 12 + fileId * 16;
+            if (entryAt + 8 > _d.Length) return null;
+            int oldOff = _d[entryAt] | (_d[entryAt + 1] << 8) | (_d[entryAt + 2] << 16) | (_d[entryAt + 3] << 24);
+            int oldSize = _d[entryAt + 4] | (_d[entryAt + 5] << 8) | (_d[entryAt + 6] << 16) | (_d[entryAt + 7] << 24);
+            if (oldOff < 0 || oldSize < 0 || oldOff + oldSize > _d.Length) return null;
+
+            byte[] o;
+            int newOff;
+            if (newBytes.Length <= oldSize)
+            {
+                o = (byte[])_d.Clone();
+                newOff = oldOff;
+                System.Array.Copy(newBytes, 0, o, newOff, newBytes.Length);
+                // Whatever the old file left behind is zeroed, so nothing stale is read as sound.
+                for (int i = newBytes.Length; i < oldSize; i++) o[newOff + i] = 0;
+            }
+            else
+            {
+                int pad = (4 - (_d.Length & 3)) & 3;         // keep the new file on a four-byte boundary
+                newOff = _d.Length + pad;
+                o = new byte[newOff + newBytes.Length];
+                System.Array.Copy(_d, o, _d.Length);
+                System.Array.Copy(newBytes, 0, o, newOff, newBytes.Length);
+            }
+
+            void Put32(int at, int v)
+            {
+                o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); o[at + 2] = (byte)(v >> 16); o[at + 3] = (byte)(v >> 24);
+            }
+            Put32(entryAt, newOff);
+            Put32(entryAt + 4, newBytes.Length);
+
+            // The container carries its own length at byte 8, and the FILE block carries the length of
+            // everything it holds; both have to say how big the archive now is.
+            Put32(8, o.Length);
+            int fileBlockOffset = _d[40] | (_d[41] << 8) | (_d[42] << 16) | (_d[43] << 24);
+            if (fileBlockOffset > 0 && fileBlockOffset + 8 <= o.Length)
+                Put32(fileBlockOffset + 4, o.Length - fileBlockOffset);
+
+            return o;
+        }
+
         public byte[] GetFileBytes(int fileId)
         {
             if (_d == null || _fatOffset <= 0) return null;

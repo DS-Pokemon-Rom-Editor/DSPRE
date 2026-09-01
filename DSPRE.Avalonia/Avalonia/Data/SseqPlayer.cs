@@ -25,6 +25,14 @@ namespace DSPRE.Avalonia.Data
         {
             public double StartSeconds;
             public double DurationSeconds;
+
+            /// <summary>
+            /// The note was written with no length at all, so nothing ever tells it to stop and it sounds
+            /// until its sample runs out. The hardware only counts a note down when its length is above
+            /// zero (snd_exchannel.c:505), so a length of zero is never released. Every Pokemon cry is
+            /// written this way: SEQ_PV is one note with a length of zero.
+            /// </summary>
+            public bool NoLengthGiven;
             public int Note;
             public int Velocity;
             public int Program;
@@ -35,6 +43,7 @@ namespace DSPRE.Avalonia.Data
             public double PitchBendSemitones;
             public int ModType, ModDepth, ModRange, ModSpeed, ModDelayTicks;
             public int SweepPitchRaw;
+            public int Track;
         }
 
         private sealed class Track
@@ -70,32 +79,91 @@ namespace DSPRE.Avalonia.Data
             public readonly Stack<int> CallStack = new Stack<int>();
         }
 
-        /// <summary>Renders sequence <paramref name="seqIndex"/> from <paramref name="sdat"/> to interleaved
-        /// stereo 16-bit PCM at <paramref name="sampleRate"/>, or null if the sequence/bank can't be resolved.</summary>
-        public static short[] Render(SdatArchive sdat, int seqIndex, int sampleRate = 32000, double maxSeconds = 8.0)
+        /// <summary>One note as the sequence wrote it. This is what the sequence actually says, before any
+        /// of it is turned into sound, so the same reading drives playing it, saving it as a MIDI and
+        /// drawing it as a note track. Keeping those on one reading is deliberate: two readings of the
+        /// same bytes drift apart, and then a picture and a sound disagree about the same file.</summary>
+        public sealed class Note
         {
+            public double StartSeconds;
+            public double DurationSeconds;
+            /// <summary>Written with no length, so nothing ever stops it and it runs until its sample
+            /// does. Every Pokemon cry is written this way.</summary>
+            public bool NoLengthGiven;
+            public int Number;        // 0..127, 60 is middle C
+            public int Velocity;      // 0..127
+            public int Program;       // which instrument of the bank
+            public int Pan;           // 0..127, 64 is centre
+            public int Volume;        // 0..127
+            public int Track;         // which of the sequence's tracks wrote it
+        }
+
+        /// <summary>Reads a sequence into its notes without making any sound.</summary>
+        public static IReadOnlyList<Note> ReadNotes(SdatArchive sdat, int seqIndex, double maxSeconds = 8.0)
+        {
+            var voices = Collect(sdat, seqIndex, maxSeconds, out _, out _, out _);
+            if (voices == null) return null;
+            var notes = new List<Note>(voices.Count);
+            foreach (var v in voices)
+                notes.Add(new Note
+                {
+                    StartSeconds = v.StartSeconds, DurationSeconds = v.DurationSeconds,
+                    NoLengthGiven = v.NoLengthGiven, Number = v.Note, Velocity = v.Velocity,
+                    Program = v.Program, Pan = v.Pan, Volume = v.Volume, Track = v.Track,
+                });
+            notes.Sort((x, y) => x.StartSeconds != y.StartSeconds
+                ? x.StartSeconds.CompareTo(y.StartSeconds)
+                : x.Number.CompareTo(y.Number));
+            return notes;
+        }
+
+        /// <summary>Runs a sequence's tracks and gathers what they play. Shared by rendering it and by
+        /// reading its notes, so there is only ever one reading of a sequence.</summary>
+        private static List<Voice> Collect(SdatArchive sdat, int seqIndex, double maxSeconds,
+            out List<SbnkInstrument> instruments, out Func<int, List<SwavSample>> wavesForSlot,
+            out double bpmOut, int bankOverride = -1)
+        {
+            instruments = null; wavesForSlot = null; bpmOut = 120.0;
             if (sdat == null || seqIndex < 0 || seqIndex >= sdat.Sequences.Count) return null;
             var seq = sdat.Sequences[seqIndex];
             if (seq == null) return null;
             var seqBytes = sdat.GetFileBytes(seq.FileId);
             if (seqBytes == null || seqBytes.Length < 0x1C) return null;
-            if (seq.BankNo < 0 || seq.BankNo >= sdat.Banks.Count || sdat.Banks[seq.BankNo] == null) return null;
-            var bank = sdat.Banks[seq.BankNo];
-            var instruments = sdat.GetBankInstruments(seq.BankNo);
+            int bankNo = bankOverride >= 0 ? bankOverride : seq.BankNo;
+            if (bankNo < 0 || bankNo >= sdat.Banks.Count || sdat.Banks[bankNo] == null) return null;
+            var bank = sdat.Banks[bankNo];
+            instruments = sdat.GetBankInstruments(bankNo);
             if (instruments == null) return null;
 
-            List<SwavSample> WavesForSlot(int slot)
-            {
-                if (slot < 0 || slot >= 4) return null;
-                return sdat.GetWaveArchive(bank.WaveArcNo[slot]);
-            }
+            wavesForSlot = slot => slot < 0 || slot >= 4 ? null : sdat.GetWaveArchive(bank.WaveArcNo[slot]);
 
             var tracks = ParseTrackList(seqBytes);
             double bpm = 120.0;
             var voices = new List<Voice>();
+            for (int i = 0; i < tracks.Count; i++)
+            {
+                int before = voices.Count;
+                RunTrack(tracks[i], seqBytes, ref bpm, voices, maxSeconds);
+                for (int v = before; v < voices.Count; v++) voices[v].Track = i;
+            }
+            bpmOut = bpm;
+            return voices;
+        }
 
-            foreach (var t in tracks)
-                RunTrack(t, seqBytes, ref bpm, voices, maxSeconds);
+        /// <summary>Renders sequence <paramref name="seqIndex"/> from <paramref name="sdat"/> to interleaved
+        /// stereo 16-bit PCM at <paramref name="sampleRate"/>, or null if the sequence/bank can't be resolved.</summary>
+        /// <param name="bankOverride">
+        /// Play the sequence with somebody else's instruments instead of its own. A cry works this way:
+        /// there is one short sequence for all of them, and the games hand it the bank belonging to the
+        /// Pokemon (snd_play.c:1091 plays SEQ_PV with the bank set to the species number). Leave it at
+        /// -1 to use the sequence's own bank.
+        /// </param>
+        public static short[] Render(SdatArchive sdat, int seqIndex, int sampleRate = 32000, double maxSeconds = 8.0,
+                                     int bankOverride = -1)
+        {
+            var voices = Collect(sdat, seqIndex, maxSeconds, out var instruments,
+                                 out var wavesForSlot, out _, bankOverride);
+            if (voices == null) return null;
 
             // Most SEs run under a second; a hardcoded 8-second buffer would allocate a Large Object Heap
             // block several times larger than needed on every preview, and the resulting gen1/gen2
@@ -106,7 +174,7 @@ namespace DSPRE.Avalonia.Data
             foreach (var v in voices) neededSeconds = Math.Max(neededSeconds, v.StartSeconds + v.DurationSeconds);
             double bufferSeconds = Math.Min(maxSeconds, neededSeconds + 1.1);
 
-            return Mix(voices, instruments, WavesForSlot, sampleRate, bufferSeconds);
+            return Mix(voices, instruments, wavesForSlot, sampleRate, bufferSeconds);
         }
 
         /// <summary>Writes interleaved stereo 16-bit PCM to a standard .wav file, so rendered audio can be
@@ -164,6 +232,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         StartSeconds = t.TimeSeconds,
                         DurationSeconds = durSec,
+                        NoLengthGiven = durTicks == 0,
                         Note = Math.Clamp(op + t.Transpose, 0, 127),
                         Velocity = velocity,
                         Program = t.Program,
@@ -280,9 +349,14 @@ namespace DSPRE.Avalonia.Data
                 var inst = instruments[v.Program];
                 var region = inst?.Resolve(v.Note);
                 if (region == null) continue;
-                var waves = wavesForSlot(region.WaveArcSlot);
-                if (waves == null || region.WaveIndex >= waves.Count || waves[region.WaveIndex] == null) continue;
-                var wav = waves[region.WaveIndex];
+                // A square or noise region has no recording to look up; its sound is made on the spot.
+                var wav = PsgWaveform.For(region);
+                if (wav == null)
+                {
+                    var waves = wavesForSlot(region.WaveArcSlot);
+                    if (waves == null || region.WaveIndex >= waves.Count || waves[region.WaveIndex] == null) continue;
+                    wav = waves[region.WaveIndex];
+                }
                 if (wav.Pcm == null || wav.Pcm.Length == 0) continue;
 
                 // Pitch bend (0xC4/0xC5) folds straight into the same semitone-to-ratio math as the note's own
@@ -325,6 +399,15 @@ namespace DSPRE.Avalonia.Data
 
                 int startSample = (int)(v.StartSeconds * sampleRate);
                 int noteSamples = Math.Max(1, (int)(v.DurationSeconds * sampleRate));
+
+                // A note with no length of its own is never told to stop, so it sounds for as long as its
+                // sample lasts. Without this a cry renders as a single sample of silence.
+                if (v.NoLengthGiven && wav.Pcm != null && wav.Pcm.Length > 0 && !wav.Loop)
+                {
+                    // How long the sample runs once it is played at this note's pitch.
+                    int wholeSample = (int)(wav.Pcm.Length / Math.Max(1e-6, basePitchRatio));
+                    noteSamples = Math.Max(noteSamples, Math.Max(1, wholeSample));
+                }
 
                 // The real per-instrument attack/decay/sustain/release envelope (SBNK's SNDInstParam bytes via
                 // NitroEnvelope), not a generic declick fade. Matters most for a looping sample held on a long
