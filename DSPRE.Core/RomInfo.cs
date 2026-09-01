@@ -1,4 +1,4 @@
-using DSPRE.Resources;
+﻿using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using LibGit2Sharp;
 using System;
@@ -226,6 +226,14 @@ namespace DSPRE
             mapTextures,
             areaData,
 
+            // Animation data the games play over the field. Terrain animation is an NSBTA chosen per
+            // area (RESOURCE_PARAM.ground_anm, 0xFFFF = none); building animations live in their own
+            // archive with separate outdoor/indoor lists saying which model uses which.
+            groundAnimations,       // ARC_GROUND_ANM        HGSS(USA) a/1/4/0  ground_anm.narc  (2 NSBTA)
+            buildingAnimations,     // ARC_BM_ANM            HGSS(USA) a/1/0/6  bm_anime.narc   (NSBCA/NSBTA/NSBTP)
+            buildingAnimListOut,    // ARC_BM_INFO_OUT_LIST  HGSS(USA) a/1/0/7  bm_info_out.narc
+            buildingAnimListIn,     // ARC_BM_INFO_IN_LIST   HGSS(USA) a/1/0/8  bm_info_in.narc
+
             eventFiles,
             OWSprites,
 
@@ -259,6 +267,9 @@ namespace DSPRE
             trainerTextTable,
 
             eggMoves,
+
+            fonts,                  // ARC_FONT   DP graphic/font.narc, Pt graphic/pl_font.narc, HGSS a/0/1/6
+            windowFrames,           // ARC_WINFRAME  the borders round a message box
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -396,7 +407,7 @@ namespace DSPRE
             ScriptActionNamesDict = BuildActionNamesDatabase(gameFamily);
             ScriptComparisonOperatorsDict = BuildComparisonOperatorsDatabase(gameFamily);
 
-            ScriptCommandNamesReverseDict = ScriptCommandNamesDict.Reverse();
+            ScriptCommandNamesReverseDict = BuildCommandNamesReverse();
             ScriptActionNamesReverseDict = ScriptActionNamesDict.Reverse();
             ScriptComparisonOperatorsReverseDict = ScriptComparisonOperatorsDict.Reverse();
 
@@ -417,7 +428,7 @@ namespace DSPRE
             ScriptCommandNamesDict = BuildCommandNamesDatabase(gameFamily);
             ScriptActionNamesDict = BuildActionNamesDatabase(gameFamily);
             ScriptComparisonOperatorsDict = BuildComparisonOperatorsDatabase(gameFamily);
-            ScriptCommandNamesReverseDict = ScriptCommandNamesDict.Reverse();
+            ScriptCommandNamesReverseDict = BuildCommandNamesReverse();
             ScriptActionNamesReverseDict = ScriptActionNamesDict.Reverse();
             ScriptComparisonOperatorsReverseDict = ScriptComparisonOperatorsDict.Reverse();
         }
@@ -444,6 +455,25 @@ namespace DSPRE
         {
             var cmdInfoDict = GetScriptCommandInfoDict();
             return cmdInfoDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
+        }
+
+        /// <summary>
+        /// Command name back to its number. The rotom names come first, since those are what the editor
+        /// writes now, and the names the old database used are added after so a script written before the
+        /// rename still opens. Where the two collide the rotom name wins.
+        /// </summary>
+        public static Dictionary<string, ushort> BuildCommandNamesReverse()
+        {
+            var info = GetScriptCommandInfoDict();
+            var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            if (info == null) return map;
+
+            foreach (var kv in info)
+                if (!string.IsNullOrEmpty(kv.Value?.Name)) map[kv.Value.Name] = kv.Key;
+            foreach (var kv in info)
+                if (!string.IsNullOrEmpty(kv.Value?.LegacyName) && !map.ContainsKey(kv.Value.LegacyName))
+                    map[kv.Value.LegacyName] = kv.Key;
+            return map;
         }
 
         /// <summary>
@@ -2189,6 +2219,8 @@ namespace DSPRE
                     {
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\msg.narc",
+                        [DirNames.fonts] = $@"{dataFolderName}\graphic\font.narc",
+                        [DirNames.windowFrames] = $@"{dataFolderName}\graphic\winframe.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -2198,6 +2230,11 @@ namespace DSPRE
                         [DirNames.buildingTextures] = $@"{dataFolderName}\fielddata\areadata\area_build_model\areabm_texset.narc",
                         [DirNames.mapTextures] = $@"{dataFolderName}\fielddata\areadata\area_map_tex\map_tex_set.narc",
                         [DirNames.areaData] = $@"{dataFolderName}\fielddata\areadata\area_data.narc",
+
+                        // DP/Pt has no terrain animation (its area record uses that slot for the
+                        // animated model set) and keeps one combined building-animation list.
+                        [DirNames.buildingAnimations] = $@"{dataFolderName}\arc\bm_anime.narc",
+                        [DirNames.buildingAnimListOut] = $@"{dataFolderName}\arc\bm_anime_list.narc",
 
                         [DirNames.eventFiles] = $@"{dataFolderName}\fielddata\eventdata\zone_event" + suffix + ".narc",
                         [DirNames.OWSprites] = $@"{dataFolderName}\data\mmodel\mmodel.narc",
@@ -2241,6 +2278,7 @@ namespace DSPRE
                         [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\wazaeffect\effectclact\wecellanm.narc",
                         [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
                         [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\batt_bg.narc",
+                        [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\batt_obj.narc",
 
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
@@ -2304,6 +2342,8 @@ namespace DSPRE
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
 
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
+                        [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
+                        [DirNames.windowFrames] = $@"{dataFolderName}\graphic\pl_winframe.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -2313,6 +2353,11 @@ namespace DSPRE
                         [DirNames.buildingTextures] = $@"{dataFolderName}\fielddata\areadata\area_build_model\areabm_texset.narc",
                         [DirNames.mapTextures] = $@"{dataFolderName}\fielddata\areadata\area_map_tex\map_tex_set.narc",
                         [DirNames.areaData] = $@"{dataFolderName}\fielddata\areadata\area_data.narc",
+
+                        // DP/Pt has no terrain animation (its area record uses that slot for the
+                        // animated model set) and keeps one combined building-animation list.
+                        [DirNames.buildingAnimations] = $@"{dataFolderName}\arc\bm_anime.narc",
+                        [DirNames.buildingAnimListOut] = $@"{dataFolderName}\arc\bm_anime_list.narc",
 
                         [DirNames.eventFiles] = $@"{dataFolderName}\fielddata\eventdata\zone_event.narc",
                         [DirNames.OWSprites] = $@"{dataFolderName}\data\mmodel\mmodel.narc",
@@ -2383,7 +2428,9 @@ namespace DSPRE
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
 
-                        [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",
+                        [DirNames.textArchives] = $@"{dataFolderName} ",
+                        [DirNames.fonts] = $@"{dataFolderName}\a\0\1\6",
+                        [DirNames.windowFrames] = $@"{dataFolderName}\a\0\3\8",
 
                         [DirNames.matrices] = $@"{dataFolderName}\a\0\4\1",
 
@@ -2393,6 +2440,11 @@ namespace DSPRE
                         [DirNames.buildingTextures] = $@"{dataFolderName}\a\0\7\0",
                         [DirNames.mapTextures] = $@"{dataFolderName}\a\0\4\4",
                         [DirNames.areaData] = $@"{dataFolderName}\a\0\4\2",
+
+                        [DirNames.groundAnimations] = $@"{dataFolderName}\a\1\4\0",
+                        [DirNames.buildingAnimations] = $@"{dataFolderName}\a\1\0\6",
+                        [DirNames.buildingAnimListOut] = $@"{dataFolderName}\a\1\0\7",
+                        [DirNames.buildingAnimListIn] = $@"{dataFolderName}\a\1\0\8",
 
                         [DirNames.eventFiles] = $@"{dataFolderName}\a\0\3\2",
                         [DirNames.OWSprites] = $@"{dataFolderName}\a\0\8\1",
