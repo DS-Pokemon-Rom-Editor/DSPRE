@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.Data
             if (names + 16 > file.Length) return null;
 
             var raw = System.Text.Encoding.ASCII.GetString(file, names, 16);
-            int end = raw.IndexOf(' ');
+            int end = raw.IndexOf('\0');
             string name = (end >= 0 ? raw.Substring(0, end) : raw).Trim();
             foreach (char c in name) if (c < 32 || c > 126) return null;
             return name.Length == 0 ? null : name;
