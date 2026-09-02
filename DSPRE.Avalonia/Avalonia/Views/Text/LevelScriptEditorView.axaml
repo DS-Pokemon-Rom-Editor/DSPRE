@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        x:Class="DSPRE.Avalonia.Views.Text.LevelScriptEditorView"
+        x:DataType="vm:LevelScriptEditorViewModel">
+
+  <Design.DataContext>
+    <vm:LevelScriptEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBlock Text="Script file:" VerticalAlignment="Center"/>
+        <controls:FusionAutoCompleteBox Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="Save"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Import…" Click="Import_Click"/>
+        <Button Content="Export…" Click="Export_Click"/>
+        <CheckBox Content="Word-align padding" IsChecked="{Binding WordAlignmentPadding}" VerticalAlignment="Center"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="*,300" Margin="6">
+      <!-- Trigger list -->
+      <DockPanel Grid.Column="0" Margin="0,0,6,0">
+        <TextBlock DockPanel.Dock="Top" Text="Triggers" FontWeight="Bold" Margin="0,0,0,4"/>
+        <Button DockPanel.Dock="Bottom" Content="Remove selected" Click="Remove_Click" IsEnabled="{Binding HasTrigger}" Margin="0,4,0,0"/>
+        <ListBox ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
+      </DockPanel>
+
+      <!-- Add panel -->
+      <Border Grid.Column="1" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Padding="8">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Add a trigger" FontWeight="Bold"/>
+          <TextBlock Text="Type" FontSize="12"/>
+          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerTypes}" SelectedIndex="{Binding TriggerTypeIndex}"/>
+          <TextBlock Text="Script ID to run" FontSize="12"/>
+          <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewScriptId}"/>
+          <TextBlock Text="{Binding NewScriptCommonInfo}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                     IsVisible="{Binding NewScriptHasCommonInfo}"/>
+          <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
+            <TextBlock Text="Variable to watch" FontSize="12"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewVariable}"/>
+            <TextBlock Text="Expected value" FontSize="12"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewValue}"/>
+          </StackPanel>
+          <Button Content="Add trigger" HorizontalAlignment="Stretch" Click="Add_Click" Margin="0,4,0,0"/>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,322 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
+        x:Class="DSPRE.Avalonia.Views.Items.ItemTableEditorView"
+        x:DataType="vm:ItemTableEditorViewModel"
+        Title="Item Tables (Pickup, Hidden, Rock Smash)"
+        Width="900" Height="640"
+        MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:ItemTableEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="8">
+    <!-- Buttons -->
+    <Border DockPanel.Dock="Bottom" Padding="0,8,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Content="Save Changes" Width="120" Click="Save_Click" IsDefault="True"/>
+        <Button Content="Close"        Width="80"  Click="Close_Click"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Main content -->
+    <TabControl x:Name="Tabs">
+      <!-- ── Pickup Table tab ─────────────────────────────────────────── -->
+      <TabItem Header="Pickup Table" IsVisible="{Binding ShowPickupTab}">
+        <DockPanel Margin="4">
+          <!-- Activation divisor above the activation table -->
+          <Border DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="6"
+                  BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="Activation Divisor (1-255):" VerticalAlignment="Center"/>
+              <NumericUpDown Value="{Binding ActivationDivisorEdit}"
+                             Minimum="1" Maximum="255" FormatString="0" Width="100"/>
+              <TextBlock Text="Pickup happens on roughly one battle in this many."
+                         VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+            </StackPanel>
+          </Border>
+
+          <Grid RowDefinitions="Auto,4,*,4,Auto,4,Auto">
+            <!-- Activation odds header -->
+            <TextBlock Grid.Row="0" Text="Which slot is picked" FontWeight="SemiBold" FontSize="12"/>
+
+            <!-- Activation DataGrid -->
+            <DataGrid Grid.Row="2" x:Name="ActivationGrid"
+                      ItemsSource="{Binding ActivationRows}"
+                      CanUserReorderColumns="False" CanUserResizeColumns="True"
+                      IsReadOnly="True" MinHeight="140" MaxHeight="220"
+                      HorizontalScrollBarVisibility="Auto">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Slot"        Binding="{Binding Label}"       Width="100" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Threshold"   Binding="{Binding Value}"       Width="90"  IsReadOnly="True"/>
+                <DataGridTextColumn Header="Probability" Binding="{Binding Probability}" Width="100" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Range"       Binding="{Binding Description}" Width="*"   IsReadOnly="True"/>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Common items header -->
+            <TextBlock Grid.Row="4" Text="Common Items (10 level brackets, 9 slots each)"
+                       FontWeight="SemiBold" FontSize="12"/>
+
+            <!-- Common items DataGrid -->
+            <DataGrid Grid.Row="6" x:Name="CommonGrid"
+                      ItemsSource="{Binding CommonRows}"
+                      CanUserReorderColumns="False"
+                      IsReadOnly="False"
+                      HorizontalScrollBarVisibility="Auto"
+                      MinHeight="160">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Level Range" Binding="{Binding LevelRange}" Width="90" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Item 1"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 2"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 3"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item2}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 4"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item3}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 5"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item4}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 6"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item5}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 7"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item6}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 8"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item7}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Item 9"  Width="140">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CommonPickupRow">
+                      <ComboBox ItemsSource="{Binding ItemNamesList}"
+                                SelectedItem="{Binding Item8}" HorizontalAlignment="Stretch" FontSize="12"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Rare Items tab ────────────────────────────────────────────── -->
+      <TabItem Header="Rare Pickup Items" IsVisible="{Binding ShowPickupTab}">
+        <DockPanel Margin="4">
+          <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6"
+                     Text="Rare Items (Sliding Window: 10 brackets × 2 slots)"
+                     FontWeight="SemiBold" FontSize="12"/>
+          <DataGrid x:Name="RareGrid"
+                    ItemsSource="{Binding RareRows}"
+                    IsReadOnly="False"
+                    HorizontalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Level Range" Binding="{Binding LevelRange}" Width="100" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Rare Item 1" Width="200">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RarePickupRow">
+                    <ComboBox ItemsSource="{Binding ItemNamesList}"
+                              SelectedItem="{Binding Item0}" HorizontalAlignment="Stretch" FontSize="12"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Rare Item 2" Width="200">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RarePickupRow">
+                    <ComboBox ItemsSource="{Binding ItemNamesList}"
+                              SelectedItem="{Binding Item1}" HorizontalAlignment="Stretch" FontSize="12"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Hidden Items tab ──────────────────────────────────────────── -->
+      <TabItem Header="Hidden Items" IsVisible="{Binding ShowHiddenItemsTab}">
+        <Grid ColumnDefinitions="220,8,*" Margin="4">
+          <!-- Left: list -->
+          <DockPanel Grid.Column="0">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+              <Button Content="Add"    Click="HiddenAdd_Click"    Width="70"/>
+              <Button Content="Remove" Click="HiddenRemove_Click" Width="70"
+                      IsEnabled="{Binding HiddenItemSelected}"/>
+            </StackPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{Binding HiddenEntryCount}"
+                       FontSize="12" Margin="0,0,0,4"/>
+            <ListBox ItemsSource="{Binding HiddenItems}"
+                     SelectedItem="{Binding SelectedHiddenItem}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:HiddenItemRowVM">
+                  <TextBlock Text="{Binding Display}" FontSize="12" TextWrapping="Wrap"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+
+          <!-- Right: edit panel -->
+          <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
+                  IsEnabled="{Binding HiddenItemSelected}">
+            <StackPanel Spacing="10">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Item:" FontSize="12"/>
+                <ComboBox ItemsSource="{Binding ItemNames}"
+                          SelectedIndex="{Binding SelectedItemID}"
+                          HorizontalAlignment="Stretch"/>
+              </StackPanel>
+              <Grid ColumnDefinitions="*,12,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="Amount:" FontSize="12"/>
+                  <NumericUpDown Value="{Binding SelectedAmount}"
+                                 Minimum="1" Maximum="99" FormatString="0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                  <TextBlock Text="Script ID:" FontSize="12"/>
+                  <NumericUpDown Value="{Binding SelectedScriptID}"
+                                 Minimum="0" Maximum="255" FormatString="0"/>
+                </StackPanel>
+              </Grid>
+              <TextBlock Text="{Binding SelectedScriptLabel}"
+                         FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </TabItem>
+
+      <!-- ── Rock Smash tab (HGSS) ────────────────────────────────────────── -->
+      <TabItem Header="Rock Smash" IsVisible="{Binding ShowRockSmashTab}">
+        <DockPanel Margin="4">
+          <!-- Item-drop tables: hardcoded in ov001.bin, only confirmed for English builds -->
+          <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8"
+                  BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
+                  IsVisible="{Binding ShowRockSmashItemTables}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Item Drop Tables" FontWeight="SemiBold" FontSize="12"/>
+              <TextBlock Text="8 slots each; a Rock Smash item roll picks a table by header, then a slot with fixed odds (25/20/10/10/10/10/10/5%)."
+                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+
+              <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+
+              <TextBlock Text="Ruins of Alph" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+
+              <TextBlock Text="Cliff Cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              <UniformGrid Columns="8">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item7}" FontSize="11" Margin="1"/>
+              </UniformGrid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="11"
+                     Foreground="{DynamicResource Editor.Subtle}"
+                     IsVisible="{Binding !ShowRockSmashItemTables}"
+                     Text="The item drop tables live at a fixed, hand-verified offset that is currently only confirmed for English HeartGold/SoulSilver, so editing them is disabled for this ROM's language. The per-header odds and table below are plain NARC data and work regardless of language."/>
+
+          <TextBlock DockPanel.Dock="Top" Text="{Binding RockSmashCount}" FontSize="11" Margin="0,0,0,4"/>
+
+          <DataGrid x:Name="RockSmashGrid"
+                    ItemsSource="{Binding RockSmashRows}"
+                    CanUserReorderColumns="False"
+                    IsReadOnly="False"
+                    HorizontalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Header" Binding="{Binding HeaderLabel}" Width="240" IsReadOnly="True"/>
+              <DataGridTemplateColumn Header="Odds (0-100)" Width="130">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RockSmashHeaderRow">
+                    <NumericUpDown Value="{Binding Odds}" Minimum="0" Maximum="100" FormatString="0" FontSize="11"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Table" Width="160">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:RockSmashHeaderRow">
+                    <ComboBox SelectedIndex="{Binding TypeIndex}" HorizontalAlignment="Stretch" FontSize="11">
+                      <ComboBoxItem Content="Default"/>
+                      <ComboBoxItem Content="Ruins of Alph"/>
+                      <ComboBoxItem Content="Cliff Cave"/>
+                    </ComboBox>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="" Binding="{Binding MissingLabel}" Width="*" IsReadOnly="True"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

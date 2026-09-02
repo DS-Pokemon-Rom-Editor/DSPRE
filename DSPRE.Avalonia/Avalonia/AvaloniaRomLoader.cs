@@ -70,8 +70,8 @@ namespace DSPRE.Avalonia
             // picture under the same number.
             OverworldSprites.ClearCache();
             // The font and its letter numbering belong to the ROM that was open, not the new one.
-            Views.FieldMessageBoxView.Font = null;
-            Views.FieldMessageBoxView.Frame = null;
+            Views.Controls.FieldMessageBoxView.Font = null;
+            Views.Controls.FieldMessageBoxView.Frame = null;
             Data.SoundArchive.Reset();
             ROMFiles.FieldFontCharacters.Reset();
 

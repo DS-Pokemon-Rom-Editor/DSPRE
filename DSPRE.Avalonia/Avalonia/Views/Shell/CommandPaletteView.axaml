@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
+        x:Class="DSPRE.Avalonia.Views.Shell.CommandPaletteView"
+        x:DataType="vm:CommandPaletteViewModel"
+        Title="Go to…"
+        Width="460" Height="420"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False" ShowInTaskbar="False" WindowDecorations="None">
+
+  <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+    <DockPanel Margin="8">
+      <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Text="{Binding SearchText}" PlaceholderText="Type an editor name…" Margin="0,0,0,6"/>
+      <ListBox x:Name="ResultList" ItemsSource="{Binding Items}" SelectedIndex="{Binding SelectedIndex}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:CommandItem">
+            <TextBlock Text="{Binding Name}" Padding="2,3"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+  </Border>
+</Window>

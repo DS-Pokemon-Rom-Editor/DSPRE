@@ -1,0 +1,152 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:vmcontrols="clr-namespace:DSPRE.Avalonia.ViewModels.Controls"
+		x:Class="DSPRE.Avalonia.Views.World.FlyEditorView"
+		x:DataType="vm:FlyEditorViewModel"
+		Title="{Binding Title}"
+		Width="760" Height="560" MinWidth="600" MinHeight="400"
+		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:FlyEditorViewModel/>
+  </Design.DataContext>
+
+
+  <DockPanel Margin="8" LastChildFill="True">
+
+	<!-- Save row -->
+	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+				HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
+	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
+	  <Button Content="Save Changes" Click="Save_Click"/>
+	</StackPanel>
+
+	<!-- Three tabs -->
+	<TabControl>
+
+	  <!-- ── Tab 1: Game-Over / Death Warps ─────────────────────────────── -->
+	  <TabItem Header="Game-Over Warps">
+		<DataGrid ItemsSource="{Binding Rows}"
+				  CanUserReorderColumns="False" CanUserResizeColumns="True"
+				  CanUserSortColumns="False" GridLinesVisibility="All"
+				  SelectionMode="Single" AutoGenerateColumns="False">
+		  <DataGrid.Columns>
+
+			<!-- Header combobox (shared for all game families) -->
+			<DataGridTemplateColumn Header="Header (Game-Over)" Width="*">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <ComboBox ItemsSource="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).Headers}"
+							SelectedIndex="{Binding HeaderIdGameOver}"
+							HorizontalAlignment="Stretch"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTextColumn Header="Local X" Binding="{Binding LocalX}" Width="70"/>
+			<DataGridTextColumn Header="Local Y" Binding="{Binding LocalY}" Width="70"/>
+
+		  </DataGrid.Columns>
+		</DataGrid>
+	  </TabItem>
+
+	  <!-- ── Tab 2: Fly Warps ────────────────────────────────────────────── -->
+	  <TabItem Header="Fly Warps">
+		<DataGrid ItemsSource="{Binding Rows}"
+				  CanUserReorderColumns="False" CanUserResizeColumns="True"
+				  CanUserSortColumns="False" GridLinesVisibility="All"
+				  SelectionMode="Single" AutoGenerateColumns="False">
+		  <DataGrid.Columns>
+
+			<DataGridTemplateColumn Header="Header (Fly)" Width="*">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <ComboBox ItemsSource="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).Headers}"
+							SelectedIndex="{Binding HeaderIdFly}"
+							HorizontalAlignment="Stretch"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTextColumn Header="Global X" Binding="{Binding GlobalX}" Width="80"/>
+			<DataGridTextColumn Header="Global Y" Binding="{Binding GlobalY}" Width="80"/>
+
+		  </DataGrid.Columns>
+		</DataGrid>
+	  </TabItem>
+
+	  <!-- ── Tab 3: Unlock Settings ─────────────────────────────────────── -->
+	  <TabItem Header="Unlock Settings">
+		<DataGrid ItemsSource="{Binding Rows}"
+				  CanUserReorderColumns="False" CanUserResizeColumns="True"
+				  CanUserSortColumns="False" GridLinesVisibility="All"
+				  SelectionMode="Single" AutoGenerateColumns="False">
+		  <DataGrid.Columns>
+
+			<!-- DP / Plat columns -->
+			<DataGridTemplateColumn Header="Is Teleport Pos"
+									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <CheckBox IsChecked="{Binding IsTeleportPos}" HorizontalAlignment="Center"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTemplateColumn Header="Unlock on Map Entry"
+									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <CheckBox IsChecked="{Binding UnlockOnMapEntry}" HorizontalAlignment="Center"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTextColumn Header="Unlock ID" Binding="{Binding UnlockId}"
+								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
+
+			<!-- HGSS columns -->
+			<DataGridTemplateColumn Header="Header (Unlock)"
+									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <ComboBox ItemsSource="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).Headers}"
+							SelectedIndex="{Binding HeaderIdUnlockWarp}"
+							HorizontalAlignment="Stretch"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTextColumn Header="Global X (Unlock)" Binding="{Binding GlobalXUnlock}"
+								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
+			<DataGridTextColumn Header="Global Y (Unlock)" Binding="{Binding GlobalYUnlock}"
+								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
+
+			<DataGridTextColumn Header="Flag Index" Binding="{Binding FlagIdx}"
+								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
+
+			<DataGridTemplateColumn Header="Is Blackout Spawn"
+									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <CheckBox IsChecked="{Binding IsBlackoutSpawn}" HorizontalAlignment="Center"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+			<DataGridTemplateColumn Header="Is Fly Point"
+									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
+			  <DataGridTemplateColumn.CellTemplate>
+				<DataTemplate x:DataType="vm:FlyRow">
+				  <CheckBox IsChecked="{Binding IsFlyPoint}" HorizontalAlignment="Center"/>
+				</DataTemplate>
+			  </DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+
+		  </DataGrid.Columns>
+		</DataGrid>
+	  </TabItem>
+
+	</TabControl>
+  </DockPanel>
+</Window>

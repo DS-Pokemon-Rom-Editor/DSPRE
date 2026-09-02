@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.Tools.GlTestView"
+        Title="Model Viewer"
+        Width="640" Height="520"
+        WindowStartupLocation="CenterScreen">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Content="Open NSBMD…" Click="OpenNsbmd_Click"/>
+          <Button Content="Bind NSBTX (textures)…" Click="OpenNsbtx_Click"/>
+          <Button Content="Show test cube" Click="ResetCube_Click"
+                  ToolTip.Tip="Puts a plain cube in the view, so the 3D display can be checked without a file"/>
+        </StackPanel>
+        <TextBlock Text="Drag to orbit · scroll to zoom. Open an NSBMD model, then bind its NSBTX texture file (map/building models keep textures separately). Self-contained models show textures without a separate NSBTX."
+                   FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock x:Name="StatusLabel" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+    <!-- Transparent host Border is hit-testable, so it receives the pointer events
+         that the bare OpenGlControlBase (a Control with no Background) does not. -->
+    <Border x:Name="GlHost" Background="Transparent">
+      <gl:NsbmdGlControl x:Name="GlView"/>
+    </Border>
+  </DockPanel>
+</Window>

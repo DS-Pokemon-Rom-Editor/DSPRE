@@ -34,6 +34,34 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
 
+  <!-- Views and view models are filed under the menu each editor opens from, and each folder is
+       its own namespace. Consumers see them as one surface, so the sections are global usings
+       rather than a using line in every file. -->
+  <ItemGroup>
+    <Using Include="DSPRE.Avalonia.ViewModels.Audio" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Battle" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Controls" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Graphics" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Items" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Pokemon" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Shell" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Text" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Tools" />
+    <Using Include="DSPRE.Avalonia.ViewModels.Trainers" />
+    <Using Include="DSPRE.Avalonia.ViewModels.World" />
+    <Using Include="DSPRE.Avalonia.Views.Audio" />
+    <Using Include="DSPRE.Avalonia.Views.Battle" />
+    <Using Include="DSPRE.Avalonia.Views.Controls" />
+    <Using Include="DSPRE.Avalonia.Views.Graphics" />
+    <Using Include="DSPRE.Avalonia.Views.Items" />
+    <Using Include="DSPRE.Avalonia.Views.Pokemon" />
+    <Using Include="DSPRE.Avalonia.Views.Shell" />
+    <Using Include="DSPRE.Avalonia.Views.Text" />
+    <Using Include="DSPRE.Avalonia.Views.Tools" />
+    <Using Include="DSPRE.Avalonia.Views.Trainers" />
+    <Using Include="DSPRE.Avalonia.Views.World" />
+  </ItemGroup>
+
   <ItemGroup>
     <AvaloniaResource Include="Avalonia\Assets\**" />
     <!-- Also embedded via DS_Map\Properties\Resources.resx for the legacy WinForms shell; shared, not moved. -->

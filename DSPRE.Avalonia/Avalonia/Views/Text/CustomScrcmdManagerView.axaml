@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DSPRE.Avalonia.ViewModels.Text"
+        x:Class="DSPRE.Avalonia.Views.Text.CustomScrcmdManagerView"
+        x:DataType="vm:CustomScrcmdManagerViewModel"
+        Title="Custom Script Command Manager"
+        Width="520" Height="420"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:CustomScrcmdManagerViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+               Text="Per-ROM script command databases (edited_databases). Import replaces the selected project's scrcmd_database.json; changes can be applied live by reparsing all scripts."/>
+
+    <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Right" Width="150" Margin="8,0,0,0" Spacing="6">
+      <Button Content="Import…" HorizontalAlignment="Stretch" Click="Import_Click"
+              IsEnabled="{Binding HasSelection}"/>
+      <Button Content="Export…" HorizontalAlignment="Stretch" Click="Export_Click"
+              IsEnabled="{Binding HasSelection}"/>
+      <Button Content="Open Folder" HorizontalAlignment="Stretch" Click="OpenFolder_Click"/>
+      <Button Content="Refresh" HorizontalAlignment="Stretch" Click="Refresh_Click"/>
+    </StackPanel>
+
+    <ListBox ItemsSource="{Binding Folders}"
+             SelectedIndex="{Binding SelectedIndex}"
+             IsEnabled="{Binding IsIdle}"/>
+  </DockPanel>
+</Window>

@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.SafariZoneGroupView"
+             x:DataType="vm:SafariZoneGroupViewModel">
+
+  <Grid ColumnDefinitions="*,*" Margin="4">
+
+    <!-- ── Normal encounters (Morning / Day / Night) ─────────────────────────── -->
+    <HeaderedContentControl Grid.Column="0" Header="Normal encounters" Margin="0,0,4,0">
+      <TabControl>
+        <TabItem Header="Morning">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding MorningSpecies}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Level" VerticalAlignment="Center"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding MorningLevel}"/>
+              </StackPanel>
+            </StackPanel>
+            <ListBox ItemsSource="{Binding MorningItems}" SelectedIndex="{Binding MorningIndex}"/>
+          </DockPanel>
+        </TabItem>
+        <TabItem Header="Day">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding DaySpecies}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Level" VerticalAlignment="Center"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding DayLevel}"/>
+              </StackPanel>
+            </StackPanel>
+            <ListBox ItemsSource="{Binding DayItems}" SelectedIndex="{Binding DayIndex}"/>
+          </DockPanel>
+        </TabItem>
+        <TabItem Header="Night">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding NightSpecies}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Level" VerticalAlignment="Center"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding NightLevel}"/>
+              </StackPanel>
+            </StackPanel>
+            <ListBox ItemsSource="{Binding NightItems}" SelectedIndex="{Binding NightIndex}"/>
+          </DockPanel>
+        </TabItem>
+      </TabControl>
+    </HeaderedContentControl>
+
+    <!-- ── Object encounters (shared slots + requirements) ───────────────────── -->
+    <HeaderedContentControl Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+          <Button Content="Add slot"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Remove slot" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
+        </StackPanel>
+        <ListBox DockPanel.Dock="Top" Height="90"
+                 ItemsSource="{Binding ObjectItems}" SelectedIndex="{Binding ObjectIndex}"/>
+
+        <ScrollViewer>
+          <StackPanel Spacing="3" Margin="0,6,0,0">
+            <TextBlock Text="Morning" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjMorningSpecies}"/>
+            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjMorningLevel}"/>
+            <TextBlock Text="Day" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjDaySpecies}"/>
+            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjDayLevel}"/>
+            <TextBlock Text="Night" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
+            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjNightLevel}"/>
+            <TextBlock Text="Requirement" FontWeight="Bold" Margin="0,4,0,0"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding ReqType}"/>
+            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding ReqQty}"/>
+            <TextBlock Text="Optional requirement" FontWeight="Bold" Margin="0,4,0,0"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding OptReqType}"/>
+            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding OptReqQty}"/>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </HeaderedContentControl>
+  </Grid>
+</UserControl>

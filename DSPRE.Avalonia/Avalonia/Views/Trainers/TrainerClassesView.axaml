@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        x:Class="DSPRE.Avalonia.Views.Trainers.TrainerClassesView"
+        x:DataType="vm:TrainerClassesViewModel">
+
+  <Design.DataContext>
+    <vm:TrainerClassesViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="220,*">
+      <DockPanel Grid.Column="0" Margin="4">
+        <Button DockPanel.Dock="Top" Content="+ Add Trainer Class…" Click="AddTrainerClass_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+                ToolTip.Tip="Platinum (English) only. Repoints/extends the gender, prize-money and (optionally) eye-contact-music tables into the synthetic overlay."
+                IsEnabled="{Binding IsExpansionSupported}"/>
+        <ListBox ItemsSource="{Binding ClassNames}"
+                 SelectedIndex="{Binding SelectedClassIndex}"/>
+      </DockPanel>
+
+      <ScrollViewer Grid.Column="1">
+        <StackPanel Margin="8" Spacing="10">
+          <Grid ColumnDefinitions="152,*">
+            <StackPanel Grid.Column="0" Spacing="4">
+              <Border Width="144" Height="144" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                      Background="{DynamicResource Editor.PanelBg}">
+                <Image Source="{Binding SpritePreview}" Stretch="Uniform" IsVisible="{Binding HasSpritePreview}"/>
+              </Border>
+              <Button Content="{Binding PlayButtonText}" Click="TogglePlay_Click" HorizontalAlignment="Stretch"
+                      IsEnabled="{Binding CanPlayAnimation}" ToolTip.Tip="Play this class's real battle-intro animation."/>
+              <Button Content="Edit Sprite…" Click="EditSprite_Click" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="Paint the sprite the way it actually looks (a full pixel canvas composed from this class's animation cells), pick colors from its real palette, or import a matching PNG."/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="2" Margin="10,0,0,0" VerticalAlignment="Top">
+              <TextBlock Text="Class name"/>
+              <TextBox Text="{Binding ClassName}"/>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Spacing="2" IsVisible="{Binding ShowGender}">
+            <TextBlock Text="Gender" ToolTip.Tip="Used for DV/nature calculations."/>
+            <ComboBox SelectedIndex="{Binding GenderIndex}" HorizontalAlignment="Stretch">
+              <ComboBoxItem>Male</ComboBoxItem>
+              <ComboBoxItem>Female</ComboBoxItem>
+            </ComboBox>
+          </StackPanel>
+
+          <StackPanel Spacing="2" IsVisible="{Binding ShowPrizeMul}">
+            <TextBlock Text="Prize money multiplier"/>
+            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding PrizeMultiplier}"/>
+          </StackPanel>
+
+          <StackPanel Spacing="2" IsEnabled="{Binding MusicEnabled}">
+            <TextBlock Text="Eye contact music [Main]"
+                       ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Not every class has one; disabled means this class never initiates eye-contact battle music."/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+          </StackPanel>
+
+          <StackPanel Spacing="2" IsVisible="{Binding MusicAltEnabled}">
+            <TextBlock Text="Eye contact music [Alt]" ToolTip.Tip="HGSS only: a second eye-contact music slot for this class."/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicAlt}"/>
+          </StackPanel>
+
+          <Button Content="Enable eye-contact music for this class" Click="EnableMusic_Click"
+                  IsVisible="{Binding !MusicEnabled}" IsEnabled="{Binding CanEnableMusic}" HorizontalAlignment="Left"/>
+
+          <Button Content="Save trainer class" Click="Save_Click" HorizontalAlignment="Left"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

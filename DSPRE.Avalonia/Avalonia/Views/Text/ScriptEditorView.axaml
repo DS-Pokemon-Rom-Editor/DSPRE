@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+        x:Class="DSPRE.Avalonia.Views.Text.ScriptEditorView"
+        x:DataType="vm:ScriptEditorViewModel">
+
+  <Design.DataContext>
+    <vm:ScriptEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
+        <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <Button Content="Add" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding IsEditable}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="Import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Find in File" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <TextBlock Text="Theme:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
+        <ComboBox Width="150" ItemsSource="{Binding EditorThemeNames}" SelectedIndex="{Binding SelectedEditorThemeIndex}"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+    </Border>
+
+    <Border DockPanel.Dock="Right" Width="320" Background="{DynamicResource Editor.PanelBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" Padding="8">
+      <TabControl SelectedIndex="{Binding SelectedSidebarTabIndex}">
+        <TabItem Header="Search">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Spacing="5">
+              <TextBox Text="{Binding SearchText}" PlaceholderText="Search scripts..." KeyDown="ProjectSearch_KeyDown"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Search" Click="ProjectSearch_Click" Width="90" IsEnabled="{Binding CanSearchProject}"/>
+                <CheckBox Content="Fuzzy" IsChecked="{Binding SearchFuzzy}" VerticalAlignment="Center"/>
+              </StackPanel>
+              <TextBlock Text="{Binding SearchStatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <ListBox x:Name="ProjectSearchResultsList"
+                     ItemsSource="{Binding SearchResults}"
+                     SelectedItem="{Binding SelectedSearchResult}"
+                     DoubleTapped="ProjectSearchResult_DoubleTapped"
+                     KeyDown="ProjectSearchResult_KeyDown"
+                     Margin="0,6,0,0">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScriptSearchResult">
+                  <StackPanel Margin="0,2">
+                    <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Text="{Binding Preview}" FontFamily="monospace"
+                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Diagnostics">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Spacing="5">
+              <TextBlock Text="{Binding DiagnosticsStatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+              <Button Content="Clear" Click="ClearDiagnostics_Click" Width="90" IsEnabled="{Binding HasDiagnostics}"/>
+            </StackPanel>
+
+            <ListBox x:Name="DiagnosticsList"
+                     ItemsSource="{Binding Diagnostics}"
+                     SelectedItem="{Binding SelectedDiagnostic}"
+                     DoubleTapped="Diagnostic_DoubleTapped"
+                     KeyDown="Diagnostic_KeyDown"
+                     Margin="0,6,0,0">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScriptDiagnostic">
+                  <StackPanel Margin="0,3">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{Binding Severity}" FontWeight="Bold" FontSize="12"/>
+                      <TextBlock Text="{Binding Kind}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Preview}" FontFamily="monospace"
+                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </TabItem>
+      </TabControl>
+    </Border>
+
+    <ae:TextEditor x:Name="RotomEditor"
+                   Margin="4"
+                   ShowLineNumbers="True"
+                   FontFamily="monospace"
+                   FontSize="13"
+                   HorizontalScrollBarVisibility="Auto"
+                   VerticalScrollBarVisibility="Auto"/>
+  </DockPanel>
+</UserControl>

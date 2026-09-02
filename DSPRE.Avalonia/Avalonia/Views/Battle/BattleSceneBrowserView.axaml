@@ -1,0 +1,97 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
+        xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
+        x:Class="DSPRE.Avalonia.Views.Battle.BattleSceneBrowserView"
+        x:DataType="vm:BattleSceneBrowserViewModel"
+        Title="Battle scenes"
+        Width="920" Height="680" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:BattleSceneBrowserViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding FoundSummary}" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="300,6,*" Margin="6">
+
+      <ListBox Grid.Column="0" ItemsSource="{Binding Scenes}" SelectedItem="{Binding Selected}"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="data:BattleScenes+Scene">
+            <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="12"
+                       TextWrapping="Wrap"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <GridSplitter Grid.Column="1" Width="6" Background="Transparent"/>
+
+      <DockPanel Grid.Column="2">
+
+        <Border DockPanel.Dock="Top" Padding="0,0,0,8">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Details}" FontSize="13" TextWrapping="Wrap"/>
+
+            <WrapPanel Classes="toolbar" Orientation="Horizontal">
+              <TextBlock Text="Ground" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+              <ComboBox ItemsSource="{Binding Terrains}" SelectedIndex="{Binding TerrainIndex, Mode=TwoWay}"
+                        FontSize="12" Margin="0,0,12,0"
+                        ToolTip.Tip="What the Pokemon stand on. This comes from the tile you are standing on rather than from the place's header, so it is a choice here."/>
+              <TextBlock Text="Time" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+              <ComboBox ItemsSource="{Binding TimesOfDay}" SelectedIndex="{Binding TimeOfDay, Mode=TwoWay}"
+                        FontSize="12"
+                        ToolTip.Tip="Each set of scenery is painted three ways, for day, evening and night."/>
+            </WrapPanel>
+
+            <WrapPanel Classes="toolbar" Orientation="Horizontal">
+              <Button Content="Paint the drawing…" Click="EditDrawing_Click"
+                      ToolTip.Tip="Open this scenery's drawing in the Graphics window, where it can be painted by hand."/>
+              <Button Content="Change the colours…" Click="EditColours_Click"
+                      ToolTip.Tip="Open the set of colours this scenery uses at the time of day showing."/>
+            </WrapPanel>
+
+            <Expander Header="{Binding PlacesHeader}" IsVisible="{Binding HasPlaces}" IsExpanded="False">
+              <ScrollViewer MaxHeight="150">
+                <ItemsControl ItemsSource="{Binding Places}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" FontSize="11"
+                                 Foreground="{DynamicResource Editor.Subtle}"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Expander>
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Editor.PanelBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Panel>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding HasPicture}">
+              <Image Source="{Binding Picture}" Stretch="None"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     RenderOptions.BitmapInterpolationMode="None" Margin="12"/>
+            </ScrollViewer>
+            <TextBlock Text="{Binding Whynot}" IsVisible="{Binding HasNoPicture}"
+                       TextWrapping="Wrap" MaxWidth="420" FontSize="13" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+          </Panel>
+        </Border>
+
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

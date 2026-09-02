@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DSPRE.Avalonia.ViewModels.World"
+        x:Class="DSPRE.Avalonia.Views.World.HeaderSearchView"
+        x:DataType="vm:HeaderSearchViewModel"
+        Title="Advanced Header Search"
+        Width="560" Height="480"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:HeaderSearchViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <StackPanel DockPanel.Dock="Top" Spacing="6">
+      <Grid ColumnDefinitions="*,*" >
+        <ComboBox Grid.Column="0" Margin="0,0,4,0" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding Fields}" SelectedIndex="{Binding FieldIndex}"/>
+        <ComboBox Grid.Column="1" Margin="4,0,0,0" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
+      </Grid>
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBox Grid.Column="0" Text="{Binding ValueText}" PlaceholderText="Value to search…" x:Name="ValueBox"/>
+        <CheckBox Grid.Column="1" Margin="8,0" Content="Auto" IsChecked="{Binding AutoSearch}"
+                  ToolTip.Tip="Search as you type"/>
+        <Button Grid.Column="2" Content="Search" Click="Search_Click"/>
+      </Grid>
+    </StackPanel>
+
+    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Opacity="0.7"
+               Text="Double-click a result to open it in the Header Editor."/>
+
+    <ListBox Margin="0,8,0,0"
+             ItemsSource="{Binding Results}"
+             SelectedIndex="{Binding SelectedResultIndex}"
+             DoubleTapped="Result_DoubleTapped"/>
+  </DockPanel>
+</Window>

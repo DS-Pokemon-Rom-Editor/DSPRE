@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DSPRE.Avalonia.ViewModels.Shell"
+        x:Class="DSPRE.Avalonia.Views.Shell.WelcomeView"
+        x:DataType="vm:WelcomeViewModel"
+        Title="Welcome to DSPRE"
+        Width="720" Height="480" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:WelcomeViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="14">
+
+    <!-- Footer: startup toggle + close -->
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+      <Button DockPanel.Dock="Right" Content="Close" MinWidth="90" Click="Close_Click"/>
+      <CheckBox Content="Show this window at startup" IsChecked="{Binding ShowAtStartup}"/>
+    </DockPanel>
+
+    <Grid ColumnDefinitions="290,14,*">
+
+      <!-- Left: quick actions + recents -->
+      <DockPanel Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="Get started" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <Button Content="Open ROM (.nds)…" HorizontalAlignment="Stretch" Click="OpenRom_Click"/>
+          <Button Content="Open extracted folder…" HorizontalAlignment="Stretch" Click="OpenFolder_Click"/>
+          <Button Content="Link hg-engine folder…" HorizontalAlignment="Stretch" Click="LinkHgEngine_Click"
+                  ToolTip.Tip="Link a WSL hg-engine checkout so Species/Trainers/Items/Moves/Encounters editors read and write its source"/>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="Recent projects" FontWeight="Bold" Margin="0,14,0,6"/>
+        <Panel>
+          <ListBox x:Name="RecentList" ItemsSource="{Binding RecentProjects}"
+                   IsVisible="{Binding HasRecents}"
+                   DoubleTapped="Recent_DoubleTapped"
+                   ToolTip.Tip="Double-click to open"/>
+          <TextBlock Text="Nothing here yet. Projects you open will show up here for quick access."
+                     IsVisible="{Binding !HasRecents}" Opacity="0.7" TextWrapping="Wrap"/>
+        </Panel>
+      </DockPanel>
+
+      <!-- Right: paged tutorial -->
+      <Border Grid.Column="2" Background="{DynamicResource Editor.PanelBg}"
+              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+              CornerRadius="6" Padding="16">
+        <DockPanel>
+          <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <Button DockPanel.Dock="Left" Content="← Back" MinWidth="80" Click="Back_Click"
+                    IsEnabled="{Binding CanGoBack}"/>
+            <Button DockPanel.Dock="Right" Content="Next →" MinWidth="80" Click="Next_Click"
+                    IsEnabled="{Binding CanGoNext}"/>
+            <TextBlock Text="{Binding PageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
+          </DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{Binding PageTitle}" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
+          <ScrollViewer>
+            <TextBlock Text="{Binding PageBody}" TextWrapping="Wrap" LineHeight="22"/>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

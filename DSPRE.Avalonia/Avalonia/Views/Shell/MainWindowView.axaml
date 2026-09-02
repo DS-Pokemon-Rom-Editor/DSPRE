@@ -1,0 +1,234 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.World"
+        x:Class="DSPRE.Avalonia.Views.Shell.MainWindowView"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1440" Height="860" MinWidth="1080" MinHeight="640"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:MainWindowViewModel/>
+  </Design.DataContext>
+
+  <Panel>
+  <DockPanel>
+
+    <!-- ── Menu bar (game icon from the loaded ROM's banner docked at the right) ── -->
+    <DockPanel DockPanel.Dock="Top">
+      <Image x:Name="GameIconImage" DockPanel.Dock="Right" Width="28" Height="28" Margin="4,2,10,2"
+             IsVisible="False" RenderOptions.BitmapInterpolationMode="None"
+             DoubleTapped="GameIcon_DoubleTapped"/>
+      <Menu>
+      <MenuItem Header="_File" x:Name="FileMenu">
+        <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
+        <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
+        <MenuItem Header="Open _Recent" x:Name="RecentMenu">
+          <MenuItem Header="(no recent projects)" IsEnabled="False"/>
+        </MenuItem>
+        <Separator/>
+        <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <Separator/>
+        <MenuItem Header="Link hg-engine checkout…" Click="LinkHgEngine_Click" IsEnabled="{Binding Beta[HgEngineLinkView]}"
+                  ToolTip.Tip="Edit Species/Trainers/Items/Moves/Encounters straight from a linked hg-engine WSL checkout's source"/>
+        <MenuItem Header="Compile ROM…" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
+                  ToolTip.Tip="Runs the linked hg-engine checkout's real `make` build (data domains + ASM hooks) and produces test.nds"/>
+        <Separator/>
+        <MenuItem Header="Close" Click="Close_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}"/>
+        <MenuItem Header="Form Editor (hg-engine)…" Click="HgEngineFormEditor_Click" IsEnabled="{Binding CanUseHgEngineFormEditor}"
+                  ToolTip.Tip="Which form species (Mega/regional/Gmax/etc.) exist per base Pokémon, from the linked checkout's PokeFormDataTbl.c"/>
+        <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}"/>
+        <MenuItem Header="Move Animations &amp; Battle Scripts…" Click="BattleScriptEditor_Click"
+                  ToolTip.Tip="Edit move animations (WEST) and battle-effect scripts, with a live animation preview" IsEnabled="{Binding Beta[BattleScriptEditorView]}"/>
+        <MenuItem Header="TM Editor…"        Click="TMEditor_Click"/>
+        <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
+        <Separator/>
+        <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
+        <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}" ToolTip.Tip="{Binding BetaNote[StarterEditorView]}"/>
+        <Separator/>
+        <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
+        <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"/>
+        <MenuItem Header="Headbutt Editor…"        Click="HeadbuttEditor_Click" IsEnabled="{Binding CanUseHeadbuttEditor}"
+                  ToolTip.Tip="Wild Pokémon in headbutt-able trees (HGSS)"/>
+        <MenuItem Header="Trophy Garden Editor…"   Click="TrophyGardenEditor_Click" IsEnabled="{Binding CanUseTrophyGardenEditor}"
+                  ToolTip.Tip="The 16-species pool Trophy Garden picks its daily-changing Pokémon from (DP/Platinum)"/>
+      </MenuItem>
+
+      <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Trainer Editor…"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
+        <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BetaNote[TrainerSpriteEditorView]}"/>
+        <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}"
+                  ToolTip.Tip="Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer"/>
+        <MenuItem Header="Trainer Flag Bulk Editor…" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
+                  ToolTip.Tip="Bulk-edit AI flags and the double-battle flag across many trainers at once"/>
+        <MenuItem Header="Battle Tower Editor…" Click="BattleTowerEditor_Click" IsEnabled="{Binding CanUseBattleTowerEditor}"
+                  ToolTip.Tip="Battle Tower trainer roster + the shared pool of rental Pokémon sets"/>
+      </MenuItem>
+
+      <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Item Editor…" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
+                  ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
+        <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)…" Click="ItemTableEditor_Click"
+                  ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops" IsEnabled="{Binding Beta[ItemTableEditorView]}"/>
+      </MenuItem>
+
+      <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
+        <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
+        <MenuItem Header="Level Script Editor…" Click="LevelScriptEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
+        <MenuItem Header="Camera Editor…"          Click="CameraEditor_Click" IsEnabled="{Binding Beta[CameraEditorView]}" ToolTip.Tip="{Binding BetaNote[CameraEditorView]}"/>
+        <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
+        <MenuItem Header="Building Editor…"        Click="BuildingEditor_Click"/>
+        <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
+        <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
+        <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click" IsEnabled="{Binding Beta[FlyEditorView]}" ToolTip.Tip="{Binding BetaNote[FlyEditorView]}"/>
+        <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click" IsEnabled="{Binding Beta[OverlayEditorView]}" ToolTip.Tip="{Binding BetaNote[OverlayEditorView]}"/>
+        <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
+        <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click" IsEnabled="{Binding Beta[SpawnEditorView]}" ToolTip.Tip="{Binding BetaNote[SpawnEditorView]}"/>
+        <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click" IsEnabled="{Binding Beta[HeaderSearchView]}" ToolTip.Tip="{Binding BetaNote[HeaderSearchView]}"/>
+      </MenuItem>
+
+      <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="All graphics…" Click="GraphicsBrowser_Click"/>
+        <MenuItem Header="All models and textures…" Click="ModelBrowser_Click"/>
+        <MenuItem Header="Battle scenes…" Click="BattleSceneBrowser_Click" IsEnabled="{Binding Beta[BattleSceneBrowserView]}" ToolTip.Tip="{Binding BetaNote[BattleSceneBrowserView]}"/>
+        <MenuItem Header="Battle screen…" Click="BattleScreen_Click"
+                  ToolTip.Tip="Both screens of a battle, drawn from this ROM, with every piece editable" IsEnabled="{Binding Beta[BattleScreenEditorView]}"/>
+        <MenuItem Header="Picture to Background…" Click="TilesetBuilder_Click"
+                  ToolTip.Tip="Turn a PNG into the colours, tiles and arrangement a background is drawn from" IsEnabled="{Binding Beta[TilesetBuilderView]}"/>
+        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding BetaNote[TitleScreenEditorView]}"/>
+        <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding BetaNote[DungeonCutinEditorView]}"/>
+        <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding BetaNote[TrainerCardEditorView]}"/>
+        <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
+        <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
+      </MenuItem>
+
+      <MenuItem Header="_Audio" x:Name="AudioMenu" IsEnabled="{Binding IsRomLoaded}">
+        <MenuItem Header="Audio Editor…" Click="AudioEditor_Click" IsEnabled="{Binding Beta[AudioEditorView]}" ToolTip.Tip="{Binding BetaNote[AudioEditorView]}"/>
+      </MenuItem>
+
+      <MenuItem Header="_Tools" x:Name="ToolsMenu">
+        <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P"
+                  ToolTip.Tip="Quick-open: jump to any editor by name"/>
+        <Separator/>
+        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click" IsEnabled="{Binding Beta[AddressHelperView]}" ToolTip.Tip="{Binding BetaNote[AddressHelperView]}"/>
+        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding Beta[ResearchHelperView]}" ToolTip.Tip="{Binding BetaNote[ResearchHelperView]}"/>
+        <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click" IsEnabled="{Binding Beta[CharMapManagerView]}" ToolTip.Tip="{Binding BetaNote[CharMapManagerView]}"/>
+        <MenuItem Header="Font Editor…" Click="FontEditor_Click" IsEnabled="{Binding Beta[FontEditorView]}"
+                  ToolTip.Tip="The letters this ROM writes with, and what a sentence looks like in them"/>
+        <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding Beta[ProjectChecksView]}"
+                  ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
+        <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods), per project or global"/>
+        <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click" IsEnabled="{Binding Beta[PatchToolboxView]}"
+                  ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
+        <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding Beta[CustomScrcmdManagerView]}"
+                  ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
+        <MenuItem Header="Music &amp; Battle Tables…" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
+                  ToolTip.Tip="Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)"/>
+        <MenuItem Header="Game Icon &amp; Banner…" Click="BannerEditor_Click" IsEnabled="{Binding Beta[BannerEditorView]}"
+                  ToolTip.Tip="Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)"/>
+        <Separator/>
+        <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON"/>
+        <MenuItem Header="Generate Trainer Usage CSV…" Click="TrainerUsageCsv_Click" IsEnabled="{Binding IsRomLoaded}"
+                  ToolTip.Tip="Which Pokémon each trainer class uses, with counts"/>
+        <Separator/>
+        <MenuItem Header="NARC Utility">
+          <MenuItem Header="Unpack NARC to Folder…" Click="NarcUnpack_Click"/>
+          <MenuItem Header="Pack Folder to NARC…" Click="NarcPack_Click"/>
+        </MenuItem>
+        <MenuItem Header="NSBMD Utility">
+          <MenuItem Header="Add/Replace NSBMD textures…" Click="NsbmdAddTex_Click"/>
+          <MenuItem Header="Remove textures from NSBMD…" Click="NsbmdRemoveTex_Click"/>
+          <MenuItem Header="Save textures from NSBMD…" Click="NsbmdSaveTex_Click"/>
+        </MenuItem>
+        <Separator/>
+        <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"
+                  ToolTip.Tip="Also in Settings, where the choice is listed with the other appearance options"/>
+        <MenuItem Header="3D Model Viewer…" Click="GlTest_Click"/>
+        <MenuItem Header="Welcome &amp; Tutorial…" Click="Welcome_Click"/>
+        <MenuItem Header="Guided Tour" Click="GuidedTour_Click"
+                  ToolTip.Tip="Replay the walkthrough of the main window and editor menus"/>
+        <MenuItem Header="Settings…" Click="Settings_Click"/>
+      </MenuItem>
+      </Menu>
+    </DockPanel>
+
+    <!-- ── Status bar ─────────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <Grid ColumnDefinitions="*,12,Auto">
+        <TextBlock Grid.Column="0" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+                   VerticalAlignment="Center" Text="{Binding StatusText}"/>
+        <!-- Why a good few menu entries are greyed out, said once rather than on each of them. -->
+        <TextBlock Grid.Column="2" FontSize="12" VerticalAlignment="Center"
+                   Foreground="{DynamicResource Editor.Subtle}"
+                   IsVisible="{Binding HasBetaNotice}" Text="{Binding BetaNotice}"/>
+      </Grid>
+    </Border>
+
+    <!-- ── Main editing surface: the Maps workspace (other editors open from the menu),
+         with a busy overlay while a ROM is being opened/unpacked. ── -->
+    <Panel>
+      <views:MapsWorkspaceView x:Name="Maps" DataContext="{Binding HeaderVM}"/>
+
+      <!-- Pre-ROM empty state: quick actions instead of a dead grey workspace
+           (matters when the Welcome window is disabled). -->
+      <Border IsVisible="{Binding !IsRomLoaded}" Background="{DynamicResource Editor.PanelBg}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="440">
+          <TextBlock Text="No ROM loaded" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+          <TextBlock Text="Open a game to start editing. Your edits go to a project folder next to the ROM; the original file is never touched."
+                     TextWrapping="Wrap" TextAlignment="Center" Opacity="0.75"/>
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Button Content="Open ROM (.nds)…" Click="OpenRom_Click"/>
+            <Button Content="Open extracted folder…" Click="OpenFolder_Click"/>
+          </StackPanel>
+          <StackPanel IsVisible="{Binding HasRecents}" Spacing="2">
+            <TextBlock Text="Recent projects" FontWeight="SemiBold" Margin="0,10,0,2"/>
+            <ItemsControl ItemsSource="{Binding RecentProjects}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <!-- TextBlock content so "_" in paths isn't eaten as an access-key marker -->
+                  <Button Click="RecentQuick_Click" Margin="0,2,0,0"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                          ToolTip.Tip="{Binding}">
+                    <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <TextBlock Text="Tip: press Ctrl+P anytime to jump to any editor by name."
+                     FontSize="12" Opacity="0.6" TextAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <Border IsVisible="{Binding IsBusy}"
+              Background="#A0000000" ZIndex="100">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="320">
+          <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center"/>
+          <ProgressBar IsIndeterminate="True"/>
+          <TextBlock Text="{Binding BusyHint}"
+                     FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </Panel>
+
+  </DockPanel>
+
+  <!-- ── Guided-tour layer: covers the whole window (menu bar included) so the tour can
+       spotlight any control. Populated and shown by GuidedTour; empty and hidden otherwise. ── -->
+  <Canvas x:Name="TourLayer" IsVisible="False" ZIndex="200" Background="{x:Null}"/>
+  </Panel>
+</Window>

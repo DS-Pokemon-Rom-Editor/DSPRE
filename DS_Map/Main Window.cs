@@ -1509,7 +1509,7 @@ namespace DSPRE
             // DSPRE script editors are not usable.
             if (RomInfo.hasRotomProject)
             {
-                AppLogger.Info("Rotom project detected — disabling DSPRE script editors.");
+                AppLogger.Info("Rotom project detected, disabling DSPRE script editors.");
                 EditorPanels.scriptEditorTabPage.Parent = null;
                 EditorPanels.levelScriptEditorTabPage.Parent = null;
             }
@@ -1754,8 +1754,8 @@ namespace DSPRE
 
             matrixEditor.SetupMatrixEditor(this);
 
-            new DSPRE.Avalonia.Views.SpawnEditorView(
-                new DSPRE.Avalonia.ViewModels.SpawnEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).Show();
+            new DSPRE.Avalonia.Views.World.SpawnEditorView(
+                new DSPRE.Avalonia.ViewModels.World.SpawnEditorViewModel(EditorPanels.headerEditor.headerListBoxNames)).Show();
         }
 
         private void wildEditorButton_Click(object sender, EventArgs e)
@@ -1779,20 +1779,20 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                 case GameFamilies.Plat:
-                    var vmDppt = new DSPRE.Avalonia.ViewModels.WildEditorDPPtViewModel(
+                    var vmDppt = new DSPRE.Avalonia.ViewModels.Pokemon.WildEditorDPPtViewModel(
                         wildPokeUnpackedPath, RomInfo.GetPokemonNames(),
                         encToOpen, EditorPanels.headerEditor.internalNames.Count);
-                    var windowDppt = new DSPRE.Avalonia.Views.EditorHostWindow(
-                        "Wild Pokémon Editor (DPPt)", new DSPRE.Avalonia.Views.WildEditorDPPtView(vmDppt), 900, 680);
+                    var windowDppt = new DSPRE.Avalonia.Views.Shell.EditorHostWindow(
+                        "Wild Pokémon Editor (DPPt)", new DSPRE.Avalonia.Views.Pokemon.WildEditorDPPtView(vmDppt), 900, 680);
                     windowDppt.Closed += (_, _) => vmDppt.Detach();
                     DSPRE.Avalonia.WindowPlacement.ShowManaged(windowDppt);
                     break;
                 default:
-                    var vmHgss = new DSPRE.Avalonia.ViewModels.WildEditorHGSSViewModel(
+                    var vmHgss = new DSPRE.Avalonia.ViewModels.Pokemon.WildEditorHGSSViewModel(
                         wildPokeUnpackedPath, RomInfo.GetPokemonNames(),
                         encToOpen, EditorPanels.headerEditor.internalNames.Count);
-                    var windowHgss = new DSPRE.Avalonia.Views.EditorHostWindow(
-                        "Wild Pokémon Editor (HGSS)", new DSPRE.Avalonia.Views.WildEditorHGSSView(vmHgss), 900, 680);
+                    var windowHgss = new DSPRE.Avalonia.Views.Shell.EditorHostWindow(
+                        "Wild Pokémon Editor (HGSS)", new DSPRE.Avalonia.Views.Pokemon.WildEditorHGSSView(vmHgss), 900, 680);
                     windowHgss.Closed += (_, _) => vmHgss.Detach();
                     DSPRE.Avalonia.WindowPlacement.ShowManaged(windowHgss);
                     break;
@@ -1990,7 +1990,7 @@ namespace DSPRE
 
         private void addressHelperToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.AddressHelperView().Show();
+            new DSPRE.Avalonia.Views.Tools.AddressHelperView().Show();
         }
 
 
@@ -2000,7 +2000,7 @@ namespace DSPRE
             RomInfo.SetOWtable();
             RomInfo.Set3DOverworldsDict();
             RomInfo.ReadOWTable();
-            new DSPRE.Avalonia.Views.BtxEditorView(new DSPRE.Avalonia.ViewModels.BtxEditorViewModel(true)).Show();
+            new DSPRE.Avalonia.Views.Graphics.BtxEditorView(new DSPRE.Avalonia.ViewModels.Graphics.BtxEditorViewModel(true)).Show();
         }
 
         private void exportDocsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2042,13 +2042,13 @@ namespace DSPRE
 
         private void flyWarpEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).Show();
+            new DSPRE.Avalonia.Views.World.FlyEditorView(EditorPanels.headerEditor.headerListBoxNames).Show();
         }
 
         private void tradeEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData });
-            new DSPRE.Avalonia.Views.TradeEditorView().Show();
+            new DSPRE.Avalonia.Views.Pokemon.TradeEditorView().Show();
         }
 
         private void itemEditorToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2059,8 +2059,8 @@ namespace DSPRE
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
 
-            var itemVM = new DSPRE.Avalonia.ViewModels.ItemEditorViewModel(RomInfo.GetItemNames());
-            new DSPRE.Avalonia.Views.ItemEditorView(itemVM).Show();
+            var itemVM = new DSPRE.Avalonia.ViewModels.Items.ItemEditorViewModel(RomInfo.GetItemNames());
+            new DSPRE.Avalonia.Views.Items.ItemEditorView(itemVM).Show();
 
             Helpers.statusLabelMessage();
             Update();
@@ -2092,8 +2092,8 @@ namespace DSPRE
                 return;
             }
 
-            var itemTableVM = new DSPRE.Avalonia.ViewModels.ItemTableEditorViewModel(RomInfo.GetItemNames());
-            new DSPRE.Avalonia.Views.ItemTableEditorView(itemTableVM).Show();
+            var itemTableVM = new DSPRE.Avalonia.ViewModels.Items.ItemTableEditorViewModel(RomInfo.GetItemNames());
+            new DSPRE.Avalonia.Views.Items.ItemTableEditorView(itemTableVM).Show();
 
             Helpers.statusLabelMessage();
             Update();
@@ -2275,7 +2275,7 @@ namespace DSPRE
         {
             Helpers.statusLabelMessage("Setting up Overlay Editor...");
             Update();
-            new DSPRE.Avalonia.Views.OverlayEditorView().Show();
+            new DSPRE.Avalonia.Views.World.OverlayEditorView().Show();
             Helpers.statusLabelMessage();
             Update();
         }
@@ -2287,7 +2287,7 @@ namespace DSPRE
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
 
-            new DSPRE.Avalonia.Views.MoveDataEditorView().Show();
+            new DSPRE.Avalonia.Views.Pokemon.MoveDataEditorView().Show();
 
             Helpers.statusLabelMessage();
             Update();
@@ -2295,7 +2295,7 @@ namespace DSPRE
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.SettingsWindowView().Show();
+            new DSPRE.Avalonia.Views.Shell.SettingsWindowView().Show();
         }
 
         private void pokemonEditorToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2312,8 +2312,8 @@ namespace DSPRE
             string[] fullList = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
             string[] moveNames = RomInfo.GetAttackNames();
 
-            var vm = new DSPRE.Avalonia.ViewModels.PokemonEditorViewModel(fullList, moveNames, initialMon: 1);
-            var view = new DSPRE.Avalonia.Views.PokemonEditorView(vm);
+            var vm = new DSPRE.Avalonia.ViewModels.Pokemon.PokemonEditorViewModel(fullList, moveNames, initialMon: 1);
+            var view = new DSPRE.Avalonia.Views.Pokemon.PokemonEditorView(vm);
 
             Helpers.statusLabelMessage();
             Update();
@@ -2322,32 +2322,32 @@ namespace DSPRE
 
         private void tMEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var tmEditorView = new DSPRE.Avalonia.Views.TMEditorView();
+            var tmEditorView = new DSPRE.Avalonia.Views.Pokemon.TMEditorView();
             tmEditorView.Show();
         }
 
         private void openCharmapManagerToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.CharMapManagerView().Show();
+            new DSPRE.Avalonia.Views.Text.CharMapManagerView().Show();
         }
 
         private void eggMoveEditorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.EggMoveEditorView().Show();
+            new DSPRE.Avalonia.Views.Pokemon.EggMoveEditorView().Show();
         }
 
         private void researchHelperToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new DSPRE.Avalonia.Views.ResearchHelperView(
-                new DSPRE.Avalonia.ViewModels.ResearchHelperViewModel(true)).Show();
+            new DSPRE.Avalonia.Views.Tools.ResearchHelperView(
+                new DSPRE.Avalonia.ViewModels.Tools.ResearchHelperViewModel(true)).Show();
         }
 
         private void avaloniaMainWindowToolStripMenuItem_Click(object sender, EventArgs e)
         {
             // Preview of the in-progress Avalonia main-window shell. Hosts migrated
             // editors as tabs and launches the rest from its own menu.
-            var vm = new DSPRE.Avalonia.ViewModels.MainWindowViewModel(runtime: true);
-            new DSPRE.Avalonia.Views.MainWindowView(vm).Show();
+            var vm = new DSPRE.Avalonia.ViewModels.Shell.MainWindowViewModel(runtime: true);
+            new DSPRE.Avalonia.Views.Shell.MainWindowView(vm).Show();
         }
 
         #endregion

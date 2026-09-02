@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        x:Class="DSPRE.Avalonia.Views.Trainers.VsSeekerRematchView"
+        x:DataType="vm:VsSeekerRematchViewModel">
+
+  <Design.DataContext>
+    <vm:VsSeekerRematchViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save Row" Click="SaveRow_Click" IsEnabled="{Binding IsRowSelected}"/>
+        <Button Content="Save All" Click="SaveAll_Click"/>
+        <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="trainer name…"/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="280,*">
+      <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding RowLabels}"
+               SelectedIndex="{Binding SelectedRowListIndex}"/>
+
+      <ScrollViewer Grid.Column="1">
+        <StackPanel Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
+          <TextBlock Text="Encounter Trainer" FontWeight="Bold"/>
+          <ComboBox ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding EncounterIndex}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch A" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchA}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch B" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchB}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch C" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchC}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch D" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchD}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch E" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchE}" HorizontalAlignment="Stretch"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+		x:Class="DSPRE.Avalonia.Views.World.OverlayEditorView"
+		x:DataType="vm:OverlayEditorViewModel"
+		Title="{Binding Title}"
+		Width="620" Height="500"
+		WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:OverlayEditorViewModel/>
+  </Design.DataContext>
+
+
+  <DockPanel Margin="10" LastChildFill="True">
+
+	<!-- ds-rom info banner (only visible when IsDsRomProject) -->
+	<Border DockPanel.Dock="Top"
+			IsVisible="{Binding IsDsRomProject}"
+			Background="#FFFFE1" BorderBrush="Orange" BorderThickness="1"
+			Padding="10" Margin="0,0,0,8">
+	  <!-- The panel is a fixed pale yellow, so its text has to be a fixed dark colour too. Letting it
+	       take the theme's foreground made it near-white on near-white in the dark theme. -->
+	  <StackPanel Spacing="4">
+		<TextBlock Text="Read only: ds-rom handles the compression" FontWeight="Bold" Foreground="#3A2E00"/>
+		<TextBlock TextWrapping="Wrap" Foreground="#4A3B00"
+				   Text="Overlays are kept uncompressed on disk so they can be edited. Marked Compressed shows which ones are compressed again when you save the ROM. That choice lives in overlays.yaml and cannot be changed here."/>
+	  </StackPanel>
+	</Border>
+
+	<!-- Button row -->
+	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
+				HorizontalAlignment="Right" Margin="0,8,0,0">
+	  <Button Content="Decompress All"         IsEnabled="{Binding IsNotDsRomProject}" Click="DecompressAll_Click"/>
+	  <Button Content="Toggle Marked"          IsEnabled="{Binding IsNotDsRomProject}" Click="ToggleMarked_Click"/>
+	  <Button Content="Revert"                 IsEnabled="{Binding IsNotDsRomProject}" Click="Revert_Click"/>
+	  <Button Content="Save Changes"           IsEnabled="{Binding SaveEnabled}"       Click="Save_Click"/>
+	</StackPanel>
+
+	<!-- Data grid -->
+	<DataGrid ItemsSource="{Binding Overlays}"
+			  IsReadOnly="{Binding IsDsRomProject}"
+			  CanUserReorderColumns="False"
+			  CanUserResizeColumns="False"
+			  CanUserSortColumns="False"
+			  GridLinesVisibility="All"
+			  SelectionMode="Single">
+	  <DataGrid.Columns>
+		<DataGridTextColumn   Header="Overlay ID"           Binding="{Binding Number}"              IsReadOnly="True"  Width="80"/>
+		<DataGridTemplateColumn Header="Compressed"         Width="90">
+		  <DataGridTemplateColumn.CellTemplate>
+			<DataTemplate x:DataType="vm:OverlayRow">
+			  <Border Background="{Binding MismatchBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+				<CheckBox IsChecked="{Binding IsCompressed}" HorizontalAlignment="Center" VerticalAlignment="Center"
+						  IsEnabled="{Binding $parent[Window].((vm:OverlayEditorViewModel)DataContext).IsNotDsRomProject}"/>
+			  </Border>
+			</DataTemplate>
+		  </DataGridTemplateColumn.CellTemplate>
+		</DataGridTemplateColumn>
+		<DataGridTemplateColumn Header="Marked Compressed"  Width="130">
+		  <DataGridTemplateColumn.CellTemplate>
+			<DataTemplate x:DataType="vm:OverlayRow">
+			  <Border Background="{Binding MismatchBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+				<CheckBox IsChecked="{Binding IsMarkedCompressed}" HorizontalAlignment="Center" VerticalAlignment="Center"
+						  IsEnabled="{Binding $parent[Window].((vm:OverlayEditorViewModel)DataContext).IsNotDsRomProject}"/>
+			  </Border>
+			</DataTemplate>
+		  </DataGridTemplateColumn.CellTemplate>
+		</DataGridTemplateColumn>
+		<DataGridTextColumn   Header="RAM Address"          Binding="{Binding RAMAddressHex}"       IsReadOnly="True"  Width="110"/>
+		<DataGridTextColumn   Header="Uncompressed Size"    Binding="{Binding UncompressedSize}"    IsReadOnly="True"  Width="130"/>
+	  </DataGrid.Columns>
+	</DataGrid>
+
+  </DockPanel>
+</Window>

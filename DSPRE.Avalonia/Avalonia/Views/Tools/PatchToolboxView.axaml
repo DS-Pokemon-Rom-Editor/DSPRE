@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.PatchToolboxView"
+        x:DataType="vm:PatchToolboxViewModel"
+        Title="ROM Patch Toolbox"
+        Width="640" Height="600" MinWidth="520" MinHeight="360"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:PatchToolboxViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="0">
+
+    <!-- ── Caution banner ─────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="12,8">
+      <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </Border>
+
+    <!-- ── Patch list ─────────────────────────────────────────────────── -->
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Patches}" Margin="8">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PatchRowViewModel">
+            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6"
+                    Padding="12,10" Margin="0,0,0,8">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="3">
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                  <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold"
+                             Foreground="{Binding StatusBrush}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="{Binding ButtonText}" MinWidth="96" Height="32"
+                        VerticalAlignment="Center" Margin="12,0,0,0"
+                        IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>

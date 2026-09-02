@@ -1,0 +1,185 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.World"
+        xmlns:viewstext="clr-namespace:DSPRE.Avalonia.Views.Text"
+        xmlns:ava="clr-namespace:DSPRE.Avalonia"
+        x:Class="DSPRE.Avalonia.Views.World.MapsWorkspaceView"
+        x:DataType="vm:HeaderEditorViewModel"
+        x:Name="MapsRoot">
+  <!-- Porymap-like Maps workspace over a HeaderEditorViewModel: the shared header sidebar drives a
+       context strip + map-bound tabs. Every tab is embedded and follows the selected header's linked
+       file id (see code-behind's RetargetXxx methods). -->
+  <Design.DataContext>
+    <vm:HeaderEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="Border.chip">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Padding" Value="7,2"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="Background" Value="{DynamicResource Editor.PanelBg}"/>
+    </Style>
+    <Style Selector="Border.chip TextBlock.k">
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+    <Style Selector="StackPanel.placeholder">
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Spacing" Value="12"/>
+      <Setter Property="MaxWidth" Value="460"/>
+    </Style>
+    <Style Selector="StackPanel.placeholder > TextBlock.title">
+      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid ColumnDefinitions="230,*">
+      <views:HeaderSidebarView Grid.Column="0" Margin="4" x:Name="Sidebar"/>
+
+      <DockPanel Grid.Column="1" Margin="0,4,4,4">
+        <!-- Context strip: selected header identity + Save/Reset + linked-file id chips.
+             x:Name is a guided-tour spotlight target. -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3"
+                Padding="10,7" Margin="0,0,0,4" x:Name="ContextStrip">
+          <StackPanel Spacing="7">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" x:Name="SaveResetPanel">
+                <Button Content="💾 Save header" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
+                        ToolTip.Tip="Save just this header's own fields. Each tab (Map, Events, Scripts…) has its own Save button for its own data."/>
+                <Button Content="↺ Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+                <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+                <Button Content="💽 Save ROM…" Click="SaveRom_Click"
+                        ToolTip.Tip="Build a playable .nds from everything saved so far in this project."/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="📍" FontSize="15" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectedHeaderTitle}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectedHeaderSubtitle}" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DockPanel>
+            <WrapPanel>
+              <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Terrain and building set used by this area (textures, models, tile behaviors)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Text archive with the dialogue and signs shown in this area."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Wild Pokémon table for this area (255 means no wild encounters)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon}"/></StackPanel></Border>
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+        <TabControl x:Name="MapTabs">
+          <TabItem ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses." AutomationProperties.Name="Header">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Header}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Header" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <views:HeaderFieldsView/>
+          </TabItem>
+          <TabItem ToolTip.Tip="The 3D terrain and buildings of the selected map." AutomationProperties.Name="Map">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Map}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Map" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <views:MapEditorView x:Name="MapEmbed" DataContext="{Binding #MapsRoot.MapVM}"/>
+          </TabItem>
+          <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
+          <TabItem ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map." AutomationProperties.Name="Events">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Events}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Events" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
+          </TabItem>
+          <TabItem ToolTip.Tip="The grid that stitches individual maps into the seamless world." AutomationProperties.Name="Matrix">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Matrix}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Matrix" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <views:MatrixEditorView x:Name="MatrixEmbed" DataContext="{Binding #MapsRoot.MatrixVM}"/>
+          </TabItem>
+          <TabItem ToolTip.Tip="Which texture and building set this area uses." AutomationProperties.Name="Area Data">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.AreaData}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Area Data" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <views:AreaDataEditorView x:Name="AreaDataEmbed" DataContext="{Binding #MapsRoot.AreaDataVM}"/>
+          </TabItem>
+          <TabItem x:Name="EncountersTab" ToolTip.Tip="Wild Pokémon that appear in this area." AutomationProperties.Name="Encounters">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Encounters}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Encounters" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <StackPanel Classes="placeholder">
+              <TextBlock Classes="title" Text="Wild Encounters"/>
+              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
+                         Text="This header has no wild encounters (255)." IsVisible="{Binding !CanOpenEncounters}"/>
+            </StackPanel>
+          </TabItem>
+          <TabItem ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers." AutomationProperties.Name="Scripts">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Scripts}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Scripts" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <viewstext:ScriptEditorView x:Name="ScriptsEmbed" DataContext="{Binding #MapsRoot.ScriptsVM}"/>
+          </TabItem>
+          <TabItem ToolTip.Tip="Scripts that run automatically when the map loads." AutomationProperties.Name="Level Scripts">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.LevelScripts}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Level Scripts" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <viewstext:LevelScriptEditorView x:Name="LevelScriptsEmbed" DataContext="{Binding #MapsRoot.LevelScriptsVM}"/>
+          </TabItem>
+          <TabItem ToolTip.Tip="Dialogue and signs used by this area." AutomationProperties.Name="Text">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Image Source="{x:Static ava:EditorIcons.Text}" Width="16" Height="16"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="Text" VerticalAlignment="Center"/>
+              </StackPanel>
+            </TabItem.Header>
+            <viewstext:TextEditorView x:Name="TextEmbed" DataContext="{Binding #MapsRoot.TextVM}"/>
+          </TabItem>
+        </TabControl>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

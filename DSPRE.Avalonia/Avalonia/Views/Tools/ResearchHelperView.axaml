@@ -1,0 +1,319 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.ResearchHelperView"
+        x:DataType="vm:ResearchHelperViewModel"
+        Title="Research Helper"
+        Width="900" Height="640"
+        MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:ResearchHelperViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        <ProgressBar Grid.Column="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+                     Width="100" Height="12" Margin="8,0,0,0"/>
+      </Grid>
+    </Border>
+
+    <TabControl Margin="4">
+
+      <!-- ── Tab 1: Scripts ──────────────────────────────────────────────── -->
+      <TabItem Header="Scripts">
+        <DockPanel Margin="4">
+          <TextBlock DockPanel.Dock="Top" Text="All script files and their content counts" Margin="0,0,0,4" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <DataGrid ItemsSource="{Binding ScriptStats}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    CanUserSortColumns="True">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="File ID"   Binding="{Binding ID}"        Width="70"/>
+              <DataGridTextColumn Header="Total"     Binding="{Binding Total}"     Width="70"/>
+              <DataGridTextColumn Header="Scripts"   Binding="{Binding Scripts}"   Width="80"/>
+              <DataGridTextColumn Header="Functions" Binding="{Binding Functions}" Width="90"/>
+              <DataGridTextColumn Header="Actions"   Binding="{Binding Actions}"   Width="80"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Tab 2: Level Scripts ────────────────────────────────────────── -->
+      <TabItem Header="Level Scripts">
+        <DockPanel Margin="4">
+          <TextBlock DockPanel.Dock="Top" Text="Level script files and trigger type counts" Margin="0,0,0,4" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <DataGrid ItemsSource="{Binding LevelScriptStats}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    CanUserSortColumns="True">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="File ID"       Binding="{Binding ID}"           Width="70"/>
+              <DataGridTextColumn Header="Total"         Binding="{Binding Total}"         Width="60"/>
+              <DataGridTextColumn Header="MapChange"     Binding="{Binding MapChange}"     Width="90"/>
+              <DataGridTextColumn Header="ScreenReset"   Binding="{Binding ScreenReset}"   Width="95"/>
+              <DataGridTextColumn Header="LoadGame"      Binding="{Binding LoadGame}"      Width="80"/>
+              <DataGridTextColumn Header="VarValue"      Binding="{Binding VariableValue}" Width="80"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Tab 3: Variable Watcher ────────────────────────────────────── -->
+      <TabItem Header="Variable Watcher">
+        <DockPanel Margin="4">
+          <!-- Search bar -->
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Variable:" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding VarSearchText}" Width="120" PlaceholderText="e.g. 0x4001"/>
+            <RadioButton Content="Dec" IsChecked="{Binding !VarHexMode}" GroupName="varMode"/>
+            <RadioButton Content="Hex" IsChecked="{Binding VarHexMode}"  GroupName="varMode"/>
+            <Button Content="Search"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="VarClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Files containing this variable. Double-click a row to copy ID to clipboard."/>
+          <DataGrid ItemsSource="{Binding VariableResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="VariableGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="File Type"  Binding="{Binding FileType}"  Width="110"/>
+              <DataGridTextColumn Header="File ID"    Binding="{Binding FileID}"    Width="80"/>
+              <DataGridTextColumn Header="Usage Count" Binding="{Binding UsageCount}" Width="100"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Tab 4: Flag Watcher ─────────────────────────────────────────── -->
+      <TabItem Header="Flag Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Flag:" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding FlagSearchText}" Width="120" PlaceholderText="e.g. 0x200"/>
+            <RadioButton Content="Dec" IsChecked="{Binding !FlagHexMode}" GroupName="flagMode"/>
+            <RadioButton Content="Hex" IsChecked="{Binding FlagHexMode}"  GroupName="flagMode"/>
+            <Button Content="Search"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="FlagClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Event overworld flags and script flag operations. Double-click to copy to clipboard."/>
+          <DataGrid ItemsSource="{Binding FlagResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="FlagGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="File Type"   Binding="{Binding FileType}"   Width="90"/>
+              <DataGridTextColumn Header="File ID"     Binding="{Binding FileID}"     Width="70"/>
+              <DataGridTextColumn Header="Details"     Binding="{Binding Details}"    Width="*"/>
+              <DataGridTextColumn Header="Count"       Binding="{Binding UsageCount}" Width="60"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Overworld Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="OW Entry ID:" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding OwEntryIdSearch}" Minimum="0" Maximum="9999" Width="120"/>
+            <Button Content="Search"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="OwClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Which overworld events use a given OW sprite table entry. Double-click to open in the Event Editor."/>
+          <DataGrid ItemsSource="{Binding OwWatcherResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="OwGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Event File" Binding="{Binding EventFileID}"  Width="80"/>
+              <DataGridTextColumn Header="OW Index"   Binding="{Binding OwIndex}"      Width="70"/>
+              <DataGridTextColumn Header="OW ID"      Binding="{Binding OwID}"         Width="60"/>
+              <DataGridTextColumn Header="Position"   Binding="{Binding Position}"     Width="*"/>
+              <DataGridTextColumn Header="Movement"   Binding="{Binding Movement}"     Width="80"/>
+              <DataGridTextColumn Header="Script"     Binding="{Binding ScriptNumber}" Width="70"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Trainer Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
+            <Button Content="Search"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear"     Click="TrainerWatchClear_Click"/>
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                     Text="Where a trainer is referenced: script/function Trainer params, overworld trainer battles, and Vs. Seeker rows. Double-click to open."/>
+          <DataGrid ItemsSource="{Binding TrainerWatcherResults}"
+                    AutoGenerateColumns="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    CanUserResizeColumns="True"
+                    DoubleTapped="TrainerWatchGrid_DoubleTapped">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Source" Binding="{Binding SourceId}" Width="70"/>
+              <DataGridTextColumn Header="Type"   Binding="{Binding Type}"     Width="160"/>
+              <DataGridTextColumn Header="Index"  Binding="{Binding Index}"    Width="60"/>
+              <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ── Tab 5: Script Watcher ──────────────────────────────────────── -->
+      <TabItem Header="Script Watcher">
+        <TabControl>
+
+          <!-- Sub-tab A: File Watcher -->
+          <TabItem Header="File Watcher">
+            <DockPanel Margin="4">
+              <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                <TextBlock Text="Script File ID:" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding FileWatcherScriptFileId}" Minimum="0" Width="90" FormatString="0"/>
+                <Button Content="Search" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+              </StackPanel>
+              <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                         Text="Headers that reference this script file. Double-click to copy to clipboard."/>
+              <DataGrid ItemsSource="{Binding FileWatcherResults}"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        GridLinesVisibility="Horizontal"
+                        CanUserResizeColumns="True"
+                        DoubleTapped="FileWatcherGrid_DoubleTapped">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Reference Type" Binding="{Binding ReferenceType}" Width="120"/>
+                  <DataGridTextColumn Header="ID"             Binding="{Binding ReferenceID}"   Width="80"/>
+                  <DataGridTextColumn Header="Field"          Binding="{Binding Field}"         Width="*"/>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+          </TabItem>
+
+          <!-- Sub-tab B: ID Watcher -->
+          <TabItem Header="ID Watcher">
+            <DockPanel Margin="4">
+              <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                <TextBlock Text="Script File:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding ScriptFileEntries}"
+                          SelectedIndex="{Binding SelectedScriptFileIndex}"
+                          Width="160"/>
+                <TextBlock Text="Script ID:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding ScriptIdEntries}"
+                          SelectedIndex="{Binding SelectedScriptIdIndex}"
+                          Width="120"/>
+                <Button Content="Search" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+              </StackPanel>
+              <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                         Text="Event entities in files associated with this script that call the selected script ID."/>
+              <DataGrid ItemsSource="{Binding ScriptIdResults}"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        GridLinesVisibility="Horizontal"
+                        CanUserResizeColumns="True"
+                        DoubleTapped="IdWatcherGrid_DoubleTapped">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Event File ID" Binding="{Binding EventFileID}" Width="100"/>
+                  <DataGridTextColumn Header="Event Type"    Binding="{Binding EventType}"   Width="90"/>
+                  <DataGridTextColumn Header="Index"         Binding="{Binding EventIndex}"  Width="60"/>
+                  <DataGridTextColumn Header="Details"       Binding="{Binding Details}"     Width="*"/>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+          </TabItem>
+
+        </TabControl>
+      </TabItem>
+
+      <!-- ── Tab 6: Header Watcher ──────────────────────────────────────── -->
+      <TabItem Header="Header Watcher">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Header ID:" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding HeaderSearchId}" Minimum="0" Width="90" FormatString="0"/>
+            <Button Content="Search" Click="HeaderSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="220,8,*">
+            <!-- Header properties -->
+            <DockPanel Grid.Column="0">
+              <TextBlock DockPanel.Dock="Top" Text="Header Properties" FontWeight="SemiBold" Margin="0,0,0,4" FontSize="12"/>
+              <TextBlock DockPanel.Dock="Top" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4" Text="Double-click a row to copy value"/>
+              <DataGrid ItemsSource="{Binding HeaderProperties}"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        GridLinesVisibility="Horizontal"
+                        CanUserResizeColumns="True"
+                        DoubleTapped="HeaderPropsGrid_DoubleTapped">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Property" Binding="{Binding Name}"  Width="130"/>
+                  <DataGridTextColumn Header="Value"    Binding="{Binding Value}" Width="*"/>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+
+            <!-- Warp tabs -->
+            <TabControl Grid.Column="2">
+              <TabItem Header="Incoming Warps">
+                <DockPanel Margin="4">
+                  <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                             Text="Warps in other event files that lead TO this header. Double-click to navigate to that header."/>
+                  <DataGrid ItemsSource="{Binding IncomingWarps}"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="Horizontal"
+                            CanUserResizeColumns="True"
+                            DoubleTapped="IncomingWarpsGrid_DoubleTapped">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="Event File" Binding="{Binding EventFileID}" Width="90"/>
+                      <DataGridTextColumn Header="Warp #"     Binding="{Binding WarpIndex}"   Width="70"/>
+                      <DataGridTextColumn Header="Position"   Binding="{Binding Position}"    Width="100"/>
+                      <DataGridTextColumn Header="Anchor"     Binding="{Binding Anchor}"      Width="70"/>
+                    </DataGrid.Columns>
+                  </DataGrid>
+                </DockPanel>
+              </TabItem>
+              <TabItem Header="Outgoing Warps">
+                <DockPanel Margin="4">
+                  <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
+                             Text="Warps FROM this header's event file. Double-click to navigate to destination header."/>
+                  <DataGrid ItemsSource="{Binding OutgoingWarps}"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="Horizontal"
+                            CanUserResizeColumns="True"
+                            DoubleTapped="OutgoingWarpsGrid_DoubleTapped">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="Warp #"      Binding="{Binding WarpIndex}"  Width="70"/>
+                      <DataGridTextColumn Header="Position"    Binding="{Binding Position}"   Width="100"/>
+                      <DataGridTextColumn Header="Dest Header" Binding="{Binding DestHeader}" Width="90"/>
+                      <DataGridTextColumn Header="Dest Anchor" Binding="{Binding DestAnchor}" Width="90"/>
+                    </DataGrid.Columns>
+                  </DataGrid>
+                </DockPanel>
+              </TabItem>
+            </TabControl>
+          </Grid>
+        </DockPanel>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

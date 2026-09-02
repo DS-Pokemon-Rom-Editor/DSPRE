@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.MonReorderView"
+        x:DataType="vm:MonReorderViewModel"
+        Title="Reorder Party"
+        Width="320" Height="360"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:MonReorderViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
+      <Button Content="Save"   Click="Save_Click"   IsDefault="True"/>
+      <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Right" Spacing="6" Margin="8,0,0,0" VerticalAlignment="Center">
+      <Button Content="▲ Up"   Click="Up_Click"   IsEnabled="{Binding CanMoveUp}"   Width="64"/>
+      <Button Content="▼ Down" Click="Down_Click" IsEnabled="{Binding CanMoveDown}" Width="64"/>
+    </StackPanel>
+    <ListBox ItemsSource="{Binding Items}" SelectedIndex="{Binding SelectedIndex}"/>
+  </DockPanel>
+</Window>

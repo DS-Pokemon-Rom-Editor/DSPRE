@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+             x:Class="DSPRE.Avalonia.Views.World.CameraEditorView"
+             x:DataType="vm:CameraEditorViewModel">
+  <Design.DataContext>
+    <vm:CameraEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+
+    <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <Button Content="Save Table"    Click="SaveTable_Click"   IsEnabled="{Binding IsReady}" Width="90"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="Export Table…" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
+        <Button Content="Import Table…" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
+      </WrapPanel>
+    </Border>
+
+    <!-- ── Status bar ──────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+                 VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- ── Camera DataGrid ─────────────────────────────────────────────── -->
+    <DataGrid x:Name="CamerasGrid"
+              ItemsSource="{Binding Cameras}"
+              AutoGenerateColumns="False"
+              IsReadOnly="False"
+              CanUserReorderColumns="False"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="False"
+              GridLinesVisibility="All"
+              HorizontalScrollBarVisibility="Auto"
+              Margin="4">
+
+      <DataGrid.Columns>
+
+        <!-- Always-visible columns (10 for DP/Plat, still present for HGSS) -->
+        <DataGridTextColumn Header="Camera"       Binding="{Binding Label}"     Width="150" IsReadOnly="True"/>
+        <DataGridTextColumn Header="Distance"     Binding="{Binding Distance}"  Width="90"/>
+        <DataGridTextColumn Header="Vert Rot"     Binding="{Binding VertRot}"   Width="75"/>
+        <DataGridTextColumn Header="Hori Rot"     Binding="{Binding HoriRot}"   Width="75"/>
+        <DataGridTextColumn Header="Z Rot"        Binding="{Binding ZRot}"      Width="65"/>
+        <DataGridCheckBoxColumn Header="Ortho"    Binding="{Binding IsOrtho}"   Width="60"/>
+        <DataGridTextColumn Header="FOV"          Binding="{Binding Fov}"       Width="60"/>
+        <DataGridTextColumn Header="Near Clip"    Binding="{Binding NearClip}"  Width="85"/>
+        <DataGridTextColumn Header="Far Clip"     Binding="{Binding FarClip}"   Width="85"/>
+
+        <!-- HGSS-only columns, hidden for DP/Plat in code-behind (matched by Header text) -->
+        <DataGridTextColumn Header="X Offset" Binding="{Binding XOffset}" Width="75"/>
+        <DataGridTextColumn Header="Y Offset" Binding="{Binding YOffset}" Width="75"/>
+        <DataGridTextColumn Header="Z Offset" Binding="{Binding ZOffset}" Width="75"/>
+
+        <!-- Per-row Export button -->
+        <DataGridTemplateColumn Header="" Width="72">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:CompileBindings="False">
+              <Button Content="Export"
+                      Command="{Binding DataContext.ExportCameraCommand,
+                                        RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                      CommandParameter="{Binding Index}"
+                      HorizontalAlignment="Stretch"
+                      Margin="2,1" Padding="4,2" FontSize="12"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <!-- Per-row Import button -->
+        <DataGridTemplateColumn Header="" Width="72">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:CompileBindings="False">
+              <Button Content="Import"
+                      Command="{Binding DataContext.ImportCameraCommand,
+                                        RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                      CommandParameter="{Binding Index}"
+                      HorizontalAlignment="Stretch"
+                      Margin="2,1" Padding="4,2" FontSize="12"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+      </DataGrid.Columns>
+    </DataGrid>
+
+  </DockPanel>
+</UserControl>

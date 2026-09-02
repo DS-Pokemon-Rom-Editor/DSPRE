@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.HgEngineLinkView"
+        x:DataType="vm:HgEngineLinkViewModel"
+        Title="Link hg-engine checkout"
+        Width="560" Height="250"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:HgEngineLinkViewModel/>
+  </Design.DataContext>
+
+  <StackPanel Margin="16" Spacing="12">
+    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+
+    <TextBlock TextWrapping="Wrap" FontSize="12"
+               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+               Text="Once linked, the Pokémon, Trainer, Item, Move Data and Wild Pokémon editors read and write data/*.c in the checkout instead of the ROM."/>
+
+    <CheckBox Content="Enabled" IsChecked="{Binding Enabled}" IsEnabled="{Binding IsLinked}"/>
+
+    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="Orange" IsVisible="{Binding ShowRomNdsWarning}"
+               Text="No rom.nds found at this checkout's root. hg-engine's own build needs one there before you can Compile ROM."/>
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="Unlink" Click="Unlink_Click" IsEnabled="{Binding IsLinked}"/>
+      <Button Content="Browse…" Click="Browse_Click"/>
+      <Button Content="Close" Click="Close_Click"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

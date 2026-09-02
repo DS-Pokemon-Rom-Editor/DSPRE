@@ -1,0 +1,136 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.TableEditorView"
+        x:DataType="vm:TableEditorViewModel"
+        Title="Music &amp; Battle Tables"
+        Width="760" Height="560"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:TableEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+
+    <!-- ── Status bar ──────────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+                 VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- No tables for this ROM family -->
+    <TextBlock DockPanel.Dock="Top" Margin="16"
+               IsVisible="{Binding NoTablesAvailable}"
+               TextWrapping="Wrap"
+               Text="The Table Editor has no editable tables for this ROM version."/>
+
+    <TabControl x:Name="Tabs" Margin="4">
+
+      <!-- ── Conditional Music (HGSS) ───────────────────────────────────────── -->
+      <TabItem Header="Conditional Music" IsVisible="{Binding ShowConditionalMusic}">
+        <Grid ColumnDefinitions="*,260" Margin="4">
+          <ListBox Grid.Column="0"
+                   ItemsSource="{Binding CondMusicItems}"
+                   SelectedIndex="{Binding CondSelectedIndex}"/>
+          <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+            <TextBlock Text="Header" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding HeaderNames}"
+                      SelectedIndex="{Binding CondHeaderIndex}"/>
+            <TextBlock Text="Flag" FontWeight="Bold"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondFlag}"/>
+            <TextBlock Text="Music" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding MusicNames.Names}"
+                      SelectedIndex="{Binding CondMusicComboIndex}"
+                      PlaceholderText="Not a track this game names"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondMusic}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+              <Button Content="Save Table" Click="SaveCondMusic_Click"/>
+              <Button Content="?"          Click="CondMusicHelp_Click" Width="28"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- ── Effect Combos (HGSS + Plat) ────────────────────────────────────── -->
+      <TabItem Header="Effect Combos" IsVisible="{Binding ShowEffectsCombos}">
+        <Grid ColumnDefinitions="*,260" Margin="4">
+          <ListBox Grid.Column="0"
+                   ItemsSource="{Binding ComboItems}"
+                   SelectedIndex="{Binding ComboSelectedIndex}"/>
+          <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+            <TextBlock Text="VS Animation (Effect)" FontWeight="Bold"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding VsAnimation}"/>
+            <TextBlock Text="Battle SSEQ (Music)" FontWeight="Bold"/>
+            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleSseq}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+              <Button Content="Save Combo" Click="SaveEffectCombo_Click"/>
+              <Button Content="?"          Click="EffectComboHelp_Click" Width="28"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- ── VS Trainer (HGSS) ──────────────────────────────────────────────── -->
+      <TabItem Header="VS Trainer" IsVisible="{Binding ShowVsTables}">
+        <Grid ColumnDefinitions="*,260" Margin="4">
+          <ListBox Grid.Column="0"
+                   ItemsSource="{Binding VsTrainerItems}"
+                   SelectedIndex="{Binding VsTrainerSelectedIndex}"/>
+          <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+            <TextBlock Text="Trainer Class" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding TrainerNames}"
+                      SelectedIndex="{Binding TrainerClassIndex}"/>
+            <TextBlock Text="Effect Combo" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding ComboItems}"
+                      SelectedIndex="{Binding TrainerComboIndex}"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+              <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="80" Height="80">
+                <Image Source="{Binding TrainerSpriteImage}" Stretch="Uniform"/>
+              </Border>
+              <StackPanel Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasTrainerSprite}">
+                <TextBlock Text="Frame" FontSize="12"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="{Binding TrainerSpriteFrameMax}"
+                               Increment="1" Value="{Binding TrainerSpriteFrame}"/>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+              <Button Content="Save Entry" Click="SaveVsTrainer_Click"/>
+              <Button Content="?"          Click="VsTrainerHelp_Click" Width="28"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- ── VS Pokémon (HGSS, display only) ────────────────────────────────── -->
+      <TabItem Header="VS Pokémon" IsVisible="{Binding ShowVsTables}">
+        <Grid ColumnDefinitions="*,260" Margin="4">
+          <ListBox Grid.Column="0"
+                   ItemsSource="{Binding VsPokemonItems}"
+                   SelectedIndex="{Binding VsPokemonSelectedIndex}"/>
+          <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+            <TextBlock Text="Pokémon" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding PokemonNames}"
+                      SelectedIndex="{Binding PokemonIndex}"
+                      IsEnabled="False"/>
+            <TextBlock Text="Effect Combo" FontWeight="Bold"/>
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding ComboItems}"
+                      SelectedIndex="{Binding PokemonComboIndex}"
+                      IsEnabled="False"/>
+            <TextBlock Text="(Read-only: the original editor does not write this table.)"
+                       Foreground="#888" FontStyle="Italic" TextWrapping="Wrap" Margin="0,4,0,0"/>
+            <Button Content="?" Click="VsPokemonHelp_Click" Width="28" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

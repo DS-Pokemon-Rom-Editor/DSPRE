@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        xmlns:models="clr-namespace:DSPRE.Avalonia.Models"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.TmHmBulkEditorView"
+        x:DataType="vm:TmHmBulkEditorViewModel">
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <WrapPanel Orientation="Horizontal">
+        <ToggleButton Content="By Pokémon" IsChecked="{Binding IsByPokemonMode, Mode=OneWay}" Click="ByPokemonMode_Click" Margin="0,0,6,4"/>
+        <ToggleButton Content="By TM/HM" IsChecked="{Binding IsByMachineMode, Mode=OneWay}" Click="ByMachineMode_Click" Margin="0,0,12,4"/>
+
+        <TextBlock Text="Machine:" VerticalAlignment="Center" Margin="0,0,6,4" IsVisible="{Binding IsByMachineMode}"/>
+        <ComboBox ItemsSource="{Binding MachineNamesList}" SelectedIndex="{Binding CurrentMachineIndex}"
+                  Width="220" Margin="0,0,12,4" IsVisible="{Binding IsByMachineMode}"/>
+
+        <Button Content="Save All" Click="SaveAll_Click" Margin="0,0,12,4"/>
+
+        <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="0,0,6,4"/>
+        <Button Content="{Binding SelectNoneLabel}" Click="SelectNone_Click" Margin="0,0,12,4"/>
+
+        <Button Content="Sync Family (Union)" Click="SyncUnion_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,6,4"
+                ToolTip.Tip="Any member of the selected family(ies) has it → all members get it"/>
+        <Button Content="Sync Family (Intersection)" Click="SyncIntersect_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"
+                ToolTip.Tip="Only machines shared by every member of the selected family(ies) stay"/>
+        <Button Content="Copy Compatibility To…" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
+
+        <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,6,4"/>
+        <TextBox Text="{Binding FilterText}" Width="180" PlaceholderText="pokémon name…" Margin="0,0,0,4"/>
+      </WrapPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="360,*">
+      <TreeView Grid.Column="0" Margin="4" ItemsSource="{Binding Tree}">
+        <TreeView.DataTemplates>
+          <TreeDataTemplate DataType="models:SpeciesGroupNode" ItemsSource="{Binding Children}">
+            <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsChecked}"/>
+          </TreeDataTemplate>
+          <DataTemplate DataType="models:SpeciesLeafNode">
+            <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsChecked}"/>
+          </DataTemplate>
+        </TreeView.DataTemplates>
+      </TreeView>
+
+      <Grid Grid.Column="1">
+        <ScrollViewer IsVisible="{Binding IsByPokemonMode}">
+          <ItemsControl Margin="16" ItemsSource="{Binding MachineChecklist}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:FlagChecklistItem">
+                <CheckBox Content="{Binding Name}" IsThreeState="True" IsChecked="{Binding IsChecked, Mode=OneWay}"
+                          Click="MachineCheckBox_Click" Margin="0,2"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <TextBlock IsVisible="{Binding IsByMachineMode}" Margin="16" TextWrapping="Wrap"
+                   Text="Check or uncheck a Pokémon (or a whole family) on the left to enable or disable the machine selected above for it."/>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</UserControl>

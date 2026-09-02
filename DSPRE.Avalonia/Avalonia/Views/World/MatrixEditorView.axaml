@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.World.MatrixEditorView"
+        x:DataType="vm:MatrixEditorViewModel">
+
+  <Design.DataContext>
+    <vm:MatrixEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBlock Text="Matrix:" VerticalAlignment="Center"/>
+        <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="📥 Import" Click="Import_Click"/>
+        <Button Content="📤 Export" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="📍 Set spawn to selection" Click="SetSpawn_Click"
+                ToolTip.Tip="Set the game's start position to the selected matrix cell"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding CellInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <TabControl Margin="4">
+      <TabItem Header="Maps">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <TextBlock Text="Paint value:" VerticalAlignment="Center"/>
+            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MapPaint}"/>
+            <TextBlock Text="Click/drag to fill cells." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+          </StackPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <gl:MatrixGridControl x:Name="MapGrid"/>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Headers" IsVisible="{Binding HasHeaders}">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <TextBlock Text="Paint value:" VerticalAlignment="Center"/>
+            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" Value="{Binding HeaderPaint}"/>
+          </StackPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <gl:MatrixGridControl x:Name="HeaderGrid"/>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Heights" IsVisible="{Binding HasHeights}">
+        <DockPanel Margin="4">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+            <TextBlock Text="Paint value:" VerticalAlignment="Center"/>
+            <NumericUpDown Width="110" Minimum="0" Maximum="255" Increment="1" Value="{Binding HeightPaint}"/>
+          </StackPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <gl:MatrixGridControl x:Name="HeightGrid"/>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Sections">
+        <StackPanel Margin="10" Spacing="8">
+          <Button Content="Add header section"  Click="AddHeaders_Click" IsEnabled="{Binding CanAddHeaders}"/>
+          <Button Content="Add heights section" Click="AddHeights_Click" IsEnabled="{Binding CanAddHeights}"/>
+          <TextBlock Text="Header / height sections are optional. Adding one enables its tab." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

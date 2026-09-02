@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia
         {
             var owner = (global::Avalonia.Application.Current?.ApplicationLifetime
                 as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-            var dlg = new Views.UpdateAvailableWindow(currentVersion, availableVersion, notes, preview);
+            var dlg = new Views.Shell.UpdateAvailableWindow(currentVersion, availableVersion, notes, preview);
             if (owner != null) await dlg.ShowDialog(owner);
             else dlg.Show();
             return dlg.Install;

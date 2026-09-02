@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.World"
+        x:Class="DSPRE.Avalonia.Views.World.HeaderEditorView"
+        x:DataType="vm:HeaderEditorViewModel">
+
+  <Design.DataContext>
+    <vm:HeaderEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <!-- Toolbar -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <Button Content="💾  Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="↺  Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="⧉  Copy"  Click="Copy_Click"/>
+        <Button Content="📋  Paste" Click="Paste_Click"/>
+        <Button Content="📥  Import" Click="Import_Click"/>
+        <Button Content="📤  Export" Click="Export_Click"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <Button Content="＋  Add"    Click="AddHeader_Click"    IsEnabled="{Binding CanAddRemove}"/>
+        <Button Content="🗑  Remove" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <TextBlock Text="Go to #" VerticalAlignment="Center"/>
+        <NumericUpDown Width="100" Minimum="0" Maximum="65535" Value="{Binding GoToValue}"/>
+        <Button Content="Go" Click="GoTo_Click"/>
+      </WrapPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- Sidebar tree + detail form (both shared with the Maps workspace) -->
+    <Grid ColumnDefinitions="230,*">
+      <views:HeaderSidebarView Grid.Column="0" Margin="4"/>
+      <views:HeaderFieldsView  Grid.Column="1"/>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        x:Class="DSPRE.Avalonia.Views.World.SpawnEditorView"
+        x:DataType="vm:SpawnEditorViewModel"
+        Title="Spawn Settings Editor"
+        Width="420" Height="290"
+        MinWidth="420" MinHeight="290"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:SpawnEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.lbl">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,4,0"/>
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel Margin="10">
+    <!-- Buttons row -->
+    <Grid DockPanel.Dock="Bottom" Margin="0,10,0,0"
+          ColumnDefinitions="Auto,*,Auto,8,Auto">
+      <Button Grid.Column="0" Content="Show all headers" Width="120" Click="ResetFilter_Click"
+              ToolTip.Tip="Puts every header back in the list when it has been narrowed to one map"/>
+      <Button Grid.Column="2" Content="Load Saved"     Width="110" Click="Load_Click"/>
+      <Button Grid.Column="4" Content="Save Settings"  Width="110" Click="Save_Click" IsDefault="True"/>
+    </Grid>
+
+    <!-- Content -->
+    <StackPanel Spacing="8">
+      <!-- Row 1: Header + Direction -->
+      <Grid ColumnDefinitions="*,12,*">
+        <StackPanel Grid.Column="0" Spacing="3">
+          <TextBlock Text="Spawn Header:" Classes="lbl"/>
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding HeaderNames}"
+                                          SelectedIndex="{Binding SelectedHeaderIndex}"
+                                          HorizontalAlignment="Stretch"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Spacing="3">
+          <TextBlock Text="Player Direction:" Classes="lbl"/>
+          <ComboBox ItemsSource="{Binding DirectionNames}"
+                    SelectedIndex="{Binding PlayerDirIndex}"
+                    HorizontalAlignment="Stretch"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Row 2: Location name -->
+      <TextBlock Text="{Binding LocationName}" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
+
+      <!-- Row 3: Coordinates -->
+      <Grid ColumnDefinitions="Auto,8,90,16,Auto,8,90" RowDefinitions="Auto,6,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix X:" Classes="lbl"/>
+        <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding MatrixX}"
+                       Minimum="0" Maximum="{Binding MatrixXMax}" FormatString="0" Width="90"/>
+        <TextBlock Grid.Row="0" Grid.Column="4" Text="Matrix Y:" Classes="lbl"/>
+        <NumericUpDown Grid.Row="0" Grid.Column="6" Value="{Binding MatrixY}"
+                       Minimum="0" Maximum="{Binding MatrixYMax}" FormatString="0" Width="90"/>
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Local X:" Classes="lbl"/>
+        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding LocalX}"
+                       Minimum="0" Maximum="31" FormatString="0" Width="90"/>
+        <TextBlock Grid.Row="2" Grid.Column="4" Text="Local Y:" Classes="lbl"/>
+        <NumericUpDown Grid.Row="2" Grid.Column="6" Value="{Binding LocalY}"
+                       Minimum="0" Maximum="31" FormatString="0" Width="90"/>
+      </Grid>
+
+      <!-- Row 4: Initial money -->
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Initial Money:" Classes="lbl"/>
+        <NumericUpDown Value="{Binding InitialMoney}"
+                       Minimum="0" Maximum="999999" FormatString="0" Width="110"/>
+      </StackPanel>
+    </StackPanel>
+  </DockPanel>
+</Window>

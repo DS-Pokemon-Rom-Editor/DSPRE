@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        x:Class="DSPRE.Avalonia.Views.World.AddOverworldEntryView"
+        x:DataType="vm:AddOverworldEntryViewModel"
+        Title="Add Custom Overworld Entry"
+        Width="380" Height="520"
+        MinWidth="340" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <Design.DataContext>
+    <vm:AddOverworldEntryViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
+      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+        <Button Content="Add" Click="Add_Click" IsDefault="True"/>
+        <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+      </StackPanel>
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Requires the hzla PlatPatches overworld-sprites expansion patch and a free custom slot." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+
+      <TextBlock Text="Appearance ID (decimal or 0x hex)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+      <TextBox Text="{Binding AppearanceIdText}"/>
+
+      <TextBlock Text="Image (optional, pick this first, it decides which texture slot below will fit)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+      <Grid ColumnDefinitions="*,4,*,4,Auto">
+        <Button Grid.Column="0" Content="Choose PNG…" Click="ChoosePng_Click" HorizontalAlignment="Stretch"
+                ToolTip.Tip="A normal image file. It's converted into the ROM's native texture format on Add."/>
+        <Button Grid.Column="2" Content="Choose Raw Texture…" Click="ChooseRawBtx_Click" HorizontalAlignment="Stretch"
+                ToolTip.Tip="An already ROM-native BTX0 texture file (e.g. extracted from another ROM), copied in as-is, no conversion, so it's pixel-perfect."/>
+        <Button Grid.Column="4" Content="Clear" Click="ClearImage_Click" IsEnabled="{Binding HasImage}"/>
+      </Grid>
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" Height="120">
+        <Image Source="{Binding ImagePreview}" Stretch="Uniform" Margin="4"/>
+      </Border>
+      <TextBlock Text="{Binding ImageInfoText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"
+                 IsVisible="{Binding HasImage}"/>
+
+      <TextBlock Text="{Binding SlotSectionLabel}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+      <ComboBox ItemsSource="{Binding SlotOptions}" SelectedItem="{Binding SelectedSlot}" HorizontalAlignment="Stretch"
+                ToolTip.Tip="{Binding SlotSectionTooltip}"/>
+
+      <TextBlock Text="Clone render/animation profile from" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"/>
+      <ComboBox ItemsSource="{Binding CloneOptions}" SelectedItem="{Binding SelectedCloneSource}" HorizontalAlignment="Stretch"
+                ToolTip.Tip="An existing overworld whose renderer/render-state/animation rows this new entry copies (only its texture and ID are new)."/>
+    </StackPanel>
+  </DockPanel>
+</Window>

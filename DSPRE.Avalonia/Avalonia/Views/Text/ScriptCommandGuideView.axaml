@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
+        x:Class="DSPRE.Avalonia.Views.Text.ScriptCommandGuideView"
+        x:DataType="vm:ScriptCommandGuideViewModel"
+        Title="{Binding Title}"
+        Width="820" Height="600"
+        MinWidth="560" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:ScriptCommandGuideViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <TextBlock Text="Search:" VerticalAlignment="Center"/>
+      <TextBox Text="{Binding SearchText}" Width="260" PlaceholderText="command, parameter or description"/>
+    </StackPanel>
+
+    <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,6" TextWrapping="Wrap"
+               Text="Every command usable in this script's text editor, with its arguments and what it does. Type a command's arguments as label=value (e.g. slot=0); unlabeled numbers just fill whichever argument slots are left, in order."/>
+
+    <DataGrid ItemsSource="{Binding Entries}"
+              AutoGenerateColumns="False"
+              IsReadOnly="True"
+              GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Command"     Binding="{Binding Command}"     Width="170"/>
+        <DataGridTextColumn Header="Title"       Binding="{Binding Title}"       Width="170"/>
+        <DataGridTextColumn Header="Arguments"   Binding="{Binding Params}"      Width="170"/>
+        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

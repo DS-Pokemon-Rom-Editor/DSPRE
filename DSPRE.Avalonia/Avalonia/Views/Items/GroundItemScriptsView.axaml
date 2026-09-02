@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
+        x:Class="DSPRE.Avalonia.Views.Items.GroundItemScriptsView"
+        x:DataType="vm:GroundItemScriptsViewModel"
+        Title="Manage Ground Items"
+        Width="620" Height="560"
+        MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:GroundItemScriptsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="12">
+    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="12"
+               Text="These are the item + quantity combinations Overworld Item events can pick from. Entries still in use by an Overworld event can't be removed."/>
+
+    <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
+      <StackPanel Spacing="6">
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="Firebrick" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ComboBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding NewItemIndex}"
+                    Width="260" HorizontalAlignment="Left"/>
+          <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          <NumericUpDown Value="{Binding NewQuantity}" Minimum="1" Maximum="99" FormatString="0" Width="90"/>
+          <Button Content="Add" Click="Add_Click" Width="70"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+          <Button Content="Remove Selected" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>
+          <Button Content="Close" Click="Close_Click" IsDefault="True" IsCancel="True"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <DataGrid ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}"
+              CanUserReorderColumns="False" CanUserResizeColumns="True"
+              IsReadOnly="True" GridLinesVisibility="Horizontal"
+              HorizontalScrollBarVisibility="Auto">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/>
+        <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="90"/>
+        <DataGridTextColumn Header="In use" Binding="{Binding InUseText}" Width="70"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

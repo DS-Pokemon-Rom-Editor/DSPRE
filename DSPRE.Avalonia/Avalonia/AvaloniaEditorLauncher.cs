@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia
     ///
     /// These mirror the per-editor launch logic that currently lives inline in the
     /// WinForms <c>Main Window.cs</c> handlers. Keeping them here lets the new
-    /// Avalonia <see cref="Views.MainWindowView"/> open the same editors without
+    /// Avalonia <see cref="Views.Shell.MainWindowView"/> open the same editors without
     /// duplicating the NARC-unpack + data-sourcing steps, and gives the WinForms
     /// side a single place to delegate to once it is retired.
     ///
@@ -72,9 +72,9 @@ namespace DSPRE.Avalonia
                 catch { names = System.Array.Empty<string>(); }
 
                 await System.Threading.Tasks.Task.Yield();
-                var vm = new ViewModels.AudioEditorViewModel(names);
+                var vm = new ViewModels.Audio.AudioEditorViewModel(names);
                 if (showCryFor > 0) vm.ShowCryFor(showCryFor);
-                new Views.AudioEditorView(vm).ShowManaged();
+                new Views.Audio.AudioEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -598,7 +598,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                new Views.GraphicsBrowserView(new ViewModels.GraphicsBrowserViewModel()).ShowManaged();
+                new Views.Graphics.GraphicsBrowserView(new ViewModels.Graphics.GraphicsBrowserViewModel()).ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -607,13 +607,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>
-        /// Opens the graphics window already looking at one file.
-        ///
-        /// For the editors that already know which graphic they are showing: the Pokemon Editor knows the
-        /// icon it just drew, the Trainer Editor knows the class. Handing that over beats making somebody
-        /// find it again among six thousand rows.
-        /// </summary>
+        /// <summary>Opens the graphics window already looking at one file.</summary>
         public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex)
         {
             try
@@ -625,9 +619,9 @@ namespace DSPRE.Avalonia
                     return;
                 }
 
-                var vm = new ViewModels.GraphicsBrowserViewModel();
+                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel();
                 bool found = vm.JumpTo(a, fileIndex);
-                new Views.GraphicsBrowserView(vm).ShowManaged();
+                new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
                 if (!found)
                     vm.Status = "That graphic could not be found in this game, so the whole list is shown instead.";
             }
@@ -638,14 +632,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>
-        /// The editor that owns a graphic, and what to call it.
-        ///
-        /// The hand-off runs both ways: an editor can send a graphic to the brush, and the brush can send
-        /// you back to whatever decides that graphic's numbers. A Pokemon's sprite belongs to the Pokemon
-        /// Sprite Editor, a battle backdrop to the place that fights on it. Where nothing owns a graphic,
-        /// this says so rather than offering a dead button.
-        /// </summary>
+        /// <summary>The editor that owns a graphic, and what to call it.</summary>
         public static (string Name, System.Action Open)? EditorForGraphic(RomInfo.DirNames archive, int fileIndex)
         {
             switch (archive)
@@ -698,14 +685,55 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Opens the battle scenes list: the scenery every place in the game fights on, with the header
-        /// number that chooses it. Its own window rather than a tab of the graphics list, because a row
-        /// here is a scene and a place rather than a picture.
+        /// number that chooses it.
         /// </summary>
+        /// <summary>Opens the window that turns a picture into a background.</summary>
+        public static void OpenTilesetBuilder()
+        {
+            try
+            {
+                new Views.Graphics.TilesetBuilderView().ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenTilesetBuilder failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("That window could not be opened.", "Picture to Background");
+            }
+        }
+
+        public static void OpenFontEditor()
+        {
+            try
+            {
+                new Views.Graphics.FontEditorView().ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenFontEditor failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The fonts could not be opened. Open a ROM first.",
+                                          "Font Editor");
+            }
+        }
+
+        public static void OpenBattleScreenEditor()
+        {
+            try
+            {
+                new Views.Battle.BattleScreenEditorView().ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenBattleScreenEditor failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("The battle screen could not be opened. Open a ROM first.",
+                                          "Battle screen");
+            }
+        }
+
         public static void OpenBattleSceneBrowser()
         {
             try
             {
-                new Views.BattleSceneBrowserView(new ViewModels.BattleSceneBrowserViewModel()).ShowManaged();
+                new Views.Battle.BattleSceneBrowserView(new ViewModels.Battle.BattleSceneBrowserViewModel()).ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -720,7 +748,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                new Views.ModelBrowserView(new ViewModels.ModelBrowserViewModel()).ShowManaged();
+                new Views.Graphics.ModelBrowserView(new ViewModels.Graphics.ModelBrowserViewModel()).ShowManaged();
             }
             catch (System.Exception ex)
             {

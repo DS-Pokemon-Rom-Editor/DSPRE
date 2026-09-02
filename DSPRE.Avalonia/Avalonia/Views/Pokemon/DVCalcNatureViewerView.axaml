@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.DVCalcNatureViewerView"
+        x:DataType="vm:DVCalcNatureViewerViewModel"
+        Title="DV / IV / Nature"
+        Width="320" Height="460"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:DVCalcNatureViewerViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="6">
+    <TextBlock DockPanel.Dock="Top" Text="Double-click a row to pick its DV." Margin="0,0,0,4" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,6,0,0">
+      <Button Content="Select" Click="Select_Click" IsDefault="True"/>
+      <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+    </StackPanel>
+    <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"
+              AutoGenerateColumns="False" IsReadOnly="True"
+              GridLinesVisibility="All" DoubleTapped="Row_DoubleTapped">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="DV"     Binding="{Binding DV}"     Width="70"/>
+        <DataGridTextColumn Header="IV"     Binding="{Binding IV}"     Width="70"/>
+        <DataGridTextColumn Header="Nature" Binding="{Binding Nature}" Width="*"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>
