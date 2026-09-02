@@ -22,7 +22,6 @@ namespace DSPRE.Avalonia
 
         /// <summary>
         /// Asks for a colour as three numbers from 0 to 255, with a square showing what they make.
-        /// Kept to plain Avalonia controls so no extra package is needed. Returns null when cancelled.
         /// </summary>
         public static async Task<(byte R, byte G, byte B)?> PickColour(Window owner, string title)
         {
@@ -116,6 +115,11 @@ namespace DSPRE.Avalonia
         /// <returns>MsgResult.Yes / No / Cancel</returns>
         public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
             => ShowMsg(message, title, MsgButtons.YesNoCancel);
+
+        /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
+        public static Task<MsgResult> AskThreeWay(string message, string title,
+                                                  string yes, string no, string cancel = "Cancel")
+            => ShowMsg(message, title, MsgButtons.YesNoCancel, labels: (yes, no, cancel));
 
         /// <summary>Prompts for a single line of free text. Returns null if cancelled or closed without
         /// confirming; an empty string is a valid (non-null) confirmed answer.</summary>
@@ -260,14 +264,15 @@ namespace DSPRE.Avalonia
 
         private enum MsgButtons { Ok, YesNo, YesNoCancel }
 
-        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null, Window owner = null)
+        private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null, Window owner = null,
+                                                     (string Yes, string No, string Cancel)? labels = null)
         {
             var tcs = new TaskCompletionSource<MsgResult>();
 
             var win = new Window
             {
                 Title = title,
-                Width = 420,
+                Width = labels == null ? 420 : 560,   // named buttons are wider than Yes and No
                 MinHeight = 140,
                 CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -306,9 +311,9 @@ namespace DSPRE.Avalonia
                     AddBtn("No", MsgResult.No);
                     break;
                 case MsgButtons.YesNoCancel:
-                    AddBtn("Yes", MsgResult.Yes);
-                    AddBtn("No", MsgResult.No);
-                    AddBtn("Cancel", MsgResult.Cancel);
+                    AddBtn(labels?.Yes ?? "Yes", MsgResult.Yes);
+                    AddBtn(labels?.No ?? "No", MsgResult.No);
+                    AddBtn(labels?.Cancel ?? "Cancel", MsgResult.Cancel);
                     break;
             }
 
