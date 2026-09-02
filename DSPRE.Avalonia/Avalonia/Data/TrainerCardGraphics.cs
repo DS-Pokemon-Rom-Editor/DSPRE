@@ -362,15 +362,13 @@ namespace DSPRE.Avalonia.Data
 
         private static void WriteTileData(byte[] memberRaw, byte[] tiles)
         {
-            int rahc = NitroBgCodec.Find(memberRaw, "RAHC", 0);
-            int tileBytesOffset = rahc + 0x20;
+            int tileBytesOffset = NitroBgCodec.ReadTileHeader(memberRaw).TilesAt;
             Array.Copy(tiles, 0, memberRaw, tileBytesOffset, tiles.Length);
         }
 
         private static void WriteMapData(byte[] scrRaw, ushort[] mapEntries)
         {
-            int nrcs = NitroBgCodec.Find(scrRaw, "NRCS", 0);
-            int mapDataOffset = nrcs + 0x14;
+            int mapDataOffset = NitroBgCodec.ReadScreenHeader(scrRaw).MapAt;
             for (int i = 0; i < mapEntries.Length; i++)
             {
                 scrRaw[mapDataOffset + i * 2] = (byte)(mapEntries[i] & 0xFF);

@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia
     // Reads/writes real indexed (PNG color type 3) images, preserving the file's own literal index/PLTE order instead of re-quantizing by color like TryReadImageColors does.
     public static class IndexedPng
     {
-        private static readonly byte[] Signature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+        internal static readonly byte[] Signature = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
         public static bool TryRead(byte[] fileBytes, out byte[] indices, out uint[] palette, out int width, out int height)
         {
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia
             return ms.ToArray();
         }
 
-        private static void Unfilter(byte filterType, byte[] cur, byte[] prev, int bpp)
+        internal static void Unfilter(byte filterType, byte[] cur, byte[] prev, int bpp)
         {
             switch (filterType)
             {
@@ -198,7 +198,7 @@ namespace DSPRE.Avalonia
             WriteUInt32BE(s, unchecked((int)Crc32.Compute(crcBuf)));
         }
 
-        private static int ReadUInt32BE(byte[] data, int offset) =>
+        internal static int ReadUInt32BE(byte[] data, int offset) =>
             (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
 
         private static void WriteUInt32BE(Stream s, int value) =>

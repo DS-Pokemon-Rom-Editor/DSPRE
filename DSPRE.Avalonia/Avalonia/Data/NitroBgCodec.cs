@@ -43,13 +43,50 @@ namespace DSPRE.Avalonia.Data
             return colors;
         }
 
+        /// <summary>Where a drawing keeps its pixels and how many colours they point at.</summary>
+        public static (bool EightBit, int TilesAt) ReadTileHeader(byte[] chr)
+        {
+            // NCGR RAHC: bitdepth at +0x0C, 3 for sixteen colours and 4 for two hundred and fifty six;
+            // the pixels start at +0x20.
+            int rahc = chr == null ? -1 : Find(chr, "RAHC", 0);
+            int depth = rahc >= 0 ? U32(chr, rahc + 0x0C) : 3;
+            return (depth == 4, rahc >= 0 ? rahc + 0x20 : 0x30);
+        }
+
+        /// <summary>How big a background is and where its arrangement starts.</summary>
+        public static (int Width, int Height, int MapAt) ReadScreenHeader(byte[] scr)
+        {
+            // NSCR NRCS: width and height in pixels at +0x08 and +0x0A, the arrangement at +0x14.
+            int nrcs = scr == null ? -1 : Find(scr, "NRCS", 0);
+            int w = nrcs >= 0 ? U16(scr, nrcs + 0x08) : 256;
+            int h = nrcs >= 0 ? U16(scr, nrcs + 0x0A) : 256;
+            if (w <= 0 || w > 1024) w = 256;
+            if (h <= 0 || h > 1024) h = 256;
+            return (w, h, nrcs >= 0 ? nrcs + 0x14 : 0x24);
+        }
+
+        /// <summary>
+        /// Where one square of the screen keeps its entry. A background wider than 32 squares is stored
+        /// in blocks of 32 by 32, block after block; a narrower one is stored straight across at its own
+        /// width. Read off the ROM's own files: all 22 narrower arrangements in HeartGold hold exactly
+        /// width-by-height entries, and the two wider ones only make a solid picture read as blocks.
+        /// </summary>
+        public static int SquareIndex(int cols, int tx, int ty)
+        {
+            if (cols <= 32) return ty * cols + tx;
+            int blocksX = (cols + 31) / 32;
+            return ((ty / 32) * blocksX + (tx / 32)) * 1024 + (ty % 32) * 32 + (tx % 32);
+        }
+
+        /// <summary>How many entries an arrangement of this size holds.</summary>
+        public static int SquareCount(int cols, int rows)
+            => cols <= 32 ? cols * rows : ((cols + 31) / 32) * ((rows + 31) / 32) * 1024;
+
         private static void ReadNcgrHeader(byte[] chr, out bool is8, out int tileBytes)
         {
-            // NCGR RAHC: bitdepth at +0x0C (3 = 4bpp, 4 = 8bpp); tile bytes at +0x20.
-            int rahc = Find(chr, "RAHC", 0);
-            int depth = rahc >= 0 ? U32(chr, rahc + 0x0C) : 3;
-            is8 = depth == 4;
-            tileBytes = rahc >= 0 ? rahc + 0x20 : 0x30;
+            var head = ReadTileHeader(chr);
+            is8 = head.EightBit;
+            tileBytes = head.TilesAt;
         }
 
         private static void BlitTile(byte[] rgba, int w, byte[] chr, int tileBytes, bool is8,
@@ -77,25 +114,26 @@ namespace DSPRE.Avalonia.Data
         public static BgImage Composite(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true)
         {
             var colors = ReadPalette(pal, out int palCount);
+            return Composite(chr, colors, palCount, scr, transparentZero);
+        }
+
+        /// <summary>
+        /// The same, with the colours already in hand. Some screens are drawn with more than one
+        /// palette file loaded over each other, row by row, and only the caller knows which.
+        /// </summary>
+        public static BgImage Composite(byte[] chr, (byte r, byte g, byte b)[] colors, int palCount, byte[] scr,
+                                        bool transparentZero = true)
+        {
             ReadNcgrHeader(chr, out bool is8, out int tileBytes);
 
-            // NSCR NRCS: width/height in px at +0x08/+0x0A; map u16 entries at +0x14.
-            int nrcs = Find(scr, "NRCS", 0);
-            int w = nrcs >= 0 ? U16(scr, nrcs + 0x08) : 256;
-            int h = nrcs >= 0 ? U16(scr, nrcs + 0x0A) : 256;
-            if (w <= 0 || w > 1024) w = 256;
-            if (h <= 0 || h > 1024) h = 256;
-            int mapData = nrcs >= 0 ? nrcs + 0x14 : 0x24;
+            var (w, h, mapData) = ReadScreenHeader(scr);
 
             var rgba = new byte[w * h * 4];
-            int cols = w / 8, rows = h / 8, blocksX = (cols + 31) / 32;
+            int cols = w / 8, rows = h / 8;
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
-                    // NDS BG screen data is stored in 256×256 (32×32-tile) blocks, not a linear grid. A 512-wide
-                    // map is [block(0,0)][block(1,0)]..., so index by block, then local (x,y) within the block.
-                    int mapIdx = ((ty / 32) * blocksX + (tx / 32)) * 1024 + (ty % 32) * 32 + (tx % 32);
-                    int mo = mapData + mapIdx * 2;
+                    int mo = mapData + SquareIndex(cols, tx, ty) * 2;
                     if (mo + 1 >= scr.Length) continue;
                     int e = U16(scr, mo);
                     int tile = e & 0x3FF, palNo = (e >> 12) & 0xF;

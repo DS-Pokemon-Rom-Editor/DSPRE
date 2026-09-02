@@ -1,0 +1,154 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.TilesetBuilderView"
+        x:DataType="vm:TilesetBuilderViewModel"
+        Title="Picture to Background"
+        Width="1000" Height="700" MinWidth="620" MinHeight="440"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:TilesetBuilderViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.head">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
+      <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="📂 Open a PNG…" Click="Open_Click"/>
+        <TextBlock Text="{Binding PictureName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+        <TextBlock Classes="hint" VerticalAlignment="Center" IsVisible="{Binding HasNoPicture}"
+                   Text="Nothing is written until you save."/>
+      </StackPanel>
+    </Border>
+
+    <!-- What it costs, and what will not fit -->
+    <Border DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+      <DockPanel>
+
+      <!-- Saving stays at the bottom of the panel rather than at the end of a long scroll, so the one
+           thing this window is for is never below the fold. -->
+      <StackPanel DockPanel.Dock="Bottom" Margin="12,10,12,12" Spacing="8">
+        <Separator Background="{DynamicResource Editor.Separator}"/>
+        <Button Content="💾 Save the three files…" Click="Save_Click"
+                IsEnabled="{Binding CanSave}" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"/>
+        <TextBlock Text="{Binding CannotSaveBecause}" Classes="hint"
+                   IsVisible="{Binding ShowSaveReason}"/>
+        <TextBlock Classes="hint" IsVisible="{Binding CanSave}"
+                   Text="Writes the three files side by side, ready for the Graphics workbench."/>
+      </StackPanel>
+
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12" Spacing="12">
+
+          <TextBlock Text="How it is drawn" Classes="head"/>
+          <RadioButton GroupName="depth" Content="Sixteen banks of sixteen colours"
+                       IsChecked="{Binding !EightBit}"/>
+          <RadioButton GroupName="depth" Content="One list of 256 colours"
+                       IsChecked="{Binding EightBit}"/>
+          <TextBlock Text="{Binding DepthNote}" Classes="hint"/>
+
+          <CheckBox Content="Keep the first colour clear" IsChecked="{Binding KeepClearSlot}"/>
+          <TextBlock Classes="hint"
+                     Text="See-through stays see-through. Costs one colour out of every bank."/>
+
+          <Separator Background="{DynamicResource Editor.Separator}"/>
+
+          <TextBlock Text="What it comes to" Classes="head"/>
+          <TextBlock Classes="hint" IsVisible="{Binding HasNoPicture}"
+                     Text="Open a PNG and this fills in."/>
+
+          <Border IsVisible="{Binding Refused}" Padding="10" CornerRadius="3"
+                  Background="{DynamicResource Editor.StatusBg}"
+                  BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1">
+            <StackPanel Spacing="6">
+              <TextBlock Text="This will not fit" Classes="head"
+                         Foreground="{DynamicResource Editor.Warn}"/>
+              <TextBlock Text="{Binding Whynot}" TextWrapping="Wrap"/>
+              <TextBlock Classes="hint" Text="Nothing was written."/>
+            </StackPanel>
+          </Border>
+
+          <ItemsControl ItemsSource="{Binding Facts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,0,0,8">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Name}" Width="96"
+                               Foreground="{DynamicResource Editor.Subtle}"/>
+                    <TextBlock Text="{Binding Value}" FontWeight="SemiBold"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding Detail}" Classes="hint" Margin="104,1,0,0"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <ItemsControl ItemsSource="{Binding Notes}" IsVisible="{Binding HasNotes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" Classes="hint" Margin="0,0,0,6"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
+
+      </DockPanel>
+    </Border>
+
+    <!-- The picture, before and after. The words sit outside the scroller so they wrap to whatever
+         width there is, while a picture wider than the window scrolls sideways on its own. -->
+    <DockPanel Margin="14,12,14,10">
+
+      <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding HasNoPicture}"
+                 Text="Open a PNG to see it twice: as it is, and as the game would draw it. Anything the screen cannot hold shows up as a difference."/>
+
+      <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding Refused}" Margin="0,0,0,10"
+                 Text="Nothing was made. The reason is on the right."/>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                    IsVisible="{Binding HasPicture}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="The picture as it is" Classes="head"/>
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                  HorizontalAlignment="Left">
+            <Image Source="{Binding Before}" Stretch="None"
+                   RenderOptions.BitmapInterpolationMode="None"/>
+          </Border>
+
+          <StackPanel Spacing="10" IsVisible="{Binding !Refused}">
+            <TextBlock Text="The picture as the game would draw it" Classes="head" Margin="0,8,0,0"/>
+            <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                    HorizontalAlignment="Left">
+              <Image Source="{Binding After}" Stretch="None"
+                     RenderOptions.BitmapInterpolationMode="None"/>
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+
+    </DockPanel>
+
+  </DockPanel>
+</Window>

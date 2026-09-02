@@ -3,23 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Taking a painted background apart again, back into the tiles it is drawn from.
-    ///
-    /// A background is three files: a sheet of eight by eight tiles, an arrangement saying which tile goes
-    /// in each square of the screen and whether it is flipped, and the colours. Painting the tile sheet
-    /// means working on a jumble that looks nothing like the picture, so the browser shows the three put
-    /// together and this is the way back from that.
-    ///
-    /// The rule followed is the exact inverse of NitroBgCodec.Composite, which is what draws them, down to
-    /// how the arrangement is stored: the DS keeps it in blocks of thirty two squares by thirty two, not
-    /// as one long grid, so a screen wider than that is several blocks side by side.
-    ///
-    /// One thing cannot be got around. Backgrounds reuse tiles: the same eight by eight square is drawn in
-    /// many places, which is how they fit. Painting one place therefore changes every place that shares
-    /// it. That is how the format works rather than a fault, so what happens here is that the sharing is
-    /// counted and reported, and the caller can say so before anything is written.
-    /// </summary>
+    /// <summary>Taking a painted background apart again, back into the tiles it is drawn from.</summary>
     public static class BackgroundDecompose
     {
         public sealed class Result
@@ -43,9 +27,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// Reads a painted picture back into the tile sheet the background is drawn from.
-        ///
-        /// The picture has to be the size the background is drawn at, and every colour in it has to be one
-        /// the background's own colours already hold, because the tiles keep numbers pointing at those.
         /// </summary>
         public static Result PutBack(byte[] chr, byte[] pal, byte[] scr, byte[] painted,
                                      int width, int height)
@@ -58,16 +39,8 @@ namespace DSPRE.Avalonia.Data
             if (colours == null || colours.Length == 0)
             { it.Whynot = "This background's colours could not be read."; return it; }
 
-            int rahc = NitroBgCodec.Find(chr, "RAHC", 0);
-            bool is8 = rahc >= 0 && NitroBgCodec.U32(chr, rahc + 0x0C) == 4;
-            int tileBytes = rahc >= 0 ? rahc + 0x20 : 0x30;
-
-            int nrcs = NitroBgCodec.Find(scr, "NRCS", 0);
-            int w = nrcs >= 0 ? U16(scr, nrcs + 0x08) : 256;
-            int h = nrcs >= 0 ? U16(scr, nrcs + 0x0A) : 256;
-            if (w <= 0 || w > 1024) w = 256;
-            if (h <= 0 || h > 1024) h = 256;
-            int mapData = nrcs >= 0 ? nrcs + 0x14 : 0x24;
+            var (is8, tileBytes) = NitroBgCodec.ReadTileHeader(chr);
+            var (w, h, mapData) = NitroBgCodec.ReadScreenHeader(scr);
 
             if (width != w || height != h)
             {
@@ -92,12 +65,6 @@ namespace DSPRE.Avalonia.Data
                 }
 
             // Read from the sheet as it was and write into a copy.
-            //
-            // Backgrounds share tiles, so one tile is reached from several squares. Comparing against the
-            // copy as it is being written means a square nobody painted sees the change another square
-            // just made, decides it is wrong, and puts the original back: the paint would be undone by
-            // its own neighbours. Comparing against the original means a square nobody painted writes
-            // nothing at all.
             var outp = (byte[])chr.Clone();
             var was = chr;
             var writtenTo = new Dictionary<int, int>();   // pixel in the sheet -> what was put there
@@ -158,13 +125,7 @@ namespace DSPRE.Avalonia.Data
             return it;
         }
 
-        /// <summary>
-        /// The arrangement entry for one square of the screen.
-        ///
-        /// The DS stores this in blocks of thirty two squares by thirty two rather than as one grid, so a
-        /// screen wider than 256 pixels is several blocks side by side and the square at (32,0) is the
-        /// first square of the second block, not the thirty third of one long row.
-        /// </summary>
+        /// <summary>The arrangement entry for one square of the screen.</summary>
         private static int EntryAt(byte[] scr, int mapData, int blocksX, int tx, int ty)
         {
             int mapIdx = ((ty / 32) * blocksX + (tx / 32)) * 1024 + (ty % 32) * 32 + (tx % 32);
