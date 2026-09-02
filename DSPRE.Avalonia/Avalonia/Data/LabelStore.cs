@@ -81,9 +81,7 @@ namespace DSPRE.Avalonia.Data
             void Reg(string key, string name, string group, string singular, string[] defaults)
                 => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults });
 
-            // The routines a move animation can call. Their names come from the games' own source, but
-            // somebody working on a hack may know a routine by what they use it for, so they are
-            // renameable like every other list here and every view picks the new name up.
+            // The routines a move animation can call.
             Reg("west_routines", "Move animation routines", "Pokémon", "Routine",
                 BuildRoutineDefaults());
 
@@ -111,6 +109,14 @@ namespace DSPRE.Avalonia.Data
             Reg("move_split",             "Move Split (Phys/Spec/Status)", "Moves", "Split", Enum.GetNames<MoveData.MoveSplit>());
             Reg("move_contest_conditions","Move Contest Conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
             Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
+
+            // Overworld sprite entries. The games hold no names for these, so they start as numbers
+            // and are worth naming per project: which entry is the player, which is a shop keeper.
+            Register(new LabelCategory
+            {
+                Key = "overworld_sprites", DisplayName = "Overworld Sprites", Group = "World",
+                Singular = "OW Entry", Cap = 4096, Defaults = Array.Empty<string>(),
+            });
         }
 
         /// <summary>Default "param meaning" per evolution method (method index → EvolutionParamMeaning value),
