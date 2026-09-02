@@ -18,11 +18,14 @@ namespace DSPRE
         /// Application entry point.
         /// Velopack update check runs first (before any UI), then Avalonia takes over
         /// the Win32 message loop. The existing WinForms MainProgram is shown from
-        /// AvaloniaApp.OnFrameworkInitializationCompleted — both share the same STA thread.
+        /// AvaloniaApp.OnFrameworkInitializationCompleted, both share the same STA thread.
         /// </summary>
         [STAThread]
         static void Main(string[] args)
         {
+            // Read before any window can be opened, since the gate is asked as each one is shown.
+            BetaEditors.ReadFrom(args);
+
             if (!Directory.Exists(DspreDataPath))
                 Directory.CreateDirectory(DspreDataPath);
 
@@ -49,7 +52,7 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Avalonia app builder — also used by the AXAML previewer.
+        /// Avalonia app builder, also used by the AXAML previewer.
         /// </summary>
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<AvaloniaApp>()

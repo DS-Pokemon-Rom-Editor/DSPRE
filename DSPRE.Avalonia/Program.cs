@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Avalonia;
+using DSPRE;
 using DSPRE.Avalonia.Data;
 
 namespace DSPRE.AvaloniaShell
@@ -14,6 +15,8 @@ namespace DSPRE.AvaloniaShell
         [STAThread]   // required on Windows; harmless elsewhere
         public static void Main(string[] args)
         {
+            BetaEditors.ReadFrom(args);
+
             // Velopack hooks (install/update/uninstall) must run before any UI is created.
             // Cross-platform: Windows installer packages and Linux AppImages alike.
             Velopack.VelopackApp.Build().Run();
@@ -39,7 +42,7 @@ namespace DSPRE.AvaloniaShell
             }
         }
 
-        /// <summary>Avalonia app builder — also used by the AXAML previewer.</summary>
+        /// <summary>Avalonia app builder, also used by the AXAML previewer.</summary>
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<DSPRE.AvaloniaApp>()
                 .UsePlatformDetect()

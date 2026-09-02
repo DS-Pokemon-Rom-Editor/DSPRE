@@ -16,6 +16,16 @@ namespace DSPRE.Avalonia
     {
         public static void ShowManaged(this Window w)
         {
+            // Every editor window opens through here, whether from a menu, the command palette, or a
+            // button inside another editor, so this is the one place a beta editor has to be stopped.
+            if (w != null && !BetaEditors.Allows(w.GetType().Name))
+            {
+                string why = BetaEditors.WhyNot(w.GetType().Name);
+                AppLogger.Info("Beta editor not opened: " + w.GetType().Name);
+                _ = DialogHelper.ShowInfo(why, "Not available yet");
+                return;
+            }
+
             try
             {
                 var active = ActiveWindow();
