@@ -12,11 +12,6 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// The wave exactly as it sat in the file, kept so a sample nobody touched can be written back
         /// untouched.
-        ///
-        /// These are squeezed down to four bits a sample. Decoding one and squeezing it again is not the
-        /// same sound: it loses a little every time. Replacing one instrument in WAVE_ARC_BASIC rebuilds
-        /// the whole archive, so without this all 157 others would come out slightly worse each time
-        /// anybody changed one.
         /// </summary>
         public byte[] Raw;
 
@@ -33,7 +28,6 @@ namespace DSPRE.Avalonia.Data
             var list = new System.Collections.Generic.List<SwavSample>();
             if (d == null || d.Length < 16 + 8 + 4) return list;
 
-            int U16(int o) => d[o] | (d[o + 1] << 8);
             uint U32(int o) => (uint)(d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24));
             string Sig4(int o) => System.Text.Encoding.ASCII.GetString(d, o, 4);
 
