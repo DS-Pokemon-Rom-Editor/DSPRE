@@ -30,6 +30,9 @@
 					<SolidColorBrush x:Key="Editor.Separator"  Color="#B8B8B8"/>
 					<SolidColorBrush x:Key="Editor.Text"       Color="#000000"/>
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#767676"/>
+					<SolidColorBrush x:Key="Editor.Good"       Color="#1B7F2E"/>
+					<SolidColorBrush x:Key="Editor.Warn"       Color="#A65B00"/>
+					<SolidColorBrush x:Key="Editor.Bad"        Color="#C22323"/>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key="Dark">
 					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#323232"/>
@@ -39,6 +42,9 @@
 					<SolidColorBrush x:Key="Editor.Separator"  Color="#212121"/>
 					<SolidColorBrush x:Key="Editor.Text"       Color="#F0F0F0"/>
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#828282"/>
+					<SolidColorBrush x:Key="Editor.Good"       Color="#5FD07A"/>
+					<SolidColorBrush x:Key="Editor.Warn"       Color="#F0A250"/>
+					<SolidColorBrush x:Key="Editor.Bad"        Color="#FF7B72"/>
 				</ResourceDictionary>
 			</ResourceDictionary.ThemeDictionaries>
 		</ResourceDictionary>
