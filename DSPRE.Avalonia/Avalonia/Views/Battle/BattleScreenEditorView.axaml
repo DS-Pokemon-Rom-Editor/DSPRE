@@ -1,0 +1,180 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
+        x:Class="DSPRE.Avalonia.Views.Battle.BattleScreenEditorView"
+        x:DataType="vm:BattleScreenEditorViewModel"
+        Title="Battle Screen"
+        Width="1120" Height="780" MinWidth="640" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:BattleScreenEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- What the screens are showing -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <WrapPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+          <TextBlock Text="Ground" Classes="label"/>
+          <ComboBox Width="110" ItemsSource="{Binding TerrainNames}" SelectedIndex="{Binding TerrainIndex}"
+                    ToolTip.Tip="Which terrain the Pokemon stand on, which picks the platforms and their colours"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+          <TextBlock Text="Time" Classes="label"/>
+          <ComboBox Width="100" ItemsSource="{Binding TimeNames}" SelectedIndex="{Binding TimeIndex}"
+                    ToolTip.Tip="The games keep a set of colours for each time of day"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+          <TextBlock Text="Text box" Classes="label"/>
+          <ComboBox Width="150" ItemsSource="{Binding WindowStyleNames}" SelectedIndex="{Binding WindowStyleIndex}"
+                    ToolTip.Tip="The player picks this in the options, and the same choice is used on the field"/>
+        </StackPanel>
+        <CheckBox Content="Show the command buttons" IsChecked="{Binding ShowCommandPanel}" Margin="0,0,0,4"
+                  ToolTip.Tip="The touch screen as it looks while you are choosing what to do"/>
+      </WrapPanel>
+    </Border>
+
+    <!-- The piece list -->
+    <Border DockPanel.Dock="Left" Width="196" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,1,0">
+      <DockPanel Margin="6">
+        <TextBlock DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
+                   Text="Click one here, or click it on either screen."/>
+        <ListBox ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel>
+                <TextBlock Text="{Binding Name}"/>
+                <TextBlock Text="{Binding Where}" FontSize="11"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+                <TextBlock Text="{Binding Trouble}" FontSize="11" TextWrapping="Wrap"
+                           IsVisible="{Binding IsMissing}"
+                           Foreground="{DynamicResource Editor.Bad}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- What is picked -->
+    <Border DockPanel.Dock="Right" Width="240" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="1,0,0,0">
+      <ScrollViewer>
+        <StackPanel Margin="8" Spacing="8">
+          <TextBlock Text="{Binding SelectedName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding SelectedWhat}" Classes="hint"/>
+
+          <Border IsVisible="{Binding SelectedIsShared}" Padding="8"
+                  Background="{DynamicResource Editor.PanelBg}"
+                  BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1,1,1,1" CornerRadius="4">
+            <TextBlock Text="{Binding SelectedShared}" Classes="hint"/>
+          </Border>
+
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Paint this…" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Export PNG…" Click="Export_Click" IsEnabled="{Binding CanPaint}"/>
+          </StackPanel>
+          <Button Content="Import PNG…" Click="Import_Click" IsEnabled="{Binding CanPaint}"
+                  HorizontalAlignment="Stretch"/>
+          <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
+                     IsVisible="{Binding CannotPaintBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+
+          <Separator Margin="0,4"/>
+
+          <TextBlock Text="Sample" FontWeight="SemiBold"/>
+          <TextBlock Classes="hint"
+                     Text="Only for the preview. Nothing here is written to the ROM; it is so you can see whether an edited bar still fits a long name or a full bar."/>
+          <TextBlock Text="Pokemon name" Classes="hint"/>
+          <TextBox Text="{Binding SampleName}"/>
+          <TextBlock Text="Level" Classes="hint"/>
+          <NumericUpDown Value="{Binding SampleLevel}" Minimum="1" Maximum="100" FormatString="0"/>
+          <TextBlock Text="Health left" Classes="hint"/>
+          <Slider Value="{Binding HpLeft}" Minimum="0" Maximum="1" TickFrequency="0.05"/>
+          <TextBlock Text="Message" Classes="hint"/>
+          <TextBox Text="{Binding SampleMessage}" AcceptsReturn="True" Height="56" TextWrapping="Wrap"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- The two screens, stacked the way a DS has them -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="10" Margin="12" HorizontalAlignment="Center">
+
+        <TextBlock Text="Top screen" Classes="hint" HorizontalAlignment="Center"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
+          <Panel Width="512" Height="384">
+            <Image Source="{Binding TopScreen}" Width="512" Height="384" Stretch="Fill"
+                   RenderOptions.BitmapInterpolationMode="None"
+                   PointerPressed="TopScreen_Pressed"/>
+            <!-- The screens are drawn at twice size; scaling from the corner keeps the outline over
+                 the piece rather than pushing it off toward the middle. -->
+            <Canvas IsHitTestVisible="False" RenderTransformOrigin="0,0">
+              <Canvas.RenderTransform><ScaleTransform ScaleX="2" ScaleY="2"/></Canvas.RenderTransform>
+              <!-- The sample, at the places measured off real battles. Their side reads at the top
+                   left, yours at the middle right, and the message fills the box along the bottom. -->
+              <views:RomTextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding SampleName}"/>
+              <views:RomTextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding SampleLevelText}"/>
+              <Rectangle Canvas.Left="50" Canvas.Top="42" Height="4" Fill="#38C838"
+                         Width="{Binding HpBarWidth}"/>
+              <views:RomTextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding SampleName}"/>
+              <views:RomTextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding SampleLevelText}"/>
+              <Rectangle Canvas.Left="200" Canvas.Top="118" Height="4" Fill="#38C838"
+                         Width="{Binding HpBarWidth}"/>
+              <views:RomTextBlock Canvas.Left="16"  Canvas.Top="152" Text="{Binding SampleMessage}"/>
+
+              <Rectangle IsVisible="{Binding HighlightOnTop}"
+                         Canvas.Left="{Binding HighlightLeft}" Canvas.Top="{Binding HighlightTop}"
+                         Width="{Binding HighlightWidth}" Height="{Binding HighlightHeight}"
+                         Stroke="{DynamicResource Editor.Warn}" StrokeThickness="1"
+                         StrokeDashArray="3,2" Fill="Transparent"/>
+            </Canvas>
+          </Panel>
+        </Border>
+
+        <TextBlock Text="Touch screen" Classes="hint" HorizontalAlignment="Center"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">
+          <Panel Width="512" Height="384">
+            <Image Source="{Binding TouchScreen}" Width="512" Height="384" Stretch="Fill"
+                   RenderOptions.BitmapInterpolationMode="None"
+                   PointerPressed="TouchScreen_Pressed"/>
+            <!-- The screens are drawn at twice size; scaling from the corner keeps the outline over
+                 the piece rather than pushing it off toward the middle. -->
+            <Canvas IsHitTestVisible="False" RenderTransformOrigin="0,0">
+              <Canvas.RenderTransform><ScaleTransform ScaleX="2" ScaleY="2"/></Canvas.RenderTransform>
+              <Rectangle IsVisible="{Binding HighlightOnTouch}"
+                         Canvas.Left="{Binding HighlightLeft}" Canvas.Top="{Binding HighlightTop}"
+                         Width="{Binding HighlightWidth}" Height="{Binding HighlightHeight}"
+                         Stroke="{DynamicResource Editor.Warn}" StrokeThickness="1"
+                         StrokeDashArray="3,2" Fill="Transparent"/>
+            </Canvas>
+          </Panel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>

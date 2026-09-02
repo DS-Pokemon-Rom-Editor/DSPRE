@@ -27,12 +27,6 @@ namespace DSPRE.Avalonia.Data
         // (e.g. GRAVEL(0) uses GROUND02, LAWN(2) uses GROUND00, WATER(7) uses GROUND01).
         private static readonly int[] GroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6 };
 
-        // file indices. GROUND00 has the full M/E set (NCGR,NCER,NANR each); every other GROUND##
-        // is just an M_NCGR + E_NCGR pair, packed from index 133. The cell (NCER) is GROUND00's for every terrain.
-        private static int MineNcgr(int gg) => gg == 0 ? 127 : 133 + (gg - 1) * 2;
-        private static int EnemyNcgr(int gg) => gg == 0 ? 130 : 134 + (gg - 1) * 2;
-        private const int MineNcer = 128, EnemyNcer = 131;
-        private static int PalDay(int gg) => 1 + gg * 3;   // +0 day, +1 evening, +2 night (BATT_GROUND##_D/E/N_NCLR)
 
         // GROUND_MINE_X/Y, GROUND_ENEMY_X/Y: the CATS actor screen position (the cell origin). Get_Image
         // draws each OAM at canvasSize/2 + oam.xy, so a 256² render placed at (pos − 128) lands the origin on pos.
@@ -44,15 +38,23 @@ namespace DSPRE.Avalonia.Data
         // are set independently per-zone in the game data, so there is no canonical 1:1; this reuses the GROUND##
         // graphic number (which parallels the BATTLE_BG## scene numbering) as a sensible default; the Backdrop
         // selector still overrides it. Returns -1 for none.
-        /// <summary>Which files make up the ground one Pokemon stands on. Both sides share their cell
-        /// layout with every other terrain; only the drawing and the colours change, and there are three
-        /// sets of colours for the three times of day.</summary>
+        /// <summary>
+        /// Which files make up the ground one Pokemon stands on, found by the names the game gives
+        /// them. The numbers differ per game, so a constant is right for one family and wrong for the
+        /// others. GROUND00 carries the layout every terrain is drawn with.
+        /// </summary>
         public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
             TerrainFiles(int terrainId)
         {
             if (terrainId < 0 || terrainId >= GroundGfx.Length) return null;
             int gg = GroundGfx[terrainId];
-            return (MineNcgr(gg), EnemyNcgr(gg), MineNcer, EnemyNcer, PalDay(gg));
+            int mineDraw = BattleObjects.Find($"GROUND{gg:D2}_M", "Drawing");
+            int enemyDraw = BattleObjects.Find($"GROUND{gg:D2}_E", "Drawing");
+            int mineLayout = BattleObjects.Find("GROUND00_M", "As it appears");
+            int enemyLayout = BattleObjects.Find("GROUND00_E", "As it appears");
+            int palDay = BattleObjects.Find($"BATT_GROUND{gg:D2}_D", "Colours");
+            if (mineDraw < 0 || enemyDraw < 0 || mineLayout < 0 || enemyLayout < 0 || palDay < 0) return null;
+            return (mineDraw, enemyDraw, mineLayout, enemyLayout, palDay);
         }
 
         public static int BackdropForTerrain(int terrainId)
@@ -65,23 +67,32 @@ namespace DSPRE.Avalonia.Data
         /// archive is unmapped/missing. <paramref name="timeZone"/> 0=day,1=evening,2=night selects the palette.</summary>
         public (GroundImage mine, GroundImage enemy) Build(int terrainId, int timeZone = 0)
         {
-            if (!_narc.Available || terrainId < 0 || terrainId >= GroundGfx.Length) return (null, null);
-            int gg = GroundGfx[terrainId];
+            if (!_narc.Available) return (null, null);
+            var files = TerrainFiles(terrainId);
+            if (files == null) return (null, null);
             int tz = Math.Clamp(timeZone, 0, 2);
-            var mine = Render(MineNcgr(gg), PalDay(gg) + tz, MineNcer, MineX, MineY);
-            var enemy = Render(EnemyNcgr(gg), PalDay(gg) + tz, EnemyNcer, EnemyX, EnemyY);
+            var f = files.Value;
+            var mine = Render(f.MineDrawing, f.PaletteDay + tz, f.MineLayout, MineX, MineY);
+            var enemy = Render(f.EnemyDrawing, f.PaletteDay + tz, f.EnemyLayout, EnemyX, EnemyY);
             return (mine, enemy);
         }
 
         // HP-gauge frames (GaugeObjParam_aa/bb, single battle): the PLAYER gauge = SINGLE_GAGE2 at (192,116),
         // the ENEMY gauge = SINGLE_GAGE1 at (58,36); both use GAGE_PALETTE_NCLR. All in pl_batt_obj. This renders only
         // the static frame cell (bank 0); the HP bar fill + name/level/HP text are drawn at runtime, overlaid in the UI.
-        private const int GaugePal = 71;
         public GroundImage BuildGauge(bool player)
         {
             if (!_narc.Available) return null;
-            return player ? Render(191, GaugePal, 190, 192, 116)    // SINGLE_GAGE2 NCGR(191)/NCER(190)
-                          : Render(188, GaugePal, 187, 58, 36);     // SINGLE_GAGE1 NCGR(188)/NCER(187)
+            // Looked up by the name the game gives each file: the numbers differ per game, and the
+            // ones that were written in here were Platinum and HeartGold's, so Diamond drew the wrong
+            // files. SINGLE_GAGE2 is your side, SINGLE_GAGE1 is theirs (gauge.c).
+            string thing = player ? "SINGLE_GAGE2" : "SINGLE_GAGE1";
+            int drawing = BattleObjects.Find(thing, "Drawing");
+            int layout = BattleObjects.Find(thing, "As it appears");
+            int colours = BattleObjects.Find("GAGE_PALETTE", "Colours");
+            if (drawing < 0 || layout < 0 || colours < 0) return null;
+            return player ? Render(drawing, colours, layout, 192, 116)
+                          : Render(drawing, colours, layout, 58, 36);
         }
 
         private GroundImage Render(int ncgrIdx, int nclrIdx, int ncerIdx, int posX, int posY)

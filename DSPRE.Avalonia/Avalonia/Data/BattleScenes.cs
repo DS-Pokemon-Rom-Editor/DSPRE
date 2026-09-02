@@ -7,17 +7,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Which battle scenery each place in the game uses.
-    ///
-    /// A battle backdrop is not picked when the battle starts: every map header carries the number of the
-    /// backdrop that place fights on, so the graphic and the game data are two halves of one thing. Seeing
-    /// the drawing without knowing which places use it, or the number without seeing the drawing, is half
-    /// the picture either way.
-    ///
-    /// The ground the Pokemon stand on is separate and comes from what you are standing on rather than
-    /// from the header, so it is offered as a choice rather than tied to a backdrop.
-    /// </summary>
+    /// <summary>Which battle scenery each place in the game uses.</summary>
     public static class BattleScenes
     {
         public sealed class Scene
@@ -50,9 +40,7 @@ namespace DSPRE.Avalonia.Data
         {
             var byId = new Dictionary<int, Scene>();
 
-            // The internal names are codes like D02 and R213. Every header also carries the name the game
-            // shows the player, so use that where there is one and fall back to the code where there is
-            // not: "Route 213" beats "R213" for somebody deciding which scenery to change.
+            // The internal names are codes like D02 and R213.
             int headers = 0;
             try { headers = RomInfo.GetHeaderCount(); } catch { }
 
@@ -61,13 +49,9 @@ namespace DSPRE.Avalonia.Data
             try { placeNames = RomInfo.GetLocationNames(); } catch { }
 
             bool dynamic = false;
-            try { dynamic = RomInfo.gameDirs.ContainsKey(DirNames.dynamicHeaders); } catch { }
+            try { dynamic = HeaderLabels.DynamicHeaders; } catch { }
 
-            // The displayed-name lookup only works properly in some games. Measured over every header:
-            // Diamond answers for all 559, Platinum for 12 of 593 and HeartGold for 3 of 540, and the few
-            // it does answer there are wrong, which is how nine different places all came out as Route
-            // 201. So it is used only when it answers for nearly every header, and the internal codes are
-            // used throughout otherwise. A name that is wrong is worse than a code that is terse.
+            // The displayed-name lookup only works properly in some games.
             bool trustDisplayedNames = false;
             if (placeNames != null && headers > 0)
             {
