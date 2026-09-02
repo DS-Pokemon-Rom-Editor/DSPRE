@@ -47,7 +47,7 @@ namespace LibNDSFormats.NSBMD
         /// <summary>Converts the NSBMD 0-31 material alpha into a 0-1 GL alpha (31 = fully opaque).
         /// Ported from upstream main's PR #209 ("Make Map Editor texture preview respect 1-30 alpha
         /// values for materials") even though RenderModel here is currently a stub pending the OpenTK
-        /// rewrite — kept in sync so a future merge with main doesn't conflict on this hunk, and so the
+        /// rewrite, kept in sync so a future merge with main doesn't conflict on this hunk, and so the
         /// eventual OpenTK renderer has it ready to call. The real fix now lives in the Avalonia
         /// renderer: see NsbmdGeometry.MaterialAlpha + NsbmdGlControl's per-part GL_BLEND.</summary>
         private static float MaterialAlpha(NSBMDMaterial mat) {
@@ -61,7 +61,7 @@ namespace LibNDSFormats.NSBMD
         public NSBMDGlRenderer(int matstart) { }
 
         // ----------------------------------------------------------------
-        // RenderModel overloads — no-op stubs
+        // RenderModel overloads, no-op stubs
         // ----------------------------------------------------------------
         public void RenderModel(
             string file2,
@@ -74,7 +74,7 @@ namespace LibNDSFormats.NSBMD
             float X, float Y,
             float dist, float elev, float ang,
             NSBTP.NSBTP_File p, NSBMD nsb)
-        { /* stub — awaiting OpenTK 4 rewrite */ }
+        { /* stub, awaiting OpenTK 4 rewrite */ }
 
         public void RenderModel(
             string file2,
@@ -88,10 +88,10 @@ namespace LibNDSFormats.NSBMD
             float dist, float elev, float ang,
             bool licht,
             NSBTP.NSBTP_File p, NSBMD nsb)
-        { /* stub — awaiting OpenTK 4 rewrite */ }
+        { /* stub, awaiting OpenTK 4 rewrite */ }
 
         // ----------------------------------------------------------------
-        // Pure math helpers — FULLY FUNCTIONAL (used by data-parsing layer)
+        // Pure math helpers, FULLY FUNCTIONAL (used by data-parsing layer)
         // ----------------------------------------------------------------
 
         public static int Sign(int data, int size)

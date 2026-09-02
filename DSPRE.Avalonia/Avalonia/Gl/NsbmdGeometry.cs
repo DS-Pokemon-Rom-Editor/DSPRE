@@ -15,11 +15,8 @@ namespace DSPRE.Avalonia.Gl
         public float Alpha = 1f;      // material alpha (0-1); < 1 needs GL_BLEND when drawn
 
         /// <summary>
-        /// Which faces the DS would draw, out of the material's polygon attribute: 0 draws neither,
-        /// 1 drops the front, 2 drops the back, 3 draws both. Bits 6 and 7 hold it
-        /// (REG_G3_POLYGON_ATTR_BK_SHIFT is 6 in the SDK's ioreg_G3.h, and the values are the GXCull
-        /// list in g3.h). Everything used to be drawn from both sides, which is why a map with a
-        /// backdrop drew the inside of it over the ground.
+        /// Which faces the DS would draw, out of the material's polygon attribute: 0 draws neither, 1 drops
+        /// the front, 2 drops the back, 3 draws both.
         /// </summary>
         public int CullMode = NsbmdCull.None;
     }
@@ -32,11 +29,7 @@ namespace DSPRE.Avalonia.Gl
         public const int Back = 2;      // GX_CULL_BACK: the back face is dropped
         public const int None = 3;      // GX_CULL_NONE: both sides drawn
 
-        /// <summary>
-        /// Reads the cull mode out of a material's polygon attribute. The mask says which bits the
-        /// material really sets: one material on every single map leaves these two alone, and reading
-        /// them anyway would say "draw nothing" and take it off the map.
-        /// </summary>
+        /// <summary>Reads the cull mode out of a material's polygon attribute. </summary>
         public static int FromPolyAttrib(uint attr, uint mask) =>
             (mask & 0xC0) == 0 ? None : (int)((attr >> 6) & 3);
     }
@@ -589,8 +582,7 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>
         /// Rebuilds one building's triangles with its parts moved to where a joint animation puts them on
-        /// this frame, in the same space the rest of the scene already sits in. Returns the vertices for
-        /// each of that building's materials, ready to hand straight back to the renderer.
+        /// this frame, in the same space the rest of the scene already sits in.
         /// </summary>
         public static Dictionary<int, float[]> RebuildBuilding(NsbmdRenderModel scene,
             NsbmdRenderModel.BuildingMaterials building, Func<int, NSBMDObject, float[]> jointMatrix)
@@ -715,7 +707,14 @@ namespace DSPRE.Avalonia.Gl
             }
         }
 
-        private static int S32(byte[] d, ref int i) { int v = BitConverter.ToInt32(d, i); i += 4; return v; }
+        /// <summary>One parameter word. Reads nought past the end rather than throwing, so a list
+        /// that stops mid-command is simply cut short.</summary>
+        private static int S32(byte[] d, ref int i)
+        {
+            int v = i + 4 <= d.Length ? BitConverter.ToInt32(d, i) : 0;
+            i += 4;
+            return v;
+        }
 
         private static void InterpretPolyData(byte[] poly, int polyStackId, MTX44[] stack, float modelScale,
             NSBMDMaterial mat, float[] sceneTransform, List<float> outVerts, float cr, float cg, float cb)
@@ -742,7 +741,11 @@ namespace DSPRE.Avalonia.Gl
                 var cmds = new int[4];
                 for (int k = 0; k < 4; k++) cmds[k] = idx < len ? poly[idx++] : 0xff;
 
-                for (int k = 0; k < 4 && idx < len; k++)
+                // Every command in the word is run, not only the ones with a parameter still to come.
+                // Stopping at the end of the parameters drops whatever sits after the last one, and the
+                // command that ends a run of corners takes no parameter, so a shape written as a single
+                // run lost all of it and a shape written as several lost its last one.
+                for (int k = 0; k < 4; k++)
                 {
                     switch (cmds[k])
                     {
@@ -885,12 +888,7 @@ namespace DSPRE.Avalonia.Gl
             }
         }
 
-        /// <summary>Centres a model in view and scales it to fit.
-        ///
-        /// <paramref name="like"/> makes it use another model's centre and scale instead of working out
-        /// its own. That matters while an animation plays: a moving model has different bounds every
-        /// frame, so recentring each one made the whole thing slide about the screen instead of the
-        /// moving part moving. Every frame is placed the way the still model was placed.</summary>
+        /// <summary>Centres a model in view and scales it to fit.</summary>
         private static void NormalizePositions(NsbmdRenderModel model, NsbmdRenderModel like = null)
         {
             float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;

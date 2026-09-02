@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DSPRE;
+using DSPRE.Avalonia;
 using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
@@ -13,10 +14,6 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// The 3D side of the game: the models, the texture bundles that dress them, and the animations that
     /// move them.
-    ///
-    /// Kept apart from the flat graphics on purpose. A model is a different kind of thing: it has shape as
-    /// well as colour, what can be saved out of it is not a picture, and putting one back means converting
-    /// between formats rather than swapping pixels. Mixing the two in one list would have made both worse.
     /// </summary>
     public static class ModelAssets
     {
@@ -30,20 +27,18 @@ namespace DSPRE.Avalonia.Data
             public string What { get; init; }
             public string DeepEditor { get; init; }
 
-            /// <summary>The archive holding the picture sets for these models, when they are kept apart
-            /// from the models themselves. Buildings and map scenery work this way: one set dresses a
-            /// whole map, so which set a given model wants is a choice rather than something the model
-            /// records.</summary>
+            /// <summary>
+            /// The archive holding the picture sets for these models, when they are kept apart from the
+            /// models themselves.
+            /// </summary>
             public DirNames? TextureArchive { get; init; }
 
-            /// <summary>The archive holding the movement for these models, when it is kept apart from
-            /// them. Which animation belongs to which building is not recorded either, so it is offered
-            /// as a choice the same way the pictures are.</summary>
+            /// <summary>
+            /// The archive holding the movement for these models, when it is kept apart from them.
+            /// </summary>
             public DirNames? AnimationArchive { get; init; }
 
-            /// <summary>True for the models inside buildings. The game keeps a separate table of which
-            /// movement belongs to which model for the inside and the outside, so it has to be said
-            /// which of the two this archive is.</summary>
+            /// <summary>True for the models inside buildings. </summary>
             public bool Indoor { get; init; }
         }
 
@@ -270,17 +265,7 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { AppLogger.Error("ModelAssets.Dress failed: " + ex.Message); return false; }
         }
 
-        /// <summary>
-        /// The name a model file calls itself, without reading the model.
-        ///
-        /// Every one of these files carries the names GameFreak gave its models, and listing 590 rows all
-        /// reading "Buildings, outside" throws that away. Opening every model to fetch a name would make
-        /// the list crawl, so only the name table is read: after the MDL0 block's four byte tag, its size,
-        /// a spare byte and the model count, the reader skips fourteen bytes and the count's worth of
-        /// offsets, which puts the sixteen byte names at the block plus 24 plus eight per model. Those
-        /// numbers are lifted from ReadMdl0 in NSBMD.cs rather than worked out, and a test checks every
-        /// model in every game against what the full reader says.
-        /// </summary>
+        /// <summary>The name a model file calls itself, without reading the model.</summary>
         public static string NameInFile(byte[] file)
         {
             if (file == null || file.Length < 32) return null;
@@ -315,9 +300,7 @@ namespace DSPRE.Avalonia.Data
             public Kind Kind;
         }
 
-        /// <summary>One thing in a 3D archive. An overworld person is a model, the pictures painted on it
-        /// and the movement it makes, filed one after another; listing those as three rows meant two of
-        /// them could only say they were not a model.</summary>
+        /// <summary>One thing in a 3D archive. </summary>
         public sealed class Unit
         {
             public Archive Archive;
@@ -340,13 +323,9 @@ namespace DSPRE.Avalonia.Data
             _ => "Other data",
         };
 
-        /// <summary>Breaks a 3D archive into the things it holds, and gives each the name its file carries.
-        ///
-        /// A model claims whatever follows it until the next model. In Diamond, Platinum and HeartGold
-        /// nothing ever does follow one: those archives are filed by kind, so the buildings archive is all
-        /// models and the overworld one is a handful of models with four hundred sets of pictures, because
-        /// an overworld person is a flat board wearing a texture. The rule is kept for an archive filed
-        /// the other way, and a test records that none of these three are.</summary>
+        /// <summary>
+        /// Breaks a 3D archive into the things it holds, and gives each the name its file carries.
+        /// </summary>
         public static List<Unit> Units(Archive a, int fileCount)
         {
             var units = new List<Unit>();
@@ -392,11 +371,9 @@ namespace DSPRE.Avalonia.Data
             return units;
         }
 
-        /// <summary>What one entry calls itself, whatever kind it is, or null when it says nothing.
-        ///
-        /// A model carries its own name. A set of pictures does not, but the pictures in it do, so it is
-        /// named after the first of them: the overworld archive turns from four hundred numbered sets into
-        /// babyboy1, boy1 and the rest, which is who they actually are.</summary>
+        /// <summary>
+        /// What one entry calls itself, whatever kind it is, or null when it says nothing.
+        /// </summary>
         public static string NameOf(Archive a, int index)
         {
             var narc = new ScriptNarc(a.Dir);
@@ -409,8 +386,6 @@ namespace DSPRE.Avalonia.Data
             if (kind == Kind.TextureBundle) return FirstTextureName(b);
             return null;
         }
-
-        private static readonly Dictionary<(string, int), string> _textureNames = new();
 
         /// <summary>The name of the first picture in a set, read with the real reader rather than by
         /// hunting for readable bytes, which found rubbish in half the files.</summary>
@@ -435,12 +410,35 @@ namespace DSPRE.Avalonia.Data
             catch { return null; }
         }
 
-        /// <summary>The movements the game itself gives this model, as entries of the movement archive.
+        /// <summary>
+        /// How well a movement's own name says it belongs to a model: 2 when the two names are the same,
+        /// 1 when one starts with the other, 0 when they have nothing to do with each other.
         ///
-        /// Buildings are not left to guesswork after all: the games carry a table saying which movements
-        /// each building model uses, which is what makes a windmill turn and a door open. It is read here
-        /// so the right one can be offered first instead of making somebody try ninety eight of them.
-        /// Anything not in that table still gets the full list to pick from.</summary>
+        /// The names really do line up. Across HeartGold's 340 building models and 273 movements, 85 of
+        /// the movements carry a name at all; 8 of those are exactly a model's name and 46 share a start
+        /// with one, so this finds real pairs rather than coincidences.
+        /// </summary>
+        public static int NameMatch(string modelName, string movementName)
+        {
+            if (string.IsNullOrWhiteSpace(modelName) || string.IsNullOrWhiteSpace(movementName)) return 0;
+            modelName = modelName.Trim();
+            movementName = movementName.Trim();
+            if (string.Equals(modelName, movementName, StringComparison.OrdinalIgnoreCase)) return 2;
+
+            // A shared start has to be a real one. Two names that only agree on "en_" say nothing, since
+            // most of a game's models begin that way.
+            int shared = 0;
+            while (shared < modelName.Length && shared < movementName.Length
+                   && char.ToLowerInvariant(modelName[shared]) == char.ToLowerInvariant(movementName[shared]))
+                shared++;
+            if (shared < 4) return 0;
+            return movementName.StartsWith(modelName, StringComparison.OrdinalIgnoreCase)
+                || modelName.StartsWith(movementName, StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        }
+
+        /// <summary>
+        /// The movements the game itself gives this model, as entries of the movement archive.
+        /// </summary>
         public static IReadOnlyList<int> OwnAnimations(Archive a, int index)
         {
             if (a.AnimationArchive == null) return Array.Empty<int>();
@@ -502,24 +500,52 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// What a mesh from a 3D program cannot do, said once so every place that needs it says the same.
-        ///
-        /// Reading a model means walking a display list the DS hardware runs, and writing one means
-        /// producing that list plus the bytecode that drives the bones. Nothing in DSPRE writes either, and
-        /// no other tool that opens these files does it either, so there is nothing to lean on. Putting a
-        /// finished NSBMD in works because those bytes are already in the shape the game reads.
         /// </summary>
-        public const string CannotConvertAMesh =
-            "An OBJ or a glTF cannot be turned into one of these. A model in these games is a list of "
-            + "drawing commands for the DS's own hardware, and DSPRE cannot write that list. What can be "
-            + "put in is a finished NSBMD file, which is what the tools that build these models produce.";
+        public const string CanConvertAMesh =
+            "An OBJ is turned into a model as it goes in: its corners, the way they face, where they " + 
+            "land on their pictures, and the colours and pictures its materials name. A finished NSBMD " + 
+            "goes in as it is.";
 
+        /// <summary>Puts a file back into an archive, in place of one entry.</summary>
         /// <summary>
-        /// Puts a file back into an archive, in place of one entry.
-        ///
-        /// The kind is checked first. An archive of models holds models, and a texture set dropped into a
-        /// model's slot would leave the game reading one thing as another, so it is refused with a reason
-        /// rather than written and found out later.
+        /// Puts a mesh in as a model, turning it into one on the way. Returns why not, or null, and
+        /// hands back a line saying what it came to.
         /// </summary>
+        public static string ImportMesh(Archive a, int index, string path, out string note)
+        {
+            note = null;
+            var narc = new ScriptNarc(a.Dir);
+            if (!narc.Available) return "This game does not have this archive.";
+            var there = narc.Get(index);
+            if (there == null) return "There is no entry here to put a model in place of.";
+            if (Identify(there) != Kind.Model)
+                return $"This entry holds {ShortName(Identify(there))}, not a model, so a mesh does not "
+                     + "belong here. Pick an entry that holds a model.";
+
+            var mesh = ObjMesh.Read(path, out string whynot);
+            if (mesh == null) return whynot;
+
+            var textures = new List<DsTexture>();
+            foreach (var m in mesh.Materials)
+            {
+                if (m.TexturePath == null) continue;
+                byte[] png;
+                try { png = File.ReadAllBytes(m.TexturePath); } catch { continue; }
+                if (!AnyPng.TryReadRgba(png, out var rgba, out int w, out int h, out string pngWhy))
+                    return $"{Path.GetFileName(m.TexturePath)} could not be read: {pngWhy}";
+                var t = DsTexture.From(rgba, w, h, m.Name);
+                if (t.Whynot != null) return t.Whynot;
+                textures.Add(t);
+            }
+
+            var made = NsbmdWriter.Build(mesh, textures);
+            if (made.Whynot != null) return made.Whynot;
+
+            narc.Put(index, made.Bytes);
+            note = made.Summary + (made.Notes.Count > 0 ? " " + string.Join(" ", made.Notes) : "");
+            return null;
+        }
+
         public static string ImportRaw(Archive a, int index, string path)
         {
             var narc = new ScriptNarc(a.Dir);
@@ -527,6 +553,11 @@ namespace DSPRE.Avalonia.Data
 
             var there = narc.Get(index);
             if (there == null) return "There is no entry here to put a file in place of.";
+
+            // A mesh is not 3D data the DS can read until it has been turned into some, so it takes
+            // the long way in.
+            if (string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase))
+                return ImportMesh(a, index, path, out _);
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
@@ -537,7 +568,7 @@ namespace DSPRE.Avalonia.Data
             var now = Identify(file);
 
             if (now == Kind.NotThreeD || now == Kind.Empty)
-                return "That file is not 3D data. " + CannotConvertAMesh;
+                return "That file is not 3D data. " + CanConvertAMesh;
 
             if (was != Kind.NotThreeD && was != Kind.Empty && now != was)
                 return $"This entry holds {ShortName(was)} and that file holds {ShortName(now)}. Put a "
