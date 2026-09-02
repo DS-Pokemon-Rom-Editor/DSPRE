@@ -94,7 +94,7 @@ jobs:
           ## 🚧 What does this mean?
           This build reflects ongoing development and is not a stable release.
           Features may be incomplete, subject to change, or cause unexpected issues.
-          Use at your own risk—expect potential crashes, broken functionality, or unpolished features.
+          Use at your own risk. Expect potential crashes, broken functionality, or unpolished features.
           
           ## 💡 Who is this for?
           Developers and testers who want to stay up-to-date with the latest progress.

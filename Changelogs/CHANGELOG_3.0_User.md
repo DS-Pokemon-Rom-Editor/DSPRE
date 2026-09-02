@@ -12,6 +12,13 @@ separate window or a manual step are now part of the main view.
 
 This file is a work in progress while 3.0 is being finished.
 
+### Editors that are not ready yet
+
+3.0 adds a great many editors, and 47 of them are not finished. They are greyed out in the menus with
+the reason on hover, and the status bar says how many there are. Everything that shipped before 3.0
+works as it always did. They will be turned on as they are finished.
+
+
 ### The application itself
 
 - DSPRE now runs on Linux as well as Windows, from the same codebase.
@@ -349,8 +356,33 @@ This file is a work in progress while 3.0 is being finished.
   after a second game was opened. In HeartGold the text box colours start one file later than in
   Platinum, so opening HeartGold second showed every text box style in the wrong colours.
 
+- Trainer sprites open on the trainer as they appear in a battle, not on the sheet of loose pieces,
+  and are drawn with the colours the game pairs them with rather than the nearest set in the archive.
+  The nearest set usually happened to be the right one, which is the worst kind of nearly right.
+- Fixed the Battle screen tab listing thirty one rows that all read "Battle background colour
+  cycles". They are numbered now, so one can be told from another.
+- Removed a line about ball naming that was showing on every battle graphic, including the HP bars
+  and the message frames, where it meant nothing.
 - The location splash screens are now named after the places they belong to, and the two screens
   that two places share are one row naming both rather than two rows claiming the same files.
+- The Items tab now has a row per item icon rather than a row per drawing. Several items share one
+  drawing and have their own colours, and grouping by the drawing kept only the first of them: Burn
+  Heal, Ice Heal, Awakening and Parlyz Heal are one bottle in four colours, and three of the four
+  went missing while their colours turned up further down the list as unnamed files. That is 71 item
+  icons per game that could not be found by name before, and a row now says when a drawing is shared
+  so it is clear that painting it changes the others too.
+- The item files that are not any item's icon are named for what they are: the animation and the
+  layout at the start of the archive, and the arrow drawn beside Back in the bag at the end. The rest
+  say that no item uses them rather than repeating the name of the archive with a file number after
+  it. There are 65 of those rows in HeartGold.
+
+### Tidying up
+
+- The battle background field in the Header editor now has an Open button like every other linked
+  field on that row, which shows the scenery and every place that fights on it.
+- One reader for a drawing's header and one for a background's, instead of six and four copies of the
+  same offsets. They all agreed, which is six chances for one of them to stop agreeing.
+- Removed a setting nothing read, an unused cache and an unused reader.
 
 ### Weather, fonts and banners
 
@@ -392,7 +424,7 @@ This file is a work in progress while 3.0 is being finished.
 
 - The battle screen is now grouped and named instead of being a run of numbered files. Every entry of
   the battle furniture archive is named from the games' own index list, so the HP bar, the box with
-  the Pokémon's name in it, the six balls, the type badges, the message frame and the platforms can
+  the Pokémon's name in it, the six balls, the type icons, the message frame and the platforms can
   be found by name.
 - Split into tabs: Battle HP bars, Battle icons, Battle platforms and Battle screen, with rows in
   file order.
@@ -418,6 +450,13 @@ This file is a work in progress while 3.0 is being finished.
   draws, so they are no longer mistaken for the real ones.
 - Added the battle furniture archive to Diamond and Pearl, which DSPRE never read at all. That is 279
   more graphics reachable in those games.
+- The type, contest condition and move category icons now show the right way round and in the right
+  colours. Nothing in those files records how wide they are, so DSPRE guessed sixteen pixels and
+  stacked each word on top of itself, and they were all painted from the first sixteen colours when
+  the game paints them from three different sets. All twenty six now read as they do in the game.
+- Those icons are named by what is written on them rather than by the file name, so the one whose
+  file is called ELE is the Electric type icon, ESP is Psychic, EVIL is Dark, INSECT is Bug and
+  QUES is the ??? type. The five that are contest conditions rather than types say so.
 
 ### Event Editor
 
@@ -469,3 +508,262 @@ This file is a work in progress while 3.0 is being finished.
   the game itself goes by, and Platinum's 20 fanfares are listed.
 - The note track now says why it is empty when a cry or a sound is picked, instead of asking you to
   pick something when you already have.
+
+### Spawn Point Editor
+
+Sets where a new game begins and how much money the player starts with. Pick the header the player
+wakes up in, the direction they face, the matrix square and the tile inside it, and the starting
+money. The place name is shown under the header so you can tell you have the right one.
+
+"Show all headers" puts the whole list back when the Matrix Editor has handed over a single map.
+
+### Special Encounters
+
+Gathers the encounter tables that are not ordinary grass into one window, and shows only the ones
+the open game has. Diamond, Pearl and Platinum get Honey Tree and Great Marsh; HeartGold and
+SoulSilver get Bug Contest and Safari Zone. Each set lists its Pokemon with levels, rate and score,
+tells you the effective chance of each one appearing, and can be exported and imported. Headbutt
+trees have their own editor under Pokemon.
+
+### Camera Editor
+
+Lists the camera angles a header can pick, each row named the way the Header Editor names it, so you
+can tell 2D Top View from 3D Front Low without counting rows. The whole table can be exported and
+imported, and single angles exported one at a time.
+
+### Matrix Editor
+
+Shows a header's map grid with one colour per map number so the shape of an area reads at a glance,
+and lets you paint values across cells by dragging. The Headers, Heights and Sections tabs appear
+only when the matrix carries those sections. "Set spawn to selection" hands the selected square
+straight to the Spawn Point Editor.
+
+### Building Editor
+
+Lists every building model in the ROM and draws the selected one in 3D. The texture list picks which
+texture pack paints it, starting on the model's own embedded textures where it has them, and says so
+when a model has none to use. Models can be imported and exported.
+
+### Area Data Editor
+
+Sets which texture packs a map's terrain and buildings are drawn with, the light type, and, in
+HeartGold and SoulSilver, the terrain animation and whether the area counts as indoor or outdoor.
+The terrain animation reads "none" when it is set to the game's own value for no animation.
+
+### Overlay Editor
+
+Lists the ROM's overlays with their RAM addresses and uncompressed sizes, and shows which ones are
+compressed on disk against which ones are marked to be compressed again when the ROM is built. The
+window is read-only: ds-rom handles the compression and that choice lives in overlays.yaml.
+
+### Item Tables
+
+Three tables in one window. Pickup shows which slot the game rolls and the items each level bracket
+can give, with the activation divisor that decides how often Pickup fires at all. Hidden Items and
+Rock Smash list what each map can turn up. Every table can be edited in place and saved together.
+
+### Reading the screen
+
+- Green, orange and red status text follows the theme, so a warning is readable on the light theme
+  and the dark one.
+- Editors that show a list open on its first entry, so the panel beside it is filled in rather than
+  blank.
+- Windows that offer a choice say why a button is unavailable rather than greying it out silently.
+
+### Opening a ROM
+
+When a ROM already has an extracted folder beside it, DSPRE asks what to do with it and the buttons
+say which is which: "Load extracted data" opens what is there, "Re-extract from the ROM" throws that
+folder away and unpacks the ROM again, and Cancel leaves the ROM closed. The message spells out that
+re-extracting loses anything already edited.
+
+### Fly / Warp Editor
+
+Sets where the game sends you after a blackout, where each Fly destination lands, and which of them
+start unlocked. Headers read as the place they are rather than their internal code, the same label
+the Header Editor uses.
+
+### Places by name
+
+Anywhere a header is picked, it now reads as its number, its internal code and the place it is:
+"060 - T20   New Bark Town". That name comes from the header itself, and it works in all three
+games: 559 of 559 headers in Diamond, 593 of 593 in Platinum and 540 of 540 in HeartGold. The list
+of places that fight on a piece of battle scenery is named the same way.
+
+### Music & Battle Tables
+
+Four tables in one window: which music a flag switches a place to, which battle effects combine,
+and the Vs. Trainer and Vs. Pokemon tables. Places and songs are both pickable by name, with the raw
+numbers still there for anything the name lists do not cover.
+
+### Overworld Editor
+
+Shows every overworld sprite entry in the ROM with its pictures, and on Platinum can add and remove
+entries. Entries can be given names, per project or for every project, in Tools > Edit Dropdown
+Labels under World; anything unnamed stays "OW Entry" and its number. The names show up wherever an
+overworld is picked, including the Event Editor.
+
+### Wild Pokemon Editor
+
+Sets what appears in the grass, in the water, from a rod and from a rock, per time of day where the
+game has one. A walk rate of 0 is called out, since that means the game never rolls for a wild
+Pokemon in that area no matter what the twelve slots say.
+
+### Trainer Card Editor
+
+Edits the trainer card's front, back, copyright line and the two trainer poses, each importable and
+exportable as a PNG, with a preview of the finished card. The poses are drawn at twice size so the
+trainer is actually visible in the ROM's mostly-empty 256 by 192 canvas, and the panels wrap to the
+window rather than running off its right edge.
+
+### Dungeon Cut-in Editor
+
+Sets the picture and text shown when you enter a cave or dungeon, per time of day. The wipe field is
+marked unused, because the game always fades in here and never reads it; it stays editable so
+importing and exporting keeps whatever a ROM has in it.
+
+### Settings
+
+Holds the export and import paths, the default ROM, update checks, UI scale, the welcome screen and
+the 3D camera. The light or dark theme is picked here too, applies straight away, and is remembered
+next time DSPRE opens. The Tools menu keeps a quick toggle.
+
+### Battle Screen
+
+Draws a whole battle, both screens, from the graphics in the open ROM, and lets you edit any part of
+it from there.
+
+The top screen carries the backdrop, the ground each Pokemon stands on, both HP bars and the message
+box. The touch screen carries the command panel. Which screen a thing belongs to is the games' own
+answer, not a guess: the HP bars and the message window are drawn by the main engine, everything on
+the command panel by the sub engine.
+
+Pick a piece by clicking it on either screen, or from the list beside them. The list says which
+screen each piece is on, and says so plainly when a piece could not be drawn. What you pick is
+outlined on the screen and described on the right, and can be painted, saved as a PNG or replaced
+from one.
+
+Along the top you can change the ground the battle is fought on, the time of day, which of the
+twenty text box styles the box uses, and whether the command buttons are showing. The message box
+and the HP bars are written in the ROM's own font, so an edited font shows here too. The name, level,
+health and message are a sample you can type over, so you can see whether an edited bar still fits a
+long name or a full bar; none of it is written to the ROM.
+
+Anything shared says so before it is changed. The HP bars and the message frame are drawn by every
+battle in the game, and the frame is the one the field uses as well, so changing one asks first and
+says what else it affects. The touch screen layers cannot be painted from here at all, because they
+are all drawn from one sheet of tiles and there would be no saying which layer a painted picture
+belonged to; the editor says that rather than leaving the buttons greyed out with no reason.
+
+### Picture to Background
+
+Graphics, Picture to Background. Takes any PNG and makes the three files a DS background is drawn
+from: the colour list, the tile sheet and the arrangement that says which tile goes in each square of
+the screen.
+
+The window shows the picture twice: as it is, and as the game would draw it once it has been taken
+apart into tiles. Anything the screen cannot hold shows up as a difference between the two, so there
+is no guessing about what a conversion cost.
+
+Down the right it says what the picture comes to: its size in squares of eight pixels, how many tiles
+it needs out of the 1024 an arrangement can point at, how many of those squares got to share a tile
+and how many of those only matched once turned over, how many colour banks it used out of sixteen,
+how many colours in all, and how much room the three files take.
+
+You can build it either way a DS background works: sixteen banks of sixteen colours, which is what
+almost every background in these games uses, or one list of 256. There is a switch for keeping the
+first colour of each bank clear so see-through parts of the picture stay see-through.
+
+It refuses rather than approximates, and it always says the number. A size that does not divide by
+eight is told the nearest that would fit. A square asking for more colours than a bank holds is
+refused with the position of the worst offenders and how many colours each wants. A picture needing
+more than sixteen banks, more than 1024 tiles, or in 256-colour mode more than 256 colours, is
+refused with the count it actually needs. Nothing is written until you save, and a refusal writes
+nothing at all.
+
+Saving writes the three files side by side under one name, ready to go into an archive through the
+Graphics workbench.
+
+### Instruments as a SoundFont
+
+The Audio Editor can now save the set of instruments a tune plays on as a SoundFont, next to Export
+MIDI.
+
+A MIDI carries the notes but not the sounds, so a tune exported from the ROM has always played on
+whatever the receiving program happened to have under those instrument numbers. Save the SoundFont
+beside the MIDI, load both, and it plays on the game's own sounds instead.
+
+The button exports the bank whatever is picked is played on, named as the game names it. Note ranges,
+root notes, loop points and sample rates carry across exactly. The DS's own tone generators carry no
+recording at all, so each is written out as a short looping clip of the sound it makes. The attack,
+decay, sustain and release are converted from the way the DS counts them to the way a SoundFont does,
+so those are close rather than identical, and the window says so.
+
+### Matching a movement to a model by name
+
+The Models and textures window works out which movement belongs to a model from the name the movement
+file carries, for the models the game keeps no table for. Those come up under "Named for this model",
+ahead of the full list, and one of them is what the box starts on. The line underneath says where the
+choice came from: the game's own table, the movement's name, or neither.
+
+Searching in that window and in the Graphics workbench now has a button to empty the box, inside the
+box on the right. Close moved to the bottom of the window, so the button beside what you are typing
+in empties it rather than shutting the window.
+
+### A mesh from any 3D program, put in as a model
+
+The Models and textures window's "Put a file in" now takes an OBJ as well as a finished Nitro file.
+The mesh is turned into a DS model as it goes in: its corners, the way they face, where they land on
+their pictures, and the colours and pictures its materials name.
+
+Pictures named by the materials file go in with it, in whichever shape they need. Sixteen colours if
+they fit, then 256, and every pixel carrying its own colour when there are more than a list can hold,
+which is said plainly because it costs twice the room. A picture has to be a power of two across and
+down, from 8 to 1024, and one that is not is refused with the nearest size that would fit.
+
+A mesh reaching further from the middle than the DS keeps in one number is written smaller, with the
+model itself saying how much to scale it back up, so nothing is lost to rounding that did not have to
+be. What it came to is reported when it goes in: how many triangles, shapes, materials and pictures,
+and anything that was left out or worked around.
+
+What it does not carry: a skeleton, since an OBJ has none, so the whole mesh hangs off one joint and
+animations written for the model it replaced will not fit it. A mesh with no normals is drawn at its
+material's own colour rather than lit, because lighting a model that cannot say which way it faces
+comes out black.
+
+### Two fixes underneath
+
+Saving a ROM failed for HeartGold and SoulSilver with a message about a null character in a path. The
+place the text archives live had been written into the source with the wrong sort of slashes, leaving
+four control characters where `a/0/2/7` should have been, so the moment a save touched the text
+archives it stopped. Every archive path in Diamond, Platinum and HeartGold is now checked to be a
+path at all.
+
+A shape whose drawing commands ended exactly on their last parameter lost the command that closes it,
+and with it everything it was going to draw. The games' own models all end with padding so none of
+them was affected, but a model written by anything that does not pad came out invisible.
+
+### Font Editor
+
+Shows the letters a ROM writes with, and lets you redraw them.
+
+The dropdown lists every font the open ROM carries, by the names the games give them: four in Diamond
+and Pearl, four in Platinum, six in HeartGold and SoulSilver. Each holds 509 letters at two bits a
+pixel, up to sixteen pixels square, which gives four shades: nothing, two inks and the paper the box
+behind the writing has already painted.
+
+The list on the left is every letter in the font. Beside each number is the character that writes it,
+where this ROM's character map has one; the rest are kana and symbols an English map never asks for,
+and they say so rather than sitting blank. The status line says how many of the 509 are reachable.
+
+Pick a letter and it opens in the painter at twenty times size. The left button paints whichever of
+the four shades is chosen, the right button rubs out. A red line marks how far along the next letter
+starts, which is the letter's width and is editable beside it; anything drawn past that line is not
+lost, it simply sits under whatever comes next.
+
+Underneath, type a sentence and see it in that font, at the size the game writes it and again at three
+times that, so a redrawn letter can be judged in a word rather than on its own. The preview follows
+your edits before they are saved.
+
+Nothing is written until you press Save, and saving a font that has not been edited puts back the
+same bytes it read.
