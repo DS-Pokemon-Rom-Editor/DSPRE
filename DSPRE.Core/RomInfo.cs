@@ -12,9 +12,7 @@ using Path = System.IO.Path;
 
 namespace DSPRE
 {
-    /// <summary>
-    /// Class to store ROM data from GEN IV Pokémon games
-    /// </summary>
+    /// <summary>Class to store ROM data from GEN IV Pokémon games</summary>
 
     public class RomInfo
     {
@@ -66,10 +64,7 @@ namespace DSPRE
         public static uint pickupActivationDivisorOffset { get; private set; }
         public static uint pickupWeightTableOffset { get; private set; }
 
-        // Starter Pokémon table. DP/Pt: a fixed overlay offset (species IDs are 4-byte words, held item lives
-        // separately in a script file). HGSS: no fixed offset — species are found at runtime via
-        // starterArm9SearchSuffix (a byte-pattern search over arm9.bin), so starterOverlayNumber there only
-        // covers the starter-cries table (a separate table, still overlay-based on HGSS).
+        // Starter Pokémon table.
         public static int starterOverlayNumber { get; private set; } = -1;
         public static uint starterSpeciesOffset { get; private set; }
         public static byte[] starterArm9SearchSuffix { get; private set; }
@@ -109,11 +104,7 @@ namespace DSPRE
         public static int itemDescriptionsTextNumber { get; private set; }
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
-        /// <summary>Trainer-class description text archive. Only confirmed for Platinum
-        /// non-Japanese (619 name / 620 description, per a verified community write-up on adding a
-        /// new trainer class) — elsewhere this is the unverified "next archive after the name one"
-        /// convention, not independently confirmed. Only rely on it where that's been checked (see
-        /// TrainerClassTableExpansion's Platinum-English-only gate for "Add Trainer Class").</summary>
+        /// <summary>Trainer-class description text archive. </summary>
         public static int trainerClassDescriptionMessageNumber { get; private set; }
         public static int trainerNamesMessageNumber { get; private set; }
         public static int moveDescriptionsTextNumbers { get; private set; }
@@ -187,28 +178,28 @@ namespace DSPRE
             personalPokeData,
             pokemonBattleSprites,
             otherPokemonBattleSprites,
-            pokemonSpriteOffsets,   // combined per-mon record: HGSS /a/1/8/0 (89 B/mon) · Plat pl_poke_data.narc — last 3 bytes = sprite Y/shadow X/shadow size
-            pokeYofs,               // DP /poketool/pokegra/poke_yofs.narc — signed front-sprite Y, 1 B/mon
-            pokeShadowOfx,          // DP /poketool/pokegra/poke_shadow_ofx.narc — signed shadow X, 1 B/mon
-            pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc — shadow size, 1 B/mon
-            pokeHeight,             // DP+Plat /poketool/pokegra/height.narc — 4 files/mon (F-back,M-back,F-front,M-front), heights
+            pokemonSpriteOffsets,   // combined per-mon record: HGSS /a/1/8/0 (89 B/mon) · Plat pl_poke_data.narc, last 3 bytes = sprite Y/shadow X/shadow size
+            pokeYofs,               // DP /poketool/pokegra/poke_yofs.narc, signed front-sprite Y, 1 B/mon
+            pokeShadowOfx,          // DP /poketool/pokegra/poke_shadow_ofx.narc, signed shadow X, 1 B/mon
+            pokeShadow,             // DP /poketool/pokegra/poke_shadow.narc, shadow size, 1 B/mon
+            pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front), heights
             pokeHeightForms,        // /poketool/pokegra/height_o.narc, alt-form heights (record index matches the otherpoke sprite index)
-            pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc — 28 B/mon battle-animation table (POKE_ANM_DATA)
-            pokeAnimDefs,           // DP /pokeanime/poke_anm.narc — the PAST program-animation scripts (referenced by prg_anm)
+            pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc, 28 B/mon battle-animation table (POKE_ANM_DATA)
+            pokeAnimDefs,           // DP /pokeanime/poke_anm.narc, the PAST program-animation scripts (referenced by prg_anm)
 
-            wazaSeq,                // battle move sequence scripts (per move) — battle/skill/waza_seq.narc (HGSS a/0/0/0)
-            subSeq,                 // shared move-sequence subroutines — battle/skill/sub_seq.narc (HGSS a/0/0/1)
-            beSeq,                  // per-effect move sequence scripts — battle/skill/be_seq.narc (HGSS a/0/3/0)
-            wazaEffectScripts,      // move VISUAL-effect (WEST) scripts, one per move — wazaeffect/we.arc (HGSS a/0/1/0)
-            wazaEffectSub,          // WEST subroutines / continuous animations — wazaeffect/we_sub.narc (HGSS a/0/6/1)
-            wazaEffectChar,         // effect cell graphics: NCGR char — wazaeffect/effectclact/wechar.narc (HGSS a/0/2/2)
-            wazaEffectPltt,         // effect cell graphics: NCLR palette — wazaeffect/effectclact/wepltt.narc (HGSS a/0/2/3)
-            wazaEffectCell,         // effect cell graphics: NCER cells — wazaeffect/effectclact/wecell.narc (HGSS a/0/2/4)
-            wazaEffectCellAnm,      // effect cell graphics: NANR anims — wazaeffect/effectclact/wecellanm.narc (HGSS a/0/2/5)
-            wazaParticle,           // effect SPA particle systems — wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
-            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs — pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
-            battleObj,              // battle OBJ cells incl. the terrain ground platforms — pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
-            battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX) — a/0/0/9 = ARC_BATT_BG_PLANM
+            wazaSeq,                // battle move sequence scripts (per move), battle/skill/waza_seq.narc (HGSS a/0/0/0)
+            subSeq,                 // shared move-sequence subroutines, battle/skill/sub_seq.narc (HGSS a/0/0/1)
+            beSeq,                  // per-effect move sequence scripts, battle/skill/be_seq.narc (HGSS a/0/3/0)
+            wazaEffectScripts,      // move VISUAL-effect (WEST) scripts, one per move, wazaeffect/we.arc (HGSS a/0/1/0)
+            wazaEffectSub,          // WEST subroutines / continuous animations, wazaeffect/we_sub.narc (HGSS a/0/6/1)
+            wazaEffectChar,         // effect cell graphics: NCGR char, wazaeffect/effectclact/wechar.narc (HGSS a/0/2/2)
+            wazaEffectPltt,         // effect cell graphics: NCLR palette, wazaeffect/effectclact/wepltt.narc (HGSS a/0/2/3)
+            wazaEffectCell,         // effect cell graphics: NCER cells, wazaeffect/effectclact/wecell.narc (HGSS a/0/2/4)
+            wazaEffectCellAnm,      // effect cell graphics: NANR anims, wazaeffect/effectclact/wecellanm.narc (HGSS a/0/2/5)
+            wazaParticle,           // effect SPA particle systems, wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
+            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs, pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX), a/0/0/9 = ARC_BATT_BG_PLANM
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
             titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
             trainerCardGraphics,    // HGSS + Platinum only. Trainer card face/back + trainer-pose art.
@@ -226,9 +217,7 @@ namespace DSPRE
             mapTextures,
             areaData,
 
-            // Animation data the games play over the field. Terrain animation is an NSBTA chosen per
-            // area (RESOURCE_PARAM.ground_anm, 0xFFFF = none); building animations live in their own
-            // archive with separate outdoor/indoor lists saying which model uses which.
+            // Animation data the games play over the field.
             groundAnimations,       // ARC_GROUND_ANM        HGSS(USA) a/1/4/0  ground_anm.narc  (2 NSBTA)
             buildingAnimations,     // ARC_BM_ANM            HGSS(USA) a/1/0/6  bm_anime.narc   (NSBCA/NSBTA/NSBTP)
             buildingAnimListOut,    // ARC_BM_INFO_OUT_LIST  HGSS(USA) a/1/0/7  bm_info_out.narc
@@ -278,9 +267,9 @@ namespace DSPRE
 
         public RomInfo(string id, string romFolderName)
         {
-            // These are only ever (re)populated lazily elsewhere, behind an "if (x == null)" check —
-            // without resetting them here first, switching to a different ROM mid-session would leave
-            // the FIRST-loaded ROM's overworld-sprite table/dict silently in effect forever.
+            // These are only ever (re)populated lazily elsewhere, behind an "if (x == null)" check, without
+            // resetting them here first, switching to a different ROM mid-session would leave the
+            // FIRST-loaded ROM's overworld-sprite table/dict silently in effect forever.
             OverworldTable = null;
             overworldTableKeys = null;
             ow3DSpriteDict = null;
@@ -382,6 +371,7 @@ namespace DSPRE
             SetPickupTableOffsets();
             SetItemTableOffset();
             SetStarterOffsets();
+            SetupSpawnSettings();
 
             SetAbilityNamesTextNumber();
             SetAttackNamesTextNumber();
@@ -448,20 +438,14 @@ namespace DSPRE
             }
         }
 
-        /// <summary>
-        /// Builds the command names dictionary from ScriptCommandInfo objects.
-        /// </summary>
+        /// <summary>Builds the command names dictionary from ScriptCommandInfo objects.</summary>
         public static Dictionary<ushort, string> BuildCommandNamesDatabase(GameFamilies gameFam)
         {
             var cmdInfoDict = GetScriptCommandInfoDict();
             return cmdInfoDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
         }
 
-        /// <summary>
-        /// Command name back to its number. The rotom names come first, since those are what the editor
-        /// writes now, and the names the old database used are added after so a script written before the
-        /// rename still opens. Where the two collide the rotom name wins.
-        /// </summary>
+        /// <summary>Command name back to its number. </summary>
         public static Dictionary<string, ushort> BuildCommandNamesReverse()
         {
             var info = GetScriptCommandInfoDict();
@@ -476,9 +460,7 @@ namespace DSPRE
             return map;
         }
 
-        /// <summary>
-        /// Builds the command parameters dictionary from ScriptCommandInfo objects.
-        /// </summary>
+        /// <summary>Builds the command parameters dictionary from ScriptCommandInfo objects.</summary>
         public static Dictionary<ushort, byte[]> BuildCommandParametersDatabase(GameFamilies gameFam)
         {
             var cmdInfoDict = GetScriptCommandInfoDict();
@@ -880,13 +862,7 @@ namespace DSPRE
             }
         }
 
-        /// <summary>
-        /// Offsets for the Starter Pokémon editor. Sourced from Universal Pokémon Randomizer FVX's
-        /// gen4_offsets.ini (its "(E)"/"(G)"/"(F)"/"(S)"/"(I)" ROM entries all CopyFrom the "(U)" entry with
-        /// zero Starter-key overrides, so English and every European language share identical offsets here;
-        /// Japanese has its own confirmed offsets). HGSS species aren't offset-based at all — see
-        /// <see cref="starterArm9SearchSuffix"/> — so only the cries-table overlay is set for that family.
-        /// </summary>
+        /// <summary>Offsets for the Starter Pokémon editor. </summary>
         public static void SetStarterOffsets()
         {
             // Initialize to invalid values by default
@@ -947,7 +923,7 @@ namespace DSPRE
 
                 case GameFamilies.HGSS:
                     // Species IDs are read/written straight in arm9.bin via this byte-pattern search (species
-                    // words start 13 bytes before the match) rather than a fixed offset — see StarterPokemonData.
+                    // words start 13 bytes before the match) rather than a fixed offset, see StarterPokemonData.
                     starterArm9SearchSuffix = new byte[] { 0x03, 0x03, 0x1A, 0x12, 0x01, 0x23, 0x00, 0x00 };
                     starterOverlayNumber = 61; // starter-cries table only (species table is in ARM9, above)
                     starterCriesPrefix = "0004000C10BD0000000000000000000000E000000000000000E0000000000200";
@@ -2011,9 +1987,8 @@ namespace DSPRE
             }
 
             byte[] bytesAtOffset = ARM9.ReadBytes(0x0793B8, 4);
-            // Vanilla Plat USA is F8 B5 9A B0
-            // Backport by is F0 B5 93 B0
-            // The tutorial is only for the USA version, but it might be better to differentiate the different languages here
+            // Vanilla Plat USA is F8 B5 9A B0 Backport by is F0 B5 93 B0 The tutorial is only for the USA
+            // version, but it might be better to differentiate the different languages here
             AIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0xF0, 0xB5, 0x93, 0xB0 });
 
 
@@ -2428,7 +2403,7 @@ namespace DSPRE
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
 
-                        [DirNames.textArchives] = $@"{dataFolderName} ",
+                        [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",
                         [DirNames.fonts] = $@"{dataFolderName}\a\0\1\6",
                         [DirNames.windowFrames] = $@"{dataFolderName}\a\0\3\8",
 
@@ -2487,7 +2462,7 @@ namespace DSPRE
             gameDirs = new Dictionary<DirNames, (string packedDir, string unpackedDir)>();
             foreach (KeyValuePair<DirNames, string> kvp in packedDirsDict)
             {
-                // The NARC path literals use '\' — normalize so they resolve on non-Windows too.
+                // The NARC path literals use '\', normalize so they resolve on non-Windows too.
                 string packedDir = Path.Combine(workDir, kvp.Value.Replace('\\', Path.DirectorySeparatorChar));
                 string unpackedDir = Path.Combine(workDir, "unpacked", kvp.Key.ToString());
                 gameDirs.Add(kvp.Key, (packedDir, unpackedDir));
@@ -2581,20 +2556,14 @@ namespace DSPRE
             overworldTableKeys = OverworldTable.Keys.ToArray();
         }
 
-        /// <summary>
-        /// Checks if the Item Table Editor is available for the current ROM version.
-        /// Item Table Editor requires at least pickup table support, or (HGSS) the Rock Smash tab.
-        /// </summary>
+        /// <summary>Checks if the Item Table Editor is available for the current ROM version. </summary>
         /// <returns>True if the editor is available, false otherwise</returns>
         public static bool IsItemTableEditorAvailable()
         {
             return pickupTableOverlayNumber >= 0 || gameFamily == GameFamilies.HGSS;
         }
 
-        /// <summary>
-        /// Checks if Hidden Items editor is available for the current ROM version.
-        /// Currently only HeartGold US is supported.
-        /// </summary>
+        /// <summary>Checks if Hidden Items editor is available for the current ROM version. </summary>
         /// <returns>True if hidden items editor is available, false otherwise</returns>
         public static bool IsHiddenItemsEditorAvailable()
         {
@@ -2602,20 +2571,17 @@ namespace DSPRE
             return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
         }
 
-        /// <summary>
-        /// Checks if the Rock Smash per-header odds/table editor is available. This is plain NARC data
-        /// (data/a/2/5/3), so it works for HGSS regardless of language.
-        /// </summary>
+        /// <summary>Checks if the Rock Smash per-header odds/table editor is available. </summary>
         public static bool IsRockSmashEditorAvailable()
         {
             return gameFamily == GameFamilies.HGSS;
         }
 
         /// <summary>
-        /// Checks if the Rock Smash item-drop tables (the 3 hardcoded 8-slot tables in ov001.bin,
-        /// offsets 0x23D04/0x23D14/0x23D24 per https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/hgss-rock_smash/)
-        /// are safe to edit. Only the English build's offsets are confirmed; gate to that until other
-        /// languages are verified, same convention as <see cref="IsHiddenItemsEditorAvailable"/>.
+        /// Checks if the Rock Smash item-drop tables (the 3 hardcoded 8-slot tables in ov001.bin, offsets
+        /// 0x23D04/0x23D14/0x23D24 per
+        /// https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/hgss-rock_smash/) are safe to
+        /// edit.
         /// </summary>
         public static bool IsRockSmashItemTableAvailable()
         {
@@ -2623,9 +2589,8 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// HGSS only (Diamond/Pearl/Platinum have no equivalent system), English and Spanish only,
-        /// the only revisions with confirmed offsets. Same gating convention as
-        /// <see cref="IsHiddenItemsEditorAvailable"/> and <see cref="IsRockSmashItemTableAvailable"/>.
+        /// HGSS only (Diamond/Pearl/Platinum have no equivalent system), English and Spanish only, the only
+        /// revisions with confirmed offsets.
         /// </summary>
         public static bool IsDungeonCutinEditorAvailable()
         {
@@ -2637,10 +2602,6 @@ namespace DSPRE
 
         /// <summary>
         /// Member indices of the title logo/palette/background inside a/0/4/6 for a specific game version.
-        /// That archive carries both HeartGold's and SoulSilver's sets in the same file, so both are always
-        /// editable regardless of which one the loaded ROM actually is. The logo and background are each
-        /// backed by a real NSCR (confirmed against titledemo.naix): logoNscr is shared between HeartGold
-        /// and SoulSilver, backgroundNscr is per-version like the NCGR/NCLR pair.
         /// </summary>
         public static (int logo, int palette, int background, int logoNscr, int backgroundNscr) TitleScreenMembersFor(GameVersions version) =>
             version == GameVersions.HeartGold ? (3, 4, 34, 0, 35) : (1, 2, 36, 0, 37);
@@ -2649,11 +2610,7 @@ namespace DSPRE
         public static (int logo, int palette, int background, int logoNscr, int backgroundNscr) TitleScreenMembers =>
             TitleScreenMembersFor(gameVersion);
 
-        /// <summary>
-        /// Member indices of the title screen's copyright text strip inside a/0/4/6. Unlike the logo and
-        /// background, there is only one copy in the archive (confirmed via titledemo.naix's single
-        /// title_cpright_* entry), shared between HeartGold and SoulSilver, with its own dedicated palette.
-        /// </summary>
+        /// <summary>Member indices of the title screen's copyright text strip inside a/0/4/6. </summary>
         public static (int ncgr, int nclr, int nscr) TitleScreenCopyrightMembers => (15, 16, 17);
 
         public static bool IsTrainerCardEditorAvailable() =>
@@ -2673,18 +2630,13 @@ namespace DSPRE
         public static (int ncgr, int maleNscr, int femaleNscr) TrainerCardTrainerMembers =>
             gameFamily == GameFamilies.Plat ? (31, 40, 41) : (44, 54, 55);
 
-        /// <summary>
-        /// Checks if the Starter Pokémon editor is available for the current ROM. Offsets are known for
-        /// DP/Plat/HGSS in English and every European language (all share the "(U)" offsets) plus Japanese.
-        /// </summary>
+        /// <summary>Checks if the Starter Pokémon editor is available for the current ROM. </summary>
         public static bool IsStarterEditorAvailable()
         {
             return gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
         }
 
-        /// <summary>
-        /// Gets a display name for the current game version.
-        /// </summary>
+        /// <summary>Gets a display name for the current game version.</summary>
         /// <returns>Game display name (e.g., "Diamond (US)", "Platinum (US)", "HeartGold (US)")</returns>
         public static string GetGameDisplayName()
         {
