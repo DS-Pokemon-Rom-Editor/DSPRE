@@ -113,7 +113,7 @@ namespace DSPRE.Tests
             Assert.True(particles.Available, "the particle archive is missing, so the runs would not be comparable");
 
             int funcCall = WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_FUNC_CALL");
-            const int emptyRoutine = 0;   // TEST_1, empty in wsp_sample.c
+            const int emptyRoutine = 0;   // TEST_1, one of the sample routines, empty
 
             var unchanged = new List<string>();
             var neverReached = new List<string>();

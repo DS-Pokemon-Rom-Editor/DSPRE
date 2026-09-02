@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Data
                 WouldChange = "When a move is judged to have finished, by at most a frame or two. The emitter "
                             + "throws itself away once it has stopped emitting instead of sitting there empty, "
                             + "and nothing is drawn after its particles are gone either way.",
-                Source = "battle_particle.c",
+                Source = "the games' own particle code",
             },
         };
 

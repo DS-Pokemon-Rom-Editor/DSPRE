@@ -142,7 +142,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The sound a door makes, which is what the Door field picks (GetDoorSE in field_3d_anime_ev.c).
+        /// The sound a door makes, which is what the Door field picks (GetDoorSE).
         /// </summary>
         public static string DoorSound(int modelId, bool indoor, bool opening)
         {

@@ -77,7 +77,7 @@ namespace DSPRE.Tests
         [Fact]
         public void APlayOnceAnimationDoesNotLoopAndWaitsToBeStarted()
         {
-            // field_3d_anime.c: a Suicide animation is entered with a loop count of one and stopped,
+            // In the games: a Suicide animation is entered with a loop count of one and stopped,
             // while everything else is entered as LOOP_INFINIT and running.
             var once = new BuildingAnimationInfo(Record(type: 0, suicide: 1));
             Assert.True(once.PlaysOnce);

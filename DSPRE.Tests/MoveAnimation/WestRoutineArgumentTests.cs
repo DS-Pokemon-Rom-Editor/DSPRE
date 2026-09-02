@@ -20,7 +20,7 @@ namespace DSPRE.Tests
         public WestRoutineArgumentTests(ITestOutputHelper o) { _out = o; }
 
         private const int RoutineCount = 84;   // NELEMS(WeSysSP_FuncTable)
-        private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX, we_sys.h:92
+        private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX
 
         private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
         private const string Platinum =
@@ -122,12 +122,12 @@ namespace DSPRE.Tests
         }
 
         [Fact]
-        public void EveryRoutineEntryNamesTheSourceItCameFrom()
+        public void EveryRoutineEntryNamesTheRoutineItCameFrom()
         {
             foreach (var r in WestRoutines.Known)
             {
                 Assert.False(string.IsNullOrWhiteSpace(r.Summary), $"routine {r.Id} has no summary");
-                Assert.Matches(@"^\w+, \w+\.c:\d+$", r.Source);
+                Assert.Matches(@"^\w+$", r.Source);
                 Assert.True(r.Words.Length <= WestRoutines.WorkSlots,
                     $"routine {r.Id} claims more words than the work array holds");
             }
@@ -138,7 +138,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheNamesAreRelativeToTheMoveNotToTheSides()
         {
-            // M1 is the attacker and E1 the defender, whichever side either is on (we_tool.c:1431).
+            // M1 is the attacker and E1 the defender, whichever side either is on.
             Assert.Equal(new[] { 7 }, WestTargetFlags.Targets(WestTargetFlags.M1 | WestTargetFlags.Ssp, 7, 9));
             Assert.Equal(new[] { 9 }, WestTargetFlags.Targets(WestTargetFlags.E1 | WestTargetFlags.Ssp, 7, 9));
             Assert.Equal(new[] { 7, 9 }, WestTargetFlags.Targets(WestTargetFlags.M1 | WestTargetFlags.E1, 7, 9));

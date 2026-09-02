@@ -95,7 +95,7 @@ namespace DSPRE.Tests
             // Each of these is silent for a reason that was checked, not waved away.
             var expected = new[]
             {
-                // The games' own sample routines, which really do nothing (wsp_sample.c).
+                // The games' own sample routines, which really do nothing.
                 "TEST_1 (0)", "TEST_2 (1)", "TEST_3 (2)", "TEST_4 (3)",
                 // Keeps the dropped copies drawn while particle data streams in, which a preview never
                 // waits for, so there is nothing to keep drawn.

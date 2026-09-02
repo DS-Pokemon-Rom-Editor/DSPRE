@@ -13,8 +13,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The order the engine runs the arrival scripts in: field setup first, then the map change.</summary>
         public static readonly int[] ArrivalOrder =
         {
-            LevelScriptTrigger.LOADGAME,      // 4, SP_SCRID_INIT_CHANGE, fieldmap.c:401
-            LevelScriptTrigger.SCREENRESET,   // 3, SP_SCRID_OBJ_CHANGE,  fieldmap.c:479
+            LevelScriptTrigger.LOADGAME,      // 4, SP_SCRID_INIT_CHANGE
+            LevelScriptTrigger.SCREENRESET,   // 3, SP_SCRID_OBJ_CHANGE
             LevelScriptTrigger.MAPCHANGE,     // 2, SP_SCRID_FLAG_CHANGE, ev_mapchange.c:391
         };
 

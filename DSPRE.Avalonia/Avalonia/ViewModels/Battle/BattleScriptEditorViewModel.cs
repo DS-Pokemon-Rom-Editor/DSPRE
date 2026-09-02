@@ -840,7 +840,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // Some moves hold two animations and the game alternates them by the battle's turn count
-        // (we_sys.c:3018).
+        // (the games do this themselves).
         private bool _secondTurnVariant;
         public bool SecondTurnVariant
         {

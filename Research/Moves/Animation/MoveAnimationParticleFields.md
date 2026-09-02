@@ -10,7 +10,7 @@ An emitter record in a `.spa` archive holds 130 fields. Every one of them is rea
 
 | field | what acting on it would change | read from |
 |---|---|---|
-| `SelfDestruct` | When a move is judged to have finished, by at most a frame or two. The emitter throws itself away once it has stopped emitting instead of sitting there empty, and nothing is drawn after its particles are gone either way. | battle_particle.c |
+| `SelfDestruct` | When a move is judged to have finished, by at most a frame or two. The emitter throws itself away once it has stopped emitting instead of sitting there empty, and nothing is drawn after its particles are gone either way. | the games' own particle code |
 
 ## Used when drawing, not when moving
 

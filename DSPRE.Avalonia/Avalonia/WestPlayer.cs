@@ -451,7 +451,7 @@ namespace DSPRE.Avalonia
                     // plenty of moves use it for alternating VARIANTS (Lunar Dance). A fresh battle previews
                     // with count 0 (even), taking the first branch, exactly like the game's first use.
                     // TURN_CHK adrs_even, adrs_odd: the games alternate two animations by the battle's own
-                    // turn counter (we_sys.c WEST_TURN_CHK jumps from the first offset on an even count and
+                    // turn counter (WEST_TURN_CHK jumps from the first offset on an even count and
                     // from the second on an odd one). A preview has no turn count, so it shows the even one,
                     // which is what a move looks like the first time it is used, unless the second variant
                     // is asked for.
@@ -728,7 +728,7 @@ namespace DSPRE.Avalonia
                     case "WEST_EX_DATA":
                         break;
 
-                    // A pause the developers left in, waiting for L, R and X together (we_sys.c
+                    // A pause the developers left in, waiting for L, R and X together
                     // WEST_KEY_WAIT). Only one script has one, and stopping a preview dead is not useful.
                     case "WEST_KEY_WAIT":
                         Note("This move has a developer's pause left in it, which the preview runs straight past.");
@@ -952,13 +952,13 @@ namespace DSPRE.Avalonia
         private static readonly (int x, int y)[] Axis145 = { (2864, 3752), (-2944, 1456) };
 
         /// <summary>How many work slots a routine can read, whatever the script passed it.</summary>
-        private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX, we_sys.h:92
+        private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX
 
         private void DoFuncCall(int[] a)
         {
             if (a.Length < 1) return;
 
-            // The games copy the script's words into the work array and then zero the rest of it (we_sys.c
+            // The games copy the script's words into the work array and then zero the rest of it
             // WEST_FUNC_CALL), so a routine handed fewer words than it reads sees zeros, and it still runs.
             if (a.Length < 2 + WorkSlots)
             {
@@ -1045,7 +1045,7 @@ namespace DSPRE.Avalonia
                     StartBackground(a[2], overlay: true, posX: 0, posY: 0, spdX: 0, spdY: speed,
                         peak: 12 / 16.0, fadeFrames: 12, stopY: 0, useStop: false);
                     // Its own task holds for STEFF_FADE_WAIT frames and then takes the blend down one step
-                    // a frame from 12 to nothing (wsp_steff.c:58, :154 and the step after it), so about
+                    // a frame from 12 to nothing in three steps, so about
                     // thirty-four frames all told.
                     _bgHoldLeft = 20;
                     break;
@@ -1258,7 +1258,7 @@ namespace DSPRE.Avalonia
                     AddScaleSeq(_dfVis, new[] { new double[]{100,120,100,150,7}, new double[]{120,100,150,100,4} });
                     break;
                 // WE_148: the background whitens and the attacker darkens together, both hold five frames,
-                // then both come back (We148_TCB, wsp_goto.c).
+                // then both come back (We148_TCB).
                 case 16:
                 {
                     const int fadeIn = 8, hold = 5;
@@ -1417,7 +1417,7 @@ namespace DSPRE.Avalonia
                         Keys = new double[] { start, end }, R = R5(col), G = G5(col), B = B5(col) });
                     break;
                 }
-                case 73:   // EMIT_SIMPLE_UD (wsp_tool.c:3881): move an emitter straight between the mon and a point
+                case 73:   // EMIT_SIMPLE_UD: move an emitter straight between the mon and a point
                 {   // 60px above the top of the screen, once, over `time` frames after `wait` frames of delay. Mode
                     // picks the direction: 0 comes down onto the mon, anything else rises away from it. Both ends
                     // share the mon's x, so nothing moves sideways. The tick is the same one EMIT_STRAIGHT uses.
@@ -1578,7 +1578,7 @@ namespace DSPRE.Avalonia
 
         // Which sprite a routine targets, from its WE_TOOL flag arg (M1=attacker, E1=defender; defaults to defender).
         /// <summary>
-        /// Every Pokemon a target flag picks out, in the order WT_SSPointerGet (we_tool.c:1431) picks them.
+        /// Every Pokemon a target flag picks out, in the order WT_SSPointerGet picks them.
         /// </summary>
         private List<int> TargetsFromFlags(int flag) => WestTargetFlags.Targets(flag, _atVis, _dfVis);
 

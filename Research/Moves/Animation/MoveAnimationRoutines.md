@@ -2,48 +2,48 @@
 
 # The move-effect support routines
 
-What each routine a move-effect script can call reads out of the words handed to it, taken from its own
-C body in the HeartGold leak, not from inference. This file is written from `WestRoutines.cs`, which is
-what the editor itself reads, so the two cannot drift apart.
+What each routine a move-effect script can call reads out of the words handed to it, taken from what
+the routine itself does rather than from inference. This file is written from `WestRoutines.cs`, which
+is what the editor itself reads, so the two cannot drift apart.
 
 A script calls one with `FUNC_CALL id, count, words`. The id is the routine's index in
-`WeSysSP_FuncTable` (`west_sp.c:218` indexes it directly, no offset) and the words land in
-`waza_eff_gp_wk`. `WEST_FUNC_CALL` copies `count` words in and then **zeros the rest** of the ten
-(`we_sys.h:92`), so a routine handed fewer words than it reads still runs and sees zeros; it is never
-skipped. The routine ids are identical in Platinum and HeartGold, checked by comparing every
-`WEST_SP_DEF_CMD` line in both `west_sp_def.h` files.
+`WeSysSP_FuncTable`, which is indexed directly with no offset, and the words land in
+`waza_eff_gp_wk`. `WEST_FUNC_CALL` copies `count` words in and then **zeros the rest** of the ten, so
+a routine handed fewer words than it reads still runs and sees zeros; it is never skipped. The routine
+ids are identical in Platinum and HeartGold, checked by comparing every `WEST_SP_DEF_CMD` entry in
+both games.
 
 A word shown as never read is one the scripts hand over that the routine never looks at. Those are left
 blank on purpose rather than invented.
 
 Where a word picks out Pokemon it is a target flag. Those names are relative to the move, not to the
 sides of the field: M1 is the attacker and E1 the defender, M2 and E2 are their allies and only exist in
-a double battle, STAGE is everybody and OTHER is everybody but the attacker (`we_tool.c:1431`).
+a double battle, STAGE is everybody and OTHER is everybody but the attacker.
 
 ### 0. `TEST_1`
 
 A sample routine the games left in. Does nothing.  
-_WestSp_Sample, wsp_sample.c:64_
+_WestSp_Sample_
 
 ### 1. `TEST_2`
 
 A sample routine the games left in. Does nothing.  
-_WestSp_SampleEffectTCB, wsp_sample.c:126_
+_WestSp_SampleEffectTCB_
 
 ### 2. `TEST_3`
 
 A sample routine the games left in. Does nothing.  
-_WestSp_SampleSoundTCB, wsp_sample.c:193_
+_WestSp_SampleSoundTCB_
 
 ### 3. `TEST_4`
 
 A sample routine the games left in. Does nothing.  
-_WestSp_SampleTCB, wsp_sample.c:258_
+_WestSp_SampleTCB_
 
 ### 4. `POKEROTA_00`
 
 Turns the attacker on the spot.  
-_WestSp_EffectTCBPokeRota00, wsp_tool.c:697_
+_WestSp_EffectTCBPokeRota00_
 
 | word | meaning |
 |---:|---|
@@ -57,7 +57,7 @@ _WestSp_EffectTCBPokeRota00, wsp_tool.c:697_
 ### 5. `WE_070`
 
 Squashes the attacker down (Strength).  
-_WestSp_WE_070, wsp_goto.c:424_
+_WestSp_WE_070_
 
 | word | meaning |
 |---:|---|
@@ -69,7 +69,7 @@ _WestSp_WE_070, wsp_goto.c:424_
 ### 6. `WE_339`
 
 One move's own effect.  
-_WestSp_WE_339, wsp_goto.c:592_
+_WestSp_WE_339_
 
 | word | meaning |
 |---:|---|
@@ -78,7 +78,7 @@ _WestSp_WE_339, wsp_goto.c:592_
 ### 7. `WE_104`
 
 One move's own effect.  
-_WestSp_WE_104, wsp_goto.c:781_
+_WestSp_WE_104_
 
 | word | meaning |
 |---:|---|
@@ -87,17 +87,17 @@ _WestSp_WE_104, wsp_goto.c:781_
 ### 8. `WE_098`
 
 One move's own effect.  
-_WestSp_WE_098, wsp_tomoya.c:131_
+_WestSp_WE_098_
 
 ### 9. `WE_065`
 
 One move's own effect.  
-_WestSp_WE_065, wsp_tomoya.c:344_
+_WestSp_WE_065_
 
 ### 10. `WE_066`
 
 Turns the attacker while moving it.  
-_WestSp_WE_066, wsp_tool.c:824_
+_WestSp_WE_066_
 
 | word | meaning |
 |---:|---|
@@ -108,57 +108,57 @@ _WestSp_WE_066, wsp_tool.c:824_
 ### 11. `WE_093`
 
 One move's own effect.  
-_WestSp_WE_093, wsp_tomoya.c:960_
+_WestSp_WE_093_
 
 ### 12. `WE_151`
 
 One move's own effect.  
-_WestSp_WE_151, wsp_tomoya.c:1226_
+_WestSp_WE_151_
 
 ### 13. `WE_074`
 
 One move's own effect.  
-_WestSp_WE_074, wsp_goto.c:944_
+_WestSp_WE_074_
 
 ### 14. `WE_096`
 
 One move's own effect.  
-_WestSp_WE_096, wsp_goto.c:1045_
+_WestSp_WE_096_
 
 ### 15. `WE_100`
 
 One move's own effect.  
-_WestSp_WE_100, wsp_goto.c:1196_
+_WestSp_WE_100_
 
 ### 16. `WE_148`
 
 Whitens the background and darkens the attacker together, holds, then brings both back.  
-_WestSp_WE_148, wsp_goto.c:1352_
+_WestSp_WE_148_
 
 ### 17. `WE_101AT`
 
 One move's own effect, on the attacker.  
-_WestSp_WE_101AT, wsp_tomoya.c:1525_
+_WestSp_WE_101AT_
 
 ### 18. `WE_101DF`
 
 One move's own effect, on the defender.  
-_WestSp_WE_101DF, wsp_tomoya.c:1577_
+_WestSp_WE_101DF_
 
 ### 19. `WE_150`
 
 One move's own effect.  
-_WestSp_WE_150, wsp_goto.c:1510_
+_WestSp_WE_150_
 
 ### 20. `WE_180`
 
 One move's own effect.  
-_WestSp_WE_180, wsp_tomoya.c:1874_
+_WestSp_WE_180_
 
 ### 22. `WE_107`
 
 One move's own effect.  
-_WestSp_WE_107, wsp_goto.c:1821_
+_WestSp_WE_107_
 
 | word | meaning |
 |---:|---|
@@ -167,12 +167,12 @@ _WestSp_WE_107, wsp_goto.c:1821_
 ### 23. `WE_185`
 
 One move's own effect.  
-_WestSp_WE_185, wsp_tomoya.c:2820_
+_WestSp_WE_185_
 
 ### 24. `WE_089`
 
 One move's own effect.  
-_WestSp_WE_089, wsp_goto.c:1999_
+_WestSp_WE_089_
 
 | word | meaning |
 |---:|---|
@@ -181,7 +181,7 @@ _WestSp_WE_089, wsp_goto.c:1999_
 ### 25. `WE_204`
 
 One move's own effect.  
-_WestSp_WE_204, wsp_tomoya.c:3776_
+_WestSp_WE_204_
 
 | word | meaning |
 |---:|---|
@@ -190,7 +190,7 @@ _WestSp_WE_204, wsp_tomoya.c:3776_
 ### 26. `WE_171`
 
 One move's own effect.  
-_WestSp_WE_171, wsp_goto.c:2123_
+_WestSp_WE_171_
 
 | word | meaning |
 |---:|---|
@@ -199,7 +199,7 @@ _WestSp_WE_171, wsp_goto.c:2123_
 ### 27. `WE_175 / SHAKE`
 
 Shakes a Pokemon, in one of two ways.  
-_WestSp_WE_175, wsp_goto.c:2313_
+_WestSp_WE_175_
 
 | word | meaning |
 |---:|---|
@@ -213,7 +213,7 @@ _WestSp_WE_175, wsp_goto.c:2313_
 ### 28. `WE_222`
 
 One move's own effect.  
-_WestSp_WE_222, wsp_goto.c:2412_
+_WestSp_WE_222_
 
 | word | meaning |
 |---:|---|
@@ -222,27 +222,27 @@ _WestSp_WE_222, wsp_goto.c:2412_
 ### 29. `WE_216`
 
 One move's own effect.  
-_WestSp_WE_216, wsp_tomoya.c:4386_
+_WestSp_WE_216_
 
 ### 30. `WE_233`
 
 One move's own effect.  
-_WestSp_WE_233, wsp_tomoya.c:4562_
+_WestSp_WE_233_
 
 ### 31. `WE_207_MAIN`
 
 One move's own effect.  
-_WestSp_WE_207_MAIN, wsp_tomoya.c:3944_
+_WestSp_WE_207_MAIN_
 
 ### 32. `WE_262`
 
 One move's own effect.  
-_WestSp_WE_262, wsp_tomoya.c:5471_
+_WestSp_WE_262_
 
 ### 33. `HAIKEI_PAL_FADE`
 
 Fades the background's colours toward one colour and back.  
-_WestSp_WE_HaikeiPalFade, wsp_tool.c:1114_
+_WestSp_WE_HaikeiPalFade_
 
 | word | meaning |
 |---:|---|
@@ -255,7 +255,7 @@ _WestSp_WE_HaikeiPalFade, wsp_tool.c:1114_
 ### 34. `SSP_POKE_PAL_FADE`
 
 Flashes a Pokemon a colour, over and over.  
-_WestSp_WE_SSPPokePalFade, wsp_tool.c:1243_
+_WestSp_WE_SSPPokePalFade_
 
 | word | meaning |
 |---:|---|
@@ -269,7 +269,7 @@ _WestSp_WE_SSPPokePalFade, wsp_tool.c:1243_
 ### 35. `CAP_POKE_SCALE_UPDOWN`
 
 Grows and shrinks a dropped copy of a Pokemon.  
-_WestSp_WE_CAPPokeScaleUpDown, wsp_tool.c:1523_
+_WestSp_WE_CAPPokeScaleUpDown_
 
 | word | meaning |
 |---:|---|
@@ -285,7 +285,7 @@ _WestSp_WE_CAPPokeScaleUpDown, wsp_tool.c:1523_
 ### 36. `WT_SHAKE`
 
 Shakes a Pokemon, a dropped copy, or the background.  
-_WestSp_WE_T01, wsp_tool.c:115_
+_WestSp_WE_T01_
 
 | word | meaning |
 |---:|---|
@@ -298,12 +298,12 @@ _WestSp_WE_T01, wsp_tool.c:115_
 ### 37. `WE_326`
 
 One move's own effect.  
-_WestSp_WE_326DF, wsp_tomoya.c:6319_
+_WestSp_WE_326DF_
 
 ### 38. `CAP_ALPHA_FADE`
 
 Fades dropped copies in or out.  
-_WestSp_WE_CAP_NormalAlphaFade, wsp_tool.c:1895_
+_WestSp_WE_CAP_NormalAlphaFade_
 
 | word | meaning |
 |---:|---|
@@ -317,7 +317,7 @@ _WestSp_WE_CAP_NormalAlphaFade, wsp_tool.c:1895_
 ### 40. `SSP_POKE_VANISH`
 
 Hides or shows a Pokemon.  
-_WestSp_WE_SSP_PokeVanish, wsp_tool.c:1955_
+_WestSp_WE_SSP_PokeVanish_
 
 | word | meaning |
 |---:|---|
@@ -327,12 +327,12 @@ _WestSp_WE_SSP_PokeVanish, wsp_tool.c:1955_
 ### 41. `WE_252_BACK`
 
 One move's own effect, on the background.  
-_WestSp_WE_252Back, wsp_tomoya.c:6514_
+_WestSp_WE_252Back_
 
 ### 42. `SSP_POKE_SCALE_UPDOWN`
 
 Squashes and stretches a Pokemon, over and over.  
-_WestSp_WE_SSPPokeScaleUpDown, wsp_tool.c:1716_
+_WestSp_WE_SSPPokeScaleUpDown_
 
 | word | meaning |
 |---:|---|
@@ -348,12 +348,12 @@ _WestSp_WE_SSPPokeScaleUpDown, wsp_tool.c:1716_
 ### 43. `WE_252_POKE`
 
 One move's own effect, on a Pokemon.  
-_WestSp_WE_252SSPPoke, wsp_tomoya.c:6775_
+_WestSp_WE_252SSPPoke_
 
 ### 44. `WE_T02`
 
 Slides a background across the screen behind the battle.  
-_WestSp_WE_T02, wsp_tool.c:299_
+_WestSp_WE_T02_
 
 | word | meaning |
 |---:|---|
@@ -369,7 +369,7 @@ _WestSp_WE_T02, wsp_tool.c:299_
 ### 45. `WE_T22`
 
 Slides a background across the screen behind the battle.  
-_WestSp_WE_T22, wsp_tool.c:528_
+_WestSp_WE_T22_
 
 | word | meaning |
 |---:|---|
@@ -385,17 +385,17 @@ _WestSp_WE_T22, wsp_tool.c:528_
 ### 47. `WE_224AT`
 
 One move's own effect, on the attacker.  
-_WestSp_WE_224AT, wsp_tomoya.c:7027_
+_WestSp_WE_224AT_
 
 ### 48. `WE_224DF`
 
 One move's own effect, on the defender.  
-_WestSp_WE_224DF, wsp_tomoya.c:7168_
+_WestSp_WE_224DF_
 
 ### 49. `WE_057`
 
 The Surf wave.  
-_WestSp_WE_057, wsp_goto.c:2789_
+_WestSp_WE_057_
 
 | word | meaning |
 |---:|---|
@@ -404,7 +404,7 @@ _WestSp_WE_057, wsp_goto.c:2789_
 ### 50. `WE_T03`
 
 Blinks a Pokemon in and out.  
-_WestSp_WE_T03, wsp_tool.c:2018_
+_WestSp_WE_T03_
 
 | word | meaning |
 |---:|---|
@@ -414,7 +414,7 @@ _WestSp_WE_T03, wsp_tool.c:2018_
 ### 51. `WE_T04`
 
 Slides a Pokemon sideways and back.  
-_WestSp_WE_T04, wsp_tool.c:2078_
+_WestSp_WE_T04_
 
 | word | meaning |
 |---:|---|
@@ -425,7 +425,7 @@ _WestSp_WE_T04, wsp_tool.c:2078_
 ### 52. `WE_T05`
 
 Slides a Pokemon sideways and back.  
-_WestSp_WE_T05, wsp_tool.c:2181_
+_WestSp_WE_T05_
 
 | word | meaning |
 |---:|---|
@@ -436,7 +436,7 @@ _WestSp_WE_T05, wsp_tool.c:2181_
 ### 53. `WE_T06`
 
 Slides a Pokemon and holds it there.  
-_WestSp_WE_T06, wsp_tool.c:2372_
+_WestSp_WE_T06_
 
 | word | meaning |
 |---:|---|
@@ -450,12 +450,12 @@ _WestSp_WE_T06, wsp_tool.c:2372_
 ### 55. `WE_293`
 
 One move's own effect.  
-_WestSp_WE_293, wsp_goto2.c:997_
+_WestSp_WE_293_
 
 ### 56. `WE_T08`
 
 Puts a glow around the attacker (Superpower).  
-_WestSp_WE_T08, wsp_tool.c:2623_
+_WestSp_WE_T08_
 
 | word | meaning |
 |---:|---|
@@ -465,7 +465,7 @@ _WestSp_WE_T08, wsp_tool.c:2623_
 ### 57. `WE_T10`
 
 Slides a Pokemon and brings it back.  
-_WestSp_WE_T10, wsp_tool.c:2695_
+_WestSp_WE_T10_
 
 | word | meaning |
 |---:|---|
@@ -477,12 +477,12 @@ _WestSp_WE_T10, wsp_tool.c:2695_
 ### 58. `WE_102`
 
 One move's own effect.  
-_WestSp_WE_102, wsp_100.c:85_
+_WestSp_WE_102_
 
 ### 59. `WE_325`
 
 One move's own effect.  
-_WestSp_WE_325, wsp_300.c:120_
+_WestSp_WE_325_
 
 | word | meaning |
 |---:|---|
@@ -491,7 +491,7 @@ _WestSp_WE_325, wsp_300.c:120_
 ### 60. `WE_KAITEN`
 
 Swings a Pokemon around in a circle.  
-_WestSp_WE_Kaiten, wsp_tool.c:2802_
+_WestSp_WE_Kaiten_
 
 | word | meaning |
 |---:|---|
@@ -502,7 +502,7 @@ _WestSp_WE_Kaiten, wsp_tool.c:2802_
 ### 61. `WE_DISP_OUT`
 
 Slides a Pokemon off the screen.  
-_WestSp_WE_DispOut, wsp_tool.c:2861_
+_WestSp_WE_DispOut_
 
 | word | meaning |
 |---:|---|
@@ -512,7 +512,7 @@ _WestSp_WE_DispOut, wsp_tool.c:2861_
 ### 62. `WE_DISP_DEF`
 
 Puts a Pokemon straight back where it belongs.  
-_WestSp_WE_DispDef, wsp_tool.c:2997_
+_WestSp_WE_DispDef_
 
 | word | meaning |
 |---:|---|
@@ -521,7 +521,7 @@ _WestSp_WE_DispDef, wsp_tool.c:2997_
 ### 63. `WE_OAM_PAL_FADE`
 
 Fades the colours of dropped copies toward one colour.  
-_WestSp_WE_OAM_PalFade, wsp_tool.c:3067_
+_WestSp_WE_OAM_PalFade_
 
 | word | meaning |
 |---:|---|
@@ -535,7 +535,7 @@ _WestSp_WE_OAM_PalFade, wsp_tool.c:3067_
 ### 65. `EMIT_STRAIGHT`
 
 Moves a particle emitter in a straight line.  
-_WSP_Emitter_Straight, wsp_tool.c:3820_
+_WSP_Emitter_Straight_
 
 | word | meaning |
 |---:|---|
@@ -552,7 +552,7 @@ _WSP_Emitter_Straight, wsp_tool.c:3820_
 ### 66. `EMIT_PARABOLIC`
 
 Moves a particle emitter along an arc.  
-_WSP_Emitter_Parabolic, wsp_tool.c:3981_
+_WSP_Emitter_Parabolic_
 
 | word | meaning |
 |---:|---|
@@ -569,7 +569,7 @@ _WSP_Emitter_Parabolic, wsp_tool.c:3981_
 ### 67. `RECT_VIEW`
 
 Wipes a Pokemon in or out behind a moving edge.  
-_WSP_RectView, wsp_tool.c:3359_
+_WSP_RectView_
 
 | word | meaning |
 |---:|---|
@@ -583,7 +583,7 @@ _WSP_RectView, wsp_tool.c:3359_
 ### 68. `BG_SHAKE`
 
 Shakes the background.  
-_WestSp_WE_BgShake, wsp_tool.c:3536_
+_WestSp_WE_BgShake_
 
 | word | meaning |
 |---:|---|
@@ -597,7 +597,7 @@ _WestSp_WE_BgShake, wsp_tool.c:3536_
 ### 69. `MOSAIC`
 
 Breaks a dropped copy into blocks and back.  
-_WSP_Mosaic, wsp_tool.c:3620_
+_WSP_Mosaic_
 
 | word | meaning |
 |---:|---|
@@ -609,7 +609,7 @@ _WSP_Mosaic, wsp_tool.c:3620_
 ### 70. `WSP_272`
 
 One move's own effect.  
-_WSP_272, wsp_300.c:404_
+_WSP_272_
 
 | word | meaning |
 |---:|---|
@@ -618,7 +618,7 @@ _WSP_272, wsp_300.c:404_
 ### 71. `WSP_289`
 
 One move's own effect.  
-_WSP_289, wsp_300.c:594_
+_WSP_289_
 
 | word | meaning |
 |---:|---|
@@ -627,7 +627,7 @@ _WSP_289, wsp_300.c:594_
 ### 72. `EMIT_ROTATION`
 
 Swings a particle emitter around a Pokemon.  
-_WSP_Emitter_Rotation, wsp_tool.c:4090_
+_WSP_Emitter_Rotation_
 
 | word | meaning |
 |---:|---|
@@ -645,7 +645,7 @@ _WSP_Emitter_Rotation, wsp_tool.c:4090_
 ### 73. `EMIT_SIMPLE_UD`
 
 Moves a particle emitter up or down.  
-_WSP_Emitter_SimpleUD, wsp_tool.c:3877_
+_WSP_Emitter_SimpleUD_
 
 | word | meaning |
 |---:|---|
@@ -659,7 +659,7 @@ _WSP_Emitter_SimpleUD, wsp_tool.c:3877_
 ### 74. `PALCOL_CHANGE`
 
 Drains the colour out of the scene, or puts it back.  
-_WSP_PalColChange, wsp_tool.c:4518_
+_WSP_PalColChange_
 
 | word | meaning |
 |---:|---|
@@ -668,7 +668,7 @@ _WSP_PalColChange, wsp_tool.c:4518_
 ### 75. `POKE_OAM_VIEW`
 
 Changes how a dropped copy is drawn and where it sits in the stack.  
-_WSP_PokeOAM_View, wsp_tool.c:4701_
+_WSP_PokeOAM_View_
 
 | word | meaning |
 |---:|---|
@@ -683,7 +683,7 @@ _WSP_PokeOAM_View, wsp_tool.c:4701_
 ### 76. `LASTER`
 
 Ripples the screen line by line.  
-_WestSp_WE_Laster, wsp_tool.c:4975_
+_WestSp_WE_Laster_
 
 | word | meaning |
 |---:|---|
@@ -692,7 +692,7 @@ _WestSp_WE_Laster, wsp_tool.c:4975_
 ### 77. `DISP_MOVE`
 
 Slides a Pokemon off the screen or back on.  
-_WestSp_WE_DispMove, wsp_tool.c:2921_
+_WestSp_WE_DispMove_
 
 | word | meaning |
 |---:|---|
@@ -705,7 +705,7 @@ _WestSp_WE_DispMove, wsp_tool.c:2921_
 ### 78. `ALL_DROP`
 
 Keeps all four Pokemon drawn as sprites while the particle data loads.  
-_WSP_AllPokeDrop, wsp_tool.c:4873_
+_WSP_AllPokeDrop_
 
 | word | meaning |
 |---:|---|
@@ -714,7 +714,7 @@ _WSP_AllPokeDrop, wsp_tool.c:4873_
 ### 79. `WSP_166`
 
 One move's own effect.  
-_WSP_166, wsp_300.c:758_
+_WSP_166_
 
 | word | meaning |
 |---:|---|
@@ -723,7 +723,7 @@ _WSP_166, wsp_300.c:758_
 ### 82. `ST_EFF_RECOVER`
 
 Scrolls an overlay upward behind a Pokemon, for getting its health back.  
-_StatusEffect_Recover, wsp_steff.c:355_
+_StatusEffect_Recover_
 
 | word | meaning |
 |---:|---|
@@ -733,7 +733,7 @@ _StatusEffect_Recover, wsp_steff.c:355_
 ### 83. `ST_EFF_METAL`
 
 Scrolls an overlay downward behind a Pokemon, for turning metallic.  
-_StatusEffect_Metal, wsp_steff.c:377_
+_StatusEffect_Metal_
 
 | word | meaning |
 |---:|---|
