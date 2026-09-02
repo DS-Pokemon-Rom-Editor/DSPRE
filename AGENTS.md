@@ -49,25 +49,25 @@ Six projects, organized into a cross-platform core, a cross-platform UI, and a l
 |---------|--------|------|
 | **DSPRE.Core** (`DSPRE.Core/`) | `net8.0` | Cross-platform ROM core: file formats, ROM data model, script system, databases. No WinForms, no Avalonia. |
 | **DSPRE.Avalonia** (`DSPRE.Avalonia/`) | `net8.0` | Cross-platform Avalonia UI (MVVM) + thin entry point. |
-| **DSPRE** (`DS_Map/DSPRE.csproj`) | `net8.0-windows` | Legacy WinForms shell exe. Hosts the Avalonia UI alongside WinForms editors during the porting transition. |
+| **DSPRE** (`DS_Map/DSPRE.csproj`) | `net8.0-windows` | The Windows exe. Hosts the legacy WinForms shell by default and the Avalonia shell under `DSPRE_AVALONIA_SHELL=1`. |
 | **Ekona** (`Ekona/`) | `net8.0` | Image/sprite processing library (formerly Tinke plugin host; WinForms controls stripped out). Also hosts `AppPaths`. |
 | **Images** (`Images/Images/`) | `net8.0` | Nintendo DS image format handlers (NCGR, NCER, NCLR, etc.). |
 | **DSPRE.Tests** (`DSPRE.Tests/`) | `net8.0` (+`net8.0-windows` opt-in) | xUnit test project. |
 
-### Source-sharing via `.props` files (important)
+### Where a file goes
 
-Most source files still physically live under `DS_Map/` but are compiled into the cross-platform projects through two shared item-group files:
+The split is physical: every file lives in the project that owns it. The `CoreFiles.props` /
+`AvaloniaFiles.props` source-sharing arrangement that earlier revisions of this file described is gone,
+along with the files themselves.
 
-- **`CoreFiles.props`** — defines `@(CoreCompile)` / `@(CoreEmbeddedResource)`:
-  - `DSPRE.Core.csproj` **includes** them.
-  - `DS_Map/DSPRE.csproj` **removes** them (gets the core via `ProjectReference`).
-  - Only files with no WinForms/Avalonia dependency belong here (ROMFiles, DSUtils, LibNDSFormats, Script, Narc, RomInfo, Filesystem, SettingsManager, databases, etc.).
-- **`AvaloniaFiles.props`** — defines `@(AvaloniaLayerCompile)` / `@(AvaloniaLayerXaml)` / `@(AvaloniaLayerAsset)`:
-  - `DSPRE.Avalonia.csproj` **includes** them.
-  - `DS_Map/DSPRE.csproj` **removes** them.
-  - Nothing in this set may reference WinForms.
+- ROM formats, data models, binary IO, the script and text systems, `RomInfo`, hg-engine: `DSPRE.Core/`.
+- Anything with a view, a view model, or a reader only the UI needs: `DSPRE.Avalonia/Avalonia/`.
+- WinForms-only editors and the Windows entry point: `DS_Map/`.
 
-A file's *physical* location (`DS_Map/...`) and its *compile* location (Core vs Avalonia vs WinForms shell) are decoupled on purpose. When adding a new file, decide which layer owns it and put it in the matching folder; update the relevant `.props` if you need to add a whole new glob. Files are expected to migrate physically under `DSPRE.Core/` and `DSPRE.Avalonia/` over time.
+Inside the Avalonia project, views and view models are filed by the menu section the editor opens from
+(`Shell`, `Pokemon`, `Trainers`, `Items`, `Text`, `World`, `Graphics`, `Battle`, `Audio`, `Tools`,
+`Controls`), and each folder is its own namespace. Consumers reach them through global usings declared
+in `DSPRE.Avalonia.csproj`. See `DSPRE-Development.md` §3.
 
 `DSPRE.Core` marks `DSPRE`, `DSPRE.Avalonia`, and `DSPRE.Tests` as `InternalsVisibleTo` so UI/test code can still reach internal core types from the one-project era.
 

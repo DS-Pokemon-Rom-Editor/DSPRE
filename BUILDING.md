@@ -8,7 +8,7 @@
 | `Ekona`, `Images` | `net8.0` | Pixel/format engine (Tinke-derived) |
 | `DSPRE.Avalonia` | `net8.0` | **Cross-platform app** (Avalonia UI) — runs on Windows and Linux |
 | `DSPRE` | `net8.0-windows` | Legacy Windows app (WinForms shell hosting the same Avalonia UI) |
-| `DSPRE.Tests` | `net8.0-windows` | xunit tests (some exercise GDI+, so they only *run* on Windows) |
+| `DSPRE.Tests` | `net8.0` (+`net8.0-windows` on Windows) | xunit tests; the Windows target adds the few that need GDI+ |
 
 ## Prerequisites
 
