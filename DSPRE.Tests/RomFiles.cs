@@ -4,15 +4,7 @@ using System.Threading;
 
 namespace DSPRE.Tests
 {
-    /// <summary>
-    /// Reading a folder the tests may still be filling.
-    ///
-    /// The suite runs its two target frameworks side by side against the same unpacked project, so on
-    /// the first run after a build one process can be part way through unpacking an archive while the
-    /// other starts counting what is in it. That produced failures saying a sweep had only covered a
-    /// fraction of the files, which had nothing to do with what was being tested. Waiting until two
-    /// readings in a row agree on the count removes it.
-    /// </summary>
+    /// <summary>Reading a folder the tests may still be filling.</summary>
     internal static class RomFiles
     {
         public static string[] Settled(string dir)
