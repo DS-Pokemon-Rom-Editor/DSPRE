@@ -6,32 +6,14 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// What is in the battle furniture archive, and what each piece is for.
-    ///
-    /// This is the archive the whole battle screen is drawn from: the HP gauges, the box with the
-    /// Pokemon's name in it, the six balls showing who is still standing, the type badges, the ground
-    /// the Pokemon stand on, the message frame, the cursors. Every one of them was a numbered file with
-    /// no name until now, which made the one thing people most want to change, the HP bar, impossible to
-    /// find.
-    ///
-    /// The games name every file themselves. Diamond and Pearl in batt_obj_def.h, Platinum in
-    /// pl_batt_obj_def.h and HeartGold and SoulSilver in batt_obj_gs_def.h, all under
-    /// src/battle/graphic in the leaked source, each listing every entry in order with no gaps.
-    /// Those lists are in BattleObjectNames.
-    ///
-    /// A thing is usually four files: its drawing, the layout saying how the pieces sit together, the
-    /// timing for its animation and its colours. The game gives them one name each with the kind on the
-    /// end, so GAUGE_AA_NCGR_BIN, GAUGE_AA_NCER_BIN and GAUGE_AA_NANR_BIN are one gauge, and they are
-    /// gathered back into one row here.
-    /// </summary>
+    /// <summary>What is in the battle furniture archive, and what each piece is for.</summary>
     public static class BattleObjects
     {
         /// <summary>Which part of the battle screen a thing belongs to.</summary>
         public enum Section
         {
             Gauges,      // the HP bars, the name boxes, the balls beside them
-            Icons,       // type badges, move category badges, the balls that get thrown
+            Icons,       // type, contest and move-category icons, and the balls that get thrown
             Platforms,   // the ground each side stands on
             Screen,      // message frames, cursors, arrows, everything else on screen
         }
@@ -86,13 +68,7 @@ namespace DSPRE.Avalonia.Data
             return (name, "File");
         }
 
-        /// <summary>
-        /// What to call a thing, in the words somebody looking for it would use.
-        ///
-        /// The games' own names are shouted abbreviations, several of them Japanese: WAKU is a frame,
-        /// GAGE is a gauge, BUNRUI is what kind of move it is, SHINKA is evolving. Left as they are,
-        /// somebody looking for the HP bar would have to know to look for SINGLE_GAGE1.
-        /// </summary>
+        /// <summary>What to call a thing, in the words somebody looking for it would use.</summary>
         public static string Friendly(string thing)
         {
             if (string.IsNullOrEmpty(thing)) return null;
@@ -123,12 +99,16 @@ namespace DSPRE.Avalonia.Data
                 return ball ?? "Thrown ball " + number;
             }
             if (thing.StartsWith("P_ST_TYPE_", StringComparison.Ordinal))
-                return Pretty(thing.Substring("P_ST_TYPE_".Length)) + " type badge";
+            {
+                string tag = thing.Substring("P_ST_TYPE_".Length);
+                if (ContestIcon.TryGetValue(tag, out string condition)) return condition + " contest icon";
+                return (TypeIcon.TryGetValue(tag, out string type) ? type : Pretty(tag)) + " type icon";
+            }
             if (thing.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal))
-                return thing.EndsWith("BUTURI") ? "Physical move badge"
-                     : thing.EndsWith("HENKA") ? "Status move badge"
-                     : thing.EndsWith("TOKUSYU") ? "Special move badge"
-                     : Pretty(thing.Substring("P_ST_BUNRUI_".Length)) + " move badge";
+                return thing.EndsWith("BUTURI") ? "Physical move icon"
+                     : thing.EndsWith("HENKA") ? "Status move icon"
+                     : thing.EndsWith("TOKUSYU") ? "Special move icon"
+                     : Pretty(thing.Substring("P_ST_BUNRUI_".Length)) + " move icon";
             if (thing.StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal))
                 return "Message frame " + thing.Substring("BATTLE_W_WAKU".Length);
             if (thing.StartsWith("SINGLE_ARROW_ANIMATION", StringComparison.Ordinal))
@@ -137,10 +117,7 @@ namespace DSPRE.Avalonia.Data
             return Pretty(thing);
         }
 
-        // Which drawing each row of MonsterBall_GRA_Table uses, in Diamond, Pearl and Platinum. The rows
-        // are not in drawing order: the plain ball is the fourth row and uses drawing 00, and Quick and
-        // Dusk are the other way round. HeartGold and SoulSilver gave every ball its own drawing, so
-        // there row R uses drawing R + 1 and no table is needed.
+        // Which drawing each row of MonsterBall_GRA_Table uses, in Diamond, Pearl and Platinum.
         private static readonly int[] SinnohDrawingForRow =
         {
             1, 2, 3, 0, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 12, 15,   // the sixteen that are items
@@ -151,14 +128,7 @@ namespace DSPRE.Avalonia.Data
         // ball_effect.h calls them BALL_EFF_PARK_BALL, BALL_EFF_STONE, BALL_EFF_FOOD and BALL_EFF_BACK.
         private static readonly string[] NotItems = { "Park Ball", "Mud", "Bait", "Putting one back" };
 
-        /// <summary>
-        /// Which item a row of the ball table belongs to, or 0 when it is not an item.
-        ///
-        /// ball_effect.c's DP_BallEffectID_Get takes an item number and returns the row, so the first
-        /// sixteen rows are simply items 1 to 16. HeartGold and SoulSilver added the Apricorn balls as
-        /// items 492 to 499 and gave them the next eight rows. Everything after that is an effect with no
-        /// item behind it.
-        /// </summary>
+        /// <summary>Which item a row of the ball table belongs to, or 0 when it is not an item.</summary>
         private static int ItemForBallRow(int row, bool johto)
         {
             if (row < 0) return 0;
@@ -169,13 +139,7 @@ namespace DSPRE.Avalonia.Data
 
         private static int FirstRowWithoutAnItem(bool johto) => johto ? 24 : 16;
 
-        /// <summary>
-        /// What a thrown-ball drawing is called, taken from the ROM's own item names.
-        ///
-        /// Reading the names rather than keeping a list means renaming an item in the Item Editor renames
-        /// it here too, and a ROM whose balls have been changed says what it actually holds. Where more
-        /// than one ball shares a drawing, which happens for the Safari ones, both are named.
-        /// </summary>
+        /// <summary>What a thrown-ball drawing is called, taken from the ROM's own item names.</summary>
         private static string BallNamed(string number, out bool everyOneIsABall)
         {
             everyOneIsABall = true;
@@ -215,10 +179,7 @@ namespace DSPRE.Avalonia.Data
             ("GAUGE", "HP bar colours"),
             ("GAGE_PALETTE", "HP bar colours, shared"),
 
-            // Which file is whose comes from gauge.c's own tables, not from the names. The header called
-            // GaugeObjParam_aa draws at 192,116, the bottom right of the screen, and it loads
-            // SINGLE_GAGE2; GaugeObjParam_bb draws at 58,36, the top left, and loads SINGLE_GAGE1. The
-            // four double-battle headers load DOUBLE_GAGE3 and 4 low on the screen and 1 and 2 high.
+            // Which file is whose comes from the games' own gauge tables, not from the names.
             ("SINGLE_GAGE2", "HP bar, your side"),
             ("SINGLE_GAGE1", "HP bar, their side"),
             ("DOUBLE_GAGE3", "HP bar, your side, two on two"),
@@ -226,9 +187,8 @@ namespace DSPRE.Avalonia.Data
             ("DOUBLE_GAGE1", "HP bar, their side, two on two"),
             ("DOUBLE_GAGE2", "HP bar, their partner, two on two"),
 
-            // These four sit in the archive and no code in the leaked source refers to them, in either
-            // the plain or the enum form, so the game never draws them. Named for what they are rather
-            // than left looking like the gauges the game actually uses.
+            // These four sit in the archive and nothing in the games ever asks for them, in either the
+            // plain or the enum form, so the game never draws them.
             ("GAUGE_AA", "Spare HP bar, unused"),
             ("GAUGE_BB", "Spare HP bar, unused"),
             ("GAUGE_NAME_AA", "Spare name box, unused"),
@@ -237,17 +197,79 @@ namespace DSPRE.Avalonia.Data
             ("BATT_M_BALL", "Caught ball"),
             ("BATTLE_STOCK_M", "Your six balls"),
             ("BATTLE_STOCK_E", "Their six balls"),
-            ("BATT_WAKU", "Message frame colours"),
-            ("BATTLE_WOBJ", "Message frame pieces"),
+            ("BATT_WAKU", "Spare message frame colours, unused"),
+            ("BATTLE_WOBJ", "Message frame colours"),
             ("BATTLE_CURSOR_OAM_SUB", "Choice cursor"),
             ("LV_UP_PLATE", "Level up panel"),
             ("SAFARI_GAUGE", "Safari counter"),
             ("SAFARI_W", "Safari counter colours"),
             ("POKE_OAM", "Pokemon slot"),
             ("POKE_OAM128K", "Pokemon slot, large"),
-            ("ST_TYPE", "Type badge colours"),
+            ("ST_TYPE", "Type and contest icon colours"),
             ("SPACE_COLOR", "Blank colours"),
             ("SPACE_32K_32X16", "Blank piece"),
+        };
+
+        // The icons are all one shape, and the game keeps one cell layout for the lot of them, so the
+        // drawings themselves record no size. The games' own icon table says which of the
+        // three banks of ST_TYPE_NCLR each one is painted with; without it they all came out in the
+        // first bank's colours.
+        private static readonly Dictionary<string, int> IconBank = new(StringComparer.Ordinal)
+        {
+            ["NORMAL"] = 0, ["FIGHT"] = 0, ["FLIGHT"] = 1, ["POISON"] = 1, ["GROUND"] = 0,
+            ["ROCK"] = 0, ["INSECT"] = 2, ["GHOST"] = 1, ["STEEL"] = 0, ["QUES"] = 2,
+            ["FIRE"] = 0, ["WATER"] = 1, ["GRASS"] = 2, ["ELE"] = 0, ["ESP"] = 1,
+            ["ICE"] = 1, ["DRAGON"] = 2, ["EVIL"] = 0,
+            ["STYLE"] = 0, ["BEAUTIFUL"] = 1, ["CUTE"] = 1, ["INTELLI"] = 2, ["STRONG"] = 0,
+        };
+
+        // WazaKindPlttOffset, from the same file.
+        private static readonly Dictionary<string, int> KindBank = new(StringComparer.Ordinal)
+        {
+            ["BUTURI"] = 0, ["TOKUSYU"] = 1, ["HENKA"] = 0,
+        };
+
+        /// <summary>Whether this entry is one of the type, contest or move-category icons.</summary>
+        private static bool IsIcon(string thing) =>
+            thing != null && thing.StartsWith("P_ST_", StringComparison.Ordinal)
+                          && thing.EndsWith("_NCGR_BIN", StringComparison.Ordinal);
+
+        /// <summary>The icons are thirty two by sixteen. Nothing in the file says so, so it is said here.</summary>
+        public static int WidthFor(int index)
+        {
+            var names = Names();
+            if (index < 0 || index >= names.Count) return 0;
+            return IsIcon(names[index]) ? 32 : 0;
+        }
+
+        /// <summary>Which bank of ST_TYPE_NCLR an icon is painted with.</summary>
+        public static int ColourBankFor(int index)
+        {
+            var names = Names();
+            if (index < 0 || index >= names.Count) return 0;
+            string thing = names[index];
+            if (!IsIcon(thing)) return 0;
+            string tag = thing.Substring(0, thing.Length - "_NCGR_BIN".Length);
+            if (tag.StartsWith("P_ST_TYPE_", StringComparison.Ordinal)
+                && IconBank.TryGetValue(tag.Substring("P_ST_TYPE_".Length), out int bank)) return bank;
+            if (tag.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal)
+                && KindBank.TryGetValue(tag.Substring("P_ST_BUNRUI_".Length), out int kind)) return kind;
+            return 0;
+        }
+
+        // The names the game writes on these icons, read off the drawings themselves. Several of the
+        // file names are abbreviations that do not match what the icon says.
+        private static readonly Dictionary<string, string> TypeIcon = new(StringComparer.Ordinal)
+        {
+            ["ELE"] = "Electric", ["ESP"] = "Psychic", ["EVIL"] = "Dark", ["FIGHT"] = "Fighting",
+            ["FLIGHT"] = "Flying", ["INSECT"] = "Bug", ["QUES"] = "???",
+        };
+
+        // Five of the files in the same group are contest conditions rather than types.
+        private static readonly Dictionary<string, string> ContestIcon = new(StringComparer.Ordinal)
+        {
+            ["STYLE"] = "Cool", ["BEAUTIFUL"] = "Beauty", ["CUTE"] = "Cute",
+            ["INTELLI"] = "Smart", ["STRONG"] = "Tough",
         };
 
         /// <summary>Turns a SHOUTED_NAME into something readable when there is nothing better to say.</summary>
@@ -286,7 +308,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// One row per thing, with its drawing, layout, animation and colours together, in the order the
-        /// game lists them. A file the list does not name still gets a row of its own.
+        /// game lists them.
         /// </summary>
         public static List<GraphicAssets.Unit> Units(GraphicAssets.Archive a, int fileCount)
         {
@@ -338,12 +360,7 @@ namespace DSPRE.Avalonia.Data
             return units;
         }
 
-        // The assembled picture first, because that is the thing itself: a gauge is a box with a bar and
-        // a name in it, and its drawing on its own is a heap of pieces that looks like nothing.
-        private static int Rank(string part) => part switch
-        {
-            "As it appears" => 0, "Drawing" => 1, "Animation" => 2, "Arrangement" => 3, "Colours" => 4, _ => 5,
-        };
+        private static int Rank(string part) => GraphicAssets.PartRank(part);
 
         private static GraphicAssets.Group GroupFor(Section s) => s switch
         {
@@ -355,10 +372,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The drawing a layout puts together, which is the one belonging to the same thing.
-        ///
-        /// The game's list settles this: GAUGE_AA_NCER_BIN and GAUGE_AA_NCGR_BIN are one gauge. Looking
-        /// for the nearest drawing instead finds whatever happens to sit before the layout, which for the
-        /// gauges is the previous thing entirely.
         /// </summary>
         public static int DrawingFor(int fileIndex)
         {
@@ -381,7 +394,23 @@ namespace DSPRE.Avalonia.Data
             int own = IndexOf(names, thing, "Colours");
             if (own >= 0) return own;
 
-            // Everything on the gauge shares one set, which is what gauge.c loads for all of them.
+            // Every type, contest and move-category icon is painted from the one set, which is what
+            // the games load for all of them.
+            if (IsIcon(names[fileIndex]))
+            {
+                int icons = IndexOf(names, "ST_TYPE", "Colours");
+                if (icons >= 0) return icons;
+            }
+
+            // The message frames carry no colours of their own. battle_input.c:2760 in HeartGold and
+            // :2623 in Platinum load BATTLE_WOBJ_NCLR for the screen they are drawn on.
+            if (thing.StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal))
+            {
+                int frame = IndexOf(names, "BATTLE_WOBJ", "Colours");
+                if (frame >= 0) return frame;
+            }
+
+            // Everything on the gauge shares one set, which is what the games load for all of them.
             var section = SectionOf(thing);
             if (section == Section.Gauges)
             {
@@ -392,6 +421,10 @@ namespace DSPRE.Avalonia.Data
             }
             return -1;
         }
+
+        /// <summary>Which file holds one part of one thing, by the name the game gives it. The number
+        /// differs per game, so nothing should hold one of these as a constant.</summary>
+        public static int Find(string thing, string part) => IndexOf(Names(), thing, part);
 
         private static int IndexOf(IReadOnlyList<string> names, string thing, string part)
         {
@@ -411,7 +444,10 @@ namespace DSPRE.Avalonia.Data
             var (thing, part) = Split(names[fileIndex]);
             if (thing == null) return null;
             string friendly = Friendly(thing);
-            return part == "File" ? friendly : $"{friendly}, {part.ToLowerInvariant()}";
+            if (part == "File") return friendly;
+            // "Message frame colours, colours" reads worse than the name on its own.
+            if (friendly.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0) return friendly;
+            return $"{friendly}, {part.ToLowerInvariant()}";
         }
     }
 }

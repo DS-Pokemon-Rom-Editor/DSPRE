@@ -10,18 +10,10 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// Every 2D graphic in the game, in one list, with a picture of each where one can be made.
-    ///
-    /// The games keep graphics in eighteen archives and most of them have never had an editor. The
-    /// pieces are also split up: the drawing is in one file, the colours in another, and for a
-    /// background the arrangement of the tiles in a third. Which file goes with which is different in
-    /// every archive, so each one is described here rather than guessed at, and where the pairing is not
-    /// known that is said plainly instead of showing a picture in the wrong colours.
     /// </summary>
     public static partial class GraphicAssets
     {
-        /// <summary>Where a person would look for something, rather than where the ROM keeps it. Split
-        /// finer than the archives are, because "Menus and text" holding fonts, item icons, text box
-        /// frames and location banners together is barely narrower than not sorting them at all.</summary>
+        /// <summary>Where a person would look for something, rather than where the ROM keeps it. </summary>
         public enum Group
         {
             PokemonSprites, PokemonIcons,
@@ -58,25 +50,19 @@ namespace DSPRE.Avalonia.Data
             public string DeepEditor;           // the editor that already knows this, if any
             public string CannotImportBecause;  // null when a PNG can go back in
 
-            // What the games actually do with these files, where it is known. Most of these drawings do
-            // not record their own width, and most of them do not use the first set of colours in the
-            // archive, so working either out from the bytes alone gets it wrong. Where DSPRE already knows
-            // the answer, say it here rather than guess.
+            // What the games actually do with these files, where it is known.
             public int PixelWidth;              // 0 when the drawing has to be measured instead
+            public Func<int, int> PixelWidthOf; // when the width differs entry by entry; 0 to fall back
             public bool ScrambledPixels;        // the pixels are run through a rolling key and must be undone
 
-            // Several of these files hold more than one picture: a party icon is two frames of an
-            // animation stacked up, a battle sprite is two side by side. Saying how big one frame is lets
-            // the painter show them one at a time instead of as a strip.
+            // Several of these files hold more than one picture: a party icon is two frames of an animation
+            // stacked up, a battle sprite is two side by side.
             public int FrameWidth, FrameHeight; // 0 for both when the file holds a single picture
             public Func<int, int> ColourBank;   // which bank of the palette an entry uses
             public Func<int, int> ColourEntry;  // which entry holds the colours, when the game says so
             public Func<int, string> NameOf;    // what this entry is, in the player's words
 
-            // Most of these archives do not hold one picture per file. A Pokemon's battle sprites are six
-            // files in a row, four drawings and two sets of colours, and a trainer is five. Listing them
-            // flat means scrolling past six rows to get to the next Pokemon, so the pieces that make up
-            // one thing are grouped and the pieces offered underneath it.
+            // Most of these archives do not hold one picture per file.
             public int LeadIn;                  // files before the run of things starts
             public int Stride;                  // how many files make one thing; 0 means one each
             public string[] PartNames;          // what each of those files is, in order
@@ -89,18 +75,10 @@ namespace DSPRE.Avalonia.Data
             /// when the shiny view is asked for.</summary>
             public Func<int, int> ShinyColourEntry;
 
-            /// <summary>The file saying how a drawing's tiles are arranged, when it needs one. A battle
-            /// backdrop's tiles are a heap of pieces until the arrangement puts them in order, so showing
-            /// the drawing on its own shows a heap of pieces.</summary>
+            /// <summary>The file saying how a drawing's tiles are arranged, when it needs one. </summary>
             public Func<int, int> ArrangementEntry;
 
-        /// <summary>
-        /// Which entry holds the drawing a layout arranges, when the game says so.
-        ///
-        /// Without this the nearest drawing is used, and the nearest is not the right one: a gauge's
-        /// layout sits directly after the previous thing's drawing, so guessing assembled the HP bar out
-        /// of whatever came before it. Same trap as pairing a battle sprite with the nearest palette.
-        /// </summary>
+        /// <summary>Which entry holds the drawing a layout arranges, when the game says so.</summary>
         public Func<int, int> DrawingEntry;
         }
 
@@ -112,19 +90,14 @@ namespace DSPRE.Avalonia.Data
             public string Name;
         }
 
-        /// <summary>One thing in an archive, which is usually several files. The files need not sit next
-        /// to each other: an alternate form's drawings are near the front of its archive and its colours
-        /// a hundred files further on.</summary>
+        /// <summary>One thing in an archive, which is usually several files. </summary>
         public sealed class Unit
         {
             public Archive Archive;
             public string Name;
             public List<UnitPart> Parts = new();
-            /// <summary>The lowest file this thing occupies, which is where it starts in the archive.
-            ///
-            /// Not the first part listed: the parts are ordered the way somebody works, drawing before
-            /// colours, and a thing's colours can sit earlier in the archive than its drawing. Sorting on
-            /// the first part listed put the battle HP bars in an order that looked like no order at all.
+            /// <summary>
+            /// The lowest file this thing occupies, which is where it starts in the archive.
             /// </summary>
             public int First
             {
@@ -137,15 +110,24 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            /// <summary>Which tab this row belongs on, when that is not the whole archive's tab.
-            ///
-            /// The battle furniture archive holds four different things: the HP bars, the type badges, the
-            /// ground the Pokemon stand on and the rest of the screen. Putting all of it under one tab is
-            /// what made the HP bar impossible to find, so a row can name its own tab.</summary>
+            /// <summary>Which tab this row belongs on, when that is not the whole archive's tab.</summary>
             public Group? In;
         }
 
         /// <summary>Breaks an archive into the things it holds rather than the files it holds.</summary>
+        /// <summary>
+        /// The order a thing's pieces are shown in, which is the order somebody works in rather than the
+        /// order the archive stores them.
+        /// The assembled picture comes first where there is one, because that is the thing itself: a
+        /// trainer or an HP bar looks like nothing as a sheet of loose tiles. Then the drawing, then how
+        /// it moves, then its colours.
+        /// </summary>
+        public static int PartRank(string part) => part switch
+        {
+            "As it appears" => 0, "Drawing" => 1, "Animation" => 2, "Arrangement" => 3, "Colours" => 4,
+            _ => 5,
+        };
+
         public static List<Unit> Units(Archive a, int fileCount)
         {
             if (a.BuildUnits != null)
@@ -183,31 +165,42 @@ namespace DSPRE.Avalonia.Data
                         Name = a.PartNames != null && k < a.PartNames.Length
                             ? a.PartNames[k] : "File " + (at + k),
                     });
+                u.Parts.Sort((x, y) => PartRank(x.Name).CompareTo(PartRank(y.Name)));
                 units.Add(u);
             }
             return units;
         }
 
-        /// <summary>
-        /// Which item each drawing in the item icon archive belongs to.
-        ///
-        /// Items do not sit in that archive in item order. Each item names the drawing and the colours it
-        /// wants, in a table the game carries in its code, and several items share one drawing. So the
-        /// table is read the other way round: for every item, note what it points at.
-        /// </summary>
+        /// <summary>Which files in the item icon archive belong to which item.</summary>
         internal static class ItemIcons
         {
-            private static Dictionary<int, string> _names;    // drawing entry -> the items using it
-            private static Dictionary<int, int> _colours;     // drawing entry -> the colours entry
+            /// <summary>One icon: the drawing, the colours, and every item that uses that pair.</summary>
+            internal sealed class Icon
+            {
+                public int Drawing, Colours;
+                public List<string> Items = new();
+                public string Name => Items.Count <= 1 ? Items.FirstOrDefault()
+                                    : $"{Items[0]} and {Items.Count - 1} more";
+            }
+
+            private static List<Icon> _icons;
+            private static Dictionary<int, int> _sharing;   // drawing -> how many icons use it
+            private static Dictionary<int, int> _colours;   // drawing -> a colours entry that suits it
             private static string _builtFor;
+
+            // Every game's item icon archive starts with these two, and ends with a spare drawing and an
+            // arrow. The archive's own index names them, and they are in the same place in every game.
+            public const int AnimationFile = 0;
+            public const int LayoutFile = 1;
 
             private static void Build()
             {
                 string now = RomInfo.gameDirs != null && RomInfo.gameDirs.ContainsKey(DirNames.itemIcons)
                     ? RomInfo.gameDirs[DirNames.itemIcons].unpackedDir : null;
-                if (_builtFor == now && _names != null) return;
+                if (_builtFor == now && _icons != null) return;
 
-                _names = new Dictionary<int, string>();
+                _icons = new List<Icon>();
+                _sharing = new Dictionary<int, int>();
                 _colours = new Dictionary<int, int>();
                 _builtFor = now;
                 if (now == null) return;
@@ -215,32 +208,41 @@ namespace DSPRE.Avalonia.Data
                 try
                 {
                     var itemNames = RomInfo.GetItemNames();
-                    var shared = new Dictionary<int, int>();   // how many items use each drawing
+                    var byPair = new Dictionary<(int, int), Icon>();
                     for (int item = 0; item < itemNames.Length; item++)
                     {
                         uint at = (uint)(RomInfo.itemTableOffset + item * 8);
                         int drawing = ARM9.ReadWordLE(at + 2);
                         int colours = ARM9.ReadWordLE(at + 4);
-                        if (drawing < 0) continue;
+                        if (drawing < 0 || colours < 0) continue;
 
-                        shared[drawing] = shared.TryGetValue(drawing, out int n) ? n + 1 : 1;
-                        // The first item using a drawing gives it its name; the rest just add to the count,
-                        // because "Potion and 6 more" is more use than one arbitrary name out of seven.
-                        if (!_names.ContainsKey(drawing))
+                        // Items with the same drawing and the same colours look identical, so they share a
+                        // row. Items sharing only the drawing get a row each: four of the status healers
+                        // are one bottle in four colours, and folding those together lost three of them.
+                        if (!byPair.TryGetValue((drawing, colours), out var icon))
                         {
-                            string name = itemNames[item]?.Trim();
-                            if (!string.IsNullOrEmpty(name) && name.Trim('-').Length > 0)
-                                _names[drawing] = name;
+                            icon = new Icon { Drawing = drawing, Colours = colours };
+                            byPair[(drawing, colours)] = icon;
+                            _icons.Add(icon);
+                            _sharing[drawing] = _sharing.TryGetValue(drawing, out int n) ? n + 1 : 1;
                         }
-                        if (colours >= 0 && !_colours.ContainsKey(drawing)) _colours[drawing] = colours;
-                        if (colours >= 0 && !_names.ContainsKey(colours)) _names[colours] = null;
+                        string name = itemNames[item]?.Trim();
+                        icon.Items.Add(string.IsNullOrEmpty(name) || name.Trim('-').Length == 0
+                                       ? "Item " + item : name);
+                        if (!_colours.ContainsKey(drawing)) _colours[drawing] = colours;
                     }
-
-                    foreach (var kv in shared)
-                        if (kv.Value > 1 && _names.TryGetValue(kv.Key, out string had) && had != null)
-                            _names[kv.Key] = $"{had} and {kv.Value - 1} more";
                 }
                 catch (Exception ex) { AppLogger.Error("ItemIcons.Build failed: " + ex.Message); }
+            }
+
+            /// <summary>Every icon in the archive, in item order.</summary>
+            public static IReadOnlyList<Icon> Icons() { Build(); return _icons ?? new List<Icon>(); }
+
+            /// <summary>How many icons use this drawing, so a row can say when one is shared.</summary>
+            public static int Sharing(int drawing)
+            {
+                Build();
+                return _sharing != null && _sharing.TryGetValue(drawing, out int n) ? n : 0;
             }
 
             /// <summary>The drawing an item uses, from the game's own table, or -1.</summary>
@@ -258,7 +260,10 @@ namespace DSPRE.Avalonia.Data
             public static string NameOfEntry(int entry)
             {
                 Build();
-                return _names != null && _names.TryGetValue(entry, out string n) ? n : null;
+                if (entry == AnimationFile) return "Item icon animation";
+                if (entry == LayoutFile) return "Item icon layout";
+                var icon = _icons?.FirstOrDefault(i => i.Drawing == entry);
+                return icon?.Name;
             }
 
             public static int ColoursFor(int entry)
@@ -267,7 +272,7 @@ namespace DSPRE.Avalonia.Data
                 return _colours != null && _colours.TryGetValue(entry, out int c) ? c : -1;
             }
 
-            public static void Forget() { _names = null; _colours = null; _builtFor = null; }
+            public static void Forget() { _icons = null; _sharing = null; _colours = null; _builtFor = null; }
         }
 
         /// <summary>The drawing an item uses, for an editor handing one over.</summary>
@@ -291,7 +296,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The eighteen archives that hold 2D graphics, from the census in
-        /// Research/Graphics/GraphicsCensus.md. Anything not listed here is not a 2D graphic.
+        /// Research/Graphics/GraphicsCensus.md.
         /// </summary>
         public static readonly Archive[] All =
         {
@@ -303,15 +308,13 @@ namespace DSPRE.Avalonia.Data
                 Stride = 6,
                 PartNames = new[] { "Back, female", "Back, male", "Front, female", "Front, male",
                                     "Colours", "Shiny colours" },
-                // All four of a Pokemon's sprites share one set of colours; the only other set is the
-                // shiny one. Looking for the nearest palette instead picked the PREVIOUS Pokemon's shiny
-                // colours for both back sprites, which looked close enough to pass unnoticed.
+                // All four of a Pokemon's sprites share one set of colours; the only other set is the shiny
+                // one.
                 ColourEntry = i => (i / 6) * 6 + 4,
                 ShinyColourEntry = i => (i / 6) * 6 + 5,
                 NameOf = i => FromList(RomInfo.GetPokemonNames, i / 6) },
             // This archive is not laid out in runs: a form's two drawings sit near the front and its two
-            // sets of colours a hundred files further on. AlternateFormSprites holds the table that says
-            // which go together, which is the same one the Pokemon Sprite Editor reads.
+            // sets of colours a hundred files further on.
             new Archive { Dir = DirNames.otherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
                 What = "Battle sprites for the forms that are not a Pokemon's default one.",
                 Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokemon Sprite Editor",
@@ -321,9 +324,7 @@ namespace DSPRE.Avalonia.Data
                 NameOf = i => AlternateFormSprites.WhoOwns(i)?.Form.Name,
                 BuildUnits = count => AlternateFormSprites.UnitsFor(
                     All.First(x => x.Dir == DirNames.otherPokemonBattleSprites), count) },
-            // Seven files come first, then one icon per Pokemon, per DSUtils.cs:1338 (species + 7). Each
-            // icon is 32 wide and holds two frames stacked, and each picks its own bank of the one shared
-            // palette from a table in the game's code.
+            // Seven files come first, then one icon per Pokemon, per DSUtils.cs:1338 (species + 7).
             new Archive { Dir = DirNames.monIcons, Title = "Pokemon party icons", In = Group.PokemonIcons,
                 What = "The small pictures used in the party, the box and the menus.",
                 Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokemon Editor",
@@ -339,9 +340,13 @@ namespace DSPRE.Avalonia.Data
             // Five files per trainer class, per TrainerSpriteEditorViewModel.cs:646-678.
             new Archive { Dir = DirNames.trainerGraphics, Title = "Trainer sprites", In = Group.Trainers,
                 What = "Every trainer class as it appears when a battle starts.",
-                Colours = Pairing.NearestInSameArchive, DeepEditor = "Trainer Sprite Editor",
+                DeepEditor = "Trainer Sprite Editor",
                 Stride = 5,
-                PartNames = new[] { "Drawing", "Colours", "Layout", "Animation", "Extra" },
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Extra" },
+                // Five files a class, and which is which is not a guess: TrainerClassSpriteRenderer reads
+                // the drawing at 5n, the colours at 5n+1, the layout at 5n+2 and the animation at 5n+3.
+                ColourEntry = i => (i / 5) * 5 + 1,
+                DrawingEntry = i => (i / 5) * 5,
                 NameOf = i => FromList(RomInfo.GetTrainerClassNames, i / 5) },
             new Archive { Dir = DirNames.trainerCardGraphics, Title = "Trainer card", In = Group.Trainers,
                 What = "The trainer card's face and back, and the poses drawn on it.",
@@ -351,20 +356,25 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.battleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
                 What = "The scenery behind a battle, and the sweeping backgrounds some moves put up.",
                 ColourEntry = GraphicUnits.BackdropColours,
+                DrawingEntry = GraphicUnits.PanelDrawing,
                 ArrangementEntry = GraphicUnits.BackdropArrangement,
                 NameOf = GraphicUnits.BackdropName,
                 BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.battleBg), n) },
             new Archive { Dir = DirNames.battleObj, Title = "Battle furniture", In = Group.BattleScenery,
                 What = "The ground the Pokemon stand on, the HP bars, the name boxes and the rest of the "
-                     + "battle screen. The balls are named from the item names, so renaming an item in "
-                     + "the Item Editor renames it here.",
+                     + "battle screen.",
                 ColourEntry = BattleObjects.ColoursFor,
                 DrawingEntry = BattleObjects.DrawingFor,
+                ColourBank = BattleObjects.ColourBankFor,
+                PixelWidthOf = BattleObjects.WidthFor,
                 NameOf = BattleObjects.NameOf,
                 BuildUnits = n => BattleObjects.Units(All.First(x => x.Dir == DirNames.battleObj), n) },
             new Archive { Dir = DirNames.battleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
                 What = "Colour changes played over a battle background. HeartGold and SoulSilver only.",
                 Colours = Pairing.NotKnown,
+                // One per entry rather than the archive's title on all of them, which listed thirty one
+                // rows reading the same thing and made the tab unusable.
+                NameOf = i => "Colour cycle " + i,
                 CannotImportBecause = "These are lists of colour changes played over a background, not pictures. "
                                     + "There is nothing here to put a PNG in place of." },
 
@@ -404,20 +414,12 @@ namespace DSPRE.Avalonia.Data
                      + "what is shown here is a stand-in.",
                 ColourEntry = i => GraphicUnits.WindowFrameColours(i),
                 BuildUnits = n => GraphicUnits.WindowFrames(All.First(x => x.Dir == DirNames.windowFrames), n) },
-            // Left ungrouped on purpose. This name points at two different archives depending on the
-            // game: in Diamond, Pearl and Platinum it is data/weather_sys.narc, the rain, snow and
-            // sandstorms, and in HeartGold and SoulSilver it is a/0/2/8, which holds seven synthetic
-            // overlay files and is not weather at all. weather_sys.naix names 65 entries and Platinum's
-            // archive has exactly 65, but Diamond's has 59 and HeartGold's has 7, so one set of names
-            // cannot be right for all three and guessing which fits would put the wrong name on things.
+            // Left ungrouped on purpose.
             new Archive { Dir = DirNames.synthOverlay, Title = "Map screen overlay", In = Group.Windows,
                 What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the "
                      + "weather; in HeartGold and SoulSilver it is something else.",
                 DeepEditor = "Header Editor" },
-            // Grouped by what the files are rather than by anything the games say about them. This name
-            // points at different archives per game, debug/cb_edit/d_test.narc in Platinum and a/0/5/0 in
-            // HeartGold, so what the pictures are for is not settled; the runs of drawing, colours and
-            // arrangement are plain enough to group either way.
+            // Grouped by what the files are rather than by anything the games say about them.
             new Archive { Dir = DirNames.dynamicHeaders, Title = "Location banner", In = Group.Places,
                 What = "The banner shown when you walk into a new place.", DeepEditor = "Header Editor",
                 BuildUnits = n => GraphicUnits.ByDrawing(All.First(x => x.Dir == DirNames.dynamicHeaders), n) },
@@ -472,9 +474,7 @@ namespace DSPRE.Avalonia.Data
             catch { return b; }
         }
 
-        /// <summary>Squeezes a file back down the way the game stores it. Only the plain kind, marked 0x10:
-        /// the other kind is written differently and DSPRE has no writer for it, so those are refused
-        /// rather than written in a shape the game may not read.</summary>
+        /// <summary>Squeezes a file back down the way the game stores it. </summary>
         public static byte[] Squeeze(byte[] plain, byte marker)
         {
             if (plain == null || plain.Length == 0 || marker != 0x10) return null;
@@ -527,10 +527,7 @@ namespace DSPRE.Avalonia.Data
             return new Preview { Rgba = rgba, Width = w, Height = h, Kind = Kind.Palette };
         }
 
-        // Where the colours sit in each archive. Worked out once, because finding them means reading every
-        // entry and some archives hold thousands. Kept per game as well as per archive: HeartGold's window
-        // frames start their colours at 25 and Platinum's at 24, so remembering one game's answer and
-        // handing it to the next puts the wrong colours on every text box style.
+        // Where the colours sit in each archive.
         private static readonly Dictionary<(string Rom, DirNames Dir), List<int>> _paletteIndexes = new();
 
         private static string OpenGame => (RomInfo.romID ?? "") + "|" + (RomInfo.workDir ?? "");
@@ -582,9 +579,7 @@ namespace DSPRE.Avalonia.Data
 
                 case Pairing.OnePaletteForAll:
                 {
-                    // One set of colours at the very start serves the whole archive. The icons then pick a
-                    // bank out of it per Pokemon from a table in an overlay; the browser shows the first
-                    // bank, which is the right shape and not always the right colours.
+                    // One set of colours at the very start serves the whole archive.
                     var first = narc.Get(0);
                     if (first != null && Identify(first) == Kind.Palette) return first;
                     return null;
@@ -593,8 +588,7 @@ namespace DSPRE.Avalonia.Data
                 case Pairing.NearestInSameArchive:
                 {
                     // The closest set of colours to the drawing, looking through the whole archive rather
-                    // than a window around it. Some archives keep all their colours together at one end, so
-                    // a window found nothing and twenty-eight entries went unshown for that reason alone.
+                    // than a window around it.
                     var palettes = PaletteIndexes(a.Dir, narc);
                     if (palettes.Count == 0) return null;
                     int best = -1, bestGap = int.MaxValue;
@@ -631,12 +625,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// Puts a painted picture of an assembled sprite back into the tiles it is drawn from.
-        ///
-        /// The picture is the one Render gives for a cell layout, at the same size, so what is painted is
-        /// the thing as it appears rather than the heap of pieces it is stored as. The pieces are read out
-        /// of it by CellDecompose, which follows the same rule the drawing follows.
-        ///
-        /// Comes back with a reason when it could not, and writes nothing in that case.
         /// </summary>
         public static string PutAssembledBack(Archive a, int layoutIndex, byte[] painted, int width, int height)
         {
@@ -721,31 +709,17 @@ namespace DSPRE.Avalonia.Data
             finally { foreach (var t in temps) { try { File.Delete(t); } catch { } } }
         }
 
-        /// <summary>Where the pixels start inside an NCGR: the RAHC section's own data, past its header.</summary>
+        /// <summary>Where the pixels start inside a drawing, from the one place that reads its header.</summary>
         private static int TilesStartInNcgr(byte[] ncgr)
         {
             if (ncgr == null || ncgr.Length < 0x30) return -1;
-            for (int at = 0x10; at + 0x20 <= ncgr.Length; )
-            {
-                string tag = System.Text.Encoding.ASCII.GetString(ncgr, at, 4);
-                int size = BitConverter.ToInt32(ncgr, at + 4);
-                if (size <= 0 || at + size > ncgr.Length) break;
-                if (tag == "RAHC") return at + 0x20;
-                at += size;
-            }
-            return -1;
+            int at = NitroBgCodec.ReadTileHeader(ncgr).TilesAt;
+            return at > 0 && at < ncgr.Length ? at : -1;
         }
 
 
         /// <summary>
         /// Puts a painted picture of a whole background back into the tiles it is drawn from.
-        ///
-        /// The picture is the one Render gives for an arrangement, at the same size. Backgrounds reuse
-        /// their tiles, so painting one square changes every square drawn from the same one. That is how
-        /// the format saves room rather than a fault, so how many squares share a tile is reported back
-        /// and the caller says so.
-        ///
-        /// Comes back with a reason when it could not, and writes nothing in that case.
         /// </summary>
         /// <param name="drawingIndex">The background's own drawing, which is what the picture was drawn
         /// from. Several backgrounds share one arrangement, so the drawing is what names which one this
@@ -898,8 +872,7 @@ namespace DSPRE.Avalonia.Data
                 }
 
                 // Read it the same way the painter does, so the size shown here and the size you paint on
-                // are never different numbers. Many of these files do not record their own width and
-                // height, and laying their tiles out in one long row made a party icon read as 256 by 8.
+                // are never different numbers.
                 var art = ReadIndexed(a, index, out string cannot, shiny);
                 if (art != null)
                     return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };

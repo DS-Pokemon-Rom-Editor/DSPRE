@@ -7,14 +7,7 @@ using Images;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Taking a graphic out of the game and putting one back.
-    ///
-    /// A drawing in these games is a grid of numbers with a separate list of colours. Saving it as an
-    /// ordinary picture throws the numbers away, and then putting it back means guessing which colour was
-    /// which. So everything goes out as a PNG that keeps the numbers and the list, which is what an
-    /// indexed PNG is, and comes back in the same way. Anything that is not a drawing says so instead.
-    /// </summary>
+    /// <summary>Taking a graphic out of the game and putting one back.</summary>
     public static partial class GraphicAssets
     {
         /// <summary>The numbers and the colours of one entry, which is what a drawing really is.</summary>
@@ -52,7 +45,7 @@ namespace DSPRE.Avalonia.Data
             var colours = NitroBgCodec.ReadPalette(Unsqueeze(pal), out int count);
             if (colours == null || count == 0) { whynot = "The colours could not be read."; return null; }
 
-            var shape = ReadShape(raw, a.PixelWidth);
+            var shape = ReadShape(raw, WidthFor(a, index));
             if (shape == null)
             {
                 whynot = "This drawing is stored in a way DSPRE cannot take apart yet.";
@@ -84,8 +77,7 @@ namespace DSPRE.Avalonia.Data
             var straight = tiled ? Untile(idx, width, height) : idx;
 
             // A sixteen colour drawing takes one bank out of a palette that usually holds several, and the
-            // archive says which bank this entry wants. Reading from the start regardless painted the party
-            // icons in the first Pokemon's colours, so Venusaur came out yellow.
+            // archive says which bank this entry wants.
             int bankSize = bpp == 8 ? 256 : 16;
             int bank = a.ColourBank?.Invoke(index) ?? 0;
             int from = bank * bankSize;
@@ -106,15 +98,7 @@ namespace DSPRE.Avalonia.Data
             };
         }
 
-        /// <summary>
-        /// Undoes the scrambling on a Pokemon battle sprite's pixels, in place.
-        ///
-        /// These entries are ordinary drawings whose pixels have been run through a rolling key, so read
-        /// straight they come out as coloured noise. The key starts from the first two bytes and steps on
-        /// with the same multiply and add the games use; Diamond and Pearl run it backwards from the last
-        /// two bytes instead. Same routine as PokemonSpriteEditorViewModel.MakeImage, which is where these
-        /// numbers come from.
-        /// </summary>
+        /// <summary>Undoes the scrambling on a Pokemon battle sprite's pixels, in place.</summary>
         private static void Unscramble(byte[] data, int off, int size)
         {
             int words = size / 2;
@@ -146,12 +130,9 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        /// <summary>Puts the scrambling back on, so an edited sprite reads the same way the game expects.
-        ///
-        /// The key starts from the sprite's own first two bytes, which means those two bytes have to come
-        /// back out unchanged or every pixel after them decodes to nonsense. Reading always turns them into
-        /// four see-through pixels for the same reason, so they are put back that way here. In practice
-        /// that corner of a battle sprite is empty anyway.</summary>
+        /// <summary>
+        /// Puts the scrambling back on, so an edited sprite reads the same way the game expects.
+        /// </summary>
         private static void Scramble(byte[] data, int off, int size, ushort seed)
         {
             int words = size / 2;
@@ -194,11 +175,18 @@ namespace DSPRE.Avalonia.Data
             return (ushort)(data[off + at * 2] | (data[off + at * 2 + 1] << 8));
         }
 
-        /// <summary>Where the pixels are in a drawing, what shape they make, and whether they are stored
-        /// in eight by eight blocks. Laid out to match the reader in Images/Images/NCGR.cs, which is what
-        /// the rest of DSPRE uses: after the sixteen byte file header the CHAR section runs id, size,
-        /// tiles down, tiles across, depth, two spare, the tiled flag, the size of the pixels and one more
-        /// spare, so the pixels themselves begin thirty two bytes into the section.</summary>
+        /// <summary>
+        /// Where the pixels are in a drawing, what shape they make, and whether they are stored in eight by
+        /// eight blocks.
+        /// </summary>
+        /// <summary>The width this entry is known to be drawn at, if any.</summary>
+        private static int WidthFor(Archive a, int index)
+        {
+            int said = 0;
+            try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch { }
+            return said > 0 ? said : a.PixelWidth;
+        }
+
         private static (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? ReadShape(byte[] ncgr, int declaredWidth = 0)
         {
             if (ncgr == null) return null;
@@ -227,18 +215,13 @@ namespace DSPRE.Avalonia.Data
             int acrossTiles = tilesAcross > 0 ? tilesAcross : 0;
             int downTiles = tilesDown > 0 ? tilesDown : 0;
 
-            // A width the archive is known to use beats anything worked out from the bytes. Most of these
-            // files record nothing, and the ones that do sometimes record the whole run rather than the
-            // shape the game draws.
+            // A width the archive is known to use beats anything worked out from the bytes.
             if (declaredWidth >= 8 && declaredWidth % 8 == 0) { acrossTiles = declaredWidth / 8; downTiles = 0; }
 
             if (acrossTiles == 0 && downTiles > 0) acrossTiles = (numTiles + downTiles - 1) / downTiles;
             if (acrossTiles == 0)
             {
-                // Nothing recorded and nothing known, which is common. Lay the tiles out as close to square
-                // as they go, in TILES rather than pixels: a thirty two tile icon becomes four by eight
-                // tiles, which is 32 by 64 and looks like something. Laying them in one long row instead
-                // reported a party icon as 256 by 8, which is true of the bytes and useless to look at.
+                // Nothing recorded and nothing known, which is common.
                 acrossTiles = Math.Max(1, (int)Math.Round(Math.Sqrt(numTiles)));
                 while (acrossTiles > 1 && numTiles % acrossTiles != 0) acrossTiles--;
                 if (acrossTiles <= 0) acrossTiles = 1;
@@ -298,9 +281,7 @@ namespace DSPRE.Avalonia.Data
             var ix = ReadIndexed(a, index, out string whynot);
             if (ix != null)
             {
-                // Only the colours this drawing is allowed. A sixteen colour drawing sits next to a list of
-                // two hundred and fifty six, and writing all of them out made the picture refuse to go back
-                // in for having too many.
+                // Only the colours this drawing is allowed.
                 var allowed = ix.Palette.Length > ix.ColourCount
                     ? ix.Palette.Take(ix.ColourCount).ToArray()
                     : ix.Palette;
@@ -391,8 +372,8 @@ namespace DSPRE.Avalonia.Data
         private const string Skipped = "\u0000not assembled";
 
         /// <summary>
-        /// Puts a PNG of a whole assembled picture back through the pieces it is drawn from, when the
-        /// entry is one of those. Comes back with Skipped when it is an ordinary flat drawing.
+        /// Puts a PNG of a whole assembled picture back through the pieces it is drawn from, when the entry
+        /// is one of those.
         /// </summary>
         private static string PutWholePictureBack(Archive a, int index, string path, out string note)
         {
@@ -465,7 +446,7 @@ namespace DSPRE.Avalonia.Data
                 return "This drawing is squeezed down in a way DSPRE cannot put back yet, so nothing was "
                      + "changed.";
 
-            var shape = ReadShape(stored, a.PixelWidth);
+            var shape = ReadShape(stored, WidthFor(a, index));
             if (shape == null) return "This drawing could not be taken apart, so nothing was changed.";
             var (dataOff, dataSize, bpp, width, height, isTiled) = shape.Value;
 
@@ -499,8 +480,7 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        /// <summary>Changes the colours a drawing is painted with. Every pixel using a colour changes with
-        /// it, because the pixels hold numbers and the numbers point here.</summary>
+        /// <summary>Changes the colours a drawing is painted with. </summary>
         /// <summary>Turns the numbers and the colours into plain pixels. Colour zero is the see-through one
         /// in these games, so it is left clear.</summary>
         public static byte[] Flatten(byte[] indices, uint[] palette, int width, int height)

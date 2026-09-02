@@ -10,14 +10,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Tests
 {
-    /// <summary>
-    /// Grouping an archive's files into things loses none of them and invents none.
-    ///
-    /// This is the check that matters for grouping: a row that quietly swallows a file it should not own,
-    /// or a file that belongs to nothing and so appears nowhere, both look fine on screen. Every archive
-    /// is walked in every game and every file has to be reachable from exactly one row, except where a
-    /// file is deliberately shared by many rows and is named as such.
-    /// </summary>
+    /// <summary>Grouping an archive's files into things loses none of them and invents none.</summary>
     [Collection("rom")]
     public class GraphicGroupingTests
     {
@@ -37,12 +30,12 @@ namespace DSPRE.Tests
             new object[] { "IPKE", HeartGold, "HeartGold" },
         };
 
-        /// <summary>A drawing belongs to one thing and one thing only. Colours, layouts and timings are
-        /// routinely shared: every battle backdrop uses one tilemap, and all twenty eight Unown forms are
-        /// painted from the same two sets of colours. So sharing is checked only on the drawings, which is
-        /// where a grouping mistake would actually show.</summary>
+        /// <summary>A drawing belongs to one thing and one thing only. </summary>
         private static bool MustBeExclusive(string partName)
-            => !(partName.StartsWith("Colours", StringComparison.Ordinal)
+            // A part that says it is shared may be in several rows: several items are one drawing in
+            // different colours, and each of them is a row. A part named plainly may not.
+            => !(partName.StartsWith("Drawing, shared", StringComparison.Ordinal)
+                 || partName.StartsWith("Colours", StringComparison.Ordinal)
                  || partName.StartsWith("Layout", StringComparison.Ordinal)
                  || partName.StartsWith("Their layout", StringComparison.Ordinal)
                  || partName.StartsWith("Arrangement", StringComparison.Ordinal)
@@ -129,12 +122,7 @@ namespace DSPRE.Tests
                 "emptying a row changed nothing, so this check cannot tell a dropped file from a kept one");
         }
 
-
-        /// <summary>An editor handing a graphic over lands on the right row and the right piece.
-        ///
-        /// The point of the hand-off is that somebody does not have to find the thing again among six
-        /// thousand rows, so it has to land exactly. Checked for every Pokemon and every trainer class
-        /// rather than one of each, because an off-by-one here would look plausible.</summary>
+        /// <summary>An editor handing a graphic over lands on the right row and the right piece.</summary>
         [Theory]
         [MemberData(nameof(Games))]
         public void HandingAGraphicOverLandsOnIt(string code, string path, string game)
@@ -143,7 +131,7 @@ namespace DSPRE.Tests
             new RomInfo(code, path);
             GraphicAssets.Forget();
 
-            var vm = new DSPRE.Avalonia.ViewModels.GraphicsBrowserViewModel();
+            var vm = new DSPRE.Avalonia.ViewModels.Graphics.GraphicsBrowserViewModel();
 
             int tried = 0;
             var wrong = new List<string>();
@@ -201,7 +189,7 @@ namespace DSPRE.Tests
             new RomInfo("CPUE", Platinum);
             GraphicAssets.Forget();
 
-            var vm = new DSPRE.Avalonia.ViewModels.GraphicsBrowserViewModel();
+            var vm = new DSPRE.Avalonia.ViewModels.Graphics.GraphicsBrowserViewModel();
             var a = GraphicAssets.All.First(x => x.Dir == DirNames.pokemonBattleSprites);
 
             Assert.True(vm.JumpTo(a, 18));
@@ -215,74 +203,8 @@ namespace DSPRE.Tests
             Assert.NotEqual(landedOn18, landedOn19);
         }
 
-
-        /// <summary>What the map headers actually say about battle backgrounds, before anything is built
-        /// on the link. The field is there; the question is whether its numbers line up with the
-        /// backdrops the renderer knows about.</summary>
-        [Theory]
-        [MemberData(nameof(Games))]
-        public void ReportWhichBattleBackgroundsTheHeadersUse(string code, string path, string game)
-        {
-            if (!Directory.Exists(path)) { _out.WriteLine($"{game}: not unpacked here"); return; }
-            new RomInfo(code, path);
-
-            var usedBy = new Dictionary<int, List<int>>();
-            int headers = 0;
-            try { headers = RomInfo.GetHeaderCount(); } catch { }
-            for (ushort i = 0; i < headers; i++)
-            {
-                try
-                {
-                    var h = DSPRE.ROMFiles.MapHeader.LoadFromARM9(i);
-                    if (h == null) continue;
-                    int bg = h.battleBackground;
-                    if (!usedBy.TryGetValue(bg, out var list)) usedBy[bg] = list = new List<int>();
-                    list.Add(i);
-                }
-                catch { }
-            }
-
-            _out.WriteLine($"{game}: {headers} headers, {usedBy.Count} different battle backgrounds used");
-            foreach (var kv in usedBy.OrderBy(k => k.Key))
-                _out.WriteLine($"   background {kv.Key}: {kv.Value.Count} places, first is header {kv.Value[0]}");
-            _out.WriteLine($"   the renderer knows {DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount} backdrops");
-        }
-
-
-        /// <summary>What the archives with no grouping yet actually hold, so a decision about them can be
-        /// made from the contents rather than from the name.</summary>
-        [Fact]
-        public void ReportTheUngroupedArchives()
-        {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
-            new RomInfo("CPUE", Platinum);
-            GraphicAssets.Forget();
-
-            foreach (var a in GraphicAssets.All)
-            {
-                if (a.BuildUnits != null || a.Stride > 1) continue;
-                int n;
-                try { n = GraphicAssets.Count(a); } catch { n = 0; }
-                if (n == 0) continue;
-
-                var narc = new ScriptNarc(a.Dir);
-                var kinds = new List<string>();
-                for (int i = 0; i < n; i++) kinds.Add(GraphicAssets.Identify(narc.Get(i)).ToString());
-                var tally = kinds.GroupBy(k => k).OrderByDescending(g => g.Count())
-                                 .Select(g => $"{g.Count()} {g.Key}");
-                _out.WriteLine($"{a.Title}: {n} files [{string.Join(", ", tally)}]");
-                _out.WriteLine("   in order: " + string.Join(", ", kinds.Take(16)));
-            }
-        }
-
-
         /// <summary>
         /// The battle screen is grouped and named from the game's own list, in every game that has one.
-        ///
-        /// The names come from batt_obj_def.h, pl_batt_obj_def.h and batt_obj_gs_def.h in the leaked
-        /// source, which name every entry of the battle furniture archive in order. This asserts the
-        /// grouping actually ran, because falling back to a flat list would still satisfy the
-        /// every-file-belongs-somewhere check while leaving the HP bar unfindable.
         /// </summary>
         [Theory]
         [MemberData(nameof(Games))]
@@ -344,14 +266,6 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// The thrown-ball drawings are named from the ROM's own item names, in both families.
-        ///
-        /// ball_effect.c's DP_BallEffectID_Get takes an item number, so the first sixteen rows of the ball
-        /// table are items 1 to 16; HeartGold and SoulSilver added the Apricorn balls as items 492 to 499.
-        /// Reading the names out of the ROM means a renamed item is renamed here too, so this checks
-        /// against what the ROM says rather than against a list in the code.
-        ///
-        /// Which drawing goes with which ball is not the same in the two families: Diamond and Platinum
-        /// shuffle them, so the plain ball uses drawing 00 and Quick and Dusk are the other way round.
         /// </summary>
         [Theory]
         [MemberData(nameof(Games))]
@@ -402,8 +316,7 @@ namespace DSPRE.Tests
                 }
 
             // Where two of them share one drawing the row names both, joined with a dash, rather than
-            // picking one and hiding the other. Sinnoh shares the bait drawing between throwing bait and
-            // putting a Pokemon back.
+            // picking one and hiding the other.
             var shared = balls.Where(u => u.Name.Contains(" - ")).ToList();
             if (!johto)
                 Assert.True(shared.Count > 0,
@@ -448,10 +361,6 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// Two locations sharing one splash screen must be one row naming both, not two rows.
-        ///
-        /// HeartGold's table has rows 4 and 5 both naming files 27 to 35 and rows 17 and 18 both naming
-        /// 150 to 158, which is real sharing rather than a misread: the shared rows also carry the same
-        /// name message id. This pins the merge, and fails if the table stops being read at all.
         /// </summary>
         [Fact]
         public void SplashScreensSharedByTwoPlacesAreOneRow()
@@ -488,11 +397,6 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// Text box frames must be paired the way winframe.naix pairs them, not by position.
-        ///
-        /// The drawings come first and the colours after, so drawing 2 goes with colours 26 in HeartGold
-        /// and 25 in Platinum. This asserts the grouping actually ran and produced the twenty styles,
-        /// because the builder falls back to a flat list when the archive does not look right, and a flat
-        /// list would still satisfy the every-file-belongs-somewhere check.
         /// </summary>
         [Theory]
         [MemberData(nameof(Games))]
@@ -547,22 +451,17 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// Battle scenes must never show a place name the game did not actually give that place.
-        ///
-        /// The displayed-name lookup answers for every header in Diamond but for almost none in
-        /// Platinum and HeartGold, where the handful it does answer are wrong: nine different places
-        /// came out as Route 201. So where the lookup cannot answer for nearly every header, every name
-        /// shown has to be the internal code instead. This fails if that gate is taken away.
         /// </summary>
         [Theory]
         [MemberData(nameof(Games))]
-        public void BattleScenesNeverShowAPlaceNameTheLookupCannotBackUp(string code, string path, string game)
+        public void BattleScenesShowRealPlaceNamesWhereverTheLookupAnswers(string code, string path, string game)
         {
             if (!Directory.Exists(path)) { _out.WriteLine($"{game}: not unpacked here"); return; }
             new RomInfo(code, path);
 
             var displayed = RomInfo.GetLocationNames();
             var internalNames = HeaderLists.GetHeaderListBoxNames();
-            bool dynamic = RomInfo.gameDirs.ContainsKey(DirNames.dynamicHeaders);
+            bool dynamic = HeaderLabels.DynamicHeaders;
             int headers = RomInfo.GetHeaderCount();
             Assert.True(headers > 0, $"{game}: no headers read, the test would prove nothing");
 
@@ -625,15 +524,14 @@ namespace DSPRE.Tests
 
                 // An archive whose files are each their own thing gains nothing from folding, and
                 // everything from being named: the fonts are one file each and were listed as eleven
-                // numbers. So a row carrying a real name counts as work done too.
+                // numbers.
                 int named = units.Count(u => !string.IsNullOrEmpty(u.Name) && u.Name != a.Title);
 
                 grouped.Add($"{a.Title}: {n} files into {rows} rows, {named} of them named"
                           + (reachesOtherArchives ? ", each pulling in its pieces from other archives" : ""));
 
                 // Grouping folds files together, pulls a row's pieces in from other archives, or names
-                // them. A move effect does the second: one row per drawing, with its colours, layout and
-                // timing fetched from three neighbouring archives.
+                // them.
                 Assert.True(rows < n || reachesOtherArchives || named > 0,
                     $"{game} / {a.Title}: {n} files still came out as {rows} rows, none of them named and "
                     + "nothing pulled in from elsewhere, so the grouping did nothing");

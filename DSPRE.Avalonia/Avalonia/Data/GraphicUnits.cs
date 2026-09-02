@@ -6,18 +6,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// How the files in each archive group into things.
-    ///
-    /// Almost nothing in these games is one picture per file. A battle backdrop is a drawing, a tilemap
-    /// shared with every other backdrop, and three sets of colours for the three times of day. A move
-    /// effect is a drawing, its colours, its layout and its timing, in four different archives at the same
-    /// position. Listing those flat is what made this window a wall of numbers.
-    ///
-    /// Every grouping here comes from somewhere that already knew it: the renderers DSPRE built from the
-    /// leaked source, or a table the games carry themselves. Nothing is guessed, and where a file is not
-    /// accounted for it still gets a row of its own rather than disappearing.
-    /// </summary>
+    /// <summary>How the files in each archive group into things.</summary>
     public static class GraphicUnits
     {
         private static GraphicAssets.UnitPart Part(GraphicAssets.Archive a, int index, string name)
@@ -43,7 +32,7 @@ namespace DSPRE.Avalonia.Data
         // ── the scenery behind a battle ────────────────────────────────────────────────────────────
 
         /// <summary>One row per backdrop: its drawing, the tilemap every backdrop shares, and its three
-        /// sets of colours. From BattleBgRenderer, which took the mapping from client_tool.c.</summary>
+        /// sets of colours. From BattleBgRenderer, which has the games' own mapping.</summary>
         public static List<GraphicAssets.Unit> BattleBackdrops(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
@@ -83,7 +72,37 @@ namespace DSPRE.Avalonia.Data
         public static int BackdropColours(int fileIndex)
         {
             int bg = BackdropOf(fileIndex);
-            return bg < 0 ? -1 : BattleBgRenderer.BackdropFiles(bg).PaletteDay;
+            if (bg >= 0) return BattleBgRenderer.BackdropFiles(bg).PaletteDay;
+            return PanelColours(fileIndex);
+        }
+
+        /// <summary>
+        /// The touch screen panel is not a backdrop, and its files had no colours of their own, so
+        /// they were shown and put back in whatever palette came to hand. battle_input.c:2471 loads
+        /// BATTLE_W_NCLR for the panel, and :1290 says every one of its layers is drawn from
+        /// BATTLE_W_NCGR.
+        /// </summary>
+        private static int PanelColours(int fileIndex) =>
+            IsPanelFile(fileIndex) ? BattleBgNames.Find("BATTLE_W_NCLR") : -1;
+
+        /// <summary>The tiles a touch screen panel layer is arranged from.</summary>
+        public static int PanelDrawing(int fileIndex)
+        {
+            var names = BattleBgNames.Names();
+            if (fileIndex < 0 || fileIndex >= names.Length) return -1;
+            string n = names[fileIndex];
+            return n != null && n.StartsWith("BATTLE_WBG", StringComparison.Ordinal) && n.Contains("_NSCR")
+                ? BattleBgNames.Find("BATTLE_W_NCGR_BIN") : -1;
+        }
+
+        private static bool IsPanelFile(int fileIndex)
+        {
+            var names = BattleBgNames.Names();
+            if (fileIndex < 0 || fileIndex >= names.Length) return false;
+            string n = names[fileIndex];
+            return n != null
+                && (n.StartsWith("BATTLE_WBG", StringComparison.Ordinal)
+                    || string.Equals(n, "BATTLE_W_NCGR_BIN", StringComparison.Ordinal));
         }
 
         /// <summary>Every backdrop's tiles are arranged by the one file they all share.</summary>
@@ -101,9 +120,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── the ground the Pokemon stand on ────────────────────────────────────────────────────────
 
-        /// <summary>One row per terrain: the two sides' drawings and its three sets of colours. The cell
-        /// layouts are shared by every terrain, so they are named but not claimed. From
-        /// BattleGroundRenderer, which took the mapping from battle/ground.c.</summary>
+        /// <summary>One row per terrain: the two sides' drawings and its three sets of colours. </summary>
         public static List<GraphicAssets.Unit> BattleGrounds(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
@@ -198,65 +215,83 @@ namespace DSPRE.Avalonia.Data
 
         // ── the pictures of the items in the bag ───────────────────────────────────────────────────
 
-        /// <summary>One row per drawing, with the colours the game's own table pairs it with. The archive
-        /// alternates drawing and colours, but not evenly, and several items share one drawing, so the
-        /// table is read rather than the alternation assumed.</summary>
+        /// <summary>One row per drawing, with the colours the game's own table pairs it with. </summary>
         public static List<GraphicAssets.Unit> ItemIcons(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
             var spokenFor = new HashSet<int>();
 
+            if (fileCount > GraphicAssets.ItemIcons.LayoutFile)
+            {
+                units.Add(Single(a, GraphicAssets.ItemIcons.AnimationFile,
+                                 "Item icon animation", "How the pieces move"));
+                units.Add(Single(a, GraphicAssets.ItemIcons.LayoutFile,
+                                 "Item icon layout", "How the pieces are placed"));
+                spokenFor.Add(GraphicAssets.ItemIcons.AnimationFile);
+                spokenFor.Add(GraphicAssets.ItemIcons.LayoutFile);
+            }
+
+            foreach (var icon in GraphicAssets.ItemIcons.Icons())
+            {
+                if (icon.Drawing >= fileCount || icon.Colours >= fileCount) continue;
+
+                int shared = GraphicAssets.ItemIcons.Sharing(icon.Drawing);
+                var u = new GraphicAssets.Unit { Archive = a, Name = icon.Name ?? a.Title };
+                u.Parts.Add(Part(a, icon.Drawing, shared > 1
+                    ? $"Drawing, shared with {shared - 1} other" + (shared > 2 ? " icons" : " icon")
+                    : "Drawing"));
+                u.Parts.Add(Part(a, icon.Colours, "Colours"));
+                units.Add(u);
+                spokenFor.Add(icon.Drawing);
+                spokenFor.Add(icon.Colours);
+            }
+
+            // The last two files are the arrow drawn beside Back at the bottom of the bag list, which
+            // the games reach for by name rather than through the item table. It is last in every
+            // game, so it is the last two files that are named, not a fixed pair of numbers.
+            if (fileCount >= 2 && !spokenFor.Contains(fileCount - 1) && !spokenFor.Contains(fileCount - 2))
+            {
+                var back = new GraphicAssets.Unit { Archive = a, Name = "Back arrow" };
+                back.Parts.Add(Part(a, fileCount - 2, "Drawing"));
+                back.Parts.Add(Part(a, fileCount - 1, "Colours"));
+                units.Add(back);
+                spokenFor.Add(fileCount - 2);
+                spokenFor.Add(fileCount - 1);
+            }
+
+            // The archive holds art for item slots the game never asks for. Saying so beats a row named
+            // after the archive with a file number after it.
             for (int i = 0; i < fileCount; i++)
             {
-                string name = null;
-                try { name = a.NameOf?.Invoke(i); } catch { }
-                int colours = -1;
-                try { colours = a.ColourEntry?.Invoke(i) ?? -1; } catch { }
-
-                // Only a drawing starts a row. A palette the table pairs with one is folded into it, and a
-                // palette nothing points at still gets a row so it does not vanish.
-                if (name == null && colours < 0) continue;
-                if (colours < 0) continue;
-
-                var u = new GraphicAssets.Unit { Archive = a, Name = name ?? a.Title };
-                u.Parts.Add(Part(a, i, "Drawing"));
-                spokenFor.Add(i);
-                if (colours < fileCount && colours != i)
-                {
-                    u.Parts.Add(Part(a, colours, "Colours"));
-                    // Several items share one set of colours, so it belongs to whichever rows name it and
-                    // must not also turn up as a leftover row of its own.
-                    spokenFor.Add(colours);
-                }
+                if (spokenFor.Contains(i)) continue;
+                var u = new GraphicAssets.Unit { Archive = a, Name = "No item uses this" };
+                u.Parts.Add(Part(a, i, KindIn(a, i) == GraphicAssets.Kind.Palette ? "Colours" : "Drawing"));
                 units.Add(u);
             }
 
-            FillGaps(units, a, fileCount, spokenFor);
+            units.Sort((x, y) => x.First.CompareTo(y.First));
             return units;
+        }
+
+        /// <summary>Whether a file in an archive is a drawing or a set of colours.</summary>
+        private static GraphicAssets.Kind KindIn(GraphicAssets.Archive a, int index)
+        {
+            try { return GraphicAssets.Identify(new ScriptNarc(a.Dir).Get(index)); }
+            catch { return GraphicAssets.Kind.Unknown; }
+        }
+
+        /// <summary>A row that is one file on its own.</summary>
+        private static GraphicAssets.Unit Single(GraphicAssets.Archive a, int index, string name, string part)
+        {
+            var u = new GraphicAssets.Unit { Archive = a, Name = name };
+            u.Parts.Add(Part(a, index, part));
+            return u;
         }
 
 
         // ── the borders drawn around text boxes and menus ──────────────────────────────────────────
 
-        /// <summary>
-        /// One row per window frame, named the way the games name them.
-        ///
-        /// The archive's own index file, include/system/winframe.naix in both leaks, names every entry:
-        /// system, fmenu, talk_win00 to talk_win19 and the cursors as drawings, then system, talk_win00
-        /// to talk_win19 and ugmenu_win as colours, then the four poke_win files. So drawing 2 goes with
-        /// colours 26 in HeartGold, not with colours 2. Pairing them by position would have put the wrong
-        /// colours on all twenty text box styles.
-        ///
-        /// The two games differ only in how many cursors they carry, HeartGold three and Platinum two,
-        /// which shifts everything after them. The palettes are found rather than counted so both work.
-        ///
-        /// The pairing is the engine's own, not a guess. window.c's TalkWinGraphicSet takes the style
-        /// number the player picked, CONFIG_GetWindowType, and hands it to both TalkWinCgxArcGet, which
-        /// returns talk_win00_ncgr + id, and TalkWinPalArcGet, which returns talk_win00_nclr + id. So the
-        /// drawings are a run indexed straight by the setting, and drawing number k always goes with
-        /// colours number k. MenuWinPalArcGet returns system_nclr, which is why the field menu shares the
-        /// system colours.
-        /// </summary>
+        /// <summary>One row per window frame, named the way the games name them.</summary>
         public static List<GraphicAssets.Unit> WindowFrames(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
@@ -266,7 +301,7 @@ namespace DSPRE.Avalonia.Data
             int firstColour = GraphicAssets.FirstPaletteIndex(a);
 
             // Twenty text box styles is what both games carry. If this archive does not look like the one
-            // the leaks describe, leave it flat rather than pairing things up wrongly.
+            // the games use, leave it flat rather than pairing things up wrongly.
             const int Styles = 20;
             if (firstColour < 2 + Styles || firstColour + Styles >= fileCount)
             {
@@ -311,9 +346,10 @@ namespace DSPRE.Avalonia.Data
         }
 
 
-        /// <summary>The colours a window frame drawing is meant to be drawn with, from the same naix order
-        /// the rows are built from. Without this the frames draw in whatever palette happens to be nearest,
-        /// which for these is all black.</summary>
+        /// <summary>
+        /// The colours a window frame drawing is meant to be drawn with, from the same naix order the rows
+        /// are built from.
+        /// </summary>
         public static int WindowFrameColours(int fileIndex)
         {
             var a = Find(DirNames.windowFrames);
@@ -330,13 +366,8 @@ namespace DSPRE.Avalonia.Data
             }
             if (fileIndex >= 2 && fileIndex < 2 + Styles) return firstColour + 1 + (fileIndex - 2);
 
-            // The system window and the field menu both use the system colours: window.c's
-            // MenuWinPalArcGet returns system_nclr.
-            //
-            // The cursors have no colours of their own and never load any. window.c fetches only their
-            // character data, builds them into the tiles of whatever window they sit in, and loads that
-            // into the background, so a cursor is drawn in the colours of the box it appears in. The
-            // system colours are used here to have something to show it in, not because they are its own.
+            // The system window and the field menu both use the system colours: window.c's MenuWinPalArcGet
+            // returns system_nclr.
             return firstColour;
         }
 
@@ -345,13 +376,6 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// One row per drawing, taking the colours and arrangements that follow it as belonging to it.
-        ///
-        /// For archives with no index list in the leaks to go by, but which plainly run in that order: a
-        /// drawing, then its colours, then the ways it is arranged, then the next drawing. Platinum's
-        /// location banner archive is three such runs and HeartGold's is one.
-        ///
-        /// This is read off the files themselves rather than from anything the games say, so it groups
-        /// what is there without claiming to know what the pictures are for.
         /// </summary>
         public static List<GraphicAssets.Unit> ByDrawing(GraphicAssets.Archive a, int fileCount)
         {
@@ -401,9 +425,10 @@ namespace DSPRE.Avalonia.Data
 
         // ── the trainer card ───────────────────────────────────────────────────────────────────────
 
-        /// <summary>The card is one drawing arranged two ways, front and back, with a set of colours for
-        /// each rank you can reach. The portrait beside it is another drawing arranged two ways, one per
-        /// gender. Both layouts are already declared in RomInfo.TrainerCardMembers.</summary>
+        /// <summary>
+        /// The card is one drawing arranged two ways, front and back, with a set of colours for each rank
+        /// you can reach.
+        /// </summary>
         public static List<GraphicAssets.Unit> TrainerCard(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
@@ -453,9 +478,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── the small pictures in the party and the box ────────────────────────────────────────────
 
-        /// <summary>One row per Pokemon, with its alternate forms' icons under it. A form's icon is not
-        /// next to its Pokemon's: it sits past the end of the real species, at the number the game's own
-        /// alternate form table gives it.</summary>
+        /// <summary>One row per Pokemon, with its alternate forms' icons under it. </summary>
         public static List<GraphicAssets.Unit> PartyIcons(GraphicAssets.Archive a, int fileCount)
         {
             const int LeadIn = 7;            // DSUtils.cs: the icon for a species is species + 7
