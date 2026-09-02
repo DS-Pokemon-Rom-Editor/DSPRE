@@ -36,9 +36,11 @@ namespace DSPRE
         public bool databasesPulled { get; set; } = false;
         public bool automaticallyCheckForUpdates { get; set; } = true;
         public bool automaticallyUpdateDBs { get; set; } = true;
-        public bool useDecompNames { get; set; } = false;
         public bool convertLegacyText { get; set; } = true;
         public string rotomEditorTheme { get; set; } = "OneDark";
+
+        /// <summary>The light or dark skin, so the choice survives closing the program.</summary>
+        public bool darkTheme { get; set; } = true;
 
         /// <summary>Avalonia scale override (0 = use the platform scale).</summary>
         public double uiScale { get; set; } = 0;

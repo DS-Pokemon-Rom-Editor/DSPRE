@@ -25,8 +25,21 @@ namespace DSPRE.Avalonia
         {
             if (Application.Current != null)
                 Application.Current.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+            if (DSPRE.SettingsManager.Settings != null)
+            {
+                DSPRE.SettingsManager.Settings.darkTheme = dark;
+                DSPRE.SettingsManager.Save();
+            }
         }
 
         public static void Toggle() => SetDark(!IsDark);
+
+        /// <summary>Puts back the skin the last session was left on.</summary>
+        public static void ApplySaved()
+        {
+            var s = DSPRE.SettingsManager.Settings;
+            if (s != null && Application.Current != null)
+                Application.Current.RequestedThemeVariant = s.darkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+        }
     }
 }

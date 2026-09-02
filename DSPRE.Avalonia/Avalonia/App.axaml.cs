@@ -66,6 +66,7 @@ namespace DSPRE
                     // The WinForms shell does these in the MainProgram ctor; the pure-Avalonia shell must
                     // do them itself (ROM loads read Settings, and the logger needs its file path).
                     SettingsManager.Load();
+                    DSPRE.Avalonia.ThemeManager.ApplySaved();
                     AppLogger.Initialize();
                     DatabaseSetup.CopyBundledDatabases();
 
@@ -82,7 +83,7 @@ namespace DSPRE
                     if (SettingsManager.Settings?.automaticallyCheckForUpdates == true)
                         DSPRE.Avalonia.ShellIntegration.CheckForUpdates(silent: true);
 
-                    var main = new DSPRE.Avalonia.Views.MainWindowView(new DSPRE.Avalonia.ViewModels.MainWindowViewModel(true));
+                    var main = new DSPRE.Avalonia.Views.Shell.MainWindowView(new DSPRE.Avalonia.ViewModels.Shell.MainWindowViewModel(true));
                     desktop.MainWindow = main;
                     desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;   // closing the shell exits the app
                     main.Show();
@@ -99,7 +100,7 @@ namespace DSPRE
                     void ShowWelcomeIfEnabled()
                     {
                         if (SettingsManager.Settings?.showWelcomeOnStartup != false)
-                            DSPRE.Avalonia.Views.WelcomeView.ShowWelcome(main);
+                            DSPRE.Avalonia.Views.Shell.WelcomeView.ShowWelcome(main);
                     }
 
                     if (haveDefaultRom)
