@@ -8,16 +8,6 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// The font the games write with, read out of the ROM that is loaded so it shows whatever the person
     /// using DSPRE has put there.
-    ///
-    /// The four fonts named in the leak's convert/message/font_list.txt live in one archive, which is
-    /// graphic/font.narc in Diamond and Pearl, graphic/pl_font.narc in Platinum and a/0/1/6 in HeartGold
-    /// and SoulSilver. include/system/font_arc.h gives their order, and entry 1 is the one an NPC talks
-    /// to you with.
-    ///
-    /// A font is a sixteen byte header, then one 64 byte picture per letter, then one width byte per
-    /// letter. Each letter is four eight by eight blocks, in reading order, and each row of a block is a
-    /// little-endian ushort holding eight pixels two bits at a time with the leftmost pixel highest.
-    /// The two bit value is 0 outside the letter, 3 for the paper it sits on, and 1 or 2 for the ink.
     /// </summary>
     public sealed class FieldFont
     {
@@ -36,15 +26,23 @@ namespace DSPRE.ROMFiles
         private readonly byte[] _pixels;    // one byte a pixel, glyph by glyph, row by row
         private readonly byte[] _widths;
 
+        // Kept so a font written back out is the same bytes it came in as. Reading does not look at
+        // every byte of the header, and some fonts carry something after the width table; rebuilding
+        // from the parts alone would quietly drop both.
+        private readonly byte[] _header;
+        private readonly byte[] _tail;
+
         public int GlyphCount { get; }
         public int MaxWidth { get; }
         public int Height { get; }
         public int BitsPerPixel { get; }
 
-        private FieldFont(byte[] pixels, byte[] widths, int count, int maxWidth, int height, int bpp)
+        private FieldFont(byte[] pixels, byte[] widths, int count, int maxWidth, int height, int bpp,
+                          byte[] header, byte[] tail)
         {
             _pixels = pixels; _widths = widths;
             GlyphCount = count; MaxWidth = maxWidth; Height = height; BitsPerPixel = bpp;
+            _header = header; _tail = tail;
         }
 
         /// <summary>Reads one font out of the bytes of an archive entry.</summary>
@@ -80,7 +78,66 @@ namespace DSPRE.ROMFiles
 
             var widths = new byte[count];
             Array.Copy(data, tableStart, widths, 0, count);
-            return new FieldFont(pixels, widths, count, maxWidth, height, bpp);
+
+            var header = new byte[HeaderSize];
+            Array.Copy(data, 0, header, 0, HeaderSize);
+            int after = tableStart + count;
+            var tail = new byte[data.Length - after];
+            Array.Copy(data, after, tail, 0, tail.Length);
+
+            return new FieldFont(pixels, widths, count, maxWidth, height, bpp, header, tail);
+        }
+
+        /// <summary>
+        /// The font back as the bytes an archive entry holds. The header and anything past the width
+        /// table are the ones it was read with, so a font nobody edited comes out exactly as it went in.
+        /// </summary>
+        public byte[] Write()
+        {
+            int tableStart = HeaderSize + GlyphCount * BytesPerGlyph;
+            var data = new byte[tableStart + GlyphCount + (_tail?.Length ?? 0)];
+            Array.Copy(_header, 0, data, 0, HeaderSize);
+
+            // The same walk Read does, the other way round: four eight by eight blocks, two bytes a
+            // row, two bits a pixel with the leftmost pixel in the top bits.
+            for (int g = 0; g < GlyphCount; g++)
+            {
+                int write = HeaderSize + g * BytesPerGlyph;
+                int read = g * CellSize * CellSize;
+                for (int blockRow = 0; blockRow < 2; blockRow++)
+                    for (int blockCol = 0; blockCol < 2; blockCol++)
+                        for (int row = 0; row < 8; row++, write += 2)
+                        {
+                            int packed = 0;
+                            for (int col = 0; col < 8; col++)
+                            {
+                                int v = _pixels[read + (blockRow * 8 + row) * CellSize + blockCol * 8 + col] & 3;
+                                packed |= v << (14 - col * 2);
+                            }
+                            data[write] = (byte)packed;
+                            data[write + 1] = (byte)(packed >> 8);
+                        }
+            }
+
+            Array.Copy(_widths, 0, data, tableStart, GlyphCount);
+            if (_tail != null && _tail.Length > 0)
+                Array.Copy(_tail, 0, data, tableStart + GlyphCount, _tail.Length);
+            return data;
+        }
+
+        /// <summary>Changes one spot in one letter. 0 nothing, 1 or 2 ink, 3 paper.</summary>
+        public void SetPixel(int glyph, int x, int y, byte value)
+        {
+            if (glyph < 0 || glyph >= GlyphCount) return;
+            if (x < 0 || y < 0 || x >= CellSize || y >= CellSize) return;
+            _pixels[glyph * CellSize * CellSize + y * CellSize + x] = (byte)(value & 3);
+        }
+
+        /// <summary>Changes how far along the next letter starts.</summary>
+        public void SetWidth(int glyph, int width)
+        {
+            if (glyph < 0 || glyph >= GlyphCount) return;
+            _widths[glyph] = (byte)Math.Clamp(width, 0, CellSize);
         }
 
         /// <summary>Reads the talking font out of the loaded ROM, or null when it cannot be found.</summary>
@@ -147,10 +204,6 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// Turns the letters people type into the numbers the font stores its pictures under.
-    ///
-    /// The font's pictures are in the same order as the games' own character table, one behind it: the
-    /// table's code 2 is the first hiragana and that is picture 1, so the picture is the code less one.
-    /// The table itself is the charmap DSPRE already uses to read the games' text.
     /// </summary>
     public static class FieldFontCharacters
     {

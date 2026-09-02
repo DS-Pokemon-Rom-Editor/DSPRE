@@ -1,0 +1,117 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
+        x:Class="DSPRE.Avalonia.Views.Graphics.FontEditorView"
+        x:DataType="vm:FontEditorViewModel"
+        Title="Font Editor"
+        Width="980" Height="700" MinWidth="620" MinHeight="460"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:FontEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="Font" VerticalAlignment="Center"/>
+        <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
+                  PlaceholderText="This ROM carries no fonts this editor can read"/>
+        <Button Content="💾 Save this font" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBlock Classes="hint" VerticalAlignment="Center"
+                   Text="Nothing is written until you save."/>
+      </StackPanel>
+    </Border>
+
+    <!-- Every letter in the font -->
+    <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,1,0">
+      <DockPanel Margin="6">
+        <TextBlock DockPanel.Dock="Top" Text="Letters" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
+                   Text="The number is the picture's place in the font. Beside it is the character that writes it, where this ROM's map has one."/>
+        <ListBox ItemsSource="{Binding Glyphs}" SelectedIndex="{Binding SelectedGlyphIndex}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding Number}" Width="42"
+                           Foreground="{DynamicResource Editor.Subtle}"
+                           FontFamily="Consolas,monospace"/>
+                <TextBlock Text="{Binding Letter}" IsVisible="{Binding IsMapped}"/>
+                <TextBlock Text="not in the character map" IsVisible="{Binding !IsMapped}"
+                           FontSize="11" FontStyle="Italic"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="14" Spacing="12">
+
+        <TextBlock Text="{Binding GlyphTitle}" FontWeight="SemiBold"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+            <views:GlyphPainter Model="{Binding}" Revision="{Binding GlyphChanged}"
+                                LetterWidth="{Binding GlyphWidth}"
+                                Shade="{Binding #ShadePicker.SelectedIndex}"/>
+          </Border>
+
+          <StackPanel Spacing="8" Width="230">
+            <TextBlock Text="Shade" FontWeight="SemiBold"/>
+            <TextBlock Classes="hint"
+                       Text="Two bits a pixel gives four. Left button paints the one picked here, right button rubs out."/>
+            <ComboBox x:Name="ShadePicker" SelectedIndex="1" Width="200">
+              <ComboBoxItem>Nothing</ComboBoxItem>
+              <ComboBoxItem>Ink</ComboBoxItem>
+              <ComboBoxItem>Second ink</ComboBoxItem>
+              <ComboBoxItem>Paper</ComboBoxItem>
+            </ComboBox>
+
+            <TextBlock Text="Width" FontWeight="SemiBold" Margin="0,8,0,0"/>
+            <TextBlock Classes="hint"
+                       Text="How far along the next letter starts. The red line shows it; anything drawn past it sits under whatever comes next."/>
+            <NumericUpDown Value="{Binding GlyphWidth}" Minimum="0" Maximum="16" FormatString="0"
+                           IsEnabled="{Binding HasGlyph}" Width="120" HorizontalAlignment="Left"/>
+            <TextBlock Classes="hint" Text="Pick a letter on the left first." IsVisible="{Binding !HasGlyph}"/>
+          </StackPanel>
+        </StackPanel>
+
+        <Separator/>
+
+        <TextBlock Text="How a sentence comes out" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding Sample}" AcceptsReturn="False"/>
+        <TextBlock Text="{Binding PreviewNote}" Classes="hint"
+                   IsVisible="{Binding PreviewNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                Background="White" Padding="10" HorizontalAlignment="Left">
+          <views:FontSampleLine Model="{Binding}" Revision="{Binding GlyphChanged}"
+                                Text="{Binding Sample}"/>
+        </Border>
+        <TextBlock Classes="hint"
+                   Text="Drawn at the size the game draws it, and again at three times that."/>
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>

@@ -6,19 +6,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Grouping and naming for the archives whose contents the games name themselves.
-    ///
-    /// Several archives come with an index list in the leaked source naming every entry, in the same
-    /// shape: a thing's name with the kind of file on the end, so RAIN_NCGR, RAIN_NCER and RAIN_NANR are
-    /// one thing. The battle furniture list was the first of these and BattleObjects does the reading;
-    /// this does the same for the rest so there is one way of doing it rather than a copy per archive.
-    ///
-    /// Covered here:
-    ///   the weather effects, include/field/weather_sys.naix, which DSPRE used to call the map screen
-    ///   overlay: rain, snow, storms, fog, the volcano ash over Cinnabar and so on
-    ///   the fonts, include/system/font_arc.h
-    /// </summary>
+    /// <summary>Grouping and naming for the archives whose contents the games name themselves.</summary>
     public static class NamedArchives
     {
         /// <summary>The names for one archive in the game that is open, or empty when there are none.</summary>
@@ -41,13 +29,7 @@ namespace DSPRE.Avalonia.Data
                          .ToList();
         }
 
-        /// <summary>
-        /// What to call a thing, in the words somebody looking for it would use.
-        ///
-        /// The lists shout, and a few are Japanese: SHINPI is the mysterious shimmer, HAIKEI a backdrop.
-        /// The weather names are otherwise plain enough that saying them properly is mostly a matter of
-        /// capitalising them.
-        /// </summary>
+        /// <summary>What to call a thing, in the words somebody looking for it would use.</summary>
         public static string Friendly(DirNames dir, string thing)
         {
             if (string.IsNullOrEmpty(thing)) return null;
@@ -163,10 +145,7 @@ namespace DSPRE.Avalonia.Data
             return units;
         }
 
-        private static int Rank(string part) => part switch
-        {
-            "As it appears" => 0, "Drawing" => 1, "Animation" => 2, "Arrangement" => 3, "Colours" => 4, _ => 5,
-        };
+        private static int Rank(string part) => GraphicAssets.PartRank(part);
 
         /// <summary>The drawing a layout or arrangement belongs with, which is the one of the same thing.</summary>
         public static int DrawingFor(DirNames dir, int fileIndex)

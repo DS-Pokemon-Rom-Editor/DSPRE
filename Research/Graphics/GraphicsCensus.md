@@ -34,7 +34,7 @@ Games read: Diamond, Platinum, HeartGold. Archives found: 67.
 | eventFiles | raw data | 512 / 534 / 491 | EventEditor |
 | evolutions | raw data | 501 / 508 / 508 | PokemonEditor, TmHmBulkEditor |
 | exteriorBuildingModels | 3D model | 535 / 590 / 340 | BuildingEditor, EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor |
-| fonts | raw data, palette, tile graphic | 8 / 8 / 11 | **none** |
+| fonts | raw data, palette, tile graphic | 8 / 8 / 11 | FontEditor |
 | groundAnimations | 3D texture animation | 2 | **none** |
 | headbutt | raw data | 540 | HeadbuttEncounter, HeadbuttEncounterEditor |
 | interiorBuildingModels | 3D model | 222 | BuildingEditor, EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor |
