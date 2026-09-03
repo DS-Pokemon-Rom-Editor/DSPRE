@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DSPRE;
+using DSPRE.Avalonia.ViewModels.Shell;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -111,6 +112,91 @@ namespace DSPRE.Tests
             Assert.Null(BetaEditors.WhyNot("TilesetBuilderView"));
         }
 
+        // ── what the welcome guide and the tour say about it ──────────────────────────
+
+        /// <summary>
+        /// The welcome guide gains a page about the unfinished editors, and only in that mode. The
+        /// pages used to be a static array, so this also pins that the count and the indexes follow.
+        /// </summary>
+        [Fact]
+        public void TheWelcomeGuideExplainsBetaOnlyWhenItApplies()
+            {
+            BetaEditors.Set(false);
+            var off = new WelcomeViewModel();
+            int plain = CountPages(off);
+            Assert.False(PageTitles(off).Contains("unfinished", StringComparison.OrdinalIgnoreCase),
+                         "the plain guide should not mention the unfinished editors");
+
+            BetaEditors.Set(true);
+            var on = new WelcomeViewModel();
+            Assert.Equal(plain + 1, CountPages(on));
+
+            // Second, right after the greeting, not buried at the end.
+            on.PageIndex = 1;
+            Assert.Contains("unfinished", on.PageTitle, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("beta editor or feature was involved", on.PageBody);
+            Assert.Contains($"{BetaEditors.Count} editors", on.PageBody);
+            Assert.Equal($"2 / {plain + 1}", on.PageLabel);
+
+            // Every page is still reachable at the longer length.
+            for (int k = 0; k < plain + 1; k++)
+            {
+                on.PageIndex = k;
+                Assert.False(string.IsNullOrWhiteSpace(on.PageTitle), $"page {k} has no title");
+            }
+        }
+
+        /// <summary>Every in-editor feature that is gated is named, so the guide cannot go stale.</summary>
+        [Fact]
+        public void EveryGatedFeatureInsideAnEditorIsWrittenDown()
+        {
+            string views = Path.Combine(Repo, "DSPRE.Avalonia", "Avalonia", "Views");
+            if (!Directory.Exists(views))
+            { Assert.Fail($"{views} is not there, so this proved nothing."); return; }
+
+            int bound = Directory.GetFiles(views, "*.axaml", SearchOption.AllDirectories)
+                .Sum(f => Regex.Matches(File.ReadAllText(f), "ShowBetaFeatures").Count);
+
+            _out.WriteLine($"{bound} controls bound to ShowBetaFeatures, "
+                         + $"{BetaEditors.Features.Count} features written down");
+            Assert.True(bound > 0, "nothing is bound to ShowBetaFeatures any more");
+            Assert.True(BetaEditors.Features.Count > 0, "no in-editor features are written down");
+            Assert.All(BetaEditors.Features, f =>
+            {
+                Assert.False(string.IsNullOrWhiteSpace(f.Name));
+                Assert.False(string.IsNullOrWhiteSpace(f.Where));
+            });
+        }
+
+        /// <summary>The status bar says which mode you are in either way, so the tour has a target.</summary>
+        [Fact]
+        public void TheStatusBarNamesTheModeEitherWay()
+        {
+            string xaml = Path.Combine(Repo, "DSPRE.Avalonia", "Avalonia", "Views", "Shell",
+                                       "MainWindowView.axaml");
+            if (!File.Exists(xaml))
+            { Assert.Fail($"{xaml} is not there, so this proved nothing."); return; }
+            Assert.Contains("BetaNoticeText", File.ReadAllText(xaml), StringComparison.Ordinal);
+        }
+
+        private static int CountPages(WelcomeViewModel vm)
+        {
+            int n = 0;
+            while (true)
+            {
+                vm.PageIndex = n;
+                if (vm.PageIndex != n) break;
+                n++;
+            }
+            return n;
+        }
+
+        private static string PageTitles(WelcomeViewModel vm)
+        {
+            var all = new List<string>();
+            for (int k = 0; k < CountPages(vm); k++) { vm.PageIndex = k; all.Add(vm.PageTitle); }
+            return string.Join(" | ", all);
+        }
         // ── the list against the code ─────────────────────────────────────────────────────────────
 
         [Fact]
@@ -154,9 +240,22 @@ namespace DSPRE.Tests
             }
 
             _out.WriteLine($"{seen} menu entries name a beta editor.");
-            Assert.True(seen > 15, $"only {seen} menu entries were found to be gated, which is too few");
+            Assert.True(seen > 0, "no menu entry is gated at all, which cannot be right");
             Assert.True(loose.Count == 0,
                 "these name a beta editor but are never disabled: " + string.Join(", ", loose));
+
+            // A binding naming a window that is no longer gated is litter: it always reads true and
+            // quietly suggests the editor is still being held back. Thirty one of these were left
+            // behind when the list was trimmed from 47 to 16.
+            var stale = new List<string>();
+            foreach (Match m in Regex.Matches(s, @"Beta(?:Note)?\[(\w+)\]"))
+            {
+                string window = m.Groups[1].Value;
+                if (!BetaEditors.IsBeta(window)) stale.Add(window);
+            }
+            Assert.True(stale.Count == 0,
+                "these menu bindings name a window that is not gated any more: "
+                + string.Join(", ", stale.Distinct()));
         }
 
         [Fact]

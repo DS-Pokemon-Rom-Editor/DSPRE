@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using DSPRE;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -23,7 +24,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             public string Body { get; init; }
         }
 
-        private static readonly TutorialPage[] Pages =
+        // The pages everybody sees. BuildPages() adds the beta one on top when it applies.
+        private static readonly TutorialPage[] StandardPages =
         {
             new()
             {
@@ -96,6 +98,45 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             },
         };
 
+        /// <summary>
+        /// Only shown when the editors that are still being tried out are switched on. It goes second,
+        /// straight after the greeting, because it changes what to expect from everything after it.
+        /// </summary>
+        private static TutorialPage BetaPage()
+        {
+            var areas = new List<string>();
+            foreach (var a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
+
+            var features = new List<string>();
+            foreach (var f in BetaEditors.Features) features.Add($"• {f.Name} ({f.Where}).");
+
+            return new TutorialPage
+            {
+                Title = "You are running the unfinished editors",
+                Body =
+                    $"DSPRE was started with beta features on, so {BetaEditors.Count} editors that "
+                    + "are normally hidden are available to you: " + string.Join(", ", areas)
+                    + ".\n\n"
+                    + "These parts of finished editors are switched on too:\n"
+                    + string.Join("\n", features) + "\n\n"
+                    + "They are unfinished. They can write a project you cannot open again, so back "
+                    + "up your work before using one, and keep the clean .nds somewhere safe.\n\n"
+                    + "If you report a problem, please say whether a beta editor or feature was "
+                    + "involved. It is the difference between a bug in DSPRE and a bug in something "
+                    + "we already know is half built, and it saves everybody a lot of time."
+            };
+        }
+
+        private static TutorialPage[] BuildPages()
+        {
+            if (!BetaEditors.Enabled) return StandardPages;
+            var pages = new List<TutorialPage>(StandardPages);
+            pages.Insert(1, BetaPage());
+            return pages.ToArray();
+        }
+
+        private readonly TutorialPage[] Pages = BuildPages();
+
         public ObservableCollection<string> RecentProjects { get; } = new();
 
         private int _pageIndex;
@@ -135,6 +176,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 OnPropertyChanged();
             }
         }
+
+        /// <summary>So nobody forgets which mode they started in after clicking past the page.</summary>
+        public string WindowTitle => BetaEditors.Enabled
+            ? "Welcome to DSPRE (beta features on)"
+            : "Welcome to DSPRE";
 
         public bool HasRecents => RecentProjects.Count > 0;
 

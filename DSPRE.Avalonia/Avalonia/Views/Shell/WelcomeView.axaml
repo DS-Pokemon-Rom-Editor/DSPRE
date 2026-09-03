@@ -3,7 +3,7 @@
         xmlns:vm="using:DSPRE.Avalonia.ViewModels.Shell"
         x:Class="DSPRE.Avalonia.Views.Shell.WelcomeView"
         x:DataType="vm:WelcomeViewModel"
-        Title="Welcome to DSPRE"
+        Title="{Binding WindowTitle}"
         Width="720" Height="480" CanResize="False"
         WindowStartupLocation="CenterOwner">
 

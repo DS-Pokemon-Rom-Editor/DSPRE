@@ -90,5 +90,52 @@ namespace DSPRE
 
         /// <summary>How many there are, for the line the main window shows when they are switched on.</summary>
         public static int Count => Testing.Count;
+
+        /// <summary>One unfinished thing inside an editor that is otherwise finished.</summary>
+        public sealed class BetaFeature
+        {
+            public string Name { get; init; }
+            public string Where { get; init; }
+        }
+
+        /// <summary>
+        /// The parts of a finished editor that are still being tried out. These cannot be gated by
+        /// window name, so their controls bind to a ShowBetaFeatures property instead. Listing them
+        /// here is what lets the welcome guide and the tour say what is switched on.
+        /// </summary>
+        public static IReadOnlyList<BetaFeature> Features { get; } = new List<BetaFeature>
+        {
+            new() { Name = "Walking the map", Where = "Event Editor" },
+            new() { Name = "The animated preview", Where = "Event Editor and Map Editor" },
+            new() { Name = "Dragging events with a gizmo", Where = "Event Editor" },
+            new() { Name = "The tile boundary overlay", Where = "Map Editor" },
+        };
+
+        /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>
+        public static IEnumerable<KeyValuePair<string, int>> CountByArea()
+        {
+            var by = new Dictionary<string, int>();
+            foreach (string window in Testing.Keys)
+            {
+                string area = AreaOf(window);
+                by[area] = by.TryGetValue(area, out int n) ? n + 1 : 1;
+            }
+            var order = new List<KeyValuePair<string, int>>(by);
+            order.Sort((a, b) => b.Value != a.Value
+                ? b.Value.CompareTo(a.Value)
+                : string.Compare(a.Key, b.Key, StringComparison.Ordinal));
+            return order;
+        }
+
+        private static string AreaOf(string window)
+        {
+            if (window.StartsWith("Battle", StringComparison.Ordinal)) return "Battle";
+            if (window.StartsWith("HgEngine", StringComparison.Ordinal)
+             || window == "CompileRomView") return "hg-engine";
+            if (window is "FontEditorView" or "TilesetBuilderView" or "BannerEditorView"
+                       or "TitleScreenEditorView" or "DungeonCutinEditorView"
+                       or "TrainerCardEditorView" or "TrainerSpriteEditorView") return "Graphics";
+            return "Tools";
+        }
     }
 }

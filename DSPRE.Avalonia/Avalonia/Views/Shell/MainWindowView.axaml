@@ -50,7 +50,7 @@
         <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click"/>
         <Separator/>
         <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click"/>
-        <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}" ToolTip.Tip="{Binding BetaNote[StarterEditorView]}"/>
+        <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}"/>
         <Separator/>
         <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}"/>
         <MenuItem Header="Special Encounters…"     Click="EncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"/>
@@ -75,7 +75,7 @@
         <MenuItem Header="Item Editor…" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
                   ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
         <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)…" Click="ItemTableEditor_Click"
-                  ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops" IsEnabled="{Binding Beta[ItemTableEditorView]}"/>
+                  ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
       </MenuItem>
 
       <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -86,16 +86,16 @@
 
       <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Header Editor…"          Click="HeaderEditor_Click"/>
-        <MenuItem Header="Camera Editor…"          Click="CameraEditor_Click" IsEnabled="{Binding Beta[CameraEditorView]}" ToolTip.Tip="{Binding BetaNote[CameraEditorView]}"/>
+        <MenuItem Header="Camera Editor…"          Click="CameraEditor_Click"/>
         <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
         <MenuItem Header="Building Editor…"        Click="BuildingEditor_Click"/>
         <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
         <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
-        <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click" IsEnabled="{Binding Beta[FlyEditorView]}" ToolTip.Tip="{Binding BetaNote[FlyEditorView]}"/>
-        <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click" IsEnabled="{Binding Beta[OverlayEditorView]}" ToolTip.Tip="{Binding BetaNote[OverlayEditorView]}"/>
+        <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click"/>
+        <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click"/>
         <MenuItem Header="Area Data Editor…"       Click="AreaDataEditor_Click"/>
-        <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click" IsEnabled="{Binding Beta[SpawnEditorView]}" ToolTip.Tip="{Binding BetaNote[SpawnEditorView]}"/>
-        <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click" IsEnabled="{Binding Beta[HeaderSearchView]}" ToolTip.Tip="{Binding BetaNote[HeaderSearchView]}"/>
+        <MenuItem Header="Spawn Point Editor…"     Click="SpawnEditor_Click"/>
+        <MenuItem Header="Advanced Header Search…" Click="HeaderSearch_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -121,18 +121,18 @@
         <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P"
                   ToolTip.Tip="Quick-open: jump to any editor by name"/>
         <Separator/>
-        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click" IsEnabled="{Binding Beta[AddressHelperView]}" ToolTip.Tip="{Binding BetaNote[AddressHelperView]}"/>
-        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding Beta[ResearchHelperView]}" ToolTip.Tip="{Binding BetaNote[ResearchHelperView]}"/>
-        <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click" IsEnabled="{Binding Beta[CharMapManagerView]}" ToolTip.Tip="{Binding BetaNote[CharMapManagerView]}"/>
+        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"/>
+        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click"/>
+        <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click"/>
         <MenuItem Header="Font Editor…" Click="FontEditor_Click" IsEnabled="{Binding Beta[FontEditorView]}"
                   ToolTip.Tip="The letters this ROM writes with, and what a sentence looks like in them"/>
         <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding Beta[ProjectChecksView]}"
                   ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
         <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods), per project or global"/>
-        <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click" IsEnabled="{Binding Beta[PatchToolboxView]}"
+        <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click"
                   ToolTip.Tip="ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches"/>
-        <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click" IsEnabled="{Binding Beta[CustomScrcmdManagerView]}"
+        <MenuItem Header="Custom Script Command Manager…" Click="CustomCommandManager_Click"
                   ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
         <MenuItem Header="Music &amp; Battle Tables…" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
                   ToolTip.Tip="Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)"/>
@@ -172,7 +172,7 @@
         <TextBlock Grid.Column="0" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
                    VerticalAlignment="Center" Text="{Binding StatusText}"/>
         <!-- Why a good few menu entries are greyed out, said once rather than on each of them. -->
-        <TextBlock Grid.Column="2" FontSize="12" VerticalAlignment="Center"
+        <TextBlock x:Name="BetaNoticeText" Grid.Column="2" FontSize="12" VerticalAlignment="Center"
                    Foreground="{DynamicResource Editor.Subtle}"
                    IsVisible="{Binding HasBetaNotice}" Text="{Binding BetaNotice}"/>
       </Grid>

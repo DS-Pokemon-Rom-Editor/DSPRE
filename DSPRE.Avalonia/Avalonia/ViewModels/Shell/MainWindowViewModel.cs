@@ -48,10 +48,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// they are not ready; how to switch them on is not something to put in front of everybody.
         /// </summary>
         public string BetaNotice => BetaEditors.Enabled
-            ? null
+            ? $"Beta features on: {BetaEditors.Count} unfinished editors."
             : $"{BetaEditors.Count} editors are not available yet.";
 
-        public bool HasBetaNotice => !BetaEditors.Enabled;
+        public bool HasBetaNotice => true;   // says which mode you are in, either way
 
         /// <summary>Why it is greyed out, or nothing when it is not.</summary>
         public BetaReason BetaNote { get; } = new BetaReason();
@@ -79,10 +79,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             && BetaEditors.Allows("TrainerSpriteEditorView");
         public bool CanUseVsSeekerRematchEditor => IsRomLoaded && VsSeekerRematchTable.IsSupported;
         public bool CanUseTrainerFlagBulkEditor => IsRomLoaded && HgAllows;
-        public bool CanUseBattleTowerEditor => IsRomLoaded && DSPRE.ROMFiles.BattleTowerTrainerFile.IsAvailable() && DSPRE.ROMFiles.BattleTowerPokemonSetFile.IsAvailable()
-            && BetaEditors.Allows("BattleTowerEditorView");
-        public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable()
-            && BetaEditors.Allows("StarterEditorView");
+        public bool CanUseBattleTowerEditor => IsRomLoaded && DSPRE.ROMFiles.BattleTowerTrainerFile.IsAvailable() && DSPRE.ROMFiles.BattleTowerPokemonSetFile.IsAvailable();
+        public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
         public bool CanUseDungeonCutinEditor => IsRomLoaded && RomInfo.IsDungeonCutinEditorAvailable()
             && BetaEditors.Allows("DungeonCutinEditorView");
         public bool CanUseTitleScreenEditor => IsRomLoaded && RomInfo.IsTitleScreenEditorAvailable()
@@ -94,8 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // DSPRE can read/write from source yet, so it stays blocked regardless of the link, unlike
         // CanUseWildEditors, which covers the actual wild-encounter table hg-engine does own.
         public bool CanUseSpecialEncountersEditor => IsRomLoaded && !isHGE;
-        public bool CanUseTrophyGardenEditor => IsRomLoaded && DSPRE.ROMFiles.TrophyGardenEncounterFile.IsAvailable()
-            && BetaEditors.Allows("TrophyGardenEditorView");
+        public bool CanUseTrophyGardenEditor => IsRomLoaded && DSPRE.ROMFiles.TrophyGardenEncounterFile.IsAvailable();
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
         // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
@@ -104,7 +101,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
-        public bool CanUseHeadbuttEditor => IsHgssRom && BetaEditors.Allows("HeadbuttEncounterView");
+        public bool CanUseHeadbuttEditor => IsHgssRom;
         // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
         // are Plat+HGSS; nothing in it exists on DP.
         public bool CanUseMiscTables    => IsRomLoaded && gameFamily != GameFamilies.DP;

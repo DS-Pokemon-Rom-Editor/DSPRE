@@ -180,6 +180,13 @@ namespace DSPRE.Avalonia
                 },
                 new Step
                 {
+                    Target = () => BetaEditors.Enabled
+                        ? main.FindControl<Control>("BetaNoticeText") : null,
+                    Title = "You are running the unfinished editors",
+                    Body = BetaSummary(),
+                },
+                new Step
+                {
                     OnEnter = () =>
                     {
                         var tabs = maps?.FindControl<TabControl>("MapTabs");
@@ -191,8 +198,37 @@ namespace DSPRE.Avalonia
                            "Tools > Guided Tour, and the written guide is under Tools > Welcome & Tutorial."
                 },
             };
+
+            // Only when the unfinished editors are switched on. It goes second from last, so it is
+            // the thing people read just before they start, and it has the status-bar line to point at.
+            if (BetaEditors.Enabled)
+            {
+                _steps.Insert(_steps.Count - 1, new Step
+                {
+                    Target = () => main.FindControl<Control>("BetaNoticeText"),
+                    Title = "You are running the unfinished editors",
+                    Body = BetaSummary(),
+                });
+            }
         }
 
+        /// <summary>What is switched on, short enough to fit a callout card.</summary>
+        private static string BetaSummary()
+        {
+            var areas = new List<string>();
+            foreach (var a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
+
+            var features = new List<string>();
+            foreach (var f in BetaEditors.Features) features.Add(f.Name);
+
+            return $"{BetaEditors.Count} editors that are normally hidden are available to you: "
+                 + string.Join(", ", areas) + ".\n\n"
+                 + "Inside editors that are finished, these parts are not: "
+                 + string.Join(", ", features).ToLowerInvariant() + ".\n\n"
+                 + "They can write a project you cannot open again, so back up first. If you report "
+                 + "a problem, please say whether a beta editor or feature was involved. The full "
+                 + "list is in Tools > Welcome & Tutorial.";
+        }
         private void Begin()
         {
             _index = 0;
