@@ -22,6 +22,26 @@ namespace DSPRE.Avalonia.Data
 
         public static Bitmap Status(BattleGaugeText.Status status) => Show(BattleGaugeTextRenderer.StatusWord(status));
 
+        /// <summary>
+        /// One whole bar with its name and level already written into it, the way a battle does it.
+        /// Comes back null on games whose letters cannot be read, so callers keep their plain bar.
+        /// </summary>
+        public static Bitmap Bar(bool player, string name, int level,
+                                 BattleGaugeText.Gender gender = BattleGaugeText.Gender.Genderless,
+                                 BattleGaugeText.Status status = BattleGaugeText.Status.None)
+        {
+            var drawn = BattleGaugeComposer.Build(
+                player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle,
+                new BattleGaugeComposer.Showing
+                {
+                    Name = name, Level = level, Gender = gender, Status = status,
+                    ShowHealthNumbers = player,
+                });
+            if (drawn?.Rgba == null) return null;
+            try { return ImageConverter.FromRgba(drawn.Rgba, drawn.Width, drawn.Height); }
+            catch { return null; }
+        }
+
         private static Bitmap Show(BattleGaugeTextRenderer.Drawn drawn)
         {
             if (drawn?.Rgba == null) return null;

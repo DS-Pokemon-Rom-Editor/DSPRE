@@ -76,6 +76,10 @@ namespace DSPRE.Avalonia.Data
             public string Message = "Wild PIDGEY appeared!";
             public string PokemonName = "PIDGEY";
             public int Level = 5;
+            public BattleGaugeText.Gender Gender = BattleGaugeText.Gender.Genderless;
+            public BattleGaugeText.Status Status = BattleGaugeText.Status.None;
+            public bool Doubles;             // two bars a side instead of one
+            public bool NumbersInsteadOfBar; // in a double battle the games swap the two over
         }
 
         private readonly ScriptNarc _bg = new ScriptNarc(DirNames.battleBg);
@@ -92,7 +96,7 @@ namespace DSPRE.Avalonia.Data
 
             AddBackdrop(pieces, o);
             AddGround(pieces, o);
-            AddGauges(pieces);
+            AddGauges(pieces, o);
             AddMessageBox(pieces, o);
             AddTouchPanel(pieces, o);
             foreach (var p in pieces) p.MeasurePaint();
@@ -146,6 +150,22 @@ namespace DSPRE.Avalonia.Data
                 What = "The sky and ground behind the battle.",
                 Archive = DirNames.battleBg,
             };
+
+            // Which files this backdrop is made of, so the editor can hand them over. Without these
+            // the piece was the only one with no way at all to reach what it is drawn from.
+            if (bg >= 0)
+            {
+                var files = BattleBgRenderer.BackdropFiles(bg);
+                piece.Drawing = files.Drawing;
+                piece.Arrangement = files.Tilemap;
+                piece.Colours = files.PaletteDay + Math.Clamp(o.TimeOfDay, 0, 2);
+                piece.SharedNote = "The arrangement behind every backdrop is the same file.";
+                // The sheet is twice as wide as the backdrop it draws, because the arrangement picks
+                // tiles out of it, so a picture the size of what you see here cannot go back into it.
+                piece.CannotEditBecause = "A backdrop is arranged out of a wider sheet of tiles, so a "
+                                        + "picture the size of this one cannot be put back. Open the "
+                                        + "sheet in the Graphics window to change it.";
+            }
             try
             {
                 var img = bg >= 0 ? (_backdrop ??= new BattleBgRenderer()).BuildBackdrop(bg, o.TimeOfDay) : null;
@@ -182,15 +202,17 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private void AddGauges(List<Piece> pieces)
+        private void AddGauges(List<Piece> pieces, Options o)
         {
-            var r = _ground ??= new BattleGroundRenderer();
-            foreach (bool player in new[] { false, true })
+            foreach (var kind in BattleGaugeComposer.ForDoubleBattle(o.Doubles))
             {
-                string thing = player ? "SINGLE_GAGE2" : "SINGLE_GAGE1";
+                bool player = kind == BattleGaugeComposer.Kind.PlayerSingle
+                           || kind == BattleGaugeComposer.Kind.PlayerNear
+                           || kind == BattleGaugeComposer.Kind.PlayerFar;
+                string thing = BattleGaugeComposer.GraphicOf(kind);
                 var piece = new Piece
                 {
-                    Name = player ? "HP bar, your side" : "HP bar, their side",
+                    Name = BattleGaugeComposer.NameOf(kind),
                     What = "The name, level and health of one Pokemon.",
                     Archive = DirNames.battleObj,
                     Drawing = BattleObjects.Find(thing, "Drawing"),
@@ -200,7 +222,30 @@ namespace DSPRE.Avalonia.Data
                 };
                 try
                 {
-                    var g = r.BuildGauge(player);
+                    // The writing goes into the bar's own picture, the way a battle does it, so it sits
+                    // where the game puts it and nothing paints over the bar's slanted edge.
+                    var g = BattleGaugeComposer.Build(kind, new BattleGaugeComposer.Showing
+                    {
+                        Name = o.PokemonName,
+                        Level = o.Level,
+                        Gender = o.Gender,
+                        Status = o.Status,
+                        // Only your own side shows numbers, and in a double battle only once the
+                        // games have been asked to swap the bar for them.
+                        ShowHealthNumbers = player && (!o.Doubles || o.NumbersInsteadOfBar),
+                    });
+                    if (g == null && !o.Doubles)
+                    {
+                        // Games we cannot read the letters of still get the bar itself.
+                        var plain = (_ground ??= new BattleGroundRenderer()).BuildGauge(player);
+                        if (plain?.Rgba != null)
+                            g = new BattleGaugeComposer.Drawn
+                            {
+                                Rgba = plain.Rgba, Width = plain.Width,
+                                Height = plain.Height, Left = plain.Left, Top = plain.Top,
+                            };
+                    }
+
                     if (g?.Rgba == null) piece.Whynot = "This HP bar could not be drawn.";
                     else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 }
@@ -214,6 +259,25 @@ namespace DSPRE.Avalonia.Data
         // whole screen width and the bottom 48 pixels.
         public const int MessageTilesWide = 27, MessageTilesHigh = 4;
         public const int MessageTop = 144;
+
+        /// <summary>
+        /// The frame's outermost pixels are see-through, but the games do not show the battle behind
+        /// them: the whole band the box sits in is filled. Checked against a captured Platinum frame,
+        /// where every pixel of that band outside the paper is either black or the frame's own white,
+        /// and none of it is the scene. Leaving them clear let a strip of grass show along the edges.
+        /// </summary>
+        private static void BlackOutTheRest(Piece piece)
+        {
+            if (piece.Rgba == null) return;
+            for (int i = 0; i < piece.Width * piece.Height; i++)
+            {
+                if (piece.Rgba[i * 4 + 3] != 0) continue;
+                piece.Rgba[i * 4] = 0;
+                piece.Rgba[i * 4 + 1] = 0;
+                piece.Rgba[i * 4 + 2] = 0;
+                piece.Rgba[i * 4 + 3] = 255;
+            }
+        }
 
         private void AddMessageBox(List<Piece> pieces, Options o)
         {
@@ -235,6 +299,7 @@ namespace DSPRE.Avalonia.Data
                     piece.Rgba = frame.Compose(MessageTilesWide, MessageTilesHigh, out int w, out int h);
                     piece.Width = w; piece.Height = h;
                     PaintPaper(piece, frame.PaperArgb);
+                    BlackOutTheRest(piece);
                     piece.Drawing = FieldWindowFrame.FirstGraphicEntry + o.WindowStyle;
                     piece.Colours = FieldWindowFrame.FirstPaletteEntry + o.WindowStyle;
                 }

@@ -215,18 +215,31 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
         public string GaugeLevelText => "Lv5";
 
+        // The name and level as the game itself draws them, rather than typed out in a desktop font.
+        // Shared with the other two battle previews so all three show the same thing.
+        public bool GaugeTextIsReal => Data.GaugeTextImages.Available;
+        public global::Avalonia.Media.Imaging.Bitmap GaugeNameImage => Data.GaugeTextImages.Name(GaugeNameText);
+        public global::Avalonia.Media.Imaging.Bitmap GaugeLevelImage =>
+            Data.GaugeTextImages.Level(5, ROMFiles.BattleGaugeText.Gender.Genderless);
+
         private void RenderGauges()
         {
             try
             {
+                // The name and level go into each bar's own picture, the way a battle writes them.
+                // Games whose letters cannot be read fall back to the plain bar.
                 var r = _groundRenderer ??= new BattleGroundRenderer();
-                GaugePlayerImage = GaugeToBitmap(r.BuildGauge(true));
-                GaugeEnemyImage = GaugeToBitmap(r.BuildGauge(false));
+                GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, 5)
+                                ?? GaugeToBitmap(r.BuildGauge(true));
+                GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
+                               ?? GaugeToBitmap(r.BuildGauge(false));
             }
             catch { GaugePlayerImage = GaugeEnemyImage = null; }
             OnPropertyChanged(nameof(HasRealGauges));
             OnPropertyChanged(nameof(PlaceholderGaugesVisible));
             OnPropertyChanged(nameof(GaugeTextBrush));
+            foreach (var n in new[] { nameof(GaugeTextIsReal), nameof(GaugeNameImage), nameof(GaugeLevelImage) })
+                OnPropertyChanged(n);
         }
 
         // GroundImage (256² straight RGBA) -> unpremultiplied BGRA; the frame has transparency.
@@ -1588,6 +1601,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _loading = true;
             _currentId = id;
             OnPropertyChanged(nameof(GaugeNameText));
+            OnPropertyChanged(nameof(GaugeNameImage));
+            RenderGauges();
             _pendingIconGraphic = null;   // drop any unsaved icon-graphic import from the previous mon
             try
             {

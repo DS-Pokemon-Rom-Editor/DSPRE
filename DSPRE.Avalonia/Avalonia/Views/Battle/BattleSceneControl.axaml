@@ -74,14 +74,16 @@
         <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
                IsVisible="{Binding PlaceholderGaugesVisible}"/>
 
-        <!-- Name / level / HP readout. Positions measured off real battles; the frame graphic already
-             carries the "HP" label and the empty bar, so only the fill and the text go on top. -->
+        <!-- The name and level are written into each bar's own picture now, so only the health fill
+             goes on top. Games whose letters cannot be read keep the plain written sample. -->
         <Canvas IsVisible="{Binding HasRealGauges}">
-          <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-          <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+          <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
           <Rectangle Canvas.Left="50"  Canvas.Top="42"  Width="48" Height="4" Fill="#38C838"/>
-          <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-          <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+          <!-- Your side. The captured frame only shows their gauge, so these are where DSPRE has
+               always put them and are NOT checked against a real battle. -->
+          <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+          <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
           <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
         </Canvas>
 

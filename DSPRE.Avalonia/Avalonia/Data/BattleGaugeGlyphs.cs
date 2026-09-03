@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.Data
         /// The three placeholders a font uses become the three colours a battle asks for. Both the field
         /// font and the number font mean the same by them: nothing, the letter, then its shadow.
         /// </summary>
-        private static byte Ink(byte placeholder) => placeholder switch
+        internal static byte Ink(byte placeholder) => placeholder switch
         {
             1 => Letter,
             2 => Shadow,
