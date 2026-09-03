@@ -56,8 +56,12 @@ namespace DSPRE.Avalonia.Data
             return made;
         }
 
-        /// <summary>A number, left aligned across so many tiles, in the gauge's own colours.</summary>
-        public static byte[] NumberRow(int value, int tiles)
+        /// <summary>
+        /// A number across so many tiles, in the gauge's own colours. The games put the level and the
+        /// maximum health against the left and the current health against the right, padding it with
+        /// blanks, which is why the two numbers either side of the "/" line up the way they do.
+        /// </summary>
+        public static byte[] NumberRow(int value, int tiles, bool againstTheRight = false)
         {
             if (tiles <= 0) return null;
 
@@ -66,13 +70,14 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Background;
 
             string digits = Math.Clamp(value, 0, 999).ToString();
-            for (int i = 0; i < digits.Length && i < tiles; i++)
+            int from = againstTheRight ? Math.Max(0, tiles - digits.Length) : 0;
+            for (int i = 0; i < digits.Length && from + i < tiles; i++)
             {
                 var tile = BattleGaugeText.Digit(digits[i] - '0');
                 if (tile == null) continue;
                 for (int y = 0; y < Tile; y++)
                     for (int x = 0; x < Tile; x++)
-                        pixels[y * wide + i * Tile + x] = Ink(tile.At(x, y));
+                        pixels[y * wide + (from + i) * Tile + x] = Ink(tile.At(x, y));
             }
             return Pack(pixels, wide, Tile);
         }
