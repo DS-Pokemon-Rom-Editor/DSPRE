@@ -30,6 +30,13 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// </summary>
     public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
+        /// <summary>
+        /// Whether the parts of this editor that are still being tried out are shown: walking the map,
+        /// the animated preview and the drag gizmos. They are off with the beta editors, because they
+        /// are the same kind of unfinished, but the editor itself is not gated.
+        /// </summary>
+        public bool ShowBetaFeatures => BetaEditors.Enabled;
+
 
         /// <summary>
         /// The level script file the selected header points at, so the preview can run what the map runs by

@@ -26,7 +26,7 @@
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="▶ Animate" Click="AnimatedPreview_Click"
+          <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                   ToolTip.Tip="Opens a look-only window that runs the map, so its water moves the way it does in game."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -55,7 +55,7 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"
                     ToolTip.Tip="Show real textures vs. a flat per-material colour view of the mesh"/>
-          <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center"
+          <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center" IsVisible="{Binding ShowBetaFeatures}"
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
           <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsStitchedView}" VerticalAlignment="Center"

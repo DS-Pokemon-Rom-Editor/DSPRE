@@ -33,13 +33,12 @@ namespace DSPRE
         private static readonly Dictionary<string, string> Testing =
             new(StringComparer.OrdinalIgnoreCase)
             {
-                // New in 3.0.
+                // Only editors that are genuinely new in 3.0 belong here. Anything that shipped in
+                // 2.x is already in people's hands, so gating it takes working features away.
                 ["BattleScreenEditorView"] = "Battle Screen editor",
                 ["FontEditorView"] = "Font editor",
                 ["TilesetBuilderView"] = "Picture to Background",
                 ["BattleSceneBrowserView"] = "Battle scenes",
-                ["BattleDisplayEditorView"] = "Battle Display editor",
-                ["BattleMessageEditorView"] = "Battle message editor",
                 ["BattleScriptEditorView"] = "Battle script editor",
                 ["AudioEditorView"] = "Audio editor",
                 ["BannerEditorView"] = "Game icon and banner editor",
@@ -47,40 +46,11 @@ namespace DSPRE
                 ["DungeonCutinEditorView"] = "Dungeon Cut-in editor",
                 ["TrainerCardEditorView"] = "Trainer Card editor",
                 ["TrainerSpriteEditorView"] = "Trainer Sprite editor",
-                ["TrainerClassesView"] = "Trainer Classes",
-                ["PaletteColorEditorView"] = "Palette colour editor",
-                ["SpriteImportWizardView"] = "Sprite import wizard",
-                ["SpriteExportWizardView"] = "Sprite export wizard",
                 ["ProjectChecksView"] = "Project checks",
-                ["ResearchHelperView"] = "Research helper",
-                ["AddressHelperView"] = "Address helper",
-                ["HeaderSearchView"] = "Advanced header search",
-                ["CharMapManagerView"] = "Char Map manager",
-                ["CustomScrcmdManagerView"] = "Custom script command manager",
                 ["ScriptCommandGuideView"] = "Script command reference",
-                ["PatchToolboxView"] = "ROM patch toolbox",
                 ["CompileRomView"] = "Compile ROM",
                 ["HgEngineLinkView"] = "hg-engine link",
                 ["HgEngineFormEditorView"] = "Form editor",
-                ["MonReorderView"] = "Reorder Pokemon",
-                ["BulkLearnsetEditorView"] = "Bulk learnset editor",
-                ["TmHmBulkEditorView"] = "TM and HM bulk editor",
-                ["TrainerFlagBulkEditorView"] = "Trainer flag bulk editor",
-                ["GroundItemScriptsView"] = "Ground item scripts",
-                ["FlyEditorView"] = "Fly destination editor",
-                ["VsSeekerRematchView"] = "Vs. Seeker rematch editor",
-                ["TrophyGardenEditorView"] = "Trophy Garden editor",
-                ["SafariZoneEncounterView"] = "Safari Zone editor",
-                ["BugContestEncounterView"] = "Bug Contest editor",
-                ["GreatMarshEncounterView"] = "Great Marsh editor",
-                ["HoneyTreeEncounterView"] = "Honey Tree editor",
-                ["HeadbuttEncounterView"] = "Headbutt editor",
-                ["StarterEditorView"] = "Starter Pokemon editor",
-                ["ItemTableEditorView"] = "Item tables",
-                ["BattleTowerEditorView"] = "Battle Tower editor",
-                ["CameraEditorView"] = "Camera editor",
-                ["SpawnEditorView"] = "Spawn Point editor",
-                ["OverlayEditorView"] = "Overlay editor",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>

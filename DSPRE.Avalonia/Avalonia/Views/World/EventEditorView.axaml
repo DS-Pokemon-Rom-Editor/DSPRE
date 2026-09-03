@@ -22,7 +22,7 @@
         <Button Content="📥 Import" Click="Import_Click"/>
         <Button Content="📤 Export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2"
+        <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2" IsVisible="{Binding ShowBetaFeatures}"
                 PointerPressed="Pegman_PointerPressed"
                 PointerMoved="Pegman_PointerMoved"
                 PointerReleased="Pegman_PointerReleased"
@@ -33,9 +33,9 @@
             <TextBlock Text="Drag to walk" VerticalAlignment="Center"/>
           </StackPanel>
         </Border>
-        <Button Content="▶ Step in here" Click="StepInHere_Click"
+        <Button Content="▶ Step in here" Click="StepInHere_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Walk the map starting next to the selected event, so you can talk to them or set the trigger off straight away."/>
-        <Button Content="▶ Animate" Click="AnimatedPreview_Click"
+        <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Opens a look-only window that runs the map: the water moves and the people turn and wander the way their movement code says. Scripts are not run."/>
         <Button Content="📷 Screenshot" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
@@ -67,7 +67,7 @@
               <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="12"/>
               <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" IsEnabled="{Binding GridToggleEnabled}" FontSize="12"
                         ToolTip.Tip="Highlights each map's out-of-bounds tile boundary. Only available for a matrix of 4 cells or fewer (an expensive per-tile scan on larger ones)."/>
-              <CheckBox Content="Gizmos" IsChecked="False" FontSize="12"
+              <CheckBox Content="Gizmos" IsChecked="False" FontSize="12" IsVisible="{Binding ShowBetaFeatures}"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
               <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="12"

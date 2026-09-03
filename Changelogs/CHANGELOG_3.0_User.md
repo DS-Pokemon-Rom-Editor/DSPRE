@@ -14,7 +14,7 @@ This file is a work in progress while 3.0 is being finished.
 
 ### Editors that are not ready yet
 
-3.0 adds a great many editors, and 47 of them are not finished. They are greyed out in the menus with
+3.0 adds a great many editors, and 16 of them are not finished. They are greyed out in the menus with
 the reason on hover, and the status bar says how many there are. Everything that shipped before 3.0
 works as it always did. They will be turned on as they are finished.
 

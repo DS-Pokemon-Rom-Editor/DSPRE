@@ -211,6 +211,39 @@ namespace DSPRE.Tests
                 "these open an editor without asking the gate, use ShowManaged(): " + string.Join(", ", loose));
         }
 
+
+        /// <summary>
+        /// Walking the map, the animated preview and the drag gizmos live inside editors that are not
+        /// themselves gated, so the window gate cannot reach them. They hang off ShowBetaFeatures
+        /// instead, and this is what stops that binding being dropped by accident.
+        /// </summary>
+        [Theory]
+        [InlineData("World/EventEditorView.axaml", "Pegman")]
+        [InlineData("World/EventEditorView.axaml", "StepInHere_Click")]
+        [InlineData("World/EventEditorView.axaml", "AnimatedPreview_Click")]
+        [InlineData("World/MapEditorView.axaml", "AnimatedPreview_Click")]
+        public void TheUnfinishedPartsOfAFinishedEditorAreGated(string view, string marker)
+        {
+            string path = Path.Combine(Repo, "DSPRE.Avalonia", "Avalonia", "Views",
+                                       view.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+            { Assert.Fail($"{path} is not there, so this proved nothing."); return; }
+
+            string xaml = File.ReadAllText(path);
+            int at = xaml.IndexOf(marker, StringComparison.Ordinal);
+            Assert.True(at >= 0, $"{view} no longer mentions {marker}");
+
+            // Walk back to the start of the element the marker sits in, then read that whole tag.
+            int open = xaml.LastIndexOf('<', at);
+            int close = xaml.IndexOf('>', at);
+            Assert.True(open >= 0 && close > open, $"could not read the element around {marker}");
+            string tag = xaml.Substring(open, close - open);
+
+            Assert.True(tag.Contains("ShowBetaFeatures", StringComparison.Ordinal),
+                $"{view}: the element carrying {marker} is not bound to ShowBetaFeatures, so it shows "
+                + "in a normal build.");
+        }
+
         /// <summary>The check above proves able to fail: the pattern it looks for really does match.</summary>
         [Fact]
         public void ThePlainShowCheckRecognisesTheShapeItLooksFor()
