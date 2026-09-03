@@ -72,6 +72,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
         public bool CanUseHgEngineFormEditor => IsRomLoaded && HgEngineProject.IsActive
             && BetaEditors.Allows("HgEngineFormEditorView");
+        /// <summary>Diamond and Pearl keep the battle screen's pieces elsewhere, so it is not read there.</summary>
+        public bool CanUseBattleScreen  => IsRomLoaded && Beta["BattleScreenEditorView"]
+                                        && RomInfo.gameFamily != RomInfo.GameFamilies.DP;
+
         public bool CanUseMoveEditor    => IsRomLoaded && HgAllows;
         public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
         public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
