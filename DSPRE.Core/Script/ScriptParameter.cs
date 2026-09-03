@@ -184,11 +184,14 @@ public class ScriptParameter
 
     private string FormatHexNumber(uint value)
     {
-        if (SettingsManager.Settings.scriptEditorFormatPreference == (int)NumberStyles.HexNumber)
+        // Nothing but the script editor cares how this reads, and anything parsing a script without a
+        // UI (the starter locator, tests) has no settings loaded. Fall back rather than throwing.
+        int preference = SettingsManager.Settings?.scriptEditorFormatPreference ?? (int)NumberStyles.None;
+        if (preference == (int)NumberStyles.HexNumber)
         {
             return $"0x{value:X}";
         }
-        else if (SettingsManager.Settings.scriptEditorFormatPreference == (int)NumberStyles.None)
+        else if (preference == (int)NumberStyles.None)
         {
             return value >= 4000 ? $"0x{value:X}" : value.ToString();
         }

@@ -32,6 +32,14 @@ namespace DSPRE
         public string exportPath { get; set; } = "";
         public string mapImportStarterPoint { get; set; } = "";
         public string openDefaultRom { get; set; } = "";
+
+        /// <summary>
+        /// Which give-a-Pokemon command the starter editor was told to treat as the starter, keyed by
+        /// project folder, and what the set of candidates looked like at the time. The fingerprint is
+        /// how a newly added one gets noticed without asking on every open.
+        /// </summary>
+        public Dictionary<string, string> starterCommandChoice { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> starterCommandFingerprint { get; set; } = new Dictionary<string, string>();
         public bool neverAskForOpening { get; set; } = false;
         public bool databasesPulled { get; set; } = false;
         public bool automaticallyCheckForUpdates { get; set; } = true;
