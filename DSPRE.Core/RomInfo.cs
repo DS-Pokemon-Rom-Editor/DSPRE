@@ -273,6 +273,7 @@ namespace DSPRE
             OverworldTable = null;
             overworldTableKeys = null;
             ow3DSpriteDict = null;
+            OverlayUtils.ForgetOverlayTable();
 
             string path = Path.GetFullPath(romFolderName);
 
