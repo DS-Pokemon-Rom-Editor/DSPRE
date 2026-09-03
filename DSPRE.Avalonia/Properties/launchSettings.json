@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "DSPRE (Avalonia)": {
+      "commandName": "Project"
+    },
+    "DSPRE (Avalonia, beta editors on)": {
+      "commandName": "Project",
+      "commandLineArgs": "--beta"
+    }
+  }
+}

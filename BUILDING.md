@@ -23,8 +23,10 @@ dotnet build DS_Map.sln            # everything
 dotnet test  DSPRE.Tests           # run the tests
 ```
 
-Run profiles (VS dropdown on the `DSPRE` project): **WinForms shell** or **Avalonia shell**
-(the latter just sets `DSPRE_AVALONIA_SHELL=1`). `DSPRE.Avalonia` is always the pure Avalonia app.
+Run profiles (VS dropdown on the `DSPRE` project): **DSPRE** is the Avalonia shell and the default.
+**DSPRE (beta editors on)** passes `--beta`. **DSPRE (old WinForms shell)** sets
+`DSPRE_WINFORMS_SHELL=1` for the few editors that were never ported. `DSPRE.Avalonia` runs the same
+Avalonia shell with no WinForms in the process at all.
 
 ## Linux
 

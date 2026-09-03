@@ -1,12 +1,16 @@
 {
   "profiles": {
-    "DSPRE (WinForms shell)": {
+    "DSPRE": {
       "commandName": "Project"
     },
-    "DSPRE (Avalonia shell)": {
+    "DSPRE (beta editors on)": {
+      "commandName": "Project",
+      "commandLineArgs": "--beta"
+    },
+    "DSPRE (old WinForms shell)": {
       "commandName": "Project",
       "environmentVariables": {
-        "DSPRE_AVALONIA_SHELL": "1"
+        "DSPRE_WINFORMS_SHELL": "1"
       }
     }
   }

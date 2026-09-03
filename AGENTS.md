@@ -25,7 +25,8 @@ dotnet build DSPRE.Avalonia/DSPRE.Avalonia.csproj -c Release-Linux
 ### Run
 - **Windows (legacy WinForms shell, default)**: `dotnet run --project DS_Map/DSPRE.csproj -c Debug`
 - **Pure-Avalonia shell (any OS)**: `dotnet run --project DSPRE.Avalonia/DSPRE.Avalonia.csproj`
-- The Windows exe can also be forced into the Avalonia shell with `DSPRE_AVALONIA_SHELL=1`.
+- The Windows exe runs the Avalonia shell by default. `DSPRE_WINFORMS_SHELL=1` or `--winforms` gets
+  the old WinForms shell.
 
 ### Test
 ```bash
@@ -49,7 +50,7 @@ Six projects, organized into a cross-platform core, a cross-platform UI, and a l
 |---------|--------|------|
 | **DSPRE.Core** (`DSPRE.Core/`) | `net8.0` | Cross-platform ROM core: file formats, ROM data model, script system, databases. No WinForms, no Avalonia. |
 | **DSPRE.Avalonia** (`DSPRE.Avalonia/`) | `net8.0` | Cross-platform Avalonia UI (MVVM) + thin entry point. |
-| **DSPRE** (`DS_Map/DSPRE.csproj`) | `net8.0-windows` | The Windows exe. Hosts the legacy WinForms shell by default and the Avalonia shell under `DSPRE_AVALONIA_SHELL=1`. |
+| **DSPRE** (`DS_Map/DSPRE.csproj`) | `net8.0-windows` | The Windows exe. Runs the Avalonia shell; the legacy WinForms shell is behind `DSPRE_WINFORMS_SHELL=1`. |
 | **Ekona** (`Ekona/`) | `net8.0` | Image/sprite processing library (formerly Tinke plugin host; WinForms controls stripped out). Also hosts `AppPaths`. |
 | **Images** (`Images/Images/`) | `net8.0` | Nintendo DS image format handlers (NCGR, NCER, NCLR, etc.). |
 | **DSPRE.Tests** (`DSPRE.Tests/`) | `net8.0` (+`net8.0-windows` opt-in) | xUnit test project. |

@@ -10,7 +10,7 @@ namespace DSPRE
     ///
     /// The Windows DSPRE exe installs <see cref="WinFormsHostHook"/> so that, by default, startup
     /// shows the legacy WinForms MainProgram (both toolkits share the Win32 message pump). Without
-    /// the hook, or with DSPRE_AVALONIA_SHELL=1, the pure-Avalonia shell runs instead.
+    /// the hook and DSPRE_WINFORMS_SHELL=1 is set, the pure-Avalonia shell runs instead.
     /// </summary>
     public class AvaloniaApp : Application
     {
@@ -20,9 +20,13 @@ namespace DSPRE
         /// </summary>
         public static System.Action<IClassicDesktopStyleApplicationLifetime> WinFormsHostHook;
 
-        // Force the pure-Avalonia shell even when a WinForms host is available.
-        private static bool ForceAvaloniaShell =>
-            string.Equals(System.Environment.GetEnvironmentVariable("DSPRE_AVALONIA_SHELL"), "1", System.StringComparison.Ordinal);
+        // The Avalonia shell is what runs. The WinForms shell is still reachable for the few editors
+        // that were never ported, with DSPRE_WINFORMS_SHELL=1 or --winforms on the command line.
+        private static bool UseWinFormsShell =>
+            string.Equals(System.Environment.GetEnvironmentVariable("DSPRE_WINFORMS_SHELL"), "1",
+                          System.StringComparison.Ordinal)
+            || System.Linq.Enumerable.Any(System.Environment.GetCommandLineArgs(),
+                   a => string.Equals(a, "--winforms", System.StringComparison.OrdinalIgnoreCase));
 
         public override void Initialize()
         {
@@ -41,7 +45,7 @@ namespace DSPRE
                 // throwing doesn't kill the process and every other editor's unsaved work with it.
                 DSPRE.Avalonia.AvaloniaErrorHandler.Install();
 
-                if (WinFormsHostHook == null || ForceAvaloniaShell)
+                if (WinFormsHostHook == null || !UseWinFormsShell)
                 {
                     // The pure-Avalonia shell is the only one that ever runs on Linux (no WinForms
                     // host exe there). ndstool/blz/apicula have no native Linux build yet, so without

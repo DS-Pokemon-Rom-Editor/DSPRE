@@ -36,7 +36,7 @@ namespace DSPRE
             WinFormsApp.EnableVisualStyles();
             WinFormsApp.SetCompatibleTextRenderingDefault(false);
 
-            // This exe hosts the legacy WinForms shell (unless DSPRE_AVALONIA_SHELL=1 forces the
+            // This exe runs the Avalonia shell (unless DSPRE_WINFORMS_SHELL=1 or --winforms asks for the
             // pure-Avalonia one); the cross-platform DSPRE.Avalonia exe never installs these hooks.
             WinFormsShellHost.InstallHooks();
 
