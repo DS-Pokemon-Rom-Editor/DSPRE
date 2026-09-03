@@ -33,6 +33,14 @@
         <TextBlock Text="Font" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
                   PlaceholderText="This ROM carries no fonts this editor can read"/>
+        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+        <Button Content="Save a picture…" Click="ExportPng_Click"
+                ToolTip.Tip="Write this letter, or the whole font, out as a PNG"/>
+        <Button Content="Read a picture…" Click="ImportPng_Click"
+                ToolTip.Tip="Read a PNG back over this letter, or over the whole font"/>
+        <CheckBox Content="the whole font" IsChecked="{Binding WholeFontForPictures}" VerticalAlignment="Center"
+                  ToolTip.Tip="Off does just the letter you are on; on does every letter as one sheet"/>
         <Button Content="💾 Save this font" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <TextBlock Classes="hint" VerticalAlignment="Center"
                    Text="Nothing is written until you save."/>
@@ -45,8 +53,21 @@
       <DockPanel Margin="6">
         <TextBlock DockPanel.Dock="Top" Text="Letters" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
-                   Text="The number is the picture's place in the font. Beside it is the character that writes it, where this ROM's map has one."/>
-        <ListBox ItemsSource="{Binding Glyphs}" SelectedIndex="{Binding SelectedGlyphIndex}">
+                   Text="The number is the picture's place in the font, and beside it the character that writes it. Most letters are drawn; only the empty slots are called out."/>
+
+        <TextBox DockPanel.Dock="Top" Text="{Binding Search}" Margin="0,0,0,4"
+                 PlaceholderText="Find a letter, or type its number"/>
+        <ComboBox DockPanel.Dock="Top" SelectedIndex="{Binding ShowWhat}" Margin="0,0,0,4"
+                  HorizontalAlignment="Stretch">
+          <ComboBoxItem>All letters</ComboBoxItem>
+          <ComboBoxItem>Drawn</ComboBoxItem>
+          <ComboBoxItem>Empty slots</ComboBoxItem>
+          <ComboBoxItem>Has a character</ComboBoxItem>
+          <ComboBoxItem>No character yet</ComboBoxItem>
+        </ComboBox>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FilterSummary}" Classes="hint" Margin="0,0,0,6"/>
+
+        <ListBox ItemsSource="{Binding Glyphs}" SelectedIndex="{Binding SelectedRowIndex}">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <StackPanel Orientation="Horizontal" Spacing="10">
@@ -54,7 +75,7 @@
                            Foreground="{DynamicResource Editor.Subtle}"
                            FontFamily="Consolas,monospace"/>
                 <TextBlock Text="{Binding Letter}" IsVisible="{Binding IsMapped}"/>
-                <TextBlock Text="not in the character map" IsVisible="{Binding !IsMapped}"
+                <TextBlock Text="{Binding Describe}" IsVisible="{Binding !IsMapped}"
                            FontSize="11" FontStyle="Italic"
                            Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
