@@ -44,6 +44,10 @@ namespace DSPRE.Avalonia
             return true;
         }
 
+        /// <summary>What the busy overlay says under the title while an archive is being unpacked.</summary>
+        private const string UnpackHint =
+            "First-time opens unpack the ROM's data and can take a while, especially for a WSL-hosted project.";
+
         /// <summary>Runs unpack-heavy file I/O off the UI thread behind the app's busy overlay. Only pass plain file I/O, not UI/bitmap work.</summary>
         private static async System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
         {
@@ -120,14 +124,25 @@ namespace DSPRE.Avalonia
             new HgEngineFormEditorView(vm).ShowManaged();
         }
 
-        public static void OpenMoveDataEditor(int initialIndex = 0)
+        public static void OpenMoveDataEditor(int initialIndex = 0) => _ = OpenMoveDataEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenMoveDataEditorAsync(int initialIndex = 0)
         {
             if (!IsRomLoaded || BlockedForHge("The Move Data Editor", HgEngineDomain.Moves)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
-            var view = new MoveDataEditorView();
-            if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
-                vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
-            view.ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Move Data Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }));
+                var view = new MoveDataEditorView();
+                if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
+                    vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
+                view.ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Move Data Editor: " + ex.Message, "Move Data Editor");
+            }
         }
 
         public static void OpenTMEditor(int initialIndex = 0)
@@ -162,14 +177,25 @@ namespace DSPRE.Avalonia
             new EditorHostWindow("Battle Scripts", view, 1320, 800).ShowManaged();
         }
 
-        public static void OpenItemEditor(int initialIndex = 1)
+        public static void OpenItemEditor(int initialIndex = 1) => _ = OpenItemEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenItemEditorAsync(int initialIndex = 1)
         {
             if (!IsRomLoaded || BlockedForHge("The Item Editor", HgEngineDomain.Items)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
-            var vm = new ItemEditorViewModel(GetItemNames());
-            if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
-            new ItemEditorView(vm).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Item Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData }));
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
+                var vm = new ItemEditorViewModel(GetItemNames());
+                if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
+                new ItemEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Item Editor: " + ex.Message, "Item Editor");
+            }
         }
 
         public static void OpenItemTableEditor()
@@ -178,23 +204,45 @@ namespace DSPRE.Avalonia
             new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
-        public static void OpenTradeEditor(int initialIndex = 0)
+        public static void OpenTradeEditor(int initialIndex = 0) => _ = OpenTradeEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenTradeEditorAsync(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData });
-            var view = new TradeEditorView();
-            if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
-                _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
-            view.ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Trade Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }));
+                var view = new TradeEditorView();
+                if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
+                    _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
+                view.ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Trade Editor: " + ex.Message, "Trade Editor");
+            }
         }
 
-        public static void OpenTextEditor(int initialIndex = 0)
+        public static void OpenTextEditor(int initialIndex = 0) => _ = OpenTextEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenTextEditorAsync(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives });
-            new EditorHostWindow("Text Editor",
-                new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }),
-                980, 640).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Text Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }));
+                new EditorHostWindow("Text Editor",
+                    new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }),
+                    980, 640).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Text Editor: " + ex.Message, "Text Editor");
+            }
         }
 
         public static void OpenScriptEditor(int initialIndex = 0)
@@ -232,12 +280,23 @@ namespace DSPRE.Avalonia
             new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
-        public static void OpenTmHmBulkEditor()
+        public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenTmHmBulkEditorAsync()
         {
             if (!IsRomLoaded || BlockedForHge("The TM/HM Bulk Editor", HgEngineDomain.Species)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions });
-            var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
-            new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening TM/HM Bulk Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }));
+                var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
+                new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the TM/HM Bulk Editor: " + ex.Message, "TM/HM Bulk Editor");
+            }
         }
 
         public static void OpenBattleTowerEditor()
@@ -260,30 +319,41 @@ namespace DSPRE.Avalonia
                 700, 500).ShowManaged();
         }
 
-        public static void OpenWildEditor(int initialIndex = 0)
+        public static void OpenWildEditor(int initialIndex = 0) => _ = OpenWildEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenWildEditorAsync(int initialIndex = 0)
         {
             if (!IsRomLoaded || BlockedForHge("The Wild Pokémon Editor", HgEngineDomain.Encounters)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons });
-            string path = gameDirs[DirNames.encounters].unpackedDir;
-            string[] names = GetPokemonNames();
-            int headerCount = GetHeaderCount();
-            // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
-            // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
-            // no generic post-close hook for this; the embedded tab's single long-lived instance never
-            // needs Detach at all, matching every other embedded-editor VM's lifetime).
-            if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+
+            try
             {
-                var vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
-                var window = new EditorHostWindow("Wild Pokémon Editor (DPPt)", new WildEditorDPPtView(vm), 900, 680);
-                window.Closed += (_, _) => vm.Detach();
-                window.ShowManaged();
+                await RunBusyAsync("Opening Wild Pokémon Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons }));
+                string path = gameDirs[DirNames.encounters].unpackedDir;
+                string[] names = GetPokemonNames();
+                int headerCount = GetHeaderCount();
+                // Standalone instances aren't shared with the embedded Maps-workspace tab, so each one must
+                // unsubscribe its own AppEvents.NamesChanged hook when its window closes (EditorHostWindow has
+                // no generic post-close hook for this; the embedded tab's single long-lived instance never
+                // needs Detach at all, matching every other embedded-editor VM's lifetime).
+                if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+                {
+                    var vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
+                    var window = new EditorHostWindow("Wild Pokémon Editor (DPPt)", new WildEditorDPPtView(vm), 900, 680);
+                    window.Closed += (_, _) => vm.Detach();
+                    window.ShowManaged();
+                }
+                else
+                {
+                    var vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
+                    var window = new EditorHostWindow("Wild Pokémon Editor (HGSS)", new WildEditorHGSSView(vm), 900, 680);
+                    window.Closed += (_, _) => vm.Detach();
+                    window.ShowManaged();
+                }
             }
-            else
+            catch (System.Exception ex)
             {
-                var vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
-                var window = new EditorHostWindow("Wild Pokémon Editor (HGSS)", new WildEditorHGSSView(vm), 900, 680);
-                window.Closed += (_, _) => vm.Detach();
-                window.ShowManaged();
+                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon Editor");
             }
         }
 
@@ -300,19 +370,40 @@ namespace DSPRE.Avalonia
             new EditorHostWindow("Camera Editor", new CameraEditorView(new CameraEditorViewModel(true))).ShowManaged();
         }
 
-        public static void OpenTrainerEditor(int initialIndex = 0)
+        public static void OpenTrainerEditor(int initialIndex = 0) => _ = OpenTrainerEditorAsync(initialIndex);
+
+        public static async System.Threading.Tasks.Task OpenTrainerEditorAsync(int initialIndex = 0)
         {
             if (!IsRomLoaded || BlockedForHge("The Trainer Editor", HgEngineDomain.Trainers)) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> {
-                DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics });
-            new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Trainer Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics }));
+                new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Trainer Editor: " + ex.Message, "Trainer Editor");
+            }
         }
 
-        public static void OpenTrainerSpriteEditor(int initialClassIndex = 0)
+        public static void OpenTrainerSpriteEditor(int initialClassIndex = 0) => _ = OpenTrainerSpriteEditorAsync(initialClassIndex);
+
+        public static async System.Threading.Tasks.Task OpenTrainerSpriteEditorAsync(int initialClassIndex = 0)
         {
             if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor")) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
-            new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Trainer Sprite Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }));
+                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Trainer Sprite Editor: " + ex.Message, "Trainer Sprite Editor");
+            }
         }
 
         public static void OpenTrainerFlagBulkEditor() => _ = OpenTrainerFlagBulkEditorAsync();
@@ -359,12 +450,22 @@ namespace DSPRE.Avalonia
                 new VsSeekerRematchView(vm), 900, 600).ShowManaged();
         }
 
-        public static void OpenStarterEditor()
+        public static void OpenStarterEditor() => _ = OpenStarterEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenStarterEditorAsync()
         {
             if (!IsRomLoaded || BlockedForHge("The Starter Pokémon Editor") || !RomInfo.IsStarterEditorAvailable()) return;
-            // scripts: rival/tag-battle team patches + DP/Pt held item; personalPokeData: primary-type lookup for text patch.
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData });
-            new StarterEditorView().ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Starter Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData }));
+                new StarterEditorView().ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Starter Editor: " + ex.Message, "Starter Editor");
+            }
         }
 
         // ── World / data editors ───────────────────────────────────────────────
@@ -463,14 +564,25 @@ namespace DSPRE.Avalonia
             new OverlayEditorView().ShowManaged();
         }
 
-        public static void OpenOverworldEditor()
+        public static void OpenOverworldEditor() => _ = OpenOverworldEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenOverworldEditorAsync()
         {
             if (!IsRomLoaded) return;
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
-            SetOWtable();
-            Set3DOverworldsDict();
-            ReadOWTable();
-            new BtxEditorView(new BtxEditorViewModel(true)).ShowManaged();
+
+            try
+            {
+                await RunBusyAsync("Opening Overworld Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites }));
+                SetOWtable();
+                Set3DOverworldsDict();
+                ReadOWTable();
+                new BtxEditorView(new BtxEditorViewModel(true)).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Overworld Editor: " + ex.Message, "Overworld Editor");
+            }
         }
 
         // ── Tools ──────────────────────────────────────────────────────────────
