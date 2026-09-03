@@ -73,6 +73,12 @@ namespace DSPRE
         public static string starterCriesPrefix { get; private set; }           // HGSS only
         public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
         public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
+
+        // Where the starter's GivePokemon sits in an untouched ROM. Knowing this, the editor reads one
+        // script instead of searching all 575, which is the difference between under a millisecond and
+        // about 45. -1 means "no known slot, go and look".
+        public static int starterCommandScriptNumber { get; private set; } = -1;   // Plat only, for now
+        public static int starterCommandIndex { get; private set; } = -1;          // Plat only, for now
         public static int starterScreenTextNumber { get; private set; } = -1;
         public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
 
@@ -875,6 +881,8 @@ namespace DSPRE
             starterCriesPrefix = null;
             starterHeldItemScriptFileID = -1;
             starterHeldItemOffset = 0;
+            starterCommandScriptNumber = -1;
+            starterCommandIndex = -1;
             starterScreenTextNumber = -1;
             starterPokedexSpeciesTextNumber = -1;
 
@@ -907,6 +915,8 @@ namespace DSPRE
                     starterGraphicsPrefixInner = "0290039002200002";
                     starterHeldItemScriptFileID = 427;
                     starterHeldItemOffset = 0x460;
+                    starterCommandScriptNumber = 13;   // GivePokemon 0x8000 0x5 ITEM_NONE 0x800C
+                    starterCommandIndex = 11;
                     switch (gameLanguage)
                     {
                         case GameLanguages.Japanese:

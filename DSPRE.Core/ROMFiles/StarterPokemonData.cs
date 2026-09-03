@@ -71,6 +71,43 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        /// <summary>
+        /// Which script inside the starter script file holds the GivePokemon command, worked out from
+        /// the file's own header rather than written down, so it stays right for Pearl and for a ROM
+        /// whose scripts have been shuffled. Returns -1 when it cannot be worked out.
+        /// </summary>
+        public static int GetStarterScriptNumber()
+        {
+            if (RomInfo.starterHeldItemScriptFileID < 0) return -1;
+            string path = Filesystem.GetScriptPath(RomInfo.starterHeldItemScriptFileID);
+            if (!File.Exists(path)) return -1;
+
+            byte[] d;
+            try { d = File.ReadAllBytes(path); } catch { return -1; }
+
+            // The header is a run of relative offsets, one per script, ended by the 0xFD13 marker.
+            var starts = new List<int>();
+            int pos = 0;
+            while (pos + 4 <= d.Length)
+            {
+                uint value = (uint)(d[pos] | (d[pos + 1] << 8) | (d[pos + 2] << 16) | (d[pos + 3] << 24));
+                pos += 4;
+                if ((value & 0xFFFF) == 0xFD13) break;
+                starts.Add((int)value + pos);
+            }
+            if (starts.Count == 0) return -1;
+
+            // The script whose range covers the byte the held item sits at.
+            int target = (int)RomInfo.starterHeldItemOffset;
+            var byStart = starts.Select((start, i) => (start, i)).OrderBy(x => x.start).ToList();
+            for (int n = 0; n < byStart.Count; n++)
+            {
+                int from = byStart[n].start;
+                int to = n + 1 < byStart.Count ? byStart[n + 1].start : d.Length;
+                if (target >= from && target < to) return byStart[n].i + 1;   // shown one-based
+            }
+            return -1;
+        }
         /// <summary>Reads the DP/Pt starter's held item (HGSS starters never carry one, returns 0).</summary>
         public static int GetHeldItem()
         {
@@ -427,32 +464,24 @@ namespace DSPRE.ROMFiles
         {
             if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
 
-            // rotom's single-file decompile mode (-i/-o) doesn't auto-discover the command database from
-            // rotom.toml the way whole-project mode does, it must be passed explicitly.
-            string databaseDir = Path.Combine(RomInfo.workDir, ".rotom", "command_database");
-            string databasePath = Directory.Exists(databaseDir) ? Directory.GetFiles(databaseDir, "*.json").FirstOrDefault() : null;
-            if (databasePath == null)
+            // Project mode, not the single-file mode this used to use. Single-file decompile flattens
+            // the whole file to raw numbers: SPECIES_EEVEE becomes 133, ITEM_NONE becomes 0. Project
+            // mode keeps the species and item names.
+            //
+            // It is not free: it rewrites every source, and variable names come back numeric
+            // (VAR_RESULT reads as 0x800C afterwards). That is the accepted trade for sources that
+            // still say the right thing, because a stale source is worse: the next save in the Script
+            // Editor would compile it and undo the edit that was just made.
+            try
             {
-                AppLogger.Warn($"StarterPokemonData: no rotom command database found under {databaseDir}, .rotom sources left stale.");
-                return;
+                var result = await RotomTool.RunAsync("decompile");
+                if (!result.Success)
+                    AppLogger.Warn("StarterPokemonData: could not refresh the script sources: "
+                                 + RotomTool.FormatResult(result));
             }
-
-            foreach (int fileId in fileIds)
+            catch (Exception ex)
             {
-                try
-                {
-                    string binPath = Filesystem.GetScriptPath(fileId);
-                    string rotomPath = Path.Combine(RomInfo.workDir, "expanded", "scripts", fileId.ToString("D4") + ".rotom");
-                    if (!File.Exists(binPath) || !File.Exists(rotomPath)) continue; // no existing source to keep in sync
-
-                    var result = await RotomTool.RunAsync("decompile", "-i", binPath, "-o", rotomPath, "--database", databasePath);
-                    if (!result.Success)
-                        AppLogger.Warn($"StarterPokemonData: failed to refresh .rotom source for script {fileId}: {RotomTool.FormatResult(result)}");
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn($"StarterPokemonData: failed to refresh .rotom source for script {fileId}: {ex.Message}");
-                }
+                AppLogger.Warn("StarterPokemonData: could not refresh the script sources: " + ex.Message);
             }
         }
 
