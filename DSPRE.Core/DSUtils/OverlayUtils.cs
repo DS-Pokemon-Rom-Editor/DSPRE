@@ -33,6 +33,12 @@ namespace DSPRE
 
         private static OverlayYaml _cachedOverlayYaml;
 
+        /// <summary>
+        /// Forgets the overlay table, which belongs to one ROM. Loading a second ROM without this leaves
+        /// every overlay address and size pointing at the first one, and reads land in the wrong place.
+        /// </summary>
+        public static void ForgetOverlayTable() => _cachedOverlayYaml = null;
+
         private static OverlayYaml LoadOverlayYaml()
         {
             if (_cachedOverlayYaml != null)
