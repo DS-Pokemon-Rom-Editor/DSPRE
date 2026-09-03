@@ -22,7 +22,8 @@ namespace DSPRE.Avalonia.Data
             {
                 var sdat = SdatArchive.Parse(File.ReadAllBytes(path));
                 if (sdat == null || sdat.Sequences.Count == 0) return null;
-                _cached = sdat; _cachedFor = path;
+                // A different ROM keeps its cry sequence at its own index, so that has to be found again.
+                _cached = sdat; _cachedFor = path; _crySequence = null;
                 return sdat;
             }
             catch (Exception ex) { AppLogger.Error("Sound archive could not be read: " + ex.Message); return null; }
