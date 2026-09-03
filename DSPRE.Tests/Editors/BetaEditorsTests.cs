@@ -171,5 +171,55 @@ namespace DSPRE.Tests
             Assert.Contains("BetaEditors.Allows", s);
             Assert.Contains("ShowManaged", s);
         }
+
+        /// <summary>
+        /// The gate only works if every editor actually goes through it. The check above cannot see
+        /// that: it reads WindowPlacement and passes whether or not anything calls it. Nine listed
+        /// editors were opened with a plain Show() and skipped the gate entirely while it was green.
+        /// </summary>
+        [Fact]
+        public void NoEditorWindowIsOpenedWithAPlainShow()
+        {
+            var roots = new[] { Path.Combine(Repo, "DSPRE.Avalonia"), Path.Combine(Repo, "DS_Map") };
+            var files = roots.Where(Directory.Exists)
+                             .SelectMany(r => Directory.GetFiles(r, "*.cs", SearchOption.AllDirectories))
+                             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                                      && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+                             .ToList();
+            Assert.True(files.Count > 100, $"only {files.Count} source files were read, so this proved nothing");
+
+            // `new SomethingView(...).Show()`, across line breaks, which is how they are usually written.
+            var call = new Regex(@"new\s+[\w.]*?(\w+View)\s*\((?:[^()]|\([^()]*\))*\)\s*\.Show\(\)",
+                                 RegexOptions.Singleline);
+            var loose = new List<string>();
+            int seen = 0;
+            foreach (string f in files)
+            {
+                string text = File.ReadAllText(f);
+                foreach (Match m in call.Matches(text))
+                {
+                    string view = m.Groups[1].Value;
+                    // The shell's own main window is not an editor: it is not gated and must not cascade.
+                    if (view == "MainWindowView") continue;
+                    seen++;
+                    loose.Add($"{Path.GetFileName(f)}: {view}");
+                }
+            }
+
+            _out.WriteLine($"{files.Count} source files read, {seen} plain Show() calls on an editor view");
+            Assert.True(loose.Count == 0,
+                "these open an editor without asking the gate, use ShowManaged(): " + string.Join(", ", loose));
+        }
+
+        /// <summary>The check above proves able to fail: the pattern it looks for really does match.</summary>
+        [Fact]
+        public void ThePlainShowCheckRecognisesTheShapeItLooksFor()
+        {
+            var call = new Regex(@"new\s+[\w.]*?(\w+View)\s*\((?:[^()]|\([^()]*\))*\)\s*\.Show\(\)",
+                                 RegexOptions.Singleline);
+            Assert.Matches(call, "new FontEditorView().Show()");
+            Assert.Matches(call, "new Views.World.SpawnEditorView(a, b(c), d)" + "\n    .Show()");
+            Assert.DoesNotMatch(call, "new FontEditorView().ShowManaged()");
+        }
     }
 }

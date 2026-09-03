@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
             int trainerId = VM?.SelectedTrainerIndex ?? 0;
-            new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).Show();
+            new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).ShowManaged();
         }
 
         private void TrainerClasses_Click(object sender, RoutedEventArgs e)

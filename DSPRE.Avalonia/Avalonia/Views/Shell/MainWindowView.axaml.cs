@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.Views.Shell
                     "ds-rom project required");
                 return;
             }
-            new BannerEditorView(new ViewModels.Graphics.BannerEditorViewModel()).Show();
+            new BannerEditorView(new ViewModels.Graphics.BannerEditorViewModel()).ShowManaged();
         }
 
         // ── Window placement persistence (size + maximized; centered by the OS otherwise) ──

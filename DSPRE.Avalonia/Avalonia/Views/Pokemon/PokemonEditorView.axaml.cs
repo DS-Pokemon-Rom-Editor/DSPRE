@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             => ViewModel.LearnsetVM.MoveEntryDown();
 
         private void Learnset_BulkEdit_Click(object sender, RoutedEventArgs e)
-            => new BulkLearnsetEditorView(new BulkLearnsetEditorViewModel(true)).Show();
+            => new BulkLearnsetEditorView(new BulkLearnsetEditorViewModel(true)).ShowManaged();
 
         private async void Learnset_Export_Click(object sender, RoutedEventArgs e)
         {

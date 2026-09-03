@@ -1,4 +1,5 @@
-﻿﻿using DSPRE.ROMFiles;
+﻿﻿using DSPRE.Avalonia;
+using DSPRE.ROMFiles;
 using MKDS_Course_Editor.Export3DTools;
 using System;
 using System.Collections.Generic;
@@ -659,7 +660,7 @@ namespace DSPRE.Editors
             int matrixX = selectedCell.ColumnIndex;
             int matrixY = selectedCell.RowIndex;
 
-            new DSPRE.Avalonia.Views.World.SpawnEditorView(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY).Show();
+            new DSPRE.Avalonia.Views.World.SpawnEditorView(result, EditorPanels.headerEditor.headerListBoxNames, headerNumber, matrixX, matrixY).ShowManaged();
         }
         private void selectMatrixComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {

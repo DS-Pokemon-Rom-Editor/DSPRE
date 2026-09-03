@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null || !VM.InBounds) return;
             var names = HeaderLists.GetHeaderListBoxNames();
-            new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).Show();
+            new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).ShowManaged();
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
