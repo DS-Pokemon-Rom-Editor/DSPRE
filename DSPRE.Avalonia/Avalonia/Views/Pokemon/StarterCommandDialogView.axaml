@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.StarterCommandDialogView"
+        x:DataType="vm:StarterCommandDialogViewModel"
+        Title="Which command gives the starter?" Width="560" Height="440"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+
+  <DockPanel Margin="12">
+    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+               Text="These are the give-a-Pokémon commands in this project's scripts. Pick the one that hands the player their starter."/>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+      <Button Content="OK" Click="Ok_Click"/>
+      <Button Content="Cancel" Click="Cancel_Click"/>
+    </StackPanel>
+
+    <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+      <StackPanel Spacing="6">
+        <TextBlock Text="Somewhere else? Say where and check it:" Opacity="0.85"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="Script file:" VerticalAlignment="Center"/>
+          <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0" Width="110"
+                         Value="{Binding FileId}"/>
+          <TextBlock Text="Script:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+          <TextBox Text="{Binding ContainerName}" Width="140" PlaceholderText="script_13"/>
+          <Button Content="Verify" Click="Verify_Click"/>
+        </StackPanel>
+        <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding HasVerdict}" TextWrapping="Wrap" Opacity="0.9"/>
+      </StackPanel>
+    </Border>
+
+    <ListBox ItemsSource="{Binding Candidates}" SelectedIndex="{Binding SelectedIndex}">
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</Window>

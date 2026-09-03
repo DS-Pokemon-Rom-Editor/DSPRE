@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -112,8 +113,52 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch { HeldItemIcon = null; }
         }
 
-        /// <summary>HGSS starters never carry a held item.</summary>
-        public bool IsHeldItemSupported => RomInfo.gameFamily != RomInfo.GameFamilies.HGSS;
+        // Diamond and Pearl set the held item and the level inside a script command, and DSPRE cannot
+        // read those scripts reliably yet, so it says where they are instead of offering a control that
+        // would write to the wrong place. Platinum keeps the same layout but does parse.
+        private static bool IsDiamondOrPearl => RomInfo.gameFamily == RomInfo.GameFamilies.DP;
+
+        // Platinum keeps the level and the held item in the script that hands the starter over, so
+        // both are editable there once that command has been found.
+        private StarterRotomSource.Match _command;
+
+        private int _starterLevel = 5;
+        public int StarterLevel
+        {
+            get => _starterLevel;
+            set { if (Set(ref _starterLevel, value)) { MarkDirty(); } }
+        }
+
+        public bool IsLevelSupported => _command != null;
+
+        /// <summary>Where the starter is handed over, so it is clear what the editor is about to change.</summary>
+        public string CommandLocation => _command == null ? null : _command.Where;
+        public bool HasCommandLocation => _command != null;
+
+        /// <summary>HGSS keeps its starters in the ARM9, so there is no script command to point at.</summary>
+        public bool CanManageCommand => StarterRotomSource.IsAvailable && IsHeldItemSupported;
+
+        /// <summary>HGSS starters never carry a held item, and DP keep theirs out of reach.</summary>
+        public bool IsHeldItemSupported =>
+            RomInfo.gameFamily != RomInfo.GameFamilies.HGSS && !IsDiamondOrPearl;
+
+        /// <summary>Shown instead of the held item and level fields on Diamond and Pearl.</summary>
+        public bool HasScriptNote => IsDiamondOrPearl;
+
+        public string ScriptNote
+        {
+            get
+            {
+                if (!IsDiamondOrPearl) return null;
+                int file = RomInfo.starterHeldItemScriptFileID;
+                int number = DSPRE.ROMFiles.StarterPokemonData.GetStarterScriptNumber();
+                string where = number > 0
+                    ? $"script file {file}, script {number}"
+                    : $"script file {file}";
+                return "The starter's held item and level are set by the GivePokemon command in "
+                     + where + ". Edit them there; this editor only changes the species.";
+            }
+        }
 
         // ── Loading flag (prevents handlers from firing during load) ────────────
         private bool _loading;
@@ -157,7 +202,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(Starter3));
             OnPropertyChanged(nameof(HeldItem));
             OnPropertyChanged(nameof(IsHeldItemSupported));
+            OnPropertyChanged(nameof(HasScriptNote));
+            OnPropertyChanged(nameof(ScriptNote));
             RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon();
+
+            LocateStarterCommand();
 
             _dirty = false;
             Title = "Starter Pokémon Editor";
@@ -166,6 +215,109 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.Reset(TakeSnapshot());
             _lastCaptureUtc = System.DateTime.MinValue;
             RaiseUndoState();
+        }
+
+        /// <summary>
+        /// Finds the command that hands the starter over. Two cheap reads of one file cover everything
+        /// but a starter somebody has moved: whatever was chosen for this project last time, then the
+        /// place an untouched game keeps it. Only when neither holds up is the whole game read, and only
+        /// then can the editor have anything new to say about which command is the right one. Changing
+        /// the held item or the level leaves both of those pointing where they did, so the ordinary use
+        /// of this editor never reaches the scan. Diamond and Pearl are left alone: their scripts are
+        /// handled elsewhere.
+        /// </summary>
+        private void LocateStarterCommand()
+        {
+            _command = null;
+            SpeciesEditable = true;
+            CommandsHaveChanged = false;
+
+            if (!IsDiamondOrPearl && StarterRotomSource.IsAvailable)
+            {
+                string remembered = RememberedChoice();
+                _command = StarterRotomSource.FindByKey(remembered)
+                        ?? StarterRotomSource.FindVanilla();
+
+                if (_command == null)
+                {
+                    // The starter is not where it should be, so now it is worth reading the whole game.
+                    var all = StarterRotomSource.FindAll();
+                    _command = all.FirstOrDefault(c => c.NamedAsStarter);
+
+                    // Say once that the give commands are not what they were, so a romhack that has
+                    // added its own gets a chance to point the editor at the right one.
+                    string now = Fingerprint(all);
+                    CommandsHaveChanged = KnownFingerprint() != null && KnownFingerprint() != now;
+                    RememberFingerprint(now);
+                }
+
+                if (_command != null) StarterLevel = _command.Level;
+            }
+            OnPropertyChanged(nameof(IsLevelSupported));
+            OnPropertyChanged(nameof(CommandLocation));
+            OnPropertyChanged(nameof(HasCommandLocation));
+            OnPropertyChanged(nameof(CanManageCommand));
+        }
+
+        private bool _commandsHaveChanged;
+        /// <summary>Set when the project has gained or lost a give command since the choice was made.</summary>
+        public bool CommandsHaveChanged { get => _commandsHaveChanged; private set => Set(ref _commandsHaveChanged, value); }
+
+        private static string Fingerprint(System.Collections.Generic.IEnumerable<StarterRotomSource.Match> all) =>
+            string.Join(",", all.Select(c => c.Key).OrderBy(k => k, System.StringComparer.Ordinal));
+
+        private static string KnownFingerprint()
+        {
+            var map = SettingsManager.Settings?.starterCommandFingerprint;
+            return map != null && map.TryGetValue(ProjectKey(), out string f) ? f : null;
+        }
+
+        private static void RememberFingerprint(string fingerprint)
+        {
+            if (SettingsManager.Settings == null || KnownFingerprint() == fingerprint) return;
+            SettingsManager.Settings.starterCommandFingerprint ??= new System.Collections.Generic.Dictionary<string, string>();
+            SettingsManager.Settings.starterCommandFingerprint[ProjectKey()] = fingerprint;
+            SettingsManager.Save();
+        }
+
+        private static string ProjectKey() => RomInfo.workDir ?? "";
+
+        private static string RememberedChoice()
+        {
+            var map = SettingsManager.Settings?.starterCommandChoice;
+            return map != null && map.TryGetValue(ProjectKey(), out string key) ? key : null;
+        }
+
+        /// <summary>The dialog's starting state: the candidates, with the current one picked out.</summary>
+        public StarterCommandDialogViewModel NewCommandChoice() => new StarterCommandDialogViewModel(_command);
+
+        /// <summary>
+        /// Takes what the dialog came back with. A script that picks the species itself is allowed,
+        /// but the species dropdowns are switched off: changing them there would do nothing.
+        /// </summary>
+        public void ApplyCommandChoice(StarterCommandDialogViewModel dialog)
+        {
+            if (dialog?.Chosen == null) return;
+            SpeciesEditable = !dialog.SpeciesIsOutOfOurHands;
+            ChooseCommand(dialog.Chosen);
+        }
+
+        private bool _speciesEditable = true;
+        public bool SpeciesEditable { get => _speciesEditable; private set => Set(ref _speciesEditable, value); }
+
+        /// <summary>Remembers which command the user said is the starter, for this project.</summary>
+        public void ChooseCommand(StarterRotomSource.Match chosen)
+        {
+            if (chosen == null || SettingsManager.Settings == null) return;
+            _command = chosen;
+            StarterLevel = chosen.Level;
+            SettingsManager.Settings.starterCommandChoice ??= new System.Collections.Generic.Dictionary<string, string>();
+            SettingsManager.Settings.starterCommandChoice[ProjectKey()] = chosen.Key;
+            CommandsHaveChanged = false;
+            SettingsManager.Save();
+            OnPropertyChanged(nameof(IsLevelSupported));
+            OnPropertyChanged(nameof(CommandLocation));
+            OnPropertyChanged(nameof(HasCommandLocation));
         }
 
         private void OnNamesChanged(object sender, System.EventArgs e)
@@ -177,7 +329,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
-        // ── Busy state (background .rotom resync after Save, see SaveChanges) ──
+        // ── Busy state (the rotom work after Save, see FinishSavingAsync) ──
         private bool _isBusy;
         public bool IsBusy { get => _isBusy; private set => Set(ref _isBusy, value); }
         private string _busyText;
@@ -197,7 +349,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            if (IsHeldItemSupported)
+            // With the sources in front of us, the held item and the level go through the script the
+            // same way the Script Editor saves one: change the line, compile the project. Writing the
+            // bytes instead would be undone the next time that script is compiled.
+            bool throughTheScript = _command != null;
+            if (IsHeldItemSupported && !throughTheScript)
             {
                 StarterPokemonData.SetHeldItem(HeldItem);
                 if (RomInfo.starterHeldItemScriptFileID >= 0) touchedScripts.Add(RomInfo.starterHeldItemScriptFileID);
@@ -210,30 +366,62 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.MarkSaved();
             RaiseUndoState();
 
-            // The species/rival-script bytes above are already on disk; this only keeps the Script
-            // Editor's .rotom text in sync (see RefreshRotomSourcesAsync's remarks) and must run in the
-            // background: it shells out to rotom.exe per touched file, and awaiting it synchronously here
-            // would freeze the whole app (SaveChanges is called directly from a UI Click handler).
-            if (touchedScripts.Count > 0 && RomInfo.hasRotomProject)
-                _ = RefreshRotomInBackgroundAsync(touchedScripts);
+            // The species bytes above are already on disk. What is left shells out to rotom, and
+            // awaiting it here would freeze the app: SaveChanges runs straight off a Click handler.
+            if ((touchedScripts.Count > 0 && RomInfo.hasRotomProject) || throughTheScript)
+                _ = FinishSavingAsync(touchedScripts, throughTheScript);
         }
 
-        private async System.Threading.Tasks.Task RefreshRotomInBackgroundAsync(System.Collections.Generic.List<int> fileIds)
+        /// <summary>
+        /// The two rotom steps, one after the other and never at the same time: one turns binaries back
+        /// into text, the other turns text into binaries, and running both at once would have them
+        /// overwrite each other. Both shell out to rotom, so this stays off the UI thread.
+        /// </summary>
+        private async System.Threading.Tasks.Task FinishSavingAsync(
+            System.Collections.Generic.List<int> touchedScripts, bool throughTheScript)
         {
             IsBusy = true;
-            BusyText = "Reparsing scripts…";
             try
             {
-                await StarterPokemonData.RefreshRotomSourcesAsync(fileIds);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("StarterEditor: background .rotom refresh failed: " + ex.Message);
+                if (throughTheScript)
+                {
+                    BusyText = "Saving the script…";
+                    await SaveThroughTheScriptAsync();
+                }
+                if (touchedScripts.Count > 0 && RomInfo.hasRotomProject)
+                {
+                    BusyText = "Reparsing scripts…";
+                    try { await StarterPokemonData.RefreshRotomSourcesAsync(touchedScripts); }
+                    catch (Exception ex) { AppLogger.Warn("StarterEditor: .rotom refresh failed: " + ex.Message); }
+                }
             }
             finally
             {
                 IsBusy = false;
                 BusyText = null;
+            }
+        }
+
+        /// <summary>
+        /// Rewrites the give command's level and held item and compiles, which is what the Script
+        /// Editor's own Save does. Reports what went wrong rather than leaving it silent.
+        /// </summary>
+        private async System.Threading.Tasks.Task SaveThroughTheScriptAsync()
+        {
+            var command = _command;
+            int item = HeldItem;
+            int level = StarterLevel;
+            string itemName = item > 0 && item < ItemNames.Count
+                ? StarterRotomSource.ItemToken(ItemNames[item]) : "ITEM_NONE";
+
+            try
+            {
+                string failure = await StarterRotomSource.SaveAsync(command, level, itemName, item);
+                if (failure != null) AppMessages.Error(failure, "Starter Pokémon Editor");
+            }
+            catch (Exception ex)
+            {
+                AppMessages.Error("The script could not be saved: " + ex.Message, "Starter Pokémon Editor");
             }
         }
 
