@@ -29,8 +29,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public PaintedGaugeRomBuilder(ITestOutputHelper o) { _out = o; }
 
-        private const string Source =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string Source = TestRoms.Platinum;
 
         private static readonly string Scratch =
             @"C:\Users\safea\AppData\Local\Temp\claude\C--Romhacking-Tooling-DSPRE\4e7579f1-fc54-4253-a949-eba625115ec9\scratchpad";

@@ -21,8 +21,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public WestDurationTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string Platinum = TestRoms.Platinum;
 
         private static string ScriptDir()
         {

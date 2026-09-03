@@ -18,8 +18,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public ArrangementLayoutTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Unpacked =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked";
+        private static readonly string Unpacked = TestRoms.HeartGold + @"\unpacked";
 
         private static IEnumerable<(string path, int cols, int rows, int entries)> Real()
         {

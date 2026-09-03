@@ -13,7 +13,7 @@ namespace DSPRE.Tests
     [Collection("rom")]
     public class FieldFontTests
     {
-        private const string Project = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string Project = TestRoms.HeartGold;
 
         private static FieldFont Talk()
         {

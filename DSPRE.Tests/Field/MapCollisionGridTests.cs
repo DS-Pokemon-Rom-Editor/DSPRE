@@ -67,7 +67,7 @@ namespace DSPRE.Tests
         [Fact]
         public void RealMapsHaveBothWalkableAndBlockedTiles()
         {
-            const string Maps = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked\maps";
+            string Maps = TestRoms.HeartGold + @"\unpacked\maps";
             if (!Directory.Exists(Maps)) return;
 
             int checkedMaps = 0, withBlocked = 0, withOpen = 0;

@@ -9,8 +9,7 @@ namespace DSPRE.Tests
     /// <summary>Plays back the real HeartGold terrain animations. </summary>
     public class TextureSrtAnimationTests
     {
-        private const string Archive =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\files\a\1\4\0";
+        private static readonly string Archive = TestRoms.HeartGold + @"\files\a\1\4\0";
 
         private static byte[][] ReadNarc(string path)
         {

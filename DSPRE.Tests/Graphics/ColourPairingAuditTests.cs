@@ -29,8 +29,8 @@ namespace DSPRE.Tests
 
         public static IEnumerable<object[]> Games => new List<object[]>
         {
-            new object[] { "IPKE", @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents", "HeartGold" },
-            new object[] { "CPUE", @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents", "Platinum" },
+            new object[] { "IPKE", TestRoms.HeartGold, "HeartGold" },
+            new object[] { "CPUE", TestRoms.Platinum, "Platinum" },
         };
 
         [Theory]

@@ -17,7 +17,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public ApricornTreeFieldTests(ITestOutputHelper o) { _out = o; }
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
 
         /// <summary>
         /// DSPRE reads the overworld record in the same order the engine's own FIELD_OBJ_H declares it, so

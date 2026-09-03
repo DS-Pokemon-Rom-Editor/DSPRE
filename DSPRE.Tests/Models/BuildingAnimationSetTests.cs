@@ -11,9 +11,9 @@ namespace DSPRE.Tests
     /// </summary>
     public class BuildingAnimationSetTests
     {
-        private const string Project = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
-        private const string ListDir = Project + @"\unpacked\buildingAnimListOut";
-        private const string AnimDir = Project + @"\unpacked\buildingAnimations";
+        private static readonly string Project = TestRoms.HeartGold;
+        private static readonly string ListDir = Project + @"\unpacked\buildingAnimListOut";
+        private static readonly string AnimDir = Project + @"\unpacked\buildingAnimations";
 
         private static bool Ready => Directory.Exists(ListDir) && Directory.Exists(AnimDir);
 

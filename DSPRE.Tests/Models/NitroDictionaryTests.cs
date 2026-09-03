@@ -18,8 +18,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public NitroDictionaryTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Models =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked\exteriorBuildingModels";
+        private static readonly string Models = TestRoms.HeartGold + @"\unpacked\exteriorBuildingModels";
 
         [Fact]
         public void OneNameResolvesToItself()

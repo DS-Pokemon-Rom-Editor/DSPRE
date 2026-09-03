@@ -20,9 +20,9 @@ namespace DSPRE.Tests
 
         private static readonly (string Code, string Project)[] Games =
         {
-            ("IPKE", @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents"),
-            ("CPUE", @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents"),
-            ("ADAE", @"C:\Romhacking\ROMs\NDS\DP\Pokemon Diamond (v05) (U)(Legacy)\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents"),
+            ("IPKE", TestRoms.HeartGold),
+            ("CPUE", TestRoms.Platinum),
+            ("ADAE", TestRoms.Diamond),
         };
 
         [Fact]

@@ -17,7 +17,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public WestViewSwitchTests(ITestOutputHelper o) { _out = o; }
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
 
         private static readonly WestViewMode[] AllViews =
             { WestViewMode.Guided, WestViewMode.Script, WestViewMode.Raw };

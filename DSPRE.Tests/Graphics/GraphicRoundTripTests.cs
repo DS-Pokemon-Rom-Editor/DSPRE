@@ -19,8 +19,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public GraphicRoundTripTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Source =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string Source = TestRoms.Platinum;
 
         private string _work;
 
@@ -109,13 +108,13 @@ namespace DSPRE.Tests
         {
             // Diamond runs the key backwards from the last two bytes; the other two run it forwards.
             new object[] { "ADAE",
-                @"C:\Romhacking\ROMs\NDS\DP\Pokemon Diamond (v05) (U)(Legacy)\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents",
+                TestRoms.Diamond,
                 "Diamond", 4 },
             new object[] { "CPUE",
-                @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents",
+                TestRoms.Platinum,
                 "Platinum", 4 },
             new object[] { "IPKE",
-                @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents",
+                TestRoms.HeartGold,
                 "HeartGold", 4 },
         };
 
