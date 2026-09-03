@@ -227,7 +227,7 @@ namespace DSPRE.Tests
         {
             if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
 
-            string copy = Path.Combine(Path.GetDirectoryName(Platinum), "dspre_ask_" + Guid.NewGuid().ToString("N"));
+            string copy = Path.Combine(Path.GetTempPath(), "dspre_ask_" + Guid.NewGuid().ToString("N"));
             try
             {
                 foreach (string d in Directory.GetDirectories(Platinum, "*", SearchOption.AllDirectories))
@@ -282,7 +282,7 @@ namespace DSPRE.Tests
         {
             if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
 
-            string copy = Path.Combine(Path.GetDirectoryName(Platinum), "dspre_key_" + Guid.NewGuid().ToString("N"));
+            string copy = Path.Combine(Path.GetTempPath(), "dspre_key_" + Guid.NewGuid().ToString("N"));
             try
             {
                 foreach (string d in Directory.GetDirectories(Platinum, "*", SearchOption.AllDirectories))
