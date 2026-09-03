@@ -240,7 +240,8 @@ namespace DSPRE.Avalonia.Data
                 var hp = layout.Hp[0].size > 0 ? layout.Hp[0] : layout.Hp[1];
                 if (hp.size > 0)
                 {
-                    byte[] now = BattleGaugeGlyphs.NumberRow(showing.Health, hp.size);
+                    // The games pad this one on the left so it sits against the "/".
+                    byte[] now = BattleGaugeGlyphs.NumberRow(showing.Health, hp.size, againstTheRight: true);
                     if (now != null) Copy(now, 0, tiles, hp, showing: hp.size);
                 }
                 if (layout.HpMax.size > 0)
