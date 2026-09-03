@@ -12,6 +12,7 @@ namespace DSPRE.ROMFiles
     public sealed class FieldFont
     {
         /// <summary>Entry 1 of the archive, NARC_font_talk_dat, which is the one dialogue uses.</summary>
+        public const int SystemFontEntry = 0;
         public const int TalkFontEntry = 1;
 
         public const int HeaderSize = 16;
@@ -142,6 +143,13 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Reads the talking font out of the loaded ROM, or null when it cannot be found.</summary>
         public static FieldFont LoadTalkFont() => LoadFromArchive(TalkFontEntry);
+
+        /// <summary>
+        /// The font a battle writes a Pokemon's name on its gauge with. In the English DP and Platinum
+        /// archives this entry and the talk font are the same file, so the two are interchangeable
+        /// there; in HeartGold they are different files and only this one is right.
+        /// </summary>
+        public static FieldFont LoadSystemFont() => LoadFromArchive(SystemFontEntry);
 
         public static FieldFont LoadFromArchive(int entry)
         {
