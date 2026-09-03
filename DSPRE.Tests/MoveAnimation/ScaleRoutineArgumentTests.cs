@@ -20,9 +20,8 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public ScaleRoutineArgumentTests(ITestOutputHelper o) { _out = o; }
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
+        private static readonly string Platinum = TestRoms.Platinum;
 
         // The stretch routine (WestSp_WE_SSPPokeScaleUpDown, routine 42) takes its denominator in gp work 5,
         // which is argument 7 of the call once the routine id and the word count are counted.

@@ -22,9 +22,8 @@ namespace DSPRE.Tests
         private const int RoutineCount = 84;   // NELEMS(WeSysSP_FuncTable)
         private const int WorkSlots = 8 + 2;   // WE_GENE_WK_MAX
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
+        private static readonly string Platinum = TestRoms.Platinum;
 
         private static string ScriptDir(string project, string gameCode)
         {

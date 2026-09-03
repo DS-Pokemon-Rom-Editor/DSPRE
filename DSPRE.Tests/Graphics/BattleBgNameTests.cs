@@ -17,9 +17,9 @@ namespace DSPRE.Tests
 
         private static readonly (string code, string path, string name)[] Games =
         {
-            ("ADAE", @"C:\Romhacking\ROMs\NDS\DP\Pokemon Diamond (v05) (U)(Legacy)\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents", "Diamond"),
-            ("CPUE", @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents", "Platinum"),
-            ("IPKE", @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents", "HeartGold"),
+            ("ADAE", TestRoms.Diamond, "Diamond"),
+            ("CPUE", TestRoms.Platinum, "Platinum"),
+            ("IPKE", TestRoms.HeartGold, "HeartGold"),
         };
 
         private static string PackedFor(RomInfo.GameFamilies family) => family switch
@@ -92,8 +92,8 @@ namespace DSPRE.Tests
         {
             var checks = new (string code, string path, string name, int chr, int pal, int scr)[]
             {
-                ("CPUE", @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents", "Platinum", 65, 291, 62),
-                ("IPKE", @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents", "HeartGold", 59, 295, 56),
+                ("CPUE", TestRoms.Platinum, "Platinum", 65, 291, 62),
+                ("IPKE", TestRoms.HeartGold, "HeartGold", 59, 295, 56),
             };
             int checkedGames = 0;
             foreach (var (code, path, name, chr, pal, scr) in checks)

@@ -14,8 +14,8 @@ namespace DSPRE.Tests
     [Collection("rom")]
     public class AnimatedPreviewTests
     {
-        private const string Project = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
-        private const string Archive = Project + @"\files\a\1\4\0";
+        private static readonly string Project = TestRoms.HeartGold;
+        private static readonly string Archive = Project + @"\files\a\1\4\0";
 
         /// <summary>The real HeartGold water animation. </summary>
         private static TextureSrtAnimation RequireWater()

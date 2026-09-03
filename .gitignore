@@ -371,3 +371,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Where this machine keeps its extracted game projects for the tests
+testroms.json

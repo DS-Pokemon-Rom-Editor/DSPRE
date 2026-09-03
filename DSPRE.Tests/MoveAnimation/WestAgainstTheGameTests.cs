@@ -18,13 +18,13 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public WestAgainstTheGameTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string Platinum = TestRoms.Platinum;
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
 
-        private static string ScriptDir(string project = Platinum, string code = "CPUE")
+        private static string ScriptDir(string project = null, string code = "CPUE")
         {
+            project ??= Platinum;   // the default cannot name a path that is read at run time
             if (!Directory.Exists(project)) return null;
             try { new RomInfo(code, project); } catch { return null; }
             var narc = new ScriptNarc(DirNames.wazaEffectScripts);

@@ -18,7 +18,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public WestRoutineInContextTests(ITestOutputHelper o) { _out = o; }
 
-        private const string HeartGold = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string HeartGold = TestRoms.HeartGold;
 
         // The seven the isolated harness cannot reach, with the name the table gives them.
         private static readonly (int Id, string Name)[] NeedContext =

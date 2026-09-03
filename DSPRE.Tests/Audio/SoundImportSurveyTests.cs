@@ -20,8 +20,8 @@ namespace DSPRE.Tests
 
         public static IEnumerable<object[]> Games => new List<object[]>
         {
-            new object[] { "IPKE", @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents", "HeartGold" },
-            new object[] { "CPUE", @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents", "Platinum" },
+            new object[] { "IPKE", TestRoms.HeartGold, "HeartGold" },
+            new object[] { "CPUE", TestRoms.Platinum, "Platinum" },
         };
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheTabCheckWouldCatchTheOldNameSplit()
         {
-            const string Platinum = @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+            string Platinum = TestRoms.Platinum;
             if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
             new RomInfo("CPUE", Platinum);
             SoundArchive.Reset();

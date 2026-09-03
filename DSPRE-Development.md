@@ -216,7 +216,7 @@ in the user changelog.
 
 ## Tests
 
-846 tests, filed by subject: `Audio Editors Field Graphics Models MoveAnimation Scripts Tools`.
+887 tests, filed by subject: `Audio Editors Field Graphics Models MoveAnimation Scripts Tools`.
 
 ```powershell
 dotnet test DSPRE.Tests -f net8.0 --nologo
@@ -225,6 +225,29 @@ dotnet test DSPRE.Tests -f net8.0 --filter "FullyQualifiedName~BattleIcon"
 
 The full run is about nine minutes because most of it reads real ROMs. Split it by class name when
 that's too slow, rather than skipping it.
+
+### Pointing them at your games
+
+Most of the suite reads real extracted projects. Where yours live is per machine, so put it in
+`testroms.json` beside `DS_Map.sln` (git ignores it):
+
+```json
+{
+  "heartGold": "D:\\roms\\HeartGold (USA)_DSPRE_contents",
+  "platinum":  "D:\\roms\\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents",
+  "diamond":   "D:\\roms\\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents"
+}
+```
+
+`DSPRE_TEST_HEARTGOLD`, `DSPRE_TEST_PLATINUM` and `DSPRE_TEST_DIAMOND` override the file, which is how
+to point one run somewhere else. If you keep all three under one folder in the usual layout, set
+`DSPRE_TEST_ROMS` to that folder instead of naming each one. Nothing set falls back to
+`C:\Romhacking\ROMs\NDS`, which is where they sat when these tests were written.
+
+Read them through `TestRoms.HeartGold` / `.Platinum` / `.Diamond`, never a path written into the test.
+A test whose game is missing should say so and return rather than fail, and then assert it actually ran
+something, or it passes while proving nothing. `TestRomsTests` prints where each one resolved to and
+fails if none of the three is on the machine.
 
 Two conventions cause confusing failures if you miss them:
 

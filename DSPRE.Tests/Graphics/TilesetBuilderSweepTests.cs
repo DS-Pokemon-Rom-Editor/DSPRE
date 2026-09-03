@@ -20,7 +20,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public TilesetBuilderSweepTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Project = @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string Project = TestRoms.HeartGold;
 
         private static bool Ready()
         {

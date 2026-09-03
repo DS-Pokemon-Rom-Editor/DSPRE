@@ -184,8 +184,7 @@ namespace DSPRE.Tests
     /// this machine, since it's a large external test asset, not something checked into the repo.</summary>
     public class SseqWholeArchiveSmokeTests
     {
-        private const string RomSdatPath =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\files\data\sound\gs_sound_data.sdat";
+        private static readonly string RomSdatPath = TestRoms.HeartGold + @"\files\data\sound\gs_sound_data.sdat";
 
         [Fact]
         public void RenderEverySoundEffect_NoExceptions()
@@ -209,8 +208,7 @@ namespace DSPRE.Tests
         // Platinum's own file name, which the game asks for by name:
         // "data/sound/pl_sound_data.sdat". Same container/SSEQ/SBNK/SWAV format as
         // HGSS (shared Nitro SDK), this guards that the parser/renderer generalize, not just fit one ROM's data.
-        private const string PlatRomSdatPath =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents\files\data\sound\pl_sound_data.sdat";
+        private static readonly string PlatRomSdatPath = TestRoms.Platinum + @"\files\data\sound\pl_sound_data.sdat";
 
         [Fact]
         public void RenderEverySoundEffect_Platinum_NoExceptions()
@@ -234,8 +232,7 @@ namespace DSPRE.Tests
         // DP's file name is genuinely different from Platinum's, not just "whatever Plat uses":
         // Diamond and Pearl ask for "data/sound/sound_data.sdat", with no prefix, and Platinum
         // replaced it with its own.
-        private const string DpRomSdatPath =
-            @"C:\Romhacking\ROMs\NDS\DP\Pokemon Diamond (v05) (U)(Legacy)\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents\files\data\sound\sound_data.sdat";
+        private static readonly string DpRomSdatPath = TestRoms.Diamond + @"\files\data\sound\sound_data.sdat";
 
         [Fact]
         public void RenderEverySoundEffect_Diamond_NoExceptions()

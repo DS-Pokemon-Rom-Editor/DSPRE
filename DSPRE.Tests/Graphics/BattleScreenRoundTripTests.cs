@@ -19,8 +19,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public BattleScreenRoundTripTests(ITestOutputHelper o) => _out = o;
 
-        private const string Source =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string Source = TestRoms.HeartGold;
 
         private string _work;
 

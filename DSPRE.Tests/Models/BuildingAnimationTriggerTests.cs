@@ -8,8 +8,7 @@ namespace DSPRE.Tests
     /// <summary>Which building animations run by themselves and which wait to be set off. </summary>
     public class BuildingAnimationTriggerTests
     {
-        private const string ListDir =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked\buildingAnimListOut";
+        private static readonly string ListDir = TestRoms.HeartGold + @"\unpacked\buildingAnimListOut";
 
         private static bool Ready => Directory.Exists(ListDir);
 

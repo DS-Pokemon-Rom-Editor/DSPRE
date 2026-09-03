@@ -17,12 +17,9 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public GraphicAssetsTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Diamond =
-            @"C:\Romhacking\ROMs\NDS\DP\Pokemon Diamond (v05) (U)(Legacy)\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents";
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
-        private const string HeartGold =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents";
+        private static readonly string Diamond = TestRoms.Diamond;
+        private static readonly string Platinum = TestRoms.Platinum;
+        private static readonly string HeartGold = TestRoms.HeartGold;
 
         public static IEnumerable<object[]> Games => new[]
         {

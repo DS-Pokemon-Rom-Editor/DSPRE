@@ -18,8 +18,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public AnimationNameMatchTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Unpacked =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked";
+        private static readonly string Unpacked = TestRoms.HeartGold + @"\unpacked";
 
         // ── the rule itself ───────────────────────────────────────────────────────────────────────
 

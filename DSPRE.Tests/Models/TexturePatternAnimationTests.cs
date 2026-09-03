@@ -9,8 +9,7 @@ namespace DSPRE.Tests
     /// <summary>Texture-swapping animations (NSBTP), read from a real HeartGold project. </summary>
     public class TexturePatternAnimationTests
     {
-        private const string AnimDir =
-            @"C:\Romhacking\ROMs\NDS\HGSS\HeartGold (USA)_DSPRE_contents\unpacked\buildingAnimations";
+        private static readonly string AnimDir = TestRoms.HeartGold + @"\unpacked\buildingAnimations";
 
         private static bool Ready => Directory.Exists(AnimDir);
 

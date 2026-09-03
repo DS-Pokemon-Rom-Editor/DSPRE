@@ -18,8 +18,7 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public WestFamilyComparisonTests(ITestOutputHelper o) { _out = o; }
 
-        private const string Platinum =
-            @"C:\Romhacking\ROMs\NDS\Plat\Pokemon - Platinum Version (USA) (Rev 1)\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents";
+        private static readonly string Platinum = TestRoms.Platinum;
 
         /// <summary>What the recording of that move's battle measured. Brightness is out of 255.</summary>
         private sealed class Recorded
