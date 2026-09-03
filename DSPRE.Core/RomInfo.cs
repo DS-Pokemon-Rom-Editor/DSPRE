@@ -1476,7 +1476,7 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    abilityNamesTextNumber = 552;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 544 : 552;
                     break;
 
                 case GameFamilies.Plat:
@@ -1484,7 +1484,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    abilityNamesTextNumber = 720;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 711 : 720;
                     break;
 
                 default:
@@ -1554,7 +1554,9 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    pokemonNamesTextNumbers = new int[2] { 362, 363 };
+                    pokemonNamesTextNumbers = gameLanguage == GameLanguages.Japanese
+                        ? new int[1] { 356 }
+                        : new int[2] { 362, 363 };
                     break;
 
                 case GameFamilies.Plat:
@@ -1627,21 +1629,22 @@ namespace DSPRE
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
         {
+            bool jp = gameLanguage == GameLanguages.Japanese;
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    battleTowerTrainerNamesMessageNumber = 16;
-                    battleTowerTrainerMessagesNumber = 555;
+                    battleTowerTrainerNamesMessageNumber = jp ? 15 : 16;
+                    battleTowerTrainerMessagesNumber = jp ? 546 : 555;
                     break;
 
                 case GameFamilies.Plat:
-                    battleTowerTrainerNamesMessageNumber = 21;
-                    battleTowerTrainerMessagesNumber = 614;
+                    battleTowerTrainerNamesMessageNumber = jp ? 20 : 21;
+                    battleTowerTrainerMessagesNumber = jp ? 607 : 614;
                     break;
 
                 case GameFamilies.HGSS:
-                    battleTowerTrainerNamesMessageNumber = 27;
-                    battleTowerTrainerMessagesNumber = 724;
+                    battleTowerTrainerNamesMessageNumber = jp ? 26 : 27;
+                    battleTowerTrainerMessagesNumber = jp ? 714 : 724;
                     break;
             }
         }
