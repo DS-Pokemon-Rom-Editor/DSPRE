@@ -717,6 +717,16 @@ namespace DSPRE.Avalonia
 
         public static void OpenBattleScreenEditor()
         {
+            // Diamond and Pearl lay the battle screen out differently enough that this editor cannot
+            // read it, and it was failing to open at all rather than saying so.
+            if (DSPRE.RomInfo.gameFamily == DSPRE.RomInfo.GameFamilies.DP)
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The battle screen is only read on Platinum, HeartGold and SoulSilver so far. "
+                  + "Diamond and Pearl keep its pieces elsewhere.", "Battle screen");
+                return;
+            }
+
             try
             {
                 new Views.Battle.BattleScreenEditorView().ShowManaged();
@@ -762,6 +772,8 @@ namespace DSPRE.Avalonia
         {
             new() { Name = "Graphics",              Keywords = "sprite picture image texture palette colour color icon font paint draw", Run = OpenGraphicsBrowser },
             new() { Name = "Models and textures",   Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
+            new() { Name = "Battle screens",        Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
+            new() { Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
             new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
@@ -803,6 +815,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
+            new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
             new() { Name = "Edit Dropdown Labels",  Keywords = "enum custom", Run = OpenLabelEditor },
             new() { Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
             new() { Name = "Settings",              Run = OpenSettings },

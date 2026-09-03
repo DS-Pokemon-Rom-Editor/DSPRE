@@ -102,8 +102,8 @@
         <MenuItem Header="All graphics…" Click="GraphicsBrowser_Click"/>
         <MenuItem Header="All models and textures…" Click="ModelBrowser_Click"/>
         <MenuItem Header="Battle scenes…" Click="BattleSceneBrowser_Click" IsEnabled="{Binding Beta[BattleSceneBrowserView]}" ToolTip.Tip="{Binding BetaNote[BattleSceneBrowserView]}"/>
-        <MenuItem Header="Battle screen…" Click="BattleScreen_Click"
-                  ToolTip.Tip="Both screens of a battle, drawn from this ROM, with every piece editable" IsEnabled="{Binding Beta[BattleScreenEditorView]}"/>
+        <MenuItem Header="Battle screen…" Click="BattleScreen_Click" IsEnabled="{Binding CanUseBattleScreen}"
+                  ToolTip.Tip="Both screens of a battle, drawn from this ROM, with every piece editable"/>
         <MenuItem Header="Picture to Background…" Click="TilesetBuilder_Click"
                   ToolTip.Tip="Turn a PNG into the colours, tiles and arrangement a background is drawn from" IsEnabled="{Binding Beta[TilesetBuilderView]}"/>
         <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding BetaNote[TitleScreenEditorView]}"/>
