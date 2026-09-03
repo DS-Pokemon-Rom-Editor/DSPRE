@@ -230,16 +230,16 @@
                      part, and leaving the last row out let the frame's brown show where the game is black.
                      Rows checked one at a time over 705 frames of real battles, both gauges. -->
                 <!-- enemy (upper-left) -->
-                <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-                <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+                <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                 <Rectangle Canvas.Left="50" Canvas.Top="42" Width="48" Height="1" Fill="#FBFBFB"/>
                 <Rectangle Canvas.Left="50" Canvas.Top="43" Width="48" Height="2" Fill="#000000"/>
                 <Rectangle Canvas.Left="50" Canvas.Top="43" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
                 <Rectangle Canvas.Left="50" Canvas.Top="45" Width="48" Height="1" Fill="#FBFBFB"/>
                 <Rectangle Canvas.Left="50" Canvas.Top="46" Width="48" Height="1" Fill="#000000"/>
                 <!-- player (lower-right) -->
-                <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
-                <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
+                <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+                <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                 <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
                 <Rectangle Canvas.Left="200" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
                 <Rectangle Canvas.Left="200" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>

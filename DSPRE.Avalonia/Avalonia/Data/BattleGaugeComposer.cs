@@ -27,6 +27,8 @@ namespace DSPRE.Avalonia.Data
             public (int pos, int size)[] Hp;       // the current HP number; one entry is unused
             public (int pos, int size) HpMax;      // the maximum HP number
             public int Status;                     // the word for what is wrong, three tiles
+            public int Slash;                      // the "/" between the two numbers, when it is not
+                                                   // already part of the picture (double battles only)
         }
 
         // Tile numbers, not bytes: multiplied up when used. Straight from the gauge's own tables.
@@ -61,6 +63,7 @@ namespace DSPRE.Avalonia.Data
                 Hp = new[] { (0, 0), (0x60, 3) },
                 HpMax = (0x64, 3),
                 Status = 0x23,
+                Slash = 0x63,
             },
             [Kind.OpponentFar] = new Layout             // B
             {
@@ -81,6 +84,7 @@ namespace DSPRE.Avalonia.Data
                 Hp = new[] { (0, 0), (0x60, 3) },
                 HpMax = (0x64, 3),
                 Status = 0x23,
+                Slash = 0x63,
             },
             [Kind.OpponentNear] = new Layout            // D
             {
@@ -216,6 +220,23 @@ namespace DSPRE.Avalonia.Data
 
             if (showing.ShowHealthNumbers)
             {
+                // A double battle's bars normally show the bar and no numbers; the games swap the two
+                // over on a press, and only then do they put the "/" in. A single battle's bars have
+                // it in the picture already, which is why only these two write one.
+                if (layout.Slash > 0)
+                {
+                    var slash = BattleGaugeText.Slash();
+                    if (slash != null)
+                    {
+                        var one = new byte[TileBytes];
+                        for (int y = 0; y < 8; y++)
+                            for (int x = 0; x < 8; x += 2)
+                                one[y * 4 + x / 2] = (byte)((BattleGaugeGlyphs.Ink(slash.At(x, y)) & 0xF)
+                                                          | (BattleGaugeGlyphs.Ink(slash.At(x + 1, y)) << 4));
+                        Copy(one, 0, tiles, (layout.Slash, 1), showing: 1);
+                    }
+                }
+
                 var hp = layout.Hp[0].size > 0 ? layout.Hp[0] : layout.Hp[1];
                 if (hp.size > 0)
                 {

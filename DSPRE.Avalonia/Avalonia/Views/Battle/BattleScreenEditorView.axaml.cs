@@ -53,6 +53,22 @@ namespace DSPRE.Avalonia.Views.Battle
             new GraphicPainterView(new GraphicPainterViewModel(archive, at)).ShowManaged();
         }
 
+        /// <summary>
+        /// Hands the sheet this piece is drawn from to the Graphics window. This is the way in for the
+        /// touch screen layers, which share one sheet and so cannot take a painted picture back.
+        /// </summary>
+        private async void HandOver_Click(object sender, RoutedEventArgs e)
+        {
+            var piece = VM?.Selected?.Piece;
+            if (piece == null || piece.Drawing < 0)
+            {
+                await DialogHelper.ShowInfo("This piece is not drawn from a single file in an archive.",
+                                            "Battle Screen");
+                return;
+            }
+            AvaloniaEditorLauncher.OpenGraphicAt(piece.Archive, piece.Drawing);
+        }
+
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
             var piece = VM?.Selected?.Piece;

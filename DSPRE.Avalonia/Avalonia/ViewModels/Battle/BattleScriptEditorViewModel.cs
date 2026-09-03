@@ -1023,7 +1023,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int GaugeCurHp => (int)Math.Round(_gaugeMaxHp * _gaugeHpPercent / 100.0);
         public string GaugeHpText => GaugeCurHp + "/" + _gaugeMaxHp;
         private void RaiseHpProps() { OnPropertyChanged(nameof(GaugeHpBarWidth)); OnPropertyChanged(nameof(GaugeHpBrush)); OnPropertyChanged(nameof(GaugeCurHp)); OnPropertyChanged(nameof(GaugeHpText)); }
-        public int GaugeLevel { get => _gaugeLevel; set { if (Set(ref _gaugeLevel, Math.Clamp(value, 1, 100))) OnPropertyChanged(nameof(GaugeLevelText)); } }
+        public int GaugeLevel { get => _gaugeLevel; set { if (Set(ref _gaugeLevel, Math.Clamp(value, 1, 100))) { OnPropertyChanged(nameof(GaugeLevelText)); OnPropertyChanged(nameof(GaugeLevelImage)); RenderGauges(); } } }
 
         // The Pokémon shown in the preview (and named on the gauge); pick it from a dropdown. Changing it
         // live-loads that species' front/back battle sprites into the scene.
@@ -1037,6 +1037,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (!Set(ref _gaugeSpeciesId, value)) return;
                 OnPropertyChanged(nameof(GaugeNameText));
+                OnPropertyChanged(nameof(GaugeNameImage));
+                RenderGauges();
                 if (_sceneLoaded) LoadDisplayMon(value);
             }
         }
@@ -1050,6 +1052,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
         public string GaugeLevelText => "Lv" + _gaugeLevel;
+
+        // The name and level as the game itself draws them, shared with the other two battle previews.
+        public bool GaugeTextIsReal => Data.GaugeTextImages.Available;
+        public global::Avalonia.Media.Imaging.Bitmap GaugeNameImage => Data.GaugeTextImages.Name(GaugeNameText);
+        public global::Avalonia.Media.Imaging.Bitmap GaugeLevelImage =>
+            Data.GaugeTextImages.Level(_gaugeLevel, ROMFiles.BattleGaugeText.Gender.Genderless);
+        public global::Avalonia.Media.Imaging.Bitmap GaugeHealthImage =>
+            Data.GaugeTextImages.Health((int)Math.Round(_gaugeMaxHp * _gaugeHpPercent / 100.0), _gaugeMaxHp);
         public double GaugeHpBarWidth => 48.0 * _gaugeHpPercent / 100.0;        // groove is 48px, measured off real battles
         // All three read off real Platinum battles, by watching the player's bar take damage across fourteen
         // recordings. Gold and OrangeRed, which stood in for the last two, were both too bright.
@@ -1068,9 +1078,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             try
             {
+                // The name and level go into each bar's own picture, the way a battle writes them.
+                // Games whose letters cannot be read fall back to the plain bar.
                 var r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
-                GaugePlayerImage = GaugeToBitmap(r.BuildGauge(true));
-                GaugeEnemyImage = GaugeToBitmap(r.BuildGauge(false));
+                GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
+                                ?? GaugeToBitmap(r.BuildGauge(true));
+                GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
+                               ?? GaugeToBitmap(r.BuildGauge(false));
                 OnPropertyChanged(nameof(HasRealGauges));
                 OnPropertyChanged(nameof(ShowPlaceholderGauges));
                 OnPropertyChanged(nameof(RealGaugesVisible));

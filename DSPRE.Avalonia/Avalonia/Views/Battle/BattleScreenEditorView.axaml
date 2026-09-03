@@ -101,16 +101,50 @@
                   HorizontalAlignment="Stretch"/>
           <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
                      IsVisible="{Binding CannotPaintBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="Open in Graphics…" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
+                  HorizontalAlignment="Stretch" ToolTip.Tip="{Binding HandOverWhat}"/>
 
           <Separator Margin="0,4"/>
 
           <TextBlock Text="Sample" FontWeight="SemiBold"/>
           <TextBlock Classes="hint"
                      Text="Only for the preview. Nothing here is written to the ROM; it is so you can see whether an edited bar still fits a long name or a full bar."/>
+          <TextBlock Text="How many Pokemon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"
+                    IsVisible="{Binding GaugeTextIsReal}">
+            <ComboBoxItem>One, a single battle</ComboBoxItem>
+            <ComboBoxItem>Two, a double battle</ComboBoxItem>
+          </ComboBox>
+
+          <CheckBox Content="Show the numbers instead of the bar"
+                    IsChecked="{Binding NumbersInsteadOfBar}" IsVisible="{Binding IsDoubles}"/>
+
           <TextBlock Text="Pokemon name" Classes="hint"/>
           <TextBox Text="{Binding SampleName}"/>
           <TextBlock Text="Level" Classes="hint"/>
           <NumericUpDown Value="{Binding SampleLevel}" Minimum="1" Maximum="100" FormatString="0"/>
+
+          <TextBlock Text="Gender" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <ComboBox SelectedIndex="{Binding GenderChoice}" HorizontalAlignment="Stretch"
+                    IsVisible="{Binding GaugeTextIsReal}">
+            <ComboBoxItem>Female</ComboBoxItem>
+            <ComboBoxItem>Male</ComboBoxItem>
+            <ComboBoxItem>No gender</ComboBoxItem>
+          </ComboBox>
+
+          <TextBlock Text="What is wrong with it" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <ComboBox SelectedIndex="{Binding StatusChoice}" HorizontalAlignment="Stretch"
+                    IsVisible="{Binding GaugeTextIsReal}">
+            <ComboBoxItem>Nothing</ComboBoxItem>
+            <ComboBoxItem>Paralysed</ComboBoxItem>
+            <ComboBoxItem>Frozen</ComboBoxItem>
+            <ComboBoxItem>Asleep</ComboBoxItem>
+            <ComboBoxItem>Poisoned</ComboBoxItem>
+            <ComboBoxItem>Burned</ComboBoxItem>
+          </ComboBox>
+
+          <TextBlock Text="{Binding GaugeTextNote}" Classes="hint" TextWrapping="Wrap"
+                     IsVisible="{Binding HasGaugeTextNote}"/>
           <TextBlock Text="Health left" Classes="hint"/>
           <Slider Value="{Binding HpLeft}" Minimum="0" Maximum="1" TickFrequency="0.05"/>
           <TextBlock Text="Message" Classes="hint"/>
@@ -133,16 +167,24 @@
                  the piece rather than pushing it off toward the middle. -->
             <Canvas IsHitTestVisible="False" RenderTransformOrigin="0,0">
               <Canvas.RenderTransform><ScaleTransform ScaleX="2" ScaleY="2"/></Canvas.RenderTransform>
-              <!-- The sample, at the places measured off real battles. Their side reads at the top
-                   left, yours at the middle right, and the message fills the box along the bottom. -->
-              <views:RomTextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding SampleName}"/>
-              <views:RomTextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding SampleLevelText}"/>
+              <!-- The name, level, gender and status are written into each bar's own picture now,
+                   the way a battle writes them, so nothing is drawn over the screens here. Diamond
+                   and Pearl, whose letters cannot be read, keep the old written sample. -->
+              <views:RomTextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding SampleName}"
+                                  IsVisible="{Binding !GaugeTextIsReal}"/>
+              <views:RomTextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding SampleLevelText}"
+                                  IsVisible="{Binding !GaugeTextIsReal}"/>
+              <views:RomTextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding SampleName}"
+                                  IsVisible="{Binding !GaugeTextIsReal}"/>
+              <views:RomTextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding SampleLevelText}"
+                                  IsVisible="{Binding !GaugeTextIsReal}"/>
+
+              <!-- How much health is left. The bar itself is part of the picture; only its green
+                   fill moves, and these two places are the single battle's bars. -->
               <Rectangle Canvas.Left="50" Canvas.Top="42" Height="4" Fill="#38C838"
-                         Width="{Binding HpBarWidth}"/>
-              <views:RomTextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding SampleName}"/>
-              <views:RomTextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding SampleLevelText}"/>
+                         Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
               <Rectangle Canvas.Left="200" Canvas.Top="118" Height="4" Fill="#38C838"
-                         Width="{Binding HpBarWidth}"/>
+                         Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
               <views:RomTextBlock Canvas.Left="16"  Canvas.Top="152" Text="{Binding SampleMessage}"/>
 
               <Rectangle IsVisible="{Binding HighlightOnTop}"
