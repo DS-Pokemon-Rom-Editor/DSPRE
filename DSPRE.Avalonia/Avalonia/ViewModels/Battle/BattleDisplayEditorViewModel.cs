@@ -450,8 +450,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int ActFrontH(bool f) => (_formMode && _hasFormHeights) ? _formFrontH : (f ? _frontHeightF : _frontHeightM);
         private int ActBackH(bool f) => (_formMode && _hasFormHeights) ? _formBackH : (f ? _backHeightF : _backHeightM);
 
-        // Base 11, not the 10 the engine source implies: measured against real battles.
-        private double FrontTopFor(int h) => 11 - _spriteY + (HeightsActive ? h : 0);
+        // Base 10, which is what the engine works out: appear Y 50 less half the 80px sprite.
+        // A measurement against a screenshot once put this at 11; testers on real battles say 10.
+        private double FrontTopFor(int h) => 10 - _spriteY + (HeightsActive ? h : 0);
         private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
 
         public double EnemyLeft => 152;
