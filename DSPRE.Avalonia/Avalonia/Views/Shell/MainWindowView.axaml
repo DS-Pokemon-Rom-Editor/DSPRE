@@ -82,6 +82,9 @@
         <MenuItem Header="Text Editor…" Click="TextEditor_Click"/>
         <MenuItem Header="Script Editor…" Click="ScriptEditor_Click"/>
         <MenuItem Header="Level Script Editor…" Click="LevelScriptEditor_Click"/>
+        <Separator/>
+        <MenuItem Header="Font Editor…" Click="FontEditor_Click" IsEnabled="{Binding Beta[FontEditorView]}"
+                  ToolTip.Tip="The letters this ROM writes with, and what a sentence looks like in them"/>
       </MenuItem>
 
       <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -124,8 +127,6 @@
         <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"/>
         <MenuItem Header="Research Helper…" Click="ResearchHelper_Click"/>
         <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click"/>
-        <MenuItem Header="Font Editor…" Click="FontEditor_Click" IsEnabled="{Binding Beta[FontEditorView]}"
-                  ToolTip.Tip="The letters this ROM writes with, and what a sentence looks like in them"/>
         <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding Beta[ProjectChecksView]}"
                   ToolTip.Tip="Scan headers for broken references, and look up which headers use a matrix/event/script/…"/>
         <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
