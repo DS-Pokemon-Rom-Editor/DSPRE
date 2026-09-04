@@ -18,6 +18,7 @@ namespace DSPRE.ROMFiles
         {
             public string Name;
             public byte[] Alpha;      // one value per frame, 0-31
+            public ushort[] Diffuse;  // one packed colour per frame, five bits a channel
         }
 
         private readonly List<Track> _tracks = new List<Track>();
@@ -28,6 +29,25 @@ namespace DSPRE.ROMFiles
 
         /// <summary>True when at least one material actually fades rather than sitting at one value.</summary>
         public bool Fades => _tracks.Any(t => t.Alpha != null && t.Alpha.Distinct().Count() > 1);
+
+        /// <summary>True when at least one material changes colour rather than only fading.</summary>
+        public bool Colours => _tracks.Any(t => t.Diffuse != null && t.Diffuse.Distinct().Count() > 1);
+
+        /// <summary>
+        /// A material's colour on a frame, as three values from zero to one, or null when this animation
+        /// leaves its colour alone. The file keeps five bits a channel, lowest bits red.
+        /// </summary>
+        public (float r, float g, float b)? ColourAt(int material, int frame)
+        {
+            if (material < 0 || material >= _tracks.Count) return null;
+            var track = _tracks[material].Diffuse;
+            if (track == null || track.Length == 0) return null;
+            int c = track[Math.Clamp(frame, 0, track.Length - 1)];
+            return ((c & 0x1F) / 31f, ((c >> 5) & 0x1F) / 31f, ((c >> 10) & 0x1F) / 31f);
+        }
+
+        public (float r, float g, float b)? ColourAt(string materialName, int frame) =>
+            ColourAt(IndexOf(materialName), frame);
 
         /// <summary>Reads one, or null when the file is some other kind of animation.</summary>
         public static MaterialColourAnimation Load(byte[] d)
@@ -102,8 +122,38 @@ namespace DSPRE.ROMFiles
                 string name = Encoding.ASCII.GetString(d, namesAt + i * 16, 16).Split('\0')[0].Trim();
                 if (name.Length == 0) continue;
 
-                into._tracks.Add(new Track { Name = name, Alpha = ReadAlpha(d, chunk, rec, frames) });
+                into._tracks.Add(new Track
+                {
+                    Name = name,
+                    Alpha = ReadAlpha(d, chunk, rec, frames),
+                    Diffuse = ReadDiffuse(d, chunk, rec, frames),
+                });
             }
+        }
+
+        // The five channels are twenty bytes of the record, diffuse first. Each is a word: the value or
+        // an offset in its low half, how many frames in the next byte, and flags in the top byte, where
+        // 0x20 means the value is the colour itself rather than somewhere to read it from.
+        private const int DiffuseOffset = 0;
+        private const int ConstantFlag = 0x20;
+
+        /// <summary>The colour track for one material, or null when it holds one colour throughout.</summary>
+        private static ushort[] ReadDiffuse(byte[] d, int chunk, int record, int frames)
+        {
+            if (record + DiffuseOffset + 4 > d.Length) return null;
+            uint channel = BitConverter.ToUInt32(d, record + DiffuseOffset);
+            int value = (int)(channel & 0xFFFF);
+            int flags = (int)((channel >> 24) & 0xFF);
+
+            // One colour for the whole animation is not worth a track; it changes nothing over time.
+            if ((flags & ConstantFlag) != 0) return null;
+
+            int start = chunk + value;
+            if (start < 0 || start + frames * 2 > d.Length) return null;
+
+            var track = new ushort[frames];
+            for (int f = 0; f < frames; f++) track[f] = BitConverter.ToUInt16(d, start + f * 2);
+            return track;
         }
 
         /// <summary>The see-through track for one material, or null when it never changes.</summary>
