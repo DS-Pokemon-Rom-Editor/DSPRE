@@ -39,7 +39,11 @@
         <ListBox ItemsSource="{Binding TextureNames}" SelectedIndex="{Binding TextureIndex}"/>
       </DockPanel>
       <DockPanel Grid.Column="2" Margin="0,0,4,0">
-        <TextBlock DockPanel.Dock="Top" Text="Palettes" FontWeight="Bold" Margin="0,0,0,2"/>
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+          <TextBlock Text="Palettes" FontWeight="Bold"/>
+          <TextBlock Text="Suggested from names; you can override it." FontSize="10"
+                     Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+        </StackPanel>
         <ListBox ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
       </DockPanel>
       <Border Grid.Column="3" Background="#2A2A2E" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
