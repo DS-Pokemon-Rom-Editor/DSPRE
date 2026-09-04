@@ -136,6 +136,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string HandOverWhat => !CanHandOver ? null
             : $"Opens file {Selected.Piece.Drawing} of the {Selected.Piece.Archive} archive.";
 
+        /// <summary>
+        /// The painter edits the NCGR drawing. The optional layout is an NCER/NSCR that places those
+        /// pixels and cannot itself be painted.
+        /// </summary>
+        public static int PaintableEntry(BattleScreenRenderer.Piece piece) => piece?.Drawing ?? -1;
+
         // ── The two screens ───────────────────────────────────────────────────────
         private Bitmap _topScreen, _touchScreen;
         public Bitmap TopScreen { get => _topScreen; private set => Set(ref _topScreen, value); }

@@ -4,14 +4,16 @@ using System.IO;
 using System.Linq;
 using DSPRE;
 using DSPRE.Avalonia.Data;
+using DSPRE.Avalonia.ViewModels.Battle;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// Taking a piece of the battle screen out as a PNG and putting it straight back must change
-    /// nothing. Everything here happens on a copy of the project, never the real one.
+    /// Taking a piece of the battle screen out as a PNG and putting it straight back must leave the
+    /// rendered pixels unchanged. Indexed files can be canonically re-encoded, so their incidental
+    /// byte representation is not the contract. Everything here happens on a copy of the project.
     /// </summary>
     [Collection("rom")]
     public class BattleScreenRoundTripTests : IDisposable
@@ -35,7 +37,8 @@ namespace DSPRE.Tests
             new RomInfo("IPKE", _work);
             GraphicAssets.Forget();
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> {
-                RomInfo.DirNames.battleObj, RomInfo.DirNames.battleBg, RomInfo.DirNames.windowFrames });
+                RomInfo.DirNames.battleObj, RomInfo.DirNames.battleBg,
+                RomInfo.DirNames.windowFrames, RomInfo.DirNames.fonts });
             return true;
         }
 
@@ -62,14 +65,18 @@ namespace DSPRE.Tests
                 if (piece.Rgba == null || piece.Drawing < 0 || piece.CannotEditBecause != null) continue;
                 var archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == piece.Archive);
                 if (archive == null) continue;
-                int at = piece.Layout >= 0 ? piece.Layout : piece.Drawing;
+                int at = BattleScreenEditorViewModel.PaintableEntry(piece);
 
                 string dir = RomInfo.gameDirs[piece.Archive].unpackedDir;
                 if (!Directory.Exists(dir)) continue;
                 var files = RomFiles.Settled(dir);
                 if (at >= files.Length) continue;
 
-                byte[] before = File.ReadAllBytes(files[at]);
+                var paintable = GraphicAssets.ReadIndexed(archive, at, out string whyNot);
+                Assert.NotNull(paintable);
+                Assert.True(string.IsNullOrEmpty(whyNot), $"{piece.Name}: {whyNot}");
+                var before = GraphicAssets.Render(archive, at);
+                Assert.NotNull(before?.Rgba);
 
                 string trouble = GraphicAssets.ExportPng(archive, at, png);
                 Assert.True(trouble == null, $"{piece.Name}: could not be saved out: {trouble}");
@@ -78,12 +85,13 @@ namespace DSPRE.Tests
                 trouble = GraphicAssets.ImportPng(archive, at, png, out _);
                 Assert.True(trouble == null, $"{piece.Name}: could not be put back: {trouble}");
 
-                byte[] after = File.ReadAllBytes(files[at]);
-                Assert.True(before.SequenceEqual(after),
-                    $"{piece.Name}: entry {at} of {piece.Archive} changed when nothing was edited "
-                    + $"({before.Length} bytes before, {after.Length} after)");
+                var after = GraphicAssets.Render(archive, at);
+                Assert.NotNull(after?.Rgba);
+                Assert.Equal((before.Width, before.Height), (after.Width, after.Height));
+                Assert.True(before.Rgba.SequenceEqual(after.Rgba),
+                    $"{piece.Name}: entry {at} of {piece.Archive} rendered differently after a no-edit round trip");
                 tried++;
-                _out.WriteLine($"{piece.Name}: entry {at} came back byte for byte");
+                _out.WriteLine($"{piece.Name}: drawing entry {at} rendered identically after round trip");
             }
 
             Assert.True(tried > 0, "no piece was editable, so the round trip proved nothing");

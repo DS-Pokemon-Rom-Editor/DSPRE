@@ -837,13 +837,17 @@ namespace DSPRE.Avalonia
             }
         }
 
-        public static void OpenBattleScreenEditor()
+        public static void OpenBattleScreenEditor() => _ = OpenBattleScreenEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenBattleScreenEditorAsync()
         {
+            if (!IsRomLoaded) return;
+
             // Diamond and Pearl lay the battle screen out differently enough that this editor cannot
             // read it, and it was failing to open at all rather than saying so.
             if (DSPRE.RomInfo.gameFamily == DSPRE.RomInfo.GameFamilies.DP)
             {
-                _ = DialogHelper.ShowInfo(
+                await DialogHelper.ShowInfo(
                     "The battle screen is only read on Platinum, HeartGold and SoulSilver so far. "
                   + "Diamond and Pearl keep its pieces elsewhere.", "Battle screen");
                 return;
@@ -851,13 +855,16 @@ namespace DSPRE.Avalonia
 
             try
             {
+                await RunBusyAsync("Opening Battle Screen…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> {
+                        DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }));
                 new Views.Battle.BattleScreenEditorView().ShowManaged();
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenBattleScreenEditor failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The battle screen could not be opened. Open a ROM first.",
-                                          "Battle screen");
+                await DialogHelper.ShowInfo("The battle screen could not be opened. " + ex.Message,
+                                            "Battle screen");
             }
         }
 
