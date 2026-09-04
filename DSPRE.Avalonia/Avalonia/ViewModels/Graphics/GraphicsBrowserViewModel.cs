@@ -47,7 +47,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             /// <summary>Usually the row's own archive, but a model's pictures and movement live elsewhere.</summary>
             public GraphicAssets.Archive Archive { get; init; }
             public string Name { get; init; }
-            public string Label => Name;
+            /// <summary>What this file is, so the list can open on a picture rather than a palette.</summary>
+            public GraphicAssets.Kind Kind { get; init; }
+
+            /// <summary>
+            /// What to call this part. The plain words on their own said what a file is for rather than
+            /// what it is, and "As it appears" told nobody they were looking at a cell layout. A part
+            /// with a name of its own, like "Back, female", keeps it.
+            /// </summary>
+            public string Label => Name switch
+            {
+                "Colours" => "Colours (NCLR)",
+                "Drawing" => "Picture (NCGR)",
+                "Arrangement" => "Tile map (NSCR)",
+                "As it appears" => "Cell layout (NCER)",
+                "Animation" => "Cell animation (NANR)",
+                "Second picture" => "Second picture (NCGR)",
+                _ => Name,
+            };
         }
 
         /// <summary>One tab: a kind of graphic, and how many of them this game has.</summary>
@@ -232,13 +249,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Parts.Clear();
             if (_selected?.Unit != null && _selected.Unit.Parts.Count > 1)
                 foreach (var up in _selected.Unit.Parts)
-                    Parts.Add(new Part { Index = up.Index, Archive = up.Archive, Name = up.Name });
+                    Parts.Add(new Part { Index = up.Index, Archive = up.Archive, Name = up.Name, Kind = up.Kind });
 
             _partIndex = -1;
             OnPropertyChanged(nameof(PartIndex));
-            _partIndex = Parts.Count > 0 ? 0 : -1;
+            // Open on something you can look at. The colours come first in the file for a lot of these,
+            // so picking a Pokemon used to show a row of swatches rather than the Pokemon.
+            _partIndex = Parts.Count > 0 ? Math.Max(0, FirstWorthShowing()) : -1;
             OnPropertyChanged(nameof(PartIndex));
             OnPropertyChanged(nameof(HasParts));
+        }
+
+        /// <summary>
+        /// The first part that is a picture rather than the colours it is painted with, or the first of
+        /// anything when this unit holds no picture at all.
+        /// </summary>
+        private int FirstWorthShowing()
+        {
+            for (int i = 0; i < Parts.Count; i++)
+                if (Parts[i].Kind != GraphicAssets.Kind.Palette) return i;
+            return 0;
         }
 
         private int _partIndex = -1;

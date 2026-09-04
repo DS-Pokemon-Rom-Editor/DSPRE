@@ -83,7 +83,7 @@ namespace DSPRE.Tests
             Assert.True(looked >= 12, $"{game}: only {looked} archives were read");
 
             // The ones already settled must stay settled. Each of these was a real fault once.
-            foreach (string must in new[] { "Pokemon battle sprites", "Item icons", "Battle furniture",
+            foreach (string must in new[] { "Pokemon battle sprites", "Item icons", "Battle objects",
                                             "Text box frames" })
                 Assert.Contains(told, t => t.StartsWith(must, StringComparison.Ordinal));
         }

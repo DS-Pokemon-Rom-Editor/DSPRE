@@ -66,6 +66,13 @@ namespace DSPRE.Avalonia.Data
             public int LeadIn;                  // files before the run of things starts
             public int Stride;                  // how many files make one thing; 0 means one each
             public string[] PartNames;          // what each of those files is, in order
+
+            /// <summary>
+            /// How many files a thing takes, when that differs by game. Diamond and Pearl keep two files
+            /// a trainer class where Platinum keeps five, so a fixed number groups theirs wrongly.
+            /// </summary>
+            public Func<int> StrideNow;
+            public Func<string[]> PartNamesNow;
             public string LeadInName;           // what the files before the run are, together
 
             /// <summary>For archives whose things cannot be described by a plain run: builds them itself.</summary>
@@ -88,6 +95,25 @@ namespace DSPRE.Avalonia.Data
             public Archive Archive;             // usually the unit's own, but not always
             public int Index;
             public string Name;
+
+            private Kind? _kind;
+            /// <summary>
+            /// What this file is. Worked out from the file itself the first time it is asked for, because
+            /// parts are built in half a dozen places and only the selected row ever needs it.
+            /// </summary>
+            public Kind Kind
+            {
+                get
+                {
+                    if (_kind == null)
+                    {
+                        try { _kind = Identify(new ScriptNarc(Archive.Dir).Get(Index)); }
+                        catch { _kind = Kind.Unknown; }
+                    }
+                    return _kind.Value;
+                }
+                set => _kind = value;
+            }
         }
 
         /// <summary>One thing in an archive, which is usually several files. </summary>
@@ -139,7 +165,12 @@ namespace DSPRE.Avalonia.Data
             var units = new List<Unit>();
             if (fileCount <= 0) return units;
 
-            int stride = a.Stride > 0 ? a.Stride : 1;
+            int stride = 0;
+            try { stride = a.StrideNow?.Invoke() ?? 0; } catch { }
+            if (stride <= 0) stride = a.Stride > 0 ? a.Stride : 1;
+
+            string[] partNames = a.PartNames;
+            try { partNames = a.PartNamesNow?.Invoke() ?? a.PartNames; } catch { }
             int at = 0;
 
             if (a.LeadIn > 0)
@@ -162,8 +193,8 @@ namespace DSPRE.Avalonia.Data
                     u.Parts.Add(new UnitPart
                     {
                         Archive = a, Index = at + k,
-                        Name = a.PartNames != null && k < a.PartNames.Length
-                            ? a.PartNames[k] : "File " + (at + k),
+                        Name = partNames != null && k < partNames.Length
+                            ? partNames[k] : "File " + (at + k),
                     });
                 u.Parts.Sort((x, y) => PartRank(x.Name).CompareTo(PartRank(y.Name)));
                 units.Add(u);
@@ -342,7 +373,11 @@ namespace DSPRE.Avalonia.Data
                 What = "Every trainer class as it appears when a battle starts.",
                 DeepEditor = "Trainer Sprite Editor",
                 Stride = 5,
-                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Extra" },
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
+                StrideNow = () => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 2 : 5,
+                PartNamesNow = () => RomInfo.gameFamily == RomInfo.GameFamilies.DP
+                    ? new[] { "Drawing", "Colours" }
+                    : new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
                 // Five files a class, and which is which is not a guess: TrainerClassSpriteRenderer reads
                 // the drawing at 5n, the colours at 5n+1, the layout at 5n+2 and the animation at 5n+3.
                 ColourEntry = i => (i / 5) * 5 + 1,
@@ -360,7 +395,7 @@ namespace DSPRE.Avalonia.Data
                 ArrangementEntry = GraphicUnits.BackdropArrangement,
                 NameOf = GraphicUnits.BackdropName,
                 BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.battleBg), n) },
-            new Archive { Dir = DirNames.battleObj, Title = "Battle furniture", In = Group.BattleScenery,
+            new Archive { Dir = DirNames.battleObj, Title = "Battle objects", In = Group.BattleScenery,
                 What = "The ground the Pokemon stand on, the HP bars, the name boxes and the rest of the "
                      + "battle screen.",
                 ColourEntry = BattleObjects.ColoursFor,
