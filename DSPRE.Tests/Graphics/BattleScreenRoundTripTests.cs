@@ -45,10 +45,10 @@ namespace DSPRE.Tests
                 try { Directory.Delete(_work, true); } catch { }
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryPieceTheEditorOffersToEditGoesOutAndBackUnchanged()
         {
-            if (!OpenACopy()) { _out.WriteLine("HeartGold is not unpacked here"); return; }
+            Skip.If(!OpenACopy(), "HeartGold is not unpacked here");
 
             var pieces = new BattleScreenRenderer().Build(new BattleScreenRenderer.Options { TerrainId = 2 });
             Assert.NotEmpty(pieces);

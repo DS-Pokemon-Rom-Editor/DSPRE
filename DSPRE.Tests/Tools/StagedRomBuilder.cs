@@ -45,11 +45,11 @@ namespace DSPRE.Tests
                 File.Copy(f, f.Replace(from, to), overwrite: true);
         }
 
-        [Fact]
+        [SkippableFact]
         public void BuildTheRomsNamedInTheEnvironment()
         {
             string list = Environment.GetEnvironmentVariable("DSPRE_STAGE_MOVES");
-            if (string.IsNullOrWhiteSpace(list)) { _out.WriteLine("DSPRE_STAGE_MOVES not set; nothing to build"); return; }
+            Skip.If(string.IsNullOrWhiteSpace(list), "DSPRE_STAGE_MOVES not set; nothing to build");
 
             var moves = list.Split(',', StringSplitOptions.RemoveEmptyEntries)
                             .Select(x => int.Parse(x.Trim())).ToList();

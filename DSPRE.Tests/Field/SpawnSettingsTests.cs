@@ -53,11 +53,11 @@ namespace DSPRE.Tests
         }
 
         /// <summary>HeartGold's own numbers, read straight out of the files rather than through RomInfo.</summary>
-        [Fact]
+        [SkippableFact]
         public void HeartGoldStartsInNewBarkTownWithThreeThousand()
         {
             string folder = TestRoms.HeartGold;
-            if (!Directory.Exists(folder)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(folder), "HeartGold not unpacked here");
             new RomInfo("IPKE", folder);
 
             byte[] arm9 = File.ReadAllBytes(Path.Combine(folder, "arm9", "arm9.bin"));

@@ -108,10 +108,10 @@ namespace DSPRE.Tests
 
         /// <summary>The names are worth having: they differ from each other and are not the archive title
         /// repeated. A reader returning one constant would satisfy every check above.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheNamesAreRealAndDistinct()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
 
             var a = ModelAssets.All.First(x => x.Title == "Buildings, outside");

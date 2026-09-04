@@ -186,10 +186,10 @@ namespace DSPRE.Tests
     {
         private static readonly string RomSdatPath = TestRoms.HeartGold + @"\files\data\sound\gs_sound_data.sdat";
 
-        [Fact]
+        [SkippableFact]
         public void RenderEverySoundEffect_NoExceptions()
         {
-            if (!File.Exists(RomSdatPath)) return;   // no local ROM asset, nothing to smoke-test here
+            Skip.If(!File.Exists(RomSdatPath), "the extracted game project these tests read is not on this machine");
 
             var sdat = SdatArchive.Parse(File.ReadAllBytes(RomSdatPath));
             int total = 0, exceptions = 0;
@@ -210,10 +210,10 @@ namespace DSPRE.Tests
         // HGSS (shared Nitro SDK), this guards that the parser/renderer generalize, not just fit one ROM's data.
         private static readonly string PlatRomSdatPath = TestRoms.Platinum + @"\files\data\sound\pl_sound_data.sdat";
 
-        [Fact]
+        [SkippableFact]
         public void RenderEverySoundEffect_Platinum_NoExceptions()
         {
-            if (!File.Exists(PlatRomSdatPath)) return;
+            Skip.If(!File.Exists(PlatRomSdatPath), "the extracted game project these tests read is not on this machine");
 
             var sdat = SdatArchive.Parse(File.ReadAllBytes(PlatRomSdatPath));
             int total = 0, exceptions = 0;
@@ -234,10 +234,10 @@ namespace DSPRE.Tests
         // replaced it with its own.
         private static readonly string DpRomSdatPath = TestRoms.Diamond + @"\files\data\sound\sound_data.sdat";
 
-        [Fact]
+        [SkippableFact]
         public void RenderEverySoundEffect_Diamond_NoExceptions()
         {
-            if (!File.Exists(DpRomSdatPath)) return;
+            Skip.If(!File.Exists(DpRomSdatPath), "the extracted game project these tests read is not on this machine");
 
             var sdat = SdatArchive.Parse(File.ReadAllBytes(DpRomSdatPath));
             int total = 0, exceptions = 0;

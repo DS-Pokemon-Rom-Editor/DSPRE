@@ -32,11 +32,11 @@ namespace DSPRE.Tests
         private static int ADrawnLetter(FontEditorViewModel vm) =>
             vm.Glyphs.First(g => g.HasPicture).Index;
 
-        [Fact]
+        [SkippableFact]
         public void PaintingCanBeTakenBackAndPutAgain()
         {
             var vm = Open();
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
             if (vm.Glyphs.Count == 0) { Assert.Fail("no font was loaded, so this proved nothing"); }
 
             vm.SelectedGlyphIndex = ADrawnLetter(vm);
@@ -60,11 +60,11 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Changing how wide a letter is can be taken back too, not only the painting.</summary>
-        [Fact]
+        [SkippableFact]
         public void ChangingHowWideALetterIsCanBeTakenBack()
         {
             var vm = Open();
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
 
             vm.SelectedGlyphIndex = ADrawnLetter(vm);
             int was = vm.GlyphWidth;
@@ -81,11 +81,11 @@ namespace DSPRE.Tests
         /// a shade being written as one grey and read back as another, which would quietly change every
         /// pixel of a font somebody edited in a paint program.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void ALetterGoesOutToAPictureAndComesBackTheSame()
         {
             var vm = Open();
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
 
             vm.SelectedGlyphIndex = ADrawnLetter(vm);
             int cell = DSPRE.ROMFiles.FieldFont.CellSize;
@@ -121,11 +121,11 @@ namespace DSPRE.Tests
         }
 
         /// <summary>The whole font goes out and comes back, every letter of it, not just the one on show.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheWholeFontGoesOutAndComesBackTheSame()
         {
             var vm = Open();
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
 
             int cell = DSPRE.ROMFiles.FieldFont.CellSize;
             int letters = vm.Font.GlyphCount;

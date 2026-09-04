@@ -114,11 +114,10 @@ namespace DSPRE.Tests
         /// has to differ from every other, which a misread does not manage: reading them a tile and a
         /// half early gave ten pictures that were each half of two numerals, and several came out alike.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheTenDigitsAreTenDifferentPictures()
         {
-            if (!Directory.Exists(TestRoms.Platinum))
-            { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(TestRoms.Platinum), "Platinum not unpacked here");
 
             SettingsManager.Load();
             new RomInfo("CPUE", TestRoms.Platinum);

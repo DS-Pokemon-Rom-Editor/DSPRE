@@ -38,14 +38,13 @@ namespace DSPRE.Tests
 
         /// <summary>Writes out what the marked project holds, so the paint can be looked at away from the
         /// emulator before blaming the game for not showing it.</summary>
-        [Fact]
+        [SkippableFact]
         public void ShowTheMarkedStyles()
         {
-            if (Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1")
-            { _out.WriteLine("DSPRE_PAINT_ROM not set"); return; }
+            Skip.If(Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1", "DSPRE_PAINT_ROM not set");
 
             string work = Path.Combine(Scratch, "plat_textbox");
-            if (!Directory.Exists(work)) { _out.WriteLine("nothing built yet"); return; }
+            Skip.If(!Directory.Exists(work), "nothing built yet");
 
             foreach (var (root, tag) in new[] { (work, "marked"), (Source, "original") })
             {
@@ -61,14 +60,10 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void BuildARomWithEveryTextBoxStyleMarked()
         {
-            if (Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1")
-            {
-                _out.WriteLine("DSPRE_PAINT_ROM not set; nothing built");
-                return;
-            }
+            Skip.If(Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1", "DSPRE_PAINT_ROM not set; nothing built");
             Assert.True(Directory.Exists(Source), "the Platinum project is not there, so nothing was built");
 
             string work = Path.Combine(Scratch, "plat_textbox");

@@ -95,10 +95,10 @@ namespace DSPRE.Tests
 
         /// <summary>The check above proves able to fail: an archive whose grouping drops a file has to be
         /// caught. Without this, "every file belongs somewhere" could be true because nothing groups.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheCheckCatchesAThingThatDropsAFile()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
             GraphicAssets.Forget();
 
@@ -180,10 +180,10 @@ namespace DSPRE.Tests
 
         /// <summary>The hand-off check can fail: asking for a file one along has to land somewhere else,
         /// or "it landed on it" would be true however the jump behaved.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheHandOffCheckNoticesTheWrongFile()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
             GraphicAssets.Forget();
 
@@ -247,10 +247,10 @@ namespace DSPRE.Tests
 
         /// <summary>The check above proves able to fail: a name the list does not contain must not be
         /// found, or "the HP bar is there" would be true of any list at all.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheBattleNameCheckWouldNotFindSomethingAbsent()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
             GraphicAssets.Forget();
 
@@ -330,11 +330,10 @@ namespace DSPRE.Tests
         /// The check above proves able to fail: the two families must not agree on which drawing is the
         /// plain ball, because they genuinely do not, and a naming that ignored the table would.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheTwoFamiliesDisagreeAboutWhichDrawingIsThePlainBall()
         {
-            if (!Directory.Exists(Platinum) || !Directory.Exists(HeartGold))
-            { _out.WriteLine("need both games unpacked"); return; }
+            Skip.If(!Directory.Exists(Platinum) || !Directory.Exists(HeartGold), "need both games unpacked");
 
             int DrawingOfPlainBall(string code, string path)
             {
@@ -360,10 +359,10 @@ namespace DSPRE.Tests
         /// <summary>
         /// Two locations sharing one splash screen must be one row naming both, not two rows.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void SplashScreensSharedByTwoPlacesAreOneRow()
         {
-            if (!Directory.Exists(HeartGold)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
 
             var rows = DSPRE.Avalonia.Data.DungeonCutinTable.Read();

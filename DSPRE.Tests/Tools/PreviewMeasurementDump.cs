@@ -71,11 +71,11 @@ namespace DSPRE.Tests
             return (frames, kind, Math.Max(darkest, brightest), flashAt, movedAt, furthest, mostParticles, mostActors);
         }
 
-        [Fact]
+        [SkippableFact]
         public void DumpTheMovesNamedInTheEnvironment()
         {
             string list = Environment.GetEnvironmentVariable("DSPRE_PREVIEW_MOVES");
-            if (string.IsNullOrWhiteSpace(list)) { _out.WriteLine("DSPRE_PREVIEW_MOVES not set; nothing to do"); return; }
+            Skip.If(string.IsNullOrWhiteSpace(list), "DSPRE_PREVIEW_MOVES not set; nothing to do");
 
             var moves = list.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x.Trim())).ToList();
             Assert.True(Directory.Exists(Platinum), "the Platinum project is not there");

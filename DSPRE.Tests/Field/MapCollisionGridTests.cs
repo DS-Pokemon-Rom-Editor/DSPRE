@@ -64,11 +64,11 @@ namespace DSPRE.Tests
             Assert.False(grid.IsEmpty);
         }
 
-        [Fact]
+        [SkippableFact]
         public void RealMapsHaveBothWalkableAndBlockedTiles()
         {
             string Maps = TestRoms.HeartGold + @"\unpacked\maps";
-            if (!Directory.Exists(Maps)) return;
+            Skip.If(!Directory.Exists(Maps), "the extracted game project these tests read is not on this machine");
 
             int checkedMaps = 0, withBlocked = 0, withOpen = 0;
             foreach (var f in Directory.GetFiles(Maps).OrderBy(x => x).Take(40))

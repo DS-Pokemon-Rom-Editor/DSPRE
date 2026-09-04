@@ -19,10 +19,10 @@ namespace DSPRE.Tests
             return File.Exists(p) ? TexturePatternAnimation.Load(File.ReadAllBytes(p)) : null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheLiftDoorRunsThroughItsFrames()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Animation 200 opens a lift door: one material stepping through six pictures.
             var anim = Load(200);
@@ -38,25 +38,26 @@ namespace DSPRE.Tests
             Assert.All(seen, n => Assert.StartsWith("ele_door", n));
         }
 
-        [Fact]
+        [SkippableFact]
         public void ClosingRunsTheOppositeWayToOpening()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var opening = Load(200);
             var closing = Load(201);
-            if (opening == null || closing == null) return;
+            Assert.NotNull(opening);
+            Assert.NotNull(closing);
 
             string[] a = opening.AllSwaps(opening.IndexOf("ele_door1_op")).Select(s => s.TextureName).ToArray();
             string[] b = closing.AllSwaps(closing.IndexOf("ele_door1_cl")).Select(s => s.TextureName).ToArray();
             Assert.Equal(a, b.Reverse());
         }
 
-        [Fact]
+        [SkippableFact]
         public void PlaybackHoldsTheLastKeyFrameAndLoops()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(200);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             int m = anim.IndexOf("ele_door1_op");
 
             // A frame between two key frames keeps showing the earlier one.
@@ -66,22 +67,22 @@ namespace DSPRE.Tests
                          anim.Evaluate(m, 3 + anim.FrameCount).TextureName);
         }
 
-        [Fact]
+        [SkippableFact]
         public void AMaterialItDoesNotTouchComesBackEmpty()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(200);
-            if (anim == null) return;
+            Assert.NotNull(anim);
 
             Assert.Equal(-1, anim.IndexOf("no_such_material"));
             Assert.False(anim.Evaluate("no_such_material", 0).IsSet);
             Assert.True(anim.IsStatic(-1));
         }
 
-        [Fact]
+        [SkippableFact]
         public void OtherKindsOfAnimationAreNotReadAsSwaps()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int patterns = 0, others = 0;
             foreach (var f in Directory.GetFiles(AnimDir))

@@ -74,11 +74,11 @@ namespace DSPRE.Tests
         }
 
         /// <summary>A changed pixel and a changed width both survive the trip, and nothing else moves.</summary>
-        [Fact]
+        [SkippableFact]
         public void AnEditedLetterComesBackChangedAndTheRestDoesNot()
         {
             string folder = TestRoms.HeartGold;
-            if (!Directory.Exists(folder)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(folder), "HeartGold not unpacked here");
             new RomInfo("IPKE", folder);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.fonts });
 

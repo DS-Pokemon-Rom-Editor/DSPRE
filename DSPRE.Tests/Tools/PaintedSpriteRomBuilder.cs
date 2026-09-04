@@ -39,14 +39,13 @@ namespace DSPRE.Tests
 
         /// <summary>Writes out what the painted project holds, so the edit can be looked at away from the
         /// emulator, and says which species the entry belongs to.</summary>
-        [Fact]
+        [SkippableFact]
         public void ShowWhatWasPainted()
         {
-            if (Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1")
-            { _out.WriteLine("DSPRE_PAINT_ROM not set"); return; }
+            Skip.If(Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1", "DSPRE_PAINT_ROM not set");
 
             string work = Path.Combine(Scratch, "plat_painted");
-            if (!Directory.Exists(work)) { _out.WriteLine("nothing built yet"); return; }
+            Skip.If(!Directory.Exists(work), "nothing built yet");
             new RomInfo("CPUE", work);
             GraphicAssets.Forget();
 
@@ -74,14 +73,10 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void BuildARomWithAPaintedBattleSprite()
         {
-            if (Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1")
-            {
-                _out.WriteLine("DSPRE_PAINT_ROM not set; nothing built");
-                return;
-            }
+            Skip.If(Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1", "DSPRE_PAINT_ROM not set; nothing built");
             Assert.True(Directory.Exists(Source), "the Platinum project is not there, so nothing was built");
 
             string work = Path.Combine(Scratch, "plat_painted");

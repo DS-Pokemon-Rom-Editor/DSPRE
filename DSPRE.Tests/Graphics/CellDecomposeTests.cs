@@ -47,10 +47,10 @@ namespace DSPRE.Tests
             return found;
         }
 
-        [Fact]
+        [SkippableFact]
         public void PuttingAPictureBackUnchangedLeavesTheDrawingAlone()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Battle();
             var layouts = Layouts(a, 40);
             Assert.True(layouts.Count >= 10, $"only {layouts.Count} layouts found, the sweep would prove little");
@@ -107,10 +107,10 @@ namespace DSPRE.Tests
         /// The check above proves able to fail: painting really does change the picture, and only where it
         /// was painted.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void PaintingOnThePictureChangesExactlyWhatWasPainted()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Battle();
             var narc = new ScriptNarc(a.Dir);
 
@@ -183,10 +183,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>A picture that is not the size the sprite is drawn at is refused, not written badly.</summary>
-        [Fact]
+        [SkippableFact]
         public void APictureOfTheWrongSizeIsRefused()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Battle();
             int layout = Layouts(a, 5).FirstOrDefault(-1);
             Assert.True(layout >= 0, "no layout to try");

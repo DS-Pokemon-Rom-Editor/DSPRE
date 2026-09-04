@@ -68,11 +68,11 @@ namespace DSPRE.Tests
         /// "Two on two" repeats a word on purpose and is not this fault, which is why only the last
         /// piece is checked against what came before it.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void NoBattleObjectSaysTheSameWordTwice()
         {
             string folder = TestRoms.HeartGold;
-            if (!Directory.Exists(folder)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(folder), "HeartGold not unpacked here");
             new RomInfo("IPKE", folder);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.battleObj });
 

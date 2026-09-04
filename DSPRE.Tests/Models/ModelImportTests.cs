@@ -39,10 +39,10 @@ namespace DSPRE.Tests
             return null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void AFilePutBackInComesOutTheSameBytes()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
 
             var archive = FirstArchiveWithModels(out int count);
             Assert.NotNull(archive);
@@ -83,10 +83,10 @@ namespace DSPRE.Tests
             Assert.True(mine.SequenceEqual(restored));
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheWrongKindOfFileIsRefusedWithAReason()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
 
             var models = FirstArchiveWithModels(out int count);
             Assert.NotNull(models);
@@ -141,10 +141,10 @@ namespace DSPRE.Tests
 
         /// <summary>The refusal check proves able to fail: a file of the right kind must be accepted, or
         /// the test above would pass simply because everything is refused.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheRefusalCheckStillLetsTheRightKindThrough()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var archive = FirstArchiveWithModels(out int count);
             Assert.NotNull(archive);
 
@@ -168,10 +168,10 @@ namespace DSPRE.Tests
 
         /// <summary>Every 3D entry in every archive either says a file can go in it or says why not.
         /// Never a button that is off with nothing said.</summary>
-        [Fact]
+        [SkippableFact]
         public void EveryEntryEitherTakesAFileOrSaysWhyNot()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
 
             int looked = 0, takes = 0;
             var silent = new List<string>();

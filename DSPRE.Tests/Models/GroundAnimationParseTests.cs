@@ -30,10 +30,10 @@ namespace DSPRE.Tests
             }).ToArray();
         }
 
-        [Fact]
+        [SkippableFact]
         public void TerrainAnimationsParseIntoMaterialTracks()
         {
-            if (!File.Exists(Archive)) return;   // no local HeartGold project; nothing to check against
+            Skip.If(!File.Exists(Archive), "the extracted game project these tests read is not on this machine");
 
             byte[][] files = ReadNarc(Archive);
             Assert.NotEmpty(files);

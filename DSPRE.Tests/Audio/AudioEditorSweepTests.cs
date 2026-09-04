@@ -26,10 +26,10 @@ namespace DSPRE.Tests
             return SoundArchive.Load() != null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void EverySequenceInTheArchiveLandsOnExactlyOneTab()
         {
-            if (!Ready()) return;
+            Skip.If(!Ready(), "the extracted game project these tests read is not on this machine");
             var sdat = SoundArchive.Load();
             Assert.NotNull(sdat);
 
@@ -55,10 +55,10 @@ namespace DSPRE.Tests
                 Assert.StartsWith(SoundArchive.CryBankPrefix, sdat.BankNames[cry.Number]);
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryRowOnEveryTabActuallyMakesASound()
         {
-            if (!Ready()) return;
+            Skip.If(!Ready(), "the extracted game project these tests read is not on this machine");
             var sdat = SoundArchive.Load();
             var vm = new AudioEditorViewModel(null);
 
@@ -98,10 +98,10 @@ namespace DSPRE.Tests
             Assert.Equal(3, silent.Count);
         }
 
-        [Fact]
+        [SkippableFact]
         public void PickingOnOneTabDoesNotWipeThePickOnAnother()
         {
-            if (!Ready()) return;
+            Skip.If(!Ready(), "the extracted game project these tests read is not on this machine");
             var vm = new AudioEditorViewModel(null);
             Assert.True(vm.Cries.Count > 0 && vm.Music.Count > 0);
 

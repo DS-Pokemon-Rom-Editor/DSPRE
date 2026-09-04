@@ -31,11 +31,11 @@ namespace DSPRE.Tests
             return new FontEditorViewModel();
         }
 
-        [Fact]
+        [SkippableFact]
         public void AFontHoldsBothDrawnAndEmptyPicturesAndTheListSaysWhich()
         {
             var vm = Open(TestRoms.Platinum);
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
             if (vm.Glyphs.Count == 0) { Assert.Fail("no font was loaded, so this proved nothing"); }
 
             int all = vm.Glyphs.Count;
@@ -62,11 +62,11 @@ namespace DSPRE.Tests
             Assert.All(vm.Glyphs.Where(g => g.IsMapped), g => Assert.Equal(g.Letter, g.Describe));
         }
 
-        [Fact]
+        [SkippableFact]
         public void EachFilterShowsOnlyWhatItSays()
         {
             var vm = Open(TestRoms.Platinum);
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
             if (vm.Glyphs.Count == 0) { Assert.Fail("no font was loaded, so this proved nothing"); }
 
             int all = vm.Glyphs.Count;
@@ -96,11 +96,11 @@ namespace DSPRE.Tests
             Assert.True(drawn > 0 && empty > 0, "one of the two kinds is missing, so this proved nothing");
         }
 
-        [Fact]
+        [SkippableFact]
         public void TypingFindsALetterAndANumberJumpsStraightToIt()
         {
             var vm = Open(TestRoms.Platinum);
-            if (vm == null) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(vm == null, "Platinum not unpacked here");
 
             var target = vm.Glyphs.FirstOrDefault(g => g.IsMapped && g.Letter == "A");
             if (target == null) { Assert.Fail("this font has no letter A in the map, so this proved nothing"); }
