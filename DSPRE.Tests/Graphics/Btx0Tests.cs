@@ -65,6 +65,14 @@ namespace DSPRE.Tests
         }
 
         [Fact]
+        public void ReadRaw_RejectsAPaletteTheFileDoesNotStore()
+        {
+            BTX0.PaletteIndex = 1;
+            Assert.Null(BTX0.ReadRaw(BuildFile()));
+            Assert.Equal(1u, BTX0.PaletteCount);
+        }
+
+        [Fact]
         public void Write_RoundTripsThroughReadRaw()
         {
             BTX0.PaletteIndex = 0;

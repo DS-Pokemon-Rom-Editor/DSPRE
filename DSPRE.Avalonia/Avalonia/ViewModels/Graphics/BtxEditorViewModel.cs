@@ -47,6 +47,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             set { if (Set(ref _isShiny, value) && _btxData != null) RefreshImage(); }
         }
 
+        private bool _hasShinyPalette;
+        public bool HasShinyPalette { get => _hasShinyPalette; private set => Set(ref _hasShinyPalette, value); }
+        public string ShinyPaletteNote => HasShinyPalette
+            ? "This entry stores normal and shiny palettes."
+            : "This entry stores only its normal palette.";
+
         private byte[] _btxData;
         private Dictionary<uint, byte[]> _modifiedFiles = new();
 
@@ -134,7 +140,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── Load entry ─────────────────────────────────────────────────────────
         private void LoadEntry(int index)
         {
-            if (index < 0 || index >= _owKeys.Count) { CurrentImage = null; _btxData = null; ClearOverworldProperties(); return; }
+            _isShiny = false;
+            OnPropertyChanged(nameof(IsShiny));
+            if (index < 0 || index >= _owKeys.Count)
+            {
+                CurrentImage = null;
+                _btxData = null;
+                HasShinyPalette = false;
+                OnPropertyChanged(nameof(ShinyPaletteNote));
+                ClearOverworldProperties();
+                return;
+            }
 
             uint key    = _owKeys[index];
             uint sprite = RomInfo.OverworldTable[key].spriteID;
@@ -148,6 +164,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 _btxData = null;
                 CurrentImage = null;
+                HasShinyPalette = false;
+                OnPropertyChanged(nameof(ShinyPaletteNote));
                 StatusText = "File not found";
                 LoadOverworldProperties(key);
                 return;
@@ -364,8 +382,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_btxData == null) { CurrentImage = null; return; }
             try
             {
-                BTX0.PaletteIndex = _isShiny ? 1u : 0u;
+                BTX0.PaletteIndex = 0;
                 var raw = BTX0.ReadRaw(_btxData);
+                HasShinyPalette = raw != null && BTX0.PaletteSize == 64 && BTX0.PaletteCount == 2;
+                OnPropertyChanged(nameof(ShinyPaletteNote));
+                if (_isShiny && HasShinyPalette)
+                {
+                    BTX0.PaletteIndex = 1;
+                    raw = BTX0.ReadRaw(_btxData);
+                }
                 CurrentImage = raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
                 StatusText = CurrentImage != null
                     ? $"{CurrentImage.PixelSize.Width}×{CurrentImage.PixelSize.Height}, {BTX0.ColorCount} colors"
