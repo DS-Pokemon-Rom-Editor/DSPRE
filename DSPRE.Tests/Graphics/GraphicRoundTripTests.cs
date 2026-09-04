@@ -43,10 +43,10 @@ namespace DSPRE.Tests
                 try { Directory.Delete(_work, true); } catch { }
         }
 
-        [Fact]
+        [SkippableFact]
         public void SavingAndPuttingBackChangesNothing()
         {
-            if (!OpenACopy()) { _out.WriteLine("the Platinum project is not here"); return; }
+            Skip.If(!OpenACopy(), "the Platinum project is not here");
 
             int tried = 0, same = 0;
             var wrong = new List<string>();          // came back different: a real fault
@@ -189,10 +189,10 @@ namespace DSPRE.Tests
             Assert.False(LooksDrawn(raw.Indices), $"{game}: the noise check passed a reading that was never unscrambled, so it cannot fail");
         }
 
-        [Fact]
+        [SkippableFact]
         public void APaintedChangeSurvivesBeingSavedAndReopened()
         {
-            if (!OpenACopy()) { _out.WriteLine("the Platinum project is not here"); return; }
+            Skip.If(!OpenACopy(), "the Platinum project is not here");
 
             int painted = 0;
             var wrong = new List<string>();

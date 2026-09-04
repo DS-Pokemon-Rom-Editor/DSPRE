@@ -269,11 +269,11 @@ namespace DSPRE.Tests
             Assert.NotEqual(0u, (t.ImageParam(0) >> 29) & 1);     // and the word says so
         }
 
-        [Fact]
+        [SkippableFact]
         public void ModelsAreWrittenToDiskSoAnotherReaderCanBeAskedWhetherTheyAreRight()
         {
             string outDir = Environment.GetEnvironmentVariable("DSPRE_OBJ_OUT");
-            if (string.IsNullOrEmpty(outDir)) return;
+            Skip.If(string.IsNullOrEmpty(outDir), "the extracted game project these tests read is not on this machine");
             Directory.CreateDirectory(outDir);
 
             string dir = Scratch();
@@ -301,12 +301,12 @@ namespace DSPRE.Tests
         /// Turns every OBJ in one folder into a model file in another. Used by the round trip that
         /// takes the ROM's own models out and puts them back.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void EveryObjInAFolderIsTurnedIntoAModel()
         {
             string from = Environment.GetEnvironmentVariable("DSPRE_OBJ_IN");
             string to = Environment.GetEnvironmentVariable("DSPRE_OBJ_OUT");
-            if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to)) return;
+            Skip.If(string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to), "the extracted game project these tests read is not on this machine");
             Directory.CreateDirectory(to);
 
             int made = 0, refused = 0;

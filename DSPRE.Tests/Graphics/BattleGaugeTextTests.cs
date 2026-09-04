@@ -174,10 +174,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Diamond is laid out differently, so it says no rather than drawing nonsense.</summary>
-        [Fact]
+        [SkippableFact]
         public void DiamondSaysItCannotRatherThanReadingTheWrongTiles()
         {
-            if (!Open("ADAE", TestRoms.Diamond)) { _out.WriteLine("Diamond not unpacked here, skipped"); return; }
+            Skip.If(!Open("ADAE", TestRoms.Diamond), "Diamond not unpacked here");
 
             _out.WriteLine("Diamond: " + (BattleGaugeText.Unavailable ?? "reported as available"));
             Assert.False(BattleGaugeText.IsAvailable,
@@ -187,11 +187,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Opening a second ROM must not keep the first one's pictures.</summary>
-        [Fact]
+        [SkippableFact]
         public void ASecondRomGetsItsOwnPictures()
         {
-            if (!Directory.Exists(TestRoms.Platinum) || !Directory.Exists(TestRoms.HeartGold))
-            { _out.WriteLine("both games are needed here, skipped"); return; }
+            Skip.If(!Directory.Exists(TestRoms.Platinum) || !Directory.Exists(TestRoms.HeartGold), "both games are needed here");
 
             Open("CPUE", TestRoms.Platinum);
             Assert.True(BattleGaugeText.IsAvailable);

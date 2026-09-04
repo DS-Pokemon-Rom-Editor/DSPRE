@@ -45,14 +45,10 @@ namespace DSPRE.Tests
                 File.Copy(f, f.Replace(from, to), overwrite: true);
         }
 
-        [Fact]
+        [SkippableFact]
         public void BuildARomWithAPaintedEnemyGauge()
         {
-            if (Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1")
-            {
-                _out.WriteLine("DSPRE_PAINT_ROM not set; nothing built");
-                return;
-            }
+            Skip.If(Environment.GetEnvironmentVariable("DSPRE_PAINT_ROM") != "1", "DSPRE_PAINT_ROM not set; nothing built");
             Assert.True(Directory.Exists(Source), "the Platinum project is not there, so nothing was built");
 
             string work = Path.Combine(Scratch, "plat_gauge");

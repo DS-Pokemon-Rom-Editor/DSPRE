@@ -56,11 +56,11 @@ namespace DSPRE.Tests
         }
 
         /// <summary>A folder for dynamic headers is not the same as the patch being applied.</summary>
-        [Fact]
+        [SkippableFact]
         public void HavingTheFolderIsNotTheSameAsHavingThePatch()
         {
             string folder = TestRoms.HeartGold;
-            if (!Directory.Exists(folder)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(folder), "HeartGold not unpacked here");
             new RomInfo("IPKE", folder);
 
             Assert.True(RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.dynamicHeaders),

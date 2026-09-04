@@ -31,12 +31,11 @@ namespace DSPRE.Tests
             return true;
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheGameNamesItsOwnStarterAndOnlyOnce()
         {
-            if (!Open(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
-            if (!StarterRotomSource.IsAvailable)
-            { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+            Skip.If(!Open(Platinum), "Platinum not unpacked here");
+            Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
             var all = StarterRotomSource.FindAll();
             foreach (var m in all)
@@ -62,12 +61,11 @@ namespace DSPRE.Tests
         /// The rule earns its keep by rejecting things: the other give commands are not the starter,
         /// and GetPlayerStarterSpecies on its own is all over the game asking which one you picked.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheOtherGiveCommandsAreNotMistakenForIt()
         {
-            if (!Open(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
-            if (!StarterRotomSource.IsAvailable)
-            { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+            Skip.If(!Open(Platinum), "Platinum not unpacked here");
+            Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
             var all = StarterRotomSource.FindAll();
             foreach (var m in all.Where(x => !x.NamedAsStarter))
@@ -89,12 +87,11 @@ namespace DSPRE.Tests
         /// in the text and then writes it in the binary. If those two ever disagree, the edit lands
         /// somewhere the user was not shown.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheSourceAndTheBinaryAgreeOnWhereTheStarterIs()
         {
-            if (!Open(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
-            if (!StarterRotomSource.IsAvailable)
-            { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+            Skip.If(!Open(Platinum), "Platinum not unpacked here");
+            Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
             RomInfo.InitScriptDBs();
             RomInfo.ReloadScriptCommandDictionaries();
@@ -116,18 +113,17 @@ namespace DSPRE.Tests
         /// source, compile the project. Runs on a COPY, never the real project. The check that
         /// matters is the BINARY changing, because that is what the ROM is built from.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void ChangingTheLineAndSavingUpdatesTheBinary()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
 
             string copy = Path.Combine(Path.GetTempPath(), "dspre_save_" + Guid.NewGuid().ToString("N"));
             try
             {
                 CopyTree(Platinum, copy);
-                if (!Open(copy)) { _out.WriteLine("copy would not open, skipped"); return; }
-                if (!StarterRotomSource.IsAvailable)
-                { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+                Skip.If(!Open(copy), "copy would not open");
+                Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 var starter = StarterRotomSource.FindStarter();
                 Assert.NotNull(starter);
@@ -175,18 +171,17 @@ namespace DSPRE.Tests
         /// run it over every script it touched. Editing the text and saving touches no decompiler at
         /// all, so the names have to survive.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void SavingKeepsTheReadableNamesInTheFile()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
 
             string copy = Path.Combine(Path.GetTempPath(), "dspre_names_" + Guid.NewGuid().ToString("N"));
             try
             {
                 CopyTree(Platinum, copy);
-                if (!Open(copy)) { _out.WriteLine("copy would not open, skipped"); return; }
-                if (!StarterRotomSource.IsAvailable)
-                { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+                Skip.If(!Open(copy), "copy would not open");
+                Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 var starter = StarterRotomSource.FindStarter();
                 Assert.NotNull(starter);

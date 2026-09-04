@@ -28,10 +28,10 @@ namespace DSPRE.Tests
             return File.Exists(p) ? File.ReadAllBytes(p) : null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void APartThatTurnsGivesADifferentMatrixEachFrame()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Animation 3 turns one part right round over 180 frames.
             var anim = Load(3);
@@ -47,12 +47,12 @@ namespace DSPRE.Tests
             Assert.False(start.SequenceEqual(quarter));
         }
 
-        [Fact]
+        [SkippableFact]
         public void ATurnKeepsItsShape()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(3);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             int part = anim.AnimatedObjects.First();
 
             // A turn should not stretch anything: each row of the 3x3 keeps unit length.
@@ -66,29 +66,29 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void PlaybackLoops()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(3);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             int part = anim.AnimatedObjects.First();
             Assert.Equal(anim.MatrixFor(part, 7), anim.MatrixFor(part, 7 + anim.FrameCount));
         }
 
-        [Fact]
+        [SkippableFact]
         public void PartsTheAnimationDoesNotTouchAreLeftAlone()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(3);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             Assert.Null(anim.MatrixFor(999, 0));
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryMatrixItProducesIsWellFormed()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int checkedMatrices = 0;
             foreach (var f in Directory.GetFiles(AnimDir))
@@ -114,10 +114,10 @@ namespace DSPRE.Tests
             Assert.True(checkedMatrices > 100);
         }
 
-        [Fact]
+        [SkippableFact]
         public void MostOfTheArchivesJointAnimationsActuallyMove()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int total = 0, moving = 0;
             foreach (var f in Directory.GetFiles(AnimDir))
@@ -131,10 +131,10 @@ namespace DSPRE.Tests
             Assert.True(moving > total / 2);
         }
 
-        [Fact]
+        [SkippableFact]
         public void OtherKindsOfAnimationAreNotReadAsJointAnimations()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int joint = 0, others = 0;
             foreach (var f in Directory.GetFiles(AnimDir))

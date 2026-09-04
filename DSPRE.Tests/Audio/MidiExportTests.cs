@@ -166,13 +166,13 @@ namespace DSPRE.Tests
 
         /// <summary>The check above with the notes moved, to show it can fail. A file written from a
         /// changed note list has to be caught, or "the notes match" means nothing.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheNoteCheckCatchesAChangedNote()
         {
-            if (!Directory.Exists(HeartGold)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
             var sdat = SoundArchive.Load();
-            if (sdat == null) { _out.WriteLine("no sound archive"); return; }
+            Skip.If(sdat == null, "no sound archive");
 
             IReadOnlyList<SseqPlayer.Note> notes = null;
             for (int i = 0; i < sdat.Sequences.Count && notes == null; i++)
@@ -249,13 +249,13 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Nothing lands on the drum channel, which would be played as percussion by mistake.</summary>
-        [Fact]
+        [SkippableFact]
         public void NoTrackIsWrittenOnTheDrumChannel()
         {
-            if (!Directory.Exists(HeartGold)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
             var sdat = SoundArchive.Load();
-            if (sdat == null) { _out.WriteLine("no sound archive"); return; }
+            Skip.If(sdat == null, "no sound archive");
 
             int looked = 0;
             for (int i = 0; i < sdat.Sequences.Count; i++)

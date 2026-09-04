@@ -51,10 +51,10 @@ namespace DSPRE.Tests
             return found;
         }
 
-        [Fact]
+        [SkippableFact]
         public void PuttingABackgroundBackUnchangedLeavesItAlone()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Backdrops();
             var drawings = Drawings(a, 25);
             Assert.True(drawings.Count >= 8, $"only {drawings.Count} backgrounds found, this would prove little");
@@ -100,10 +100,10 @@ namespace DSPRE.Tests
         /// <summary>
         /// The check above proves able to fail: painting really does change the picture.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void PaintingABackgroundChangesItAndSaysWhatSharesATile()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Backdrops();
             var narc = new ScriptNarc(a.Dir);
 
@@ -170,10 +170,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>A picture of the wrong size is refused, not written badly.</summary>
-        [Fact]
+        [SkippableFact]
         public void ABackgroundPictureOfTheWrongSizeIsRefused()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var a = Backdrops();
             int at = Drawings(a, 5).FirstOrDefault(-1);
             Assert.True(at >= 0, "no background to try");

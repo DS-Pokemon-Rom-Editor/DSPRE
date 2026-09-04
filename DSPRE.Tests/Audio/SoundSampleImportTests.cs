@@ -41,10 +41,10 @@ namespace DSPRE.Tests
 
         private static byte[] MakeWav(short[] pcm, int rate) => CryFiles.WriteWav(pcm, rate);
 
-        [Fact]
+        [SkippableFact]
         public void ThereAreSoundsBesidesTheCries()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
 
             var sets = SoundArchive.SampleArchives();
             Assert.NotEmpty(sets);
@@ -66,10 +66,10 @@ namespace DSPRE.Tests
             Assert.Empty(sets.Where(s => cryArcs.Contains(s.Arc)));
         }
 
-        [Fact]
+        [SkippableFact]
         public void APutInSoundComesBackOutAsItWentIn()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             string archive = ArchivePath();
             Assert.NotNull(archive);
 
@@ -146,10 +146,10 @@ namespace DSPRE.Tests
             return Math.Sqrt(sum / n);
         }
 
-        [Fact]
+        [SkippableFact]
         public void ReplacingASoundLeavesEveryOtherSetAlone()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             string archive = ArchivePath();
             Assert.NotNull(archive);
 
@@ -201,10 +201,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Reading a wave archive and writing it straight back must give the same bytes.</summary>
-        [Fact]
+        [SkippableFact]
         public void EveryWaveArchiveRebuildsToTheSameBytes()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
             var sdat = SoundArchive.Load();
             Assert.NotNull(sdat);
 
@@ -242,10 +242,10 @@ namespace DSPRE.Tests
 
         /// <summary>A sequence still cannot take a WAV, and the window has to say so rather than
         /// offering a button that does nothing.</summary>
-        [Fact]
+        [SkippableFact]
         public void ASequenceStillCannotTakeAWav()
         {
-            if (!Ready()) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Ready(), "HeartGold not unpacked here");
 
             var vm = new DSPRE.Avalonia.ViewModels.Audio.AudioEditorViewModel(null);
             Assert.NotEmpty(vm.Music);

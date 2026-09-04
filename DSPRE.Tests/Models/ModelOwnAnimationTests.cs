@@ -111,10 +111,10 @@ namespace DSPRE.Tests
 
         /// <summary>The same measure applied to a movement picked at random shows it can fail: somebody
         /// else's movement mostly does nothing to a model, which is why naming the right one matters.</summary>
-        [Fact]
+        [SkippableFact]
         public void SomebodyElsesMovementIsMuchLessLikelyToMoveAModel()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
 
             var a = ModelAssets.All.First(x => x.Title == "Buildings, outside");

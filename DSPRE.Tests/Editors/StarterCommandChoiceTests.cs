@@ -36,10 +36,10 @@ namespace DSPRE.Tests
         /// knows from RomInfo which file and which script the game keeps it in, so there is nothing to
         /// search for until that stops being true.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheKnownSlotIsReadWithoutSearchingTheWholeGame()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var vanilla = StarterRotomSource.FindVanilla();
             Assert.NotNull(vanilla);
@@ -71,10 +71,10 @@ namespace DSPRE.Tests
         /// all 575 every time, which is work for nothing and would have had the editor deciding afresh
         /// each open whether the starter had moved.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void OpeningTheEditorReadsOneScriptSourceNotTheWholeGame()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             int inTheGame = Directory.GetFiles(
                 Path.Combine(RomInfo.workDir, "expanded", "scripts"), "*.rotom").Length;
@@ -90,10 +90,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>Every give command is placed in a named script, or the picker cannot tell two apart.</summary>
-        [Fact]
+        [SkippableFact]
         public void EveryCommandKnowsWhichScriptItIsIn()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var all = StarterRotomSource.FindAll();
             Assert.True(all.Count >= 2, $"only {all.Count} found, so this proved nothing");
@@ -107,10 +107,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>The three answers, each from a real place in Platinum.</summary>
-        [Fact]
+        [SkippableFact]
         public void CheckingAPlaceSaysYesSaysItPicksItsOwnOrRefuses()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var starter = StarterRotomSource.FindStarter();
             var yes = StarterRotomSource.Verify(starter.FileId, starter.Container);
@@ -134,10 +134,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>The scripts in a file are listed, so the box can be filled in rather than guessed at.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheScriptsInAFileCanBeListed()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var starter = StarterRotomSource.FindStarter();
             var names = StarterRotomSource.ContainersIn(starter.FileId);
@@ -150,10 +150,10 @@ namespace DSPRE.Tests
         /// The dialog hands back what was chosen, and says when the species is out of our hands. Without
         /// that flag the editor would keep offering species dropdowns that change nothing.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheDialogReportsWhatWasChosenAndWhetherSpeciesIsOurs()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var starter = StarterRotomSource.FindStarter();
             var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterCommandDialogViewModel(starter);
@@ -179,10 +179,10 @@ namespace DSPRE.Tests
         /// The editor offers the level, starts on what the script says, and remembers a chosen command
         /// for this project so the next open does not ask again.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheEditorOffersTheLevelAndRemembersTheChosenCommand()
         {
-            if (!Open()) { _out.WriteLine("Platinum sources not here, skipped"); return; }
+            Skip.If(!Open(), "Platinum sources not here");
 
             var starter = StarterRotomSource.FindStarter();
             var vm = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
@@ -222,10 +222,10 @@ namespace DSPRE.Tests
         /// not make the editor ask which command the starter is next time it opens. The whole save runs
         /// here, compile and resync included, on a COPY.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void ChangingTheItemAndLevelDoesNotMakeTheEditorAskAgain()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
 
             string copy = Path.Combine(Path.GetTempPath(), "dspre_ask_" + Guid.NewGuid().ToString("N"));
             try
@@ -238,8 +238,7 @@ namespace DSPRE.Tests
                 SettingsManager.Load();
                 new RomInfo("CPUE", copy);
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
-                if (!StarterRotomSource.IsAvailable)
-                { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+                Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 var opened = new DSPRE.Avalonia.ViewModels.Pokemon.StarterEditorViewModel();
                 Assert.True(opened.HasCommandLocation, "the starter should have been found");
@@ -277,10 +276,10 @@ namespace DSPRE.Tests
         /// number it would not: adding a line above the starter would point the editor at nothing.
         /// Done on a COPY, never the real project.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheRememberedChoiceSurvivesAnEditAboveIt()
         {
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
 
             string copy = Path.Combine(Path.GetTempPath(), "dspre_key_" + Guid.NewGuid().ToString("N"));
             try
@@ -293,8 +292,7 @@ namespace DSPRE.Tests
                 SettingsManager.Load();
                 new RomInfo("CPUE", copy);
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
-                if (!StarterRotomSource.IsAvailable)
-                { _out.WriteLine("this project has no decompiled sources, skipped"); return; }
+                Skip.If(!StarterRotomSource.IsAvailable, "this project has no decompiled sources");
 
                 var before = StarterRotomSource.FindStarter();
                 Assert.NotNull(before);

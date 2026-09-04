@@ -84,11 +84,10 @@ namespace DSPRE.Tests
         /// with none, and only in the rows the name sits in. Comparing against the plain bar the older
         /// code drew would not show this, since that one has no writing at all either.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void ABarWithANameDiffersFromAnEmptyOneWhereTheNameGoes()
         {
-            if (!Directory.Exists(TestRoms.Platinum))
-            { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(TestRoms.Platinum), "Platinum not unpacked here");
 
             SettingsManager.Load();
             new RomInfo("CPUE", TestRoms.Platinum);
@@ -128,11 +127,10 @@ namespace DSPRE.Tests
         /// A double battle shows two bars a side instead of one, and they are different pictures in
         /// different places. Every one of them has to draw.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void ADoubleBattleShowsFourBarsAndASingleShowsTwo()
         {
-            if (!Directory.Exists(TestRoms.Platinum))
-            { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!Directory.Exists(TestRoms.Platinum), "Platinum not unpacked here");
 
             SettingsManager.Load();
             new RomInfo("CPUE", TestRoms.Platinum);

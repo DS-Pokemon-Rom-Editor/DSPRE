@@ -31,22 +31,24 @@ namespace DSPRE.Tests
         private static TextureSrtAnimation First() =>
             File.Exists(Archive) ? TextureSrtAnimation.Load(ReadNarc(Archive)[0]) : null;
 
-        [Fact]
+        [SkippableFact]
         public void LoadsTheWaterMaterials()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             Assert.Contains("river", a.MaterialNames);
             Assert.Contains("sea_on", a.MaterialNames);
             Assert.Equal(360, a.FrameCount);          // a six second loop at 60fps
         }
 
-        [Fact]
+        [SkippableFact]
         public void UnknownMaterialIsLeftAlone()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             Assert.Equal(-1, a.IndexOf("no_such_material"));
 
@@ -55,11 +57,12 @@ namespace DSPRE.Tests
             Assert.Equal(0f, srt.TranslateS);
         }
 
-        [Fact]
+        [SkippableFact]
         public void WaterScrollsOverTime()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             var start = a.Evaluate("river", 0);
             var later = a.Evaluate("river", 30);
@@ -69,31 +72,34 @@ namespace DSPRE.Tests
             Assert.Equal(start.ScaleS, later.ScaleS);
         }
 
-        [Fact]
+        [SkippableFact]
         public void PlaybackLoops()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             Assert.Equal(a.Evaluate("river", 7).TranslateS,
                          a.Evaluate("river", 7 + a.FrameCount).TranslateS);
         }
 
-        [Fact]
+        [SkippableFact]
         public void MovingMaterialsAreNotReportedStatic()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             Assert.False(a.IsStatic(a.IndexOf("river")));
             Assert.True(a.IsStatic(-1));   // nothing selected: nothing to animate
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryMaterialOnlyScrolls()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             // The whole archive is scrolling water: nothing scales or rotates. The renderer relies on
             // this, so if a ROM ever does something else the matrix path needs a real look.
@@ -108,18 +114,19 @@ namespace DSPRE.Tests
                 }
         }
 
-        [Fact]
+        [SkippableFact]
         public void IdentitySrtIsAnIdentityMatrix()
         {
             Assert.Equal(new[] { 1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f },
                          TextureSrtAnimation.Srt.Identity.ToMatrix3());
         }
 
-        [Fact]
+        [SkippableFact]
         public void ScrollingShowsUpAsTheMatrixTranslation()
         {
+            Skip.If(!File.Exists(Archive), "HeartGold not unpacked here");
             var a = First();
-            if (a == null) return;
+            Assert.NotNull(a);
 
             var srt = a.Evaluate("river", 60);
             float[] m = srt.ToMatrix3();

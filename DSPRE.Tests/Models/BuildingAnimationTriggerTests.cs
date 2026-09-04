@@ -17,10 +17,10 @@ namespace DSPRE.Tests
                      .Select(f => new BuildingAnimationInfo(File.ReadAllBytes(f)))
                      .ToArray();
 
-        [Fact]
+        [SkippableFact]
         public void EveryDoorWaitsToBeOpened()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Not one door in the game animates on its own; they are all Type 0x03, which has the
             // bottom bit set. If this ever fails, a door is about to start flapping in the preview.
@@ -33,27 +33,27 @@ namespace DSPRE.Tests
             });
         }
 
-        [Fact]
+        [SkippableFact]
         public void NothingConditionalIsPlayedUnprompted()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             Assert.All(All().Where(i => i.IsConditional), i => Assert.False(i.PlaysUnprompted));
         }
 
-        [Fact]
+        [SkippableFact]
         public void TimeOfDayAnimationsAreNotTreatedAsAlwaysOn()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             var timed = All().Where(i => i.Animates && i.IsTimeOfDay).ToArray();
             Assert.NotEmpty(timed);
             Assert.All(timed, i => Assert.False(i.PlaysUnprompted));
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheOnesThatDoRunAreStillThere()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Waterfalls, lights and the rest: plenty should still play, or the filter has gone too far.
             var auto = All().Where(i => i.PlaysUnprompted).ToArray();
@@ -88,10 +88,10 @@ namespace DSPRE.Tests
             Assert.Equal(BuildingAnimationInfo.LoopForever, looping.LoopCount);
         }
 
-        [Fact]
+        [SkippableFact]
         public void NoBuildingInHeartGoldUsesPlayOnce()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             // Recorded rather than assumed: the flag exists but the retail data never sets it, so the
             // rule above is there for hacks rather than for anything the games ship.
             Assert.Empty(All().Where(i => i.Animates && i.PlaysOnce));

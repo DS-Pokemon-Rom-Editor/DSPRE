@@ -32,11 +32,10 @@ namespace DSPRE.Tests
             return true;
         }
 
-        [Fact]
+        [SkippableFact]
         public void DiamondSaysItCannotAndKeepsTheWrittenSample()
         {
-            if (!Open("ADAE", TestRoms.Diamond))
-            { _out.WriteLine("Diamond not unpacked here, skipped"); return; }
+            Skip.If(!Open("ADAE", TestRoms.Diamond), "Diamond not unpacked here");
 
             _out.WriteLine("Diamond: " + (BattleGaugeTextRenderer.Unavailable ?? "reported as available"));
             Assert.False(BattleGaugeTextRenderer.IsAvailable,

@@ -52,10 +52,10 @@ namespace DSPRE.Tests
         /// <summary>
         /// Apricorn trees really do exist in HeartGold's maps and carry a bed number in that field.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void HeartGoldsApricornTreesCarryABedNumberInThatField()
         {
-            if (!Directory.Exists(HeartGold)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
 
             int trees = 0, read = 0;
@@ -88,10 +88,10 @@ namespace DSPRE.Tests
         /// The editor offers the apricorn wording for a tree and the sight-range wording for anything else,
         /// so the number is never presented as something it is not.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void TheEditorCallsItABedOnlyForATree()
         {
-            if (!Directory.Exists(HeartGold)) { _out.WriteLine("HeartGold not unpacked here"); return; }
+            Skip.If(!Directory.Exists(HeartGold), "HeartGold not unpacked here");
             new RomInfo("IPKE", HeartGold);
 
             var vm = new DSPRE.Avalonia.ViewModels.World.EventEditorViewModel();

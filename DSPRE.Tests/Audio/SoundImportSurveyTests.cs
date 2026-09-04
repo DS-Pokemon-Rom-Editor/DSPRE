@@ -67,15 +67,15 @@ namespace DSPRE.Tests
         }
 
         /// <summary>The check above proves able to fail: splitting on SEQ_ME_ alone must not satisfy it.</summary>
-        [Fact]
+        [SkippableFact]
         public void TheTabCheckWouldCatchTheOldNameSplit()
         {
             string Platinum = TestRoms.Platinum;
-            if (!Directory.Exists(Platinum)) { _out.WriteLine("Platinum not unpacked here"); return; }
+            Skip.If(!Directory.Exists(Platinum), "Platinum not unpacked here");
             new RomInfo("CPUE", Platinum);
             SoundArchive.Reset();
             var sdat = SoundArchive.Load();
-            if (sdat == null) { _out.WriteLine("no sound archive"); return; }
+            Skip.If(sdat == null, "no sound archive");
 
             int byName = sdat.SeqNames.Count(k => (k.Value ?? "").StartsWith("SEQ_ME_"));
             int byPlayer = sdat.SeqNames.Count(k => k.Key < sdat.Sequences.Count

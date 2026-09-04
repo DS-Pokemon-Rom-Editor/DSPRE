@@ -42,10 +42,10 @@ namespace DSPRE.Tests
         }
 
         // ── the windmill, which is what caught the scaling bug ──────────────────────────
-        [Fact]
+        [SkippableFact]
         public void TheWindmillSailsStayOnTopOfItAndTurnRightRound()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Model 27 is New Bark Town's windmill and animation 5 turns it.
             using var fs = File.OpenRead(Path.Combine(Unpacked("exteriorBuildingModels"), "0027"));
@@ -74,10 +74,10 @@ namespace DSPRE.Tests
             Assert.True(seen.Min() < -0.9f, "the sails never turn past halfway");
         }
 
-        [Fact]
+        [SkippableFact]
         public void NoAnimatedPartIsFlungAwayFromWhereItsModelPutsIt()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int samples = 0, near = 0;
             foreach (var (id, info) in AllModels())
@@ -123,10 +123,10 @@ namespace DSPRE.Tests
         }
 
         // ── every time of day ───────────────────────────────────────────────────────────
-        [Fact]
+        [SkippableFact]
         public void EveryClockDrivenModelHasSomethingToShowAtEveryTime()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             var timed = AllModels().Where(m => m.info.Animates && m.info.IsTimeOfDay).ToArray();
             Assert.NotEmpty(timed);
@@ -137,10 +137,10 @@ namespace DSPRE.Tests
                         $"model {id} has nothing for {FieldTimeOfDay.Name(zone)}");
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryClockDrivenModelReallyChangesThroughTheDay()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             foreach (var (id, info) in AllModels().Where(m => m.info.Animates && m.info.IsTimeOfDay))
             {
@@ -154,10 +154,10 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryMapResolvesItsAnimationsAtEveryTimeOfDay()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             var infos = AllModels().ToDictionary(m => m.id, m => m.info);
             int maps = 0, playing = 0;

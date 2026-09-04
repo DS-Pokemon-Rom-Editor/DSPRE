@@ -46,11 +46,11 @@ namespace DSPRE.Tests
                 File.Copy(f, f.Replace(from, to), overwrite: true);
         }
 
-        [Fact]
+        [SkippableFact]
         public void GiveTheStarterTheMovesNamedInTheEnvironment()
         {
             string list = Environment.GetEnvironmentVariable("DSPRE_STARTER_MOVES");
-            if (string.IsNullOrWhiteSpace(list)) { _out.WriteLine("DSPRE_STARTER_MOVES not set; nothing to do"); return; }
+            Skip.If(string.IsNullOrWhiteSpace(list), "DSPRE_STARTER_MOVES not set; nothing to do");
 
             var moves = list.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x.Trim())).ToList();
             Assert.True(moves.Count == 4, $"four moves are needed, {moves.Count} were given");

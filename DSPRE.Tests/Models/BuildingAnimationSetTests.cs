@@ -29,10 +29,10 @@ namespace DSPRE.Tests
             return File.Exists(p) ? TextureSrtAnimation.Load(File.ReadAllBytes(p)) : null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheWaterfallBuildingScrollsItsOwnMaterials()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // Model 170 is the waterfall used on map 77. Its one animation moves the falling water.
             var info = Info(170);
@@ -44,10 +44,10 @@ namespace DSPRE.Tests
             Assert.Contains("wfall_wave", names);
         }
 
-        [Fact]
+        [SkippableFact]
         public void OnlyTheScrollingAnimationsComeBack()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // The archive holds four kinds of animation and only the scrolling ones parse, so every
             // entry either loads as a texture animation or is left alone.
@@ -64,10 +64,10 @@ namespace DSPRE.Tests
             Assert.True(skipped > 0);
         }
 
-        [Fact]
+        [SkippableFact]
         public void ModelsThatDoNotAnimateSaySo()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int animating = Directory.GetFiles(ListDir).Select(f => new BuildingAnimationInfo(File.ReadAllBytes(f)))
                                      .Count(i => i.Animates);
@@ -76,19 +76,19 @@ namespace DSPRE.Tests
             Assert.True(animating < total);   // most buildings just stand there
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryListEntryIsOneRecordLong()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             foreach (var f in Directory.GetFiles(ListDir))
                 Assert.Equal(BuildingAnimationInfo.Size, new FileInfo(f).Length);
         }
 
-        [Fact]
+        [SkippableFact]
         public void UnusedAnimationSlotsAreSkipped()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             foreach (var f in Directory.GetFiles(ListDir))
             {

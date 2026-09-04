@@ -37,10 +37,10 @@ namespace DSPRE.Tests
         /// An untouched project reads one file and stops. If this ever starts scanning, opening the
         /// editor gets slower for everybody who has changed nothing.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void AnUntouchedPlatinumIsFoundWithoutScanning()
         {
-            if (!OpenPlatinum()) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!OpenPlatinum(), "Platinum not unpacked here");
 
             var sw = Stopwatch.StartNew();
             var r = StarterScriptLocator.Locate(null, null);
@@ -66,10 +66,10 @@ namespace DSPRE.Tests
         /// The reason the editor cannot just take the only match: an untouched Platinum already has two
         /// give commands whose species comes from a variable, in different files.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public void VanillaPlatinumAlreadyHasMoreThanOneCandidate()
         {
-            if (!OpenPlatinum()) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!OpenPlatinum(), "Platinum not unpacked here");
 
             var all = StarterScriptLocator.FindCandidates();
             foreach (var c in all) _out.WriteLine($"  {c.Where}, index {c.CommandIndex}: {c.Summary}");
@@ -87,10 +87,10 @@ namespace DSPRE.Tests
             Assert.DoesNotContain(all, c => c.CommandName.IndexOf("Egg", StringComparison.OrdinalIgnoreCase) >= 0);
         }
         /// <summary>A remembered choice is honoured, and a stale one asks again instead of writing blind.</summary>
-        [Fact]
+        [SkippableFact]
         public void ARememberedChoiceIsKeptAndAStaleOneAsksAgain()
         {
-            if (!OpenPlatinum()) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!OpenPlatinum(), "Platinum not unpacked here");
 
             var all = StarterScriptLocator.FindCandidates();
             var other = all.FirstOrDefault(c => c.FileId != 427);
@@ -106,10 +106,10 @@ namespace DSPRE.Tests
         }
 
         /// <summary>A candidate appearing since last time is reported rather than silently ignored.</summary>
-        [Fact]
+        [SkippableFact]
         public void ANewCandidateSinceLastTimeIsReported()
         {
-            if (!OpenPlatinum()) { _out.WriteLine("Platinum not unpacked here, skipped"); return; }
+            Skip.If(!OpenPlatinum(), "Platinum not unpacked here");
 
             var all = StarterScriptLocator.FindCandidates();
             var chosen = all[0];

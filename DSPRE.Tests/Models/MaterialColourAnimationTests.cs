@@ -21,10 +21,10 @@ namespace DSPRE.Tests
             return File.Exists(p) ? MaterialColourAnimation.Load(File.ReadAllBytes(p)) : null;
         }
 
-        [Fact]
+        [SkippableFact]
         public void AFadeRunsFromSolidToGone()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // 0119 fades a floor out over 60 frames. The name comes from the list inside the chunk,
             // which is the materials; the outer list names the model and is a different thing.
@@ -39,15 +39,16 @@ namespace DSPRE.Tests
             Assert.True(anim.Evaluate(m, 30).Value < anim.Evaluate(m, 0).Value);
         }
 
-        [Fact]
+        [SkippableFact]
         public void APairOfAnimationsFadeOppositeWays()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // hosz1 and hosz2 are a cross-fade: one comes in as the other goes out.
             var up = Load(212);
             var down = Load(214);
-            if (up == null || down == null) return;
+            Assert.NotNull(up);
+            Assert.NotNull(down);
 
             float upStart = up.Evaluate(0, 0).Value, upLater = up.Evaluate(0, 15).Value;
             float dnStart = down.Evaluate(0, 0).Value, dnLater = down.Evaluate(0, 15).Value;
@@ -56,10 +57,10 @@ namespace DSPRE.Tests
             Assert.True(dnLater < dnStart, "hosz2 should fade out");
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryValueStaysInRange()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int checkedValues = 0;
             foreach (var f in Directory.GetFiles(AnimDir))
@@ -78,10 +79,10 @@ namespace DSPRE.Tests
             Assert.True(checkedValues > 100);
         }
 
-        [Fact]
+        [SkippableFact]
         public void MaterialsAreNamedProperly()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // A name read from the wrong place runs into the next block, so check they look like names.
             foreach (var f in Directory.GetFiles(AnimDir))
@@ -98,23 +99,23 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void ManyMaterialsInOneAnimationAreAllRead()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // 0147 fades fourteen materials at once, including a waterfall's spray.
             var anim = Load(147);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             Assert.Equal(14, anim.MaterialNames.Count);
             Assert.Contains("wfall_wave", anim.MaterialNames);
             Assert.All(Enumerable.Range(0, anim.MaterialNames.Count), i => Assert.False(anim.IsStatic(i)));
         }
 
-        [Fact]
+        [SkippableFact]
         public void TheFadeNamesAMaterialItsModelActuallyHas()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             // This is what the whole thing turns on: the names inside the chunk are the model's own
             // material names, so the renderer can match them.
@@ -134,19 +135,19 @@ namespace DSPRE.Tests
             }
         }
 
-        [Fact]
+        [SkippableFact]
         public void PlaybackLoops()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(119);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             Assert.Equal(anim.Evaluate(0, 9), anim.Evaluate(0, 9 + anim.FrameCount));
         }
 
-        [Fact]
+        [SkippableFact]
         public void EveryFadingAnimationInTheArchiveIsRead()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
 
             int fading = 0, others = 0;
             foreach (var f in Directory.GetFiles(AnimDir))
@@ -161,12 +162,12 @@ namespace DSPRE.Tests
             Assert.True(others > 0);
         }
 
-        [Fact]
+        [SkippableFact]
         public void AMaterialItDoesNotTouchComesBackEmpty()
         {
-            if (!Ready) return;
+            Skip.If(!Ready, "the extracted game project these tests read is not on this machine");
             var anim = Load(119);
-            if (anim == null) return;
+            Assert.NotNull(anim);
             Assert.Equal(-1, anim.IndexOf("no_such_material"));
             Assert.Null(anim.Evaluate("no_such_material", 0));
             Assert.True(anim.IsStatic(-1));
