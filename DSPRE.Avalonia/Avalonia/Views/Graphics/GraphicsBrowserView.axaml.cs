@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
 
             var painter = new GraphicPainterView(
-                new GraphicPainterViewModel(vm.Selected.Archive, vm.ShowingIndex));
+                new GraphicPainterViewModel(vm.ShowingArchive, vm.ShowingIndex));
             painter.ShowManaged();
         }
     }

@@ -238,7 +238,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
             // Thousands of entries would make the list crawl, so show the first slice and say so.
             foreach (var i in hits.Take(ShowAtMost)) Shown.Add(i);
+            if (_selected == null || !Shown.Contains(_selected))
+                Selected = FirstWorthSelecting();
             OnPropertyChanged(nameof(FoundSummary));
+        }
+
+        /// <summary>
+        /// Prefers a row the ROM can name. Unnamed archive slots remain visible and selectable, but they
+        /// are a poor first impression when a named graphic sits immediately after them.
+        /// </summary>
+        private Item FirstWorthSelecting()
+        {
+            var first = Shown.FirstOrDefault();
+            if (first == null) return null;
+            return Shown.FirstOrDefault(item => !string.Equals(
+                item.Name, item.Archive?.Title, StringComparison.Ordinal)) ?? first;
         }
 
         private const int ShowAtMost = 3000;
@@ -439,6 +453,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 AppLogger.Error("GraphicsBrowser.Look failed: " + ex.Message);
                 Whynot = "This entry could not be opened.";
+                Details = $"{Showing(a)}, number {ShowingIndex}.";
             }
             RaiseAll();
         }
@@ -471,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ? "Save as a PNG that keeps its numbered colours, so it can go back in unchanged."
                 : "No picture here to save. The file itself can still be saved as it is.";
 
-        public bool CanReplace => _selected != null && _selected.Archive.CannotImportBecause == null
+        public bool CanReplace => _selected != null && ShowingArchive?.CannotImportBecause == null
                                   && _picture != null;
 
         public string ReplaceHelp
@@ -479,7 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 if (_selected == null) return "Pick something first.";
-                if (_selected.Archive.CannotImportBecause != null) return _selected.Archive.CannotImportBecause;
+                if (ShowingArchive?.CannotImportBecause != null) return ShowingArchive.CannotImportBecause;
                 if (_picture == null)
                     return "This entry has no picture in it, so a PNG cannot take its place. "
                          + (Whynot ?? "");
@@ -506,7 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string DeepEditorHint => HasDeepEditor ? $"The {DeepEditorName} does more with these." : "";
 
-        public string DeepEditorName => _selected?.Archive.DeepEditor;
+        public string DeepEditorName => ShowingArchive?.DeepEditor;
         public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
 
         private string _status = "";
@@ -516,7 +531,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string SuggestedFileName(string extension)
         {
             if (_selected == null) return "graphic" + extension;
-            string name = _selected.Archive.Title.ToLowerInvariant().Replace(' ', '_');
+            string name = (ShowingArchive ?? _selected.Archive).Title.ToLowerInvariant().Replace(' ', '_');
             foreach (char c in System.IO.Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
             return $"{name}_{ShowingIndex:D4}{extension}";
         }
