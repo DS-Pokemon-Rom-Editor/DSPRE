@@ -36,8 +36,8 @@ namespace DSPRE
             WinFormsApp.EnableVisualStyles();
             WinFormsApp.SetCompatibleTextRenderingDefault(false);
 
-            // This exe runs the Avalonia shell (unless DSPRE_WINFORMS_SHELL=1 or --winforms asks for the
-            // pure-Avalonia one); the cross-platform DSPRE.Avalonia exe never installs these hooks.
+            // This exe runs the Avalonia shell unless DSPRE_WINFORMS_SHELL=1 or --winforms selects the
+            // legacy WinForms shell. The cross-platform DSPRE.Avalonia exe never installs these hooks.
             WinFormsShellHost.InstallHooks();
 
             // Real sound-effect playback. NAudioOutput itself no-ops on non-Windows, so this is safe to

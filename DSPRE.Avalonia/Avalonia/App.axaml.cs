@@ -8,9 +8,9 @@ namespace DSPRE
     /// <summary>
     /// Avalonia Application entry point (UI-toolkit layer, no WinForms dependency).
     ///
-    /// The Windows DSPRE exe installs <see cref="WinFormsHostHook"/> so that, by default, startup
-    /// shows the legacy WinForms MainProgram (both toolkits share the Win32 message pump). Without
-    /// the hook and DSPRE_WINFORMS_SHELL=1 is set, the pure-Avalonia shell runs instead.
+    /// The Windows DSPRE exe installs <see cref="WinFormsHostHook"/> so the legacy shell remains
+    /// available when explicitly selected. The Avalonia shell is the default, and the cross-platform
+    /// executable never installs the hook.
     /// </summary>
     public class AvaloniaApp : Application
     {
