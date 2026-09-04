@@ -18,6 +18,7 @@ namespace DSPRE.ROMFiles {
         public ushort movingModelSet;
         public byte areaType = TYPE_OUTDOOR; //HGSS ONLY
         public ushort lightType; //using an overabundant size. HGSS only needs a byte
+        public bool IsIndoor => RomInfo.gameFamily == GameFamilies.HGSS && areaType == TYPE_INDOOR;
         #endregion
 
         #region Constructors (1)

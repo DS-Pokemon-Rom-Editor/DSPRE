@@ -224,6 +224,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(n);
         }
 
+        private void ClearCompanions()
+        {
+            _slides.Clear(); _swaps.Clear(); _colours.Clear(); _showings.Clear();
+            SlideChoices.Clear(); SwapChoices.Clear(); ColourChoices.Clear(); ShowingChoices.Clear();
+            _slide = null; _swap = null; _colour = null; _showing = null;
+            _slideChoice = _swapChoice = _colourChoice = _showingChoice = 0;
+            TextureMatrices = null; TextureSwaps = null; MaterialFades = null;
+            HiddenMaterials = null; MaterialColours = null;
+            CompanionNote = "";
+            foreach (var name in new[] { nameof(HasSlideChoice), nameof(HasSwapChoice),
+                         nameof(HasColourChoice), nameof(HasShowingChoice), nameof(HasCompanionSummary),
+                         nameof(CompanionSummary), nameof(HasCompanionNote) })
+                OnPropertyChanged(name);
+        }
+
         /// <summary>The archives worth looking in: the model's own, and the one its animations live in.</summary>
         private static IEnumerable<(RomInfo.DirNames dir, bool sameArchive)> Sources(ModelAssets.Archive a)
         {

@@ -5,6 +5,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using global::Avalonia;
+using global::Avalonia.Media.Imaging;
+using global::Avalonia.Platform;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.ROMFiles;
@@ -65,6 +69,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private readonly List<Item> _everything = new();
+        private IReadOnlyList<BuildingModelTextureSet> _buildingTextureSets = Array.Empty<BuildingModelTextureSet>();
 
         /// <summary>
         /// Reading every archive to see what is in it is real file work, so it does not happen here.
@@ -85,6 +90,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             var found = new List<Item>();
             var tabs = new List<CategoryTab>();
+            try { _buildingTextureSets = BuildingModelTextureSets.ReadCurrentRom(); }
+            catch (Exception ex)
+            {
+                _buildingTextureSets = Array.Empty<BuildingModelTextureSet>();
+                AppLogger.Error("ModelBrowser could not read building texture associations: " + ex.Message);
+            }
             foreach (var g in Enum.GetValues<ModelAssets.Group>())
             {
                 int inGroup = 0;
@@ -291,23 +302,52 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>The model the 3D view should draw, or null when there is not one.</summary>
         public NsbmdRenderModel Model3D { get; private set; }
 
+        private Bitmap _texturePreview;
+        public Bitmap TexturePreview
+        {
+            get => _texturePreview;
+            private set
+            {
+                if (!Set(ref _texturePreview, value)) return;
+                OnPropertyChanged(nameof(HasTexturePreview));
+                OnPropertyChanged(nameof(HasNoModel));
+            }
+        }
+        public bool HasTexturePreview => TexturePreview != null;
+
         private string _details = "Pick something on the left to see it.";
         public string Details { get => _details; private set => Set(ref _details, value); }
 
         private string _whynot = "";
         public string Whynot { get => _whynot; private set => Set(ref _whynot, value); }
         public bool HasModel => Model3D != null;
-        public bool HasNoModel => Model3D == null && !string.IsNullOrEmpty(_whynot);
+        public bool HasNoModel => Model3D == null && TexturePreview == null && !string.IsNullOrEmpty(_whynot);
 
         private ModelAssets.Options _options;
 
         private void Look()
         {
             Model3D = null;
+            ClearTexturePreview();
+            ClearCompanions();
+            TextureChoices.Clear();
+            _textureSetEntries.Clear();
+            AnimationChoices.Clear();
+            _animationEntries.Clear();
+            Playing = false;
+            AnimationDetails = "";
+            AnimationOwner = "";
+            MovementNote = "";
             Whynot = "";
             if (_selected == null)
             {
+                _options = null;
+                BaseDetails = "";
                 Details = "Pick something on the left to see it.";
+                OnPropertyChanged(nameof(HasTextureChoice));
+                OnPropertyChanged(nameof(HasAnimationChoice));
+                OnPropertyChanged(nameof(HasAnimationDetails));
+                OnPropertyChanged(nameof(HasMovementNote));
                 RaiseAll();
                 return;
             }
@@ -319,8 +359,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             // An animation picked on its own has no shape to draw, so say what it does instead of
             // leaving an empty box and the word "animation".
-            AnimationDetails = "";
-            AnimationOwner = "";
             if (IsAnAnimation(_options.Kind))
             {
                 AnimationDetails = DescribeAnimation(a, ShowingIndex, _options.Kind);
@@ -332,7 +370,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasCompanionSummary));
             OnPropertyChanged(nameof(CompanionSummary));
 
-            if (_options.CanShow)
+            if (_options.Kind == ModelAssets.Kind.TextureBundle)
+            {
+                LoadTexturePreview(a, ShowingIndex);
+                OnPropertyChanged(nameof(HasTextureChoice));
+                OnPropertyChanged(nameof(HasAnimationChoice));
+            }
+            else if (_options.CanShow)
             {
                 FindCompanions(a, ShowingIndex, Named);
                 BuildTextureChoices(a);
@@ -342,9 +386,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             else
             {
                 Whynot = _options.ShowNote ?? "There is nothing here to show.";
-                TextureChoices.Clear();
-                AnimationChoices.Clear();
-                Playing = false;
                 OnPropertyChanged(nameof(HasTextureChoice));
                 OnPropertyChanged(nameof(HasAnimationChoice));
             }
@@ -356,6 +397,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>What this model can be dressed in. </summary>
         public ObservableCollection<string> TextureChoices { get; } = new();
         public bool HasTextureChoice => TextureChoices.Count > 1;
+        private readonly List<int> _textureSetEntries = new();
 
         private int _textureChoice;
         public int TextureChoice
@@ -373,19 +415,197 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void BuildTextureChoices(ModelAssets.Archive a)
         {
             TextureChoices.Clear();
+            _textureSetEntries.Clear();
             bool embedded = ModelAssets.EmbeddedTextures(a, ShowingIndex) != null
                          || ModelAssets.NeighbouringTextures(a, ShowingIndex) != null;
-            TextureChoices.Add(embedded ? "Its own pictures" : "No pictures");
+            TextureChoices.Add(embedded ? "Its own pictures" : "No embedded pictures");
+            _textureSetEntries.Add(-1);
             int sets = ModelAssets.TextureSetCount(a);
-            for (int i = 0; i < sets; i++) TextureChoices.Add("Picture set " + i);
+            var uses = _buildingTextureSets
+                .Where(x => x.Indoor == a.Indoor && x.ModelIds.Contains(ShowingIndex))
+                .OrderBy(x => x.TextureSetId).ToList();
+            var authoritative = new HashSet<int>(uses.Select(x => x.TextureSetId));
+            var model = ModelAssets.LoadModel(a, ShowingIndex);
+
+            foreach (var use in uses)
+            {
+                if (use.TextureSetId < 0 || use.TextureSetId >= sets) continue;
+                var coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, use.TextureSetId));
+                string areas = string.Join(", ", use.AreaIds.Take(4));
+                if (use.AreaIds.Count > 4) areas += ", …";
+                AddTextureChoice(use.TextureSetId,
+                    $"ROM uses set {use.TextureSetId} · {CoverageText(coverage)} · area{(use.AreaIds.Count == 1 ? "" : "s")} {areas}");
+            }
+
+            var compatible = new List<(int id, ModelAssets.TextureCoverage coverage)>();
+            for (int i = 0; uses.Count == 0 && i < sets; i++)
+            {
+                if (authoritative.Contains(i)) continue;
+                var coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, i));
+                if (coverage.HasMatches) compatible.Add((i, coverage));
+            }
+            foreach (var candidate in compatible
+                .OrderByDescending(x => x.coverage.Complete)
+                .ThenByDescending(x => x.coverage.MatchedTextures)
+                .ThenBy(x => x.id))
+                AddTextureChoice(candidate.id,
+                    $"Likely match: set {candidate.id} · {CoverageText(candidate.coverage)}");
 
             // Clear the choice first, then set it. The list was just refilled, so the box has dropped back
             // to nothing selected, and going straight to the same number as before would say nothing.
             _textureChoice = -1;
             OnPropertyChanged(nameof(TextureChoice));
-            _textureChoice = 0;
+            _textureChoice = uses.Count > 0 && TextureChoices.Count > 1 ? 1 : 0;
             OnPropertyChanged(nameof(TextureChoice));
             OnPropertyChanged(nameof(HasTextureChoice));
+        }
+
+        private void AddTextureChoice(int setId, string label)
+        {
+            _textureSetEntries.Add(setId);
+            TextureChoices.Add(label);
+        }
+
+        private static string CoverageText(ModelAssets.TextureCoverage coverage)
+        {
+            if (coverage.RequiredTextures == 0) return "model requests no textures";
+            string textures = coverage.MatchedTextures == coverage.RequiredTextures
+                ? $"all {coverage.RequiredTextures} texture{(coverage.RequiredTextures == 1 ? "" : "s")} found"
+                : $"{coverage.MatchedTextures} of {coverage.RequiredTextures} textures found";
+            if (coverage.RequiredPalettes == 0) return textures;
+            string palettes = coverage.MatchedPalettes == coverage.RequiredPalettes
+                ? $"all {coverage.RequiredPalettes} palette{(coverage.RequiredPalettes == 1 ? "" : "s")} found"
+                : $"{coverage.MatchedPalettes} of {coverage.RequiredPalettes} palettes found";
+            return textures + "; " + palettes;
+        }
+
+        // ── texture-bundle preview ───────────────────────────────────────────────────────────────
+
+        public ObservableCollection<string> PreviewTextureNames { get; } = new();
+        public ObservableCollection<string> PreviewPaletteNames { get; } = new();
+        public bool HasPreviewTextureChoice => PreviewTextureNames.Count > 1;
+        public bool HasPreviewPaletteChoice => PreviewPaletteNames.Count > 1;
+        private List<NSBMDTexture> _previewTextures = new();
+        private List<NSBMDPalette> _previewPalettes = new();
+        private int _previewTextureIndex = -1, _previewPaletteIndex = -1;
+        private bool _fillingTexturePreview;
+
+        public int PreviewTextureIndex
+        {
+            get => _previewTextureIndex;
+            set
+            {
+                int picked = PreviewTextureNames.Count == 0 ? -1 : Math.Max(0, value);
+                if (!Set(ref _previewTextureIndex, picked) || _fillingTexturePreview) return;
+                _fillingTexturePreview = true;
+                _previewPaletteIndex = BestPaletteFor(picked);
+                OnPropertyChanged(nameof(PreviewPaletteIndex));
+                _fillingTexturePreview = false;
+                RenderTexturePreview();
+            }
+        }
+
+        public int PreviewPaletteIndex
+        {
+            get => _previewPaletteIndex;
+            set
+            {
+                int picked = PreviewPaletteNames.Count == 0 ? -1 : Math.Max(0, value);
+                if (Set(ref _previewPaletteIndex, picked) && !_fillingTexturePreview) RenderTexturePreview();
+            }
+        }
+
+        private void LoadTexturePreview(ModelAssets.Archive archive, int index)
+        {
+            if (!ModelAssets.LoadTextureBundle(archive, index, out _previewTextures, out _previewPalettes))
+            {
+                Whynot = "This texture set would not open.";
+                return;
+            }
+
+            _fillingTexturePreview = true;
+            PreviewTextureNames.Clear();
+            PreviewPaletteNames.Clear();
+            foreach (var texture in _previewTextures)
+                PreviewTextureNames.Add(string.IsNullOrWhiteSpace(texture.texname)
+                    ? $"Texture {PreviewTextureNames.Count}" : texture.texname);
+            foreach (var palette in _previewPalettes)
+                PreviewPaletteNames.Add(string.IsNullOrWhiteSpace(palette.palname)
+                    ? $"Palette {PreviewPaletteNames.Count}" : palette.palname);
+            _previewTextureIndex = _previewTextures.Count > 0 ? 0 : -1;
+            _previewPaletteIndex = BestPaletteFor(_previewTextureIndex);
+            _fillingTexturePreview = false;
+            OnPropertyChanged(nameof(PreviewTextureIndex));
+            OnPropertyChanged(nameof(PreviewPaletteIndex));
+            OnPropertyChanged(nameof(HasPreviewTextureChoice));
+            OnPropertyChanged(nameof(HasPreviewPaletteChoice));
+            RenderTexturePreview();
+        }
+
+        private int BestPaletteFor(int textureIndex)
+        {
+            if (_previewPalettes.Count == 0) return -1;
+            if (textureIndex < 0 || textureIndex >= _previewTextures.Count) return 0;
+            string texture = _previewTextures[textureIndex].texname ?? "";
+            int exact = _previewPalettes.FindIndex(p => String.Equals(p.palname, texture, StringComparison.Ordinal));
+            if (exact >= 0) return exact;
+            int prefix = _previewPalettes.FindIndex(p => !string.IsNullOrEmpty(p.palname)
+                && (texture.StartsWith(p.palname, StringComparison.Ordinal)
+                    || p.palname.StartsWith(texture, StringComparison.Ordinal)));
+            return prefix >= 0 ? prefix : 0;
+        }
+
+        private void RenderTexturePreview()
+        {
+            TexturePreview = null;
+            if (_previewTextureIndex < 0 || _previewTextureIndex >= _previewTextures.Count) return;
+            var texture = _previewTextures[_previewTextureIndex];
+            RGBA[] palette = _previewPaletteIndex >= 0 && _previewPaletteIndex < _previewPalettes.Count
+                ? _previewPalettes[_previewPaletteIndex].paldata : null;
+            var decoded = NsbmdTextureDecoder.Decode(new NSBMDMaterial
+            {
+                format = texture.format,
+                width = texture.width,
+                height = texture.height,
+                texdata = texture.texdata,
+                spdata = texture.spdata,
+                color0 = texture.color0,
+                paldata = palette,
+            });
+            if (decoded == null) return;
+            TexturePreview = RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height);
+            Details = BaseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
+                + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
+                + $"and {_previewPalettes.Count} palette{(_previewPalettes.Count == 1 ? "" : "s")}.";
+        }
+
+        private static Bitmap RgbaToBitmap(byte[] rgba, int width, int height)
+        {
+            var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96),
+                PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+            using var buffer = bitmap.Lock();
+            int sourceStride = width * 4;
+            if (buffer.RowBytes == sourceStride)
+                Marshal.Copy(rgba, 0, buffer.Address, Math.Min(rgba.Length, buffer.RowBytes * height));
+            else
+                for (int y = 0; y < height; y++)
+                    Marshal.Copy(rgba, y * sourceStride, IntPtr.Add(buffer.Address, y * buffer.RowBytes), sourceStride);
+            return bitmap;
+        }
+
+        private void ClearTexturePreview()
+        {
+            TexturePreview = null;
+            _previewTextures.Clear();
+            _previewPalettes.Clear();
+            PreviewTextureNames.Clear();
+            PreviewPaletteNames.Clear();
+            _previewTextureIndex = _previewPaletteIndex = -1;
+            OnPropertyChanged(nameof(PreviewTextureIndex));
+            OnPropertyChanged(nameof(PreviewPaletteIndex));
+            OnPropertyChanged(nameof(HasTexturePreview));
+            OnPropertyChanged(nameof(HasPreviewTextureChoice));
+            OnPropertyChanged(nameof(HasPreviewPaletteChoice));
         }
 
         // ── movement ──────────────────────────────────────────────────────────────────────────────
@@ -695,7 +915,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return;
                 }
 
-                var textures = ModelAssets.TexturesFor(a, ShowingIndex, _textureChoice - 1);
+                int textureSet = _textureChoice >= 0 && _textureChoice < _textureSetEntries.Count
+                    ? _textureSetEntries[_textureChoice] : -1;
+                var textures = ModelAssets.TexturesFor(a, ShowingIndex, textureSet);
                 bool dressed = ModelAssets.Dress(nsbmd, textures);
 
                 var anim = Chosen();
@@ -749,6 +971,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             OnPropertyChanged(nameof(HasModel));
             OnPropertyChanged(nameof(HasNoModel));
+            OnPropertyChanged(nameof(HasTexturePreview));
             _cannotImport = _selected == null
                 ? "Pick something first."
                 : ModelAssets.CannotImportBecause(_selected.Archive, ShowingIndex);
@@ -832,7 +1055,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             var narc = new ScriptNarc(_selected.Archive.Dir);
             var model = narc.Get(ShowingIndex);
-            var textures = ModelAssets.TexturesFor(_selected.Archive, ShowingIndex, _textureChoice - 1);
+            int textureSet = _textureChoice >= 0 && _textureChoice < _textureSetEntries.Count
+                ? _textureSetEntries[_textureChoice] : -1;
+            var textures = ModelAssets.TexturesFor(_selected.Archive, ShowingIndex, textureSet);
 
             try
             {

@@ -670,9 +670,27 @@ namespace DSPRE.Avalonia.Gl
                     {
                         var tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
+                        else if (mat.missingExternalTexture) target.Textures[key] = MissingTexture();
                     }
                 }
             }
+        }
+
+        private static NsbmdTextureData MissingTexture()
+        {
+            const int size = 8;
+            var rgba = new byte[size * size * 4];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    bool bright = ((x / 2) + (y / 2)) % 2 == 0;
+                    int at = (y * size + x) * 4;
+                    rgba[at] = bright ? (byte)255 : (byte)40;
+                    rgba[at + 1] = 0;
+                    rgba[at + 2] = bright ? (byte)255 : (byte)40;
+                    rgba[at + 3] = 255;
+                }
+            return new NsbmdTextureData { Rgba = rgba, Width = size, Height = size, WrapS = 1, WrapT = 1 };
         }
 
         /// <summary>Converts the NSBMD 0-31 material alpha into a 0-1 GL alpha (31 = fully opaque).
@@ -732,7 +750,8 @@ namespace DSPRE.Avalonia.Gl
 
             var v = new float[3];
             float u = 0f, w = 0f;                 // current texcoord
-            var prim = new List<float[]>();       // each entry: pos.xyz + uv.st (5 floats)
+            float vr = cr, vg = cg, vb = cb;
+            var prim = new List<float[]>();       // each entry: pos.xyz + uv.st + colour.rgb
             int primType = -1;
 
             int idx = 0, len = poly.Length;
@@ -770,7 +789,14 @@ namespace DSPRE.Avalonia.Gl
                                 float tz = NSBMDGlRenderer.Sign(S32(poly, ref idx), 0x20) / 4096f / modelScale;
                                 cur.translate(tx, ty, tz); break;
                             }
-                        case 0x20: idx += 4; break;   // COLOR (per-vertex colour ignored)
+                        case 0x20:
+                            {
+                                int colour = S32(poly, ref idx);
+                                vr = (colour & 0x1f) / 31f;
+                                vg = ((colour >> 5) & 0x1f) / 31f;
+                                vb = ((colour >> 10) & 0x1f) / 31f;
+                                break;
+                            }
                         case 0x21: idx += 4; break;   // NORMAL (lighting deferred)
                         case 0x22:                    // TEXCOORD
                             {
@@ -788,7 +814,7 @@ namespace DSPRE.Avalonia.Gl
                                 v[0] = NSBMDGlRenderer.Sign(p0 & 0xffff, 0x10) / 4096f;
                                 v[1] = NSBMDGlRenderer.Sign((p0 >> 16) & 0xffff, 0x10) / 4096f;
                                 v[2] = NSBMDGlRenderer.Sign(p1 & 0xffff, 0x10) / 4096f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x24:
                             {
@@ -796,28 +822,28 @@ namespace DSPRE.Avalonia.Gl
                                 v[0] = NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 64f;
                                 v[1] = NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 64f;
                                 v[2] = NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 64f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x25:
                             {
                                 int p = S32(poly, ref idx);
                                 v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
                                 v[1] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x26:
                             {
                                 int p = S32(poly, ref idx);
                                 v[0] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
                                 v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x27:
                             {
                                 int p = S32(poly, ref idx);
                                 v[1] = NSBMDGlRenderer.Sign(p & 0xffff, 0x10) / 4096f;
                                 v[2] = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10) / 4096f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x28:
                             {
@@ -825,10 +851,10 @@ namespace DSPRE.Avalonia.Gl
                                 v[0] += NSBMDGlRenderer.Sign(p & 0x3ff, 10) / 4096f;
                                 v[1] += NSBMDGlRenderer.Sign((p >> 10) & 0x3ff, 10) / 4096f;
                                 v[2] += NSBMDGlRenderer.Sign((p >> 20) & 0x3ff, 10) / 4096f;
-                                Emit(cur, stackId, v, u, w, sceneTransform, prim); break;
+                                Emit(cur, stackId, v, u, w, vr, vg, vb, sceneTransform, prim); break;
                             }
                         case 0x40: primType = S32(poly, ref idx); prim.Clear(); break;
-                        case 0x41: Tessellate(prim, primType, outVerts, cr, cg, cb); prim.Clear(); break;
+                        case 0x41: Tessellate(prim, primType, outVerts); prim.Clear(); break;
 
                         case 0x10: case 0x12: case 0x13: idx += 4; break;
                         case 0x29: case 0x2a: case 0x2b: idx += 4; break;
@@ -854,17 +880,18 @@ namespace DSPRE.Avalonia.Gl
             else cur.MultMatrix(m).CopyValuesTo(cur);
         }
 
-        private static void Emit(MTX44 cur, int stackId, float[] v, float u, float w, float[] sceneTransform, List<float[]> prim)
+        private static void Emit(MTX44 cur, int stackId, float[] v, float u, float w,
+            float r, float g, float b, float[] sceneTransform, List<float[]> prim)
         {
             float x = v[0], y = v[1], z = v[2];
             if (stackId >= 0) { var t = cur.MultVector(v); x = t[0]; y = t[1]; z = t[2]; }
             if (sceneTransform != null) Mat4.TransformPoint(sceneTransform, ref x, ref y, ref z);
-            prim.Add(new[] { x, y, z, u, w });
+            prim.Add(new[] { x, y, z, u, w, r, g, b });
         }
 
-        private static void Tessellate(List<float[]> p, int type, List<float> outv, float r, float g, float b)
+        private static void Tessellate(List<float[]> p, int type, List<float> outv)
         {
-            void Vtx(float[] a) { outv.Add(a[0]); outv.Add(a[1]); outv.Add(a[2]); outv.Add(a[3]); outv.Add(a[4]); outv.Add(r); outv.Add(g); outv.Add(b); }
+            void Vtx(float[] a) { for (int i = 0; i < 8; i++) outv.Add(a[i]); }
             void Tri(float[] a, float[] bb, float[] c) { Vtx(a); Vtx(bb); Vtx(c); }
 
             switch (type)
