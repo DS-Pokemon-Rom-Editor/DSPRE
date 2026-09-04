@@ -53,6 +53,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Safari Zone Editor";
         public void SaveChanges() => Save();
+        // Closing the window goes through here, so that path reports a failed save rather than logging it.
+        public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !HasUnsavedChanges; }
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -154,29 +156,73 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Save / import ──────────────────────────────────────────────────────────
-        public void Save()
+        public async Task SaveAsync()
         {
-            if (UseHgEngineSource)
-            {
-                SaveOne(GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land);
-                SaveOne(SurfVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf);
-                SaveOne(OldRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod);
-                SaveOne(GoodRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod);
-                SaveOne(SuperRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod);
-                SetClean();
-                return;
-            }
-            if (_file == null) return;
-            _file.SaveToFile();
-            SetClean();
+            if (!SaveCore(out string failure))
+                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + failure, "Save Error");
         }
 
-        private void SaveOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
+        public void Save()
+        {
+            if (!SaveCore(out string failure))
+                AppLogger.Error("Safari Zone save failed: " + failure);
+        }
+
+        /// <summary>Writes everything and says what went wrong. Only a save that wrote every group
+        /// clears the dirty flag, so a failure cannot pass for a save.</summary>
+        private bool SaveCore(out string failure)
+        {
+            failure = null;
+            try
+            {
+                if (UseHgEngineSource)
+                {
+                    var failed = new List<string>();
+                    var rods = new (SafariZoneGroupViewModel Vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType Type)[]
+                    {
+                        (GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land),
+                        (SurfVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf),
+                        (OldRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod),
+                        (GoodRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod),
+                        (SuperRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod),
+                    };
+                    foreach (var rod in rods)
+                        if (!SaveOne(rod.Vm, rod.Type)) failed.Add(rod.Type.ToString());
+
+                    if (failed.Count > 0)
+                    {
+                        failure = "these groups could not be written to the hg-engine sources: "
+                                + string.Join(", ", failed);
+                        return false;
+                    }
+                    SetClean();
+                    return true;
+                }
+
+                if (_file == null) return true;
+                if (!_file.SaveToFile())
+                {
+                    failure = "the encounter data could not be turned into a file.";
+                    return false;
+                }
+                SetClean();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                failure = ex.Message;
+                return false;
+            }
+        }
+
+        private bool SaveOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
         {
             var group = vm.CurrentGroup;
-            if (group == null) return;
-            if (!DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroup(_selectedFileIndex, type, group, out string error))
-                AppLogger.Error($"hg-engine safari zone write failed ({type}, area {_selectedFileIndex}): {error}");
+            if (group == null) return true;
+            if (DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroup(_selectedFileIndex, type, group, out string error))
+                return true;
+            AppLogger.Error($"hg-engine safari zone write failed ({type}, area {_selectedFileIndex}): {error}");
+            return false;
         }
 
         public async Task SaveAsAsync()
@@ -185,7 +231,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.SaveFile(_owner, "Save Safari Zone As", new[] { filter }, "safari_zone.bin");
             if (path == null) return;
-            _file.SaveToFile(path);
+            try
+            {
+                if (!_file.SaveToFile(path, showSuccessMessage: false))
+                    await DialogHelper.ShowError(
+                        "The encounter data could not be turned into a file.", "Save Error");
+            }
+            catch (Exception ex)
+            {
+                await DialogHelper.ShowError($"Could not write {path}:\n{ex.Message}", "Save Error");
+            }
         }
 
         public async Task ImportAsync()
