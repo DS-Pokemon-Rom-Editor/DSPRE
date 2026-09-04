@@ -2,7 +2,7 @@
 using System.IO;
 
 namespace DSPRE.ROMFiles {
-  public class SafariZoneEncounterFile {
+  public class SafariZoneEncounterFile : RomFile {
     public static Dictionary<int, string> Names = new Dictionary<int, string>() {
       {0, "Plains"},
       {1, "Meadow"},
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles {
       }
     }
 
-    public byte[] ToByteArray() {
+    public override byte[] ToByteArray() {
       MemoryStream newData = new MemoryStream();
       using (BinaryWriter bw = new BinaryWriter(newData)) {
         grassEncounterGroup.writeObjectSlots(bw);
@@ -81,21 +81,15 @@ namespace DSPRE.ROMFiles {
       return newData.ToArray();
     }
 
+    // The editor says nothing of its own when a save works, so don't pop the base class's message.
     public bool SaveToFile() {
       string path = Filesystem.GetSafariZonePath(ID);
-      return SaveToFile(path);
+      return SaveToFile(path, showSuccessMessage: false);
     }
 
     public bool SaveToFile(int id) {
       string path = Filesystem.GetSafariZonePath(id);
-      return SaveToFile(path);
-    }
-
-
-    public bool SaveToFile(string path, bool showSuccessMessage = true) {
-      byte[] romFileToByteArray = ToByteArray();
-      File.WriteAllBytes(path, romFileToByteArray);
-      return true;
+      return SaveToFile(path, showSuccessMessage: false);
     }
   }
 }
