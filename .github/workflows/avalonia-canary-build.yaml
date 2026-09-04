@@ -41,6 +41,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path "DSPRE.Avalonia/bin/publish/win-x64/Tools" | Out-Null
           Copy-Item -Path "ds-rom/target/release/dsrom.exe" -Destination "DSPRE.Avalonia/bin/publish/win-x64/Tools/dsrom.exe" -Force
 
+      - name: Build apicula.exe
+        uses: ./.github/actions/build-apicula
+        with:
+          output-directory: DSPRE.Avalonia/bin/publish/win-x64/Tools
+
       - name: Bundle Databases
         run: |
           mkdir "DSPRE.Avalonia/bin/publish/win-x64/databases"
@@ -87,8 +92,13 @@ jobs:
           cp ds-rom/target/release/dsrom DSPRE.Avalonia/bin/publish/linux-x64/Tools/dsrom
           chmod +x DSPRE.Avalonia/bin/publish/linux-x64/Tools/dsrom
 
+      - name: Build apicula (Linux)
+        uses: ./.github/actions/build-apicula
+        with:
+          output-directory: DSPRE.Avalonia/bin/publish/linux-x64/Tools
+
       # TODO: same known gap as base-build-nightly.yaml - drop the remaining Linux tool binaries
-      # into Tools/ with these exact names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
+      # into Tools/ with these exact names (no extension): ndstool, blz, rotom, rotom-lsp.
 
       - name: Bundle Databases
         run: |

@@ -97,6 +97,10 @@ jobs:
         uses: microsoft/setup-msbuild@v2
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+
       - name: Clone Database Repository
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
@@ -121,6 +125,12 @@ jobs:
           robocopy databases "publish/databases" /E /XD "databases\.git\objects\pack"
           if ($LASTEXITCODE -le 7) { exit 0 } else { exit 1 }
           ls publish/
+
+      - name: Build apicula.exe
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-apicula
+        with:
+          output-directory: publish/Tools
 
       - name: Create Velopack Release
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
@@ -247,8 +257,14 @@ jobs:
           cp ds-rom/target/release/dsrom publish-linux/Tools/dsrom
           chmod +x publish-linux/Tools/dsrom
 
+      - name: Build apicula (Linux)
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-apicula
+        with:
+          output-directory: publish-linux/Tools
+
       # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
-      # names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
+      # names (no extension): ndstool, blz, rotom, rotom-lsp.
 
       - name: Bundle Databases
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}

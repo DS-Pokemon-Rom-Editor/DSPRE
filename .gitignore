@@ -373,3 +373,6 @@ MigrationBackup/
 FodyWeavers.xsd
 # Where this machine keeps its extracted game projects for the tests
 testroms.json
+
+# Completed historical migration notes are local-only.
+Migration/
