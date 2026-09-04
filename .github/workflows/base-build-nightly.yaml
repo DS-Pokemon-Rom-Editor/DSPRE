@@ -45,10 +45,14 @@ jobs:
         cp ds-rom/target/release/dsrom publish-linux/Tools/dsrom
         chmod +x publish-linux/Tools/dsrom
 
+    - name: Build apicula (Linux)
+      uses: ./.github/actions/build-apicula
+      with:
+        output-directory: publish-linux/Tools
+
     # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
-    # names (no extension): ndstool, blz, apicula, rotom, rotom-lsp.
-    # ndstool + blz build from source (devkitPro / CUE tools); apicula has Linux releases;
-    # rotom / rotom-lsp build like dsrom above.
+    # names (no extension): ndstool, blz, rotom, rotom-lsp.
+    # ndstool + blz build from source (devkitPro / CUE tools); rotom / rotom-lsp build like dsrom above.
 
     - name: Bundle Databases
       run: |
@@ -99,6 +103,11 @@ jobs:
         cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
         New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\DS_Map\bin\Release\Tools" | Out-Null
         Copy-Item -Path "${{ github.workspace }}\ds-rom\target\release\dsrom.exe" -Destination "${{ github.workspace }}\DS_Map\bin\Release\Tools\dsrom.exe" -Force
+
+    - name: Build apicula.exe
+      uses: ./.github/actions/build-apicula
+      with:
+        output-directory: DS_Map/bin/Release/Tools
     
     - name: Prepare Release Files
       run: |

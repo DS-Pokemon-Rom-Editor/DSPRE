@@ -49,6 +49,11 @@ jobs:
         cargo build --release -p ds-rom-cli --manifest-path ds-rom/Cargo.toml
         New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\DS_Map\bin\Release\Tools" | Out-Null
         Copy-Item -Path "${{ github.workspace }}\ds-rom\target\release\dsrom.exe" -Destination "${{ github.workspace }}\DS_Map\bin\Release\Tools\dsrom.exe" -Force
+
+    - name: Build apicula.exe
+      uses: ./.github/actions/build-apicula
+      with:
+        output-directory: DS_Map/bin/Release/Tools
     
     - name: Prepare Release Files
       run: |

@@ -1,0 +1,53 @@
+name: Build apicula
+description: Build the pinned apicula source and copy it into a DSPRE Tools directory.
+
+inputs:
+  output-directory:
+    description: Repository-relative Tools directory that receives the apicula executable.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout pinned apicula source
+      uses: actions/checkout@v4
+      with:
+        repository: scurest/apicula
+        ref: 3d4e91e14045392a49c89e86dab8cb936225588c
+        path: .tool-sources/apicula
+
+    - name: Build and install apicula
+      shell: bash
+      env:
+        APICULA_REVISION: 3d4e91e14045392a49c89e86dab8cb936225588c
+        APICULA_VERSION: apicula 0.1.1-dev
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+
+        actual_revision="$(git -C .tool-sources/apicula rev-parse HEAD)"
+        if [ "$actual_revision" != "$APICULA_REVISION" ]; then
+          echo "Expected apicula $APICULA_REVISION, got $actual_revision" >&2
+          exit 1
+        fi
+
+        cargo build --release --locked --manifest-path .tool-sources/apicula/Cargo.toml
+
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          source_binary=.tool-sources/apicula/target/release/apicula.exe
+          output_name=apicula.exe
+        else
+          source_binary=.tool-sources/apicula/target/release/apicula
+          output_name=apicula
+        fi
+
+        mkdir -p "$OUTPUT_DIRECTORY"
+        cp "$source_binary" "$OUTPUT_DIRECTORY/$output_name"
+        chmod +x "$OUTPUT_DIRECTORY/$output_name"
+
+        actual_version="$("$OUTPUT_DIRECTORY/$output_name" -V)"
+        if [ "$actual_version" != "$APICULA_VERSION" ]; then
+          echo "Expected '$APICULA_VERSION', got '$actual_version'" >&2
+          exit 1
+        fi
+        echo "Built $actual_version from $actual_revision"
