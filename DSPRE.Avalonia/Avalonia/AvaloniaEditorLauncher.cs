@@ -706,32 +706,42 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the one place that lists every 2D graphic in the game.</summary>
-        public static void OpenGraphicsBrowser()
+        public static void OpenGraphicsBrowser() => _ = OpenGraphicsBrowserAsync();
+
+        public static async System.Threading.Tasks.Task OpenGraphicsBrowserAsync()
         {
             try
             {
-                new Views.Graphics.GraphicsBrowserView(new ViewModels.Graphics.GraphicsBrowserViewModel()).ShowManaged();
+                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
+                await RunBusyAsync("Opening Graphics…", UnpackHint, vm.Scan);
+                vm.Publish();
+                new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicsBrowser failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
             }
         }
 
         /// <summary>Opens the graphics window already looking at one file.</summary>
         public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex)
+            => _ = OpenGraphicAtAsync(archive, fileIndex);
+
+        private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex)
         {
             try
             {
                 var a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
                 if (a == null)
                 {
-                    _ = DialogHelper.ShowInfo("That kind of graphic is not one this window lists yet.", "Graphics");
+                    await DialogHelper.ShowInfo("That kind of graphic is not one this window lists yet.", "Graphics");
                     return;
                 }
 
-                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel();
+                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
+                await RunBusyAsync("Opening Graphics…", UnpackHint, vm.Scan);
+                vm.Publish();
                 bool found = vm.JumpTo(a, fileIndex);
                 new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
                 if (!found)
@@ -740,7 +750,7 @@ namespace DSPRE.Avalonia
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenGraphicAt failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
+                await DialogHelper.ShowInfo("The graphics list could not be opened. Open a ROM first.", "Graphics");
             }
         }
 

@@ -78,10 +78,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private readonly List<Item> _everything = new();
+        private List<Item> _scannedItems;
+        private List<CategoryTab> _scannedTabs;
 
-        public GraphicsBrowserViewModel()
+        /// <summary>
+        /// The launcher defers the archive scan so it can run behind the busy overlay. Tests and small
+        /// callers keep the convenient eager behavior.
+        /// </summary>
+        public GraphicsBrowserViewModel(bool loadImmediately = true)
         {
-            Reload();
+            if (loadImmediately) Reload();
         }
 
         /// <summary>
@@ -115,11 +121,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return true;
         }
 
-        /// <summary>Builds the list from whatever the open game actually has.</summary>
-        public void Reload()
+        /// <summary>Builds and publishes the list in one go.</summary>
+        public void Reload() { Scan(); Publish(); }
+
+        /// <summary>
+        /// Walks every archive and works out what it holds. This touches files but no bound collection,
+        /// so the launcher can run it away from the UI thread.
+        /// </summary>
+        public void Scan()
         {
-            _everything.Clear();
-            Tabs.Clear();
+            var found = new List<Item>();
+            var tabs = new List<CategoryTab>();
             GraphicAssets.Forget();
 
             foreach (var g in Enum.GetValues<GraphicAssets.Group>())
@@ -142,7 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         // Count the things, not the files: a row is a whole Pokemon or a whole trainer now,
                         // so counting files made the tab claim six times as many as it lists.
                         inGroup++;
-                        _everything.Add(new Item
+                        found.Add(new Item
                         {
                             Archive = a, In = g, Index = u.First, Name = u.Name, Unit = u,
                             Search = (a.Title + " " + u.First + " " + a.What + " " + u.Name).ToLowerInvariant(),
@@ -150,25 +162,36 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     }
                 }
                 if (inGroup > 0)
-                    Tabs.Add(new CategoryTab { Title = FriendlyGroup(g), Only = g, Count = inGroup,
-                                               What = WhatIsOn(g) });
+                    tabs.Add(new CategoryTab { Title = FriendlyGroup(g), Only = g, Count = inGroup,
+                                               What = WhatIsOn(g, found) });
             }
 
-            if (Tabs.Count > 0)
-                Tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = _everything.Count,
+            if (tabs.Count > 0)
+                tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = found.Count,
                                                  What = "Every flat graphic this game has." });
+
+            _scannedItems = found;
+            _scannedTabs = tabs;
+        }
+
+        /// <summary>Puts what <see cref="Scan"/> found into the bound collections. UI thread only.</summary>
+        public void Publish()
+        {
+            _everything.Clear();
+            _everything.AddRange(_scannedItems ?? new List<Item>());
+            Tabs.Clear();
+            foreach (var tab in _scannedTabs ?? new List<CategoryTab>()) Tabs.Add(tab);
             _selectedTab = Tabs.FirstOrDefault();
             OnPropertyChanged(nameof(SelectedTab));
 
             ApplyFilter();
-            OnPropertyChanged(nameof(FoundSummary));
         }
 
         /// <summary>Which archives feed a tab. A tab can be fed by part of an archive, so this asks the
         /// rows rather than assuming an archive belongs to one tab.</summary>
-        private string WhatIsOn(GraphicAssets.Group g)
+        private static string WhatIsOn(GraphicAssets.Group g, IEnumerable<Item> items)
         {
-            var titles = _everything.Where(i => i.In == g).Select(i => i.Archive.Title).Distinct();
+            var titles = items.Where(i => i.In == g).Select(i => i.Archive.Title).Distinct();
             return string.Join("  ", titles);
         }
 
