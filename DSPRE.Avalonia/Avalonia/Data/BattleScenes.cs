@@ -16,7 +16,10 @@ namespace DSPRE.Avalonia.Data
             public int BackgroundId;
             /// <summary>The headers that fight here, by number.</summary>
             public List<int> Headers = new();
-            /// <summary>Those headers by name, as far as the game names them.</summary>
+            /// <summary>
+            /// Those headers by name, in the same order as <see cref="Headers"/>. A header-number
+            /// fallback keeps the association complete when the ROM has no usable display name.
+            /// </summary>
             public List<string> PlaceNames = new();
 
             public string Label => $"{BackgroundId,3}   {Where}";
@@ -110,8 +113,7 @@ namespace DSPRE.Avalonia.Data
                     };
                 }
                 scene.Headers.Add(i);
-                string where = NameOfPlace(i);
-                if (where != null) scene.PlaceNames.Add(where);
+                scene.PlaceNames.Add(NameOfPlace(i) ?? ("Header " + i));
             }
 
             // Scenery the games ship but no place asks for still belongs in the list: somebody adding a

@@ -28,6 +28,8 @@ namespace DSPRE.Tests
             new object[] { "IPKE", HeartGold, "HeartGold" },
         };
 
+        public static IEnumerable<object[]> PrimaryGames => Games.Where(g => (string)g[2] != "Diamond");
+
         /// <summary>A drawing belongs to one thing and one thing only. </summary>
         private static bool MustBeExclusive(string partName)
             // A part that says it is shared may be in several rows: several items are one drawing in
@@ -495,6 +497,30 @@ namespace DSPRE.Tests
                 _out.WriteLine($"{game}: lookup answered only {answered}/{headers}, showing internal "
                              + $"codes for all {shown.Count} names");
             }
+        }
+
+        [SkippableTheory]
+        [MemberData(nameof(PrimaryGames))]
+        public void EveryBattleSceneAssociationKeepsItsHeaderAndNameTogether(string code, string path, string game)
+        {
+            Skip.If(!Directory.Exists(path), $"{game} is not unpacked here");
+            new RomInfo(code, path);
+
+            var scenes = DSPRE.Avalonia.Data.BattleScenes.Read();
+            Assert.NotEmpty(scenes);
+            int checkedAssociations = 0;
+            foreach (var scene in scenes)
+            {
+                Assert.Equal(scene.Headers.Count, scene.PlaceNames.Count);
+                for (int i = 0; i < scene.Headers.Count; i++)
+                {
+                    Assert.False(string.IsNullOrWhiteSpace(scene.PlaceNames[i]));
+                    checkedAssociations++;
+                }
+            }
+
+            Assert.True(checkedAssociations > 0, $"{game}: no battle-scene associations were checked");
+            _out.WriteLine($"{game}: checked {checkedAssociations} header-to-scene associations");
         }
 
         /// <summary>The groupings actually group: an archive that has one should end up with far fewer

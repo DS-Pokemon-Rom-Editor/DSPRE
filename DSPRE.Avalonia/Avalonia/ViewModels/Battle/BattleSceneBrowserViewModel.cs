@@ -111,18 +111,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     + $"{s.Arrangement}, painted from file {s.PaletteDay + _timeOfDay}. "
                     + (s.Headers.Count == 0
                         ? "No place in this game fights here, so it is spare."
-                        : $"{s.Headers.Count} place{(s.Headers.Count == 1 ? "" : "s")} fight here.");
+                        : $"{s.Headers.Count} map header{(s.Headers.Count == 1 ? "" : "s")} use this scenery.");
 
             // The whole list rather than the first forty, in a box that scrolls, so nothing trails off
             // into "and more".
             Places.Clear();
-            if (s.PlaceNames.Count > 0)
-                foreach (var n in s.PlaceNames.Distinct()) Places.Add(n);
-            else
-                foreach (var h in s.Headers) Places.Add("Header " + h);
+            for (int i = 0; i < s.Headers.Count; i++)
+            {
+                string name = i < s.PlaceNames.Count ? s.PlaceNames[i] : "Header " + s.Headers[i];
+                Places.Add($"{name} (header {s.Headers[i]})");
+            }
             HasPlaces = Places.Count > 0;
-            PlacesHeader = Places.Count == 1 ? "The one place that fights here"
-                                             : $"The {Places.Count} places that fight here";
+            PlacesHeader = Places.Count == 1 ? "The one map header that uses this scenery"
+                                             : $"The {Places.Count} map headers that use this scenery";
 
             try
             {
