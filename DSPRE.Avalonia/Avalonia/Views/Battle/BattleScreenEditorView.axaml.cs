@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Views.Battle
             }
             if (!await WarnIfShared(piece)) return;
 
-            int at = PaintableEntry(piece);
+            int at = BattleScreenEditorViewModel.PaintableEntry(piece);
             new GraphicPainterView(new GraphicPainterViewModel(archive, at)).ShowManaged();
         }
 
@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 Safe(piece.Name) + ".png");
             if (path == null) return;
 
-            int at = PaintableEntry(piece);
+            int at = BattleScreenEditorViewModel.PaintableEntry(piece);
             string trouble = GraphicAssets.ExportPng(archive, at, path);
             if (trouble != null) await DialogHelper.ShowError(trouble, "Battle Screen");
             else VM?.Refresh();
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
 
-            int at = PaintableEntry(piece);
+            int at = BattleScreenEditorViewModel.PaintableEntry(piece);
             string trouble = GraphicAssets.ImportPng(archive, at, path, out string note);
             if (trouble != null) { await DialogHelper.ShowError(trouble, "Battle Screen"); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Battle Screen");
@@ -118,13 +118,6 @@ namespace DSPRE.Avalonia.Views.Battle
                 "This piece is shared", "Change it", "Leave it alone", "Cancel")
                 == DialogHelper.MsgResult.Yes;
         }
-
-        /// <summary>
-        /// Which file the painter is handed. A sprite is painted as the picture its layout makes; a
-        /// background as its drawing, which is where the arrangement hangs off in this codebase.
-        /// </summary>
-        private static int PaintableEntry(BattleScreenRenderer.Piece piece) =>
-            piece.Layout >= 0 ? piece.Layout : piece.Drawing;
 
         private static string Safe(string name) =>
             string.Join("_", (name ?? "piece").Split(System.IO.Path.GetInvalidFileNameChars()));
