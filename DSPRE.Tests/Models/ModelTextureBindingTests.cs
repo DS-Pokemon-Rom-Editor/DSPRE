@@ -107,6 +107,15 @@ namespace DSPRE.Tests
             Assert.Equal(2, ModelTexturePairing.BestPaletteIndex(palettes, "roof"));
             Assert.Equal(0, ModelTexturePairing.BestPaletteIndex(palettes, "door"));
             Assert.Equal(-1, ModelTexturePairing.BestPaletteIndex(Array.Empty<NSBMDPalette>(), "wall"));
+
+            var heartGoldMapPack = new[]
+            {
+                new NSBMDPalette { palname = "tree01" },
+                new NSBMDPalette { palname = "sea_f02_pl" },
+                new NSBMDPalette { palname = "sea_un" },
+            };
+            Assert.Equal(1, ModelTexturePairing.BestPaletteIndex(heartGoldMapPack, "sea_on"));
+            Assert.Equal(2, ModelTexturePairing.BestPaletteIndex(heartGoldMapPack, "sea_un"));
         }
 
         [Fact]

@@ -25,6 +25,23 @@ namespace DSPRE.Avalonia.Data
                         || palette.StartsWith(texture, StringComparison.Ordinal)))
                     return i;
             }
+            // A few standalone HGSS packs name the surface texture "*_on" while its palette carries
+            // a more specific surface name, and keep a separate "*_un" underground pair. NSBTX has
+            // no stored texture-to-palette binding, so this remains a name suggestion; avoid choosing
+            // the clearly underground palette for the surface texture.
+            int split = texture.IndexOf('_');
+            if (split > 0 && texture.EndsWith("_on", StringComparison.Ordinal))
+            {
+                string stem = texture.Substring(0, split) + "_";
+                for (int i = 0; i < palettes.Count; i++)
+                {
+                    string palette = palettes[i]?.palname;
+                    if (!string.IsNullOrEmpty(palette)
+                        && palette.StartsWith(stem, StringComparison.Ordinal)
+                        && !palette.EndsWith("_un", StringComparison.Ordinal))
+                        return i;
+                }
+            }
             return 0;
         }
     }
