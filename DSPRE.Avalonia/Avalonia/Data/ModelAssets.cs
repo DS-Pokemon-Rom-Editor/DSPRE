@@ -418,6 +418,63 @@ namespace DSPRE.Avalonia.Data
         /// the movements carry a name at all; 8 of those are exactly a model's name and 46 share a start
         /// with one, so this finds real pairs rather than coincidences.
         /// </summary>
+        /// <summary>
+        /// A name cut down to the thing it names: lower case, without the game's own prefix, and with
+        /// anything after the first underscore dropped. So pl_manene and manene_aruku both come out as
+        /// manene, which is what lets a clip be matched to the model it was written for.
+        /// </summary>
+        public static string BaseName(string name)
+        {
+            string s = (name ?? "").Trim().ToLowerInvariant();
+            foreach (string prefix in new[] { "pl_", "dp_", "hg_", "ss_", "pt_", "d_", "p_" })
+                if (s.StartsWith(prefix, StringComparison.Ordinal)) { s = s.Substring(prefix.Length); break; }
+            int us = s.IndexOf('_');
+            return us > 0 ? s.Substring(0, us) : s;
+        }
+
+        /// <summary>How sure we are that an animation was written for a model.</summary>
+        public enum Match
+        {
+            None,
+            /// <summary>The cut-down names agree. Loose, because cutting throws detail away.</summary>
+            SameFamily,
+            /// <summary>One name starts with the other, sharing a real run of characters.</summary>
+            SameStart,
+            /// <summary>The names are the same.</summary>
+            Exact,
+        }
+
+        /// <summary>
+        /// How well an animation's clips fit a model. Two rules, because neither finds everything: the
+        /// cut-down name catches door_op against p_door, and the shared start catches treeeff01 against
+        /// treeeff. Counted over three games, using both finds pairs either alone would miss.
+        /// </summary>
+        public static Match MatchFor(IEnumerable<string> clipNames, string modelName)
+        {
+            if (string.IsNullOrWhiteSpace(modelName) || clipNames == null) return Match.None;
+            var clips = clipNames.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            if (clips.Count == 0) return Match.None;
+
+            var best = Match.None;
+            foreach (string clip in clips)
+            {
+                int shared = NameMatch(modelName, clip);
+                if (shared == 2) return Match.Exact;
+                if (shared == 1) best = Match.SameStart;
+                else if (best == Match.None)
+                {
+                    string want = BaseName(modelName);
+                    // A base of one or two letters says nothing; most of a game's models share those.
+                    if (want.Length >= 3 && BaseName(clip) == want) best = Match.SameFamily;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>Whether any of an animation's clips was written for this model.</summary>
+        public static bool BelongsTo(IEnumerable<string> clipNames, string modelName)
+            => MatchFor(clipNames, modelName) != Match.None;
+
         public static int NameMatch(string modelName, string movementName)
         {
             if (string.IsNullOrWhiteSpace(modelName) || string.IsNullOrWhiteSpace(movementName)) return 0;
