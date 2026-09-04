@@ -91,6 +91,22 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             && BetaEditors.Allows("TitleScreenEditorView");
         public bool CanUseTrainerCardEditor => IsRomLoaded && RomInfo.IsTrainerCardEditorAvailable()
             && BetaEditors.Allows("TrainerCardEditorView");
+        public string TitleScreenEditorNote => EditorNote(
+            "TitleScreenEditorView", RomInfo.IsTitleScreenEditorAvailable(),
+            "The Title Screen editor is available for HeartGold and SoulSilver ROMs.");
+        public string DungeonCutinEditorNote => EditorNote(
+            "DungeonCutinEditorView", RomInfo.IsDungeonCutinEditorAvailable(),
+            "The Dungeon Cut-in editor is available for English and Spanish HeartGold and SoulSilver ROMs.");
+        public string TrainerCardEditorNote => EditorNote(
+            "TrainerCardEditorView", RomInfo.IsTrainerCardEditorAvailable(),
+            "The Trainer Card editor is available for Platinum, HeartGold and SoulSilver ROMs.");
+
+        private string EditorNote(string window, bool supported, string unsupported)
+        {
+            if (!IsRomLoaded) return "Open a ROM first.";
+            string beta = BetaEditors.WhyNot(window);
+            return beta ?? (supported ? null : unsupported);
+        }
         public bool CanUseWildEditors   => IsRomLoaded && HgAllows;
         // Special Encounters (Safari/Great Marsh-style tables) isn't one of the 5 hg-engine domains
         // DSPRE can read/write from source yet, so it stays blocked regardless of the link, unlike
@@ -166,6 +182,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseDungeonCutinEditor));
             OnPropertyChanged(nameof(CanUseTitleScreenEditor));
             OnPropertyChanged(nameof(CanUseTrainerCardEditor));
+            OnPropertyChanged(nameof(DungeonCutinEditorNote));
+            OnPropertyChanged(nameof(TitleScreenEditorNote));
+            OnPropertyChanged(nameof(TrainerCardEditorNote));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
             OnPropertyChanged(nameof(CanUseTrophyGardenEditor));

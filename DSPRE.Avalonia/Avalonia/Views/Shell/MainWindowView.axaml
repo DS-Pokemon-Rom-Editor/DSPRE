@@ -109,9 +109,9 @@
                   ToolTip.Tip="Both screens of a battle, drawn from this ROM, with every piece editable"/>
         <MenuItem Header="Picture to Background…" Click="TilesetBuilder_Click"
                   ToolTip.Tip="Turn a PNG into the colours, tiles and arrangement a background is drawn from" IsEnabled="{Binding Beta[TilesetBuilderView]}"/>
-        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding BetaNote[TitleScreenEditorView]}"/>
-        <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding BetaNote[DungeonCutinEditorView]}"/>
-        <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding BetaNote[TrainerCardEditorView]}"/>
+        <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
+        <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding DungeonCutinEditorNote}"/>
+        <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding TrainerCardEditorNote}"/>
         <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click"/>
         <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
       </MenuItem>

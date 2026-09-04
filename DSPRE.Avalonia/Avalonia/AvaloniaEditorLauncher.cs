@@ -477,20 +477,70 @@ namespace DSPRE.Avalonia
 
         public static void OpenDungeonCutinEditor()
         {
-            if (!IsRomLoaded || !RomInfo.IsDungeonCutinEditorAvailable()) return;
+            if (!IsRomLoaded) return;
+            if (!RomInfo.IsDungeonCutinEditorAvailable())
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The Dungeon Cut-in editor is available for English and Spanish HeartGold and SoulSilver ROMs.",
+                    "Dungeon Cut-in Editor");
+                return;
+            }
+            if (!BetaEditors.Allows("DungeonCutinEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("DungeonCutinEditorView")!, "Dungeon Cut-in Editor");
+                return;
+            }
             new DungeonCutinEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
         }
 
         public static void OpenTitleScreenEditor()
         {
-            if (!IsRomLoaded || !RomInfo.IsTitleScreenEditorAvailable()) return;
+            if (!IsRomLoaded) return;
+            if (!RomInfo.IsTitleScreenEditorAvailable())
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The Title Screen editor is available for HeartGold and SoulSilver ROMs.",
+                    "Title Screen Editor");
+                return;
+            }
+            if (!BetaEditors.Allows("TitleScreenEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("TitleScreenEditorView")!, "Title Screen Editor");
+                return;
+            }
             new TitleScreenEditorView().ShowManaged();
         }
 
         public static void OpenTrainerCardEditor()
         {
-            if (!IsRomLoaded || !RomInfo.IsTrainerCardEditorAvailable()) return;
+            if (!IsRomLoaded) return;
+            if (!RomInfo.IsTrainerCardEditorAvailable())
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The Trainer Card editor is available for Platinum, HeartGold and SoulSilver ROMs.",
+                    "Trainer Card Editor");
+                return;
+            }
+            if (!BetaEditors.Allows("TrainerCardEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("TrainerCardEditorView")!, "Trainer Card Editor");
+                return;
+            }
             new TrainerCardEditorView().ShowManaged();
+        }
+
+        public static async System.Threading.Tasks.Task OpenBannerEditorAsync()
+        {
+            if (!IsRomLoaded) return;
+            if (!RomInfo.IsDsRomProject)
+            {
+                await DialogHelper.ShowInfo(
+                    "Editing the game icon and banner titles requires a ds-rom-format project.\n" +
+                    "Use File → Convert to ds-rom format, then reopen this editor.",
+                    "ds-rom project required");
+                return;
+            }
+            new BannerEditorView(new ViewModels.Graphics.BannerEditorViewModel()).ShowManaged();
         }
 
         public static void OpenSpawnEditor()
@@ -910,6 +960,10 @@ namespace DSPRE.Avalonia
             new() { Name = "Models and textures",   Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
             new() { Name = "Battle screens",        Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
             new() { Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
+            new() { Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
+            new() { Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
+            new() { Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
+            new() { Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
             new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
@@ -952,6 +1006,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
             new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
+            new() { Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },
             new() { Name = "Edit Dropdown Labels",  Keywords = "enum custom", Run = OpenLabelEditor },
             new() { Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
             new() { Name = "Settings",              Run = OpenSettings },

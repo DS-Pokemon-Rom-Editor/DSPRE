@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DSPRE.Avalonia;
 using DSPRE.Avalonia.ViewModels;
 using DSPRE.Avalonia.ViewModels.Shell;
 using Xunit;
@@ -93,6 +94,22 @@ namespace DSPRE.Tests
             var vm = new CommandPaletteViewModel(Sample());
             vm.SelectedIndex = 2;
             Assert.Equal("Map Editor", vm.Selected.Name);
+        }
+
+        [Fact]
+        public void EveryStandaloneGraphicsAndAudioEditorCanBeQuickOpened()
+        {
+            var names = AvaloniaEditorLauncher.BuildCommands().Select(c => c.Name).ToHashSet();
+            var expected = new[]
+            {
+                "Battle screens", "Battle scenes", "Picture to Background", "Title Screen Editor",
+                "Dungeon Cutin Editor", "Trainer Card Editor", "Overworld Sprites (BTX)",
+                "NSBTX Texture Editor", "Font Editor", "Audio Editor", "Trainer Sprite Editor",
+                "Game Icon & Banner",
+            };
+
+            Assert.All(expected, name => Assert.Contains(name, names));
+            Assert.Equal(expected.Length, expected.Count(names.Contains));
         }
     }
 }
