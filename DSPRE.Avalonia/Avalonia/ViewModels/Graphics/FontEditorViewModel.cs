@@ -321,7 +321,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // through a program that nudged the colours still comes back as the right shades.
         private bool _wholeFontForPictures;
         /// <summary>Whether saving and reading a picture covers every letter or just this one.</summary>
-        public bool WholeFontForPictures { get => _wholeFontForPictures; set => Set(ref _wholeFontForPictures, value); }
+        public bool WholeFontForPictures
+        {
+            get => _wholeFontForPictures;
+            set
+            {
+                if (Set(ref _wholeFontForPictures, value))
+                    OnPropertyChanged(nameof(CanUsePictureCommand));
+            }
+        }
+
+        /// <summary>A single-letter picture needs a selection; a whole-font sheet does not.</summary>
+        public bool CanUsePictureCommand => _font != null && (_wholeFontForPictures || HasGlyph);
 
         private static readonly byte[] ShadeGrey = { 0x00, 0x60, 0xA0, 0xFF };
 
@@ -543,7 +554,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void RaiseGlyph()
         {
-            foreach (var n in new[] { nameof(HasGlyph), nameof(GlyphTitle), nameof(GlyphChanged) })
+            foreach (var n in new[]
+            {
+                nameof(HasGlyph), nameof(GlyphTitle), nameof(GlyphChanged),
+                nameof(CanUsePictureCommand),
+            })
                 OnPropertyChanged(n);
             if (_font != null && _selectedGlyphIndex >= 0)
             {
