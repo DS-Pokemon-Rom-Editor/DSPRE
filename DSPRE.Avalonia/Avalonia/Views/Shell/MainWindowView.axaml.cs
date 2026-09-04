@@ -94,18 +94,7 @@ namespace DSPRE.Avalonia.Views.Shell
             => await OpenBannerEditorAsync();
 
         private async System.Threading.Tasks.Task OpenBannerEditorAsync()
-        {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
-            if (!RomInfo.IsDsRomProject)
-            {
-                await DialogHelper.ShowInfo(
-                    "Editing the game icon and banner titles requires a ds-rom-format project.\n" +
-                    "Use File → Convert to ds-rom format, then reopen this editor.",
-                    "ds-rom project required");
-                return;
-            }
-            new BannerEditorView(new ViewModels.Graphics.BannerEditorViewModel()).ShowManaged();
-        }
+            => await AvaloniaEditorLauncher.OpenBannerEditorAsync();
 
         // ── Window placement persistence (size + maximized; centered by the OS otherwise) ──
         private void RestoreWindowPlacement()
