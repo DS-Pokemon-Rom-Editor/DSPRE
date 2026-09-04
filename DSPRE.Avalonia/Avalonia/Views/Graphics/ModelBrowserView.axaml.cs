@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 GlView.SetTextureMatrices(vm.TextureMatrices);
                 GlView.SetTextureSwaps(vm.TextureSwaps);
                 GlView.SetMaterialFades(vm.MaterialFades);
-                GlView.SetHiddenMaterials(vm.HiddenMaterials);
+                GlView.SetHiddenNodes(vm.HiddenNodes);
                 GlView.SetMaterialColours(vm.MaterialColours);
             };
 

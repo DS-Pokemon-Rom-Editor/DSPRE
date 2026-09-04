@@ -170,7 +170,7 @@
               <TextBlock Text="Hidden parts" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ComboBox ItemsSource="{Binding ShowingChoices}" SelectedItem="{Binding ShowingChoiceName, Mode=TwoWay}"
                         HorizontalAlignment="Stretch" FontSize="12"
-                        ToolTip.Tip="Parts of the model being hidden and shown again. Drawn see-through here, which looks the same."/>
+                        ToolTip.Tip="Parts of the model being hidden and shown again. Hidden parts are left out of the preview."/>
             </StackPanel>
 
           <WrapPanel Classes="toolbar" Orientation="Horizontal">

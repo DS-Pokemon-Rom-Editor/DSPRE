@@ -146,8 +146,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Dictionary<int, float[]> TextureMatrices { get; private set; }
         public Dictionary<int, string> TextureSwaps { get; private set; }
         public Dictionary<int, float> MaterialFades { get; private set; }
-        /// <summary>Parts an animation hides this frame, so the view can leave them out.</summary>
-        public HashSet<int> HiddenMaterials { get; private set; }
+        /// <summary>Model nodes an animation hides this frame, so the view can leave their shapes out.</summary>
+        public HashSet<int> HiddenNodes { get; private set; }
         /// <summary>What a colour animation recolours a surface to this frame.</summary>
         public Dictionary<int, (float r, float g, float b)> MaterialColours { get; private set; }
 
@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _slide = null; _swap = null; _colour = null; _showing = null;
             _slideChoice = _swapChoice = _colourChoice = _showingChoice = 0;
             TextureMatrices = null; TextureSwaps = null; MaterialFades = null;
-            HiddenMaterials = null; MaterialColours = null;
+            HiddenNodes = null; MaterialColours = null;
             CompanionNote = "";
             foreach (var name in new[] { nameof(HasSlideChoice), nameof(HasSwapChoice),
                          nameof(HasColourChoice), nameof(HasShowingChoice), nameof(HasCompanionSummary),
@@ -341,9 +341,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             TextureMatrices = null;
             TextureSwaps = null;
             MaterialFades = null;
-            HiddenMaterials = null;
+            HiddenNodes = null;
             MaterialColours = null;
-            if (Model3D?.MaterialNameByKey == null || Model3D.MaterialNameByKey.Count == 0) return;
+            if (Model3D == null) return;
 
             if (_slide != null)
             {
@@ -387,15 +387,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             // A hidden part is left out rather than drawn see-through, which is only the same thing
             // when there is nothing behind it.
-            HiddenMaterials = null;
+            HiddenNodes = null;
             if (_showing != null && _showing.AnimationNames.Count > 0)
             {
                 int at = frame % Math.Max(1, _showing.FrameCount);
-                var keys = Model3D.MaterialNameByKey.Keys.OrderBy(k => k).ToList();
                 var gone = new HashSet<int>();
-                for (int part = 0; part < keys.Count; part++)
-                    if (!_showing.Visible(0, part, at)) gone.Add(keys[part]);
-                if (gone.Count > 0) HiddenMaterials = gone;
+                for (int node = 0; node < _showing.PartCount(0); node++)
+                    if (!_showing.Visible(0, node, at)) gone.Add(node);
+                if (gone.Count > 0) HiddenNodes = gone;
             }
 
             if (fades.Count > 0) MaterialFades = fades;

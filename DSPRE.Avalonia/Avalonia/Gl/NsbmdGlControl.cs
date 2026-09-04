@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int CullMode; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; }
 
         private GlFunctions _f;
         private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc;
@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Supplies this frame's material fades, keyed by material. Pass null to stop fading.</summary>
         // Parts an animation hides outright. Drawing them fully see-through looks the same on a plain
         // background but not over anything else, so they are skipped instead.
-        private HashSet<int> _hidden;
+        private HashSet<int> _hiddenNodes;
 
         // What a material-colour animation recolours a surface to, as three values from zero to one.
         private Dictionary<int, (float r, float g, float b)> _matColours;
@@ -109,10 +109,10 @@ namespace DSPRE.Avalonia.Gl
             RequestNextFrameRendering();
         }
 
-        /// <summary>Materials not to draw at all this frame, or null to draw everything.</summary>
-        public void SetHiddenMaterials(HashSet<int> byMaterialKey)
+        /// <summary>NSBMD nodes not to draw at all this frame, or null to draw everything.</summary>
+        public void SetHiddenNodes(HashSet<int> byNodeIndex)
         {
-            _hidden = byMaterialKey;
+            _hiddenNodes = byNodeIndex;
             RequestNextFrameRendering();
         }
 
@@ -570,7 +570,9 @@ namespace DSPRE.Avalonia.Gl
                 if (_model.Textures != null && _model.Textures.TryGetValue(part.MaterialIndex, out var tex) && tex?.Rgba != null)
                     texId = UploadTexture(tex);
 
-                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId, Alpha = part.Alpha, MaterialKey = part.MaterialIndex, CullMode = part.CullMode });
+                _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId,
+                    Alpha = part.Alpha, MaterialKey = part.MaterialIndex, NodeIndex = part.NodeIndex,
+                    CullMode = part.CullMode });
             }
             _uploadPending = false;
         }
@@ -682,6 +684,7 @@ namespace DSPRE.Avalonia.Gl
             int stride = 8 * sizeof(float);
             foreach (var part in _parts)
             {
+                if (_hiddenNodes != null && _hiddenNodes.Contains(part.NodeIndex)) continue;
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, part.Vbo);
                 _f.EnableVertexAttribArray(0);
                 _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
@@ -714,8 +717,6 @@ namespace DSPRE.Avalonia.Gl
                     _f.Enable(GlFunctions.GL_BLEND);
                     _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
                 }
-                if (_hidden != null && _hidden.Contains(part.MaterialKey)) continue;
-
                 float alpha = part.Alpha;
                 if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
                     alpha = faded;
