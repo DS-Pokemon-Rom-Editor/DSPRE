@@ -3,8 +3,8 @@
 DSPRE 3.0 is an Avalonia app. This is how the code is laid out, how we write it, and the traps that
 have cost people a day. Build and publish instructions are in [BUILDING.md](BUILDING.md).
 
-The old WinForms shell is still in the repo behind `--winforms`, for the handful of editors nobody has
-ported yet. Nothing new is written for it and the rest of this document ignores it.
+The old WinForms shell is still in the repo behind `--winforms`. New UI work targets Avalonia unless a
+task explicitly concerns the legacy shell, and the rest of this document focuses on Avalonia.
 
 ---
 
@@ -47,19 +47,18 @@ view's `xmlns:vm` names its own section. Two views embed across sections and car
 
 ```powershell
 dotnet build DS_Map.sln          # everything
-dotnet test DSPRE.Tests          # the suite
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0
 ```
 
 In Visual Studio the dropdown on `DSPRE` gives you **DSPRE** (the Avalonia shell),
 **DSPRE (beta editors on)** which passes `--beta`, and **DSPRE (old WinForms shell)**.
 `DSPRE.Avalonia` runs the same UI with no WinForms in the process at all, and has its own two profiles.
 
-From a terminal the exe is `DS_Map\bin\Debug\net8.0-windows\DSPRE.exe`, or
-`DSPRE.Avalonia\bin\Debug\net8.0\DSPRE.Avalonia.exe`. Set the working directory to the bin folder or
-`Tools\*.exe` won't resolve.
+From a terminal the executable is `DS_Map\bin\Debug\net8.0-windows\DSPRE.exe`, or
+`DSPRE.Avalonia\bin\Debug\net8.0\DSPRE.Avalonia.exe`. Helpers resolve from the output's `Tools\`
+directory through `AppContext.BaseDirectory`; the process working directory does not control lookup.
 
-Test projects are already unpacked under `C:\Romhacking\ROMs\NDS\`, one folder per game. Open one with
-File, Open extracted folder.
+Extracted test projects are configured per machine. See [Pointing tests at your games](#pointing-them-at-your-games).
 
 **Two build traps.**
 
@@ -67,7 +66,8 @@ A partial build leaves a stale DLL: building `DSPRE.Avalonia.csproj` alone does 
 `DS_Map\bin\Debug\net8.0-windows\`, so `DSPRE.exe` keeps running your old code and the build reports
 success. Build `DS_Map.sln`, and kill `DSPRE.exe` and `rotom-lsp.exe` first or you get MSB3026.
 
-XAML errors do not fail a quiet build. `-v q` says success while the view is broken:
+Quiet output can hide the actionable Avalonia compiler line among other build output. When a XAML
+change fails, inspect medium-verbosity errors and `AVLN` diagnostics:
 
 ```powershell
 dotnet build DS_Map.sln -v m --nologo 2>&1 | Select-String ": error |AVLN"
@@ -82,9 +82,9 @@ starting from scratch; `CameraEditorViewModel` is a good small example, `MapEdit
 
 ### The view model
 
-Plain `INotifyPropertyChanged`, declared per class. No ReactiveUI, no CommunityToolkit, no base class:
-all 89 view models declare `PropertyChanged` themselves, and that is deliberate, so there is nothing to
-learn before you can read one.
+Plain `INotifyPropertyChanged`, declared per class. No ReactiveUI, no CommunityToolkit, no shared view
+model base class: view models declare `PropertyChanged` themselves, so there is little framework
+machinery to learn before reading one.
 
 ```csharp
 namespace DSPRE.Avalonia.ViewModels.World
@@ -216,15 +216,16 @@ in the user changelog.
 
 ## Tests
 
-887 tests, filed by subject: `Audio Editors Field Graphics Models MoveAnimation Scripts Tools`.
+Tests are filed by subject under `DSPRE.Tests/`.
 
 ```powershell
-dotnet test DSPRE.Tests -f net8.0 --nologo
-dotnet test DSPRE.Tests -f net8.0 --filter "FullyQualifiedName~BattleIcon"
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0 --nologo
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0 --filter "FullyQualifiedName~BattleIcon"
 ```
 
-The full run is about nine minutes because most of it reads real ROMs. Split it by class name when
-that's too slow, rather than skipping it.
+Many tests read extracted projects. Use a class-name filter for a focused iteration, then run the
+broader relevant target before handoff. Do not run full test processes concurrently because the ROM
+fixtures and application state are shared.
 
 ### Pointing them at your games
 
@@ -233,21 +234,20 @@ Most of the suite reads real extracted projects. Where yours live is per machine
 
 ```json
 {
-  "heartGold": "D:\\roms\\HeartGold (USA)_DSPRE_contents",
-  "platinum":  "D:\\roms\\Pokemon - Platinum Version (USA) (Rev 1)_DSPRE_contents",
-  "diamond":   "D:\\roms\\1015 - Pokemon Diamond (v05) (U)(Legacy)_DSPRE_contents"
+  "heartGold": "<path-to-heartgold-project>",
+  "platinum":  "<path-to-platinum-project>",
+  "diamond":   "<path-to-diamond-project>"
 }
 ```
 
 `DSPRE_TEST_HEARTGOLD`, `DSPRE_TEST_PLATINUM` and `DSPRE_TEST_DIAMOND` override the file, which is how
-to point one run somewhere else. If you keep all three under one folder in the usual layout, set
-`DSPRE_TEST_ROMS` to that folder instead of naming each one. Nothing set falls back to
-`C:\Romhacking\ROMs\NDS`, which is where they sat when these tests were written.
+to point one run somewhere else. `DSPRE_TEST_ROMS_CONFIG` selects an alternate JSON file. If you keep
+all three under one folder in the layout expected by `TestRoms`, set `DSPRE_TEST_ROMS` instead of
+naming each one.
 
 Read them through `TestRoms.HeartGold` / `.Platinum` / `.Diamond`, never a path written into the test.
-A test whose game is missing should say so and return rather than fail, and then assert it actually ran
-something, or it passes while proving nothing. `TestRomsTests` prints where each one resolved to and
-fails if none of the three is on the machine.
+A test whose optional game is missing should use `SkippableFact` and `Skip.If` with a useful reason,
+not return as a passing test. A sweep must also assert that it checked at least one record.
 
 Two conventions cause confusing failures if you miss them:
 
@@ -259,10 +259,42 @@ Two conventions cause confusing failures if you miss them:
 `DSPRE.Tests/Tools/` is not tests. It is ROM builders and battle stagers that write a modified ROM so
 you can look at an edit in a running game; they no-op unless an environment variable names what to build.
 
-A test earns its place by being able to fail for a reason that matters. A test that greps a source file
-for a string usually cannot: the beta gate had one that checked `WindowPlacement.cs` contained
-`BetaEditors.Allows`, and it stayed green while nine listed editors opened through a path that never
-called it.
+A test earns its place by being able to fail for a reason that matters. Source-text searches and
+reflection checks usually establish only that a symbol exists, not that the application reaches it.
+Assertions should consume values produced by the code under test, and a new test should be observed
+failing for the intended reason when practical.
+
+---
+
+## ROM project formats
+
+`RomInfo.IsDsRomProject` is set while a project is loaded from the folder type returned by
+`DSUtils.GetFolderType`. That method detects ds-rom by `config.yaml` and legacy ndstool projects by
+`header.bin`. Keep format detection and conversion in `DSPRE.Core/DSUtils/DSUtils.cs` and do not
+reproduce it in an editor.
+
+The current ds-rom layout uses `files/` for the ROM file system, `arm9/arm9.bin`,
+`arm9_overlays/ovNNN.bin`, and YAML metadata headed by `header.yaml`. The legacy ndstool layout uses
+`data/`, a root `arm9.bin`, `overlay/overlay_NNNN.bin`, and `header.bin`. New extraction uses ds-rom;
+legacy projects can be converted by the existing conversion path.
+
+Overlay callers use `OverlayUtils.GetPath` so both layouts continue to work. Saving a ROM must
+write through the existing NARC and project build paths rather than moving files directly from an
+editor.
+
+## Script binary and plaintext workflow
+
+`DSPRE.Core/ROMFiles/ScriptFile.cs` owns the dual representation. Binary script data comes from the
+ROM project; optional editable text lives at `expanded/scripts/NNNN.script`.
+
+- `TryReadPlaintextIfNewer` uses the plaintext form only when it is newer than the binary form.
+- Export preserves current plaintext unless the database hash requires regeneration.
+- `.database_hash` records the script database state used for the export.
+- The save path rebuilds binaries that require it before packing the project.
+
+Keep timestamp comparison, cache invalidation, parsing, and rebuild decisions in that owner. Changes
+need round-trip coverage for an unchanged binary, an externally edited plaintext file, and a database
+change. Search for existing script readers before adding another interpretation of the format.
 
 ---
 
@@ -315,7 +347,8 @@ called it.
 - Comments say why, not what, and only when the why is not obvious. One line. No block comments
   narrating how you debugged something.
 - No em dashes anywhere: code, UI text, changelogs, commit messages.
-- Commit subjects are `type(Scope): what changed`, lowercase, no body. `feature`, `fix`, `chore`.
+- If the operator asks for a commit, subjects use `type(Scope): what changed`, lowercase, no body.
+  Common types are `feature`, `fix`, and `chore`.
 - Changelogs live in `Changelogs/`, written for users, with numbers where there are numbers.
 - Don't name leaked source files in anything that lands in the repo. Say what the games do and how you
   checked it. The pret decomp is public and fine to cite.
@@ -327,6 +360,10 @@ called it.
 `Research/` has the worked-out material: move animation opcodes and routines, field animation, sprites
 and icons, the graphics archive census. Read it before re-deriving something.
 [pret/pokeheartgold](https://github.com/pret/pokeheartgold) is the public reference for HGSS behaviour.
+The source-selection and privacy policy is in
+[Research/ReferenceEcosystem.md](Research/ReferenceEcosystem.md).
 
-Bundled tools live in `Tools/` at the repo root and are copied next to the exe. `ndstool`, `blz` and
-`apicula` are Windows-only so far; `chatot`, `dsrom`, `rotom` and `rotom-lsp` have Linux builds.
+Bundled tools live in `Tools/` at the repo root and are copied next to the exe. `ndstool` and `blz`
+are Windows-only so far; `chatot`, `dsrom`, `apicula`, `rotom` and `rotom-lsp` have Linux builds.
+Release workflows build the pinned apicula source through `.github/actions/build-apicula` instead of
+shipping the checked-in local fallback.
