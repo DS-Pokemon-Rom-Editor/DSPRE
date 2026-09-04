@@ -152,6 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             HgEngineProject.Refresh();
             OnPropertyChanged(nameof(IsRomLoaded));
             OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(CanUseBattleScreen));
             OnPropertyChanged(nameof(CanUsePokemonEditor));
             OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
