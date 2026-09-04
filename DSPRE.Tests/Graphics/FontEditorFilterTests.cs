@@ -120,5 +120,29 @@ namespace DSPRE.Tests
             vm.Search = "";
             Assert.True(vm.Glyphs.Count > 1, "clearing the box did not bring the rest back");
         }
+
+        [SkippableFact]
+        public void PictureCommandsFollowSelectionAndWholeFontMode()
+        {
+            var vm = Open(TestRoms.Platinum);
+            Skip.If(vm == null, "Platinum not unpacked here");
+            Assert.True(vm.Glyphs.Count > 0, "no font was loaded, so this proved nothing");
+            Assert.True(vm.CanUsePictureCommand);
+
+            vm.Search = "a search no glyph can contain";
+            Assert.Empty(vm.Glyphs);
+            Assert.False(vm.HasGlyph);
+            Assert.False(vm.CanUsePictureCommand);
+
+            vm.WholeFontForPictures = true;
+            Assert.True(vm.CanUsePictureCommand);
+            vm.WholeFontForPictures = false;
+            Assert.False(vm.CanUsePictureCommand);
+
+            vm.Search = "";
+            Assert.True(vm.Glyphs.Count > 0);
+            Assert.True(vm.HasGlyph);
+            Assert.True(vm.CanUsePictureCommand);
+        }
     }
 }
