@@ -145,26 +145,38 @@ namespace DSPRE.Avalonia.Data
             int rate = s == null || s.SampleRate <= 0 ? 8000 : Math.Min(s.SampleRate, 65535);
             bool loop = s != null && s.Loop;
 
-            byte[] body;
-            int waveType, loopWords, totalWords;
+            // Put it back the way the game keeps that slot, so nothing else has to be told it changed.
+            // Cries are squeezed, but a music instrument may be kept whole, and some are a byte a sample.
+            int waveType = s?.Encoding ?? -1;
+            if (waveType < 0 || waveType > 2) waveType = squeeze ? 2 : 1;
 
-            if (squeeze)
+            byte[] body;
+            int loopWords, totalWords;
+
+            if (waveType == 2)
             {
                 body = EncodeAdpcm(pcm);
-                waveType = 2;
                 totalWords = body.Length / 4;
                 // The four-byte header counts as a word here, and the loop point is measured in words
                 // past it, which is why the reader adds one back when it works the sample index out.
                 loopWords = loop ? Math.Clamp(s.LoopStartSample / 8 + 1, 0, totalWords) : 0;
             }
-            else
+            else if (waveType == 1)
             {
                 int words = (pcm.Length + 1) / 2;       // two samples to a word at sixteen bits
                 body = new byte[words * 4];
                 for (int i = 0; i < pcm.Length; i++) { body[i * 2] = (byte)pcm[i]; body[i * 2 + 1] = (byte)(pcm[i] >> 8); }
-                waveType = 1;
                 totalWords = words;
                 loopWords = loop ? Math.Clamp(s.LoopStartSample / 2, 0, words) : 0;
+            }
+            else
+            {
+                // A byte a sample, signed, so the sixteen bit input loses its bottom eight bits.
+                int words = (pcm.Length + 3) / 4;
+                body = new byte[words * 4];
+                for (int i = 0; i < pcm.Length; i++) body[i] = (byte)(sbyte)(pcm[i] >> 8);
+                totalWords = words;
+                loopWords = loop ? Math.Clamp(s.LoopStartSample / 4, 0, words) : 0;
             }
 
             var o = new byte[12 + body.Length];

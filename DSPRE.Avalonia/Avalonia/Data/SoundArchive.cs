@@ -246,6 +246,9 @@ namespace DSPRE.Avalonia.Data
                 Loop = old.Loop,
                 LoopStartSample = old.Loop && old.LoopStartSample < pcm.Length ? old.LoopStartSample : 0,
                 Pcm = pcm,
+                // Back in the form the slot was kept in. Writing a whole sample where the game expects a
+                // squeezed one, or the other way round, is read as noise.
+                Encoding = old.Encoding,
             };
 
             byte[] rebuilt = CryFiles.BuildArchive(replaced);
