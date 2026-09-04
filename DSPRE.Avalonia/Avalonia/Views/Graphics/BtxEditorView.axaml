@@ -23,7 +23,8 @@
     <!-- Middle: texture preview + save controls -->
     <DockPanel Grid.Column="2">
       <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
-        <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"/>
+        <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"
+                  IsEnabled="{Binding HasShinyPalette}" ToolTip.Tip="{Binding ShinyPaletteNote}"/>
         <Grid ColumnDefinitions="*,8,*">
           <Button Grid.Column="0" Content="Import PNG" Click="Import_Click"
                   IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>

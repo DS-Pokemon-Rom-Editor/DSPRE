@@ -51,6 +51,10 @@ namespace DSPRE.LibNDSFormats
             uint num10 = (num8 >> 10) & 7;
             uint num11 = (PaletteCount = BTXFile[num5 + 1]);
             PaletteSize = num4;
+            if (num11 == 0 || PaletteIndex >= num11)
+            {
+                return null;
+            }
             if (num10 == 3)
             {
                 int paletteLength = (int)(num4 / num11 / 2);
