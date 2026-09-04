@@ -10,7 +10,14 @@ namespace DSPRE.Avalonia.Data
     public static class GraphicUnits
     {
         private static GraphicAssets.UnitPart Part(GraphicAssets.Archive a, int index, string name)
-            => new GraphicAssets.UnitPart { Archive = a, Index = index, Name = name };
+            => new GraphicAssets.UnitPart
+            {
+                Archive = a, Index = index, Name = name,
+                // The colours in an archive often come before the picture they paint, and a browser that
+                // opens on the first part then shows a row of swatches instead of the thing itself.
+                Kind = name != null && name.StartsWith("Colours", StringComparison.OrdinalIgnoreCase)
+                    ? GraphicAssets.Kind.Palette : KindIn(a, index),
+            };
 
         private static GraphicAssets.Archive Find(DirNames dir)
             => GraphicAssets.All.FirstOrDefault(x => x.Dir == dir);
