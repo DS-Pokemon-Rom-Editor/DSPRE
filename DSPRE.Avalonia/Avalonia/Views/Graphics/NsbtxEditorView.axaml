@@ -43,8 +43,13 @@
         <ListBox ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
       </DockPanel>
       <Border Grid.Column="3" Background="#2A2A2E" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-        <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
-               RenderOptions.BitmapInterpolationMode="None"/>
+        <Panel>
+          <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
+                 RenderOptions.BitmapInterpolationMode="None"/>
+          <TextBlock Text="{Binding PreviewReason}" IsVisible="{Binding HasPreviewReason}"
+                     Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Margin="18"/>
+        </Panel>
       </Border>
     </Grid>
   </DockPanel>
