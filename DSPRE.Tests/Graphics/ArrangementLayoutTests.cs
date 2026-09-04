@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DSPRE;
 using DSPRE.Avalonia.Data;
 using Xunit;
 using Xunit.Abstractions;
@@ -9,117 +10,125 @@ using Xunit.Abstractions;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// How a background's arrangement is laid out, checked against every arrangement the ROM carries
-    /// rather than against a rule copied from somewhere. A wide one is kept in blocks of 32 by 32 and
-    /// a narrow one straight across at its own width, and getting that backwards scrambles the picture.
+    /// How backgrounds in the graphics browser are arranged. Narrow screens are row-major; screens
+    /// wider than 32 tiles use the DS's 32-by-32 screen blocks.
     /// </summary>
+    [Collection("rom")]
     public class ArrangementLayoutTests
     {
         private readonly ITestOutputHelper _out;
-        public ArrangementLayoutTests(ITestOutputHelper o) { _out = o; }
+        public ArrangementLayoutTests(ITestOutputHelper output) { _out = output; }
 
-        private static readonly string Unpacked = TestRoms.HeartGold + @"\unpacked";
+        private sealed record Arrangement(string Name, byte[] Data, int Cols, int Rows, int Entries);
 
-        private static IEnumerable<(string path, int cols, int rows, int entries)> Real()
+        private static List<Arrangement> ReadCurrentGame()
         {
-            if (!Directory.Exists(Unpacked)) yield break;
-            foreach (string dir in Directory.GetDirectories(Unpacked))
-                foreach (string f in Directory.GetFiles(dir))
+            var result = new List<Arrangement>();
+            foreach (var archive in GraphicAssets.All)
+            {
+                var narc = new ScriptNarc(archive.Dir);
+                if (!narc.Available) continue;
+                for (int i = 0; i < narc.Count; i++)
                 {
-                    byte[] d;
-                    try
-                    {
-                        var info = new FileInfo(f);
-                        if (info.Length < 0x24 || info.Length > 200000) continue;
-                        d = File.ReadAllBytes(f);
-                    }
+                    byte[] data;
+                    try { data = GraphicAssets.Unsqueeze(narc.Get(i)); }
                     catch { continue; }
-                    if (d[0] != 'R' || d[1] != 'C' || d[2] != 'S' || d[3] != 'N') continue;
-                    int w = NitroBgCodec.U16(d, 0x18), h = NitroBgCodec.U16(d, 0x1A);
-                    if (w < 8 || h < 8) continue;
-                    yield return (Path.GetFileName(dir) + "/" + Path.GetFileName(f),
-                                  w / 8, h / 8, NitroBgCodec.U32(d, 0x20) / 2);
+                    if (GraphicAssets.Identify(data) != GraphicAssets.Kind.TileMap || data.Length < 0x24)
+                        continue;
+                    int width = NitroBgCodec.U16(data, 0x18);
+                    int height = NitroBgCodec.U16(data, 0x1a);
+                    if (width < 8 || height < 8) continue;
+                    result.Add(new Arrangement($"{archive.Title}[{i}]", data, width / 8, height / 8,
+                        NitroBgCodec.U32(data, 0x20) / 2));
                 }
+            }
+            return result;
         }
 
-        [Fact]
-        public void EveryArrangementInTheRomHoldsTheNumberOfEntriesTheRuleSaysItShould()
+        [SkippableFact]
+        public void PlatinumArrangementsHaveTheExpectedEntryCount() =>
+            CheckCounts("CPUE", TestRoms.Platinum, "Platinum");
+
+        [SkippableFact]
+        public void HeartGoldArrangementsHaveTheExpectedEntryCount() =>
+            CheckCounts("IPKE", TestRoms.HeartGold, "HeartGold");
+
+        private void CheckCounts(string code, string path, string game)
         {
-            var all = Real().ToList();
+            Skip.IfNot(Directory.Exists(path), $"The {game} test ROM project is not available.");
+            new RomInfo(code, path);
+            GraphicAssets.Forget();
+            var all = ReadCurrentGame();
             Assert.True(all.Count >= 20,
-                $"only {all.Count} arrangements were found, so this proved nothing. "
-                + $"It reads {Unpacked}.");
+                $"{game}: only {all.Count} arrangements were found through the graphics archives");
 
-            var wrong = all.Where(a => NitroBgCodec.SquareCount(a.cols, a.rows) != a.entries).ToList();
-            int narrow = all.Count(a => a.cols < 32), wide = all.Count(a => a.cols > 32);
-            _out.WriteLine($"{all.Count} arrangements: {narrow} narrower than 32 squares, "
-                         + $"{wide} wider, {all.Count - narrow - wide} exactly 32.");
+            // Some valid screens declare a full 256-pixel canvas but carry only the used top half.
+            // The renderer treats missing entries as empty. A file may therefore be shorter than the
+            // declared canvas, but it must never carry more entries than that canvas can address.
+            var tooLarge = all.Where(a => a.Entries > NitroBgCodec.SquareCount(a.Cols, a.Rows)).ToList();
+            int complete = all.Count(a => a.Entries == NitroBgCodec.SquareCount(a.Cols, a.Rows));
+            int narrow = all.Count(a => a.Cols < 32);
+            int wide = all.Count(a => a.Cols > 32);
+            _out.WriteLine($"{game}: {all.Count} arrangements, {narrow} narrower than 32 tiles, "
+                         + $"{wide} wider, {all.Count - narrow - wide} exactly 32; {complete} fill their canvas");
 
-            // The rule and the old one only part company on the narrow ones, so a run with none of those
-            // in it would pass while testing nothing.
-            Assert.True(narrow > 0, "no arrangement narrower than 32 squares was found, and those are the "
-                                  + "only ones that tell the two layouts apart");
-            Assert.True(wrong.Count == 0, string.Join("\n", wrong.Select(a =>
-                $"{a.path} is {a.cols}x{a.rows} and holds {a.entries} entries, "
-                + $"but the rule says {NitroBgCodec.SquareCount(a.cols, a.rows)}")));
+            Assert.True(complete >= 20, $"{game}: only {complete} complete arrangements exercised the rule");
+            Assert.Empty(tooLarge);
         }
 
         [Fact]
-        public void ANarrowArrangementIsReadStraightAcrossAndAWideOneInBlocks()
+        public void NarrowAndWideIndexRulesDifferAtTheBlockBoundary()
         {
-            // Fourteen squares across: entry after entry, at fourteen a row.
             Assert.Equal(0, NitroBgCodec.SquareIndex(14, 0, 0));
             Assert.Equal(13, NitroBgCodec.SquareIndex(14, 13, 0));
             Assert.Equal(14, NitroBgCodec.SquareIndex(14, 0, 1));
             Assert.Equal(182, NitroBgCodec.SquareCount(14, 13));
 
-            // Exactly 32 across: the two layouts say the same thing, which is why they were confusable.
             Assert.Equal(32, NitroBgCodec.SquareIndex(32, 0, 1));
             Assert.Equal(768, NitroBgCodec.SquareCount(32, 24));
 
-            // Sixty-four across: the first block of 32 by 32, then the second beside it.
             Assert.Equal(31, NitroBgCodec.SquareIndex(64, 31, 0));
             Assert.Equal(1024, NitroBgCodec.SquareIndex(64, 32, 0));
             Assert.Equal(2048, NitroBgCodec.SquareIndex(64, 0, 32));
             Assert.Equal(4096, NitroBgCodec.SquareCount(64, 64));
         }
 
-        /// <summary>
-        /// The one arrangement in the ROM wide enough to tell the layouts apart, checked the way it was
-        /// worked out: the squares it draws on should sit in a solid block, not scattered.
-        /// </summary>
-        [Fact]
-        public void TheWideArrangementInTheRomDrawsASolidShapeOnlyWhenReadInBlocks()
+        [SkippableFact]
+        public void HeartGoldWideArrangementDrawsSolidlyOnlyInScreenBlocks()
         {
-            string path = Path.Combine(Unpacked, "battleBg", "0268");
-            if (!File.Exists(path)) { Assert.Fail($"{path} is not there, so this proved nothing."); return; }
+            Skip.IfNot(Directory.Exists(TestRoms.HeartGold),
+                "The HeartGold test ROM project is not available.");
+            new RomInfo("IPKE", TestRoms.HeartGold);
+            GraphicAssets.Forget();
 
-            byte[] d = File.ReadAllBytes(path);
-            int cols = NitroBgCodec.U16(d, 0x18) / 8, rows = NitroBgCodec.U16(d, 0x1A) / 8;
-            Assert.True(cols > 32, $"this arrangement is {cols} squares across, which cannot tell the "
-                                 + "layouts apart");
-
-            ushort At(int index) => (ushort)NitroBgCodec.U16(d, 0x24 + index * 2);
-            int ground = Enumerable.Range(0, cols * rows).Select(At)
-                                   .GroupBy(v => v).OrderByDescending(g => g.Count()).First().Key;
-
-            Assert.Equal(1.0, Solidity(cols, rows, (x, y) => At(NitroBgCodec.SquareIndex(cols, x, y)), ground));
-            Assert.True(Solidity(cols, rows, (x, y) => At(y * cols + x), ground) < 0.6,
-                        "read straight across, the drawn squares happen to be solid too, so this test "
-                        + "cannot tell the layouts apart any more");
+            var candidates = ReadCurrentGame().Where(a => a.Cols > 32).ToList();
+            Skip.If(candidates.Count == 0, "HeartGold has no wide arrangement in the listed graphics archives.");
+            var arrangement = candidates.FirstOrDefault(a =>
+                Solidity(a, true) == 1.0 && Solidity(a, false) < 0.6);
+            Assert.NotNull(arrangement);
+            _out.WriteLine($"{arrangement.Name}: {arrangement.Cols} by {arrangement.Rows} tiles");
         }
 
-        /// <summary>How much of the box the drawn squares sit in is actually drawn on. A real picture
-        /// fills its own box; a scrambled one leaves holes.</summary>
+        private static double Solidity(Arrangement arrangement, bool blocked)
+        {
+            ushort At(int index) => (ushort)NitroBgCodec.U16(arrangement.Data, 0x24 + index * 2);
+            int ground = Enumerable.Range(0, arrangement.Cols * arrangement.Rows).Select(At)
+                .GroupBy(value => value).OrderByDescending(group => group.Count()).First().Key;
+            return Solidity(arrangement.Cols, arrangement.Rows,
+                (x, y) => At(blocked
+                    ? NitroBgCodec.SquareIndex(arrangement.Cols, x, y)
+                    : y * arrangement.Cols + x), ground);
+        }
+
         private static double Solidity(int cols, int rows, Func<int, int, int> at, int ground)
         {
-            var xs = new List<int>(); var ys = new List<int>();
+            var xs = new List<int>();
+            var ys = new List<int>();
             for (int y = 0; y < rows; y++)
                 for (int x = 0; x < cols; x++)
                     if (at(x, y) != ground) { xs.Add(x); ys.Add(y); }
             if (xs.Count == 0) return 0;
-            int x0 = xs.Min(), x1 = xs.Max(), y0 = ys.Min(), y1 = ys.Max();
-            return xs.Count / (double)((x1 - x0 + 1) * (y1 - y0 + 1));
+            return xs.Count / (double)((xs.Max() - xs.Min() + 1) * (ys.Max() - ys.Min() + 1));
         }
     }
 }

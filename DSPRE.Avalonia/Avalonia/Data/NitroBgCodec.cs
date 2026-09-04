@@ -68,8 +68,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// Where one square of the screen keeps its entry. A background wider than 32 squares is stored
         /// in blocks of 32 by 32, block after block; a narrower one is stored straight across at its own
-        /// width. Read off the ROM's own files: all 22 narrower arrangements in HeartGold hold exactly
-        /// width-by-height entries, and the two wider ones only make a solid picture read as blocks.
+        /// width. Read off the ROM's own files: complete narrow arrangements in HeartGold hold
+        /// width-by-height entries, and the wide ones only make a solid picture read as blocks. Some
+        /// screens deliberately carry fewer entries than their declared canvas; the compositor leaves
+        /// the missing part empty through its bounds check.
         /// </summary>
         public static int SquareIndex(int cols, int tx, int ty)
         {
