@@ -43,30 +43,27 @@ namespace DSPRE.Avalonia.Gl
                         }
                         break;
                     case 2: // 4-colour palette
-                        if (m.color0 != 0) pal[0] = RGBA.Transparent;
                         for (int j = 0; j < pixels; j++)
                         {
                             uint idx = m.texdata[j / 4];
                             idx = (idx >> ((j % 4) << 1)) & 3;
-                            img[j] = pal[idx];
+                            img[j] = TransparentZero(pal, (int)idx, m.color0 != 0);
                         }
                         break;
                     case 3: // 16-colour palette
-                        if (m.color0 != 0) pal[0] = RGBA.Transparent;
                         for (int j = 0; j < pixels; j++)
                         {
                             int mi = j / 2;
                             if (mi >= m.texdata.Length) continue;
                             int idx = (m.texdata[mi] >> ((j % 2) << 2)) & 0x0f;
-                            if (idx >= 0 && idx < pal.Length) img[j] = pal[idx];
+                            img[j] = TransparentZero(pal, idx, m.color0 != 0);
                         }
                         break;
                     case 4: // 256-colour palette
-                        if (m.color0 != 0) pal[0] = RGBA.Transparent;
                         for (int j = 0; j < pixels; j++)
                         {
                             int idx = m.texdata[j];
-                            if (idx >= 0 && idx < pal.Length) img[j] = pal[idx];
+                            img[j] = TransparentZero(pal, idx, m.color0 != 0);
                         }
                         break;
                     case 5: // 4x4-texel compressed
@@ -162,6 +159,9 @@ namespace DSPRE.Avalonia.Gl
         }
 
         private static RGBA Pal(RGBA[] pal, int i) => (i >= 0 && i < pal.Length) ? pal[i] : default;
+
+        private static RGBA TransparentZero(RGBA[] pal, int i, bool transparentZero)
+            => transparentZero && i == 0 ? RGBA.Transparent : Pal(pal, i);
 
         private static RGBA Mix(RGBA a, RGBA b, int wa, int wb)
         {

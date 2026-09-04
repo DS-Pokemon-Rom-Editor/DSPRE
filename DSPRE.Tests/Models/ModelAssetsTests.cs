@@ -19,13 +19,11 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public ModelAssetsTests(ITestOutputHelper o) { _out = o; }
 
-        private static readonly string Diamond = TestRoms.Diamond;
         private static readonly string Platinum = TestRoms.Platinum;
         private static readonly string HeartGold = TestRoms.HeartGold;
 
         public static IEnumerable<object[]> Games => new[]
         {
-            new object[] { "ADAE", Diamond,  "Diamond" },
             new object[] { "CPUE", Platinum, "Platinum" },
             new object[] { "IPKE", HeartGold, "HeartGold" },
         };

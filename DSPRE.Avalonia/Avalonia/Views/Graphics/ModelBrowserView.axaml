@@ -80,6 +80,9 @@
               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <Panel>
           <gl:NsbmdGlControl x:Name="GlView" IsVisible="{Binding HasModel}"/>
+          <Border Background="#707070" IsVisible="{Binding HasTexturePreview}" Padding="24">
+            <Image Source="{Binding TexturePreview}" Stretch="Uniform"/>
+          </Border>
           <TextBlock Text="{Binding Whynot}" IsVisible="{Binding HasNoModel}"
                      TextWrapping="Wrap" MaxWidth="420" FontSize="13" TextAlignment="Center"
                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"
@@ -113,6 +116,20 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+
+            <StackPanel Spacing="2" IsVisible="{Binding HasPreviewTextureChoice}">
+              <TextBlock Text="Texture" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox ItemsSource="{Binding PreviewTextureNames}"
+                        SelectedIndex="{Binding PreviewTextureIndex, Mode=TwoWay}"
+                        HorizontalAlignment="Stretch" FontSize="12"/>
+            </StackPanel>
+
+            <StackPanel Spacing="2" IsVisible="{Binding HasPreviewPaletteChoice}">
+              <TextBlock Text="Palette" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox ItemsSource="{Binding PreviewPaletteNames}"
+                        SelectedIndex="{Binding PreviewPaletteIndex, Mode=TwoWay}"
+                        HorizontalAlignment="Stretch" FontSize="12"/>
+            </StackPanel>
 
             <StackPanel Spacing="2" IsVisible="{Binding HasTextureChoice}">
               <TextBlock Text="Pictures" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>

@@ -49,68 +49,44 @@ namespace LibNDSFormats.NSBMD {
         /// </summary>
         public void MatchTextures() {
             foreach (NSBMDModel m in models) {
-                for (int j = 0; j < m.Polygons.Count - 1; j++) {
-                    int matId = m.Polygons[j].MatId;
-                    if (matId < 0 || matId >= m.Materials.Count) {
-                        continue;
-                    }
-
+                for (int matId = 0; matId < m.Materials.Count; matId++) {
                     NSBMDMaterial mat = m.Materials[matId];
                     mat.missingExternalTexture = false;
 
-                    for (int t = 0; t < m.Textures.Count; t++) {
-                        if (m.Textures[t].texmatid.Contains((uint)matId)) {
-                            int texid = -1;
-                            for (int l = 0; l < Textures.Count; l++) {
-                                if (Textures[l].texname == m.Textures[t].texname) {
-                                    texid = l;
-                                    break;
-                                }
-                            }
+                    NSBMDTexture wantedTexture = m.Textures.FirstOrDefault(t => t.texmatid.Contains((uint)matId));
+                    if (wantedTexture == null) continue;
 
-                            if (texid < 0) {
-                                MarkMissingExternalTexture(mat);
-                                break;
-                            }
-
-                            NSBMDTexture tex = Textures[texid];
-                            mat.spdata = tex.spdata; //RITORNA QUI
-                            mat.texdata = tex.texdata;
-                            mat.texname = tex.texname;
-                            mat.texoffset = tex.texoffset;
-                            mat.texsize = tex.texsize;
-                            mat.width = tex.width;
-                            mat.height = tex.height;
-                            mat.format = tex.format;
-                            mat.color0 = tex.color0;
-                            break;
-                        }
+                    NSBMDTexture tex = Textures.FirstOrDefault(t =>
+                        String.Equals(t.texname, wantedTexture.texname, StringComparison.Ordinal));
+                    if (tex == null) {
+                        MarkMissingExternalTexture(mat);
+                        continue;
                     }
+
+                    mat.spdata = tex.spdata;
+                    mat.texdata = tex.texdata;
+                    mat.texname = tex.texname;
+                    mat.texoffset = tex.texoffset;
+                    mat.texsize = tex.texsize;
+                    mat.width = tex.width;
+                    mat.height = tex.height;
+                    mat.format = tex.format;
+                    mat.color0 = tex.color0;
+
                     if (mat.format != 7) {
-                        for (int k = 0; k < m.Palettes.Count; k++) {
-                            if (m.Palettes[k].palmatid.Contains((uint)matId)) {
-                                int palid = -1;
-                                for (int l = 0; l < Palettes.Count; l++) {
-                                    if (Palettes[l].palname == m.Palettes[k].palname) {
-                                        palid = l;
-                                        break;
-                                    }
-                                }
-
-                                if (palid < 0) {
-                                    MarkMissingExternalTexture(mat);
-                                    break;
-                                }
-
-                                NSBMDPalette pal = Palettes[palid];
-
-                                mat.paldata = pal.paldata;
-                                mat.palname = pal.palname;
-                                mat.paloffset = pal.paloffset;
-                                mat.palsize = pal.palsize;
-                                break;
-                            }
+                        NSBMDPalette wantedPalette = m.Palettes.FirstOrDefault(p =>
+                            p.palmatid.Contains((uint)matId));
+                        NSBMDPalette pal = wantedPalette == null ? null : Palettes.FirstOrDefault(p =>
+                            String.Equals(p.palname, wantedPalette.palname, StringComparison.Ordinal));
+                        if (pal == null) {
+                            MarkMissingExternalTexture(mat);
+                            continue;
                         }
+
+                        mat.paldata = pal.paldata;
+                        mat.palname = pal.palname;
+                        mat.paloffset = pal.paloffset;
+                        mat.palsize = pal.palsize;
                     }
                 }
             }
@@ -125,10 +101,6 @@ namespace LibNDSFormats.NSBMD {
             mat.paldata = null;
             mat.texname = String.Empty;
             mat.palname = String.Empty;
-            mat.DiffuseColor = Color.White;
-            mat.AmbientColor = Color.White;
-            mat.SpecularColor = Color.White;
-            mat.EmissionColor = Color.White;
         }
 
         /// <summary>

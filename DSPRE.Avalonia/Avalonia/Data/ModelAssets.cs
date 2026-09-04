@@ -244,6 +244,61 @@ namespace DSPRE.Avalonia.Data
             return Identify(b) == Kind.TextureBundle ? b : null;
         }
 
+        public sealed class TextureCoverage
+        {
+            public int RequiredTextures { get; init; }
+            public int MatchedTextures { get; init; }
+            public int RequiredPalettes { get; init; }
+            public int MatchedPalettes { get; init; }
+            public bool HasMatches => MatchedTextures > 0;
+            public bool Complete => RequiredTextures > 0
+                && MatchedTextures == RequiredTextures && MatchedPalettes == RequiredPalettes;
+        }
+
+        /// <summary>Compares the names a model requests with the names a texture bundle actually contains.</summary>
+        public static TextureCoverage Coverage(NSBMD model, byte[] bundle)
+        {
+            if (model?.models == null || bundle == null) return new TextureCoverage();
+            try
+            {
+                using var input = new MemoryStream(bundle);
+                NSBTXLoader.LoadNsbtx(input, out var textures, out var palettes);
+                var haveTextures = new HashSet<string>(textures.Select(t => t.texname), StringComparer.Ordinal);
+                var havePalettes = new HashSet<string>(palettes.Select(p => p.palname), StringComparer.Ordinal);
+                var wantTextures = new HashSet<string>(model.models.SelectMany(m => m.Textures)
+                    .Select(t => t.texname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
+                var wantPalettes = new HashSet<string>(model.models.SelectMany(m => m.Palettes)
+                    .Select(p => p.palname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
+                return new TextureCoverage
+                {
+                    RequiredTextures = wantTextures.Count,
+                    MatchedTextures = wantTextures.Count(haveTextures.Contains),
+                    RequiredPalettes = wantPalettes.Count,
+                    MatchedPalettes = wantPalettes.Count(havePalettes.Contains),
+                };
+            }
+            catch { return new TextureCoverage(); }
+        }
+
+        /// <summary>Reads the pictures and palettes in a texture-only entry.</summary>
+        public static bool LoadTextureBundle(Archive a, int index,
+            out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes)
+        {
+            textures = new List<NSBMDTexture>();
+            palettes = new List<NSBMDPalette>();
+            var narc = new ScriptNarc(a.Dir);
+            if (!narc.Available) return false;
+            var bytes = narc.Get(index);
+            if (Identify(bytes) != Kind.TextureBundle) return false;
+            try
+            {
+                using var input = new MemoryStream(bytes);
+                NSBTXLoader.LoadNsbtx(input, out textures, out palettes);
+                return textures.Count > 0;
+            }
+            catch { return false; }
+        }
+
         /// <summary>The pictures to draw a model with. A chosen set wins; otherwise whatever the model
         /// carries itself, or the set filed next to it.</summary>
         public static byte[] TexturesFor(Archive a, int index, int chosenSet = -1)
