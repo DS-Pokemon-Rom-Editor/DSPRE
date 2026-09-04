@@ -155,6 +155,41 @@ namespace DSPRE.Tests
             }
         }
 
+        [Fact]
+        public void GeometryKeepsNodesSeparateWhenTheyShareAMaterial()
+        {
+            var model = new NSBMDModel { modelScale = 1 };
+            model.Materials.Add(new NSBMDMaterial { DiffuseColor = Color.White, Alpha = 31 });
+            model.Objects.Add(new NSBMDObject());
+            model.Objects.Add(new NSBMDObject());
+            model.Polygons.Add(PolygonOnNode(0));
+            model.Polygons.Add(PolygonOnNode(1));
+
+            var shown = NsbmdGeometry.BuildModel(model);
+
+            Assert.Equal(2, shown.Parts.Count);
+            Assert.All(shown.Parts, part => Assert.Equal(0, part.MaterialIndex));
+            Assert.Equal(new[] { 0, 1 }, shown.Parts.Select(part => part.NodeIndex).OrderBy(x => x));
+        }
+
+        private static NSBMDPolygon PolygonOnNode(int node)
+        {
+            var data = new List<byte>();
+            data.AddRange(new byte[] { 0x40, 0x23, 0x23, 0xff });
+            Word(data, 0);
+            Vertex(data, 0, 0, 0);
+            Vertex(data, 4096, 0, 0);
+            data.AddRange(new byte[] { 0x23, 0x41, 0xff, 0xff });
+            Vertex(data, 0, 4096, 0);
+            return new NSBMDPolygon
+            {
+                MatId = 0,
+                JointID = node,
+                StackID = -1,
+                PolyData = data.ToArray(),
+            };
+        }
+
         private static void Vertex(List<byte> bytes, int x, int y, int z)
         {
             Word(bytes, (y << 16) | (x & 0xffff));

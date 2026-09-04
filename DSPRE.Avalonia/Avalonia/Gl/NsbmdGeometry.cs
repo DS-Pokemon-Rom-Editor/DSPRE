@@ -10,6 +10,9 @@ namespace DSPRE.Avalonia.Gl
     public sealed class NsbmdMeshPart
     {
         public int MaterialIndex;     // -1 = no material
+        /// <summary>The NSBMD node that owns this shape. Kept separate from the material because two
+        /// nodes can use the same material and NSBVA visibility is defined per node.</summary>
+        public int NodeIndex = -1;
         public float[] Vertices;      // interleaved pos.xyz, uv.st, col.rgb (8 floats/vertex)
         public int VertexCount;
         public float Alpha = 1f;      // material alpha (0-1); < 1 needs GL_BLEND when drawn
@@ -229,9 +232,9 @@ namespace DSPRE.Avalonia.Gl
             Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null)
         {
             var result = new NsbmdRenderModel();
-            var byMat = new Dictionary<int, List<float>>();
-            Accumulate(model, null, 0, result, byMat, jointMatrix);
-            Finalize(result, byMat);
+            var byNodeAndMat = new Dictionary<(int Material, int Node), List<float>>();
+            Accumulate(model, null, 0, result, null, jointMatrix, byNodeAndMat);
+            Finalize(result, byNodeAndMat);
             NormalizePositions(result, placeLike);
             return result;
         }
@@ -613,7 +616,8 @@ namespace DSPRE.Avalonia.Gl
 
         private static void Accumulate(NSBMDModel model, float[] sceneTransform, int matOffset,
             NsbmdRenderModel target, Dictionary<int, List<float>> byMat,
-            Func<int, NSBMDObject, float[]> jointMatrix = null)
+            Func<int, NSBMDObject, float[]> jointMatrix = null,
+            Dictionary<(int Material, int Node), List<float>> byNodeAndMat = null)
         {
             if (model == null || model.Polygons.Count == 0) return;
 
@@ -648,7 +652,21 @@ namespace DSPRE.Avalonia.Gl
                 float r = c.R / 255f, g = c.G / 255f, b = c.B / 255f;
                 if (r + g + b < 0.05f) { r = g = b = 0.85f; }
 
-                if (!byMat.TryGetValue(key, out var list)) { list = new List<float>(); byMat[key] = list; }
+                List<float> list;
+                if (byNodeAndMat != null)
+                {
+                    var part = (key, poly.JointID);
+                    if (!byNodeAndMat.TryGetValue(part, out list))
+                    {
+                        list = new List<float>();
+                        byNodeAndMat[part] = list;
+                    }
+                }
+                else if (!byMat.TryGetValue(key, out list))
+                {
+                    list = new List<float>();
+                    byMat[key] = list;
+                }
                 InterpretPolyData(poly.PolyData, poly.StackID, stack, model.modelScale, mat, sceneTransform, list, r, g, b);
 
                 if (mat != null)
@@ -887,6 +905,30 @@ namespace DSPRE.Avalonia.Gl
             if (stackId >= 0) { var t = cur.MultVector(v); x = t[0]; y = t[1]; z = t[2]; }
             if (sceneTransform != null) Mat4.TransformPoint(sceneTransform, ref x, ref y, ref z);
             prim.Add(new[] { x, y, z, u, w, r, g, b });
+        }
+
+        /// <summary>Finalizes a standalone model without folding shapes from different nodes together.
+        /// Materials still share texture and colour state; node identity is only for visibility tracks.</summary>
+        private static void Finalize(NsbmdRenderModel result,
+            Dictionary<(int Material, int Node), List<float>> byNodeAndMat)
+        {
+            foreach (var kv in byNodeAndMat)
+            {
+                if (kv.Value.Count == 0) continue;
+                int material = kv.Key.Material;
+                float alpha = result.MaterialAlphaByKey.TryGetValue(material, out var a) ? a : 1f;
+                int cull = result.MaterialCullByKey.TryGetValue(material, out var c) ? c : NsbmdCull.None;
+                result.Parts.Add(new NsbmdMeshPart
+                {
+                    MaterialIndex = material,
+                    NodeIndex = kv.Key.Node,
+                    Vertices = kv.Value.ToArray(),
+                    VertexCount = kv.Value.Count / 8,
+                    Alpha = alpha,
+                    CullMode = cull,
+                });
+                result.TotalVertices += kv.Value.Count / 8;
+            }
         }
 
         private static void Tessellate(List<float[]> p, int type, List<float> outv)
