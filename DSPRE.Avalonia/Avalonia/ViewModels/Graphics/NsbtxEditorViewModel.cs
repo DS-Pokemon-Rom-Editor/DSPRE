@@ -12,6 +12,7 @@ using global::Avalonia.Media.Imaging;
 using global::Avalonia.Platform;
 using global::Avalonia.Platform.Storage;
 using DSPRE.Avalonia;
+using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
 using LibNDSFormats.NSBMD;
@@ -51,12 +52,41 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int PackIndex { get => _packIndex; set { if (Set(ref _packIndex, value) && !_suppress && value >= 0) LoadPack(value); } }
 
         private int _textureIndex = -1;
-        public int TextureIndex { get => _textureIndex; set { if (Set(ref _textureIndex, value)) RenderPreview(); } }
+        public int TextureIndex
+        {
+            get => _textureIndex;
+            set
+            {
+                if (!Set(ref _textureIndex, value) || _suppress) return;
+                string name = value >= 0 && value < _textures.Count ? _textures[value].texname : "";
+                _paletteIndex = ModelTexturePairing.BestPaletteIndex(_palettes, name);
+                OnPropertyChanged(nameof(PaletteIndex));
+                RenderPreview();
+            }
+        }
         private int _paletteIndex = -1;
-        public int PaletteIndex { get => _paletteIndex; set { if (Set(ref _paletteIndex, value)) RenderPreview(); } }
+        public int PaletteIndex { get => _paletteIndex; set { if (Set(ref _paletteIndex, value) && !_suppress) RenderPreview(); } }
 
         private Bitmap _preview;
-        public Bitmap Preview { get => _preview; set => Set(ref _preview, value); }
+        public Bitmap Preview
+        {
+            get => _preview;
+            set
+            {
+                if (Set(ref _preview, value)) OnPropertyChanged(nameof(HasPreviewReason));
+            }
+        }
+
+        private string _previewReason = "Pick a texture to preview it.";
+        public string PreviewReason
+        {
+            get => _previewReason;
+            private set
+            {
+                if (Set(ref _previewReason, value)) OnPropertyChanged(nameof(HasPreviewReason));
+            }
+        }
+        public bool HasPreviewReason => Preview == null && !string.IsNullOrWhiteSpace(PreviewReason);
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
@@ -91,7 +121,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             for (int i = 0; i < count; i++) PackNames.Add("Texture Pack " + i);
             _suppress = false;
             StatusText = $"{count} {(_mapTextures ? "map" : "building")} texture packs.";
-            if (PackNames.Count > 0) PackIndex = 0; else { TextureNames.Clear(); PaletteNames.Clear(); Preview = null; }
+            if (PackNames.Count > 0) PackIndex = 0;
+            else
+            {
+                TextureNames.Clear();
+                PaletteNames.Clear();
+                Preview = null;
+                PreviewReason = "This game has no texture packs in this group.";
+            }
         }
 
         private void LoadPack(int index)
@@ -109,8 +146,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 foreach (var p in _palettes) PaletteNames.Add(string.IsNullOrEmpty(p.palname) ? $"Palette {PaletteNames.Count}" : p.palname);
                 _suppress = false;
 
-                TextureIndex = TextureNames.Count > 0 ? 0 : -1;
-                PaletteIndex = PaletteNames.Count > 0 ? 0 : -1;
+                _textureIndex = TextureNames.Count > 0 ? 0 : -1;
+                string texture = _textureIndex >= 0 ? _textures[_textureIndex].texname : "";
+                _paletteIndex = ModelTexturePairing.BestPaletteIndex(_palettes, texture);
+                OnPropertyChanged(nameof(TextureIndex));
+                OnPropertyChanged(nameof(PaletteIndex));
                 RenderPreview();
                 StatusText = $"Pack {index}: {_textures.Count} textures, {_palettes.Count} palettes.";
             }
@@ -123,23 +163,40 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void RenderPreview()
         {
-            if (_textureIndex < 0 || _textureIndex >= _textures.Count || _paletteIndex < 0 || _paletteIndex >= _palettes.Count)
-            { Preview = null; return; }
+            Preview = null;
+            if (_textureIndex < 0 || _textureIndex >= _textures.Count)
+            {
+                PreviewReason = "This pack contains no texture to show.";
+                return;
+            }
 
             try
             {
                 var tex = _textures[_textureIndex];
-                var pal = _palettes[_paletteIndex];
+                NSBMDPalette pal = _paletteIndex >= 0 && _paletteIndex < _palettes.Count
+                    ? _palettes[_paletteIndex] : null;
+                if (tex.format != 7 && pal == null)
+                {
+                    PreviewReason = "This indexed texture needs a palette, but this pack contains none.";
+                    return;
+                }
                 var mat = new NSBMDMaterial
                 {
                     format = tex.format, width = tex.width, height = tex.height,
                     texdata = tex.texdata, spdata = tex.spdata, color0 = tex.color0,
-                    paldata = pal.paldata,
+                    paldata = pal?.paldata,
                 };
                 var decoded = NsbmdTextureDecoder.Decode(mat);
                 Preview = decoded != null ? RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height) : null;
+                PreviewReason = decoded == null
+                    ? "This texture is malformed or uses data the preview cannot decode." : "";
             }
-            catch (Exception ex) { Preview = null; AppLogger.Error("NSBTX preview failed: " + ex.Message); }
+            catch (Exception ex)
+            {
+                Preview = null;
+                PreviewReason = "This texture could not be previewed.";
+                AppLogger.Error("NSBTX preview failed: " + ex.Message);
+            }
         }
 
         private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)

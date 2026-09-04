@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
+using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
@@ -73,6 +75,38 @@ namespace DSPRE.Tests
             Assert.Equal(original.G, palette[0].G);
             Assert.Equal(original.B, palette[0].B);
             Assert.Equal(original.A, palette[0].A);
+        }
+
+        [Fact]
+        public void DirectColourTextureDoesNotNeedAPalette()
+        {
+            var decoded = NsbmdTextureDecoder.Decode(new NSBMDMaterial
+            {
+                format = 7,
+                width = 1,
+                height = 1,
+                texdata = new byte[] { 0x1f, 0x80 },
+                paldata = null,
+            });
+
+            Assert.NotNull(decoded);
+            Assert.Equal(new byte[] { 248, 0, 0, 255 }, decoded.Rgba);
+        }
+
+        [Fact]
+        public void StandaloneTexturePaletteSuggestionPrefersNamesButFallsBackVisibly()
+        {
+            var palettes = new[]
+            {
+                new NSBMDPalette { palname = "unrelated" },
+                new NSBMDPalette { palname = "wall" },
+                new NSBMDPalette { palname = "roof_pl" },
+            };
+
+            Assert.Equal(1, ModelTexturePairing.BestPaletteIndex(palettes, "wall"));
+            Assert.Equal(2, ModelTexturePairing.BestPaletteIndex(palettes, "roof"));
+            Assert.Equal(0, ModelTexturePairing.BestPaletteIndex(palettes, "door"));
+            Assert.Equal(-1, ModelTexturePairing.BestPaletteIndex(Array.Empty<NSBMDPalette>(), "wall"));
         }
 
         [Fact]

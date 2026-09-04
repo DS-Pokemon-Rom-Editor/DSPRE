@@ -546,21 +546,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private int BestPaletteFor(int textureIndex)
         {
-            if (_previewPalettes.Count == 0) return -1;
-            if (textureIndex < 0 || textureIndex >= _previewTextures.Count) return 0;
-            string texture = _previewTextures[textureIndex].texname ?? "";
-            int exact = _previewPalettes.FindIndex(p => String.Equals(p.palname, texture, StringComparison.Ordinal));
-            if (exact >= 0) return exact;
-            int prefix = _previewPalettes.FindIndex(p => !string.IsNullOrEmpty(p.palname)
-                && (texture.StartsWith(p.palname, StringComparison.Ordinal)
-                    || p.palname.StartsWith(texture, StringComparison.Ordinal)));
-            return prefix >= 0 ? prefix : 0;
+            string texture = textureIndex >= 0 && textureIndex < _previewTextures.Count
+                ? _previewTextures[textureIndex].texname : "";
+            return ModelTexturePairing.BestPaletteIndex(_previewPalettes, texture);
         }
 
         private void RenderTexturePreview()
         {
             TexturePreview = null;
-            if (_previewTextureIndex < 0 || _previewTextureIndex >= _previewTextures.Count) return;
+            if (_previewTextureIndex < 0 || _previewTextureIndex >= _previewTextures.Count)
+            {
+                Whynot = "This texture set contains no picture to show.";
+                OnPropertyChanged(nameof(HasNoModel));
+                return;
+            }
             var texture = _previewTextures[_previewTextureIndex];
             RGBA[] palette = _previewPaletteIndex >= 0 && _previewPaletteIndex < _previewPalettes.Count
                 ? _previewPalettes[_previewPaletteIndex].paldata : null;
@@ -574,7 +573,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 color0 = texture.color0,
                 paldata = palette,
             });
-            if (decoded == null) return;
+            if (decoded == null)
+            {
+                Whynot = texture.format == 7 || palette != null
+                    ? "This texture is malformed or uses data the preview cannot decode."
+                    : "This texture needs a palette, but this set does not contain one.";
+                Details = BaseDetails;
+                OnPropertyChanged(nameof(HasNoModel));
+                return;
+            }
+            Whynot = "";
             TexturePreview = RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height);
             Details = BaseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
                 + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
