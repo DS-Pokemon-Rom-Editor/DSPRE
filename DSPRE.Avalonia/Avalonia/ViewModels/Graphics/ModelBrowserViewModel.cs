@@ -13,7 +13,7 @@ using LibNDSFormats.NSBMD;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>The game's models and the pictures painted on them, in their own list.</summary>
-    public sealed class ModelBrowserViewModel : INotifyPropertyChanged
+    public sealed partial class ModelBrowserViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -39,6 +39,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ? $"{Index,5}  {Archive.Title}"
                 : $"{Index,5}  {Name}";
             public string Search { get; init; }
+
+            /// <summary>An animation, and no model in the game is named for it.</summary>
+            public bool Unclaimed { get; set; }
         }
 
         /// <summary>One file of the thing picked.</summary>
@@ -54,6 +57,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             public string Title { get; init; }
             public ModelAssets.Group? Only { get; init; }   // null means everything
+            /// <summary>A tab for the animations nothing is named for, rather than a kind of thing.</summary>
+            public bool OnlyUnclaimed { get; init; }
             public int Count { get; init; }
             public string What { get; init; }
             public string Header => $"{Title} ({Count})";
@@ -61,12 +66,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly List<Item> _everything = new();
 
-        public ModelBrowserViewModel() => Reload();
+        /// <summary>
+        /// Reading every archive to see what is in it is real file work, so it does not happen here.
+        /// The caller runs <see cref="Scan"/> off the UI thread and then <see cref="Publish"/> on it.
+        /// </summary>
+        public ModelBrowserViewModel() { }
 
-        public void Reload()
+        /// <summary>Reads and lists in one go, for callers that are already off the UI thread.</summary>
+        public void Reload() { Scan(); Publish(); }
+
+        private List<CategoryTab> _scanned;
+
+        /// <summary>
+        /// Walks every archive and works out what it holds. Touches files and nothing else, so it is
+        /// safe to run away from the UI thread; it fills plain lists rather than the bound collections.
+        /// </summary>
+        public void Scan()
         {
-            _everything.Clear();
-            Tabs.Clear();
+            var found = new List<Item>();
+            var tabs = new List<CategoryTab>();
             foreach (var g in Enum.GetValues<ModelAssets.Group>())
             {
                 int inGroup = 0;
@@ -77,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     if (n == 0) continue;
                     inGroup += ModelAssets.Units(a, n).Count;
                     foreach (var u in ModelAssets.Units(a, n))
-                        _everything.Add(new Item
+                        found.Add(new Item
                         {
                             Archive = a, In = g, Index = u.First, Unit = u,
                             Name = u.Name == a.Title ? null : u.Name,
@@ -85,18 +103,94 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         });
                 }
                 if (inGroup > 0)
-                    Tabs.Add(new CategoryTab { Title = FriendlyGroup(g), Only = g, Count = inGroup,
+                    tabs.Add(new CategoryTab { Title = FriendlyGroup(g), Only = g, Count = inGroup,
                                                What = string.Join("  ", ModelAssets.All
                                                    .Where(x => x.In == g).Select(x => x.Title)) });
             }
 
-            if (Tabs.Count > 0)
-                Tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = _everything.Count,
+            MarkTheUnclaimed(found);
+            int orphans = found.Count(f => f.Unclaimed);
+            if (orphans > 0)
+                tabs.Add(new CategoryTab
+                {
+                    Title = "Nothing claims these", OnlyUnclaimed = true, Count = orphans,
+                    What = "Animations no model in this game is named for. They still belong to something, "
+                         + "but the names do not say what.",
+                });
+
+            if (tabs.Count > 0)
+                tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = found.Count,
                                                  What = "Every model, picture set and animation this game has." });
+
+            _everything.Clear();
+            _everything.AddRange(found);
+            _scanned = tabs;
+        }
+
+        /// <summary>Puts what <see cref="Scan"/> found into the bound collections. UI thread only.</summary>
+        public void Publish()
+        {
+            Tabs.Clear();
+            foreach (var t in _scanned ?? new List<CategoryTab>()) Tabs.Add(t);
             _selectedTab = Tabs.FirstOrDefault();
             OnPropertyChanged(nameof(SelectedTab));
-
             ApplyFilter();
+        }
+
+        /// <summary>
+        /// Works out which animations no model is named for. Every model name in the game is collected
+        /// first, then each animation's own names are matched against them, so an animation only lands in
+        /// the unclaimed group when nothing anywhere fits it.
+        /// </summary>
+        private static void MarkTheUnclaimed(List<Item> found)
+        {
+            var modelNames = found
+                .Where(f => !string.IsNullOrWhiteSpace(f.Name))
+                .Select(f => f.Name)
+                .Distinct()
+                .ToList();
+
+            foreach (var item in found)
+            {
+                var kind = KindOf(item);
+                if (kind == null) continue;
+
+                IReadOnlyList<string> names;
+                try { names = AnimationNames(item, kind.Value); } catch { continue; }
+                item.Unclaimed = names.Count == 0
+                                 || !modelNames.Any(m => ModelAssets.BelongsTo(names, m));
+            }
+        }
+
+        private static ModelAssets.Kind? KindOf(Item item)
+        {
+            try
+            {
+                var narc = new ScriptNarc(item.Archive.Dir);
+                if (!narc.Available) return null;
+                var b = narc.Get(item.Index);
+                if (b == null) return null;
+                var k = ModelAssets.Identify(b);
+                return IsAnAnimation(k) ? k : (ModelAssets.Kind?)null;
+            }
+            catch { return null; }
+        }
+
+        private static IReadOnlyList<string> AnimationNames(Item item, ModelAssets.Kind kind)
+        {
+            var narc = new ScriptNarc(item.Archive.Dir);
+            if (!narc.Available) return Array.Empty<string>();
+            var b = narc.Get(item.Index);
+            if (b == null) return Array.Empty<string>();
+            return kind switch
+            {
+                ModelAssets.Kind.JointAnimation => JointAnimation.NamesIn(b),
+                ModelAssets.Kind.TextureAnimation => TextureSrtAnimation.Load(b)?.MaterialNames ?? Array.Empty<string>(),
+                ModelAssets.Kind.TextureSwap => TexturePatternAnimation.Load(b)?.MaterialNames ?? Array.Empty<string>(),
+                ModelAssets.Kind.MaterialAnimation => MaterialColourAnimation.Load(b)?.MaterialNames ?? Array.Empty<string>(),
+                ModelAssets.Kind.VisibilityAnimation => VisibilityAnimation.Load(b)?.AnimationNames ?? Array.Empty<string>(),
+                _ => Array.Empty<string>(),
+            };
         }
 
         private static string FriendlyGroup(ModelAssets.Group g) => g switch
@@ -127,7 +221,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Shown.Clear();
             string q = (_search ?? "").Trim().ToLowerInvariant();
             IEnumerable<Item> hits = _everything;
-            if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
+            if (_selectedTab?.OnlyUnclaimed == true) hits = hits.Where(i => i.Unclaimed);
+            else if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
             foreach (var i in hits.Take(ShowAtMost)) Shown.Add(i);
             OnPropertyChanged(nameof(FoundSummary));
@@ -222,8 +317,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             BaseDetails = $"{Named}, number {ShowingIndex}. {ModelAssets.ShortName(_options.Kind)}.";
             Details = BaseDetails;
 
+            // An animation picked on its own has no shape to draw, so say what it does instead of
+            // leaving an empty box and the word "animation".
+            AnimationDetails = "";
+            AnimationOwner = "";
+            if (IsAnAnimation(_options.Kind))
+            {
+                AnimationDetails = DescribeAnimation(a, ShowingIndex, _options.Kind);
+                AnimationOwner = WhoClaimsIt(a, ShowingIndex, _options.Kind);
+            }
+            OnPropertyChanged(nameof(AnimationDetails));
+            OnPropertyChanged(nameof(AnimationOwner));
+            OnPropertyChanged(nameof(HasAnimationDetails));
+            OnPropertyChanged(nameof(HasCompanionSummary));
+            OnPropertyChanged(nameof(CompanionSummary));
+
             if (_options.CanShow)
             {
+                FindCompanions(a, ShowingIndex, Named);
                 BuildTextureChoices(a);
                 BuildAnimationChoices(a);
                 Draw();
@@ -411,12 +522,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return ModelAssets.AnimationFor(_selected.Archive, _selected.Index, _animationEntries[_animationIndex]);
         }
 
-        public bool CanPlay => _animationIndex > 0 && _animationIndex < _animationEntries.Count;
+        /// <summary>A movement to run, or any of the other animations, which run on the same clock.</summary>
+        public bool CanPlay => (_animationIndex > 0 && _animationIndex < _animationEntries.Count)
+                               || CompanionFrames > 1;
 
         public string PlayHelp => CanPlay
-            ? "Run the movement. Buildings mostly move on a clock rather than on their own, so this is a "
-            + "way to see what a movement does, not what the game does with it."
-            : "Pick a movement first. Still means nothing is moving.";
+            ? "Run it. Buildings mostly move on a clock rather than on their own, so this is a "
+            + "way to see what an animation does, not what the game does with it."
+            : "Pick a movement or one of the other animations first. Still means nothing is moving.";
 
         /// <summary>Says whether the movement showing is the one the game gives this model or one that
         /// belongs to something else and is only being tried on it.</summary>
@@ -517,10 +630,55 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void Step()
         {
             var anim = Chosen();
-            if (anim == null || anim.FrameCount <= 0) { Playing = false; return; }
-            _frame = (_frame + 1) % anim.FrameCount;
+            int length = Math.Max(anim?.FrameCount ?? 0, CompanionFrames);
+            if (length <= 0) { Playing = false; return; }
+            _frame = (_frame + 1) % length;
+            OnPropertyChanged(nameof(Frame));
+            DrawNow();
+        }
+
+        /// <summary>Draws at the frame it is already on, and tells the view.</summary>
+        private void DrawNow()
+        {
             Draw();
+            OnPropertyChanged(nameof(FrameSummary));
+            OnPropertyChanged(nameof(FrameCount));
             if (Model3D != null) ModelReady?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>How many frames the thing showing runs for, so the slider has an end.</summary>
+        public int FrameCount
+        {
+            get
+            {
+                var anim = Chosen();
+                return Math.Max(1, Math.Max(anim?.FrameCount ?? 0, CompanionFrames));
+            }
+        }
+
+        /// <summary>The frame showing, which can be dragged to rather than only played through.</summary>
+        public int Frame
+        {
+            get => _frame;
+            set
+            {
+                int at = Math.Clamp(value, 0, Math.Max(0, FrameCount - 1));
+                if (_frame == at) return;
+                _frame = at;
+                OnPropertyChanged(nameof(Frame));
+                DrawNow();
+            }
+        }
+
+        /// <summary>Which frame is showing, for the panel beside the view.</summary>
+        public string FrameSummary
+        {
+            get
+            {
+                var anim = Chosen();
+                int length = Math.Max(anim?.FrameCount ?? 0, CompanionFrames);
+                return length <= 1 ? "" : $"Frame {_frame + 1} of {length}";
+            }
         }
 
         private void Draw()
@@ -567,9 +725,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 AppLogger.Error("ModelBrowser.Draw failed: " + ex.Message);
                 Whynot = "This model would not open.";
             }
+
+            ApplyCompanions(_frame);
         }
 
+
         private string BaseDetails = "";
+
+        /// <summary>What an animation picked on its own does, and which model it was written for.</summary>
+        public string AnimationDetails { get; private set; } = "";
+        public string AnimationOwner { get; private set; } = "";
+        public bool HasAnimationDetails => !string.IsNullOrEmpty(AnimationDetails);
+
+        private static bool IsAnAnimation(ModelAssets.Kind k) =>
+            k is ModelAssets.Kind.JointAnimation or ModelAssets.Kind.TextureAnimation
+              or ModelAssets.Kind.TextureSwap or ModelAssets.Kind.VisibilityAnimation
+              or ModelAssets.Kind.MaterialAnimation;
 
         /// <summary>What to call the thing on screen: the name in the file when it has one.</summary>
         private string Named => _selected?.Name ?? _selected?.Archive.Title ?? "";
