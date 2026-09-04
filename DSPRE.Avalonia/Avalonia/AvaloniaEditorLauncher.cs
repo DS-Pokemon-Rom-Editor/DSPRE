@@ -866,16 +866,23 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the models and textures list, which is its own place, not part of the flat one.</summary>
-        public static void OpenModelBrowser()
+        public static void OpenModelBrowser() => _ = OpenModelBrowserAsync();
+
+        public static async System.Threading.Tasks.Task OpenModelBrowserAsync()
         {
             try
             {
-                new Views.Graphics.ModelBrowserView(new ViewModels.Graphics.ModelBrowserViewModel()).ShowManaged();
+                // Listing means reading every 3D archive to see what is in it, which is far too much
+                // file work to do on the click.
+                var vm = new ViewModels.Graphics.ModelBrowserViewModel();
+                await RunBusyAsync("Opening Models…", UnpackHint, vm.Scan);
+                vm.Publish();
+                new Views.Graphics.ModelBrowserView(vm).ShowManaged();
             }
             catch (System.Exception ex)
             {
                 AppLogger.Error("OpenModelBrowser failed: " + ex.Message);
-                _ = DialogHelper.ShowInfo("The models list could not be opened. Open a ROM first.", "Models");
+                await DialogHelper.ShowInfo("The models list could not be opened. Open a ROM first.", "Models");
             }
         }
 

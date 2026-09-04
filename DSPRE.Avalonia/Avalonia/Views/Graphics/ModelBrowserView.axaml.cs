@@ -13,7 +13,16 @@ namespace DSPRE.Avalonia.Views.Graphics
         private ModelBrowserViewModel ViewModel => (ModelBrowserViewModel)DataContext;
         private Gl3DPointerNavigation _nav;
 
-        public ModelBrowserView() : this(new ModelBrowserViewModel()) { }
+        // The designer's path, and anything that has not been given a view model. It still reads on
+        // the spot; only the launcher's path does the reading away from the UI thread.
+        public ModelBrowserView() : this(Loaded()) { }
+
+        private static ModelBrowserViewModel Loaded()
+        {
+            var vm = new ModelBrowserViewModel();
+            vm.Reload();
+            return vm;
+        }
 
         public ModelBrowserView(ModelBrowserViewModel vm)
         {
@@ -21,7 +30,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             DataContext = vm;
             // Drag to turn it round, wheel to come closer, the same as everywhere else in DSPRE.
             _nav = new Gl3DPointerNavigation(GlHost, GlView);
-            vm.ModelReady += (_, _) => GlView.SetModel(vm.Model3D);
+            vm.ModelReady += (_, _) =>
+            {
+                GlView.SetModel(vm.Model3D);
+                // What the chosen animations do to each material this frame. Null means nothing does.
+                GlView.SetTextureMatrices(vm.TextureMatrices);
+                GlView.SetTextureSwaps(vm.TextureSwaps);
+                GlView.SetMaterialFades(vm.MaterialFades);
+                GlView.SetHiddenMaterials(vm.HiddenMaterials);
+                GlView.SetMaterialColours(vm.MaterialColours);
+            };
 
             // The DS runs these at 30 frames a second, so that is the speed they are played back at.
             _clock = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
@@ -113,7 +131,8 @@ namespace DSPRE.Avalonia.Views.Graphics
                 return;
             }
 
-            vm.Reload();
+            await System.Threading.Tasks.Task.Run(vm.Scan);
+            vm.Publish();
             vm.Status = note == null
                 ? "That file is in. Save the ROM to keep it."
                 : note + " Save the ROM to keep it.";
