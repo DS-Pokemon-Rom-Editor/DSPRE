@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.Gl
         private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int CullMode; }
 
         private GlFunctions _f;
-        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc;
+        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc;
         private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
 
@@ -95,6 +95,27 @@ namespace DSPRE.Avalonia.Gl
         private Dictionary<int, float> _fadedMaterials;
 
         /// <summary>Supplies this frame's material fades, keyed by material. Pass null to stop fading.</summary>
+        // Parts an animation hides outright. Drawing them fully see-through looks the same on a plain
+        // background but not over anything else, so they are skipped instead.
+        private HashSet<int> _hidden;
+
+        // What a material-colour animation recolours a surface to, as three values from zero to one.
+        private Dictionary<int, (float r, float g, float b)> _matColours;
+
+        /// <summary>Recolours some materials this frame, or null to leave every colour alone.</summary>
+        public void SetMaterialColours(Dictionary<int, (float r, float g, float b)> byMaterialKey)
+        {
+            _matColours = byMaterialKey;
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>Materials not to draw at all this frame, or null to draw everything.</summary>
+        public void SetHiddenMaterials(HashSet<int> byMaterialKey)
+        {
+            _hidden = byMaterialKey;
+            RequestNextFrameRendering();
+        }
+
         public void SetMaterialFades(Dictionary<int, float> byMaterialKey)
         {
             _fadedMaterials = byMaterialKey;
@@ -403,6 +424,8 @@ namespace DSPRE.Avalonia.Gl
                     // world-tile and mix it into the surface AFTER the alpha discard, so the collision colour follows
                     // the real texture shape (trees/lamps tinted on their pixels; transparent texels stay clear).
                     "uniform float uTint;\nuniform vec2 uTileOrigin;\nuniform vec2 uTileSize;\nuniform sampler2D uColl;\n" +
+                    // A material-colour animation (NSBMA) recolours a surface over time. White leaves it alone.
+                    "uniform vec3 uMatColor;\n" +
                     "in vec2 vUv;\nin vec3 vColor;\nin vec2 vWorld;\nout vec4 fragColor;\n" +
                     "vec3 tintRgb(vec3 c){\n" +
                     "  if (uTint <= 0.0) return c;\n" +
@@ -413,8 +436,8 @@ namespace DSPRE.Avalonia.Gl
                     "  return mix(c, t.rgb, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
-                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(tintRgb(t.rgb), uAlpha); }\n" +
-                    "  else { fragColor = vec4(tintRgb(vColor), uAlpha); }\n" +
+                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(tintRgb(t.rgb) * uMatColor, uAlpha); }\n" +
+                    "  else { fragColor = vec4(tintRgb(vColor) * uMatColor, uAlpha); }\n" +
                     "}\n";
 
                 int v = _f.CompileShaderOrThrow(GlFunctions.GL_VERTEX_SHADER, vs);
@@ -422,6 +445,7 @@ namespace DSPRE.Avalonia.Gl
                 _program = _f.LinkProgramOrThrow(v, f);
                 _mvpLoc = _f.GetUniformLocation(_program, "uMvp");
                 _texMtxLoc = _f.GetUniformLocation(_program, "uTexMtx");
+                _matColorLoc = _f.GetUniformLocation(_program, "uMatColor");
                 _texLoc = _f.GetUniformLocation(_program, "uTex");
                 _hasTexLoc = _f.GetUniformLocation(_program, "uHasTex");
                 _alphaLoc = _f.GetUniformLocation(_program, "uAlpha");
@@ -690,6 +714,8 @@ namespace DSPRE.Avalonia.Gl
                     _f.Enable(GlFunctions.GL_BLEND);
                     _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
                 }
+                if (_hidden != null && _hidden.Contains(part.MaterialKey)) continue;
+
                 float alpha = part.Alpha;
                 if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
                     alpha = faded;
@@ -699,6 +725,13 @@ namespace DSPRE.Avalonia.Gl
                 if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out var m) && m != null && m.Length == 9)
                     texMtx = m;
                 if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, texMtx);
+
+                if (_matColorLoc >= 0)
+                {
+                    var c = _matColours != null && _matColours.TryGetValue(part.MaterialKey, out var got)
+                        ? got : (1f, 1f, 1f);
+                    _f.Uniform3f(_matColorLoc, c.Item1, c.Item2, c.Item3);
+                }
 
                 // Only the faces the DS would have drawn.
                 bool cull = part.CullMode == NsbmdCull.Front || part.CullMode == NsbmdCull.Back;
@@ -715,6 +748,7 @@ namespace DSPRE.Avalonia.Gl
                 if (blend) _f.Disable(GlFunctions.GL_BLEND);
             }
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
+            if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
             _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
