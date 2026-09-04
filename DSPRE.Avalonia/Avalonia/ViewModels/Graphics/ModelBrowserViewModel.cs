@@ -236,6 +236,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             else if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
             foreach (var i in hits.Take(ShowAtMost)) Shown.Add(i);
+            if (_selected == null || !Shown.Contains(_selected))
+                Selected = Shown.FirstOrDefault();
             OnPropertyChanged(nameof(FoundSummary));
         }
 
