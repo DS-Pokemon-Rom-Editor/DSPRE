@@ -47,6 +47,7 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         private void PreviewNext_Click(object sender, RoutedEventArgs e) => VM?.NextPreviewStep();
+        private void StrVarHelp_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenStrVarHelp();
 
         public TextEditorView(TextEditorViewModel vm) : this()
         {

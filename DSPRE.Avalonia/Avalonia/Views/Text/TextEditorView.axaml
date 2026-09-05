@@ -29,6 +29,9 @@
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
         <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
                   ToolTip.Tip="Show the selected line the way the game would, in its own message box."/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
+        <Button Content="STRVAR Help…" Click="StrVarHelp_Click"
+                ToolTip.Tip="Open the string buffer syntax, examples, and type reference"/>
       </WrapPanel>
     </Border>
 

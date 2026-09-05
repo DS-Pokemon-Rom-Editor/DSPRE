@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
+        x:Class="DSPRE.Avalonia.Views.Text.StrVarHelpView"
+        x:DataType="vm:StrVarHelpViewModel"
+        Title="{Binding Title}"
+        Width="820" Height="700"
+        MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterOwner">
+  <Design.DataContext>
+    <vm:StrVarHelpViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="12">
+    <Button DockPanel.Dock="Bottom" Content="Close" Click="Close_Click"
+            HorizontalAlignment="Right" Width="90" Margin="0,10,0,0"
+            IsDefault="True" IsCancel="True"/>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                   Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,8"/>
+
+        <ItemsControl ItemsSource="{Binding Sections}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StrVarHelpSection">
+              <StackPanel Spacing="8" Margin="0,0,0,14">
+                <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold"/>
+
+                <Border IsVisible="{Binding HasCode}" Padding="10" CornerRadius="4"
+                        Background="{DynamicResource Editor.PanelBg}"
+                        BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                  <TextBlock Text="{Binding Code}" FontFamily="Consolas, monospace"
+                             TextWrapping="Wrap"/>
+                </Border>
+
+                <TextBlock Text="{Binding Body}" IsVisible="{Binding HasBody}"
+                           TextWrapping="Wrap" LineHeight="21"/>
+
+                <ItemsControl ItemsSource="{Binding Examples}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StrVarHelpExample">
+                      <Border Padding="10" Margin="0,0,0,8" CornerRadius="4"
+                              Background="{DynamicResource Editor.PanelBg}"
+                              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                        <StackPanel Spacing="6">
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                          <TextBlock Text="Script" FontSize="12"
+                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                          <TextBlock Text="{Binding Script}" FontFamily="Consolas, monospace"
+                                     TextWrapping="Wrap"/>
+                          <TextBlock Text="Message" FontSize="12" Margin="0,4,0,0"
+                                     Foreground="{DynamicResource Editor.Subtle}"/>
+                          <TextBlock Text="{Binding Message}" FontFamily="Consolas, monospace"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl ItemsSource="{Binding TypeReferences}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StrVarTypeReference">
+                      <Border Padding="10" Margin="0,0,0,8" CornerRadius="4"
+                              Background="{DynamicResource Editor.PanelBg}"
+                              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding Pattern}" FontFamily="Consolas, monospace"
+                                     FontWeight="SemiBold" TextWrapping="Wrap"/>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Type" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TypeLabel}" FontWeight="SemiBold"/>
+                            <TextBlock Text="•"/>
+                            <TextBlock Text="{Binding Description}"/>
+                          </StackPanel>
+                          <TextBlock Text="{Binding CommandsText}" TextWrapping="Wrap"
+                                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

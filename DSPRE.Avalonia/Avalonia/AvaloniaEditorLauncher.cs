@@ -245,6 +245,11 @@ namespace DSPRE.Avalonia
             }
         }
 
+        public static void OpenStrVarHelp()
+        {
+            new StrVarHelpView(new StrVarHelpViewModel()).ShowManaged();
+        }
+
         public static void OpenScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
