@@ -1,9 +1,5 @@
 # Research notes and combined logic
 
-## Research method and references
-
-- [Reference ecosystem](ReferenceEcosystem.md)
-
 ## Pokemon Research
 
 - [Pokemon Research](Pokemon/PokemonResearch.md)

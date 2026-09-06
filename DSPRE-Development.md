@@ -358,10 +358,9 @@ change. Search for existing script readers before adding another interpretation 
 ## Where the domain knowledge is
 
 `Research/` has the worked-out material: move animation opcodes and routines, field animation, sprites
-and icons, the graphics archive census. Read it before re-deriving something.
+and icons, the graphics archive census. It is maintained by the project's human contributors; do not
+add or reorganize material there unless that documentation work was explicitly requested.
 [pret/pokeheartgold](https://github.com/pret/pokeheartgold) is the public reference for HGSS behaviour.
-The source-selection and privacy policy is in
-[Research/ReferenceEcosystem.md](Research/ReferenceEcosystem.md).
 
 Bundled tools live in `Tools/` at the repo root and are copied next to the exe. `ndstool` and `blz`
 are Windows-only so far; `chatot`, `dsrom`, `apicula`, `rotom` and `rotom-lsp` have Linux builds.

@@ -16,6 +16,8 @@ WinForms shell retained during the transition.
 - Do not change Git configuration, remotes, exclusions, hooks, the index, or history unless the
   operator explicitly requests that exact action. Do not stage, commit, push, fetch, reset, restore,
   stash, clean, merge, rebase, or cherry-pick by default.
+- When the operator explicitly asks for commits, inspect recent subjects and match their plain,
+  concrete voice. Do not add generic release-note bodies unless the change needs one.
 - Do not add assistant attribution, generated-by notices, trailers, session links, telemetry, or
   vendor metadata.
 - Do not install plugins, hooks, MCP servers, or external integrations without explicit approval.
@@ -102,6 +104,10 @@ The Windows `DSPRE` executable starts the Avalonia shell by default. Set
 `DSPRE.Avalonia` executable always starts the pure Avalonia shell. `DSPRE_AVALONIA_SHELL` is not a
 current selector.
 
+Before live verification, build the current source and launch the exact executable produced by that
+build. After any code change, rebuild before relaunching; a previously running process or older output
+does not count as runtime verification.
+
 Pass `--beta` to enable beta-gated editors in Release builds. Debug builds enable them automatically.
 The gate and its reasons are defined in `DSPRE.Core/BetaEditors.cs`.
 
@@ -168,14 +174,13 @@ both unchanged and externally edited plaintext.
 
 ## Research and reference material
 
-Start at [Research/ResearchNotes.md](Research/ResearchNotes.md). The permanent policy for choosing and
-recording reference implementations is [Research/ReferenceEcosystem.md](Research/ReferenceEcosystem.md).
-Research notes explain formats and evidence; production code remains the authority for current
-behavior.
+`Research/` is a human-maintained knowledge area. Agents may read it, but must not add, rewrite, or
+reorganize Research material unless the operator explicitly requests that specific documentation
+work. Keep agent working notes in ignored task artifacts instead.
 
-When using an external implementation, document the exact fact independently confirmed, the public
-source or measurement used, and any version or game-family boundary. Do not transplant code or claims
-without checking licensing, provenance, and compatibility with DSPRE's current architecture.
+When using an external implementation for code changes, independently confirm the exact fact and its
+version or game-family boundary. Do not transplant code or claims without checking licensing,
+provenance, and compatibility with DSPRE's current architecture.
 
 ## Handoff checklist
 
