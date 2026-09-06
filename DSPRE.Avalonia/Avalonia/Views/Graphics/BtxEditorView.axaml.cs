@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.Avalonia.ViewModels.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -34,7 +35,37 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = files[0].TryGetLocalPath();
             if (path == null) return;
 
-            string error = VM?.ImportPng(path);
+            if (VM == null) return;
+
+            bool needsProfile = VM.TryGetCompatibleProfiles(path, out var profiles, out string analysisError);
+            if (analysisError != null)
+            {
+                await DialogHelper.ShowError($"Import failed: {analysisError}");
+                return;
+            }
+
+            string error;
+            if (needsProfile)
+            {
+                var pickerVm = new OverworldProfilePickerViewModel(profiles);
+                var picker = new OverworldProfilePickerView(pickerVm);
+                bool accepted = await picker.ShowDialog<bool>(this);
+                if (!accepted || pickerVm.SelectedProfile == null) return;
+
+                string warning = VM.GetSelectedMemberUsageWarning();
+                if (warning != null && !await DialogHelper.AskYesNo(warning, "Shared texture slot", this))
+                    return;
+
+                error = VM.ImportPngUsingProfile(path, pickerVm.SelectedProfile.AppearanceId);
+            }
+            else
+            {
+                string warning = VM.GetSelectedMemberUsageWarning();
+                if (warning != null && !await DialogHelper.AskYesNo(warning, "Shared texture slot", this))
+                    return;
+
+                error = VM.ImportPng(path);
+            }
             if (error != null)
                 await DialogHelper.ShowError($"Import failed: {error}");
         }

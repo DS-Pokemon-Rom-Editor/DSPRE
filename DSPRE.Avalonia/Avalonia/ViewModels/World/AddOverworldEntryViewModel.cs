@@ -51,7 +51,14 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public ObservableCollection<OwIdOption> CloneOptions { get; } = new();
         private OwIdOption _selectedCloneSource;
-        public OwIdOption SelectedCloneSource { get => _selectedCloneSource; set => Set(ref _selectedCloneSource, value); }
+        public OwIdOption SelectedCloneSource
+        {
+            get => _selectedCloneSource;
+            set
+            {
+                if (Set(ref _selectedCloneSource, value)) RebuildSlotOptions();
+            }
+        }
 
         private string _pngPath;
         public string PngPath { get => _pngPath; private set => Set(ref _pngPath, value); }
@@ -70,8 +77,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// is shared on purpose (no write happens either way).</summary>
         public string SlotSectionLabel => HasImage ? "Format template (existing texture to copy dimensions/colors from)" : "Texture slot (this entry's art)";
         public string SlotSectionTooltip => HasImage
-            ? "Your image is written into a brand-new texture slot that's created just for this entry, nothing here gets modified. This picker only supplies the size/color-count template BTX0 needs; it must exactly match your image's dimensions (and, for a PNG, its color count). Slots that fit are marked ✓ and sorted first."
-            : "No image was picked, so this entry will point straight at the chosen slot's existing art, unmodified and shared with whatever else already uses it (that's expected: many original overworld entries share art this way).";
+            ? "Your image is written into a brand-new texture slot that's created just for this entry, nothing here gets modified. The template must match both the image and the chosen animation profile, including its dictionary and repeated-frame layout. Matching slots are marked ✓ and sorted first."
+            : "No image was picked, so this entry will point straight at the chosen slot's existing art. Its complete BTX structure must match the chosen animation profile; matching slots are marked ✓.";
 
         private Bitmap _imagePreview;
         public Bitmap ImagePreview { get => _imagePreview; private set => Set(ref _imagePreview, value); }
@@ -98,8 +105,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             public int Width, Height;
             public uint ColorLimit;
             public string BaseLabel;
+            public Btx0Structure Structure;
         }
         private readonly List<SlotInfo> _allSlots = new();
+        private readonly Dictionary<uint, Btx0Structure> _cloneProfiles = new();
 
         public AddOverworldEntryViewModel()
         {
@@ -131,15 +140,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (added >= MaxUnusedSlotOptions || scanned >= MaxUnusedSlotCandidatesToScan) break;
                 scanned++;
-                if (!TryReadTextureInfo(Path.Combine(dir, id.ToString("D4")), out int w, out int h, out uint colorLimit)) continue;
-                _allSlots.Add(new SlotInfo { Id = id, Width = w, Height = h, ColorLimit = colorLimit, BaseLabel = $"Unused slot #{id}" });
+                if (!TryReadTextureInfo(Path.Combine(dir, id.ToString("D4")), out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
+                _allSlots.Add(new SlotInfo { Id = id, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Unused slot #{id}" });
                 added++;
             }
             foreach (var kv in RomInfo.OverworldTable)
             {
                 string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
-                if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit)) continue;
-                _allSlots.Add(new SlotInfo { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, BaseLabel = $"Existing art from OW Entry {kv.Key} (slot #{kv.Value.spriteID})" });
+                if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
+                _cloneProfiles[kv.Key] = structure;
+                _allSlots.Add(new SlotInfo { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Existing art from OW Entry {kv.Key} (slot #{kv.Value.spriteID})" });
             }
             RebuildSlotOptions();
 
@@ -156,25 +166,39 @@ namespace DSPRE.Avalonia.ViewModels.World
             var previouslySelectedId = SelectedSlot?.Id;
             SlotOptions.Clear();
             bool haveTarget = _targetWidth > 0;
+            bool haveProfile = SelectedCloneSource != null && _cloneProfiles.ContainsKey(SelectedCloneSource.Id);
 
-            IEnumerable<SlotInfo> ordered = haveTarget
+            IEnumerable<SlotInfo> ordered = haveTarget || haveProfile
                 ? _allSlots.OrderByDescending(s => Fits(s))
                 : _allSlots;
 
             foreach (var s in ordered)
             {
-                bool fits = haveTarget && Fits(s);
-                string label = haveTarget
-                    ? $"{(fits ? "✓ " : "")}{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors{(fits ? " (fits your image)" : " (different size/palette)")}"
+                bool fits = (haveTarget || haveProfile) && Fits(s);
+                string label = haveTarget || haveProfile
+                    ? $"{(fits ? "✓ " : "")}{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
                     : $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors";
                 SlotOptions.Add(new OwIdOption { Id = s.Id, Label = label });
             }
 
-            SelectedSlot = (previouslySelectedId.HasValue ? SlotOptions.FirstOrDefault(o => o.Id == previouslySelectedId.Value) : null)
+            OwIdOption previous = previouslySelectedId.HasValue
+                ? SlotOptions.FirstOrDefault(o => o.Id == previouslySelectedId.Value)
+                : null;
+            if ((haveTarget || haveProfile) && previous != null && !previous.Label.StartsWith("✓ "))
+                previous = null;
+            SelectedSlot = previous
+                ?? ((haveTarget || haveProfile) ? SlotOptions.FirstOrDefault(o => o.Label.StartsWith("✓ ")) : null)
                 ?? SlotOptions.FirstOrDefault();
         }
 
-        private bool Fits(SlotInfo s) => s.Width == _targetWidth && s.Height == _targetHeight && s.ColorLimit >= _targetColors;
+        private bool Fits(SlotInfo s)
+        {
+            bool imageFits = _targetWidth == 0 ||
+                (s.Width == _targetWidth && s.Height == _targetHeight && s.ColorLimit >= _targetColors);
+            bool profileFits = SelectedCloneSource == null ||
+                (_cloneProfiles.TryGetValue(SelectedCloneSource.Id, out Btx0Structure profile) && s.Structure.HasSameProfileAs(profile));
+            return imageFits && profileFits;
+        }
 
         public void SetPng(string path)
         {
@@ -272,12 +296,14 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void Confirm() => Confirmed = true;
 
-        private static bool TryReadTextureInfo(string path, out int width, out int height, out uint colorLimit)
+        private static bool TryReadTextureInfo(string path, out int width, out int height, out uint colorLimit, out Btx0Structure structure)
         {
-            width = height = 0; colorLimit = 0;
+            width = height = 0; colorLimit = 0; structure = null;
             try
             {
-                var raw = BTX0.ReadRaw(File.ReadAllBytes(path));
+                byte[] data = File.ReadAllBytes(path);
+                if (!Btx0Structure.TryInspect(data, out structure, out _)) return false;
+                var raw = BTX0.ReadRaw(data);
                 if (raw == null) return false;
                 width = raw.Width; height = raw.Height; colorLimit = BTX0.ColorCount;
                 return true;

@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.OverworldProfilePickerView"
+        x:DataType="vm:OverworldProfilePickerViewModel"
+        Title="Choose Overworld Graphics Profile"
+        Width="560" Height="300"
+        MinWidth="460" MinHeight="260"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
+      <Button Content="Use Profile" Click="UseProfile_Click" IsDefault="True"/>
+      <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+    </StackPanel>
+
+    <StackPanel Spacing="8">
+      <TextBlock Text="This PNG needs a different frame layout. Choose an existing appearance from this ROM whose complete BTX and animation profile should be cloned."
+                 TextWrapping="Wrap"/>
+      <TextBlock Text="Only profiles matching the PNG dimensions and palette capacity are listed. The source artwork is not modified."
+                 Foreground="{DynamicResource Editor.Subtle}" FontSize="12" TextWrapping="Wrap"/>
+      <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
+                HorizontalAlignment="Stretch"/>
+      <Border Padding="8" CornerRadius="4" Background="{DynamicResource Editor.PanelBg}">
+        <TextBlock Text="Saving will replace the selected entry's BTX structure and clone the source appearance's game-local animation metadata. Both changes remain staged until Save Selected or Save All."
+                   FontSize="12" TextWrapping="Wrap"/>
+      </Border>
+    </StackPanel>
+  </DockPanel>
+</Window>

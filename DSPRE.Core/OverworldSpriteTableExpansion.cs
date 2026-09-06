@@ -221,6 +221,24 @@ namespace DSPRE
             return row;
         }
 
+        internal static bool TryGetRowLocation(int tableIndex, uint appearanceId, out string path, out long offset, out int size)
+        {
+            path = null;
+            offset = 0;
+            size = 0;
+            if (!_detected || tableIndex < 0 || tableIndex >= EntrySizes.Length) return false;
+
+            byte[] data = File.ReadAllBytes(_path);
+            TableLayout layout = _tables[tableIndex];
+            int index = FindRowIndex(data, layout, appearanceId);
+            if (index < 0) return false;
+
+            path = _path;
+            offset = layout.Start + (long)index * layout.EntrySize;
+            size = layout.EntrySize;
+            return true;
+        }
+
         // ── Render-state (table 1) read/write, available on every Platinum ROM, patched or not ──
 
         public static bool TryReadRenderState(uint appearanceId, out OwRenderState state)

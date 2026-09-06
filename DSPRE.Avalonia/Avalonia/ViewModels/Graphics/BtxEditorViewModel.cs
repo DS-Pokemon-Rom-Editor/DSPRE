@@ -14,6 +14,14 @@ using static DSPRE.RomInfo;
 using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
+    public sealed class OverworldGraphicsProfileOption
+    {
+        public uint AppearanceId { get; init; }
+        public uint SpriteMember { get; init; }
+        public string Label { get; init; }
+        public override string ToString() => Label;
+    }
+
     public class BtxEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -55,6 +63,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private byte[] _btxData;
         private Dictionary<uint, byte[]> _modifiedFiles = new();
+        private readonly Dictionary<uint, OverworldSpriteProfileMetadataPatch> _metadataPatches = new();
 
         // ── Status ─────────────────────────────────────────────────────────────
         private string _statusText = "";
@@ -71,7 +80,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             $"BTX Editor ({_modifiedFiles.Count} modified file{(_modifiedFiles.Count != 1 ? "s" : "")})";
 
         public void SaveChanges() => SaveAll();
-        public void DiscardChanges() { _modifiedFiles.Clear(); OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(ModifiedCount)); }
+        public void DiscardChanges()
+        {
+            _modifiedFiles.Clear();
+            _metadataPatches.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
+            LoadEntry(_selectedIndex);
+        }
 
         // ── Platinum overworld properties (render state + expansion patch add/delete) ──────────
         // Everything in this section is Platinum-only. HGSS/DP keep the plain texture browser above.
@@ -246,8 +262,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// brand-new mmodel NARC member (<see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>)
         /// so no existing overworld's art is ever touched. Without an image, the entry just points at
         /// <paramref name="templateMember"/> directly and shares that art on purpose, no write happens.
-        /// Returns null on full success; if the table row was added but the image import failed,
-        /// still refreshes the list but returns a message saying so.</summary>
+        /// Image and profile compatibility are validated before the table row is added, so a bad
+        /// import cannot leave behind a partially added entry.</summary>
         public string AddEntryWithImage(string appearanceIdText, uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
         {
             if (!TryParseId(appearanceIdText, "Appearance ID", out uint appearanceId, out string error)) return error;
@@ -255,51 +271,84 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             bool hasImage = rawBtxPath != null || pngPath != null;
             uint mmodelMember = hasImage ? OverworldSpriteTableExpansion.AllocateNewMmodelSlot() : templateMember;
 
+            if (!TryValidateTemplateForCloneSource(templateMember, cloneFrom, out error))
+                return error;
+
+            byte[] stagedImage = null;
+            if (rawBtxPath != null && !TryBuildRawBtx(templateMember, rawBtxPath, out stagedImage, out error))
+                return error;
+            if (pngPath != null && !TryBuildPngBtx(templateMember, pngPath, out stagedImage, out error))
+                return error;
+
             if (!OverworldSpriteTableExpansion.AddEntry(appearanceId, mmodelMember, cloneFrom, out error))
                 return error;
 
+            if (stagedImage != null)
+            {
+                string newMemberPath = Path.Combine(
+                    RomInfo.gameDirs[DirNames.OWSprites].unpackedDir,
+                    mmodelMember.ToString("D4"));
+                try
+                {
+                    File.WriteAllBytes(newMemberPath, stagedImage);
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        if (File.Exists(newMemberPath)) File.Delete(newMemberPath);
+                    }
+                    catch { }
+
+                    if (!OverworldSpriteTableExpansion.DeleteEntry(appearanceId, out string rollbackError))
+                        return $"Could not create the new texture member: {ex.Message}. The table rollback also failed: {rollbackError}";
+                    return "Could not create the new texture member; the table entry was rolled back: " + ex.Message;
+                }
+            }
+
             RomInfo.ReadOWTable();
             LoadEntryList();
-
-            string imageError = rawBtxPath != null ? StageEntryRawBtx(appearanceId, templateMember, rawBtxPath)
-                : pngPath != null ? StageEntryPng(appearanceId, templateMember, pngPath)
-                : null;
 
             SelectEntry(_owKeys.IndexOf(appearanceId));
             OnPropertyChanged(nameof(ExpansionStatusText));
             OnPropertyChanged(nameof(CanAddEntry));
 
-            return imageError != null ? $"Entry was added, but the image import failed: {imageError}" : null;
+            return null;
         }
 
         /// <summary>Reads <paramref name="templateMember"/>'s existing BTX0 file purely as a
         /// read-only structural template (its bytes are never written back to that slot) and stages
         /// a pixel-perfect copy of <paramref name="rawBtxPath"/>'s texture data for the new entry's
         /// own (already-allocated, independent) mmodel member. Returns null on success.</summary>
-        private string StageEntryRawBtx(uint appearanceId, uint templateMember, string rawBtxPath)
+        private static bool TryBuildRawBtx(uint templateMember, string rawBtxPath, out byte[] stagedImage, out string error)
         {
+            stagedImage = null;
+            error = null;
             string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
+            if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
             try
             {
-                var target = BTX0.ReadRaw(File.ReadAllBytes(templatePath));
-                if (target == null) return "Template texture slot is unreadable.";
+                byte[] templateData = File.ReadAllBytes(templatePath);
+                if (!Btx0Structure.TryInspect(templateData, out Btx0Structure targetStructure, out string targetError))
+                { error = "Template texture slot is unreadable: " + targetError; return false; }
 
                 byte[] sourceData = File.ReadAllBytes(rawBtxPath);
+                if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure sourceStructure, out string sourceError))
+                { error = "Source file isn't a structurally readable BTX0: " + sourceError; return false; }
+
+                if (!targetStructure.HasSameProfileAs(sourceStructure))
+                { error = "The raw BTX uses a different dictionary, frame-reuse, texture, or palette layout than the selected profile."; return false; }
+
                 var source = BTX0.ReadRaw(sourceData);
-                if (source == null) return "Source file isn't a texture DSPRE can read (BTX0, 16-color format).";
+                if (source == null) { error = "Source file isn't a texture DSPRE can write (BTX0, 16-color format)."; return false; }
 
-                if (source.Width != target.Width || source.Height != target.Height)
-                    return $"Size mismatch. Template slot: {target.Width}×{target.Height}, source texture: {source.Width}×{source.Height}";
-
-                _modifiedFiles[appearanceId] = sourceData;
-                OnPropertyChanged(nameof(HasUnsavedChanges));
-                OnPropertyChanged(nameof(ModifiedCount));
-                return null;
+                stagedImage = sourceData;
+                return true;
             }
             catch (Exception ex)
             {
-                return ex.Message;
+                error = ex.Message;
+                return false;
             }
         }
 
@@ -307,35 +356,72 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// read-only structural template (its bytes are never written back to that slot, only cloned
         /// into memory and patched there) and stages the patched result for the new entry's own
         /// (already-allocated, independent) mmodel member. Returns null on success.</summary>
-        private string StageEntryPng(uint appearanceId, uint templateMember, string pngPath)
+        private static bool TryBuildPngBtx(uint templateMember, string pngPath, out byte[] stagedImage, out string error)
         {
+            stagedImage = null;
+            error = null;
             string templatePath = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) return "Template texture slot file not found.";
+            if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
             try
             {
                 byte[] btxData = File.ReadAllBytes(templatePath); // fresh read every call, safe for BTX0.Write to mutate in place
                 RawImage import;
                 using (var fs = File.OpenRead(pngPath))
                     import = ImageConverter.DecodeRawImage(fs);
-                if (import == null) return "Image could not be decoded.";
+                if (import == null) { error = "Image could not be decoded."; return false; }
                 var current = BTX0.ReadRaw(btxData);
-                if (current == null) return "Template texture slot is unreadable.";
+                if (current == null) { error = "Template texture slot is unreadable."; return false; }
                 if (import.Width != current.Width || import.Height != current.Height)
-                    return $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
+                { error = $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}"; return false; }
 
                 uint colors = CountColors(import);
                 if (colors > BTX0.ColorCount)
-                    return $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}";
+                { error = $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}"; return false; }
 
-                _modifiedFiles[appearanceId] = BTX0.Write(btxData, import);
-                OnPropertyChanged(nameof(HasUnsavedChanges));
-                OnPropertyChanged(nameof(ModifiedCount));
-                return null;
+                stagedImage = BTX0.Write(btxData, import);
+                return true;
             }
             catch (Exception ex)
             {
-                return ex.Message;
+                error = ex.Message;
+                return false;
             }
+        }
+
+        private static bool TryValidateTemplateForCloneSource(uint templateMember, uint cloneFrom, out string error)
+        {
+            error = null;
+            if (!RomInfo.OverworldTable.TryGetValue(cloneFrom, out var cloneEntry))
+            {
+                error = "The clone source is no longer present in the overworld table.";
+                return false;
+            }
+
+            string directory = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            string templatePath = Path.Combine(directory, templateMember.ToString("D4"));
+            string clonePath = Path.Combine(directory, cloneEntry.spriteID.ToString("D4"));
+            if (!File.Exists(templatePath) || !File.Exists(clonePath))
+            {
+                error = "The format template or clone source texture file was not found.";
+                return false;
+            }
+
+            if (!Btx0Structure.TryInspect(File.ReadAllBytes(templatePath), out Btx0Structure template, out string templateError))
+            {
+                error = "The format template is not a readable BTX0: " + templateError;
+                return false;
+            }
+            if (!Btx0Structure.TryInspect(File.ReadAllBytes(clonePath), out Btx0Structure clone, out string cloneError))
+            {
+                error = "The clone source is not a readable BTX0: " + cloneError;
+                return false;
+            }
+            if (!template.HasSameProfileAs(clone))
+            {
+                error = "The format template does not match the clone source's dictionary, frame-reuse, texture, and palette layout. Choose both from the same graphics profile.";
+                return false;
+            }
+            return true;
         }
 
         /// Returns null on success, error message on failure.
@@ -344,6 +430,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!HasSelectedEntry) return "No entry selected.";
             uint key = _owKeys[_selectedIndex];
             if (!OverworldSpriteTableExpansion.DeleteEntry(key, out string error)) return error;
+
+            _modifiedFiles.Remove(key);
+            _metadataPatches.Remove(key);
 
             RomInfo.ReadOWTable();
             LoadEntryList();
@@ -440,6 +529,162 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
+        /// <summary>
+        /// Returns true when the PNG cannot use the selected entry's current BTX layout and therefore
+        /// needs a complete game-local graphics profile. Only profiles whose cloned BTX can hold the
+        /// PNG are returned; dimensions alone are not treated as structural compatibility.
+        /// </summary>
+        public bool TryGetCompatibleProfiles(
+            string filePath,
+            out List<OverworldGraphicsProfileOption> profiles,
+            out string error)
+        {
+            profiles = new List<OverworldGraphicsProfileOption>();
+            error = null;
+            if (_btxData == null || !HasSelectedEntry)
+            {
+                error = "No entry selected.";
+                return false;
+            }
+
+            try
+            {
+                RawImage import;
+                using (var fs = File.OpenRead(filePath))
+                    import = ImageConverter.DecodeRawImage(fs);
+                if (import == null)
+                {
+                    error = "Image could not be decoded.";
+                    return false;
+                }
+
+                RawImage current = BTX0.ReadRaw(_btxData);
+                if (current == null)
+                {
+                    error = "This entry's texture file isn't a readable 16-color BTX image.";
+                    return false;
+                }
+                if (import.Width == current.Width && import.Height == current.Height)
+                    return false;
+
+                uint colorCount = CountColors(import);
+                uint targetKey = _owKeys[_selectedIndex];
+                string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+                var structures = new Dictionary<uint, Btx0Structure>();
+                var sharedCounts = RomInfo.OverworldTable.Values
+                    .GroupBy(v => v.spriteID)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                foreach (var entry in RomInfo.OverworldTable)
+                {
+                    if (entry.Key == targetKey || entry.Value.spriteID == 0x3D3D) continue;
+                    if (!structures.TryGetValue(entry.Value.spriteID, out Btx0Structure structure))
+                    {
+                        string path = Path.Combine(dir, entry.Value.spriteID.ToString("D4"));
+                        if (!File.Exists(path) || !Btx0Structure.TryInspect(File.ReadAllBytes(path), out structure, out _))
+                            continue;
+                        structures.Add(entry.Value.spriteID, structure);
+                    }
+                    if (
+                        structure.SheetWidth != import.Width || structure.SheetHeight != import.Height ||
+                        structure.Palettes.Count == 0 || structure.Palettes[0].ColorCapacity < colorCount)
+                        continue;
+
+                    int sharedBy = sharedCounts[entry.Value.spriteID];
+                    profiles.Add(new OverworldGraphicsProfileOption
+                    {
+                        AppearanceId = entry.Key,
+                        SpriteMember = entry.Value.spriteID,
+                        Label = $"{OverworldLabels.Of(entry.Key)} · slot {entry.Value.spriteID} · " +
+                            $"{structure.Textures.Count} entries / {structure.UniqueTextureBlockCount} stored frames" +
+                            (sharedBy > 1 ? $" · art shared by {sharedBy} appearances" : ""),
+                    });
+                }
+
+                profiles = profiles
+                    .OrderBy(p => p.SpriteMember)
+                    .ThenBy(p => p.AppearanceId)
+                    .ToList();
+                if (profiles.Count == 0)
+                    error = $"No existing overworld profile in this ROM accepts a {import.Width}×{import.Height} PNG with {colorCount} colors.";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        public string ImportPngUsingProfile(string filePath, uint sourceAppearanceId)
+        {
+            if (_btxData == null || !HasSelectedEntry) return "No entry selected.";
+            if (!RomInfo.OverworldTable.TryGetValue(sourceAppearanceId, out var sourceEntry))
+                return "The selected profile is no longer present in the overworld table.";
+
+            uint targetAppearanceId = _owKeys[_selectedIndex];
+            try
+            {
+                RawImage import;
+                using (var fs = File.OpenRead(filePath))
+                    import = ImageConverter.DecodeRawImage(fs);
+                if (import == null) return "Image could not be decoded.";
+
+                string sourcePath = Path.Combine(
+                    RomInfo.gameDirs[DirNames.OWSprites].unpackedDir,
+                    sourceEntry.spriteID.ToString("D4"));
+                if (!File.Exists(sourcePath)) return "The selected profile's BTX file was not found.";
+
+                byte[] sourceData = File.ReadAllBytes(sourcePath);
+                if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure structure, out string structureError))
+                    return "The selected profile is not structurally readable: " + structureError;
+                if (structure.SheetWidth != import.Width || structure.SheetHeight != import.Height)
+                    return $"The selected profile expects {structure.SheetWidth}×{structure.SheetHeight}, but the PNG is {import.Width}×{import.Height}.";
+                uint colors = CountColors(import);
+                if (structure.Palettes.Count == 0 || colors > structure.Palettes[0].ColorCapacity)
+                    return $"The selected profile cannot hold the PNG's {colors} colors.";
+
+                if (!OverworldSpriteProfileMetadata.TryCreatePatch(
+                    targetAppearanceId, sourceAppearanceId, out OverworldSpriteProfileMetadataPatch metadataPatch, out string metadataError))
+                    return metadataError;
+
+                byte[] newData = (byte[])sourceData.Clone();
+                BTX0.PaletteIndex = 0;
+                RawImage profileImage = BTX0.ReadRaw(newData);
+                if (profileImage == null || profileImage.Width != import.Width || profileImage.Height != import.Height)
+                    return "The selected profile is not writable by DSPRE's 16-color importer.";
+                if (colors > BTX0.ColorCount)
+                    return $"Too many colors. Profile limit: {BTX0.ColorCount}, PNG: {colors}.";
+
+                newData = BTX0.Write(newData, import);
+                _btxData = newData;
+                _modifiedFiles[targetAppearanceId] = newData;
+                _metadataPatches[targetAppearanceId] = metadataPatch;
+
+                RefreshImage();
+                StatusText = $"Staged {import.Width}×{import.Height} image with the profile from {OverworldLabels.Of(sourceAppearanceId)}.";
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                OnPropertyChanged(nameof(ModifiedCount));
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        public string GetSelectedMemberUsageWarning()
+        {
+            if (!HasSelectedEntry) return null;
+            uint targetKey = _owKeys[_selectedIndex];
+            uint member = RomInfo.OverworldTable[targetKey].spriteID;
+            uint[] users = RomInfo.OverworldTable
+                .Where(kv => kv.Value.spriteID == member)
+                .Select(kv => kv.Key)
+                .ToArray();
+            if (users.Length <= 1) return null;
+            return $"Texture slot {member} is shared by {users.Length} appearances. Saving this import will change their artwork too. Continue?";
+        }
+
         // ── Export PNG ─────────────────────────────────────────────────────────
         public bool ExportPng(string filePath)
         {
@@ -470,13 +715,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             uint key = _owKeys[_selectedIndex];
             if (!_modifiedFiles.TryGetValue(key, out byte[] data)) return 0;
 
-            uint sprite = RomInfo.OverworldTable[key].spriteID;
-            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
-            File.WriteAllBytes(path, data);
-            _modifiedFiles.Remove(key);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            OnPropertyChanged(nameof(ModifiedCount));
-            return 1;
+            return SaveEntry(key, data) ? 1 : 0;
         }
 
         public int SaveAll()
@@ -484,15 +723,53 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             int saved = 0;
             foreach (var kvp in _modifiedFiles.ToList())
             {
-                uint sprite = RomInfo.OverworldTable[kvp.Key].spriteID;
-                string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
-                File.WriteAllBytes(path, kvp.Value);
-                _modifiedFiles.Remove(kvp.Key);
-                saved++;
+                if (SaveEntry(kvp.Key, kvp.Value)) saved++;
             }
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
             return saved;
+        }
+
+        private bool SaveEntry(uint key, byte[] data)
+        {
+            uint sprite = RomInfo.OverworldTable[key].spriteID;
+            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
+            byte[] original = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            bool metadataApplied = false;
+
+            if (_metadataPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch patch))
+            {
+                if (!patch.TryApply(out string metadataError))
+                {
+                    StatusText = "Save failed: " + metadataError;
+                    return false;
+                }
+                metadataApplied = true;
+            }
+
+            try
+            {
+                File.WriteAllBytes(path, data);
+            }
+            catch (Exception ex)
+            {
+                if (original != null)
+                {
+                    try { File.WriteAllBytes(path, original); } catch { }
+                }
+                if (metadataApplied && !patch.TryRollback(out string rollbackError))
+                    StatusText = $"Save failed: {ex.Message}. Metadata rollback also failed: {rollbackError}";
+                else
+                    StatusText = "Save failed: " + ex.Message;
+                return false;
+            }
+
+            _modifiedFiles.Remove(key);
+            _metadataPatches.Remove(key);
+            StatusText = "Saved.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
+            return true;
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
