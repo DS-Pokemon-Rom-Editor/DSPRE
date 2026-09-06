@@ -1008,6 +1008,10 @@ namespace DSPRE {
                     }
 
                     if (!File.Exists(paths.packedPath)) {
+                        if (IsOptionalNarc(id, gameFamily)) {
+                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
+                            return;
+                        }
                         AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
                         return;
                     }
@@ -1025,6 +1029,11 @@ namespace DSPRE {
 
                     if (!File.Exists(paths.packedPath))
                     {
+                        if (IsOptionalNarc(id, gameFamily))
+                        {
+                            AppLogger.Debug($"Skipping optional NARC at {paths.packedPath}; it is not present in this project.");
+                            return;
+                        }
                         AppLogger.Error($"Tried to unpack NARC at {paths.packedPath}, but file does not exist.");
                         return;
                     }
@@ -1039,6 +1048,9 @@ namespace DSPRE {
                 }
             });
         }
+
+        internal static bool IsOptionalNarc(DirNames id, GameFamilies family) =>
+            id == DirNames.eggMoves && family != GameFamilies.HGSS;
 
         /// <summary>GDI twin of <see cref="MonIconFallbackHook"/> for the WinForms-only <see cref="GetPokePic"/>
         /// path, installed by the WinForms shell (resx Pokéball); never runs off-Windows.</summary>

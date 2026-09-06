@@ -179,9 +179,14 @@ namespace DSPRE.Editors
                 selectMatrixComboBox.Items.Add(new GameMatrix(i));
             }
 
-            if (!ReadColorTable(SettingsManager.Settings.lastColorTablePath, silent: true))
+            string colorTablePath = SettingsManager.Settings.lastColorTablePath;
+            if (string.IsNullOrWhiteSpace(colorTablePath))
             {
-                AppLogger.Error($"Failed to load color table at path \"{SettingsManager.Settings.lastColorTablePath}\". Default will be used instead.");
+                _parent.romInfo.ResetMapCellsColorDictionary();
+            }
+            else if (!ReadColorTable(colorTablePath, silent: true))
+            {
+                AppLogger.Warn($"Failed to load color table at path \"{colorTablePath}\". Default will be used instead.");
                 _parent.romInfo.ResetMapCellsColorDictionary();
             }
 
