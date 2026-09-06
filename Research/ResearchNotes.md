@@ -15,4 +15,5 @@
 ## Graphics Research
 
 - [Graphics census](Graphics/GraphicsCensus.md)
+- [Battle menu icons and gauge status words](Graphics/BattleIconsLogic.md)
 - [Nintendo DS 3D formats](Graphics/ThreeDFormats.md)
