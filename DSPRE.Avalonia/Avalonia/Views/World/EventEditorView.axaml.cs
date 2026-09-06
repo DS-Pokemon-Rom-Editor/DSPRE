@@ -71,6 +71,8 @@ namespace DSPRE.Avalonia.Views.World
             };
 
             Loaded += OnLoadedSetup;
+            Loaded += (_, _) => VM?.Attach();
+            Unloaded += (_, _) => VM?.Detach();
         }
 
         public EventEditorView(EventEditorViewModel vm) : this() { DataContext = vm; }

@@ -608,7 +608,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
                     bool isPartner = ow.scriptNumber >= 4999;
                     int decodedId = ow.scriptNumber - (isPartner ? 4999 : 2999);
-                    if (decodedId > RomInfo.trainerFunnyScriptNumber - 1) decodedId--;
 
                     if (decodedId != trainerId) continue;
 

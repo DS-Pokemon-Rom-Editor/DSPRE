@@ -870,8 +870,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Add / Export / Import ─────────────────────────────────────────────────────
-        /// <summary>Appends a brand-new trainer (blank properties + one empty party slot) after the
-        /// last existing one and selects it, mirroring the WinForms "Add Trainer" button.</summary>
+        /// <summary>Atomically appends a trainer and expands every verified dependent resource.</summary>
         public void AddTrainer()
         {
             // Adding a brand-new trainer entry to Trainers.c isn't built yet. Writing a blank trainer
@@ -883,26 +882,95 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _ = DialogHelper.ShowError("Adding new trainers isn't supported yet for hg-engine source-backed ROMs.", "Trainer Editor");
                 return;
             }
+            if (HasUnsavedChanges)
+            {
+                _ = DialogHelper.ShowError("Save or discard the current trainer's changes before adding another trainer.", "Trainer Editor");
+                return;
+            }
             try
             {
-                int newIndex = TrainerNames.Count;
-                string suffix = Path.DirectorySeparatorChar + newIndex.ToString("D4");
-                File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + suffix,
-                    new TrainerProperties((ushort)newIndex).ToByteArray());
-                File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + suffix,
-                    new PartyPokemon().ToByteArray());
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts });
+                if (!TrainerRosterService.TryAddTrainer("Trainer", out int newIndex,
+                    out string error))
+                {
+                    StatusText = error;
+                    _ = DialogHelper.ShowError(error, "Add Trainer");
+                    return;
+                }
 
-                var ta = new TextArchive(trainerNamesMessageNumber);
-                ta.SetSimpleTrainerName(newIndex, "New Trainer");
-                ta.SaveToExpandedDir(trainerNamesMessageNumber, showSuccessMessage: false);
-
-                string[] classNames = GetTrainerClassNames();
-                string className = classNames.Length > 0 ? classNames[0] : "";
-                TrainerNames.Add($"[{newIndex:D2}] {className} New Trainer");
+                AppEvents.RaiseNamesChanged();
                 SelectedTrainerIndex = newIndex;
-                StatusText = $"Added trainer {newIndex}.";
+                TrainerRosterAnalysis after = TrainerRosterService.AnalyzeCurrentProject();
+                StatusText = after.CanAdd
+                    ? $"Added trainer {newIndex}. {after.RemainingAdditions} more can be added safely."
+                    : $"Added trainer {newIndex}. {after.RefusalReason}";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add trainer:\n{ex.Message}", "Trainer Editor"); }
+        }
+
+        /// <summary>Removes only the final appended trainer after every known reference source is clear.</summary>
+        public async Task RemoveLastAddedTrainerAsync()
+        {
+            if (HgEngineProject.IsActive)
+            {
+                await DialogHelper.ShowError(
+                    "Removing trainers isn't supported for hg-engine source-backed ROMs.",
+                    "Trainer Editor");
+                return;
+            }
+            if (HasUnsavedChanges)
+            {
+                await DialogHelper.ShowError(
+                    "Save or discard the current trainer's changes before removing a trainer.",
+                    "Trainer Editor");
+                return;
+            }
+            if (TrainerNames.Count == 0) return;
+
+            int candidate = TrainerNames.Count - 1;
+            bool confirmed = await DialogHelper.AskYesNo(
+                $"Remove trainer {candidate}? Only the final trainer can be removed. " +
+                "DSPRE will cancel if an event, script, rematch table, battle message, or phonebook entry still uses it.",
+                "Remove Last Trainer");
+            if (!confirmed) return;
+
+            StatusText = $"Checking references to trainer {candidate}…";
+            PushLoading();
+            try
+            {
+                bool removed = false;
+                int removedId = -1;
+                string error = null;
+                await Task.Run(() =>
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames>
+                    {
+                        DirNames.scripts, DirNames.eventFiles, DirNames.trainerTextTable,
+                        DirNames.trainerTextOffset
+                    });
+                    removed = TrainerRosterService.TryRemoveLastAddedTrainer(out removedId,
+                        out error);
+                });
+
+                if (!removed)
+                {
+                    StatusText = error;
+                    await DialogHelper.ShowError(error, "Remove Trainer");
+                    return;
+                }
+
+                AppEvents.RaiseNamesChanged();
+                SelectedTrainerIndex = Math.Max(0, removedId - 1);
+                TrainerRosterAnalysis after = TrainerRosterService.AnalyzeCurrentProject();
+                StatusText = $"Removed trainer {removedId}. " +
+                    $"{after.RemainingAdditions} trainer slots are available.";
+            }
+            catch (Exception ex)
+            {
+                await DialogHelper.ShowError($"Couldn't remove trainer:\n{ex.Message}",
+                    "Trainer Editor");
+            }
+            finally { PopLoading(); }
         }
 
         public async Task ExportTrainerAsync()

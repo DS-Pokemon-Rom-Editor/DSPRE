@@ -393,12 +393,26 @@ namespace DSPRE.ROMFiles
 
         public void SaveToExpandedDir(int IDtoReplace, bool showSuccessMessage = true)
         {
-            (string binPath, string jsonPath) =  GetFilePaths(IDtoReplace);
+            string jsonPath = GetFilePaths(IDtoReplace).jsonPath;
 
             if (!Directory.Exists(TextConverter.GetExpandedFolderPath()))
             {
                 Directory.CreateDirectory(TextConverter.GetExpandedFolderPath());
             }
+
+            File.WriteAllBytes(jsonPath, ToExpandedJsonBytes(IDtoReplace));
+            AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
+
+            if (showSuccessMessage)
+            {
+                AppMessages.Info($"Text Archive ID {IDtoReplace:D4} saved to expanded directory:\n{jsonPath}", "Save Successful");
+            }
+        }
+
+        /// <summary>Serializes the expanded multilingual JSON without writing it.</summary>
+        public byte[] ToExpandedJsonBytes(int IDtoReplace)
+        {
+            string jsonPath = GetFilePaths(IDtoReplace).jsonPath;
 
             string langCode = TextConverter.langCodes[RomInfo.gameLanguage];
             
@@ -533,20 +547,9 @@ namespace DSPRE.ROMFiles
                     writer.WriteEndObject();
                     writer.Flush();
 
-                    string jsonString = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-                    
-                    // Write with UTF-8 encoding WITHOUT BOM
-                    File.WriteAllText(jsonPath, jsonString, new System.Text.UTF8Encoding(false));
-                    
-                    AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
+                    return stream.ToArray();
                 }
             }
-
-            if (showSuccessMessage)
-            {
-                AppMessages.Info($"Text Archive ID {IDtoReplace:D4} saved to expanded directory:\n{jsonPath}", "Save Successful");
-            }
-
         }
 
         #endregion Methods (2)

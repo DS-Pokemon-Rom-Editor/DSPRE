@@ -42,6 +42,8 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
 
         private void AddTrainer_Click(object sender, RoutedEventArgs e) => VM?.AddTrainer();
+        private async void RemoveTrainer_Click(object sender, RoutedEventArgs e)
+            => await Safe(VM?.RemoveLastAddedTrainerAsync());
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {

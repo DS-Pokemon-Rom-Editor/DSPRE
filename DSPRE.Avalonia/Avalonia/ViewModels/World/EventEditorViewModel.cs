@@ -368,7 +368,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_owTrainerIndex < 0) return;
             int idx = _owTrainerIndex;
             ushort scriptNum = (ushort)(idx + (_owPartnerTrainer ? 4999 : 2999));
-            if (idx > RomInfo.trainerFunnyScriptNumber - 1) scriptNum++;
             ForceOwScript(scriptNum);
         }
 
@@ -415,12 +414,38 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void PopulateOwTrainerAndItemEntries()
         {
-            OwTrainerEntries.Clear();
-            try { foreach (string name in TrainerNames.GetAll()) OwTrainerEntries.Add(name); }
-            catch (Exception ex) { AppLogger.Error("PopulateOwTrainerEntries: " + ex.Message); }
-
+            PopulateOwTrainerEntries();
             PopulateOwItemEntries();
         }
+
+        private void PopulateOwTrainerEntries()
+        {
+            try
+            {
+                DSPRE.Avalonia.Data.ListSync.Apply(OwTrainerEntries,
+                    new List<string>(TrainerNames.GetAll()));
+            }
+            catch (Exception ex)
+            {
+                OwTrainerEntries.Clear();
+                AppLogger.Error("PopulateOwTrainerEntries: " + ex.Message);
+            }
+        }
+
+        private void OnNamesChanged(object sender, EventArgs e)
+        {
+            PopulateOwTrainerEntries();
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange));
+            OnPropertyChanged(nameof(OwScriptEnabled));
+        }
+
+        public void Attach()
+        {
+            AppEvents.NamesChanged -= OnNamesChanged;
+            AppEvents.NamesChanged += OnNamesChanged;
+        }
+
+        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
         private void PopulateOwItemEntries()
         {
@@ -1011,18 +1036,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwMovementUnknown)); OnPropertyChanged(nameof(OwMovementUnknownNote)); OnPropertyChanged(nameof(OwOrientationIndex));
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
 
-            // Derive the Standard/Trainer/Item radio selection + locked-script dropdown index from the
-            // raw type/scriptNumber (mirrors WinForms' overworldsListBox_SelectedIndexChanged, but uses
-            // the trainerFunnyScriptNumber-aware inverse (see NavigateToOverworldTarget in the WinForms
-            // EventEditor) instead of WinForms' own display-only reverse mapping, which is off by one
-            // past that threshold.
+            // Derive the Standard/Trainer/Item radio selection and locked-script dropdown index from
+            // the raw type/scriptNumber. Expanded rosters keep the direct one-based trainer mapping.
             _owRawType = _ow.type;
             if (KindOfType(_ow.type) == OwKind.Trainer)
             {
                 _owKind = OwKind.Trainer;
                 bool partner = _ow.scriptNumber >= 4999;
                 int idx = partner ? _ow.scriptNumber - 4999 : _ow.scriptNumber - 2999;
-                if (idx > RomInfo.trainerFunnyScriptNumber - 1) idx--;
                 // Out of range (past the end of the current trainer roster) → leave unselected (-1) rather
                 // than clamping into a wrong trainer; OwTrainerIndexOutOfRange surfaces this in the UI.
                 _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;

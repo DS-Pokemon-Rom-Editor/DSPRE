@@ -23,6 +23,7 @@
             <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
             <Button Content="+ Add Trainer" Click="AddTrainer_Click" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="− Remove Last" Click="RemoveTrainer_Click" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
             <Button Content="Search…"        Click="Search_Click"/>
             <Button Content="Reorder party…" Click="Reorder_Click"/>
             <Button Content="DV Calc…"       Click="DVCalc_Click"/>
