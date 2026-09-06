@@ -120,14 +120,17 @@
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
               <Border Width="12" Height="12" Background="#3FF259" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" Click="AddOw_Click"/>
-              <Button Content="Remove" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"/>
+              <Button Content="Remove" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"
+                      ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
               <Button Content="Duplicate" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Sort ↑" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
               <Button Content="Sort ↓" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
-              <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}" SelectedIndex="{Binding SelectedOverworldIndex}"/>
+              <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}"
+                       SelectedIndex="{Binding SelectedOverworldIndex}"
+                       KeyDown="OverworldList_KeyDown"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasOw}">
                   <TextBlock Text="Position" FontWeight="Bold"/>

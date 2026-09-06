@@ -443,6 +443,12 @@ namespace DSPRE.Avalonia.Views.World
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();
         private void RemoveOw_Click(object sender, RoutedEventArgs e) => VM?.RemoveOverworld();
         private void DupOw_Click(object sender, RoutedEventArgs e) => VM?.DuplicateOverworld();
+        private void OverworldList_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Delete || VM?.HasOw != true) return;
+            VM.RemoveOverworld();
+            e.Handled = true;
+        }
         private void SortAsc_Click(object sender, RoutedEventArgs e) => VM?.SortOverworldsAsc();
         private void SortDesc_Click(object sender, RoutedEventArgs e) => VM?.SortOverworldsDesc();
         private void AddWarp_Click(object sender, RoutedEventArgs e) => VM?.AddWarp();
