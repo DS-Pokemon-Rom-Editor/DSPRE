@@ -85,6 +85,12 @@ namespace DSPRE
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
 
+        // Standard Poké Mart tables in ARM9. Zero count means this ROM has no verified layout.
+        public static uint martCommonCountOffset { get; private set; }
+        public static uint martCommonPointerOffset { get; private set; }
+        public static uint martSpecialtyPointerOffset { get; private set; }
+        public static int martSpecialtyShopCount { get; private set; }
+
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint dungeonCutinTableOffsetToRAMAddress { get; internal set; }
@@ -377,6 +383,7 @@ namespace DSPRE
             SetNullEncounterID();
             SetPickupTableOffsets();
             SetItemTableOffset();
+            SetMartOffsets();
             SetStarterOffsets();
             SetupSpawnSettings();
 
@@ -1036,6 +1043,40 @@ namespace DSPRE
                 default:
                     AppLogger.Error("SetItemTableOffset: Unsupported game");
                     throw new NotSupportedException("Game not supported");
+            }
+        }
+
+        public static void SetMartOffsets()
+        {
+            martCommonCountOffset = 0;
+            martCommonPointerOffset = 0;
+            martSpecialtyPointerOffset = 0;
+            martSpecialtyShopCount = 0;
+
+            // The other regional ARM9 layouts remain unavailable until they have been measured
+            // against representative projects, rather than trusting a version table alone.
+            if (gameLanguage != GameLanguages.English) return;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    martCommonCountOffset = 0x3FD94;
+                    martCommonPointerOffset = 0x3FDB4;
+                    martSpecialtyPointerOffset = 0x3FE04;
+                    martSpecialtyShopCount = 19;
+                    break;
+                case GameFamilies.Plat:
+                    martCommonCountOffset = 0x46B74;
+                    martCommonPointerOffset = 0x46B94;
+                    martSpecialtyPointerOffset = 0x46BF0;
+                    martSpecialtyShopCount = 20;
+                    break;
+                case GameFamilies.HGSS:
+                    martCommonCountOffset = 0x48100;
+                    martCommonPointerOffset = 0x48124;
+                    martSpecialtyPointerOffset = 0x48190;
+                    martSpecialtyShopCount = 30;
+                    break;
             }
         }
 
@@ -2575,6 +2616,12 @@ namespace DSPRE
         public static bool IsItemTableEditorAvailable()
         {
             return pickupTableOverlayNumber >= 0 || gameFamily == GameFamilies.HGSS;
+        }
+
+        /// <summary>Whether the standard ARM9 mart layout has been verified for this ROM.</summary>
+        public static bool IsMartEditorAvailable()
+        {
+            return !isHGE && martSpecialtyShopCount > 0;
         }
 
         /// <summary>Checks if Hidden Items editor is available for the current ROM version. </summary>

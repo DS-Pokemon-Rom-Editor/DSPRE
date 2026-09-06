@@ -531,6 +531,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void ItemEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenItemEditor();
 
+        private void MartEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenMartEditor();
+
         private void ItemTableEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenItemTableEditor();
 

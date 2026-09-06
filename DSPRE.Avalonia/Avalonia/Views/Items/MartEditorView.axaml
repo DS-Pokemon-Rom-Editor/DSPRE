@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
+             x:Class="DSPRE.Avalonia.Views.Items.MartEditorView"
+             x:DataType="vm:MartEditorViewModel">
+  <Design.DataContext>
+    <vm:MartEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <Button Content="Save Changes" Click="Save_Click" Width="110"/>
+        <Separator Width="8"/>
+        <Button Content="Add item" Click="AddItem_Click" IsEnabled="{Binding CanAddItem}" Width="90"/>
+        <Button Content="Remove last item" Click="RemoveItem_Click" IsEnabled="{Binding CanRemoveItem}" Width="130"/>
+        <Separator Width="8"/>
+        <Button Content="Add custom mart" Click="AddShop_Click" IsEnabled="{Binding CanResize}" Width="125"/>
+        <Button Content="Remove last custom mart" Click="RemoveShop_Click" IsEnabled="{Binding CanRemoveCustomShop}" Width="165"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding ResizeStatus}" Foreground="{DynamicResource Editor.Subtle}"
+                   FontSize="12" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding NewShopDisplayGuide}" Foreground="{DynamicResource Editor.Subtle}"
+                   FontSize="12" TextWrapping="Wrap"/>
+        <TextBlock Text="Reference: ds-pokemon-hacking.github.io/docs/generation-iv/guides/pt_hgss-pokemarts/#displaying-the-new-poké-mart"
+                   Foreground="{DynamicResource Editor.Subtle}" FontSize="11" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="290,8,*" Margin="8">
+      <DockPanel Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="Marts" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <ListBox ItemsSource="{Binding Shops}" SelectedItem="{Binding SelectedShop}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:MartShopVM">
+              <StackPanel Margin="2">
+                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Kind}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="2">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <TextBlock Text="{Binding SelectedShop.Name}" FontWeight="SemiBold" FontSize="16"/>
+          <TextBlock Text="{Binding SelectedShopDescription}" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+        </StackPanel>
+
+        <DataGrid ItemsSource="{Binding SelectedShop.Items}"
+                  AutoGenerateColumns="False" IsReadOnly="False"
+                  CanUserReorderColumns="False" CanUserSortColumns="False"
+                  GridLinesVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Slot" Binding="{Binding Slot}" Width="65" IsReadOnly="True"/>
+            <DataGridTemplateColumn Header="Item" Width="*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:MartItemRowVM">
+                  <ComboBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemId}"
+                            HorizontalAlignment="Stretch" Margin="2,1"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Stock tier" Width="120">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:MartItemRowVM">
+                  <NumericUpDown Value="{Binding RequiredTier}" Minimum="1" Maximum="6" FormatString="0"
+                                 IsVisible="{Binding HasTier}" Margin="2,1"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

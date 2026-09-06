@@ -78,6 +78,19 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public bool CanUseMoveEditor    => IsRomLoaded && HgAllows;
         public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
+        public bool CanUseMartEditor => IsRomLoaded && !isHGE && RomInfo.IsMartEditorAvailable()
+            && BetaEditors.Allows("MartEditorView");
+        public string MartEditorNote
+        {
+            get
+            {
+                if (!IsRomLoaded) return "Open a ROM first.";
+                if (isHGE) return "The Mart Editor is disabled for hg-engine ROMs.";
+                if (!RomInfo.IsMartEditorAvailable())
+                    return "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs.";
+                return BetaEditors.WhyNot("MartEditorView");
+            }
+        }
         public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
         public bool CanUseTrainerSpriteEditor => IsRomLoaded && !isHGE
             && BetaEditors.Allows("TrainerSpriteEditorView");
@@ -173,6 +186,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
+            OnPropertyChanged(nameof(CanUseMartEditor));
+            OnPropertyChanged(nameof(MartEditorNote));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
             OnPropertyChanged(nameof(CanUseTrainerSpriteEditor));
             OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
@@ -205,6 +220,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
+            OnPropertyChanged(nameof(CanUseMartEditor));
+            OnPropertyChanged(nameof(MartEditorNote));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
             OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));

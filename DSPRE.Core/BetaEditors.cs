@@ -51,6 +51,7 @@ namespace DSPRE
                 ["CompileRomView"] = "Compile ROM",
                 ["HgEngineLinkView"] = "hg-engine link",
                 ["HgEngineFormEditorView"] = "Form editor",
+                ["MartEditorView"] = "Mart editor",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>

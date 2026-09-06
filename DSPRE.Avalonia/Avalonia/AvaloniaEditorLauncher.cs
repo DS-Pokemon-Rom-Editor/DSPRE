@@ -204,6 +204,33 @@ namespace DSPRE.Avalonia
             new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
+        public static void OpenMartEditor()
+        {
+            if (!IsRomLoaded) return;
+            if (RomInfo.isHGE)
+            {
+                _ = DialogHelper.ShowInfo("The Mart Editor is disabled for hg-engine ROMs.", "Mart Editor");
+                return;
+            }
+            if (!RomInfo.IsMartEditorAvailable())
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs.",
+                    "Mart Editor");
+                return;
+            }
+            try
+            {
+                var vm = new MartEditorViewModel(MartData.LoadCurrent(), GetItemNames());
+                new EditorHostWindow("Mart Editor", new MartEditorView(vm), 980, 700).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                _ = DialogHelper.ShowError("The Mart Editor could not be opened:" + System.Environment.NewLine + ex.Message,
+                    "Mart Editor");
+            }
+        }
+
         public static void OpenTradeEditor(int initialIndex = 0) => _ = OpenTradeEditorAsync(initialIndex);
 
         public static async System.Threading.Tasks.Task OpenTradeEditorAsync(int initialIndex = 0)
@@ -907,6 +934,11 @@ namespace DSPRE.Avalonia
                   + "Diamond and Pearl keep its pieces elsewhere.", "Battle screen");
                 return;
             }
+            if (!BetaEditors.Allows("MartEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("MartEditorView"), "Mart Editor");
+                return;
+            }
 
             try
             {
@@ -978,6 +1010,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
+            new() { Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
             new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },

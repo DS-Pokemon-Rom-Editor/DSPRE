@@ -74,6 +74,8 @@
       <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Item Editor…" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
                   ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
+        <MenuItem Header="Mart Editor…" Click="MartEditor_Click" IsEnabled="{Binding CanUseMartEditor}"
+                  ToolTip.Tip="{Binding MartEditorNote}"/>
         <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)…" Click="ItemTableEditor_Click"
                   ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
       </MenuItem>
