@@ -30,8 +30,9 @@ namespace DSPRE.Tests
 
         private static readonly string Source = TestRoms.Platinum;
 
-        private static readonly string Scratch =
-            @"C:\Users\safea\AppData\Local\Temp\claude\C--Romhacking-Tooling-DSPRE\4e7579f1-fc54-4253-a949-eba625115ec9\scratchpad";
+        // Output location comes from DSPRE_EXPERIMENT_OUTPUT (see RomExperiment), so no
+        // machine-specific path is committed here.
+        private static string Scratch => RomExperiment.OutputRoot;
 
         private const int Turtwig = 387;   // the starter 00_before_starter.State is positioned to choose
 

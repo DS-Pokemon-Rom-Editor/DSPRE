@@ -64,7 +64,9 @@ namespace DSPRE.Tests
                 var im = renderer.Build(bgWant);
                 if (im?.Rgba != null)
                 {
-                    string outPath = $"C:/Users/safea/AppData/Local/Temp/claude/C--Romhacking-Tooling-DSPRE/4e7579f1-fc54-4253-a949-eba625115ec9/scratchpad/bg{bgWant}_{code}.png";
+                    string outDir = RomExperiment.OutputRoot;
+                    Directory.CreateDirectory(outDir);
+                    string outPath = Path.Combine(outDir, $"bg{bgWant}_{code}.png");
                     SaveRgba(outPath, im.Rgba, im.Width, im.Height);
                     double mean = 0;
                     for (int i = 0; i < im.Rgba.Length; i += 4)

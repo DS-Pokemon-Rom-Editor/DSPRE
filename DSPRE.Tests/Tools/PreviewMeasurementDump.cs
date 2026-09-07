@@ -29,8 +29,9 @@ namespace DSPRE.Tests
 
         private static readonly string Platinum = TestRoms.Platinum;
 
-        private static readonly string Scratch =
-            @"C:\Users\safea\AppData\Local\Temp\claude\C--Romhacking-Tooling-DSPRE\4e7579f1-fc54-4253-a949-eba625115ec9\scratchpad";
+        // Output location comes from DSPRE_EXPERIMENT_OUTPUT (see RomExperiment), so no
+        // machine-specific path is committed here.
+        private static string Scratch => RomExperiment.OutputRoot;
 
         /// <summary>Runs one variant of a move and reports what it does. `second` picks the odd-turn branch.</summary>
         private static (int frames, string kind, double size, int flashAt, int movedAt, double furthest,
