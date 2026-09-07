@@ -154,6 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null) return;
             _file.SaveToNarc();
             _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
         }

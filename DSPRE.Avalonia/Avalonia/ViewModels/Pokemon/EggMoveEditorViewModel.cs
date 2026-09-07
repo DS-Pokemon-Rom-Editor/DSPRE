@@ -245,6 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             SaveEggMoveData();
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void AddMonCommand()

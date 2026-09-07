@@ -242,6 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 WriteRows();
                 SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 await DialogHelper.ShowInfo("Dungeon Cutin table saved successfully.", "Save");
             }
             catch (Exception ex)

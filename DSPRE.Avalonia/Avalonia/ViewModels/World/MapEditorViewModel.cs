@@ -1384,6 +1384,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map == null || _selectedMapIndex < 0) return;
             _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved map {_selectedMapIndex}.";
         }
 

@@ -484,6 +484,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_current == null) return;
             _current.SaveToExpandedDir(_current.ID);
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved Text Archive {_current.ID}.";
             if (_current.ID == locationNamesTextNumber)
                 ReloadHeaderEditorLocations(_current.messages);

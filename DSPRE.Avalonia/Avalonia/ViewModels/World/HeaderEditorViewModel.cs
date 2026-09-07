@@ -1078,6 +1078,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             UpdateCurrentInternalName();
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
             RaiseUndoState();
             StatusText = $"Header {_header.ID} saved.";

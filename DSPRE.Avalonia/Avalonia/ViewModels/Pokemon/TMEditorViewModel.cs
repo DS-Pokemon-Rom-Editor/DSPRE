@@ -398,6 +398,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SetDirty(false);
                 _history.MarkSaved();
                 RaiseUndoState();
+                SaveNotice.Saved(UnsavedChangesDescription);
             }
             catch (Exception ex)
             {

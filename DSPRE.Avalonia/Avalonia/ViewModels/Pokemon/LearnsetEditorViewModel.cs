@@ -205,6 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentId < 0 || _current == null) return;
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

@@ -80,7 +80,30 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public bool WordAlignmentPadding { get => _padding; set => Set(ref _padding, value); }
 
         private int _selScript = -1;
-        public int SelectedScriptIndex { get => _selScript; set { if (Set(ref _selScript, value) && !_suppress && value >= 0) LoadFile(value); } }
+        public int SelectedScriptIndex
+        {
+            get => _selScript;
+            set
+            {
+                if (value == _selScript) return;
+                if (_dirty && !_suppress && value >= 0 && _selScript >= 0)
+                {
+                    // Snap the list back to the file still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedScriptIndex));
+                    _ = SwitchScriptAsync(requested);
+                    return;
+                }
+                if (Set(ref _selScript, value) && !_suppress && value >= 0) LoadFile(value);
+            }
+        }
+
+        private async Task SwitchScriptAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "level script")) return;
+            SetClean();
+            if (Set(ref _selScript, requested)) LoadFile(requested);
+        }
 
         private int _selTrigger = -1;
         public int SelectedTriggerIndex { get => _selTrigger; set { if (Set(ref _selTrigger, value)) OnPropertyChanged(nameof(HasTrigger)); } }
@@ -179,6 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 _file.write_file(Filesystem.GetScriptPath(_selScript), _padding);
                 SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = $"Saved level script {_selScript}.";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Level Script Editor"); }

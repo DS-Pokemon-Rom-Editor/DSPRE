@@ -671,6 +671,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemPalette), base_ + offset + 4);
             ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemAGB),     base_ + offset + 6);
             _entryDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -679,6 +680,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _currentData?.SaveToFileDefaultDir((int)_currentEntry.itemData, false);
             WriteHgEngineSource();
             _dataDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

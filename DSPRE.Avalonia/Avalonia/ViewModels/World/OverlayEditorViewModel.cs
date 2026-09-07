@@ -213,6 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
 
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
 
             if (hasCompressing)
                 await DialogHelper.ShowInfo("Compression is temporarily disabled until we work on a fix.", "Warning");

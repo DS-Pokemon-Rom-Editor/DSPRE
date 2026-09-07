@@ -578,6 +578,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WriteHgEngineSource();
             _history.MarkSaved();
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
         }
 

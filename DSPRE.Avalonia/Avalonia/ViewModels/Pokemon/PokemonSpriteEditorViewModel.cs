@@ -1673,6 +1673,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Saved.";
         }
@@ -1697,6 +1698,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WriteFormPalette(narc, form.ShinyPaletteIndex, _shinyPal);
 
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Saved.";
         }
@@ -1734,6 +1736,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     File.WriteAllBytes(posePaths[i], png);
                 }
                 _dirty = false;
+                SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Saved to hg-engine source.";
             }

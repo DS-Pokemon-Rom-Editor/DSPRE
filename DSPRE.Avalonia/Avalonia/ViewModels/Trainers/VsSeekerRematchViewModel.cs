@@ -228,6 +228,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             int count = _dirtyRows.Count;
             _dirtyRows.Clear();
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus($"Saved {count} row(s).");
         }

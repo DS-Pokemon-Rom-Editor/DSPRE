@@ -440,6 +440,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _history.MarkSaved();
             RaiseUndoState();

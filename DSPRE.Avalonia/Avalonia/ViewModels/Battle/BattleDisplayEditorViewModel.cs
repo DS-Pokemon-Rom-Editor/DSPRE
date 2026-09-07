@@ -1647,6 +1647,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     _pendingIconGraphic = null;
                 }
                 SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames(); SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
             }
             catch { /* surfaced by the global error net */ }

@@ -379,6 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 kvp.Value.SaveToFileDefaultDir(kvp.Key, false);
 
             _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus("All TM/HM compatibility changes have been saved.");
         }

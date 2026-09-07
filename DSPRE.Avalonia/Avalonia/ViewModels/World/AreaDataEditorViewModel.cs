@@ -38,7 +38,30 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool IsHGSS => gameFamily == GameFamilies.HGSS;
 
         private int _selectedIndex = -1;
-        public int SelectedIndex { get => _selectedIndex; set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadArea(value); } }
+        public int SelectedIndex
+        {
+            get => _selectedIndex;
+            set
+            {
+                if (value == _selectedIndex) return;
+                if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
+                {
+                    // Snap the list back to the area still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedIndex));
+                    _ = SwitchAreaAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadArea(value);
+            }
+        }
+
+        private async Task SwitchAreaAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "area")) return;
+            SetClean();
+            if (Set(ref _selectedIndex, requested)) LoadArea(requested);
+        }
 
         /// <summary>Area data entry to select once loaded (e.g. from the Header editor's "Open" button).</summary>
         public int InitialIndex { get; set; }
@@ -168,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_area == null || _selectedIndex < 0) return;
-            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; }
+            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area Data"); }
         }
     }

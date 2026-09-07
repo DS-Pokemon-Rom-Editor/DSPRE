@@ -286,6 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             DSUtils.WriteToFile(moneyPath, BitConverter.GetBytes((int)_initialMoney), RomInfo.initialMoneyOverlayOffset);
 
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             return true;
         }
 

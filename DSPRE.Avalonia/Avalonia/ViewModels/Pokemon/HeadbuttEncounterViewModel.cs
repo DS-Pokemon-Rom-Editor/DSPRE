@@ -500,7 +500,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     ok = _file.SaveToFile(_selFile);
                 }
-                if (ok) { SetClean(); StatusText = $"Saved headbutt file {_selFile}."; }
+                if (ok) { SetClean(); StatusText = $"Saved headbutt file {_selFile}."; SaveNotice.Saved(UnsavedChangesDescription); }
                 else StatusText = "Save failed (see log).";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt Editor"); }

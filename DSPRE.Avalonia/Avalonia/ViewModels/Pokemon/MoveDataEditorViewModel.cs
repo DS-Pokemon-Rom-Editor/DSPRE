@@ -271,6 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WriteHgEngineSource();
             _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
         }
 

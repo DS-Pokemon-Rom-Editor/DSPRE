@@ -82,7 +82,27 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int SelectedMatrixIndex
         {
             get => _selectedIndex;
-            set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadMatrix(value); }
+            set
+            {
+                if (value == _selectedIndex) return;
+                if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
+                {
+                    // Snap the list back to the matrix still loaded, so the answer decides where we
+                    // end up rather than the click already having moved us.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedMatrixIndex));
+                    _ = SwitchMatrixAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadMatrix(value);
+            }
+        }
+
+        private async Task SwitchMatrixAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "matrix")) return;
+            SetClean();
+            if (Set(ref _selectedIndex, requested)) LoadMatrix(requested);
         }
 
         public MatrixEditorViewModel() { if (Design.IsDesignMode) MatrixNames.Add("Matrix 0"); }
@@ -155,6 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_matrix == null || _selectedIndex < 0) return;
             _matrix.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false);
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved matrix {_selectedIndex}.";
         }
 

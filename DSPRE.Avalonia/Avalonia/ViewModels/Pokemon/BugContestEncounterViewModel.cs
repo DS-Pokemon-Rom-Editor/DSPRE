@@ -296,6 +296,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null) return;
             _file.SaveToFile();
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public async Task ExportAsync()

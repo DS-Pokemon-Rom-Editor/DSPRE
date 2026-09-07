@@ -206,6 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     return false;
                 }
                 SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 return true;
             }
             catch (Exception ex)

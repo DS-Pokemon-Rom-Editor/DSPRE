@@ -880,9 +880,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private async Task ConfirmEventFileSwitchAsync(int requested)
         {
-            bool discard = await DialogHelper.AskYesNo(
-                $"There are unsaved changes in event file {_selectedIndex}. Discard them?", "Unsaved changes");
-            if (!discard) return;
+            // Shared with every other editor that guards a record switch, so this offers Save as well
+            // as Discard. Discard-only forced the habit of saving first and switching second, which is
+            // the habit the prompt exists to make unnecessary.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "event file")) return;
             SetClean();
             if (Set(ref _selectedIndex, requested)) LoadFile(requested);
         }
@@ -1935,6 +1936,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_file == null || _selectedIndex < 0) return;
             _file.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false);
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved event file {_selectedIndex}.";
         }
 

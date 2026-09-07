@@ -260,6 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_trainerFile == null) return;
             _trainerFile.SaveToNarc();
             _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
         }
@@ -376,6 +377,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_setFile == null) return;
             _setFile.SaveToNarc();
             _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
         }

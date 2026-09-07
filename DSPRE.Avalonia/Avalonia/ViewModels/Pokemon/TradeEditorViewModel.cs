@@ -408,6 +408,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             _cur.SaveToFileDefaultDir(TradeID, false);
             _tradeDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             if (!_textDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.id}.");
             MarkSavedIfClean();
@@ -426,6 +427,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _tradeArchive.messages[TradeID + count] = OtName;
             _tradeArchive.SaveToExpandedDir(GetTextBankIndex(), false);
             _textDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             if (!_tradeDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade text data to message bank {GetTextBankIndex()}");
             MarkSavedIfClean();

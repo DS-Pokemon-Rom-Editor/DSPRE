@@ -151,6 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ls.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 }
                 SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved all learnsets.";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Bulk Learnsets"); }

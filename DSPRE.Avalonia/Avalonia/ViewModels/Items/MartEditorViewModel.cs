@@ -216,7 +216,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void SaveChanges()
         {
             if (!_dirty || _data == null) return;
-            if (_data.SaveCurrent()) SetClean();
+            if (!_data.SaveCurrent()) return;
+            SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void DiscardChanges()

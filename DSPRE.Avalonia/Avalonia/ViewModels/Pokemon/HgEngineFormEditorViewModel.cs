@@ -149,6 +149,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             _table = HgEngineFormRegistry.LoadAll();   // refresh from disk so future selections see the new state
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved {desired.Count} form(s) for {(SelectedSpeciesIndex < PokemonNames.Count ? PokemonNames[SelectedSpeciesIndex] : SelectedSpeciesIndex.ToString())}.";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }

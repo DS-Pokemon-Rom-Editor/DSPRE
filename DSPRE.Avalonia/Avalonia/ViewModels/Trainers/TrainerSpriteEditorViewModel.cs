@@ -237,6 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             Save();
             if (AnimJsonDirty) SaveAnimJson();
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         /// <summary>Edits are applied straight into the in-memory <see cref="_tile"/>/<see cref="_flatIndices"/>

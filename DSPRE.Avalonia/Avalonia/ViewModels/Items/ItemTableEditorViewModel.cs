@@ -756,6 +756,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             DSUtils.WriteToFile(path, _weightTable, RomInfo.pickupWeightTableOffset);
 
             _pickupDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -790,6 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ARM9.WriteBytes(new byte[] { (byte)tableLen }, HIDDEN_TABLE_LEN_OFFSET);
 
             _hiddenDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -813,6 +815,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
 
             _rockSmashDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

@@ -432,6 +432,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             { await DialogHelper.ShowError($"Error writing trainer messages:\n{error}", "Save Error"); return; }
 
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Trainer {_currentTrainerId} messages saved to hg-engine source.";
             if (unresolved.Count > 0)
                 AppLogger.Info($"hg-engine message write for trainer {_currentTrainerId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");

@@ -60,6 +60,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void SaveChanges()
         {
             foreach (var c in Children) if (c?.HasUnsavedChanges ?? false) c.SaveChanges();
+            // Announced after the children so the one visible notice names the whole save.
+            SaveNotice.Saved("Encounters Editor");
         }
         public void DiscardChanges()
         {

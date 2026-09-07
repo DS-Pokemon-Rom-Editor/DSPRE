@@ -345,6 +345,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WriteWaterRowsToFile();
             _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: true);
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
             RaiseUndoState();
         }

@@ -452,6 +452,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 int entry = _fontEntries[_selectedFontIndex];
                 File.WriteAllBytes(files[entry], _font.Write());
                 _dirty = false;
+                SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Saved {FontNames[_selectedFontIndex]}.";
                 // Anything already drawing with the ROM's font picks the change up.

@@ -221,6 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: true);
             WriteHgEngineSource();
             SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
             RaiseUndoState();
         }

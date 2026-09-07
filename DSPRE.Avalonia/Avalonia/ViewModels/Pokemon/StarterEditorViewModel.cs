@@ -360,6 +360,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             _dirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             Title = "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             AppLogger.Debug($"StarterEditor: Saved starters [{Starter1}, {Starter2}, {Starter3}].");

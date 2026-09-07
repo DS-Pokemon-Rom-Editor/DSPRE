@@ -305,6 +305,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 File.WriteAllBytes(Path.Combine(dir, kvp.Key.ToString("D4")), kvp.Value.ToByteArray());
 
             _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus("All trainer flag changes have been saved.");
         }

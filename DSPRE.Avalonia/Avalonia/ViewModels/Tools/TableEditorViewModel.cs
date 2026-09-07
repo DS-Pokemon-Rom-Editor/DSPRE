@@ -447,6 +447,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 ARM9.WriteBytes(BitConverter.GetBytes(_condMusicTable[i].music), (uint)(_condMusicStartAddr + 6 * i + 4));
             }
             _condDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Conditional music table saved.";
         }
@@ -481,6 +482,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 wr.Write(music);
             }
             _effectsDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             string updated = $"Combo {index:D2} - Effect #{effect}, Music #{music}";
@@ -522,6 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 wr.Write((ushort)((trainerClass & 1023) + (comboID << 10)));
             }
             _vsTrainerDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _suppress = true;

@@ -228,6 +228,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 WriteRows();
                 SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
                 await DialogHelper.ShowInfo("Fly table saved successfully.", "Save");
             }
             catch (Exception ex)

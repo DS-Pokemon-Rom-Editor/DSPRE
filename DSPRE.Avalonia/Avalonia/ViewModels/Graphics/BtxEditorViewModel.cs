@@ -727,6 +727,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
+            if (saved > 0) SaveNotice.Show($"Saved {saved} overworld sprite file{(saved == 1 ? "" : "s")}.");
             return saved;
         }
 
