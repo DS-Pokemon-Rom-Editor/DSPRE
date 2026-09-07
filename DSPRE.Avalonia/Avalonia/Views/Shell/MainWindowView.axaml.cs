@@ -148,7 +148,21 @@ namespace DSPRE.Avalonia.Views.Shell
         private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync()
         {
             var editors = OpenEditors.GetUnsavedEditors(this);
-            return await UnsavedChangesDialog.ShowIfNeededAsync(this, editors);
+            if (editors.Count > 0)
+            {
+                return await UnsavedChangesDialog.ShowIfNeededAsync(this, editors);
+            }
+
+            // Nothing is dirty, but opening another project still closes this one and everything open
+            // in it. Without this the current project disappears the moment the menu item is clicked,
+            // which reads as a crash rather than a choice.
+            if (!AvaloniaEditorLauncher.IsRomLoaded) return true;
+
+            return await DialogHelper.AskYesNo(
+                $"Opening another project closes the current one first.\n\n"
+                + $"{RomInfo.GetGameDisplayName()} will be closed, along with any editor windows it has "
+                + "open. There are no unsaved changes, so nothing is lost.\n\nContinue?",
+                "Close the current project?", this);
         }
 
         private static string CompactPath(string path)
