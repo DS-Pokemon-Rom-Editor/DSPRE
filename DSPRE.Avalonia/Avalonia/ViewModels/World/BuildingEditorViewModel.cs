@@ -53,7 +53,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        // No in-place editing (import/export only), so never "dirty".
+        // Import writes the chosen NSBMD straight into the unpacked model archive, which is the same
+        // place every other editor's Save writes to. There is no in-memory edit waiting to be written,
+        // so there is nothing for a prompt to offer to save. Reported as a dirty-tracking gap in #218;
+        // it is the absence of a Save step, not a missing flag.
         public bool HasUnsavedChanges => false;
         public string UnsavedChangesDescription => "Building Editor";
         public void SaveChanges() { }

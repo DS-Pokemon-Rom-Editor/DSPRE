@@ -152,6 +152,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public bool HasUnsavedChanges => false;
         public string UnsavedChangesDescription => "Battle screen";
+        // Read-only preview: terrain, time of day, window style and the sample text only change what
+        // is drawn, and nothing here writes to the ROM. Reporting clean is the honest answer.
         public void SaveChanges() { }
         public void DiscardChanges() { }
 
