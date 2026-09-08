@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!_closeConfirmed)
             {
                 e.Cancel = true;
-                if (!await ConfirmProjectCloseAsync()) return;
+                if (!await ConfirmProjectCloseAsync(openingAnother: false)) return;
                 OpenEditors.CloseEditorWindows(this);
                 _closeConfirmed = true;
                 Close();
@@ -145,7 +145,9 @@ namespace DSPRE.Avalonia.Views.Shell
         /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows: callers
         /// close them only once the new project is actually chosen, so cancelling the file picker or a
         /// preflight prompt doesn't leave the current project editor-less.</summary>
-        private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync()
+        /// <param name="openingAnother">False when the program itself is closing, where saying that
+        /// another project is about to open would be describing something that is not happening.</param>
+        private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync(bool openingAnother = true)
         {
             var editors = OpenEditors.GetUnsavedEditors(this);
             if (editors.Count > 0)
@@ -156,7 +158,7 @@ namespace DSPRE.Avalonia.Views.Shell
             // Nothing is dirty, but opening another project still closes this one and everything open
             // in it. Without this the current project disappears the moment the menu item is clicked,
             // which reads as a crash rather than a choice.
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return true;
+            if (!openingAnother || !AvaloniaEditorLauncher.IsRomLoaded) return true;
 
             return await DialogHelper.AskYesNo(
                 $"Opening another project closes the current one first.\n\n"
