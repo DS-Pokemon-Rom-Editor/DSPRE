@@ -5,8 +5,9 @@ using System.Text;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Shells out to the linked hg-engine WSL checkout's Makefile. Only for invoking `make`;
-    /// the toolchain (gcc, armips, ndstool) is Linux-native and must run inside WSL.</summary>
+    /// <summary>Shells out to the linked hg-engine checkout's Makefile. Only for invoking `make`; the
+    /// toolchain (gcc, armips, ndstool) is POSIX-native, so it runs under WSL or MSYS2 depending on
+    /// which the checkout was linked with. hg-engine documents both.</summary>
     public static class HgEngineBuild
     {
         /// <summary>Builds one or more make targets (e.g. "build/narc/a055.narc") in one `make` call.</summary>
@@ -37,7 +38,7 @@ namespace DSPRE.HgEngine
             }
             catch (Win32Exception ex)
             {
-                stderr = "Failed to start wsl.exe: " + ex.Message;
+                stderr = $"Failed to start {ShellName}: " + ex.Message;
                 AppLogger.Error(stderr);
                 return false;
             }
@@ -71,7 +72,7 @@ namespace DSPRE.HgEngine
             }
             catch (Win32Exception ex)
             {
-                stderr = "Failed to start wsl.exe: " + ex.Message;
+                stderr = $"Failed to start {ShellName}: " + ex.Message;
                 AppLogger.Error(stderr);
                 return false;
             }
@@ -85,19 +86,38 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        private static string ShellName =>
+            HgEngineProject.Shell == HgEngineShell.Msys2 ? HgEngineProject.MsysBashPath : "wsl.exe";
+
         private static ProcessStartInfo BuildStartInfo(string bashCommand, bool redirectOutput)
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "wsl.exe",
                 UseShellExecute = false,
                 RedirectStandardOutput = redirectOutput,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
             };
-            psi.ArgumentList.Add("-d");
-            psi.ArgumentList.Add(HgEngineProject.WslDistro);
+
+            if (HgEngineProject.Shell == HgEngineShell.Msys2)
+            {
+                // A login shell on purpose: hg-engine's MSYS2 setup has the user append /mingw64/bin
+                // to PATH in ~/.bashrc, and the arm-none-eabi toolchain lives there.
+                psi.FileName = HgEngineProject.MsysBashPath;
+                psi.ArgumentList.Add("-lc");
+                psi.ArgumentList.Add(bashCommand);
+                return psi;
+            }
+
+            psi.FileName = "wsl.exe";
+            // Only a checkout inside WSL names its distro. One on a Windows drive built through WSL
+            // has no distro in its path, so wsl.exe uses the default rather than being told a wrong one.
+            if (!string.IsNullOrWhiteSpace(HgEngineProject.WslDistro))
+            {
+                psi.ArgumentList.Add("-d");
+                psi.ArgumentList.Add(HgEngineProject.WslDistro);
+            }
             psi.ArgumentList.Add("--");
             psi.ArgumentList.Add("bash");
             psi.ArgumentList.Add("-lc");

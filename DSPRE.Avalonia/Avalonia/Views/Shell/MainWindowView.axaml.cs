@@ -367,7 +367,12 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             if (autoLinkHgEnginePath != null)
             {
-                if (HgEngineProject.TryLink(autoLinkHgEnginePath, out string linkError))
+                // A checkout on a Windows drive builds with either MSYS2 or WSL, so ask rather than
+                // assume; opening the folder is not enough to know which toolchain the user set up.
+                var shell = await ViewModels.Tools.HgEngineLinkViewModel.AskShellAsync(autoLinkHgEnginePath);
+                if (shell == null) return;
+
+                if (HgEngineProject.TryLink(autoLinkHgEnginePath, shell.Value, null, out string linkError))
                 {
                     vm?.RefreshHgEngineState();
                     await DialogHelper.ShowInfo(
