@@ -348,28 +348,6 @@ namespace DSPRE
 
             romID = id;
             isHGE = false;
-            if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
-            {
-                string ov129path = OverlayUtils.GetPath(129);
-                if (File.Exists(ov129path))
-                {
-                    using (DSUtils.EasyReader br = new DSUtils.EasyReader(ov129path))
-                    {
-                        string gameCode = Encoding.UTF8.GetString(br.ReadBytes(16));
-                        if (gameCode == "hg-engine rocks!")
-                        {
-                            isHGE = true;
-                        }
-                        else
-                        {
-                            isHGE = false;
-                        }
-                    }                    
-                } else
-                {
-                    isHGE = false;
-                }
-            }
             // Get the folder name and strip the _DSPRE_contents suffix to get the ROM name
             string folderName = Path.GetFileName(romFolderName);
             if (folderName.EndsWith(folderSuffix))
@@ -383,6 +361,17 @@ namespace DSPRE
 
             LoadGameFamily();
             LoadGameLanguage();
+
+            // The marker hg-engine writes is the only identifier, since a hack may have changed the
+            // title, code or anything else DSPRE could otherwise have keyed on.
+            string ov129path = OverlayUtils.GetPath(129);
+            if (File.Exists(ov129path))
+            {
+                using (DSUtils.EasyReader br = new DSUtils.EasyReader(ov129path))
+                {
+                    isHGE = Encoding.UTF8.GetString(br.ReadBytes(16)) == "hg-engine rocks!";
+                }
+            }
 
             SetNarcDirs();
             SetHeaderTableOffset();
