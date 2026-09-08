@@ -652,7 +652,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         /// <summary>True when this mon has a sprite-coordinate record (enables those fields).</summary>
         private bool _hasSpriteData;
-        public bool HasSpriteData { get => _hasSpriteData; private set => Set(ref _hasSpriteData, value); }
+        public bool HasSpriteData
+        {
+            get => _hasSpriteData;
+            // The frames panel is gated on this too, and it is set after the entries are loaded.
+            private set { if (Set(ref _hasSpriteData, value)) OnPropertyChanged(nameof(HasHgeFrameData)); }
+        }
 
         /// <summary>True only where a movement/animation byte exists (HGSS, Platinum); hides that field on DP.</summary>
         private bool _hasMovementType;

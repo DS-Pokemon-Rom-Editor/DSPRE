@@ -243,7 +243,7 @@
 
                   <!-- hg-engine: the real frame data (data/SpriteOffsets.c), 10 fixed slots each. -->
                   <StackPanel IsVisible="{Binding HasHgeFrameData}" Spacing="8">
-                    <TextBlock Text="Which raw sprite frame to show, how long (in 1/30 s), and its per-frame pixel shift. Frame −1 = unused, and stops the idle-cycle loop there."
+                    <TextBlock Text="Which raw sprite frame to show, how long for (in whichever unit Frame timing is set to), and its per-frame pixel shift. Frame −1 ends the run and settles back on frame 0; below −1 is a jump back to slot (−frame − 2), taken as many times as its duration says."
                                FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
                     <TextBlock Text="Front frames" FontWeight="SemiBold"/>
