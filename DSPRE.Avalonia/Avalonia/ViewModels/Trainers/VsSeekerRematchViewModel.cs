@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        private readonly List<VsSeekerRematchTable.Row> _rows;
+        private readonly List<RematchTable.Row> _rows;
         private readonly HashSet<int> _dirtyRows = new();
         private List<int> _filteredIndices = new();
         private bool _suppress;
@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!IsSupported)
             {
                 StatusText = "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English).";
-                _rows = new List<VsSeekerRematchTable.Row>();
+                _rows = new List<RematchTable.Row>();
                 return;
             }
 
@@ -118,8 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string RowLabel(int rowIndex)
         {
             var row = _rows[rowIndex];
-            bool empty = row.EncounterTrainerId == 0 && row.RematchTrainerIds.All(v => v == 0);
-            return empty ? $"Row {rowIndex}: (empty)" : $"Row {rowIndex}: {TrainerLabel(row.EncounterTrainerId)}";
+            return row.IsEmpty ? $"Row {rowIndex}: (empty)" : $"Row {rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
         }
 
         private string TrainerLabel(int trainerId) =>
@@ -149,12 +148,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = true;
             var row = _rows[rowIndex];
 
-            EncounterIndex = row.EncounterTrainerId < TrainerNames.Count ? row.EncounterTrainerId : -1;
+            EncounterIndex = row.BaseTrainerId < TrainerNames.Count ? row.BaseTrainerId : -1;
 
             int[] slots = { 0, 0, 0, 0, 0 };
             for (int i = 0; i < VsSeekerRematchTable.RematchLevelCount; i++)
             {
-                ushort v = row.RematchTrainerIds[i];
+                ushort v = row.Rematch(i);
                 if (v == VsSeekerRematchTable.NoRematch) slots[i] = 0;
                 else if (v == VsSeekerRematchTable.ChainEnd) slots[i] = 1;
                 else if (v < TrainerNames.Count) slots[i] = 2 + v;
@@ -170,15 +169,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_suppress || _currentRowIndex < 0) return;
 
             var row = _rows[_currentRowIndex];
-            if (EncounterIndex >= 0) row.EncounterTrainerId = (ushort)EncounterIndex;
+            if (EncounterIndex >= 0) row.BaseTrainerId = (ushort)EncounterIndex;
 
             int[] slots = { RematchA, RematchB, RematchC, RematchD, RematchE };
             for (int i = 0; i < VsSeekerRematchTable.RematchLevelCount; i++)
             {
                 int idx = slots[i];
-                if (idx == 0) row.RematchTrainerIds[i] = VsSeekerRematchTable.NoRematch;
-                else if (idx == 1) row.RematchTrainerIds[i] = VsSeekerRematchTable.ChainEnd;
-                else if (idx >= 2) row.RematchTrainerIds[i] = (ushort)(idx - 2);
+                if (idx == 0) row.SetRematch(i, VsSeekerRematchTable.NoRematch);
+                else if (idx == 1) row.SetRematch(i, VsSeekerRematchTable.ChainEnd);
+                else if (idx >= 2) row.SetRematch(i, (ushort)(idx - 2));
             }
             _rows[_currentRowIndex] = row;
 

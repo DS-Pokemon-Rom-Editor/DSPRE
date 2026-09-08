@@ -82,6 +82,12 @@ namespace DSPRE
         public static int starterScreenTextNumber { get; private set; } = -1;
         public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
 
+        // The HGSS offset is only a fallback; RematchTable reads the address from the overlay itself.
+        public static int vsSeekerRematchOverlayNumber { get; private set; } = -1;
+        public static uint vsSeekerRematchTableOffset { get; private set; }
+        public static int pokegearRematchOverlayNumber { get; private set; } = -1;
+        public static uint pokegearRematchFallbackTableOffset { get; private set; }
+
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
 
@@ -385,6 +391,7 @@ namespace DSPRE
             SetItemTableOffset();
             SetMartOffsets();
             SetStarterOffsets();
+            SetRematchTableOffsets();
             SetupSpawnSettings();
 
             SetAbilityNamesTextNumber();
@@ -954,6 +961,33 @@ namespace DSPRE
                             starterScreenTextNumber = 190;
                             break;
                     }
+                    break;
+            }
+        }
+
+        /// <summary>Where each game keeps its trainer rematch table.</summary>
+        public static void SetRematchTableOffsets()
+        {
+            vsSeekerRematchOverlayNumber = -1;
+            vsSeekerRematchTableOffset = 0;
+            pokegearRematchOverlayNumber = -1;
+            pokegearRematchFallbackTableOffset = 0;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    vsSeekerRematchOverlayNumber = 5;
+                    vsSeekerRematchTableOffset = 0x1F43C;
+                    break;
+
+                case GameFamilies.Plat:
+                    vsSeekerRematchOverlayNumber = 5;
+                    vsSeekerRematchTableOffset = 0x280C8;
+                    break;
+
+                case GameFamilies.HGSS:
+                    pokegearRematchOverlayNumber = 26;
+                    pokegearRematchFallbackTableOffset = 0x20C;
                     break;
             }
         }

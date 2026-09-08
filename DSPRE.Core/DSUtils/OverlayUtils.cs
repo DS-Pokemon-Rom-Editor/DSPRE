@@ -126,6 +126,23 @@ namespace DSPRE
                 }
             }
 
+            /// <summary>RAM address of the overlay's static initialiser list, which bounds its data.</summary>
+            public static uint GetStaticInitStart(int ovNumber)
+            {
+                if (RomInfo.IsDsRomProject)
+                {
+                    var yaml = LoadOverlayYaml();
+                    if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
+                        return 0;
+                    return yaml.overlays[ovNumber].ctor_start;
+                }
+
+                using (DSUtils.EasyReader f = new EasyReader(RomInfo.overlayTablePath, ovNumber * ENTRY_LEN + 16))
+                {
+                    return f.ReadUInt32();
+                }
+            }
+
             public static int GetNumberOfOverlays()
             {
                 if (RomInfo.IsDsRomProject)

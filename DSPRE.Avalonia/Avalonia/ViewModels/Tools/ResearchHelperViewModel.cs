@@ -627,7 +627,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 for (int r = 0; r < rows.Count; r++)
                 {
                     var row = rows[r];
-                    if (row.EncounterTrainerId == trainerId)
+                    if (row.BaseTrainerId == trainerId)
                     {
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
@@ -637,16 +637,47 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                             Details = $"Row {r}: owns this rematch chain"
                         });
                     }
-                    for (int s = 0; s < row.RematchTrainerIds.Length; s++)
+                    for (int s = 0; s < RematchTable.RematchLevelCount; s++)
                     {
-                        if (row.RematchTrainerIds[s] != trainerId) continue;
+                        if (row.Rematch(s) != trainerId) continue;
 
                         TrainerWatcherResults.Add(new TrainerUsageResult
                         {
                             SourceId = -1,
                             Type = $"Vs. Seeker Rematch {(char)('A' + s)}",
                             Index = r,
-                            Details = $"Row {r}: rematch {(char)('A' + s)} for encounter trainer {row.EncounterTrainerId}"
+                            Details = $"Row {r}: rematch {(char)('A' + s)} for encounter trainer {row.BaseTrainerId}"
+                        });
+                    }
+                }
+            }
+
+            if (PokegearRematchTable.IsSupported)
+            {
+                var rows = PokegearRematchTable.ReadAll();
+                for (int r = 0; r < rows.Count; r++)
+                {
+                    var row = rows[r];
+                    if (row.BaseTrainerId == trainerId)
+                    {
+                        TrainerWatcherResults.Add(new TrainerUsageResult
+                        {
+                            SourceId = -1,
+                            Type = "Pokégear Rematch Base",
+                            Index = r,
+                            Details = $"Row {r}: owns this rematch chain"
+                        });
+                    }
+                    for (int s = 0; s < RematchTable.RematchLevelCount; s++)
+                    {
+                        if (row.Rematch(s) != trainerId) continue;
+
+                        TrainerWatcherResults.Add(new TrainerUsageResult
+                        {
+                            SourceId = -1,
+                            Type = $"Pokégear Rematch {s + 1}",
+                            Index = r,
+                            Details = $"Row {r}: rematch {s + 1} for base trainer {row.BaseTrainerId}"
                         });
                     }
                 }
@@ -696,6 +727,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 AvaloniaEditorLauncher.OpenVsSeekerRematchEditor(result.Index);
                 StatusText = "Opened Vs. Seeker Rematch Editor";
+                return;
+            }
+
+            if (result.Type.StartsWith("Pokégear Rematch"))
+            {
+                AvaloniaEditorLauncher.OpenPokegearRematchEditor(result.Index);
+                StatusText = "Opened Pokégear Rematch Editor";
                 return;
             }
 

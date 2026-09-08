@@ -65,6 +65,8 @@
         <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BetaNote[TrainerSpriteEditorView]}"/>
         <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}"
                   ToolTip.Tip="Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer"/>
+        <MenuItem Header="Pokégear Rematch Editor…" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}"
+                  ToolTip.Tip="HeartGold/SoulSilver: which trainer you rematch when a Pokégear caller wants a battle"/>
         <MenuItem Header="Trainer Flag Bulk Editor…" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
                   ToolTip.Tip="Bulk-edit AI flags and the double-battle flag across many trainers at once"/>
         <MenuItem Header="Battle Tower Editor…" Click="BattleTowerEditor_Click" IsEnabled="{Binding CanUseBattleTowerEditor}"

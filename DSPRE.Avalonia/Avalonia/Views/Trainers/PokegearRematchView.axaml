@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        x:Class="DSPRE.Avalonia.Views.Trainers.PokegearRematchView"
+        x:DataType="vm:PokegearRematchViewModel">
+
+  <Design.DataContext>
+    <vm:PokegearRematchViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save Row" Click="SaveRow_Click" IsEnabled="{Binding IsRowSelected}"/>
+        <Button Content="Save All" Click="SaveAll_Click"/>
+        <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="trainer name…"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,4">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding TableNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding ReachabilityNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="320,*">
+      <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding RowLabels}"
+               SelectedIndex="{Binding SelectedRowListIndex}"/>
+
+      <ScrollViewer Grid.Column="1">
+        <StackPanel Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
+          <TextBlock Text="Base Trainer" FontWeight="Bold"/>
+          <TextBlock Text="Who this row belongs to, and the battle used until a rematch is unlocked."
+                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <ComboBox ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
+          <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+
+          <TextBlock Text="Rematch 1" Margin="0,12,0,0"/>
+          <TextBlock Text="Normally the same trainer again, so the first phone rematch repeats the battle."
+                     FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch1}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch 2" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch2}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch 3" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch3}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch 4" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch4}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Text="Rematch 5" Margin="0,8,0,0"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch5}" HorizontalAlignment="Stretch"/>
+
+          <TextBlock Margin="0,12,0,0" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
+                     Text="Each level unlocks by beating the one before it, and is also held behind a story flag."/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

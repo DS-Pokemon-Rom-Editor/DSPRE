@@ -22,9 +22,9 @@ namespace DSPRE.ROMFiles
     /// <summary>Finds known game resources that directly reference a main-roster trainer ID.</summary>
     internal static class TrainerReferenceScanner
     {
-        private const int PhoneBookHeaderSize = 4;
-        private const int PhoneBookEntrySize = 20;
-        private const int PhoneBookTrainerIdOffset = 4;
+        private const int PhoneBookHeaderSize = PokegearPhoneBook.HeaderSize;
+        private const int PhoneBookEntrySize = PokegearPhoneBook.EntrySize;
+        private const int PhoneBookTrainerIdOffset = PokegearPhoneBook.TrainerIdOffset;
 
         private static readonly IReadOnlyDictionary<ushort, int[]> PlatinumScriptParameters =
             new Dictionary<ushort, int[]>
@@ -62,6 +62,7 @@ namespace DSPRE.ROMFiles
                 !TryScanScripts(trainerId, references, out error) ||
                 !TryScanBattleMessages(trainerId, references, out error) ||
                 !TryScanVsSeeker(trainerId, references, out error) ||
+                !TryScanPokegearRematch(trainerId, references, out error) ||
                 !TryScanHeartGoldPhoneBook(trainerId, references, out error))
             {
                 references.Clear();
@@ -237,7 +238,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (!VsSeekerRematchTable.IsSupported) return true;
 
-            List<VsSeekerRematchTable.Row> rows;
+            List<RematchTable.Row> rows;
             try { rows = VsSeekerRematchTable.ReadAll(); }
             catch (Exception ex)
             {
@@ -253,16 +254,55 @@ namespace DSPRE.ROMFiles
 
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
-                VsSeekerRematchTable.Row row = rows[rowIndex];
-                if (row.EncounterTrainerId == trainerId)
+                RematchTable.Row row = rows[rowIndex];
+                if (row.BaseTrainerId == trainerId)
                 {
                     references.Add(new TrainerReference("Vs. Seeker", $"row {rowIndex}, encounter"));
                 }
-                for (int level = 0; level < row.RematchTrainerIds.Length; level++)
+                for (int level = 0; level < RematchTable.RematchLevelCount; level++)
                 {
-                    if (row.RematchTrainerIds[level] == trainerId)
+                    if (row.Rematch(level) == trainerId)
                     {
                         references.Add(new TrainerReference("Vs. Seeker",
+                            $"row {rowIndex}, rematch {level + 1}"));
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static bool TryScanPokegearRematch(int trainerId,
+            ICollection<TrainerReference> references, out string error)
+        {
+            error = null;
+            if (!PokegearRematchTable.IsSupported) return true;
+
+            List<RematchTable.Row> rows;
+            try { rows = PokegearRematchTable.ReadAll(out _, out error); }
+            catch (Exception ex)
+            {
+                error = $"The Pokégear rematch table could not be checked: {ex.Message}";
+                return false;
+            }
+            if (error != null) return false;
+            if (rows.Count == 0)
+            {
+                error = "The Pokégear rematch table has no readable rows.";
+                return false;
+            }
+
+            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                RematchTable.Row row = rows[rowIndex];
+                if (row.BaseTrainerId == trainerId)
+                {
+                    references.Add(new TrainerReference("Pokégear rematch", $"row {rowIndex}, base trainer"));
+                }
+                for (int level = 0; level < RematchTable.RematchLevelCount; level++)
+                {
+                    if (row.Rematch(level) == trainerId)
+                    {
+                        references.Add(new TrainerReference("Pokégear rematch",
                             $"row {rowIndex}, rematch {level + 1}"));
                     }
                 }
@@ -276,7 +316,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS) return true;
 
-            string path = Path.Combine(RomInfo.dataPath, "tel", "pmtel_book.dat");
+            string path = PokegearPhoneBook.FilePath;
             if (!File.Exists(path))
             {
                 error = "The Pokégear phonebook is missing, so trainer removal was cancelled.";

@@ -482,6 +482,28 @@ namespace DSPRE.Avalonia
                 new VsSeekerRematchView(vm), 900, 600).ShowManaged();
         }
 
+        public static void OpenPokegearRematchEditor(int initialRowIndex = -1) => _ = OpenPokegearRematchEditorAsync(initialRowIndex);
+
+        public static async System.Threading.Tasks.Task OpenPokegearRematchEditorAsync(int initialRowIndex = -1)
+        {
+            if (!IsRomLoaded) return;
+            if (!PokegearRematchTable.IsSupported)
+            {
+                AppMessages.Info("The Pokégear Rematch Editor only supports HeartGold and SoulSilver.",
+                    "Not Supported");
+                return;
+            }
+
+            PokegearRematchViewModel vm = null;
+            await RunBusyAsync("Opening Pokégear Rematch Editor…",
+                "Reading the rematch table, the phone book and trainer names.",
+                () => vm = new PokegearRematchViewModel(initialRowIndex));
+            if (vm == null) return;
+
+            new EditorHostWindow("Pokégear Rematch Editor",
+                new PokegearRematchView(vm), 950, 640).ShowManaged();
+        }
+
         public static void OpenStarterEditor() => _ = OpenStarterEditorAsync();
 
         public static async System.Threading.Tasks.Task OpenStarterEditorAsync()
@@ -1017,6 +1039,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
+            new() { Name = "Pokégear Rematch Editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
             new() { Name = "Trainer Flag Bulk Editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },

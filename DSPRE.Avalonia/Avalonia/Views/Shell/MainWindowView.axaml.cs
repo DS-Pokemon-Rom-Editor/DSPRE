@@ -662,6 +662,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void VsSeekerRematchEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenVsSeekerRematchEditor();
 
+        private void PokegearRematchEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenPokegearRematchEditor();
+
         private void TrainerFlagBulkEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerFlagBulkEditor();
 
