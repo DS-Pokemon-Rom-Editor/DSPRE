@@ -753,6 +753,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void LinkHgEngine_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHgEngineLink();
 
+        private void HgEnginePatches_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHgEnginePatches();
+
         private async void CompileRom_Click(object sender, RoutedEventArgs e)
         {
             if (!HgEngineProject.IsActive) return;

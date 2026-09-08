@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.HgEnginePatchesView"
+        x:DataType="vm:HgEnginePatchesViewModel">
+
+  <Design.DataContext>
+    <vm:HgEnginePatchesViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="Show:" VerticalAlignment="Center"/>
+        <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
+        <Button Content="Reload" Click="Reload_Click"/>
+      </StackPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,5">
+      <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
+                 Text="These are the patches your hg-engine checkout applies to the game's code every build, from its hooks, armhooks, bytereplacement and repoints lists. The offset column is where each one lands in the file, which the lists themselves do not tell you. Entries inside #ifdef branches are all listed, since which ones a build uses depends on its flags."/>
+    </Border>
+
+    <!-- Adding one -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8">
+      <StackPanel Spacing="6">
+        <TextBlock Text="Add a patch" FontWeight="Bold" FontSize="12"/>
+        <WrapPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4">
+            <TextBlock Text="List" VerticalAlignment="Center"/>
+            <ComboBox Width="150" ItemsSource="{Binding NewListChoices}" SelectedIndex="{Binding NewList}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4">
+            <TextBlock Text="Binary" VerticalAlignment="Center"/>
+            <TextBox Width="80" Text="{Binding NewBinary}" ToolTip.Tip="arm9, or an overlay number like 0012"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4"
+                      IsVisible="{Binding !NewNeedsBytes}">
+            <TextBlock Text="Routine" VerticalAlignment="Center"/>
+            <TextBox Width="200" Text="{Binding NewSymbol}" ToolTip.Tip="The symbol in your own code to branch to"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4">
+            <TextBlock Text="Address" VerticalAlignment="Center"/>
+            <TextBox Width="110" Text="{Binding NewAddress}" ToolTip.Tip="Hex, like 02078384"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4"
+                      IsVisible="{Binding !NewNeedsBytes}">
+            <TextBlock Text="Register" VerticalAlignment="Center"/>
+            <TextBox Width="50" Text="{Binding NewRegister}" ToolTip.Tip="Leave empty to replace the whole routine"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4"
+                      IsVisible="{Binding NewNeedsBytes}">
+            <TextBlock Text="Bytes" VerticalAlignment="Center"/>
+            <TextBox Width="220" Text="{Binding NewBytes}" ToolTip.Tip="Hex bytes, like 60 B4 C0 46"/>
+          </StackPanel>
+          <Button Content="Add" Click="Add_Click" Margin="0,0,0,4"/>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+              GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Binary"  Binding="{Binding Binary}"  Width="100"/>
+        <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="110"/>
+        <DataGridTextColumn Header="Offset"  Binding="{Binding Offset}"  Width="90"/>
+        <DataGridTextColumn Header="Bytes"   Binding="{Binding Size}"    Width="60"/>
+        <DataGridTextColumn Header="What it does" Binding="{Binding Does}" Width="*"/>
+        <DataGridTextColumn Header="From"    Binding="{Binding List}"    Width="130"/>
+        <DataGridTextColumn Header="Runs into" Binding="{Binding Clash}" Width="240"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</UserControl>

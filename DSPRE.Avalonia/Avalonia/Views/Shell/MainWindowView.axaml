@@ -35,6 +35,8 @@
                   ToolTip.Tip="Edit Species/Trainers/Items/Moves/Encounters straight from a linked hg-engine WSL checkout's source"/>
         <MenuItem Header="Compile ROM…" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
                   ToolTip.Tip="{Binding HgEngineNote}"/>
+        <MenuItem Header="hg-engine Patches…" Click="HgEnginePatches_Click" IsEnabled="{Binding IsHgEngineLinked}"
+                  ToolTip.Tip="Every hook, byte replacement and repoint the checkout applies to the game's code"/>
         <Separator/>
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>

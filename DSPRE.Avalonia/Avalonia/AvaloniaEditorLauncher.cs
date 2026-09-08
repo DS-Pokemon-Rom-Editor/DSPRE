@@ -502,6 +502,20 @@ namespace DSPRE.Avalonia
                 new VsSeekerRematchView(vm), 900, 600).ShowManaged();
         }
 
+        public static void OpenHgEnginePatches()
+        {
+            if (!IsRomLoaded) return;
+            if (!HgEngineProject.IsActive)
+            {
+                AppMessages.Info("Link an hg-engine checkout to see the patches it applies.",
+                    "hg-engine patches");
+                return;
+            }
+
+            new EditorHostWindow("hg-engine Patches",
+                new Views.Tools.HgEnginePatchesView(new HgEnginePatchesViewModel()), 1150, 700).ShowManaged();
+        }
+
         public static void OpenPokegearRematchEditor(int initialRowIndex = -1) => _ = OpenPokegearRematchEditorAsync(initialRowIndex);
 
         public static async System.Threading.Tasks.Task OpenPokegearRematchEditorAsync(int initialRowIndex = -1)
@@ -1064,6 +1078,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
             new() { Name = "Pokégear Rematch Editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
+            new() { Name = "hg-engine Patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
             new() { Name = "Trainer Flag Bulk Editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
             new() { Name = "Script Editor",         Run = () => OpenScriptEditor() },
