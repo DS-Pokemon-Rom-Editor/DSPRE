@@ -269,6 +269,59 @@ const SafariZoneAreaEncounterFile __data[] = {
             Assert.Equal(-1, slots[2].FrameNo);
         }
 
+        // A real entry puts spriteYOffset/shadowXOffset/shadowSize after two nested SpriteFrame[10] arrays.
+        // Those writes are issued with unresolvedFields discarded, so a scan that fails to step over the
+        // nested braces would drop them silently rather than reporting anything.
+        private const string SpriteOffsetsEntry = @"
+const SpriteFrameData __data[] = {
+    [SPECIES_VENUSAUR] = {
+        .frontHeader = { .cryDelay = 0, .animation = 1, .animationDelay = 4 },
+        .frontFrames = {
+                { .frameNo = 1, .duration = 18, .horizontalShift = -4, .verticalShift = 0 },
+                { .frameNo = -1, .duration = 0, .horizontalShift = 0, .verticalShift = 0 },
+        },
+        .backHeader = { .cryDelay = 12, .animation = 132, .animationDelay = 6 },
+        .backFrames = {
+                { .frameNo = 0, .duration = 18, .horizontalShift = 0, .verticalShift = 0 },
+                { .frameNo = -1, .duration = 0, .horizontalShift = 0, .verticalShift = 0 },
+        },
+        .spriteYOffset = -1,
+        .shadowXOffset = -3,
+        .shadowSize = 3,
+    },
+};
+";
+
+        [Fact]
+        public void SpriteOffsets_ScalarFieldsAfterTheNestedFrameArraysAreReadableAndWritable()
+        {
+            string text = SpriteOffsetsEntry;
+
+            foreach (var (field, expected) in new[] { ("spriteYOffset", "-1"), ("shadowXOffset", "-3"), ("shadowSize", "3") })
+            {
+                Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "SPECIES_VENUSAUR",
+                    new[] { FieldPathSegment.Field(field) }, out string raw), field);
+                Assert.Equal(expected, raw.Trim());
+            }
+
+            Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "SPECIES_VENUSAUR",
+                new[] { FieldPathSegment.Field("spriteYOffset") }, "7"));
+            Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "SPECIES_VENUSAUR",
+                new[] { FieldPathSegment.Field("shadowSize") }, "2"));
+
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "SPECIES_VENUSAUR",
+                new[] { FieldPathSegment.Field("spriteYOffset") }, out string y));
+            Assert.Equal("7", y.Trim());
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "SPECIES_VENUSAUR",
+                new[] { FieldPathSegment.Field("shadowSize") }, out string size));
+            Assert.Equal("2", size.Trim());
+
+            // The frame arrays either side of them are untouched.
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "SPECIES_VENUSAUR",
+                new[] { FieldPathSegment.Field("frontFrames"), FieldPathSegment.At(0), FieldPathSegment.Field("horizontalShift") }, out string shift));
+            Assert.Equal("-4", shift.Trim());
+        }
+
         [Fact]
         public void SpriteOffsets_BuildFrameWritesRoundTripsThroughTryReplaceField()
         {

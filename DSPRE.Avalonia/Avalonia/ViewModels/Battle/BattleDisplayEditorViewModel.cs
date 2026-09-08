@@ -671,7 +671,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private bool _hasAnimData;
         public bool HasAnimData { get => _hasAnimData; private set => Set(ref _hasAnimData, value); }
 
-        private bool CanEditSprite => _src != null && _hasSpriteData && !_loading;
+        // hg-engine keeps this data in source files, so _src is never built there. Requiring it left every
+        // offset, shadow and height edit silently non-dirty, and an editor that never reports unsaved
+        // changes is never asked to save: those edits were dropped on close or on switching mon.
+        private bool CanEditSprite => (_src != null || HgEngineProject.IsActive) && _hasSpriteData && !_loading;
 
         private int _movementType;
         public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && CanEditSprite) SetDirty(); } }
