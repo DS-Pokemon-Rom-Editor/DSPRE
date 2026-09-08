@@ -130,8 +130,15 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
         // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
-        public bool CanCompileRom       => IsRomLoaded && HgEngineProject.IsActive
-            && BetaEditors.Allows("CompileRomView");
+        public bool CanCompileRom       => IsRomLoaded && HgEngineProject.IsActive;
+
+        /// <summary>Why Compile ROM and the source-backed editors are greyed out, or nothing when they are not.</summary>
+        public string HgEngineNote =>
+            !IsRomLoaded ? "Open a ROM first."
+            : !isHGE ? "This ROM is not an hg-engine build."
+            : !HgEngineProject.IsLinked ? "No hg-engine checkout is linked to this project."
+            : !HgEngineProject.Enabled ? "The linked hg-engine checkout is switched off for this project."
+            : "Runs the linked checkout's real make build and produces test.nds.";
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
@@ -210,6 +217,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseMiscTables));
             OnPropertyChanged(nameof(IsHgEngineLinked));
             OnPropertyChanged(nameof(CanCompileRom));
+            OnPropertyChanged(nameof(HgEngineNote));
             RefreshRecents();
         }
 
@@ -228,6 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanCompileRom));
+            OnPropertyChanged(nameof(HgEngineNote));
         }
 
         // ── Recent projects for the pre-ROM empty state ────────────────────────

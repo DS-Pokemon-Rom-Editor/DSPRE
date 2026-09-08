@@ -31,10 +31,10 @@
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
-        <MenuItem Header="Link hg-engine checkout…" Click="LinkHgEngine_Click" IsEnabled="{Binding Beta[HgEngineLinkView]}"
+        <MenuItem Header="Link hg-engine checkout…" Click="LinkHgEngine_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Edit Species/Trainers/Items/Moves/Encounters straight from a linked hg-engine WSL checkout's source"/>
         <MenuItem Header="Compile ROM…" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
-                  ToolTip.Tip="Runs the linked hg-engine checkout's real `make` build (data domains + ASM hooks) and produces test.nds"/>
+                  ToolTip.Tip="{Binding HgEngineNote}"/>
         <Separator/>
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>

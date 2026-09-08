@@ -48,8 +48,6 @@ namespace DSPRE
                 ["TrainerSpriteEditorView"] = "Trainer Sprite editor",
                 ["ProjectChecksView"] = "Project checks",
                 ["ScriptCommandGuideView"] = "Script command reference",
-                ["CompileRomView"] = "Compile ROM",
-                ["HgEngineLinkView"] = "hg-engine link",
                 ["HgEngineFormEditorView"] = "Form editor",
                 ["MartEditorView"] = "Mart editor",
             };
@@ -131,8 +129,7 @@ namespace DSPRE
         private static string AreaOf(string window)
         {
             if (window.StartsWith("Battle", StringComparison.Ordinal)) return "Battle";
-            if (window.StartsWith("HgEngine", StringComparison.Ordinal)
-             || window == "CompileRomView") return "hg-engine";
+            if (window.StartsWith("HgEngine", StringComparison.Ordinal)) return "hg-engine";
             if (window is "FontEditorView" or "TilesetBuilderView" or "BannerEditorView"
                        or "TitleScreenEditorView" or "DungeonCutinEditorView"
                        or "TrainerCardEditorView" or "TrainerSpriteEditorView") return "Graphics";
