@@ -39,6 +39,7 @@
               <DataGridTextColumn Header="Scripts"   Binding="{Binding Scripts}"   Width="80"/>
               <DataGridTextColumn Header="Functions" Binding="{Binding Functions}" Width="90"/>
               <DataGridTextColumn Header="Actions"   Binding="{Binding Actions}"   Width="80"/>
+              <DataGridTextColumn Header="Built from" Binding="{Binding Source}"    Width="260"/>
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>

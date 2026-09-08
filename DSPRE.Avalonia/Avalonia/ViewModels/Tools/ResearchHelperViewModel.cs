@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using DSPRE.HgEngine;
 using DSPRE.Avalonia;
 using DSPRE.Editors.Utils;
 using DSPRE.Resources;
@@ -24,6 +25,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public int Scripts { get; set; }
         public int Functions { get; set; }
         public int Actions { get; set; }
+
+        /// <summary>Names the source when hg-engine assembles this file, since the counts then describe
+        /// the last build rather than what would go into the next one.</summary>
+        public string Source { get; set; } = "";
     }
 
     public class LevelScriptFileStats
@@ -285,7 +290,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                         Total = total,
                         Scripts = sf.allScripts?.Count ?? 0,
                         Functions = sf.allFunctions?.Count ?? 0,
-                        Actions = sf.allActions?.Count ?? 0
+                        Actions = sf.allActions?.Count ?? 0,
+                        Source = HgEngineOwnedFiles
+                            .Get(HgEngineOwnedFiles.ArchiveOf(DirNames.scripts), sf.fileID)?.RelPath ?? "",
                     });
                     _scriptFileById[sf.fileID] = sf;
                 }

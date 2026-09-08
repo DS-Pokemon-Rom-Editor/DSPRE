@@ -28,6 +28,13 @@
       </WrapPanel>
     </Border>
 
+    <Border DockPanel.Dock="Top" IsVisible="{Binding IsManagedByHgEngine}"
+            Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="8,4">
+      <TextBlock Text="{Binding ManagedNote}" FontSize="11" TextWrapping="Wrap"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </Border>
+
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
     </Border>

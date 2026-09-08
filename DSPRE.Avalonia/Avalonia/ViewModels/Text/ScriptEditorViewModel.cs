@@ -1,6 +1,7 @@
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using AvaloniaEdit.Document;
 using global::Avalonia.Controls;
 using global::Avalonia.Platform.Storage;
@@ -47,6 +48,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private bool _isReadOnly = true;
         private bool _suppress;
         private string _currentPath;
+        private readonly Dictionary<string, HgEngineOwnedFile> _managedByPath =
+            new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _scriptIdByPath = new(StringComparer.OrdinalIgnoreCase);
+        private int _rotomFileCount;
         private string _scriptText = "";
         private TextDocument _editorDocument;
         private bool _publishingScriptText;
@@ -193,9 +198,32 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public bool HasDiagnostics => Diagnostics.Count > 0;
         public bool HasUnsavedChanges => _dirty;
         public string SelectedScriptPath => _currentPath;
-        public string UnsavedChangesDescription => _currentPath == null
-            ? "Rotom script"
+        public string UnsavedChangesDescription =>
+            ManagedSource != null ? "hg-engine script " + ManagedSource.RelPath
+            : _currentPath == null ? "Rotom script"
             : "Rotom script " + DisplayPath(_currentPath);
+
+        /// <summary>Set while the selected entry is a script hg-engine assembles from its own source.</summary>
+        public HgEngineOwnedFile ManagedSource =>
+            _currentPath != null && _managedByPath.TryGetValue(_currentPath, out HgEngineOwnedFile f) ? f : null;
+
+        public bool IsManagedByHgEngine => ManagedSource != null;
+
+        public string ManagedNote => ManagedSource == null
+            ? ""
+            : $"hg-engine assembles script {ManagedSource.Id} from {ManagedSource.RelPath}. " +
+              "Editing it here edits that file, and Rotom does not read it.";
+
+        private async Task ShowManagedSaveNoticeAsync(HgEngineOwnedFile source)
+        {
+            if (HgEngineProject.SuppressManagedFileSaveNotice) return;
+
+            bool never = await DialogHelper.ShowNoticeWithOptOut(
+                $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
+                "compile, not just save the ROM, to see the change in game.",
+                "Managed by hg-engine");
+            if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
+        }
 
         public string StatusText
         {
@@ -311,7 +339,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 RefreshScriptList();
-                if (ScriptNames.Count == 0)
+                if (_rotomFileCount == 0)
                 {
                     StatusText = "Decompiling binary scripts to Rotom...";
                     await RunRequiredRotomCommand("decompile");
@@ -541,6 +569,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _saving = true;
             try
             {
+                if (ManagedSource != null)
+                {
+                    SaveSourceOnly(true);
+                    await ShowManagedSaveNoticeAsync(ManagedSource);
+                    return true;
+                }
+
                 SaveSourceOnly(true);
                 bool compiled = await CompileAsync(false);
                 if (!compiled) Dirty();   // source is on disk, but the binary wasn't regenerated: the editor is not fully saved
@@ -560,6 +595,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task<bool> CompileAsync(bool saveCurrentFile = true)
         {
             if (IsBusy || IsReadOnly) return false;
+            if (ManagedSource != null) return false;
 
             try
             {
@@ -799,6 +835,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 ScriptText = System.IO.File.ReadAllText(path);
                 SaveSourceOnly(true);
                 StatusText = "Imported into " + DisplayPath(_currentPath) + ".";
+                if (ManagedSource != null) await ShowManagedSaveNoticeAsync(ManagedSource);
             }
             catch (Exception ex)
             {
@@ -912,8 +949,38 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
 
             _sourceFiles.Sort(StringComparer.OrdinalIgnoreCase);
+            _rotomFileCount = _sourceFiles.Count;
+
+            _managedByPath.Clear();
+            _scriptIdByPath.Clear();
             foreach (string file in _sourceFiles)
-                ScriptNames.Add(DisplayPath(file));
+            {
+                if (int.TryParse(Path.GetFileNameWithoutExtension(file), out int rotomId))
+                    _scriptIdByPath[file] = rotomId;
+            }
+
+            var ownedScripts = HgEngineOwnedFiles
+                .FilesIn(HgEngineOwnedFiles.ArchiveOf(DirNames.scripts)).Values
+                .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
+                .OrderBy(f => f.Id);
+            foreach (HgEngineOwnedFile owned in ownedScripts)
+            {
+                // hg-engine assembles this script on every build, so the decompiled copy is not the file
+                // that ends up in the ROM and must not be offered as a second way to edit it.
+                _sourceFiles.RemoveAll(path =>
+                    _scriptIdByPath.TryGetValue(path, out int id) && id == owned.Id);
+
+                _managedByPath[owned.FullPath] = owned;
+                _scriptIdByPath[owned.FullPath] = owned.Id;
+                _sourceFiles.Add(owned.FullPath);
+            }
+
+            foreach (string file in _sourceFiles)
+            {
+                ScriptNames.Add(_managedByPath.TryGetValue(file, out HgEngineOwnedFile owned)
+                    ? $"{owned.RelPath}   [hg-engine]"
+                    : DisplayPath(file));
+            }
 
             SearchResults.Clear();
             SelectedSearchResult = null;
@@ -923,7 +990,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private int InitialSelection()
         {
             int exact = _sourceFiles.FindIndex(path =>
-                int.TryParse(Path.GetFileNameWithoutExtension(path), out int id) && id == InitialIndex);
+                _scriptIdByPath.TryGetValue(path, out int id) && id == InitialIndex);
             if (exact >= 0) return exact;
             return Math.Min(Math.Max(0, InitialIndex), _sourceFiles.Count - 1);
         }
@@ -933,8 +1000,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int max = -1;
             foreach (string file in _sourceFiles)
             {
-                if (int.TryParse(Path.GetFileNameWithoutExtension(file), out int id))
-                    max = Math.Max(max, id);
+                if (_scriptIdByPath.TryGetValue(file, out int id)) max = Math.Max(max, id);
             }
             return max + 1;
         }
@@ -958,9 +1024,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 OnPropertyChanged(nameof(HasDiagnostics));
             }
             IsReadOnly = false;
-            StatusText = "Loaded " + DisplayPath(_currentPath) + ".";
+            StatusText = ManagedSource != null
+                ? "Loaded " + ManagedSource.RelPath + " from the hg-engine checkout."
+                : "Loaded " + DisplayPath(_currentPath) + ".";
             OnPropertyChanged(nameof(SelectedScriptPath));
             OnPropertyChanged(nameof(UnsavedChangesDescription));
+            OnPropertyChanged(nameof(IsManagedByHgEngine));
+            OnPropertyChanged(nameof(ManagedNote));
+            if (ManagedSource != null)
+            {
+                Diagnostics.Clear();
+                SelectedDiagnostic = null;
+                DiagnosticsStatusText = "hg-engine source, not checked by Rotom.";
+                OnPropertyChanged(nameof(HasDiagnostics));
+                return;
+            }
             _ = OpenCurrentDocumentInLsp();
         }
 
@@ -1024,6 +1102,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private void ScheduleCurrentDocumentChangedToLsp()
         {
+            if (ManagedSource != null) return;
             CancelPendingDocumentChange();
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
