@@ -35,6 +35,13 @@
       </WrapPanel>
     </Border>
 
+    <Border DockPanel.Dock="Top" IsVisible="{Binding HasHgEngineNote}"
+            Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="8,4">
+      <TextBlock Text="{Binding ManagedNote}" FontSize="11" TextWrapping="Wrap"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </Border>
+
     <!-- ── Status bar ──────────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">

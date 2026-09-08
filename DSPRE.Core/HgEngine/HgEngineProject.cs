@@ -29,6 +29,9 @@ namespace DSPRE.HgEngine
 
         public static bool IsLinked { get; private set; }
         public static bool Enabled { get; private set; }
+
+        /// <summary>Per project: the reminder that an edited source file needs a compile has been turned off.</summary>
+        public static bool SuppressManagedFileSaveNotice { get; private set; }
         public static HgEngineShell Shell { get; private set; }
 
         /// <summary>The checkout root as Windows sees it: a \\wsl.localhost\... UNC path for a WSL
@@ -150,6 +153,7 @@ namespace DSPRE.HgEngine
                 else return;
 
                 Enabled = cfg.enabled;
+                SuppressManagedFileSaveNotice = cfg.suppressManagedFileSaveNotice;
                 IsLinked = true;
             }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.Refresh: " + ex.Message); }
@@ -224,6 +228,14 @@ namespace DSPRE.HgEngine
             Save();
         }
 
+        public static void SuppressManagedFileSaveNoticeForProject()
+        {
+            EnsureCurrent();
+            if (SuppressManagedFileSaveNotice) return;
+            SuppressManagedFileSaveNotice = true;
+            Save();
+        }
+
         public static void Unlink()
         {
             EnsureCurrent();
@@ -243,8 +255,10 @@ namespace DSPRE.HgEngine
             RepoRootWindows = null;
             WslDistro = null;
             MsysBashPath = DefaultMsysBash;
+            SuppressManagedFileSaveNotice = false;
             HgEngineSymbolTable.ClearCache();
             HgEngineFileCache.ClearCache();
+            HgEngineOwnedFiles.ClearCache();
             HgEngineSync.ClearSyncState();
         }
 
@@ -262,6 +276,7 @@ namespace DSPRE.HgEngine
                     msysBashPath = MsysBashPath,
                     repoPathPosix = RepoPathPosix,   // written for older DSPRE builds to still read
                     enabled = Enabled,
+                    suppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
                 };
                 File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
             }
@@ -312,6 +327,7 @@ namespace DSPRE.HgEngine
             public string msysBashPath { get; set; }
             public string repoPathPosix { get; set; }
             public bool enabled { get; set; }
+            public bool suppressManagedFileSaveNotice { get; set; }
         }
     }
 }

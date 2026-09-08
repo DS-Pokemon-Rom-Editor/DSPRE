@@ -19,6 +19,28 @@ namespace DSPRE.HgEngine
         public static bool RunFullBuild(Action<string> onOutputLine, out string stderr)
             => RunStreaming($"make -C '{HgEngineProject.RepoPathPosix}'", onOutputLine, out stderr);
 
+        /// <summary>
+        /// Runs hg-engine's text-archive validator over one source file. It reports problems on stdout
+        /// and still exits 0, so output is the result, not the exit code. False means it could not run.
+        /// </summary>
+        public static bool TryValidateTextArchive(string repoRelPath, out string problems)
+        {
+            problems = null;
+
+            string root = HgEngineProject.RepoRootWindows;
+            string validator = HgEngineOwnedFiles.TextValidatorRelPath(root);
+            string charmap = HgEngineOwnedFiles.CharMapRelPath(root);
+            if (validator == null || charmap == null) return false;
+
+            string command = $"cd '{HgEngineProject.RepoPathPosix}' && " +
+                $"python3 '{validator}' '{charmap}' '{repoRelPath}'";
+            if (!Run(command, out string stdout, out string stderr)) return false;
+
+            string reported = (stdout + Environment.NewLine + stderr).Trim();
+            if (reported.Length > 0) problems = reported;
+            return true;
+        }
+
         private static bool Run(string bashCommand, out string stdout, out string stderr)
         {
             stdout = ""; stderr = "";

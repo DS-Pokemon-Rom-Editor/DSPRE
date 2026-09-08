@@ -116,6 +116,12 @@ namespace DSPRE.Avalonia
         public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
             => ShowMsg(message, title, MsgButtons.YesNoCancel);
 
+        /// <summary>Notice the user can turn off. True when they asked not to see it again.</summary>
+        public static async Task<bool> ShowNoticeWithOptOut(string message, string title,
+                                                            string dismiss = "OK",
+                                                            string never = "Don't show this again")
+            => await ShowMsg(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
+
         /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
         public static Task<MsgResult> AskThreeWay(string message, string title,
                                                   string yes, string no, string cancel = "Cancel")
