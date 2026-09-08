@@ -292,9 +292,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // hg-engine: frame-cycling comes from data/SpriteOffsets.c's .frontFrames/.backFrames instead,
         // with independent sequences for front and back.
-        private System.Collections.Generic.List<(int Frame, int Duration)> _hgeFrontSteps, _hgeBackSteps;
+        private System.Collections.Generic.List<HgEngineSpriteOffsets.SpriteFrameSlot> _hgeFrontSlots, _hgeBackSlots;
+        private readonly HgEngineSpriteFramePlayer _hgeFront = new HgEngineSpriteFramePlayer();
+        private readonly HgEngineSpriteFramePlayer _hgeBack = new HgEngineSpriteFramePlayer();
         private int _hgeFrontFrame, _hgeBackFrame;
-        private int _hgeFrontStepIndex = -1, _hgeFrontCountdown, _hgeBackStepIndex = -1, _hgeBackCountdown;
+        private int _hgeFrontShift, _hgeBackShift;
+        private int _hgeReplayCountdown;
 
         private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
 
@@ -396,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private System.Collections.Generic.List<int> ActivePatternFrames(bool front)
         {
             System.Collections.Generic.IEnumerable<int> raw = HgEngineProject.IsActive
-                ? (front ? _hgeFrontSteps : _hgeBackSteps)?.Select(s => s.Frame) ?? Enumerable.Empty<int>()
+                ? HgEngineSpriteFramePlayer.ReachableFrames(front ? _hgeFrontSlots : _hgeBackSlots)
                 : AnimSteps.Select(s => s.Frame);
             var visited = raw.Select(ClampFrame).Distinct().ToList();
             if (visited.Count == 0) visited.Add(0);   // no pattern data -> AnimTick holds a static frame 0
@@ -468,8 +471,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private double FrontTopFor(int h) => 10 - _spriteY + (HeightsActive ? h : 0);
         private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
 
-        public double EnemyLeft => 152;
-        public double PlayerLeft => 23;
+        // A frame's horizontalShift moves the sprite and its shadow together (both read transforms.xOffset).
+        public double EnemyLeft => 152 + _hgeFrontShift;
+        public double PlayerLeft => 23 + _hgeBackShift;
         public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale));
         public double PlayerTop => BackTopFor(ActBackH(ShowFemale));
         public double EnemyTopM => FrontTopFor(ActFrontH(false));
@@ -480,12 +484,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool ShadowSmallVisible => HasSpriteData && _shadowSize == 1;
         public bool ShadowMediumVisible => HasSpriteData && _shadowSize == 2;
         public bool ShadowLargeVisible => HasSpriteData && _shadowSize == 3;
-        public double ShadowSmallLeft => 179 + _shadowX;
-        public double ShadowMediumLeft => 174 + _shadowX;
-        public double ShadowLargeLeft => 167 + _shadowX;
+        public double ShadowSmallLeft => 179 + _shadowX + _hgeFrontShift;
+        public double ShadowMediumLeft => 174 + _shadowX + _hgeFrontShift;
+        public double ShadowLargeLeft => 167 + _shadowX + _hgeFrontShift;
 
         private void RaiseLayout()
         {
+            OnPropertyChanged(nameof(EnemyLeft)); OnPropertyChanged(nameof(PlayerLeft));
             OnPropertyChanged(nameof(EnemyTop)); OnPropertyChanged(nameof(PlayerTop));
             OnPropertyChanged(nameof(EnemyTopM)); OnPropertyChanged(nameof(EnemyTopF)); OnPropertyChanged(nameof(PlayerTopM)); OnPropertyChanged(nameof(PlayerTopF));
             OnPropertyChanged(nameof(ShadowSmallVisible)); OnPropertyChanged(nameof(ShadowMediumVisible)); OnPropertyChanged(nameof(ShadowLargeVisible));
@@ -927,23 +932,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RestartAnimPreview();
         }
 
-        // Same "stop at the first negative frameNo" semantics as HgEngineSpriteOffsets.ReadFrameSteps,
-        // just re-derived from the live-editable entries instead of a fresh file read.
+        // The player needs the whole SpriteFrame[10] array, not the prefix before the first negative slot:
+        // a frameNo below -1 is a counted jump, and the -1 terminator is what ends the run on frame 0.
         private void RecomputeHgeSteps()
         {
-            _hgeFrontSteps = StepsFrom(FrontFrameEntries);
-            _hgeBackSteps = StepsFrom(BackFrameEntries);
-        }
-
-        private static List<(int Frame, int Duration)> StepsFrom(ObservableCollection<SpriteFrameEntry> entries)
-        {
-            var steps = new List<(int, int)>();
-            foreach (var e in entries)
-            {
-                if (e.FrameNo < 0) break;
-                steps.Add((e.FrameNo, e.Duration));
-            }
-            return steps;
+            _hgeFrontSlots = ToSlotData(FrontFrameEntries);
+            _hgeBackSlots = ToSlotData(BackFrameEntries);
+            RestartHgeFrames();
         }
 
         private void SaveFrames()
@@ -1024,6 +1019,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void ToggleProgramAnim()
         {
             if (_progPlaying) { StopProgramAnim(); return; }
+            RestartHgeFrames();   // the send-out frame run starts with the program animation, not independently
             EnsureAnimDefsNarc();
             _frontDelay = Math.Max(0, _animFrontWait);
             _prog = LoadProgram(_animFrontProg);
@@ -1247,7 +1243,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadSpriteData(int id)
         {
             HasSpriteData = false; HasMovementType = false; HasHeights = false;
-            _hgeFrontSteps = null; _hgeBackSteps = null;
+            _hgeFrontSlots = null; _hgeBackSlots = null;
+            RestartHgeFrames();
             if (!IsAvailable || id < 0) return;
             try
             {
@@ -1547,8 +1544,31 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RestartAnimPreview()
         {
             _patIndex = -1; _patCountdown = 0;
-            _hgeFrontStepIndex = -1; _hgeFrontCountdown = 0;
-            _hgeBackStepIndex = -1; _hgeBackCountdown = 0;
+            RestartHgeFrames();
+        }
+
+        /// <summary>Replays the idle run from slot 0, the way PokemonSprite_InitAnim does on every send-out.</summary>
+        private void RestartHgeFrames()
+        {
+            _hgeReplayCountdown = 0;
+            _hgeFront.Start(_hgeFrontSlots);
+            _hgeBack.Start(_hgeBackSlots);
+            ApplyHgeFrames();
+        }
+
+        private void ApplyHgeFrames()
+        {
+            int front = ClampFrame(_hgeFront.SpriteFrame), back = ClampFrame(_hgeBack.SpriteFrame);
+            if (front != _hgeFrontFrame || back != _hgeBackFrame)
+            {
+                _hgeFrontFrame = front; _hgeBackFrame = back;
+                RaiseSprites();
+            }
+            if (_hgeFrontShift != _hgeFront.HorizontalShift || _hgeBackShift != _hgeBack.HorizontalShift)
+            {
+                _hgeFrontShift = _hgeFront.HorizontalShift; _hgeBackShift = _hgeBack.HorizontalShift;
+                RaiseLayout();
+            }
         }
         private bool _framePaused;
         public bool FramePaused { get => _framePaused; set => Set(ref _framePaused, value); }
@@ -1558,12 +1578,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             TickProgramAnim();   // program-animation motion (independent of the frame/pattern loop)
             if (_framePaused) return;   // frame (pattern) loop paused for inspection
 
-            if (HgEngineProject.IsActive)
-            {
-                TickHgeFrames(_hgeFrontSteps, ref _hgeFrontStepIndex, ref _hgeFrontCountdown, ref _hgeFrontFrame);
-                TickHgeFrames(_hgeBackSteps, ref _hgeBackStepIndex, ref _hgeBackCountdown, ref _hgeBackFrame);
-                return;
-            }
+            if (HgEngineProject.IsActive) { TickHgeFrames(); return; }
 
             if (AnimSteps.Count == 0)
             {
@@ -1579,21 +1594,22 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (newFrame != _frame) { _frame = newFrame; RaiseSprites(); }
         }
 
-        // No steps means no real animation for this species; stay on frame 0.
-        private void TickHgeFrames(System.Collections.Generic.List<(int Frame, int Duration)> steps, ref int stepIndex, ref int countdown, ref int frame)
+        /// <summary>Gap between replays. The game fires this run once per send-out; the preview repeats it so
+        /// the editor still shows the animation while browsing, with each pass itself faithful.</summary>
+        private const int HgeReplayGapTicks = 45;
+
+        // Durations here are game frames and the timer already runs at 60 fps, so no wait-unit scaling
+        // (unlike the vanilla pokeanm path, whose waits are in 1/30s units).
+        private void TickHgeFrames()
         {
-            if (steps == null || steps.Count == 0)
+            if (!_hgeFront.Active && !_hgeBack.Active)
             {
-                if (frame != 0) { frame = 0; RaiseSprites(); }
+                if (_hgeReplayCountdown++ >= HgeReplayGapTicks) RestartHgeFrames();
                 return;
             }
-            if (--countdown > 0) return;
-            stepIndex = (stepIndex + 1) % steps.Count;
-            var step = steps[stepIndex];
-            countdown = Math.Max(1, step.Duration) * PatternTicksPerWaitUnit;
-            int max = MaxFrameIndex;
-            int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
-            if (newFrame != frame) { frame = newFrame; RaiseSprites(); }
+            _hgeFront.Tick();
+            _hgeBack.Tick();
+            ApplyHgeFrames();
         }
 
         public void LoadMon(int id)

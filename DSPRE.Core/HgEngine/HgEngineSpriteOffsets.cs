@@ -30,21 +30,6 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>Reads a SpriteFrame[10] array (.frontFrames or .backFrames) into (frameNo, duration)
-        /// steps, stopping at the first frameNo &lt; 0 terminator.</summary>
-        public static List<(int Frame, int Duration)> ReadFrameSteps(HgEngineSourceBlock block, string frameArrayField)
-        {
-            var steps = new List<(int, int)>();
-            var elements = block.GetArrayElements(new[] { FieldPathSegment.Field(frameArrayField) });
-            foreach (var el in elements)
-            {
-                if (!el.TryGetInt(new[] { FieldPathSegment.Field("frameNo") }, out int frameNo) || frameNo < 0) break;
-                el.TryGetInt(new[] { FieldPathSegment.Field("duration") }, out int duration);
-                steps.Add((frameNo, duration));
-            }
-            return steps;
-        }
-
         /// <summary>One SpriteFrame struct: which raw sprite frame to show, how long, and its per-frame
         /// pixel shift. A frameNo of -1 means "unused" (the file always writes all 10 slots explicitly).</summary>
         public readonly struct SpriteFrameSlot
@@ -63,8 +48,8 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Reads all 10 elements of a SpriteFrame[10] array (.frontFrames or .backFrames) verbatim,
-        /// for full-fidelity editing. Unlike <see cref="ReadFrameSteps"/>, this does not stop at the first
-        /// frameNo &lt; 0 terminator, since an editor needs every slot including the trailing unused ones.</summary>
+        /// for full-fidelity editing. Every slot matters to both the editor and playback: a frameNo below
+        /// -1 is a counted jump and -1 itself ends the run, so a truncated read misreads the animation.</summary>
         public static List<SpriteFrameSlot> ReadFrameSlots(HgEngineSourceBlock block, string frameArrayField)
         {
             var slots = new List<SpriteFrameSlot>();

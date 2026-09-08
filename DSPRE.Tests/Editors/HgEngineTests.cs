@@ -262,7 +262,7 @@ const SafariZoneAreaEncounterFile __data[] = {
             var block = new HgEngineSourceBlock(TwoSlotFrameArray(".frontFrames"));
             var slots = HgEngineSpriteOffsets.ReadFrameSlots(block, "frontFrames");
 
-            Assert.Equal(3, slots.Count);   // unlike ReadFrameSteps, doesn't stop at the first frameNo < 0
+            Assert.Equal(3, slots.Count);   // reads through the terminator: every slot is needed to play the run
             Assert.Equal(0, slots[0].FrameNo); Assert.Equal(4, slots[0].Duration);
             Assert.Equal(1, slots[1].FrameNo); Assert.Equal(10, slots[1].Duration);
             Assert.Equal(-2, slots[1].HorizontalShift); Assert.Equal(3, slots[1].VerticalShift);
