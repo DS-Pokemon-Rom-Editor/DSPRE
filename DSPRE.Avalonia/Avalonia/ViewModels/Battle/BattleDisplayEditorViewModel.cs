@@ -1541,12 +1541,49 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
         public void Detach() => _animTimer?.Stop();
 
-        // pokeanm's "wait" field is in 1/30s units; the timer ticks at 60fps, so each wait unit is 2 ticks.
-        private const int PatternTicksPerWaitUnit = 2;
+        // How long one wait/duration unit lasts, in 60 fps preview ticks. hg-engine's SpriteFrame
+        // durations are counted once per rendered frame, so a unit is 1/60 s there. Vanilla pokeanm's
+        // "wait" has long been read as 1/30 s, but that was never verified against the game, so the
+        // reading is exposed rather than baked in.
+        public ObservableCollection<string> FrameTimingOptions { get; } =
+            new ObservableCollection<string> { "Auto", "1/60 s per unit", "1/30 s per unit" };
+
+        /// <summary>0 auto, 1 forces 1/60 s, 2 forces 1/30 s. Remembered between sessions and
+        /// preview-only: it never changes what is written to the ROM or to hg-engine source.</summary>
+        public int FrameTimingIndex
+        {
+            get => Math.Clamp(DSPRE.SettingsManager.Settings?.battlePreviewWaitUnit ?? 0, 0, 2);
+            set
+            {
+                int v = Math.Clamp(value, 0, 2);
+                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.battlePreviewWaitUnit == v) return;
+                DSPRE.SettingsManager.Settings.battlePreviewWaitUnit = v;
+                try { DSPRE.SettingsManager.Save(); } catch { }
+                OnPropertyChanged(nameof(FrameTimingIndex));
+                OnPropertyChanged(nameof(FrameTimingNote));
+                _waitUnitTick = 0;
+                RestartAnimPreview();
+            }
+        }
+
+        private int TicksPerWaitUnit => FrameTimingIndex switch
+        {
+            1 => 1,
+            2 => 2,
+            _ => HgEngineProject.IsActive ? 1 : 2,
+        };
+
+        public string FrameTimingNote => FrameTimingIndex != 0
+            ? (TicksPerWaitUnit == 1 ? "Forced to 1/60 s." : "Forced to 1/30 s.")
+            : (HgEngineProject.IsActive
+                ? "Auto: 1/60 s, matching hg-engine's per-frame duration count."
+                : "Auto: 1/30 s, the long-standing reading of pokeanm's wait field.");
+
+        private int _waitUnitTick;
         private int _patIndex = -1, _patCountdown;
         private void RestartAnimPreview()
         {
-            _patIndex = -1; _patCountdown = 0;
+            _patIndex = -1; _patCountdown = 0; _waitUnitTick = 0;
             RestartHgeFrames();
         }
 
@@ -1581,6 +1618,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             TickProgramAnim();   // program-animation motion (independent of the frame/pattern loop)
             if (_framePaused) return;   // frame (pattern) loop paused for inspection
 
+            // The timer runs at 60 fps; a 1/30 s wait unit advances the frame run every second tick.
+            if (++_waitUnitTick < TicksPerWaitUnit) return;
+            _waitUnitTick = 0;
+
             if (HgEngineProject.IsActive) { TickHgeFrames(); return; }
 
             if (AnimSteps.Count == 0)
@@ -1591,7 +1632,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (--_patCountdown > 0) return;
             _patIndex = (_patIndex + 1) % AnimSteps.Count;
             var step = AnimSteps[_patIndex];
-            _patCountdown = Math.Max(1, step.Wait) * PatternTicksPerWaitUnit;
+            _patCountdown = Math.Max(1, step.Wait);   // in wait units; the caller only gets here once per unit
             int max = MaxFrameIndex;
             int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
             if (newFrame != _frame) { _frame = newFrame; RaiseSprites(); }
@@ -1601,8 +1642,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// the editor still shows the animation while browsing, with each pass itself faithful.</summary>
         private const int HgeReplayGapTicks = 45;
 
-        // Durations here are game frames and the timer already runs at 60 fps, so no wait-unit scaling
-        // (unlike the vanilla pokeanm path, whose waits are in 1/30s units).
+        // One call per wait unit, so a duration counts units directly; AnimTick owns the 60 fps to
+        // wait-unit conversion for both paths (see FrameTimingIndex).
         private void TickHgeFrames()
         {
             if (!_hgeFront.Active && !_hgeBack.Active)

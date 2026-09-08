@@ -22,6 +22,11 @@ namespace DSPRE
         // Which of the move-animation editor's three ways of reading a script was last used:
         // 0 guided, 1 script, 2 raw.
         public int moveAnimationViewMode { get; set; } = 0;
+
+        /// <summary>Battle Display preview only: how long one sprite-frame wait/duration unit lasts.
+        /// 0 auto (hg-engine durations are 60 Hz frames, vanilla pokeanm waits are read as 1/30 s),
+        /// 1 forces 1/60 s, 2 forces 1/30 s. Never written to the ROM or to hg-engine source.</summary>
+        public int battlePreviewWaitUnit { get; set; } = 0;
         // Flat 2D event view, off by default so the 3D scene stays the first impression.
         public bool eventEditorFlat2D { get; set; } = false;
         public bool mapEditorFlat2D { get; set; } = false;
