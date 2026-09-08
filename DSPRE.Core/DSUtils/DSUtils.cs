@@ -107,6 +107,9 @@ namespace DSPRE {
         }
 
         public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int indexFirstByteToWrite = 0, int? indexLastByteToWrite = null, FileMode fmode = FileMode.OpenOrCreate) {
+            int length = indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite;
+            if (HgEngineWriteGuard.Refuses(filepath, writeAt, length)) return;
+
             using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode)) {
                 writer.Write(toOutput, indexFirstByteToWrite, indexLastByteToWrite is null ? toOutput.Length - indexFirstByteToWrite : (int)indexLastByteToWrite);
             }

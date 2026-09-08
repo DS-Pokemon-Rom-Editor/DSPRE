@@ -78,6 +78,11 @@ namespace DSPRE
                     DSPRE.RomInfo.ShowWarning = (msg, title) =>
                         global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = DSPRE.Avalonia.DialogHelper.ShowError(msg, title));
 
+                    // A write hg-engine's build would undo is refused rather than silently dropped.
+                    DSPRE.HgEngine.HgEngineWriteGuard.OnRefused = msg =>
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                            () => _ = DSPRE.Avalonia.DialogHelper.ShowError(msg, "Built by hg-engine"));
+
                     // Core (WinForms-free ROMFiles/DSUtils) user messages + save picker → native Avalonia dialogs.
                     DSPRE.Avalonia.CoreDialogs.Install();
 

@@ -46,7 +46,8 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngineProject.IsActive)
             {
-                return Refuse("Adding trainers to hg-engine source-backed projects is not implemented.");
+                return Refuse("Adding and removing trainers is not implemented for hg-engine projects: the "
+                    + "roster and its shared trainer script are both built from source.");
             }
 
             if (!TrainerScriptDescriptor.TryFor(gameFamily, out TrainerScriptDescriptor scriptDescriptor))

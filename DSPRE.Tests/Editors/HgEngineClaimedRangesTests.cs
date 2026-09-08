@@ -122,6 +122,18 @@ namespace DSPRE.Tests
             Assert.False(claim.Overlaps(0x0FC, 4));  // ends just before
         }
 
+        [Theory]
+        [InlineData("arm9.bin", true, -1)]
+        [InlineData("overlay_0026.bin", true, 26)]
+        [InlineData("ov026.bin", true, 26)]
+        [InlineData("overarm9.bin", false, 0)]
+        [InlineData("a027", false, 0)]
+        public void OnlyArm9AndOverlaysAreGuarded(string fileName, bool identified, int expected)
+        {
+            Assert.Equal(identified, HgEngineWriteGuard.TryIdentify(fileName, out int overlay));
+            if (identified) Assert.Equal(expected, overlay);
+        }
+
         [SkippableFact]
         public void TheRealListsLandInsideTheBinariesTheyName()
         {
