@@ -465,6 +465,15 @@ namespace DSPRE.Avalonia.Views.Shell
                         // packed form BEFORE building, or the build just packs whatever was already on
                         // disk (e.g. patches that only ever touch the unpacked side, like the synthetic
                         // overlay used by ARM9 Expansion/Building Rotation, would silently vanish).
+                        // Packing an hg-engine checkout's own tree is the build's job, and DSPRE has no
+                        // header or banner of its own to pack it with.
+                        if (RomInfo.IsHgEngineBaseProject)
+                        {
+                            error = "This project is an hg-engine checkout's own extracted ROM. "
+                                  + "Compile ROM builds it; Save ROM cannot.";
+                            return false;
+                        }
+
                         if (!TextArchive.BuildRequiredBins()) { error = "Rebuilding text archives failed."; return false; }
                         if (!ScriptFile.BuildRequiredBins()) { error = "Rebuilding script files failed."; return false; }
 

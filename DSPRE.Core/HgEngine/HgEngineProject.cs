@@ -89,7 +89,20 @@ namespace DSPRE.HgEngine
         /// <summary>True when the path is inside WSL, so the shell is settled and nothing needs asking.</summary>
         public static bool IsWslPath(string path) => TryParseWslUncPath(path, out _, out _);
 
-        private static string ConfigPath => string.IsNullOrEmpty(workDir) ? null : Path.Combine(workDir, "dspre_hgengine.json");
+        // A base tree is deleted whole and re-extracted whenever rom.nds changes, so the link cannot live
+        // inside it; it belongs beside the checkout that owns it.
+        private static string ConfigPath =>
+            string.IsNullOrEmpty(workDir) ? null
+            : Path.Combine(RomInfo.IsHgEngineBaseProject ? CheckoutOfBaseProject() ?? workDir : workDir,
+                "dspre_hgengine.json");
+
+        /// <summary>The checkout a base-tree project belongs to, which is simply its parent.</summary>
+        internal static string CheckoutOfBaseProject()
+        {
+            if (!RomInfo.IsHgEngineBaseProject || string.IsNullOrEmpty(workDir)) return null;
+            try { return Directory.GetParent(workDir.TrimEnd(Path.DirectorySeparatorChar))?.FullName; }
+            catch (Exception ex) { AppLogger.Error("HgEngineProject.CheckoutOfBaseProject: " + ex.Message); return null; }
+        }
         private static string _loadedFor;
 
         /// <summary>(Re)loads the link state for the currently open project. Call after a ROM is opened/closed.</summary>
@@ -97,6 +110,17 @@ namespace DSPRE.HgEngine
         {
             Reset();
             _loadedFor = workDir;
+
+            // Opening a checkout's own tree says which checkout it is, so no config is needed for the link.
+            string implied = CheckoutOfBaseProject();
+            if (implied != null && LooksLikeCheckout(implied))
+            {
+                RepoRootWindows = implied;
+                Shell = IsWslPath(implied) ? HgEngineShell.Wsl : HgEngineShell.Msys2;
+                if (TryParseWslUncPath(implied, out string impliedDistro, out _)) WslDistro = impliedDistro;
+                IsLinked = true;
+                Enabled = true;
+            }
 
             string path = ConfigPath;
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;

@@ -273,8 +273,9 @@ namespace DSPRE.Avalonia.Data
                     GameFamilies.Plat => "pl_sound_data.sdat",
                     _ => "sound_data.sdat",
                 };
-                // The ROM's own filesystem sits one level in, under "files" or "data" depending on layout.
-                foreach (string root in new[] { "files", "data" })
+                // The ROM's own filesystem sits one level in, named for the layout: ds-rom uses files,
+                // a DSPRE ndstool project data, and an hg-engine checkout's own tree root.
+                foreach (string root in new[] { "files", "data", "root" })
                 {
                     string path = Path.Combine(workDir, root, "data", "sound", name);
                     if (File.Exists(path)) return path;

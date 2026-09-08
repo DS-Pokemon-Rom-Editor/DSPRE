@@ -21,6 +21,12 @@ namespace DSPRE
         private static string customNarcFolderName;
 
         public static bool IsDsRomProject { get; internal set; }
+
+        /// <summary>
+        /// The open project is an hg-engine checkout's own extracted tree rather than a DSPRE project.
+        /// It is the flat ndstool shape with its own names, and the build owns packing it.
+        /// </summary>
+        public static bool IsHgEngineBaseProject { get; internal set; }
         public static bool isHGE { get; private set; }
 
         // UI-agnostic warning surface. The host sets this (WinForms → MessageBox, Avalonia → dialog); the default
@@ -295,18 +301,19 @@ namespace DSPRE
 
             string path = Path.GetFullPath(romFolderName);
 
-            IsDsRomProject = DSUtils.GetFolderType(romFolderName) == 0;
+            int folderType = DSUtils.GetFolderType(romFolderName);
+            IsDsRomProject = folderType == 0;
+            IsHgEngineBaseProject = folderType == 2;
             
             if (IsDsRomProject)
             {
                 dataFolderName = "files";
-                customNarcFolderName = "files/zcustom";
             }
             else
             {
-                dataFolderName = "data";
-                customNarcFolderName = "data/zcustom";
+                dataFolderName = IsHgEngineBaseProject ? "root" : "data";
             }
+            customNarcFolderName = dataFolderName + "/zcustom";
 
             workDir = path + Path.DirectorySeparatorChar; // Trailing separator is load-bearing: callers concatenate onto workDir directly
             RefreshRotomProjectState();
@@ -326,8 +333,8 @@ namespace DSPRE
             {
                 arm9Path = Path.Combine(workDir, @"arm9.bin");
                 arm7Path = Path.Combine(workDir, @"arm7.bin");
-                overlayTablePath = Path.Combine(workDir, @"y9.bin");
-                y7Path = Path.Combine(workDir, @"y7.bin");
+                overlayTablePath = Path.Combine(workDir, IsHgEngineBaseProject ? "overarm9.bin" : "y9.bin");
+                y7Path = Path.Combine(workDir, IsHgEngineBaseProject ? "overarm7.bin" : "y7.bin");
                 dataPath = Path.Combine(workDir, dataFolderName);
                 overlayPath = Path.Combine(workDir, @"overlay");
                 bannerPath = Path.Combine(workDir, @"banner.bin");

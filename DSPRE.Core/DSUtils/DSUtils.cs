@@ -734,7 +734,9 @@ namespace DSPRE {
             }
             else if (File.Exists(headerPath))
             {
-                return 1; // This is a ndstool folder
+                // hg-engine extracts to the same shape but names the filesystem root/ rather than data/,
+                // and its overlay tables overarm9/overarm7 rather than y9/y7.
+                return Directory.Exists(Path.Combine(folderPath, "root")) ? 2 : 1;
             }
 
             return -1; // Not a valid dsrom or ndstool folder
