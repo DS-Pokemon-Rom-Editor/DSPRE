@@ -1565,7 +1565,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 DSPRE.SettingsManager.Settings.battlePreviewWaitUnit = v;
                 try { DSPRE.SettingsManager.Save(); } catch { }
                 OnPropertyChanged(nameof(FrameTimingIndex));
-                OnPropertyChanged(nameof(FrameTimingNote));
                 _waitUnitTick = 0;
                 RestartAnimPreview();
             }
@@ -1577,12 +1576,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             2 => 2,
             _ => HgEngineProject.IsActive ? 1 : 2,
         };
-
-        public string FrameTimingNote => FrameTimingIndex != 0
-            ? (TicksPerWaitUnit == 1 ? "Forced to 1/60 s." : "Forced to 1/30 s.")
-            : (HgEngineProject.IsActive
-                ? "Auto: 1/60 s, matching hg-engine's per-frame duration count."
-                : "Auto: 1/30 s, the long-standing reading of pokeanm's wait field.");
 
         private int _waitUnitTick;
         private int _patIndex = -1, _patCountdown;

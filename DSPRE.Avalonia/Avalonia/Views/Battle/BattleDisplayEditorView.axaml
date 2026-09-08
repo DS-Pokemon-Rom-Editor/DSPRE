@@ -41,8 +41,7 @@
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
               <TextBlock Text="Frame timing" VerticalAlignment="Center"/>
               <ComboBox ItemsSource="{Binding FrameTimingOptions}" SelectedIndex="{Binding FrameTimingIndex}" Width="150"
-                        ToolTip.Tip="How long one frame wait/duration unit lasts in the preview. Affects playback speed only, never what is saved."/>
-              <TextBlock Text="{Binding FrameTimingNote}" VerticalAlignment="Center" Opacity="0.7"/>
+                        ToolTip.Tip="How long one frame wait/duration unit lasts in the preview. Auto follows the project: 1/60 s on hg-engine, 1/30 s otherwise. Affects playback speed only, never what is saved."/>
             </StackPanel>
           </StackPanel>
 
