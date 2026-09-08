@@ -47,6 +47,9 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
+            if (AvaloniaEditorLauncher.BlockedForHgeArchive("The Battle Message Editor",
+                RomInfo.DirNames.trainerTextTable)) return;
+
             int trainerId = VM?.SelectedTrainerIndex ?? 0;
             new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).ShowManaged();
         }

@@ -115,6 +115,7 @@ namespace DSPRE.Avalonia.Data
             var sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
+            if (RefusedByHgEngine(sdatPath, out problem)) return false;
 
             int arc = CryWaveArchive(species);
             if (arc < 0) { problem = "This ROM has no cry for that Pokemon to replace."; return false; }
@@ -220,6 +221,7 @@ namespace DSPRE.Avalonia.Data
             var sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
+            if (RefusedByHgEngine(sdatPath, out problem)) return false;
             if (waveArc < 0 || waveArc >= sdat.WaveArcs.Count || sdat.WaveArcs[waveArc] == null)
             { problem = "There is no such set of sounds in this ROM."; return false; }
 
@@ -259,6 +261,19 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
 
             Reset();
+            return true;
+        }
+
+        /// <summary>hg-engine rebuilds the sound archive from its own cries, so an edit here would not last.</summary>
+        private static bool RefusedByHgEngine(string sdatPath, out string problem)
+        {
+            problem = null;
+            string archive = DSPRE.HgEngine.HgEngineOwnedFiles.ArchiveOfPath(sdatPath);
+            var rule = DSPRE.HgEngine.HgEngineOwnedFiles.RuleForArchive(archive);
+            if (rule == null || !rule.ReplacesWholeArchive) return false;
+
+            problem = $"hg-engine builds the {rule.Label} from {rule.SourceDirRelPath} on every build, "
+                    + "so anything changed here is overwritten the next time you compile.";
             return true;
         }
 

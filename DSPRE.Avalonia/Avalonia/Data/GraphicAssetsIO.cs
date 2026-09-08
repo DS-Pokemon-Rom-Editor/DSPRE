@@ -1,4 +1,5 @@
 using System;
+using DSPRE.HgEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -338,6 +339,9 @@ namespace DSPRE.Avalonia.Data
         {
             note = null;
             if (a.CannotImportBecause != null) return a.CannotImportBecause;
+
+            string builtByHgEngine = HgEngineSourceAssets.CannotImportBecause(a.Dir, index);
+            if (builtByHgEngine != null) return builtByHgEngine;
 
             // A whole picture put together from pieces goes back through the pieces, not straight into
             // the file: an assembled sprite through its layout, a background through its arrangement.

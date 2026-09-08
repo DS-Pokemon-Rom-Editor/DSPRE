@@ -44,6 +44,23 @@ namespace DSPRE.Avalonia
             return true;
         }
 
+        /// <summary>
+        /// Refuses an editor whose whole archive hg-engine rebuilds from source. Silent for a project
+        /// with no checkout linked, and for archives it only overwrites part of.
+        /// </summary>
+        internal static bool BlockedForHgeArchive(string editorName, params DirNames[] dirs)
+        {
+            foreach (DirNames dir in dirs)
+            {
+                string why = HgEngineOwnedFiles.RefusalFor(dir);
+                if (why == null) continue;
+
+                AppMessages.Info($"{editorName} is not available for this project. {why}", "Built by hg-engine");
+                return true;
+            }
+            return false;
+        }
+
         /// <summary>What the busy overlay says under the title while an archive is being unpacked.</summary>
         private const string UnpackHint =
             "First-time opens unpack the ROM's data and can take a while, especially for a WSL-hosted project.";
@@ -166,6 +183,9 @@ namespace DSPRE.Avalonia
         public static void OpenBattleScriptEditor(int archive = 0, int entryIndex = 0)
         {
             if (!IsRomLoaded) return;
+            // waza/be/sub and the WEST animations are edited from the checkout's own sources instead of
+            // being refused; only the particle archive has no source view yet.
+            if (BlockedForHgeArchive("The Battle Script Editor", DirNames.wazaParticle)) return;
             var vm = new BattleScriptEditorViewModel();
             var view = new BattleScriptEditorView { DataContext = vm };
             if (vm.IsAvailable)
@@ -929,6 +949,8 @@ namespace DSPRE.Avalonia
 
         public static void OpenFontEditor()
         {
+            if (BlockedForHgeArchive("The Font Editor", DirNames.fonts)) return;
+
             try
             {
                 new Views.Graphics.FontEditorView().ShowManaged();
@@ -961,6 +983,8 @@ namespace DSPRE.Avalonia
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("MartEditorView"), "Mart Editor");
                 return;
             }
+            if (BlockedForHgeArchive("The Battle Screen Editor",
+                DirNames.battleObj, DirNames.windowFrames, DirNames.fonts)) return;
 
             try
             {
