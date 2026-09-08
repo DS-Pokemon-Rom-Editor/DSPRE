@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 
 using DSPRE.Avalonia.Data;
@@ -42,7 +43,27 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedIndex
         {
             get => _selectedIndex;
-            set { if (Set(ref _selectedIndex, value)) LoadEntry(value); }
+            set
+            {
+                if (value == _selectedIndex) return;
+                if (HasUnsavedChanges && value >= 0 && _selectedIndex >= 0)
+                {
+                    // Snap the list back to the entry still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedIndex));
+                    _ = SwitchEntryAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedIndex, value)) LoadEntry(value);
+            }
+        }
+
+        private async Task SwitchEntryAsync(int requested)
+        {
+            // Dirty here means edited sprite files, not one record, so Discard drops them all. The
+            // guard names that through UnsavedChangesDescription, which reports the count.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "sprite entry")) return;
+            if (Set(ref _selectedIndex, requested)) LoadEntry(requested);
         }
 
         private Bitmap _currentImage;

@@ -209,7 +209,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int SelectedClassIndex
         {
             get => _trClassID;
-            set { if (Set(ref _trClassID, value)) Load(value); }
+            set
+            {
+                if (value == _trClassID) return;
+                if (HasUnsavedChanges && value >= 0 && _trClassID >= 0)
+                {
+                    // Snap the list back to the class still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedClassIndex));
+                    _ = SwitchClassAsync(requested);
+                    return;
+                }
+                if (Set(ref _trClassID, value)) Load(value);
+            }
+        }
+
+        private async Task SwitchClassAsync(int requested)
+        {
+            // Covers both halves of this editor's dirty state: the painted sprite and the animation
+            // JSON, since HasUnsavedChanges is the OR of the two.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "trainer class")) return;
+            if (Set(ref _trClassID, requested)) Load(requested);
         }
 
         public ObservableCollection<PaletteSwatchViewModel> PaletteSwatches { get; } = new();

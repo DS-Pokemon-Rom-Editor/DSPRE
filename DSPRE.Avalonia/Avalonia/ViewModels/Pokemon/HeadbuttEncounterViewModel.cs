@@ -86,7 +86,30 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool IsAvailable { get => _available; private set => Set(ref _available, value); }
 
         private int _selFile = -1;
-        public int SelectedFileIndex { get => _selFile; set { if (Set(ref _selFile, value) && !_suppress && value >= 0) LoadFile(value); } }
+        public int SelectedFileIndex
+        {
+            get => _selFile;
+            set
+            {
+                if (value == _selFile) return;
+                if (_dirty && !_suppress && value >= 0 && _selFile >= 0)
+                {
+                    // Snap the list back to the file still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    _ = SwitchFileAsync(requested);
+                    return;
+                }
+                if (Set(ref _selFile, value) && !_suppress && value >= 0) LoadFile(value);
+            }
+        }
+
+        private async Task SwitchFileAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "headbutt file")) return;
+            SetClean();
+            if (Set(ref _selFile, requested)) LoadFile(requested);
+        }
 
         private bool _specialGroupActive;
         private int _selGroup = -1;

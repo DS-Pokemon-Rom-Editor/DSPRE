@@ -104,7 +104,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int SelectedTrainerIndex
         {
             get => _selectedTrainerIndex;
-            set { if (Set(ref _selectedTrainerIndex, value) && !_suppress && value >= 0) LoadTrainer(value); }
+            set
+            {
+                if (value == _selectedTrainerIndex) return;
+                if (_dirty && !_suppress && value >= 0 && _selectedTrainerIndex >= 0)
+                {
+                    // Snap the list back to the trainer still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedTrainerIndex));
+                    _ = SwitchTrainerAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedTrainerIndex, value) && !_suppress && value >= 0) LoadTrainer(value);
+            }
+        }
+
+        private async Task SwitchTrainerAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "trainer")) return;
+            SetClean();
+            if (Set(ref _selectedTrainerIndex, requested)) LoadTrainer(requested);
         }
 
         private int _selectedTriggerIndex = -1;
