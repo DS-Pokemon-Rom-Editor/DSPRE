@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Data
         /// reading its notes, so there is only ever one reading of a sequence.</summary>
         private static List<Voice> Collect(SdatArchive sdat, int seqIndex, double maxSeconds,
             out List<SbnkInstrument> instruments, out Func<int, List<SwavSample>> wavesForSlot,
-            out double bpmOut, int bankOverride = -1)
+            out double bpmOut, int bankOverride = -1, int waveArcOverride = -1)
         {
             instruments = null; wavesForSlot = null; bpmOut = 120.0;
             if (sdat == null || seqIndex < 0 || seqIndex >= sdat.Sequences.Count) return null;
@@ -130,7 +130,12 @@ namespace DSPRE.Avalonia.Data
             instruments = sdat.GetBankInstruments(bankNo);
             if (instruments == null) return null;
 
-            wavesForSlot = slot => slot < 0 || slot >= 4 ? null : sdat.GetWaveArchive(bank.WaveArcNo[slot]);
+            // A cry whose samples do not live in the bank's own archive takes its wave archive from
+            // outside: hg-engine keeps one archive per species and leaves the bank behind.
+            wavesForSlot = slot =>
+                slot < 0 || slot >= 4 ? null
+                : waveArcOverride >= 0 ? (slot == 0 ? sdat.GetWaveArchive(waveArcOverride) : null)
+                : sdat.GetWaveArchive(bank.WaveArcNo[slot]);
 
             var tracks = ParseTrackList(seqBytes);
             double bpm = 120.0;
@@ -155,11 +160,16 @@ namespace DSPRE.Avalonia.Data
         /// Pokemon (snd_play.c:1091 plays SEQ_PV with the bank set to the species number). Leave it at
         /// -1 to use the sequence's own bank.
         /// </param>
+        /// <param name="waveArcOverride">
+        /// Take slot 0's samples from this wave archive instead of the bank's own. hg-engine stores each
+        /// species' cry as its own WAVE_ARC_PV archive and keeps only one cry bank, so the bank supplies
+        /// the envelope and this supplies the sound.
+        /// </param>
         public static short[] Render(SdatArchive sdat, int seqIndex, int sampleRate = 32000, double maxSeconds = 8.0,
-                                     int bankOverride = -1)
+                                     int bankOverride = -1, int waveArcOverride = -1)
         {
             var voices = Collect(sdat, seqIndex, maxSeconds, out var instruments,
-                                 out var wavesForSlot, out _, bankOverride);
+                                 out var wavesForSlot, out _, bankOverride, waveArcOverride);
             if (voices == null) return null;
 
             // Most SEs run under a second; a hardcoded 8-second buffer would allocate a Large Object Heap

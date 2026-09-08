@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -75,11 +76,83 @@ namespace DSPRE.Avalonia.Data
             return list;
         }
 
+        /// <summary>The prefix on the name of every wave archive that holds one species' cry.</summary>
+        public const string CryWaveArcPrefix = "WAVE_ARC_PV";
+
+        /// <summary>
+        /// hg-engine moves cries off the per-species banks and onto one wave archive per species, keeping
+        /// only BANK_PV001/002. See scripts/rebuild_json.py in a checkout, which deletes every other
+        /// BANK_PV entry, and narcs.mk, which builds WAVE_ARC_PV&lt;n&gt; from sound/cries/&lt;n&gt;.wav.
+        /// </summary>
+        private static bool CriesLiveInWaveArchives => HgEngineProject.IsActive;
+
+        /// <summary>
+        /// The cry number the game would play for a species. hg-engine's GrabCryNumSpeciesForm returns the
+        /// species itself (its mega branch cancels out, both bases being SPECIES_MAX_MON_NUM + 1), except
+        /// for the slots between the old last species and its first new one, which have no cry of their own.
+        /// </summary>
+        private const int LimboFirst = 494, LimboLast = 543, LimboFallback = 1;
+
+        public static int CryNumberFor(int species) =>
+            species >= LimboFirst && species <= LimboLast ? LimboFallback : species;
+
+        /// <summary>The wave archive holding a cry number, found by name because the archives are appended
+        /// past the vanilla count and their index stops matching their number after the first 493.</summary>
+        private static int CryWaveArcByName(SdatArchive sdat, int cryNumber)
+        {
+            if (sdat?.WaveArcNames == null || cryNumber <= 0) return -1;
+            string want = CryWaveArcPrefix + cryNumber.ToString("D3");
+            foreach (var kv in sdat.WaveArcNames)
+                if (string.Equals(kv.Value, want, StringComparison.Ordinal)
+                    && kv.Key >= 0 && kv.Key < sdat.WaveArcs.Count && sdat.WaveArcs[kv.Key] != null)
+                    return kv.Key;
+            return -1;
+        }
+
+        /// <summary>The bank a cry is played with. hg-engine keeps one; vanilla has one per species.</summary>
+        private static int CryBankFor(SdatArchive sdat, int species)
+        {
+            if (!CriesLiveInWaveArchives) return species;
+            foreach (var kv in sdat.BankNames)
+                if (kv.Value != null && kv.Value.StartsWith(CryBankPrefix, StringComparison.Ordinal)
+                    && kv.Key > 0 && kv.Key < sdat.Banks.Count && sdat.Banks[kv.Key] != null)
+                    return kv.Key;
+            return -1;
+        }
+
+        /// <summary>Every cry this ROM has, as the numbers the game plays them with, in order.</summary>
+        public static List<int> CryNumbers()
+        {
+            var list = new List<int>();
+            var sdat = Load();
+            if (sdat == null) return list;
+
+            if (!CriesLiveInWaveArchives)
+            {
+                foreach (int bank in CryBanks()) list.Add(bank);
+                return list;
+            }
+
+            foreach (var kv in sdat.WaveArcNames)
+            {
+                if (kv.Value == null || !kv.Value.StartsWith(CryWaveArcPrefix, StringComparison.Ordinal)) continue;
+                if (kv.Key < 0 || kv.Key >= sdat.WaveArcs.Count || sdat.WaveArcs[kv.Key] == null) continue;
+                string digits = kv.Value.Substring(CryWaveArcPrefix.Length);
+                if (int.TryParse(digits, out int n) && n > 0) list.Add(n);
+            }
+            list.Sort();
+            return list;
+        }
+
         /// <summary>Which wave archive holds a species' cry, or -1 when it has none.</summary>
         public static int CryWaveArchive(int species)
         {
             var sdat = Load();
-            if (sdat == null || species <= 0 || species >= sdat.Banks.Count) return -1;
+            if (sdat == null || species <= 0) return -1;
+
+            if (CriesLiveInWaveArchives) return CryWaveArcByName(sdat, CryNumberFor(species));
+
+            if (species >= sdat.Banks.Count) return -1;
             var bank = sdat.Banks[species];
             if (bank == null) return -1;
             foreach (int w in bank.WaveArcNo)
@@ -110,8 +183,19 @@ namespace DSPRE.Avalonia.Data
         /// Puts a WAV in as a species' cry, writing the sound archive back to the ROM folder.
         /// </summary>
         public static bool ImportCry(int species, string path, out string problem)
+            => ImportCry(species, path, out problem, out _);
+
+        /// <param name="note">Set when the cry went somewhere other than the ROM, and the user needs to
+        /// know what still has to happen for it to be heard in game.</param>
+        public static bool ImportCry(int species, string path, out string problem, out string note)
         {
             problem = null;
+            note = null;
+
+            // hg-engine builds the whole sound archive from sound/cries, so the cry belongs there; writing
+            // it into the ROM's copy would last until the next compile and no longer.
+            if (CriesLiveInWaveArchives) return ImportCryToCheckout(species, path, out problem, out note);
+
             var sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
@@ -147,20 +231,64 @@ namespace DSPRE.Avalonia.Data
             return true;
         }
 
+        /// <summary>Puts a cry into the linked checkout's sound/cries, which is what its build reads.</summary>
+        private static bool ImportCryToCheckout(int species, string path, out string problem, out string note)
+        {
+            problem = null;
+            note = null;
+
+            int cry = CryNumberFor(species);
+            if (cry != species)
+            {
+                problem = "That slot has no cry of its own in hg-engine; it falls back to another one.";
+                return false;
+            }
+
+            byte[] file;
+            try { file = File.ReadAllBytes(path); }
+            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
+
+            // Parsed only to refuse a file its build would choke on; what gets written is the WAV itself,
+            // since the build converts it with its own tool and settings.
+            var pcm = CryFiles.ReadWav(file, out _, out problem);
+            if (pcm == null) return false;
+            if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return false; }
+
+            string rel = Path.Combine("sound", "cries", cry.ToString("D3") + ".wav");
+            string full = Path.Combine(HgEngineProject.RepoPathUnc, rel);
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(full));
+                File.WriteAllBytes(full, file);
+            }
+            catch (Exception ex) { problem = "That cry could not be saved to the checkout: " + ex.Message; return false; }
+
+            note = "Saved to " + rel.Replace(Path.DirectorySeparatorChar, '/')
+                 + ". Compile the ROM to hear it in game; the copy in the ROM is still the old one until then.";
+            return true;
+        }
+
         /// <summary>
         /// A Pokemon's cry, as sound ready to play, or null when this ROM has nothing for that species.
         /// </summary>
         public static short[] RenderCry(int species, int sampleRate = 32000)
         {
             var sdat = Load();
-            if (sdat == null || species <= 0 || species >= sdat.Banks.Count) return null;
-            if (sdat.Banks[species] == null) return null;
+            if (sdat == null || species <= 0) return null;
 
             int seq = CrySequence(sdat);
             if (seq < 0) return null;
 
+            int bank = CryBankFor(sdat, species);
+            if (bank < 0 || bank >= sdat.Banks.Count || sdat.Banks[bank] == null) return null;
+
+            // hg-engine plays every cry through the one surviving bank, with the species' own wave archive
+            // supplying the sound; vanilla's bank already carries it.
+            int waveArc = CriesLiveInWaveArchives ? CryWaveArchive(species) : -1;
+            if (CriesLiveInWaveArchives && waveArc < 0) return null;
+
             // A cry is one short sample, so there is no reason to render a long tail for it.
-            return SseqPlayer.Render(sdat, seq, sampleRate, 3.0, species);
+            return SseqPlayer.Render(sdat, seq, sampleRate, 3.0, bank, waveArc);
         }
 
 
@@ -173,12 +301,25 @@ namespace DSPRE.Avalonia.Data
             var sdat = Load();
             if (sdat == null) return found;
 
+            // Which archives are already listed as cries, so they are not offered a second time as
+            // ordinary samples. On hg-engine that is one archive per cry rather than one per cry bank.
             var cryArcs = new HashSet<int>();
-            foreach (int b in CryBanks())
+            if (CriesLiveInWaveArchives)
             {
-                if (b < 0 || b >= sdat.Banks.Count || sdat.Banks[b] == null) continue;
-                foreach (int w in sdat.Banks[b].WaveArcNo)
-                    if (w != 0xffff && w >= 0) cryArcs.Add(w);
+                foreach (int cry in CryNumbers())
+                {
+                    int w = CryWaveArcByName(sdat, cry);
+                    if (w >= 0) cryArcs.Add(w);
+                }
+            }
+            else
+            {
+                foreach (int b in CryBanks())
+                {
+                    if (b < 0 || b >= sdat.Banks.Count || sdat.Banks[b] == null) continue;
+                    foreach (int w in sdat.Banks[b].WaveArcNo)
+                        if (w != 0xffff && w >= 0) cryArcs.Add(w);
+                }
             }
 
             for (int i = 0; i < sdat.WaveArcs.Count; i++)

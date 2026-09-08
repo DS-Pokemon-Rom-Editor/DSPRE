@@ -110,22 +110,16 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 }
             }
 
-            // A cry belongs to a Pokemon, not to a sequence, so it is listed by the bank the game plays it
-            // from.
-            foreach (int bank in SoundArchive.CryBanks())
+            // A cry belongs to a Pokemon, not to a sequence, so it is listed by the number the game plays
+            // it with: the bank on a vanilla ROM, the wave archive on an hg-engine one.
+            foreach (int cry in SoundArchive.CryNumbers())
             {
-                string bankName = sdat.BankNames.TryGetValue(bank, out var bn) ? bn : "";
-                string shortName = bankName.StartsWith("BANK_", StringComparison.Ordinal)
-                    ? bankName.Substring("BANK_".Length) : bankName;
+                string label = pokemonNames != null && cry > 0 && cry < pokemonNames.Count
+                               && !string.IsNullOrWhiteSpace(pokemonNames[cry])
+                    ? pokemonNames[cry]
+                    : "PV" + cry.ToString("D3");
 
-                string digits = new string(shortName.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
-                int.TryParse(digits, out int named);
-                string label = shortName;
-                if (named > 0 && pokemonNames != null
-                    && named > 0 && named < pokemonNames.Count && !string.IsNullOrWhiteSpace(pokemonNames[named]))
-                    label = pokemonNames[named];
-
-                _allCries.Add(new AudioItem { Number = bank, Name = label, IsCry = true, NamedNumber = named });
+                _allCries.Add(new AudioItem { Number = cry, Name = label, IsCry = true, NamedNumber = cry });
             }
 
             // The samples that are not cries. These are what the tunes and the sound effects are actually

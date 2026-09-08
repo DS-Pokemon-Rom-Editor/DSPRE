@@ -302,16 +302,17 @@ namespace DSPRE.Avalonia.Views.Audio
 
             try
             {
+                string note = null;
                 bool done = sample
                     ? SoundArchive.ImportSample(vm.Selected.WaveArc, vm.Selected.SampleIndex, path, out string problem)
-                    : SoundArchive.ImportCry(vm.Selected.Number, path, out problem);
+                    : SoundArchive.ImportCry(vm.Selected.Number, path, out problem, out note);
 
                 if (done)
                 {
                     await DrawSelected();   // the picture has to show what is in the ROM now, not what was
                     await DialogHelper.ShowInfo(
-                        (sample ? "The sound has been put in." : "The cry has been put in.")
-                        + " Press Play to hear it.", title);
+                        note ?? (sample ? "The sound has been put in." : "The cry has been put in.")
+                                + " Press Play to hear it.", title);
                 }
                 else
                 {
