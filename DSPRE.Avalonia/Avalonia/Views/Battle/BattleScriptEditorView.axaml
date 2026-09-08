@@ -43,7 +43,26 @@
          preview-side controls (background selector etc.); each half scrolls independently. -->
     <!-- The command list needs the room: its lines are wide and clipping them is what makes a script
          unreadable. The preview keeps a sensible minimum and the splitter lets either side win. -->
-    <Grid Grid.Row="2" IsVisible="{Binding IsAvailable}" ColumnDefinitions="*,6,440">
+    <!-- With a checkout linked, these archives are assembled from its own sources every build, so the
+         file on disk is what is edited and the command views have nothing to parse. -->
+    <DockPanel Grid.Row="2" IsVisible="{Binding IsHgEngineSource}">
+      <TextBlock DockPanel.Dock="Top" Margin="4,4,4,8" TextWrapping="Wrap" FontSize="11"
+                 Foreground="{DynamicResource Editor.Subtle}" Text="{Binding SourceNote}"/>
+      <TextBox Text="{Binding SourceText}" AcceptsReturn="True" AcceptsTab="True"
+               FontFamily="Consolas,Menlo,monospace" FontSize="12"
+               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+               TextWrapping="NoWrap"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+    </DockPanel>
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,6,440">
+      <Grid.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="IsAvailable"/>
+          <Binding Path="!IsHgEngineSource"/>
+        </MultiBinding>
+      </Grid.IsVisible>
       <Grid Grid.Column="0" RowDefinitions="*,Auto">
         <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
           <!-- Three ways of reading the same commands. Nothing here writes a command out as a sentence:

@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using DSPRE.HgEngine;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;
@@ -55,6 +56,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _narcs[(int)Archive.Subroutines]  = new ScriptNarc(DirNames.subSeq);
             _narcs[(int)Archive.MoveAnimation] = new ScriptNarc(DirNames.wazaEffectScripts);
 
+            _dirs[(int)Archive.MoveScripts] = DirNames.wazaSeq;
+            _dirs[(int)Archive.EffectScripts] = DirNames.beSeq;
+            _dirs[(int)Archive.Subroutines] = DirNames.subSeq;
+            _dirs[(int)Archive.MoveAnimation] = DirNames.wazaEffectScripts;
+
             if (IsAvailable) SelectArchive(0);
         }
 
@@ -80,6 +86,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Whether the move-animation archive is the one open. The three views are for it.</summary>
         public bool IsWest => (Archive)_archiveIndex == Archive.MoveAnimation;
         private ScriptNarc CurrentNarc => _narcs[_archiveIndex];
+        private readonly DirNames[] _dirs = new DirNames[4];
+        private Dictionary<int, HgEngineOwnedFile> _sourceById;
+        private List<int> _sourceOrder = new List<int>();
 
         /// <summary>Builds the reference data for the command guide window, for whichever command set this
         /// archive uses (WEST move-animation opcodes, or the waza/be/sub effect-sequence opcodes).</summary>
@@ -302,6 +311,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             BuildFileList();
             OnPropertyChanged(nameof(IsWest));
+            OnPropertyChanged(nameof(IsHgEngineSource));
+            OnPropertyChanged(nameof(SourceNote));
             OnPropertyChanged(nameof(ShowTextHelp));
             OnPropertyChanged(nameof(ArchiveNotAvailable));
             OnPropertyChanged(nameof(ArchiveUnavailableText));
@@ -320,9 +331,44 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void BuildFileList()
         {
             FileItems.Clear();
-            if (!IsAvailable || !CurrentNarc.Available) return;
+            _sourceById = null;
+            if (!IsAvailable) return;
+
+            var owned = HgEngineOwnedFiles.FilesIn(HgEngineOwnedFiles.ArchiveOf(_dirs[_archiveIndex]));
+            if (owned.Count > 0)
+            {
+                _sourceById = owned.Values
+                    .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
+                    .ToDictionary(f => f.Id);
+                _sourceOrder = _sourceById.Keys.OrderBy(id => id).ToList();
+                foreach (int id in _sourceOrder) FileItems.Add(LabelFor(id));
+                return;
+            }
+
+            if (!CurrentNarc.Available) return;
             int count = CurrentNarc.Count;
             for (int i = 0; i < count; i++) FileItems.Add(LabelFor(i));
+        }
+
+        // In source mode the list is the checkout's files, which need not be a full run from zero.
+        private int EntryIdAt(int listIndex) =>
+            _sourceById == null ? listIndex
+            : listIndex >= 0 && listIndex < _sourceOrder.Count ? _sourceOrder[listIndex] : -1;
+
+        public bool IsHgEngineSource => _sourceById != null;
+
+        private HgEngineOwnedFile CurrentSource =>
+            _sourceById != null && _sourceById.TryGetValue(EntryIdAt(_fileIndex), out var f) ? f : null;
+
+        public string SourceNote => CurrentSource == null
+            ? ""
+            : $"hg-engine assembles this from {CurrentSource.RelPath}. Editing it here edits that file.";
+
+        private string _sourceText = "";
+        public string SourceText
+        {
+            get => _sourceText;
+            set { if (Set(ref _sourceText, value)) Dirty = true; }
         }
 
         private string LabelFor(int i)
@@ -364,6 +410,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadEntry()
         {
             Rows.Clear();
+            if (IsHgEngineSource)
+            {
+                HgEngineOwnedFile source = CurrentSource;
+                _sourceText = source == null ? ""
+                    : HgEngineOwnedFiles.TryReadText(source, out string text, out string readError)
+                        ? text : readError;
+                Dirty = false;
+                OnPropertyChanged(nameof(SourceText));
+                OnPropertyChanged(nameof(SourceNote));
+                OnPropertyChanged(nameof(IsHgEngineSource));
+                OnPropertyChanged(nameof(EntryHeader));
+                return;
+            }
+
             if (IsAvailable && _fileIndex >= 0 && CurrentNarc.Available)
             {
                 var bytes = CurrentNarc.Get(_fileIndex);
@@ -442,6 +502,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public void Save()
         {
+            if (IsHgEngineSource) { _ = SaveSourceAsync(); return; }
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
             if (HasTextErrors)   // the cards are stale while the text is invalid, don't persist the wrong thing
             {
@@ -452,6 +513,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             byte[] bytes = IsWest ? WestScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             CurrentNarc.Put(_fileIndex, bytes);
             LoadEntry();   // reflect the canonical form
+        }
+
+        private async System.Threading.Tasks.Task SaveSourceAsync()
+        {
+            HgEngineOwnedFile source = CurrentSource;
+            if (source == null) return;
+
+            if (!HgEngineOwnedFiles.TryWriteText(source, SourceText ?? "", out string error))
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError(error, "Battle Scripts");
+                return;
+            }
+            Dirty = false;
+
+            if (HgEngineProject.SuppressManagedFileSaveNotice) return;
+            bool never = await DSPRE.Avalonia.DialogHelper.ShowNoticeWithOptOut(
+                $"This file is managed by hg-engine. {source.RelPath} has been saved, but you will need to " +
+                "compile, not just save the ROM, to see the change in game.",
+                "Managed by hg-engine");
+            if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
 
         private List<WazaSeqCommand> BuildCommands()
