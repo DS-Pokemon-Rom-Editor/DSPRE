@@ -116,6 +116,23 @@ namespace DSPRE.Avalonia
         public static Task<MsgResult> AskYesNoCancel(string message, string title = "Confirm")
             => ShowMsg(message, title, MsgButtons.YesNoCancel);
 
+        /// <summary>
+        /// Where an ownerless dialog should attach. The window the user is actually working in, not the
+        /// main window: a prompt raised by an editor belongs over that editor, or it looks like it came
+        /// from somewhere else and can end up behind the window that raised it.
+        /// </summary>
+        private static Window ActiveOwner()
+        {
+            var app = global::Avalonia.Application.Current?.ApplicationLifetime
+                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+            if (app == null) return null;
+
+            foreach (Window w in app.Windows)
+                if (w.IsActive && w.IsVisible) return w;
+
+            return app.MainWindow;
+        }
+
         /// <summary>Notice the user can turn off. True when they asked not to see it again.</summary>
         public static async Task<bool> ShowNoticeWithOptOut(string message, string title,
                                                             string dismiss = "OK",
@@ -178,12 +195,7 @@ namespace DSPRE.Avalonia
             root.Children.Add(btnRow);
             win.Content = root;
 
-            if (owner == null)
-            {
-                var app = global::Avalonia.Application.Current?.ApplicationLifetime
-                    as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-                owner = app?.MainWindow;
-            }
+            owner ??= ActiveOwner();
 
             input.AttachedToVisualTree += (_, _) => input.Focus();
 
@@ -352,12 +364,7 @@ namespace DSPRE.Avalonia
             // ShowDialog requires a parent; fall back to Show if none available. Callers may pass an
             // explicit owner (e.g. a modal batch dialog) so nested prompts stack on top of it instead
             // of re-attaching to the main window.
-            if (owner == null)
-            {
-                var app = global::Avalonia.Application.Current?.ApplicationLifetime
-                    as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-                owner = app?.MainWindow;
-            }
+            owner ??= ActiveOwner();
 
             if (owner != null)
                 await win.ShowDialog(owner);
