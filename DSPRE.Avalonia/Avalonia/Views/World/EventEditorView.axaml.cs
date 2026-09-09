@@ -44,6 +44,16 @@ namespace DSPRE.Avalonia.Views.World
                 },
             };
 
+            // Pointer input arrives on the host border, not the GL control, and the projection is
+            // measured in that same space (Gl3DPointerNavigation picks events the same way).
+            GlHost.PointerMoved += (s, e) =>
+            {
+                var pos = e.GetPosition(GlHost);
+                VM?.UpdateHoverCoords(pos.X, pos.Y,
+                    (x, y, z) => { bool k = GlView.WorldToScreen(x, y, z, out float sx, out float sy); return (k, sx, sy); });
+            };
+            GlHost.PointerExited += (s, e) => VM?.ClearHoverCoords();
+
             // Arrow keys nudge the selected event / pan the camera, but only while the 3D
             // viewport itself has keyboard focus (Gl3DPointerNavigation focuses it on click);
             // otherwise they'd steal input from a focused dropdown/spinner in the side panel.

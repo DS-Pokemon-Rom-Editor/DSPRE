@@ -46,7 +46,12 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding HoverCoordsText}" FontSize="12" FontFamily="Consolas,Menlo,monospace"
+                   Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"
+                   ToolTip.Tip="The tile under the pointer: which matrix cell, the tile within that map, and the absolute tile the event file stores."/>
+      </Grid>
     </Border>
 
     <Grid ColumnDefinitions="*,520">

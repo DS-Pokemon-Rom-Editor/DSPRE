@@ -1606,6 +1606,66 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
+        // ── Coordinates under the pointer ───────────────────────────────────────────
+        private string _hoverCoords = "";
+
+        /// <summary>The tile under the pointer, empty when it is over none. The cell is part of it because
+        /// a local tile means nothing on its own once the view stitches several maps.</summary>
+        public string HoverCoordsText { get => _hoverCoords; private set => Set(ref _hoverCoords, value); }
+
+        /// <summary>Reads the tile under a screen point through the viewport's own projection, so it
+        /// follows the camera rather than assuming a top-down view.</summary>
+        public void UpdateHoverCoords(double px, double py,
+                                      Func<float, float, float, (bool ok, float sx, float sy)> project)
+        {
+            var m = Model3D;
+            if (m == null || project == null) { HoverCoordsText = ""; return; }
+
+            var cells = HoverCells();
+            if (cells.Count == 0) { HoverCoordsText = ""; return; }
+
+            (bool, float, float) ProjectRaw(float rawX, float rawZ)
+            {
+                var (nx, ny, nz) = m.ToNormalized(rawX, m.SurfaceY(rawX, rawZ), rawZ);
+                return project(nx, ny, nz);
+            }
+
+            if (!FieldTilePicker.TileAtScreen(cells, ProjectRaw, px, py,
+                                              out int cellX, out int cellY, out int col, out int row, MapTiles))
+            {
+                HoverCoordsText = "";
+                return;
+            }
+
+            // Global is what an event stores; local is that tile within its own map.
+            HoverCoordsText = $"Matrix {cellX}, {cellY}    Local {col}, {row}    Global "
+                            + $"{cellX * MapTiles + col}, {cellY * MapTiles + row}";
+        }
+
+        public void ClearHoverCoords() => HoverCoordsText = "";
+
+        /// <summary>The cells the pointer could be over, placed the way the scene placed them.</summary>
+        private List<FieldTilePicker.CellQuad> HoverCells()
+        {
+            var list = new List<FieldTilePicker.CellQuad>();
+            var m = Model3D;
+            if (m == null) return list;
+
+            var cells = HeaderCells() ?? (ISet<(int x, int y)>)EventCells();
+            if (cells == null) return list;
+
+            foreach (var (x, y) in cells)
+            {
+                if (m.TryCellPlacement(x, y, out var p))
+                    list.Add(new FieldTilePicker.CellQuad(x, y, p.OriginX, p.OriginZ, p.Width, p.Height));
+                else if (m.CellStrideX != 0)
+                    list.Add(new FieldTilePicker.CellQuad(x, y,
+                        m.CellBaseX + x * m.CellStrideX, m.CellBaseZ + y * m.CellStrideZ,
+                        m.CellStrideX, m.CellStrideZ));
+            }
+            return list;
+        }
+
         /// <summary>Where a whole-matrix tile sits in the scene, for standing the player on it.</summary>
         public (float x, float y, float z) TileFoot(float tileX, float tileZ)
         {
