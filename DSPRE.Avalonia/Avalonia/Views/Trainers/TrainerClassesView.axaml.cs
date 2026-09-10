@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void EditSprite_Click(object sender, RoutedEventArgs e)
         {
-            if (VM == null || VM.SelectedClassIndex < 0) return;
+            if (VM == null || VM.SelectedClassIndex < 0 || !VM.CanEditSprite) return;
             var classesVm = VM;
             var vm = new TrainerSpriteEditorViewModel(VM.SelectedClassIndex);
             var win = new TrainerSpriteEditorView(vm);

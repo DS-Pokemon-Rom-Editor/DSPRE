@@ -15,6 +15,61 @@ namespace DSPRE.HgEngine
     /// </summary>
     internal static class HgEngineTrainerGraphicsSource
     {
+        /// <summary>A sprite's source path without extension: trainer_gfx/NNN, or trainer_back_gfx/NN for back sprites.</summary>
+        public static string Stem(bool back, int id) =>
+            Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", back ? "trainer_back_gfx" : "trainer_gfx", id.ToString(back ? "D2" : "D3"));
+
+        // The built drawing is the PNG cut into 8x8 tiles in reading order, each tile read row by row.
+        public static byte[] RasterToTiles(byte[] raster, int width, int height)
+        {
+            var tiles = new byte[raster.Length];
+            int at = 0;
+            for (int ty = 0; ty < height / 8; ty++)
+                for (int tx = 0; tx < width / 8; tx++)
+                    for (int y = 0; y < 8; y++)
+                        for (int x = 0; x < 8; x++)
+                            tiles[at++] = raster[(ty * 8 + y) * width + tx * 8 + x];
+            return tiles;
+        }
+
+        public static byte[] TilesToRaster(byte[] tiles, int width, int height)
+        {
+            var raster = new byte[width * height];
+            int at = 0;
+            for (int ty = 0; ty < height / 8; ty++)
+                for (int tx = 0; tx < width / 8; tx++)
+                    for (int y = 0; y < 8; y++)
+                        for (int x = 0; x < 8; x++)
+                            raster[(ty * 8 + y) * width + tx * 8 + x] = tiles[at++];
+            return raster;
+        }
+
+        /// <summary>4bpp data to one index per pixel, low nibble first.</summary>
+        public static byte[] Unpack4(byte[] data)
+        {
+            var indices = new byte[data.Length * 2];
+            for (int i = 0; i < data.Length; i++) { indices[i * 2] = (byte)(data[i] & 0xF); indices[i * 2 + 1] = (byte)(data[i] >> 4); }
+            return indices;
+        }
+
+        public static byte[] Pack4(byte[] indices)
+        {
+            var data = new byte[(indices.Length + 1) / 2];
+            for (int i = 0; i < indices.Length; i++) data[i / 2] |= (byte)((indices[i] & 0xF) << (i % 2 == 0 ? 0 : 4));
+            return data;
+        }
+
+        /// <summary>Every sequence in an anim.json as (cell, duration) frames, or null when it can't be read.</summary>
+        public static (int Bank, int Duration)[][] ReadAnimSequences(string animJsonPath)
+        {
+            try
+            {
+                var root = AnimJsonRoot.Parse(File.ReadAllText(animJsonPath));
+                return root?.Sequences.Select(seq => seq.FrameData.Select(f => (f.CellIndex, f.FrameDelay)).ToArray()).ToArray();
+            }
+            catch { return null; }
+        }
+
         public static bool TryReadCellBanks(string cellJsonPath, out Bank[] banks, out uint blockSize, out string error)
         {
             banks = null; blockSize = 0; error = null;

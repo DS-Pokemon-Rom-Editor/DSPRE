@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenTrainerSpriteEditorAsync(int initialClassIndex = 0)
         {
-            if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor", HgEngineDomain.TrainerGraphics)) return;
 
             try
             {
@@ -896,7 +896,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenTrainerBackSpriteEditorAsync(int initialSprite = 0)
         {
-            if (!IsRomLoaded || BlockedForHge("The Trainer Back Sprite Editor")) return;
+            if (!IsRomLoaded || BlockedForHge("The Trainer Back Sprite Editor", HgEngineDomain.TrainerGraphics)) return;
 
             try
             {

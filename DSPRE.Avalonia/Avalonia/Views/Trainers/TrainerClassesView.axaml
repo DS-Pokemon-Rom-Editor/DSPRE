@@ -34,7 +34,7 @@
               <Button Content="{Binding PlayButtonText}" Click="TogglePlay_Click" HorizontalAlignment="Stretch"
                       IsEnabled="{Binding CanPlayAnimation}" ToolTip.Tip="Play this class's real battle-intro animation."/>
               <Button Content="Edit Sprite…" Click="EditSprite_Click" HorizontalAlignment="Stretch"
-                      ToolTip.Tip="Paint the sprite the way it actually looks (a full pixel canvas composed from this class's animation cells), pick colors from its real palette, or import a matching PNG."/>
+                      IsEnabled="{Binding CanEditSprite}"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Spacing="2" Margin="10,0,0,0" VerticalAlignment="Top">

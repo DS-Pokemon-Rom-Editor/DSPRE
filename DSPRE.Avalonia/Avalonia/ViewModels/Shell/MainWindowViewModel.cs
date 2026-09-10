@@ -92,7 +92,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
         public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
-        public bool CanUseTrainerSpriteEditor => IsRomLoaded && !isHGE
+        // hg-engine keeps trainer sprites in its source, which the editor reads and writes once a checkout is linked.
+        public bool CanUseTrainerSpriteEditor => IsRomLoaded && (!isHGE || HgEngineProject.IsActive)
             && BetaEditors.Allows("TrainerSpriteEditorView");
         public bool CanUseVsSeekerRematchEditor => IsRomLoaded && VsSeekerRematchTable.IsSupported;
         public bool CanUsePokegearRematchEditor => IsRomLoaded && PokegearRematchTable.IsSupported;
@@ -233,6 +234,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseMartEditor));
             OnPropertyChanged(nameof(MartEditorNote));
             OnPropertyChanged(nameof(CanUseTrainerEditor));
+            OnPropertyChanged(nameof(CanUseTrainerSpriteEditor));
             OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanCompileRom));

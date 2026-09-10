@@ -25,8 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     public sealed class TrainerSpriteSet
     {
         public DirNames Archive { get; private init; }
-        /// <summary>hg-engine's source folder under data/graphics, and the digits its file names use.</summary>
-        public string SourceFolder { get; private init; }
+        public bool IsBack => Archive == DirNames.trainerBackGraphics;
         public int NameDigits { get; private init; }
         public string Title { get; private init; }
         public string Noun { get; private init; }
@@ -35,14 +34,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public static readonly TrainerSpriteSet Classes = new()
         {
-            Archive = DirNames.trainerGraphics, SourceFolder = "trainer_gfx", NameDigits = 3,
+            Archive = DirNames.trainerGraphics, NameDigits = 3,
             Title = "Trainer Class Sprite Editor", Noun = "class", ItemLabel = "Class:",
             Names = _ => GetTrainerClassNames().ToList(),
         };
 
         public static readonly TrainerSpriteSet Backs = new()
         {
-            Archive = DirNames.trainerBackGraphics, SourceFolder = "trainer_back_gfx", NameDigits = 2,
+            Archive = DirNames.trainerBackGraphics, NameDigits = 2,
             Title = "Trainer Back Sprite Editor", Noun = "back sprite", ItemLabel = "Sprite:",
             Names = count => DSPRE.ROMFiles.TrainerBackSprites.Names(count),
         };
@@ -339,7 +338,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadAnimJson(int trClassID)
         {
             _animJsonPath = HgEngineProject.IsActive
-                ? Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", _set.SourceFolder, $"{_set.FileStem(trClassID)}_anim.json")
+                ? HgEngineTrainerGraphicsSource.Stem(_set.IsBack, trClassID) + "_anim.json"
                 : null;
             OnPropertyChanged(nameof(CanEditAnimJson));
             OnPropertyChanged(nameof(HasAnimJsonFile));
@@ -760,12 +759,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _tile = new NCGR(_tilesPath, tilesFileID, tilesFilename);
 
                 _sprite = null; _jsonBanks = null;
+                _sourcePngPath = null;
                 if (RomInfo.gameFamily != GameFamilies.DP)
                 {
                     if (HgEngineProject.IsActive)
                     {
-                        string trainerGfxDir = Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", _set.SourceFolder);
-                        string cellPath = Path.Combine(trainerGfxDir, $"{_set.FileStem(trClassID)}_cell.json");
+                        string stem = HgEngineTrainerGraphicsSource.Stem(_set.IsBack, trClassID);
+                        if (Data.TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal)) _sourcePngPath = stem + ".png";
+                        string cellPath = stem + "_cell.json";
                         if (File.Exists(cellPath))
                         {
                             if (HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out var banks, out var blockSize, out string cellError))
@@ -1233,7 +1234,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        // ── Save (write back to the unpacked trainerGraphics NARC member) ──────
+        // ── Save ──────────────────────────────────────────────────────────────
+        // On a linked hg-engine project the drawing and colours come from, and go back to, the source PNG.
+        private string _sourcePngPath;
         /// Returns null on success, error message on failure.
         public string Save()
         {
@@ -1252,8 +1255,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     _tile.Set_Tiles(nativeBytes);
                 }
 
+                if (_sourcePngPath != null)
+                {
+                    string sourceError = Data.TrainerSpriteSourcePng.Write(_sourcePngPath, _tile, _pal);
+                    if (sourceError != null) { StatusText = "Save failed: " + sourceError; return sourceError; }
+                }
+
+                // The built archive is kept in step too, so other previews show the edit before a compile.
                 _tile.Write(_tilesPath, _pal);
-                if (_paletteDirty)
+                if (_paletteDirty || _sourcePngPath != null)
                 {
                     byte[] nclr = File.ReadAllBytes(_palPath);
                     var colours = _pal.Palette.SelectMany(bank => bank.Select(c => 0xFF000000u | ((uint)c.R << 16) | ((uint)c.G << 8) | c.B)).ToArray();
@@ -1266,7 +1276,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (BankCount > 0) BuildFrameThumbnails();
 
                 HasUnsavedChanges = false;
-                StatusText = "Saved.";
+                StatusText = _sourcePngPath != null ? "Saved. Compile the ROM to apply it." : "Saved.";
                 return null;
             }
             catch (Exception ex)

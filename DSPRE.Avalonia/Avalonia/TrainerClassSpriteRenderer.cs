@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using DSPRE.Avalonia.Data;
 using DSPRE.HgEngine;
 using Ekona.Images;
 using Images;
@@ -108,7 +109,8 @@ namespace DSPRE.Avalonia
                 if (gameFamily == GameFamilies.DP)
                     return 0; // DP has no NCER animation for trainer classes.
 
-                if (archive == DirNames.trainerGraphics && HgEngineProject.IsActive && TryLoadFromSource(trClassID))
+                bool back = archive == DirNames.trainerBackGraphics;
+                if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
                     return FrameCount - 1;
 
                 int spriteFileID = trClassID * 5 + 2;
@@ -134,15 +136,15 @@ namespace DSPRE.Avalonia
             }
         }
 
-        /// <summary>Reads OAM/cell data straight from the linked checkout's *_cell.json/*_anim.json.
-        /// Returns false (never throws) if either file is missing or fails to parse, so the caller falls
-        /// back to the compiled-narc path.</summary>
-        private bool TryLoadFromSource(int trClassID)
+        /// <summary>Reads the sprite from the linked checkout's PNG, cell.json and anim.json. False when the
+        /// cells can't be read, so the caller falls back to the built archive.</summary>
+        private bool TryLoadFromSource(int trClassID, bool back)
         {
-            string trainerGfxDir = Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", "trainer_gfx");
-            string cellPath = Path.Combine(trainerGfxDir, $"{trClassID:D3}_cell.json");
-            string animPath = Path.Combine(trainerGfxDir, $"{trClassID:D3}_anim.json");
+            string stem = HgEngineTrainerGraphicsSource.Stem(back, trClassID);
+            string cellPath = stem + "_cell.json";
+            string animPath = stem + "_anim.json";
             if (!File.Exists(cellPath)) return false;
+            TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal);
 
             if (!HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out var banks, out var blockSize, out string cellError))
             {
@@ -162,6 +164,7 @@ namespace DSPRE.Avalonia
 
             _frameBankIndices = anim?.cells ?? Enumerable.Range(0, _jsonBanks.Length).ToArray();
             _frameDurations = anim?.durations ?? Array.Empty<int>();
+            _sequences = File.Exists(animPath) ? HgEngineTrainerGraphicsSource.ReadAnimSequences(animPath) ?? Array.Empty<(int, int)[]>() : Array.Empty<(int, int)[]>();
 
             int idleBank = Array.FindIndex(_jsonBanks, b => b.name == "CellAnime0");
             int idleFrame = idleBank >= 0 ? Array.IndexOf(_frameBankIndices, idleBank) : -1;

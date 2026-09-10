@@ -110,16 +110,17 @@ namespace DSPRE.Avalonia
             return true;
         }
 
-        // Always writes 8-bit indexed: simplest, universally readable, and the palettes here never exceed 16 colors anyway.
-        public static byte[] Write(byte[] indices, uint[] palette, int width, int height)
+        // 8-bit by default; 4 matches files that were saved that way, so rewriting them keeps their format.
+        public static byte[] Write(byte[] indices, uint[] palette, int width, int height, int bitDepth = 8)
         {
+            if (bitDepth != 4) bitDepth = 8;
             using var ms = new MemoryStream();
             ms.Write(Signature);
 
             var ihdr = new byte[13];
             WriteUInt32BEInto(ihdr, 0, width);
             WriteUInt32BEInto(ihdr, 4, height);
-            ihdr[8] = 8; ihdr[9] = 3;
+            ihdr[8] = (byte)bitDepth; ihdr[9] = 3;
             WriteChunk(ms, "IHDR", ihdr);
 
             int n = palette.Length;
@@ -139,9 +140,14 @@ namespace DSPRE.Avalonia
             WriteChunk(ms, "PLTE", plte);
             if (anyAlpha) WriteChunk(ms, "tRNS", trns);
 
-            var raw = new byte[height * (width + 1)];
+            int stride = bitDepth == 4 ? (width + 1) / 2 : width;
+            var raw = new byte[height * (stride + 1)];
             for (int y = 0; y < height; y++)
-                Array.Copy(indices, y * width, raw, y * (width + 1) + 1, width);
+            {
+                int row = y * (stride + 1) + 1;
+                if (bitDepth == 8) Array.Copy(indices, y * width, raw, row, width);
+                else for (int x = 0; x < width; x++) raw[row + x / 2] |= (byte)((indices[y * width + x] & 0xF) << (x % 2 == 0 ? 4 : 0));
+            }
 
             byte[] compressed;
             using (var cms = new MemoryStream())

@@ -115,6 +115,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public bool CanEnableMusic => (IsExpansionSupported || _musicFromSource) && !MusicEnabled && _selectedIndex >= 0;
 
+        // Without a linked checkout an hg-engine build would overwrite the sprite edits.
+        public bool CanEditSprite => !isHGE || HgEngineProject.IsActive;
+
         private readonly bool _musicFromSource = HgEngineMusicTables.TablesInSource;
 
         private Bitmap _spritePreview;

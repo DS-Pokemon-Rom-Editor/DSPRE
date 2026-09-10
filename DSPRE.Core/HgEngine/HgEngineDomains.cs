@@ -101,11 +101,15 @@ namespace DSPRE.HgEngine
             },
             new HgEngineDomainInfo
             {
-                // Per-class front battle sprites (trainer_gfx.narc): NCGR/NCLR/NCER/NANR ×129 classes.
+                // Class sprites and the player-side back sprites, five files each.
                 Domain = HgEngineDomain.TrainerGraphics,
                 SourceFileRelPath = "data/graphics/trainer_gfx",
-                MakeTargets = new[] { "build/narc/trainer_gfx.narc" },
-                NarcByDir = new Dictionary<DirNames, string> { [DirNames.trainerGraphics] = "build/narc/trainer_gfx.narc" },
+                MakeTargets = new[] { "build/narc/trainer_gfx.narc", "build/narc/trainer_back_gfx.narc" },
+                NarcByDir = new Dictionary<DirNames, string>
+                {
+                    [DirNames.trainerGraphics] = "build/narc/trainer_gfx.narc",
+                    [DirNames.trainerBackGraphics] = "build/narc/trainer_back_gfx.narc",
+                },
                 SyncOncePerSession = true,
             },
         };
