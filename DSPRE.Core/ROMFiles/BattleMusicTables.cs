@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -22,6 +23,11 @@ namespace DSPRE.ROMFiles
         /// <summary>HGSS only. Platinum decides these in code.</summary>
         public readonly Table<(int Class, int Combo)> Classes = new Table<(int, int)>();
         public readonly Table<(int Species, int Combo)> Species = new Table<(int, int)>();
+
+        /// <summary>True when the rows came from hg-engine's source rather than the ROM.</summary>
+        public bool FromHgEngineSource { get; }
+
+        internal BattleMusicTables(bool fromHgEngineSource = false) => FromHgEngineSource = fromHgEngineSource;
 
         public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
 
@@ -82,14 +88,20 @@ namespace DSPRE.ROMFiles
 
         // ── Reading ──────────────────────────────────────────────────────────────────────────────
 
-        /// <summary>Reads the loaded ROM's tables. Null for other games.</summary>
-        public static BattleMusicTables Load() => LoadRom();
+        /// <summary>Reads hg-engine's source when it builds the tables, else the ROM.</summary>
+        public static BattleMusicTables Load()
+        {
+            if (!IsSupported) return null;
+            if (gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource) return HgEngineMusicTables.ReadBattle();
+            return LoadRom();
+        }
 
-        /// <summary>Reads the ROM's tables.</summary>
+        /// <summary>Reads the ROM's tables. Null on an hg-engine ROM whose tables live in its own code.</summary>
         public static BattleMusicTables LoadRom()
         {
             if (!IsSupported) return null;
             SetBattleEffectsData();
+            if (isHGE && BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) >= synthOverlayLoadAddress) return null;
             var t = new BattleMusicTables();
 
             bool hgss = gameFamily == GameFamilies.HGSS;

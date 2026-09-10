@@ -113,7 +113,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private int _prizeMultiplier;
         public int PrizeMultiplier { get => _prizeMultiplier; set => Set(ref _prizeMultiplier, value); }
 
-        public bool CanEnableMusic => IsExpansionSupported && !MusicEnabled && _selectedIndex >= 0;
+        public bool CanEnableMusic => (IsExpansionSupported || _musicFromSource) && !MusicEnabled && _selectedIndex >= 0;
+
+        private readonly bool _musicFromSource = HgEngineMusicTables.TablesInSource;
 
         private Bitmap _spritePreview;
         public Bitmap SpritePreview { get => _spritePreview; private set => Set(ref _spritePreview, value); }
@@ -131,11 +133,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string[] names = GetTrainerClassNames();
                 for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
 
-                // The eye-contact encounter-music table is found via a hardcoded vanilla ARM9 RAM address
-                // (RomInfo.encounterMusicTableOffsetToRAMAddress), meaningless on hg-engine's differently
-                // compiled ARM9: reading it there returns garbage that overruns the file, so this feature
-                // simply doesn't exist for hg-engine ROMs (mirrors IsExpansionSupported).
-                if (!isHGE) SetupEncounterMusicTable();
+                // hg-engine repoints the eye-contact music table into its own code, so only its source can be read.
+                if (!isHGE || _musicFromSource) SetupEncounterMusicTable();
 
                 StatusText = $"{ClassNames.Count} trainer classes.";
                 if (ClassNames.Count > 0)
@@ -152,6 +151,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// table, one entry per trainer class that HAS eye-contact music (not every class does).</summary>
         private void SetupEncounterMusicTable()
         {
+            if (_musicFromSource)
+            {
+                foreach (var kv in HgEngineMusicTables.ReadEncounterMusic())
+                    if (kv.Key is >= 0 and <= 255) _musicDict[(byte)kv.Key] = (0, (ushort)kv.Value.Johto, (ushort)kv.Value.Kanto);
+                return;
+            }
             SetEncounterMusicTableOffsetToRAMAddress();
 
             uint tableStart = BitConverter.ToUInt32(ARM9.ReadBytes(encounterMusicTableOffsetToRAMAddress, 4), 0);
@@ -242,7 +247,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_selectedIndex < 0) return;
             byte idx = (byte)_selectedIndex;
 
-            if (_musicDict.TryGetValue(idx, out var entry))
+            if (_musicDict.TryGetValue(idx, out var entry) && _musicFromSource)
+            {
+                ushort main = (ushort)MusicMain, alt = (ushort)MusicAlt;
+                if (HgEngineMusicTables.TrySetEncounterMusic(idx, main, alt, out string musicErr)) _musicDict[idx] = (0, main, alt);
+                else _ = DialogHelper.ShowError(musicErr, "Trainer Classes");
+            }
+            else if (_musicDict.TryGetValue(idx, out entry))
             {
                 ushort main = (ushort)MusicMain;
                 ushort alt = (ushort)MusicAlt;
@@ -294,7 +305,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void EnableMusic(ushort musicMain, ushort musicNight)
         {
             if (!CanEnableMusic) return;
-            if (!TrainerClassTableExpansion.AddEncounterMusicEntry((byte)_selectedIndex, musicMain, musicNight, out string error))
+            string error = null;
+            if (_musicFromSource ? !HgEngineMusicTables.TrySetEncounterMusic(_selectedIndex, musicMain, musicNight, out error)
+                                 : !TrainerClassTableExpansion.AddEncounterMusicEntry((byte)_selectedIndex, musicMain, musicNight, out error))
             {
                 _ = DialogHelper.ShowError(error, "Trainer Classes");
                 return;

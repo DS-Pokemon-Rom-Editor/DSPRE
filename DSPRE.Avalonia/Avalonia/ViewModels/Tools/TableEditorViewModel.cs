@@ -9,6 +9,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -254,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ShowEffectsCombos && ComboItems.Count > 0) ComboSelectedIndex = 0;
 
                 OnPropertyChanged(nameof(NoTablesAvailable));
-                StatusText = $"Tables loaded ({gameFamily}).";
+                StatusText = _tablesNote ?? $"Tables loaded ({gameFamily}).";
             }
             catch (Exception ex)
             {
@@ -314,7 +315,16 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 DirNames.trainerGraphics, DirNames.textArchives, DirNames.monIcons });
             SetMonIconsPalTableAddress();
 
-            var tables = BattleMusicTables.LoadRom();
+            // Writes go back to wherever the tables were read from.
+            _fromSource = gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
+            var tables = _fromSource ? HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom();
+            if (tables == null)
+            {
+                ShowEffectsCombos = false;
+                ShowVsTables = false;
+                _tablesNote = "Link the hg-engine checkout to edit these tables.";
+                return;
+            }
             _effectsComboTable = tables.Combos.Rows;
             _effectsComboStartAddr = tables.Combos.Start;
             RomPatchState.flag_MainComboTableRepointed = tables.Combos.Repointed;
@@ -361,6 +371,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private uint _vsPokemonStartAddr;
+        private bool _fromSource;
+        private string _tablesNote;
 
         private string TrainerLabel(int classID) =>
             classID >= 0 && classID < _trcNames.Length ? $"[{classID:D3}] {_trcNames[classID]}" : $"[{classID:D3}] ?";
@@ -428,9 +440,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ushort music = (ushort)BattleSseq;
             _effectsComboTable[index] = (effect, music);
 
-            string expArmPath = Filesystem.expArmPath;
-            using (var wr = new DSUtils.EasyWriter(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr + 4 * (uint)index))
+            if (_fromSource)
             {
+                if (!HgEngineMusicTables.TrySetCombo(index, effect, music, out string error)) { StatusText = error; return; }
+            }
+            else
+            {
+                string expArmPath = Filesystem.expArmPath;
+                using var wr = new DSUtils.EasyWriter(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr + 4 * (uint)index);
                 wr.Write(effect);
                 wr.Write(music);
             }
@@ -442,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             ComboItems[index] = updated;
             _suppress = false;
-            StatusText = "Effect combo saved.";
+            StatusText = _fromSource ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it." : "Effect combo saved.";
         }
 
         // Mark the combo detail dirty when the user edits the numerics.
@@ -471,9 +488,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ushort comboID = (ushort)Math.Max(0, _trainerComboIndex);
             _vsTrainerList[index] = (trainerClass, comboID);
 
-            string expArmPath = Filesystem.expArmPath;
-            using (var wr = new DSUtils.EasyWriter(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr + 2 * (uint)index))
+            if (_fromSource)
             {
+                if (!HgEngineMusicTables.TrySetClassCombo(index, trainerClass, comboID, out string error)) { StatusText = error; return; }
+            }
+            else
+            {
+                string expArmPath = Filesystem.expArmPath;
+                using var wr = new DSUtils.EasyWriter(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr + 2 * (uint)index);
                 wr.Write((ushort)((trainerClass & 1023) + (comboID << 10)));
             }
             _vsTrainerDirty = false;
@@ -483,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             VsTrainerItems[index] = $"{TrainerLabel(trainerClass)} uses Combo #{comboID}";
             _suppress = false;
-            StatusText = "VS Trainer entry saved.";
+            StatusText = _fromSource ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it." : "VS Trainer entry saved.";
         }
 
         public void MarkVsTrainerDirty() { if (!_suppress) MarkDirty(ref _vsTrainerDirty); }
