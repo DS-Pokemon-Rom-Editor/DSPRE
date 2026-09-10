@@ -5,6 +5,9 @@ namespace DSPRE.Avalonia.Data
     public sealed class SwavSample
     {
         public int SampleRate;
+
+        /// <summary>The channel timer for the wave's own note, or 0 when it didn't come from a ROM.</summary>
+        public int Timer;
         public bool Loop;
         public int LoopStartSample;   // sample index the clip loops back to (only meaningful if Loop)
         public short[] Pcm;           // mono 16-bit samples
@@ -87,7 +90,8 @@ namespace DSPRE.Avalonia.Data
             int waveType = d[at];
             bool loop = d[at + 1] != 0;
             int sampleRate = U16(at + 2);
-            // at+4: timer value (hardware clock divisor), not needed since we already have sampleRate directly.
+            // The hardware plays the wave by this clock divisor, not by the rounded rate beside it.
+            int timer = U16(at + 4);
             int loopOffsetWords = U16(at + 6);
             long nonLoopLenWords = U32(at + 8);   // widen: a malformed/misaligned record can hold a huge raw value
             int dataAt = at + 12;
@@ -108,7 +112,7 @@ namespace DSPRE.Avalonia.Data
                     if (dataAt + sampleCount > d.Length) sampleCount = System.Math.Max(0, d.Length - dataAt);
                     var pcm = new short[sampleCount];
                     for (int i = 0; i < sampleCount; i++) pcm[i] = (short)((sbyte)d[dataAt + i] * 256);
-                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Loop = loop, LoopStartSample = loopOffsetWords * 4, Pcm = pcm };
+                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = loopOffsetWords * 4, Pcm = pcm };
                 }
                 case 1:   // PCM16: 1 sample/2 bytes, 1 word (4 bytes) = 2 samples.
                 {
@@ -116,7 +120,7 @@ namespace DSPRE.Avalonia.Data
                     if (dataAt + sampleCount * 2 > d.Length) sampleCount = System.Math.Max(0, (d.Length - dataAt) / 2);
                     var pcm = new short[sampleCount];
                     for (int i = 0; i < sampleCount; i++) pcm[i] = (short)(d[dataAt + i * 2] | (d[dataAt + i * 2 + 1] << 8));
-                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Loop = loop, LoopStartSample = loopOffsetWords * 2, Pcm = pcm };
+                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = loopOffsetWords * 2, Pcm = pcm };
                 }
                 case 2:   // IMA-ADPCM: 2 samples/byte (nibbles), 1 word (4 bytes) = 8 samples, but the first word
                           // is the one-time predictor/step header, consumed by the decoder and absent from the
@@ -126,7 +130,7 @@ namespace DSPRE.Avalonia.Data
                     if (dataAt + byteLen > d.Length) byteLen = System.Math.Max(0, d.Length - dataAt);
                     var pcm = DecodeImaAdpcm(d, dataAt, byteLen);
                     int adpcmLoopStart = System.Math.Max(0, loopOffsetWords - 1) * 8;
-                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Loop = loop, LoopStartSample = adpcmLoopStart, Pcm = pcm };
+                    return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = adpcmLoopStart, Pcm = pcm };
                 }
                 default:
                     return null;

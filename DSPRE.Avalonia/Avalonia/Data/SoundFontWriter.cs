@@ -72,6 +72,7 @@ namespace DSPRE.Avalonia.Data
                 foreach (var region in instruments[i].Regions)
                 {
                     if (region == null) { leftOut++; continue; }
+                    if (region.Silent) continue;
                     string key;
                     SwavSample sample;
                     if (region.Psg != PsgKind.None)

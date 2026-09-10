@@ -87,15 +87,15 @@ namespace DSPRE.Tests
 
             Assert.True(checkedRows > 1800, $"only {checkedRows} rows were swept");
 
-            // Two of these are silence on purpose, by their own names.
-            var expectedSilent = new[] { "SEQ_SILENCE_", "SEQ_SE_GS_N_SESERAGI" };
+            // SEQ_AIF_ takes its instrument from a variable the game sets first; the *_END entries have volume 0.
+            var expectedSilent = new[] { "SEQ_SILENCE_", "SEQ_SE_GS_N_SESERAGI", "SEQ_AIF_", "SEQ_PV_END", "SEQ_BGM_END", "SEQ_SE_END" };
             var unexpected = silent.Where(s => !expectedSilent.Any(s.Contains)).ToList();
             Assert.True(unexpected.Count == 0,
                 $"{unexpected.Count} of {checkedRows} rows played nothing: {string.Join(", ", unexpected.Take(25))}");
 
             // And the ones that are meant to be silent really were all that was silent, so this cannot pass
             // by everything having gone quiet at once.
-            Assert.Equal(3, silent.Count);
+            Assert.Equal(9, silent.Count);
         }
 
         [SkippableFact]

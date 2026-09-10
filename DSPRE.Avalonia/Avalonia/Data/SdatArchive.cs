@@ -20,6 +20,14 @@ namespace DSPRE.Avalonia.Data
         public int[] WaveArcNo = new int[4];   // NNS_SND_ARC_INVALID_WAVEARC_NO (0xffff) = unused slot
     }
 
+    /// <summary>A sequence player: how many sequences it runs and which channels it may use (0 means any).</summary>
+    public sealed class SdatPlayerInfo
+    {
+        public int SeqMax;
+        public int AllocChannelMask;
+        public int HeapSize;
+    }
+
     /// <summary>One wave archive (SWAR) entry: just which sub-file holds it.</summary>
     public sealed class SdatWaveArcInfo
     {
@@ -47,6 +55,7 @@ namespace DSPRE.Avalonia.Data
         public List<SdatSeqInfo> Sequences { get; } = new List<SdatSeqInfo>();
         public List<SdatBankInfo> Banks { get; } = new List<SdatBankInfo>();
         public List<SdatWaveArcInfo> WaveArcs { get; } = new List<SdatWaveArcInfo>();
+        public List<SdatPlayerInfo> Players { get; } = new List<SdatPlayerInfo>();
 
         // seq number -> name (from SYMB), only entries that had a name are present.
         public Dictionary<int, string> SeqNames { get; } = new Dictionary<int, string>();
@@ -78,6 +87,7 @@ namespace DSPRE.Avalonia.Data
             int seqTableOff = (int)U32(infoOffset + 8);
             int bankTableOff = (int)U32(infoOffset + 16);
             int waveArcTableOff = (int)U32(infoOffset + 20);
+            int playerTableOff = (int)U32(infoOffset + 24);
 
             List<int> ReadOffsetTable(int relOff)
             {
@@ -131,6 +141,15 @@ namespace DSPRE.Avalonia.Data
                 if (at + 4 > d.Length) { a.WaveArcs.Add(null); continue; }
                 uint packed = U32(at);   // fileId:24, flags:8 (LSB-first bitfield)
                 a.WaveArcs.Add(new SdatWaveArcInfo { FileId = (int)(packed & 0xFFFFFF), Flags = (int)(packed >> 24) });
+            }
+
+            // Each record: sequence count u8, pad u8, allocatable channel mask u16, heap size u32.
+            var playerOffs = ReadOffsetTable(playerTableOff);
+            for (int i = 0; i < playerOffs.Count; i++)
+            {
+                int at = infoOffset + playerOffs[i];
+                if (playerOffs[i] == 0 || at + 8 > d.Length) { a.Players.Add(null); continue; }
+                a.Players.Add(new SdatPlayerInfo { SeqMax = d[at], AllocChannelMask = U16(at + 2), HeapSize = (int)U32(at + 4) });
             }
 
             // ── SYMB block (optional): mirrors INFO's per-category offset tables, entries point at C strings ──

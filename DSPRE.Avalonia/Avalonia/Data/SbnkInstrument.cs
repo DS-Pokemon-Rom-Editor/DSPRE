@@ -21,11 +21,20 @@ namespace DSPRE.Avalonia.Data
         // slow ramp or an inaudible decay.
         public int Attack = 127, Decay = 127, Sustain = 127, Release = 127;
 
+        /// <summary>Instrument pan, 0-127 with 64 centred; the sequence's pan adds to it.</summary>
+        public int Pan = 64;
+
         /// <summary>Which of the DS's own tone generators plays this region, when no sample does.</summary>
         public PsgKind Psg = PsgKind.None;
 
         /// <summary>How much of each cycle the square wave spends high, 0 to 7. Only read for a square.</summary>
         public int PsgDuty;
+
+        /// <summary>Holds its key range but makes no sound.</summary>
+        public bool Silent;
+
+        /// <summary>A release of 255: never keyed off by length, fades at the slowest rate.</summary>
+        public const int ReleaseDisabled = 255;
     }
 
     /// <summary>
@@ -98,13 +107,12 @@ namespace DSPRE.Avalonia.Data
                     case 1 when at + 5 <= d.Length:
                     {
                         var rgn = new SbnkRegion { LowKey = 0, HighKey = 127, WaveIndex = U16(at), WaveArcSlot = U16(at + 2), BaseNote = d[at + 4] };
-                        if (at + 9 <= d.Length) { rgn.Attack = d[at + 5]; rgn.Decay = d[at + 6]; rgn.Sustain = d[at + 7]; rgn.Release = d[at + 8]; }
+                        ReadEnvelope(d, at + 5, rgn);
                         inst.Regions.Add(rgn);
                         break;
                     }
 
-                    // Drum set (one region per individual MIDI key from lowKey to highKey; each region is the
-                    // same 12-byte shape as a key-split region below).
+                    // Drum set: one 12-byte region per key from lowKey to highKey.
                     case 0x10 when at + 2 <= d.Length:
                     {
                         int lowKey = d[at], highKey = d[at + 1];
@@ -113,13 +121,8 @@ namespace DSPRE.Avalonia.Data
                         {
                             int rgnAt = at + 2 + r * 12;
                             if (rgnAt + 7 > d.Length) break;
-                            var rgn = new SbnkRegion
-                            {
-                                LowKey = lowKey + r, HighKey = lowKey + r,
-                                WaveIndex = U16(rgnAt + 2), WaveArcSlot = U16(rgnAt + 4), BaseNote = d[rgnAt + 6],
-                            };
-                            if (rgnAt + 11 <= d.Length) { rgn.Attack = d[rgnAt + 7]; rgn.Decay = d[rgnAt + 8]; rgn.Sustain = d[rgnAt + 9]; rgn.Release = d[rgnAt + 10]; }
-                            inst.Regions.Add(rgn);
+                            var rgn = SubRegion(d, rgnAt, lowKey + r, lowKey + r);
+                            if (!rgn.Silent) inst.Regions.Add(rgn);
                         }
                         break;
                     }
@@ -142,13 +145,8 @@ namespace DSPRE.Avalonia.Data
                         {
                             int rgnAt = at + 8 + r * 12;
                             if (rgnAt + 7 > d.Length) break;
-                            var rgn = new SbnkRegion
-                            {
-                                LowKey = r == 0 ? 0 : keyRanges[r - 1] + 1, HighKey = keyRanges[r],
-                                WaveIndex = U16(rgnAt + 2), WaveArcSlot = U16(rgnAt + 4), BaseNote = d[rgnAt + 6],
-                            };
-                            if (rgnAt + 11 <= d.Length) { rgn.Attack = d[rgnAt + 7]; rgn.Decay = d[rgnAt + 8]; rgn.Sustain = d[rgnAt + 9]; rgn.Release = d[rgnAt + 10]; }
-                            inst.Regions.Add(rgn);
+                            // A silent entry still holds its key range, so the keys above it do not slide down.
+                            inst.Regions.Add(SubRegion(d, rgnAt, r == 0 ? 0 : keyRanges[r - 1] + 1, keyRanges[r]));
                         }
                         break;
                     }
@@ -163,7 +161,7 @@ namespace DSPRE.Avalonia.Data
                             Psg = recordType == 2 ? PsgKind.Square : PsgKind.Noise,
                             PsgDuty = U16(at) & 7,
                         };
-                        if (at + 9 <= d.Length) { rgn.Attack = d[at + 5]; rgn.Decay = d[at + 6]; rgn.Sustain = d[at + 7]; rgn.Release = d[at + 8]; }
+                        ReadEnvelope(d, at + 5, rgn);
                         inst.Regions.Add(rgn);
                         break;
                     }
@@ -175,6 +173,31 @@ namespace DSPRE.Avalonia.Data
                 list.Add(inst);
             }
             return list;
+        }
+
+        /// <summary>Attack, decay, sustain, release and pan, one byte each, where the file has them.</summary>
+        private static void ReadEnvelope(byte[] d, int at, SbnkRegion rgn)
+        {
+            if (at + 4 <= d.Length) { rgn.Attack = d[at]; rgn.Decay = d[at + 1]; rgn.Sustain = d[at + 2]; rgn.Release = d[at + 3]; }
+            if (at + 5 <= d.Length) rgn.Pan = d[at + 4];
+        }
+
+        /// <summary>One 12-byte drum set or key split entry: record type, pad, then the region parameters.</summary>
+        private static SbnkRegion SubRegion(byte[] d, int rgnAt, int lowKey, int highKey)
+        {
+            int type = d[rgnAt];
+            var rgn = new SbnkRegion
+            {
+                LowKey = lowKey, HighKey = highKey,
+                WaveIndex = d[rgnAt + 2] | (d[rgnAt + 3] << 8),
+                WaveArcSlot = d[rgnAt + 4] | (d[rgnAt + 5] << 8),
+                BaseNote = d[rgnAt + 6],
+                Psg = type == 2 ? PsgKind.Square : type == 3 ? PsgKind.Noise : PsgKind.None,
+                Silent = type < 1 || type > 3,
+            };
+            if (rgn.Psg != PsgKind.None) rgn.PsgDuty = rgn.WaveIndex & 7;
+            ReadEnvelope(d, rgnAt + 7, rgn);
+            return rgn;
         }
     }
 }
