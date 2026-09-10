@@ -185,7 +185,7 @@
                          Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
               <Rectangle Canvas.Left="200" Canvas.Top="118" Height="4" Fill="#38C838"
                          Width="{Binding HpBarWidth}" IsVisible="{Binding !IsDoubles}"/>
-              <views:RomTextBlock Canvas.Left="16"  Canvas.Top="152" Text="{Binding SampleMessage}"/>
+              <views:RomTextBlock Canvas.Left="16"  Canvas.Top="152" Text="{Binding SampleMessage}" Ink="#515159" Shadow="#A2A2AA"/>
 
               <Rectangle IsVisible="{Binding HighlightOnTop}"
                          Canvas.Left="{Binding HighlightLeft}" Canvas.Top="{Binding HighlightTop}"

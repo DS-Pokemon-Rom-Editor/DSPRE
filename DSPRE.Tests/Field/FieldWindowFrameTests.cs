@@ -119,6 +119,35 @@ namespace DSPRE.Tests
             Assert.True(a.SequenceEqual(b), "an out of range frame should come back as the first one");
         }
 
+        /// <summary>Each frame uses its own colours; a fixed palette entry gave Platinum the next frame's.</summary>
+        [SkippableTheory]
+        [InlineData("IPKE", "HeartGold")]
+        [InlineData("CPUE", "Platinum")]
+        [InlineData("ADAE", "Diamond")]
+        public void EachFrameIsDrawnInItsOwnColours(string code, string game)
+        {
+            string project = code == "IPKE" ? TestRoms.HeartGold : code == "CPUE" ? TestRoms.Platinum : TestRoms.Diamond;
+            Skip.If(!Directory.Exists(project), $"{game} not unpacked here");
+            new RomInfo(code, project);
+
+            var narc = new DSPRE.Avalonia.Data.ScriptNarc(RomInfo.DirNames.windowFrames);
+            var tags = Enumerable.Range(0, narc.Count).Select(i =>
+            {
+                var b = narc.Get(i);
+                return b == null || b.Length < 4 ? "" : new string(new[] { (char)b[0], (char)b[1], (char)b[2], (char)b[3] });
+            }).ToList();
+            int systemColours = tags.IndexOf("RLCN");
+            Assert.True(systemColours > 0, $"{game}: no palettes in the window frame archive");
+
+            for (int i = 0; i < FieldWindowFrame.FrameCount; i++)
+            {
+                var f = FieldWindowFrame.Load(i);
+                Assert.NotNull(f);
+                Assert.Equal(systemColours + 1 + i, f.PaletteEntry);
+                Assert.Equal("RLCN", tags[f.PaletteEntry]);
+            }
+        }
+
         [Fact]
         public void TheBorderStretchesToWhateverWidthItIsAskedFor()
         {

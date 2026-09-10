@@ -18,17 +18,22 @@ namespace DSPRE.Avalonia.Views.Controls
         public static readonly StyledProperty<IBrush> InkProperty =
             AvaloniaProperty.Register<RomTextBlock, IBrush>(nameof(Ink), Brushes.Black);
 
+        /// <summary>Colour for the font's shadow pixels; unset draws them in <see cref="Ink"/>.</summary>
+        public static readonly StyledProperty<IBrush> ShadowProperty =
+            AvaloniaProperty.Register<RomTextBlock, IBrush>(nameof(Shadow));
+
         /// <summary>Height of one line in ROM pixels; the games write at twelve.</summary>
         public static readonly StyledProperty<double> LineHeightProperty =
             AvaloniaProperty.Register<RomTextBlock, double>(nameof(LineHeight), 12);
 
         public string Text { get => GetValue(TextProperty); set => SetValue(TextProperty, value); }
         public IBrush Ink { get => GetValue(InkProperty); set => SetValue(InkProperty, value); }
+        public IBrush Shadow { get => GetValue(ShadowProperty); set => SetValue(ShadowProperty, value); }
         public double LineHeight { get => GetValue(LineHeightProperty); set => SetValue(LineHeightProperty, value); }
 
         static RomTextBlock()
         {
-            AffectsRender<RomTextBlock>(TextProperty, InkProperty, LineHeightProperty);
+            AffectsRender<RomTextBlock>(TextProperty, InkProperty, ShadowProperty, LineHeightProperty);
             AffectsMeasure<RomTextBlock>(TextProperty, LineHeightProperty);
         }
 
@@ -65,6 +70,7 @@ namespace DSPRE.Avalonia.Views.Controls
             var font = Font;
             double x = 0;
             var ink = Ink ?? Brushes.Black;
+            var shadow = Shadow ?? ink;
             foreach (char c in text)
             {
                 int glyph = FieldFontCharacters.GlyphFor(c);
@@ -75,7 +81,7 @@ namespace DSPRE.Avalonia.Views.Controls
                     {
                         byte v = font.PixelAt(glyph, px, py);
                         if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
-                        ctx.FillRectangle(ink, new Rect(x + px, py, 1, 1));
+                        ctx.FillRectangle(v == 1 ? ink : shadow, new Rect(x + px, py, 1, 1));
                     }
                 x += width;
             }

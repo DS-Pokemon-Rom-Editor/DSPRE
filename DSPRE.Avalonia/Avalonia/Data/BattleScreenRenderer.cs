@@ -279,7 +279,10 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private void AddMessageBox(List<Piece> pieces, Options o)
+        private void AddMessageBox(List<Piece> pieces, Options o) => pieces.Add(BuildMessageBox(o.WindowStyle));
+
+        /// <summary>The message box alone, at <see cref="MessageTop"/> across the screen.</summary>
+        public static Piece BuildMessageBox(int windowStyle)
         {
             var piece = new Piece
             {
@@ -292,7 +295,7 @@ namespace DSPRE.Avalonia.Data
             };
             try
             {
-                var frame = FieldWindowFrame.Load(o.WindowStyle);
+                var frame = FieldWindowFrame.Load(windowStyle);
                 if (frame == null) piece.Whynot = "The window frames could not be read from this ROM.";
                 else
                 {
@@ -300,12 +303,12 @@ namespace DSPRE.Avalonia.Data
                     piece.Width = w; piece.Height = h;
                     PaintPaper(piece, frame.PaperArgb);
                     BlackOutTheRest(piece);
-                    piece.Drawing = FieldWindowFrame.FirstGraphicEntry + o.WindowStyle;
-                    piece.Colours = FieldWindowFrame.FirstPaletteEntry + o.WindowStyle;
+                    piece.Drawing = FieldWindowFrame.FirstGraphicEntry + windowStyle;
+                    piece.Colours = frame.PaletteEntry;
                 }
             }
             catch (Exception ex) { piece.Whynot = "This message box could not be drawn: " + ex.Message; }
-            pieces.Add(piece);
+            return piece;
         }
 
         // battle_input.c:204-212 names the screens the touch panel is built from, :2453 reads them out of

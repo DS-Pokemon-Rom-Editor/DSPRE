@@ -13,8 +13,6 @@ namespace DSPRE.ROMFiles
 
         /// <summary>The first talk frame's picture, NARC_winframe_talk_win00_ncgr.</summary>
         public const int FirstGraphicEntry = 2;
-        /// <summary>The first talk frame's colours, NARC_winframe_talk_win00_nclr.</summary>
-        public const int FirstPaletteEntry = 26;
 
         public const int TileSize = 8;
         public const int TileCount = 18;
@@ -22,7 +20,11 @@ namespace DSPRE.ROMFiles
         private readonly byte[] _tiles;         // one index a pixel, tile by tile
         private readonly uint[] _colours;       // 0xAARRGGBB, entry 0 see-through
 
-        private FieldWindowFrame(byte[] tiles, uint[] colours) { _tiles = tiles; _colours = colours; }
+        /// <summary>The archive entry these colours were read from.</summary>
+        public int PaletteEntry { get; }
+
+        private FieldWindowFrame(byte[] tiles, uint[] colours, int paletteEntry)
+        { _tiles = tiles; _colours = colours; PaletteEntry = paletteEntry; }
 
         /// <summary>Reads one of the twenty frames out of the loaded ROM, or null if it cannot be read.</summary>
         public static FieldWindowFrame Load(int frameIndex = 0)
@@ -35,13 +37,16 @@ namespace DSPRE.ROMFiles
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
 
                 byte[] narc = File.ReadAllBytes(path);
+                int firstPalette = FirstPaletteIndex(narc);
+                if (firstPalette < 0) return null;
+                int paletteEntry = firstPalette + 1 + frameIndex;
                 byte[] gfx = NarcEntry(narc, FirstGraphicEntry + frameIndex);
-                byte[] pal = NarcEntry(narc, FirstPaletteEntry + frameIndex);
+                byte[] pal = NarcEntry(narc, paletteEntry);
                 if (gfx == null || pal == null) return null;
 
                 byte[] tiles = ReadTiles(gfx);
                 uint[] colours = ReadColours(pal);
-                return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours);
+                return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, paletteEntry);
             }
             catch { return null; }
         }
@@ -133,6 +138,20 @@ namespace DSPRE.ROMFiles
                 colours[i] = i == 0 ? 0u : 0xFF000000u | (r << 16) | (g << 8) | b;
             }
             return colours;
+        }
+
+        // The frames' colours follow the system colours, whose position differs between the games.
+        private static int FirstPaletteIndex(byte[] narc)
+        {
+            if (narc == null || narc.Length < 0x20) return -1;
+            int count = BitConverter.ToInt32(narc, 0x18);
+            for (int i = 0; i < count; i++)
+            {
+                byte[] entry = NarcEntry(narc, i);
+                if (entry != null && entry.Length >= 4 && entry[0] == 'R' && entry[1] == 'L' && entry[2] == 'C' && entry[3] == 'N')
+                    return i;
+            }
+            return -1;
         }
 
         private static byte[] NarcEntry(byte[] narc, int index)
