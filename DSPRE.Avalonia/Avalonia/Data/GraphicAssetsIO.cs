@@ -536,7 +536,7 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        private static string PatchPalette(ref byte[] nclr, uint[] palette, int startAt = 0)
+        internal static string PatchPalette(ref byte[] nclr, uint[] palette, int startAt = 0)
         {
             if (nclr == null) return "The colours could not be read.";
 
@@ -547,9 +547,10 @@ namespace DSPRE.Avalonia.Data
 
             int p = NitroBgCodec.Find(nclr, "TTLP", 0);
             if (p < 0) return "These colours are not stored in a way DSPRE can write back.";
-            int size = NitroBgCodec.U32(nclr, p + 0x10);
-            int off = p + 0x10 + 4 + NitroBgCodec.U32(nclr, p + 0x14);
-            if (off < 0 || off + size > nclr.Length) return "These colours are not stored in a way DSPRE can write back.";
+            // Colours start 0x18 into the block, where NitroBgCodec.ReadPalette reads them.
+            int off = p + 0x18;
+            int size = Math.Min(NitroBgCodec.U32(nclr, p + 0x10), nclr.Length - off);
+            if (size <= 0) return "These colours are not stored in a way DSPRE can write back.";
 
             // Write into the same bank the colours were read from. These files often hold many banks side
             // by side, so starting at the front would repaint whatever owns the first one.
