@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.ROMFiles;
 using static DSPRE.HgEngine.HgEngineSourcePatcher;
 
 namespace DSPRE.HgEngine
@@ -28,23 +29,6 @@ namespace DSPRE.HgEngine
 
             block = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
             return true;
-        }
-
-        /// <summary>One SpriteFrame struct: which raw sprite frame to show, how long, and its per-frame
-        /// pixel shift. A frameNo of -1 means "unused" (the file always writes all 10 slots explicitly).</summary>
-        public readonly struct SpriteFrameSlot
-        {
-            public int FrameNo { get; }
-            public int Duration { get; }
-            public int HorizontalShift { get; }
-            public int VerticalShift { get; }
-            public SpriteFrameSlot(int frameNo, int duration, int horizontalShift, int verticalShift)
-            {
-                FrameNo = frameNo;
-                Duration = duration;
-                HorizontalShift = horizontalShift;
-                VerticalShift = verticalShift;
-            }
         }
 
         /// <summary>Reads all 10 elements of a SpriteFrame[10] array (.frontFrames or .backFrames) verbatim,

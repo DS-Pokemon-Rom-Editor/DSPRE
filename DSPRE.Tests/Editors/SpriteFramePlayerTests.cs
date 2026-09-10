@@ -1,29 +1,27 @@
 using System.Collections.Generic;
 using System.Linq;
-using DSPRE.HgEngine;
+using DSPRE.ROMFiles;
 using Xunit;
 
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// Playback semantics for data/SpriteOffsets.c's SpriteFrame[10] idle runs, checked against the shapes
-    /// the real file actually contains. The run is one-shot and ends on sprite frame 0; a frameNo below -1
-    /// is a counted jump, not a terminator.
+    /// A battle sprite's ten-slot frame run: one-shot, ends on frame 0, and a frameNo below -1 is a counted jump.
     /// </summary>
-    public class HgEngineSpriteFramePlayerTests
+    public class SpriteFramePlayerTests
     {
-        private static HgEngineSpriteOffsets.SpriteFrameSlot Slot(int frameNo, int duration, int hShift = 0) =>
-            new HgEngineSpriteOffsets.SpriteFrameSlot(frameNo, duration, hShift, 0);
+        private static SpriteFrameSlot Slot(int frameNo, int duration, int hShift = 0) =>
+            new SpriteFrameSlot(frameNo, duration, hShift, 0);
 
-        private static List<HgEngineSpriteOffsets.SpriteFrameSlot> Padded(params HgEngineSpriteOffsets.SpriteFrameSlot[] used)
+        private static List<SpriteFrameSlot> Padded(params SpriteFrameSlot[] used)
         {
             var slots = used.ToList();
-            while (slots.Count < HgEngineSpriteFramePlayer.MaxFrames) slots.Add(Slot(-1, 0));
+            while (slots.Count < SpriteFramePlayer.MaxFrames) slots.Add(Slot(-1, 0));
             return slots;
         }
 
         /// <summary>Collects the frame shown on each of the next <paramref name="ticks"/> game frames.</summary>
-        private static List<int> Run(HgEngineSpriteFramePlayer player, int ticks)
+        private static List<int> Run(SpriteFramePlayer player, int ticks)
         {
             var seen = new List<int> { player.SpriteFrame };
             for (int i = 0; i < ticks; i++) { player.Tick(); seen.Add(player.SpriteFrame); }
@@ -35,7 +33,7 @@ namespace DSPRE.Tests
         {
             // Venusaur's real front run: one step, then the terminator. Looping the non-negative entries
             // instead pins the sprite on frame 1 forever, which is the reported "frames freeze".
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded(Slot(1, 18, -4)));
 
             Assert.True(player.Active);
@@ -55,7 +53,7 @@ namespace DSPRE.Tests
         public void MultiStepRunWalksEveryStepInOrderThenEndsOnFrameZero()
         {
             // Blastoise's real front run.
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded(Slot(1, 6), Slot(0, 10), Slot(1, 10)));
 
             var seen = Run(player, 40);
@@ -72,7 +70,7 @@ namespace DSPRE.Tests
         {
             // frameNo -2 targets slot 0 ((-frameNo) - 2). The jump entry's duration is a visit count, not a
             // delay: it is reached twice, jumping on the first and falling through on the second.
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded(Slot(1, 1), Slot(-2, 2)));
 
             var seen = Run(player, 8);
@@ -85,7 +83,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ATerminatorInTheFirstSlotNeverStartsTheRun()
         {
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded());
 
             Assert.False(player.Active);
@@ -96,7 +94,7 @@ namespace DSPRE.Tests
         [Fact]
         public void NullSlotsRestOnFrameZeroWithoutThrowing()
         {
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(null);
 
             Assert.False(player.Active);
@@ -106,7 +104,7 @@ namespace DSPRE.Tests
         [Fact]
         public void HorizontalShiftFollowsWhicheverSlotIsOnScreen()
         {
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded(Slot(1, 1, -12), Slot(0, 1, 5)));
 
             Assert.Equal(-12, player.HorizontalShift);
@@ -119,19 +117,19 @@ namespace DSPRE.Tests
         [Fact]
         public void ReachableFramesCoversEveryDisplayedFramePlusTheFrameZeroTheRunEndsOn()
         {
-            var reachable = HgEngineSpriteFramePlayer.ReachableFrames(Padded(Slot(1, 18, -4)));
+            var reachable = SpriteFramePlayer.ReachableFrames(Padded(Slot(1, 18, -4)));
             Assert.Equal(new[] { 0, 1 }, reachable.OrderBy(f => f));
 
             // A run that only ever shows frame 1 still ends on frame 0, so both are reachable.
-            Assert.Contains(0, HgEngineSpriteFramePlayer.ReachableFrames(Padded(Slot(1, 4), Slot(1, 4))));
-            Assert.Equal(new[] { 0 }, HgEngineSpriteFramePlayer.ReachableFrames(Padded()));
+            Assert.Contains(0, SpriteFramePlayer.ReachableFrames(Padded(Slot(1, 4), Slot(1, 4))));
+            Assert.Equal(new[] { 0 }, SpriteFramePlayer.ReachableFrames(Padded()));
         }
 
         [Fact]
         public void ASelfReferentialJumpChainTerminatesInsteadOfHangingTheUiThread()
         {
             // -2 targets slot 0; a jump entry in slot 0 would spin forever in the engine's own loop.
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(Padded(Slot(-2, 0), Slot(-2, 0)));
             player.Tick();
 

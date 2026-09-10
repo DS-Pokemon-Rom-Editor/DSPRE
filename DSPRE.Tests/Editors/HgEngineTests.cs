@@ -327,9 +327,9 @@ const SpriteFrameData __data[] = {
         {
             string text = "const SpriteFrameData __data[] = {\n    [SPECIES_BULBASAUR] = " + TwoSlotFrameArray(".frontFrames") + ",\n};\n";
 
-            var edited = new System.Collections.Generic.List<HgEngineSpriteOffsets.SpriteFrameSlot>
+            var edited = new System.Collections.Generic.List<DSPRE.ROMFiles.SpriteFrameSlot>
             {
-                new HgEngineSpriteOffsets.SpriteFrameSlot(frameNo: 5, duration: 20, horizontalShift: 1, verticalShift: -1),
+                new DSPRE.ROMFiles.SpriteFrameSlot(frameNo: 5, duration: 20, horizontalShift: 1, verticalShift: -1),
             };
             foreach (var write in HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", edited))
                 Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "SPECIES_BULBASAUR", write.Path, write.ValueLiteral));

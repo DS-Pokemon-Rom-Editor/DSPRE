@@ -61,6 +61,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleFrontF { get => _bFrontF; private set => Set(ref _bFrontF, value); }
         public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackM  { get => _bBackM;  private set => Set(ref _bBackM, value); }
         public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackF  { get => _bBackF;  private set => Set(ref _bBackF, value); }
+        // The same frames in the shiny palette, for a shiny send-out.
+        private System.Collections.Generic.IReadOnlyList<AvaBitmap> _bFrontMS, _bFrontFS, _bBackMS, _bBackFS;
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleFrontMShiny { get => _bFrontMS; private set => Set(ref _bFrontMS, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleFrontFShiny { get => _bFrontFS; private set => Set(ref _bFrontFS, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackMShiny  { get => _bBackMS;  private set => Set(ref _bBackMS, value); }
+        public System.Collections.Generic.IReadOnlyList<AvaBitmap> BattleBackFShiny  { get => _bBackFS;  private set => Set(ref _bBackFS, value); }
         private AvaBitmap _bBackF0;  public AvaBitmap BattleBackF0  { get => _bBackF0;  private set => Set(ref _bBackF0, value); }
         private AvaBitmap _bBackF1;  public AvaBitmap BattleBackF1  { get => _bBackF1;  private set => Set(ref _bBackF1, value); }
 
@@ -1282,6 +1288,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             BattleFrontF = RenderFrames(2, _normalPal, BattleFrameCount);
             BattleBackM  = RenderFrames(1, _normalPal, BattleFrameCount);
             BattleBackF  = RenderFrames(0, _normalPal, BattleFrameCount);
+            uint[] shiny = _shinyPal ?? _normalPal;
+            BattleFrontMShiny = RenderFrames(3, shiny, BattleFrameCount);
+            BattleFrontFShiny = RenderFrames(2, shiny, BattleFrameCount);
+            BattleBackMShiny  = RenderFrames(1, shiny, BattleFrameCount);
+            BattleBackFShiny  = RenderFrames(0, shiny, BattleFrameCount);
             OnPropertyChanged(nameof(CanUseFullSheet));
             OnPropertyChanged(nameof(IsHgEngineSourced));
             OnPropertyChanged(nameof(ShowShinyFullSheetImport));

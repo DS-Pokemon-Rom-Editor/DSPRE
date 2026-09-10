@@ -19,11 +19,27 @@ namespace DSPRE.Avalonia.Data
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
         }
 
+        // Samples left in a fade-out, or -1 while playing normally.
+        private int _fadeLeft = -1, _fadeLength;
+
+        public void FadeOut(int samples)
+        {
+            if (_fadeLeft >= 0) return;
+            _fadeLength = Math.Max(2, samples);
+            _fadeLeft = Math.Min(_fadeLength, _pcm.Length - _pos);
+        }
+
         public int Read(float[] buffer, int offset, int count)
         {
             int n = Math.Max(0, Math.Min(count, _pcm.Length - _pos));
-            for (int i = 0; i < n; i++) buffer[offset + i] = _pcm[_pos + i] / 32768f;
+            if (_fadeLeft >= 0) n = Math.Min(n, _fadeLeft);
+            for (int i = 0; i < n; i++)
+            {
+                float gain = _fadeLeft >= 0 ? (float)(_fadeLeft - i) / _fadeLength : 1f;
+                buffer[offset + i] = _pcm[_pos + i] / 32768f * gain;
+            }
             _pos += n;
+            if (_fadeLeft >= 0) _fadeLeft -= n;
             return n;
         }
     }
@@ -43,15 +59,19 @@ namespace DSPRE.Avalonia.Data
         private WaveOutEvent _output;
         private MixingSampleProvider _mixer;
 
-        public void Play(short[] interleavedStereoPcm, int sampleRate)
+        public void Play(short[] interleavedStereoPcm, int sampleRate) => Start(interleavedStereoPcm, sampleRate);
+
+        public object Start(short[] interleavedStereoPcm, int sampleRate)
         {
-            if (!OperatingSystem.IsWindows()) return;
-            if (interleavedStereoPcm == null || interleavedStereoPcm.Length == 0) return;
+            if (!OperatingSystem.IsWindows()) return null;
+            if (interleavedStereoPcm == null || interleavedStereoPcm.Length == 0) return null;
 
             lock (_gate)
             {
                 EnsureStarted(sampleRate);
-                _mixer.AddMixerInput(new PcmVoice(interleavedStereoPcm, sampleRate));
+                var voice = new PcmVoice(interleavedStereoPcm, sampleRate);
+                _mixer.AddMixerInput(voice);
+                return voice;
             }
         }
 
@@ -59,6 +79,13 @@ namespace DSPRE.Avalonia.Data
         {
             if (!OperatingSystem.IsWindows()) return;
             lock (_gate) { _mixer?.RemoveAllMixerInputs(); }
+        }
+
+        public void Stop(object handle)
+        {
+            if (!OperatingSystem.IsWindows() || handle is not PcmVoice voice) return;
+            // A quarter-second fade; the mixer drops the voice once it runs dry.
+            lock (_gate) { voice.FadeOut(voice.WaveFormat.SampleRate / 4 * 2); }
         }
 
         private void EnsureStarted(int sampleRate)

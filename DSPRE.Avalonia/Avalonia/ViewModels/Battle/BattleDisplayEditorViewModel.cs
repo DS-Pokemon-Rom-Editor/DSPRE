@@ -3,6 +3,7 @@ using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.HgEngine;
+using DSPRE.ROMFiles;
 using NSMBe4.DSFileSystem;
 using System;
 using System.Collections.Generic;
@@ -119,6 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadHgeFormData()
         {
             if (!HgEngineProject.IsActive) return;
+            StopPlayback();
             _loading = true;
             try
             {
@@ -155,9 +157,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public Bitmap ArenaGroundEnemy  { get => _arenaGroundEnemy;  private set => Set(ref _arenaGroundEnemy, value); }
 
         private double _arenaGroundMineLeft, _arenaGroundMineTop, _arenaGroundEnemyLeft, _arenaGroundEnemyTop;
-        public double ArenaGroundMineLeft   { get => _arenaGroundMineLeft;   private set => Set(ref _arenaGroundMineLeft, value); }
+        public double ArenaGroundMineLeft   { get => _arenaGroundMineLeft;   private set { if (Set(ref _arenaGroundMineLeft, value)) OnPropertyChanged(nameof(ArenaGroundMineX)); } }
         public double ArenaGroundMineTop    { get => _arenaGroundMineTop;    private set => Set(ref _arenaGroundMineTop, value); }
-        public double ArenaGroundEnemyLeft  { get => _arenaGroundEnemyLeft;  private set => Set(ref _arenaGroundEnemyLeft, value); }
+        public double ArenaGroundEnemyLeft  { get => _arenaGroundEnemyLeft;  private set { if (Set(ref _arenaGroundEnemyLeft, value)) OnPropertyChanged(nameof(ArenaGroundEnemyX)); } }
         public double ArenaGroundEnemyTop   { get => _arenaGroundEnemyTop;   private set => Set(ref _arenaGroundEnemyTop, value); }
 
         private bool _hasArenaGraphics;
@@ -183,7 +185,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     // multi-band scrolling texture), so crop to the top-left 256×192 instead of stretching the
                     // whole thing to fit, or a taller source visibly squishes into repeated horizontal bands
                     // (mirrors BattleScriptEditorViewModel.BgToBackdrop, same underlying data).
-                    ArenaBackdrop = RgbaToBitmap(CropBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height), 256, 192);
+                    // Two copies side by side so the intro scroll wraps without a seam.
+                    _backdropWidth = Math.Max(256, backdropImg.Width);
+                    ArenaBackdrop = RgbaToBitmap(TileBackdropRgba(backdropImg.Rgba, backdropImg.Width, backdropImg.Height, _backdropWidth), _backdropWidth * 2, 192);
+                    OnPropertyChanged(nameof(BackdropX));
                 }
                 HasArenaGraphics = ok;
             }
@@ -240,6 +245,69 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(GaugeTextBrush));
             foreach (var n in new[] { nameof(GaugeTextIsReal), nameof(GaugeNameImage), nameof(GaugeLevelImage) })
                 OnPropertyChanged(n);
+            RenderMessageBox();
+        }
+
+        // The Battle Screen editor's box and font, in the default window style.
+        private Bitmap _messageBoxImage;
+        private bool _messageBoxTried;
+        public Bitmap MessageBoxImage { get => _messageBoxImage; private set => Set(ref _messageBoxImage, value); }
+        public bool HasRealMessageBox => _messageBoxImage != null;
+        public bool PlaceholderMessageBoxVisible => !HasRealMessageBox;
+        public string MessageBoxText => MessageLines().First;
+        public string MessageBoxLine2 => MessageLines().Second;
+
+        // During a send-out the box shows whatever the game has printed so far, broken where the game breaks it.
+        private (string First, string Second) MessageLines()
+        {
+            if (_mode != PreviewMode.SendOut || _sendOut == null) return ($"What will {GaugeNameText} do?", "");
+            string text = _sendOut.MessageText ?? "";
+            int nl = text.IndexOf('\n');
+            return nl < 0 ? (text, "") : (text.Substring(0, nl), text.Substring(nl + 1));
+        }
+
+        // The words of each message, as the game fills them in.
+        private string MessageFor(SendOutMessage message)
+        {
+            string mon = GaugeNameText;
+            string trainer = string.Join(" ", new[] { _trainer.ClassName, _trainer.Name }).Trim();
+            if (trainer.Length == 0) trainer = "Trainer";
+            return message switch
+            {
+                SendOutMessage.Challenged => $"You are challenged by\n{trainer}!",
+                SendOutMessage.WildAppeared => $"A wild {mon} appeared!",
+                SendOutMessage.EnemySentOut => $"{trainer} sent\nout {mon}!",
+                SendOutMessage.Go => $"Go! {mon}!",
+                _ => "",
+            };
+        }
+
+        // The box's colours fade in from black at the start of an intro.
+        private double _messageBoxDim;
+        public double MessageBoxDim { get => _messageBoxDim; private set => Set(ref _messageBoxDim, value); }
+
+        private void RaiseMessage()
+        {
+            OnPropertyChanged(nameof(MessageBoxText));
+            OnPropertyChanged(nameof(MessageBoxLine2));
+        }
+
+        private void RenderMessageBox()
+        {
+            if (!_messageBoxTried && IsAvailable)
+            {
+                _messageBoxTried = true;
+                try
+                {
+                    Views.Controls.FieldMessageBoxView.Font ??= FieldFont.LoadTalkFont();
+                    var box = BattleScreenRenderer.BuildMessageBox(0);
+                    MessageBoxImage = box.Rgba != null ? DSPRE.Avalonia.ImageConverter.FromRgba(box.Rgba, box.Width, box.Height) : null;
+                }
+                catch { MessageBoxImage = null; }
+                OnPropertyChanged(nameof(HasRealMessageBox));
+                OnPropertyChanged(nameof(PlaceholderMessageBoxVisible));
+            }
+            RaiseMessage();
         }
 
         // GroundImage (256² straight RGBA) -> unpremultiplied BGRA; the frame has transparency.
@@ -249,15 +317,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return RgbaToBitmap(g.Rgba, g.Width, g.Height);
         }
 
-        // RGBA w×h (battle BG, usually 256×256 or taller) -> exactly 256×192 (top-left crop, black-padded
-        // if the source is smaller). Mirrors BattleScriptEditorViewModel.BgToBackdrop.
-        private static byte[] CropBackdropRgba(byte[] rgba, int w, int h)
+        // RGBA w×h (battle BG, 512×256) -> two copies of its top width×192 side by side, black-padded if smaller.
+        private static byte[] TileBackdropRgba(byte[] rgba, int w, int h, int width)
         {
-            var outp = new byte[256 * 192 * 4];
+            int outW = width * 2;
+            var outp = new byte[outW * 192 * 4];
             for (int y = 0; y < 192 && y < h; y++)
-                for (int x = 0; x < 256 && x < w; x++)
+                for (int x = 0; x < outW; x++)
                 {
-                    int si = (y * w + x) * 4, di = (y * 256 + x) * 4;
+                    int sx = x % width;
+                    if (sx >= w) continue;
+                    int si = (y * w + sx) * 4, di = (y * outW + x) * 4;
                     outp[di] = rgba[si]; outp[di + 1] = rgba[si + 1]; outp[di + 2] = rgba[si + 2]; outp[di + 3] = 255;
                 }
             return outp;
@@ -286,18 +356,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // back sprite at (23, 72), enemy shadow at size-specific X (179/174/167 + shadowX), Y 83/83/82.
         private readonly PokemonSpriteEditorViewModel _sprites;
 
-        // The send-out sheet is two 80×80 frames; we loop them so the preview animates like the game.
-        // Vanilla (non-hg-engine): both driven off the shared pokeAnim AnimSteps loop (front == back).
-        private int _frame;   // 0 or 1
-
-        // hg-engine: frame-cycling comes from data/SpriteOffsets.c's .frontFrames/.backFrames instead,
-        // with independent sequences for front and back.
-        private System.Collections.Generic.List<HgEngineSpriteOffsets.SpriteFrameSlot> _hgeFrontSlots, _hgeBackSlots;
-        private readonly HgEngineSpriteFramePlayer _hgeFront = new HgEngineSpriteFramePlayer();
-        private readonly HgEngineSpriteFramePlayer _hgeBack = new HgEngineSpriteFramePlayer();
-        private int _hgeFrontFrame, _hgeBackFrame;
-        private int _hgeFrontShift, _hgeBackShift;
-        private int _hgeReplayCountdown;
+        // The sheet is two 80×80 frames; each side plays its own frame run once.
+        private List<SpriteFrameSlot> _frontSlots, _backSlots;
+        private readonly SpriteFramePlayer _frontFrames = new SpriteFramePlayer();
+        private readonly SpriteFramePlayer _backFrames = new SpriteFramePlayer();
+        private int _frontFrame, _backFrame;
+        private int _frontShift, _backShift;
 
         private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
 
@@ -347,14 +411,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private Bitmap Front(bool female)
         {
             var s = _sprites; if (s == null) return null;
-            int frame = HgEngineProject.IsActive ? _hgeFrontFrame : _frame;
-            return female ? Pick(s.BattleFrontF, s.BattleFrontM, frame) : Pick(s.BattleFrontM, s.BattleFrontF, frame);
+            if (_isShiny) return female ? Pick(s.BattleFrontFShiny, s.BattleFrontMShiny, _frontFrame) : Pick(s.BattleFrontMShiny, s.BattleFrontFShiny, _frontFrame);
+            return female ? Pick(s.BattleFrontF, s.BattleFrontM, _frontFrame) : Pick(s.BattleFrontM, s.BattleFrontF, _frontFrame);
         }
         private Bitmap Back(bool female)
         {
             var s = _sprites; if (s == null) return null;
-            int frame = HgEngineProject.IsActive ? _hgeBackFrame : _frame;
-            return female ? Pick(s.BattleBackF, s.BattleBackM, frame) : Pick(s.BattleBackM, s.BattleBackF, frame);
+            if (_isShiny) return female ? Pick(s.BattleBackFShiny, s.BattleBackMShiny, _backFrame) : Pick(s.BattleBackMShiny, s.BattleBackFShiny, _backFrame);
+            return female ? Pick(s.BattleBackF, s.BattleBackM, _backFrame) : Pick(s.BattleBackM, s.BattleBackF, _backFrame);
         }
 
         // Gender-selected (separate display) + explicit per-gender (unified side-by-side display).
@@ -396,19 +460,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return frame < 0 ? 0 : (frame > max ? max : frame);
         }
 
-        private System.Collections.Generic.List<int> ActivePatternFrames(bool front)
-        {
-            System.Collections.Generic.IEnumerable<int> raw = HgEngineProject.IsActive
-                ? HgEngineSpriteFramePlayer.ReachableFrames(front ? _hgeFrontSlots : _hgeBackSlots)
-                : AnimSteps.Select(s => s.Frame);
-            var visited = raw.Select(ClampFrame).Distinct().ToList();
-            if (visited.Count == 0) visited.Add(0);   // no pattern data -> AnimTick holds a static frame 0
-            return visited;
-        }
+        private List<int> ActivePatternFrames(bool front) =>
+            SpriteFramePlayer.ReachableFrames(front ? _frontSlots : _backSlots).Select(ClampFrame).Distinct().ToList();
 
         private bool FrameWarning(bool front, bool female) => BlankFrameIndex(PoseCell(front, female)) >= 0;
 
-        // True only when the animation never shows the real frame, so the sprite would be invisible the whole loop.
+        // True only when the animation never shows the real frame, so the sprite would be invisible the whole run.
         private bool FrameWarningSevere(bool front, bool female)
         {
             var cell = PoseCell(front, female);
@@ -472,8 +529,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
 
         // A frame's horizontalShift moves the sprite and its shadow together (both read transforms.xOffset).
-        public double EnemyLeft => 152 + _hgeFrontShift;
-        public double PlayerLeft => 23 + _hgeBackShift;
+        public double EnemyLeft => 152 + _frontShift;
+        public double PlayerLeft => 23 + _backShift;
         public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale));
         public double PlayerTop => BackTopFor(ActBackH(ShowFemale));
         public double EnemyTopM => FrontTopFor(ActFrontH(false));
@@ -481,12 +538,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public double PlayerTopM => BackTopFor(ActBackH(false));
         public double PlayerTopF => BackTopFor(ActBackH(true));
 
-        public bool ShadowSmallVisible => HasSpriteData && _shadowSize == 1;
-        public bool ShadowMediumVisible => HasSpriteData && _shadowSize == 2;
-        public bool ShadowLargeVisible => HasSpriteData && _shadowSize == 3;
-        public double ShadowSmallLeft => 179 + _shadowX + _hgeFrontShift;
-        public double ShadowMediumLeft => 174 + _shadowX + _hgeFrontShift;
-        public double ShadowLargeLeft => 167 + _shadowX + _hgeFrontShift;
+        public bool ShadowSmallVisible => HasSpriteData && _enemyShown && _shadowSize == 1;
+        public bool ShadowMediumVisible => HasSpriteData && _enemyShown && _shadowSize == 2;
+        public bool ShadowLargeVisible => HasSpriteData && _enemyShown && _shadowSize == 3;
+        // In battle the shadow follows the sprite's X, movement included, but not its Y or its script's scale.
+        public double ShadowSmallLeft => 179 + _shadowX + _frontShift + _animOffsetX + _enemySlideX;
+        public double ShadowMediumLeft => 174 + _shadowX + _frontShift + _animOffsetX + _enemySlideX;
+        public double ShadowLargeLeft => 167 + _shadowX + _frontShift + _animOffsetX + _enemySlideX;
 
         private void RaiseLayout()
         {
@@ -623,15 +681,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Battle sprite / shadow data (family-specific NARC layout) ─────────────────────────
-        // Editable: front-sprite Y (signed), shadow X (signed), shadow size; a movement/animation byte
-        // (HGSS + Platinum combined record); the per-gender sprite HEIGHTS (DP & Platinum, height.narc: 4
-        // unsigned values/mon: back ♀/♂, front ♀/♂); and the raw 28-byte battle-animation record (DP, pokeanm).
-        // Storage by family (see battle-sprite-offsets-dp-pt note):
-        //   HGSS → one record/mon in pokemonSpriteOffsets (/a/1/8/0, 89 B); last 3 bytes = Y/X/size, byte 1 = movement.
-        //   Plat → same combined record in pl_poke_data.narc (movement assumed byte 1 like HGSS) + height.narc.
-        //   DP   → poke_yofs / poke_shadow_ofx / poke_shadow (1 B/mon each) + height.narc + pokeanm.narc.
+        // HGSS and Platinum keep offsets and animation in one 89-byte record (see SpeciesSpriteData); DP and
+        // Platinum add height.narc, and DP keeps poke_yofs, poke_shadow_ofx, poke_shadow and pokeanm.
         private IBattleOffsetSource _src;
         private bool _srcTried;
+
+        // Platinum and HGSS keep offsets, animation and frame runs in one record. Everything that edits it
+        // goes through this one cache, because each write saves the whole archive from its own copy.
+        private OffsetNarc _recordNarc;
+        private static bool RecordFamily => gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS;
 
         private void EnsureSource()
         {
@@ -639,15 +697,29 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _srcTried = true;
             try
             {
+                if (RecordFamily) _recordNarc = new OffsetNarc(DirNames.pokemonSpriteOffsets, SpeciesSpriteData.Size);
                 _src = gameFamily switch
                 {
-                    GameFamilies.HGSS => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true),
-                    GameFamilies.Plat => new CombinedTailSource(DirNames.pokemonSpriteOffsets, 89, hasMovement: true, movementOffset: 1, withHeights: true),
+                    GameFamilies.HGSS or GameFamilies.Plat => new CombinedTailSource(_recordNarc, withHeights: true),
                     GameFamilies.DP => new SeparateByteSource(DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow),
                     _ => null,
                 };
             }
             catch { _src = null; }
+        }
+
+        private SpeciesSpriteData ReadRecord()
+        {
+            EnsureSource();
+            return SpeciesSpriteData.Parse(_recordNarc?.GetRecord(BaseSpeciesIdFor(_currentId)));
+        }
+
+        private void EditRecord(Action<SpeciesSpriteData> edit)
+        {
+            var rec = ReadRecord();
+            if (rec == null) return;
+            edit(rec);
+            _recordNarc.PutRecord(BaseSpeciesIdFor(_currentId), rec.ToBytes());
         }
 
         /// <summary>True when this mon has a sprite-coordinate record (enables those fields).</summary>
@@ -656,23 +728,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get => _hasSpriteData;
             // The frames panel is gated on this too, and it is set after the entries are loaded.
-            private set { if (Set(ref _hasSpriteData, value)) OnPropertyChanged(nameof(HasHgeFrameData)); }
+            private set { if (Set(ref _hasSpriteData, value)) OnPropertyChanged(nameof(HasFrameRuns)); }
         }
-
-        /// <summary>True only where a movement/animation byte exists (HGSS, Platinum); hides that field on DP.</summary>
-        private bool _hasMovementType;
-        public bool HasMovementType { get => _hasMovementType; private set { if (Set(ref _hasMovementType, value)) OnPropertyChanged(nameof(ShowMovementType)); } }
-
-        /// <summary>Whether to show the vanilla "Movement type" field in Positioning. Hidden on hg-engine
-        /// ROMs: it's the same source field (frontHeader.animation) as the Animation tab's "Front animation
-        /// #", and only one place should ever write it (see the comment in SaveSpriteData).</summary>
-        public bool ShowMovementType => _hasMovementType && !HgEngineProject.IsActive;
 
         /// <summary>True where per-gender sprite heights exist (DP, Platinum; height.narc).</summary>
         private bool _hasHeights;
         public bool HasHeights { get => _hasHeights; private set { if (Set(ref _hasHeights, value)) OnPropertyChanged(nameof(ShowBaseHeights)); } }
 
-        /// <summary>True where the raw battle-animation record exists (DP; pokeanm.narc).</summary>
+        /// <summary>True where this mon has animation numbers and delays to edit.</summary>
         private bool _hasAnimData;
         public bool HasAnimData { get => _hasAnimData; private set => Set(ref _hasAnimData, value); }
 
@@ -680,9 +743,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // offset, shadow and height edit silently non-dirty, and an editor that never reports unsaved
         // changes is never asked to save: those edits were dropped on close or on switching mon.
         private bool CanEditSprite => (_src != null || HgEngineProject.IsActive) && _hasSpriteData && !_loading;
-
-        private int _movementType;
-        public int MovementType { get => _movementType; set { if (Set(ref _movementType, value) && CanEditSprite) SetDirty(); } }
 
         private int _spriteY;   // signed −128..127, additive (positive = up, negative = down)
         public int SpriteY { get => _spriteY; set { if (Set(ref _spriteY, value)) { if (CanEditSprite) SetDirty(); RaiseLayout(); } } }
@@ -771,10 +831,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaiseLayout();
         }
 
-        // ── Battle-sprite animation (the Pokémon battle-animation NARC; DP/Plat/HGSS), 28 bytes per Pokémon ──
-        // Record layout: [0] front program-anim #, [1] its wait, [2..7] three back program-anim steps
-        // {patno,wait}, [8..27] ten "pattern" steps {s8 patno(frame), u8 wait}; patno=-1 (0xFF) terminates.
-        // The pattern steps are the on-field sprite wiggle, so they drive the preview loop.
+        // ── Battle-sprite animation: movement script numbers, start delays and cry delays ──────────────
+        // Platinum and HGSS read these from the sprite record, hg-engine from SpriteOffsets.c, DP from pokeanm.
         private const int ANIM_REC_LEN = 28, ANIM_PAT_OFFSET = 8, ANIM_PAT_MAX = 10;
         private OffsetNarc _animNarc;
         private bool _animNarcTried;
@@ -782,13 +840,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _animFrontProg; public int AnimFrontProgNum { get => _animFrontProg; set { if (Set(ref _animFrontProg, value)) { if (!_loading) SetDirty(); if (_scriptTarget == 0) RefreshProgramScript(); else OnPropertyChanged(nameof(ProgramScriptHeader)); } } }
         private int _animFrontWait; public int AnimFrontWait { get => _animFrontWait; set { if (Set(ref _animFrontWait, value) && !_loading) SetDirty(); } }
 
-        // hg-engine only: cryDelay sits alongside animation/animationDelay in each of frontHeader/backHeader.
+        // Platinum, HGSS and hg-engine only: each face also carries the delay before its cry.
         private int _animFrontCryDelay; public int AnimFrontCryDelay { get => _animFrontCryDelay; set { if (Set(ref _animFrontCryDelay, value) && !_loading) SetDirty(); } }
         private int _animBackCryDelay; public int AnimBackCryDelay { get => _animBackCryDelay; set { if (Set(ref _animBackCryDelay, value) && !_loading) SetDirty(); } }
 
-        /// <summary>The three back program-animation steps ({number, wait}).</summary>
+        /// <summary>The back animation ({number, start delay}). One entry, except DP's three pokeanm slots.</summary>
         public ObservableCollection<AnimProgStep> AnimBack { get; } = new ObservableCollection<AnimProgStep>();
-        /// <summary>The pattern (frame) animation steps: the visible send-out/idle wiggle. Drives the preview.</summary>
+        public string AnimBackLabel => RecordFamily ? "Back animation (# and start delay)" : "Back program steps";
+        /// <summary>DP's pattern (frame) steps. Platinum, HGSS and hg-engine use the frame runs instead.</summary>
         public ObservableCollection<AnimPatternStep> AnimSteps { get; } = new ObservableCollection<AnimPatternStep>();
 
         public bool CanAddAnimStep => AnimSteps.Count < ANIM_PAT_MAX;
@@ -806,9 +865,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var s in AnimSteps) s.PropertyChanged -= OnAnimStepChanged;
             foreach (var s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
             AnimSteps.Clear(); AnimBack.Clear();
+            _animFrontCryDelay = _animBackCryDelay = 0;
+            OnPropertyChanged(nameof(AnimBackLabel));
             if (!IsAvailable || id < 0) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
 
             if (HgEngineProject.IsActive) { LoadAnimFromHgeSource(_currentHgeSpeciesId); return; }
+            if (RecordFamily) { LoadAnimFromRecord(); return; }
 
             EnsureAnimNarc();
             var r = _animNarc?.GetRecord(BaseSpeciesIdFor(id));
@@ -821,13 +883,23 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (patno < 0) break;   // -1 terminates
                 AddPatternStep(patno, r[ANIM_PAT_OFFSET + i * 2 + 1]);
             }
+            RecomputePatternSlots();
             OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait)); OnPropertyChanged(nameof(CanAddAnimStep));
             HasAnimData = true;
             RefreshProgramScript();
-            RestartAnimPreview();
         }
 
-        // AnimSteps stays empty: idle-frame cycling is populated separately in LoadSpriteDataFromHgeSource.
+        private void LoadAnimFromRecord()
+        {
+            var rec = ReadRecord();
+            if (rec == null) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+            _animFrontProg = rec.Front.Animation; _animFrontWait = rec.Front.StartDelay; _animFrontCryDelay = rec.Front.CryDelay;
+            AddBackStep(rec.Back.Animation, rec.Back.StartDelay);
+            _animBackCryDelay = rec.Back.CryDelay;
+            RaiseAnimFields();
+        }
+
+        // AnimSteps stays empty: the frame runs are loaded with the sprite data in LoadSpriteDataFromHgeSource.
         private void LoadAnimFromHgeSource(int id)
         {
             if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
@@ -837,19 +909,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, out int backProg);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, out int backWait);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, out _animBackCryDelay);
+            foreach (var s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
+            AnimBack.Clear();
             AddBackStep(backProg, backWait);
+            RaiseAnimFields();
+        }
 
+        private void RaiseAnimFields()
+        {
             OnPropertyChanged(nameof(AnimFrontProgNum)); OnPropertyChanged(nameof(AnimFrontWait));
             OnPropertyChanged(nameof(AnimFrontCryDelay)); OnPropertyChanged(nameof(AnimBackCryDelay));
             OnPropertyChanged(nameof(CanAddAnimStep));
             HasAnimData = true;
             RefreshProgramScript();
-            RestartAnimPreview();
         }
 
         private void SaveAnim()
         {
             if (!_hasAnimData) return;
+            int backProg = AnimBack.Count > 0 ? AnimBack[0].Number : 0;
+            int backWait = AnimBack.Count > 0 ? AnimBack[0].Wait : 0;
 
             if (HgEngineProject.IsActive)
             {
@@ -858,11 +937,21 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _animFrontProg.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, _animFrontWait.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("cryDelay") }, _animFrontCryDelay.ToString()),
-                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, (AnimBack.Count > 0 ? AnimBack[0].Number : 0).ToString()),
-                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, (AnimBack.Count > 0 ? AnimBack[0].Wait : 0).ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, backProg.ToString()),
+                    new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, backWait.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, _animBackCryDelay.ToString()),
                 };
                 HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+                return;
+            }
+
+            if (RecordFamily)
+            {
+                EditRecord(rec =>
+                {
+                    rec.Front.Animation = _animFrontProg; rec.Front.StartDelay = _animFrontWait; rec.Front.CryDelay = _animFrontCryDelay;
+                    rec.Back.Animation = backProg; rec.Back.StartDelay = backWait; rec.Back.CryDelay = _animBackCryDelay;
+                });
                 return;
             }
 
@@ -882,14 +971,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddBackStep(int num, int wait) { var s = new AnimProgStep { Number = num, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimBack.Add(s); }
         private void AddPatternStep(int frame, int wait) { var s = new AnimPatternStep { Frame = frame, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimSteps.Add(s); }
-        private void OnAnimStepChanged(object _, PropertyChangedEventArgs __) { if (!_loading) { SetDirty(); RestartAnimPreview(); } }
+        private void OnAnimStepChanged(object _, PropertyChangedEventArgs __) { if (!_loading) { SetDirty(); RecomputePatternSlots(); } }
 
         public void AddAnimStep()
         {
             if (AnimSteps.Count >= ANIM_PAT_MAX) return;
             AddPatternStep(0, 4);
             OnPropertyChanged(nameof(CanAddAnimStep));
-            if (!_loading) { SetDirty(); RestartAnimPreview(); }
+            if (!_loading) { SetDirty(); RecomputePatternSlots(); }
         }
         public void RemoveAnimStep(AnimPatternStep step)
         {
@@ -897,31 +986,37 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             step.PropertyChanged -= OnAnimStepChanged;
             AnimSteps.Remove(step);
             OnPropertyChanged(nameof(CanAddAnimStep));
-            if (!_loading) { SetDirty(); RestartAnimPreview(); }
+            if (!_loading) { SetDirty(); RecomputePatternSlots(); }
         }
 
-        // ── hg-engine frame editing (data/SpriteOffsets.c's .frontFrames/.backFrames, 10 slots each) ──
-        // Fixed-size (the source C array is SpriteFrame[10]); no add/remove, a slot with FrameNo = -1 is
-        // simply unused/terminates the idle-cycle loop, matching the file's own convention. Editing a slot
-        // live-updates the preview loop below (RecomputeHgeSteps), same as editing AnimSteps does for vanilla.
+        // DP drives both sprites from its one pattern list; the other families have their own frame runs.
+        private void RecomputePatternSlots()
+        {
+            if (RecordFamily) return;
+            var slots = AnimSteps.Select(s => new SpriteFrameSlot(s.Frame, s.Wait, 0, 0)).ToList();
+            SetFrameSlots(slots, slots);
+        }
+
+        // ── Frame runs (Platinum/HGSS sprite record, hg-engine .frontFrames/.backFrames; 10 slots each) ──
+        // Fixed size, no add/remove. FrameNo -1 ends the run.
         public ObservableCollection<SpriteFrameEntry> FrontFrameEntries { get; } = new ObservableCollection<SpriteFrameEntry>();
         public ObservableCollection<SpriteFrameEntry> BackFrameEntries { get; } = new ObservableCollection<SpriteFrameEntry>();
-        public bool HasHgeFrameData => HgEngineProject.IsActive && _hasSpriteData;
+        public bool HasFrameRuns => RecordFamily && _hasSpriteData;
 
-        private void LoadFrameEntries(HgEngineSourceBlock block)
+        private void LoadFrameEntries(IEnumerable<SpriteFrameSlot> front, IEnumerable<SpriteFrameSlot> back)
         {
             foreach (var e in FrontFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
             foreach (var e in BackFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
             FrontFrameEntries.Clear(); BackFrameEntries.Clear();
 
-            foreach (var slot in HgEngineSpriteOffsets.ReadFrameSlots(block, "frontFrames")) AddFrameEntry(FrontFrameEntries, slot);
-            foreach (var slot in HgEngineSpriteOffsets.ReadFrameSlots(block, "backFrames")) AddFrameEntry(BackFrameEntries, slot);
+            foreach (var slot in front) AddFrameEntry(FrontFrameEntries, slot);
+            foreach (var slot in back) AddFrameEntry(BackFrameEntries, slot);
 
-            RecomputeHgeSteps();
-            OnPropertyChanged(nameof(HasHgeFrameData));
+            SetFrameSlots(ToSlotData(FrontFrameEntries), ToSlotData(BackFrameEntries));
+            OnPropertyChanged(nameof(HasFrameRuns));
         }
 
-        private void AddFrameEntry(ObservableCollection<SpriteFrameEntry> list, HgEngineSpriteOffsets.SpriteFrameSlot slot)
+        private void AddFrameEntry(ObservableCollection<SpriteFrameEntry> list, SpriteFrameSlot slot)
         {
             var e = new SpriteFrameEntry
             {
@@ -936,67 +1031,281 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (_loading) return;
             SetDirty();
-            RecomputeHgeSteps();
-            RestartAnimPreview();
+            SetFrameSlots(ToSlotData(FrontFrameEntries), ToSlotData(BackFrameEntries));
         }
 
-        // The player needs the whole SpriteFrame[10] array, not the prefix before the first negative slot:
-        // a frameNo below -1 is a counted jump, and the -1 terminator is what ends the run on frame 0.
-        private void RecomputeHgeSteps()
+        // The player needs every slot, not the prefix before the first negative one: a frameNo below -1
+        // is a counted jump, and the -1 terminator is what ends the run on frame 0.
+        private void SetFrameSlots(List<SpriteFrameSlot> front, List<SpriteFrameSlot> back)
         {
-            _hgeFrontSlots = ToSlotData(FrontFrameEntries);
-            _hgeBackSlots = ToSlotData(BackFrameEntries);
-            RestartHgeFrames();
+            _frontSlots = front;
+            _backSlots = back;
+            StopPlayback();
+            RaiseFrameWarnings();
         }
 
         private void SaveFrames()
         {
-            if (!HgEngineProject.IsActive || !_hasSpriteData) return;
-            var fields = new List<HgEngineFieldWrite>();
-            fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", ToSlotData(FrontFrameEntries)));
-            fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("backFrames", ToSlotData(BackFrameEntries)));
-            HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+            if (!RecordFamily || !_hasSpriteData) return;
+            var front = ToSlotData(FrontFrameEntries);
+            var back = ToSlotData(BackFrameEntries);
+
+            if (HgEngineProject.IsActive)
+            {
+                var fields = new List<HgEngineFieldWrite>();
+                fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", front));
+                fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("backFrames", back));
+                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+                return;
+            }
+
+            EditRecord(rec =>
+            {
+                for (int i = 0; i < SpeciesSpriteData.FrameCount; i++)
+                {
+                    if (i < front.Count) rec.Front.Frames[i] = front[i];
+                    if (i < back.Count) rec.Back.Frames[i] = back[i];
+                }
+            });
         }
 
-        private static List<HgEngineSpriteOffsets.SpriteFrameSlot> ToSlotData(ObservableCollection<SpriteFrameEntry> entries)
+        private static List<SpriteFrameSlot> ToSlotData(ObservableCollection<SpriteFrameEntry> entries)
         {
-            var slots = new List<HgEngineSpriteOffsets.SpriteFrameSlot>(entries.Count);
+            var slots = new List<SpriteFrameSlot>(entries.Count);
             foreach (var e in entries)
-                slots.Add(new HgEngineSpriteOffsets.SpriteFrameSlot(e.FrameNo, e.Duration, e.HorizontalShift, e.VerticalShift));
+                slots.Add(new SpriteFrameSlot(e.FrameNo, e.Duration, e.HorizontalShift, e.VerticalShift));
             return slots;
         }
 
-        // ── Program-animation playback (PAST interpreter → live transform on the front sprite) ──────────
-        // The front program animation (prg_anm_f) indexes a script in the pokeAnimDefs NARC; PokeAnimPlayer
-        // runs it and we push its per-frame transform onto the enemy/front sprite in the preview.
+        // ── Playback: frame runs, movement scripts, or the whole send-out, once, on the game's clock ─────
+        private enum PreviewMode { None, Frames, Animation, SendOut }
+        private PreviewMode _mode;
         private OffsetNarc _animDefsNarc;
         private bool _animDefsTried;
         private PokeAnimPlayer _prog, _progBack;
-        private bool _progPlaying;
+        private readonly System.Diagnostics.Stopwatch _clock = new System.Diagnostics.Stopwatch();
+        private long _ticksRun;
 
-        public bool IsProgramAnimPlaying => _progPlaying;
-        public string ProgramAnimButtonText => _progPlaying ? "⏹ Stop" : "▶ Play animation";
-        /// <summary>Enabled when this mon has a pokeanm record (→ a front program-animation number to play).</summary>
-        public bool CanPlayProgramAnim => _hasAnimData;
+        // Only the live editor makes sound; a view model built for tests stays quiet.
+        private readonly bool _sound;
 
-        // Live transform pushed to the front sprite's RenderTransform (identity when idle).
+        public bool IsPlaying => _mode != PreviewMode.None;
+        public string FramesButtonText => ButtonText(PreviewMode.Frames, "▶ Play frames");
+        public string AnimationButtonText => ButtonText(PreviewMode.Animation, "▶ Play animation");
+        public string SendOutButtonText => _sendOutLoading ? "Loading…" : ButtonText(PreviewMode.SendOut, "▶ Play send-out");
+        private string ButtonText(PreviewMode mode, string idle) => _mode == mode ? "⏹ Stop" : idle;
+        public bool CanPlay => _hasAnimData;
+
+        /// <summary>Which sprites the three Play buttons drive. Shared, so the choice follows between tabs.</summary>
+        public IReadOnlyList<string> SideOptions { get; } = new[] { "Both sides", "Theirs (front)", "Yours (back)" };
+        private int _sideIndex;
+        public int SideIndex { get => _sideIndex; set { if (value >= 0 && Set(ref _sideIndex, value)) { StopPlayback(); RaiseAdvanced(); } } }
+        private PreviewSides Sides => (PreviewSides)_sideIndex;
+
+        public IReadOnlyList<string> SendOutKindOptions { get; } = new[] { "Wild battle", "Trainer battle" };
+        private int _sendOutKindIndex = 1;
+        public int SendOutKindIndex
+        {
+            get => _sendOutKindIndex;
+            set { if (value >= 0 && Set(ref _sendOutKindIndex, value)) { StopPlayback(); RaiseAdvanced(); RefreshMusic(); } }
+        }
+        public bool IsTrainerBattle => _sendOutKindIndex == (int)SendOutKind.Trainer;
+
+        // ── Advanced send-out options ─────────────────────────────────────────────────────────────
+        private bool _advancedOpen;
+        public bool AdvancedOpen
+        {
+            get => _advancedOpen;
+            set { if (Set(ref _advancedOpen, value) && value) { _ = LoadTrainersAsync(); RefreshMusic(); } }
+        }
+
+        /// <summary>The ball thrown: its graphic, burst and the colour the Pokémon appears in.</summary>
+        public ObservableCollection<string> BallOptions { get; } = new ObservableCollection<string>();
+        private readonly List<int> _ballIds = new List<int>();
+        private int _ballIndex;
+        public int BallIndex { get => _ballIndex; set { if (value >= 0 && Set(ref _ballIndex, value)) StopPlayback(); } }
+        private int SelectedBall => _ballIndex >= 0 && _ballIndex < _ballIds.Count ? _ballIds[_ballIndex] : 4;
+        /// <summary>A ball is thrown in a trainer battle, and by you in a wild one.</summary>
+        public bool BallMatters => IsTrainerBattle || Sides != PreviewSides.Theirs;
+
+        private void LoadBallOptions()
+        {
+            _ballIds.Clear();
+            var names = new List<string>();
+            foreach (var (ball, name) in SendOutGraphics.Balls()) { _ballIds.Add(ball); names.Add(name); }
+            ListSync.Apply(BallOptions, names);
+            _ballIndex = Math.Max(0, _ballIds.IndexOf(4));   // Poké Ball
+            OnPropertyChanged(nameof(BallIndex));
+        }
+
+        /// <summary>Every trainer as "id: Class Name", filled when first needed.</summary>
+        public ObservableCollection<string> TrainerOptions { get; } = new ObservableCollection<string>();
+        private int _trainerIndex = -1;
+        private bool _trainersLoading, _trainersLoaded;
+        public int TrainerIndex
+        {
+            get => _trainerIndex;
+            set
+            {
+                if (value < 0 || !Set(ref _trainerIndex, value)) return;
+                StopPlayback();
+                _trainer = SendOutGraphics.TrainerInfo(value);
+                RefreshMusic();
+            }
+        }
+        private (int Class, string ClassName, string Name) _trainer = (-1, "", "");
+
+        private async System.Threading.Tasks.Task LoadTrainersAsync()
+        {
+            if (_trainersLoading || _trainersLoaded || !IsAvailable) return;
+            _trainersLoading = true;
+            List<string> list = null;
+            int initial = 1;
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() =>
+                {
+                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.textArchives });
+                    list = SendOutGraphics.TrainerList();
+                    if (_trainerIndex < 0) initial = SendOutGraphics.DefaultTrainer();
+                });
+            }
+            catch (Exception ex) { AppLogger.Error("Send-out preview could not list trainers: " + ex.Message); }
+            _trainersLoading = false;
+            if (list == null || list.Count == 0) return;
+            _trainersLoaded = true;
+            ListSync.Apply(TrainerOptions, list);
+            if (_trainerIndex < 0 || _trainerIndex >= list.Count)
+            {
+                _trainerIndex = Math.Clamp(initial, 0, list.Count - 1);
+                _trainer = SendOutGraphics.TrainerInfo(_trainerIndex);
+            }
+            OnPropertyChanged(nameof(TrainerIndex));
+            RefreshMusic();
+        }
+
+        private bool _playTrainerIntro = true;
+        /// <summary>Off plays the send-out a trainer makes mid-battle: no trainers, no slide.</summary>
+        public bool PlayTrainerIntro { get => _playTrainerIntro; set { if (Set(ref _playTrainerIntro, value)) { StopPlayback(); RaiseAdvanced(); } } }
+
+        private bool _trainerSlideIn;
+        public bool TrainerSlideIn { get => _trainerSlideIn; set { if (Set(ref _trainerSlideIn, value)) StopPlayback(); } }
+
+        private bool _showPartyBalls = true;
+        public bool ShowPartyBalls { get => _showPartyBalls; set { if (Set(ref _showPartyBalls, value)) { StopPlayback(); RaiseAdvanced(); } } }
+
+        private int _partyBallCount = 3;
+        public int PartyBallCount { get => _partyBallCount; set { if (Set(ref _partyBallCount, Math.Clamp(value, 1, 6))) StopPlayback(); } }
+
+        private bool _isShiny;
+        /// <summary>Shows both sprites in their shiny colours, and a send-out plays the sparkle.</summary>
+        public bool IsShiny { get => _isShiny; set { if (Set(ref _isShiny, value)) { StopPlayback(); RaiseSprites(); } } }
+
+        public IReadOnlyList<string> TextSpeedOptions { get; } = new[] { "Slow text", "Mid text", "Fast text" };
+        private int _textSpeedIndex = (int)TextSpeed.Mid;
+        public int TextSpeedIndex { get => _textSpeedIndex; set { if (value >= 0 && Set(ref _textSpeedIndex, value)) StopPlayback(); } }
+
+        private bool _playMusic = true;
+        public bool PlayBattleMusic { get => _playMusic; set { if (Set(ref _playMusic, value)) { StopPlayback(); RefreshMusic(); } } }
+
+        private bool _kantoMusic;
+        /// <summary>HGSS plays the Kanto versions of its standard themes in Kanto.</summary>
+        public bool KantoMusic { get => _kantoMusic; set { if (Set(ref _kantoMusic, value)) { StopPlayback(); RefreshMusic(); } } }
+        public bool ShowKantoMusic => gameFamily == GameFamilies.HGSS;
+
+        private string _battleMusicText = "";
+        public string BattleMusicText { get => _battleMusicText; private set => Set(ref _battleMusicText, value); }
+
+        public bool CanChooseTrainer => IsTrainerBattle;
+        public bool CanChooseIntro => IsTrainerBattle;
+        public bool CanSlideIn => IsTrainerBattle && _playTrainerIntro;
+        public bool CanShowPartyBalls => IsTrainerBattle;
+        public bool CanCountPartyBalls => IsTrainerBattle && _showPartyBalls;
+
+        private void RaiseAdvanced()
+        {
+            foreach (var n in new[] { nameof(IsTrainerBattle), nameof(BallMatters), nameof(CanChooseTrainer), nameof(CanChooseIntro),
+                                      nameof(CanSlideIn), nameof(CanShowPartyBalls), nameof(CanCountPartyBalls) })
+                OnPropertyChanged(n);
+        }
+
+        // ── Send-out scene: what the sequence moves besides the two Pokémon ──────────────────────────
+        private SendOutSequence _sendOut;
+        private SendOutGraphics _gfx;
+        private SpaParticlePreview _enemyBurst, _playerBurst;
+        private WestPlayer _enemySparkle, _playerSparkle;
+        private CellActor _enemyBallActor, _playerBallActor;
+        private bool _enemyBallRolling, _playerBallRolling;
+        private readonly CellActor[] _enemyRowActors = new CellActor[6], _playerRowActors = new CellActor[6];
+        private int _sendOutBall;
+        private System.Threading.Tasks.Task<short[]> _cry, _ballOpenSound;
+        private object _musicHandle;
+        private int _musicVersion;
+
+        public SceneSprite EnemyTrainerSprite { get; } = new SceneSprite();
+        public SceneSprite PlayerTrainerSprite { get; } = new SceneSprite();
+        public SceneSprite EnemyBallSprite { get; } = new SceneSprite();
+        public SceneSprite PlayerBallSprite { get; } = new SceneSprite();
+
+        private Bitmap _enemyBurstImage, _playerBurstImage, _enemySparkleImage, _playerSparkleImage, _partyRowsImage;
+        public Bitmap EnemyBurstImage { get => _enemyBurstImage; private set => Set(ref _enemyBurstImage, value); }
+        public Bitmap PlayerBurstImage { get => _playerBurstImage; private set => Set(ref _playerBurstImage, value); }
+        public Bitmap EnemySparkleImage { get => _enemySparkleImage; private set => Set(ref _enemySparkleImage, value); }
+        public Bitmap PlayerSparkleImage { get => _playerSparkleImage; private set => Set(ref _playerSparkleImage, value); }
+        public Bitmap PartyRowsImage { get => _partyRowsImage; private set => Set(ref _partyRowsImage, value); }
+
+        private bool _enemyShown = true, _playerShown = true;
+        public bool EnemyShown { get => _enemyShown; private set { if (Set(ref _enemyShown, value)) RaiseShadows(); } }
+        public bool PlayerShown { get => _playerShown; private set => Set(ref _playerShown, value); }
+
+        // The wild slide moves the sprite and its shadow; the grow-in scales both.
+        private double _enemySlideX, _enemyGrow = 1, _playerGrow = 1;
+        private double _enemyTint, _playerTint;
+        private uint _enemyTintRgb, _playerTintRgb;
+
+        private int _enemyPlatformX, _playerPlatformX, _backdropX, _enemyGaugeX, _playerGaugeX;
+        private bool _enemyGaugeShown = true, _playerGaugeShown = true;
+        public double ArenaGroundEnemyX => _arenaGroundEnemyLeft + _enemyPlatformX;
+        public double ArenaGroundMineX => _arenaGroundMineLeft + _playerPlatformX;
+        public double PlaceholderEnemyPlatformX => 129 + _enemyPlatformX;
+        public double PlaceholderPlayerPlatformX => -42 + _playerPlatformX;
+        public double BackdropX => _backdropX - _backdropWidth;
+        private int _backdropWidth = 256;
+        public double EnemyGaugeX => _enemyGaugeX;
+        public double PlayerGaugeX => _playerGaugeX;
+        public bool EnemyGaugeShown => _enemyGaugeShown;
+        public bool PlayerGaugeShown => _playerGaugeShown;
+
+        public double ShadowGrow => _enemyGrow;
+        // The shadow sits under the sprite's scaled anchor, so it drops while the sprite is small.
+        public double ShadowGrowY => (40 - _spriteY) * (1 - _enemyGrow);
+
+        // Live front-sprite transform. The parts are kept because the shadow follows only X.
         private double _animOffsetX, _animOffsetY, _animScaleX = 1, _animScaleY = 1, _animRotation, _animFadeOpacity;
-        public double AnimOffsetX { get => _animOffsetX; private set => Set(ref _animOffsetX, value); }
+        public double AnimOffsetX
+        {
+            get => _animOffsetX;
+            private set { if (Set(ref _animOffsetX, value)) { OnPropertyChanged(nameof(ShadowSmallLeft)); OnPropertyChanged(nameof(ShadowMediumLeft)); OnPropertyChanged(nameof(ShadowLargeLeft)); } }
+        }
         public double AnimOffsetY { get => _animOffsetY; private set => Set(ref _animOffsetY, value); }
         public double AnimScaleX { get => _animScaleX; private set => Set(ref _animScaleX, value); }
         public double AnimScaleY { get => _animScaleY; private set => Set(ref _animScaleY, value); }
         public double AnimRotation { get => _animRotation; private set => Set(ref _animRotation, value); }
+        private global::Avalonia.Matrix _animMatrix = global::Avalonia.Matrix.Identity;
+        public global::Avalonia.Matrix AnimMatrix { get => _animMatrix; private set => Set(ref _animMatrix, value); }
         public double AnimFadeOpacity { get => _animFadeOpacity; private set => Set(ref _animFadeOpacity, value); }
         private IBrush _animFadeBrush = Brushes.Transparent;
         public IBrush AnimFadeBrush { get => _animFadeBrush; private set => Set(ref _animFadeBrush, value); }
 
-        // Same, for the player/back sprite (our own mon's entry animation, from prg_anm_b).
+        // Same, for the player/back sprite.
         private double _animBackOffsetX, _animBackOffsetY, _animBackScaleX = 1, _animBackScaleY = 1, _animBackRotation, _animBackFadeOpacity;
         public double AnimBackOffsetX { get => _animBackOffsetX; private set => Set(ref _animBackOffsetX, value); }
         public double AnimBackOffsetY { get => _animBackOffsetY; private set => Set(ref _animBackOffsetY, value); }
         public double AnimBackScaleX { get => _animBackScaleX; private set => Set(ref _animBackScaleX, value); }
         public double AnimBackScaleY { get => _animBackScaleY; private set => Set(ref _animBackScaleY, value); }
         public double AnimBackRotation { get => _animBackRotation; private set => Set(ref _animBackRotation, value); }
+        private global::Avalonia.Matrix _animBackMatrix = global::Avalonia.Matrix.Identity;
+        public global::Avalonia.Matrix AnimBackMatrix { get => _animBackMatrix; private set => Set(ref _animBackMatrix, value); }
         public double AnimBackFadeOpacity { get => _animBackFadeOpacity; private set => Set(ref _animBackFadeOpacity, value); }
         private IBrush _animBackFadeBrush = Brushes.Transparent;
         public IBrush AnimBackFadeBrush { get => _animBackFadeBrush; private set => Set(ref _animBackFadeBrush, value); }
@@ -1008,45 +1317,527 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (IsAvailable) _animDefsNarc = new OffsetNarc(DirNames.pokeAnimDefs, 1);
         }
 
-        private int _frontDelay, _backDelay;   // pre-delay frames before the front / back program (prg_anm_*_wait)
+        /// <summary>Plays or stops the chosen sides' movement scripts.</summary>
+        public void ToggleAnimationPlayback() => TogglePlayback(PreviewMode.Animation);
 
-        // The own-mon back sprite has THREE alternative program animations (prg_anm_b[0..2]); the game plays exactly
-        // ONE, chosen from the Pokémon's nature via PokeAnm_GetBackAnmSlotNo (0 = lively, 1 = neutral, 2 = reserved
-        // natures). We expose the slot directly so the editor can preview each variant. (PokePrgAnmDataSet)
-        private int _backVariant;
-        public int BackVariantIndex
+        /// <summary>Plays the chosen sides' frame runs once, or stops playback.</summary>
+        public void ToggleFramePlayback() => TogglePlayback(PreviewMode.Frames);
+
+        /// <summary>Plays or stops the send-out for the chosen sides.</summary>
+        public void ToggleSendOutPlayback()
         {
-            get => _backVariant;
-            set { if (Set(ref _backVariant, Math.Clamp(value, 0, 2)) && _progPlaying) { StopProgramAnim(); ToggleProgramAnim(); } }
+            if (_mode == PreviewMode.SendOut || _animTimer == null) { TogglePlayback(PreviewMode.SendOut); return; }
+            _ = PrepareThenSendOutAsync();
         }
-        public string[] BackVariantOptions { get; } =
-            { "Slot 0: lively natures", "Slot 1: neutral natures", "Slot 2: reserved natures" };
 
-        /// <summary>Toggles one-shot playback: the front program animation (prg_anm_f) on the enemy sprite, and the
-        /// own mon's selected back variant (prg_anm_b[BackVariant]) on the player sprite, each honouring its wait.</summary>
-        public void ToggleProgramAnim()
+        // The first send-out unpacks its archives, and each new theme renders, in the background.
+        private bool _sendOutReady, _sendOutLoading, _sendOutPreparing;
+
+        private async System.Threading.Tasks.Task PrepareThenSendOutAsync()
         {
-            if (_progPlaying) { StopProgramAnim(); return; }
-            RestartHgeFrames();   // the send-out frame run starts with the program animation, not independently
+            if (_sendOutPreparing) return;
+            _sendOutPreparing = true;
+            try
+            {
+                if (!_sendOutReady)
+                {
+                    SetSendOutLoading(true);
+                    try { await System.Threading.Tasks.Task.Run(SendOutGraphics.Unpack); }
+                    catch (Exception ex) { AppLogger.Error("Send-out preview unpack failed: " + ex.Message); }
+                    await LoadTrainersAsync();
+                    _sendOutReady = true;
+                }
+                if (_sound && _playMusic)
+                {
+                    var music = await ChooseMusicAsync();
+                    if (music != null && !music.IsCompleted) { SetSendOutLoading(true); await music; }
+                }
+            }
+            finally
+            {
+                _sendOutPreparing = false;
+                SetSendOutLoading(false);
+            }
+            TogglePlayback(PreviewMode.SendOut);
+        }
+
+        private void SetSendOutLoading(bool loading)
+        {
+            if (_sendOutLoading == loading) return;
+            _sendOutLoading = loading;
+            OnPropertyChanged(nameof(SendOutButtonText));
+        }
+
+        // Finds and names the theme off the UI thread and starts rendering it; null when there is none.
+        private async System.Threading.Tasks.Task<System.Threading.Tasks.Task<short[]>> ChooseMusicAsync()
+        {
+            _gfx ??= new SendOutGraphics();
+            var gfx = _gfx;
+            int version = ++_musicVersion;
+            bool trainer = IsTrainerBattle, kanto = _kantoMusic;
+            int trainerClass = Math.Max(0, _trainer.Class), species = _currentId;
+            int seq = -1;
+            string name = "";
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() =>
+                {
+                    seq = gfx.BattleMusic(trainer, trainerClass, species, kanto);
+                    if (seq >= 0) name = SendOutGraphics.SequenceName(seq);
+                });
+            }
+            catch (Exception ex) { AppLogger.Error("Battle music lookup failed: " + ex.Message); }
+            if (version != _musicVersion) return null;
+            BattleMusicText = name;
+            return seq >= 0 && _playMusic ? gfx.Music(seq) : null;
+        }
+
+        // Renders the current theme ahead of the next play.
+        private void RefreshMusic()
+        {
+            if (!_sound || !IsAvailable || !(_sendOutReady || _advancedOpen)) return;
+            _ = ChooseMusicAsync();
+        }
+
+        private void StartMusic()
+        {
+            if (!_sound || !_playMusic || _gfx == null) return;
+            int seq = _gfx.BattleMusic(IsTrainerBattle, Math.Max(0, _trainer.Class), _currentId, _kantoMusic);
+            var music = seq >= 0 ? _gfx.Music(seq) : null;
+            if (music != null && music.IsCompletedSuccessfully) _musicHandle = SendOutGraphics.StartMusic(music.Result);
+        }
+
+        private void TogglePlayback(PreviewMode mode)
+        {
+            bool stopping = _mode == mode;
+            if (_mode == PreviewMode.SendOut && _sound) StopSounds();
+            StopPlayback();
+            if (stopping) return;
+
+            if (mode == PreviewMode.SendOut) { BeginSendOut(); if (_mode != PreviewMode.SendOut) return; }
+            else
+            {
+                bool frames = mode == PreviewMode.Frames, movement = mode == PreviewMode.Animation;
+                if (Sides != PreviewSides.Yours) StartFront(frames, movement);
+                if (Sides != PreviewSides.Theirs) StartBack(frames, movement);
+                PushFrames();
+                PushTransforms();
+                if (!SpritesPlaying) return;
+            }
+
+            _mode = mode;
+            _ticksRun = 0;
+            _clock.Restart();
+            _animTimer?.Start();
+            RaisePlaying();
+        }
+
+        private void StartFront(bool frames, bool movement)
+        {
             EnsureAnimDefsNarc();
-            _frontDelay = Math.Max(0, _animFrontWait);
-            _prog = LoadProgram(_animFrontProg);
-
-            int slot = Math.Clamp(_backVariant, 0, 2);
-            if (slot < AnimBack.Count) { _backDelay = Math.Max(0, AnimBack[slot].Wait); _progBack = LoadProgram(AnimBack[slot].Number); }
-            else { _backDelay = 0; _progBack = null; }
-
-            if (_prog == null && _progBack == null) return;
-            _progPlaying = true;
-            OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
+            if (frames) _frontFrames.Start(_frontSlots);
+            if (movement) _prog = LoadProgram(_animFrontProg, _animFrontWait);
         }
 
-        private PokeAnimPlayer LoadProgram(int fileIndex)
+        private void StartBack(bool frames, bool movement)
+        {
+            EnsureAnimDefsNarc();
+            if (frames) _backFrames.Start(_backSlots);
+            if (movement && AnimBack.Count > 0) _progBack = LoadProgram(AnimBack[0].Number, AnimBack[0].Wait);
+        }
+
+        private bool FrontBusy => _frontFrames.Active || (_prog?.Active ?? false);
+        private bool BackBusy => _backFrames.Active || (_progBack?.Active ?? false);
+        private bool SpritesPlaying => FrontBusy || BackBusy;
+
+        private void BeginSendOut()
+        {
+            _gfx ??= new SendOutGraphics();
+            _sendOutBall = SelectedBall;
+            if (_trainer.Class < 0) _trainer = SendOutGraphics.TrainerInfo(_trainerIndex >= 0 ? _trainerIndex : SendOutGraphics.DefaultTrainer());
+            bool trainer = IsTrainerBattle;
+            int trainerClass = Math.Max(0, _trainer.Class);
+            var options = new SendOutOptions
+            {
+                Kind = (SendOutKind)_sendOutKindIndex,
+                Sides = Sides,
+                Ball = _sendOutBall,
+                TrainerIntro = !trainer || _playTrainerIntro,
+                SlideIn = trainer && _playTrainerIntro && _trainerSlideIn,
+                ShowPartyBalls = trainer && _showPartyBalls,
+                PartyBalls = _partyBallCount,
+                Shiny = _isShiny,
+                Speed = (TextSpeed)_textSpeedIndex,
+                EnemyCryDelay = _animFrontCryDelay,
+                PlayerCryDelay = _animBackCryDelay,
+                CryZeroIsEight = gameFamily == GameFamilies.HGSS,
+                TrainerSequences = trainer ? _gfx.EnemyTrainerSequenceCount(trainerClass) : 1,
+                TrainerLandingTicks = trainer ? _gfx.EnemyTrainerSequenceTicks(trainerClass, 1) : 0,
+                Text = MessageFor,
+            };
+            _sendOut = new SendOutSequence(options);
+            _enemyBurst = new SpaParticlePreview(256, 192);
+            _playerBurst = new SpaParticlePreview(256, 192);
+            _enemySparkle = _playerSparkle = null;
+            var balls = _gfx.BallSequences(_sendOutBall);
+            _enemyBallActor = new CellActor(balls, 1);
+            _playerBallActor = new CellActor(balls, 0);
+            _enemyBallRolling = _playerBallRolling = false;
+            var rowSeqs = _gfx.PartyRowSequences();
+            for (int i = 0; i < 6; i++) { _enemyRowActors[i] = new CellActor(rowSeqs, 0); _playerRowActors[i] = new CellActor(rowSeqs, 3); }
+            if (_sound)
+            {
+                _cry = SendOutGraphics.Cry(_currentId);
+                _ballOpenSound = _gfx.BallOpenSound();
+            }
+            StartMusic();
+            // The first tick shows at once; after that the timer steps it.
+            _mode = PreviewMode.SendOut;
+            SendOutTick();
+        }
+
+        private void StopSounds()
+        {
+            try { AudioOutput.Current.Stop(); } catch { }
+        }
+
+        // Running players step first so the sequence sees what finished; anything started shows its first state.
+        private void SendOutTick()
+        {
+            _prog?.Step();
+            _progBack?.Step();
+            _frontFrames.Tick();
+            _backFrames.Tick();
+            bool enemyBursting = _enemyBurst.HasEmitters && !_enemyBurst.AllFinished;
+            bool playerBursting = _playerBurst.HasEmitters && !_playerBurst.AllFinished;
+            StepSparkle(ref _enemySparkle, img => EnemySparkleImage = img);
+            StepSparkle(ref _playerSparkle, img => PlayerSparkleImage = img);
+
+            var s = _sendOut;
+            s.EnemyBusy = FrontBusy;
+            s.PlayerBusy = BackBusy;
+            s.EnemyBurstBusy = enemyBursting;
+            s.PlayerBurstBusy = playerBursting;
+            s.EnemySparkleBusy = _enemySparkle != null;
+            s.PlayerSparkleBusy = _playerSparkle != null;
+            s.Step();
+
+            if (s.EnemyAnimStarts) StartFront(frames: true, movement: true);
+            if (s.PlayerAnimStarts) StartBack(frames: true, movement: true);
+            if (s.EnemyBallOpens) { _gfx.AddBurst(_enemyBurst, _sendOutBall, enemySide: true); PlaySound(_ballOpenSound); }
+            if (s.PlayerBallOpens) { _gfx.AddBurst(_playerBurst, _sendOutBall, enemySide: false); PlaySound(_ballOpenSound); }
+            if (s.EnemyCry) PlaySound(_cry);
+            if (s.PlayerCry) PlaySound(_cry);
+            if (s.EnemySparkleStarts) _enemySparkle = StartSparkle(enemySide: true);
+            if (s.PlayerSparkleStarts) _playerSparkle = StartSparkle(enemySide: false);
+            foreach (string name in s.Sounds) PlaySound(_gfx.Sound(name));
+
+            ApplySendOut();
+            PushFrames();
+            PushTransforms();
+
+            // Particles are drawn where they are, then moved, once a tick.
+            EnemyBurstImage = StepBurst(_enemyBurst);
+            PlayerBurstImage = StepBurst(_playerBurst);
+
+            if (s.Done && !SpritesPlaying && _enemySparkle == null && _playerSparkle == null
+                && !(_enemyBurst.HasEmitters && !_enemyBurst.AllFinished) && !(_playerBurst.HasEmitters && !_playerBurst.AllFinished))
+                StopPlayback();
+        }
+
+        private static Bitmap StepBurst(SpaParticlePreview burst)
+        {
+            if (!burst.HasEmitters || burst.AllFinished) return null;
+            var image = burst.RenderFrame();
+            burst.Step();
+            return image;
+        }
+
+        private WestPlayer StartSparkle(bool enemySide)
+        {
+            // On the battler's centre, the way the effect's own emitters are placed.
+            double x = enemySide ? EnemyLeft + 40 : PlayerLeft + 40;
+            double y = enemySide ? EnemyTop + 40 : PlayerTop + 40;
+            var player = _gfx.Sparkle(enemySide, x, y);
+            if (player != null) player.PlaySound = id => PlaySound(_gfx.Sound(id));
+            return player;
+        }
+
+        private static void StepSparkle(ref WestPlayer sparkle, Action<Bitmap> show)
+        {
+            if (sparkle == null) return;
+            sparkle.Step();
+            if (sparkle.Finished) { sparkle = null; show(null); return; }
+            show(sparkle.RenderFrame());
+        }
+
+        private void PlaySound(System.Threading.Tasks.Task<short[]> sound)
+        {
+            if (_sound) SendOutGraphics.Play(sound);
+        }
+
+        private void ApplySendOut()
+        {
+            var s = _sendOut;
+            EnemyShown = s.Enemy.Visible;
+            PlayerShown = s.Player.Visible;
+            _enemySlideX = s.Enemy.OffsetX;
+            _enemyGrow = s.Enemy.Scale; _playerGrow = s.Player.Scale;
+            _enemyTint = s.Enemy.Tint; _enemyTintRgb = s.Enemy.TintRgb;
+            _playerTint = s.Player.Tint; _playerTintRgb = s.Player.TintRgb;
+            SetSceneOffsets(s.EnemyPlatformOffsetX, s.PlayerPlatformOffsetX, s.BackdropScrollX,
+                s.EnemyGaugeOffsetX, s.PlayerGaugeOffsetX, s.EnemyGaugeVisible, s.PlayerGaugeVisible);
+
+            var et = s.EnemyTrainer;
+            ApplyTrainer(EnemyTrainerSprite, et, et.Visible ? _gfx.EnemyTrainer(Math.Max(0, _trainer.Class), et.Sequence, et.SequenceTicks) : null);
+            ApplyTrainer(PlayerTrainerSprite, s.PlayerTrainer, s.PlayerTrainer.Visible ? _gfx.PlayerTrainer(s.PlayerTrainer.AnimTicks) : null);
+            ApplyBall(EnemyBallSprite, s.EnemyBall, _enemyBallActor, ref _enemyBallRolling);
+            ApplyBall(PlayerBallSprite, s.PlayerBall, _playerBallActor, ref _playerBallRolling);
+            ApplyRow(s.EnemyRow, _enemyRowActors);
+            ApplyRow(s.PlayerRow, _playerRowActors);
+            PartyRowsImage = s.EnemyRow.Visible || s.PlayerRow.Visible
+                ? _gfx.ComposeRows((s.EnemyRow, _enemyRowActors, false), (s.PlayerRow, _playerRowActors, true))
+                : null;
+
+            MessageBoxDim = 1 - s.TextBox;
+            RaiseMessage();
+            RaiseShadows();
+        }
+
+        // Party-row balls spin at the battle's two animation units a tick while they roll.
+        private static void ApplyRow(SendOutSequence.RowState row, CellActor[] actors)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                var ball = row.Balls[i];
+                if (actors[i].Seq != ball.Sequence) actors[i].SetSeq(ball.Sequence);
+                else if (ball.Animating) { actors[i].Tick(); actors[i].Tick(); }
+                else if (actors[i].FrameIndex != 0) actors[i].SetSeq(ball.Sequence);
+            }
+        }
+
+        private static void ApplyTrainer(SceneSprite view, SendOutSequence.TrainerState t, Bitmap image)
+        {
+            view.Visible = t.Visible && image != null;
+            if (!view.Visible) return;
+            view.Image = image;
+            view.Left = t.X - 80;
+            view.Top = t.Y - 80;
+        }
+
+        // The ball's cells advance one animation unit a tick while it spins or opens.
+        private void ApplyBall(SceneSprite view, SendOutSequence.BallState b, CellActor actor, ref bool rolling)
+        {
+            if (b.Animating)
+            {
+                if (!rolling || actor.Seq != b.Sequence) actor.SetSeq(b.Sequence);
+                else actor.Tick();
+            }
+            rolling = b.Animating;
+
+            view.Visible = b.Visible;
+            if (!b.Visible) return;
+            view.Image = _gfx.BallCell(_sendOutBall, actor.CellIndex);
+            view.Left = b.X - 32;
+            view.Top = b.Y - 32;
+            view.Rotation = b.Rotation * 360.0 / 0x10000;
+            view.Flash = b.Flash;
+        }
+
+        private void SetSceneOffsets(int enemyPlatform, int playerPlatform, int backdrop, int enemyGauge, int playerGauge, bool enemyGaugeShown, bool playerGaugeShown)
+        {
+            if (_enemyPlatformX != enemyPlatform)
+            {
+                _enemyPlatformX = enemyPlatform;
+                OnPropertyChanged(nameof(ArenaGroundEnemyX)); OnPropertyChanged(nameof(PlaceholderEnemyPlatformX));
+            }
+            if (_playerPlatformX != playerPlatform)
+            {
+                _playerPlatformX = playerPlatform;
+                OnPropertyChanged(nameof(ArenaGroundMineX)); OnPropertyChanged(nameof(PlaceholderPlayerPlatformX));
+            }
+            if (_backdropX != backdrop) { _backdropX = backdrop; OnPropertyChanged(nameof(BackdropX)); }
+            if (_enemyGaugeX != enemyGauge) { _enemyGaugeX = enemyGauge; OnPropertyChanged(nameof(EnemyGaugeX)); }
+            if (_playerGaugeX != playerGauge) { _playerGaugeX = playerGauge; OnPropertyChanged(nameof(PlayerGaugeX)); }
+            if (_enemyGaugeShown != enemyGaugeShown) { _enemyGaugeShown = enemyGaugeShown; OnPropertyChanged(nameof(EnemyGaugeShown)); }
+            if (_playerGaugeShown != playerGaugeShown) { _playerGaugeShown = playerGaugeShown; OnPropertyChanged(nameof(PlayerGaugeShown)); }
+        }
+
+        // Back to the battle as it stands after the send-out: both Pokémon out, bars in, nothing thrown.
+        private void ResetScene()
+        {
+            _sendOut = null;
+            _enemyBurst = _playerBurst = null;
+            _enemySparkle = _playerSparkle = null;
+            EnemyBurstImage = PlayerBurstImage = EnemySparkleImage = PlayerSparkleImage = PartyRowsImage = null;
+            EnemyShown = PlayerShown = true;
+            _enemySlideX = 0; _enemyGrow = _playerGrow = 1; _enemyTint = _playerTint = 0;
+            SetSceneOffsets(0, 0, 0, 0, 0, true, true);
+            EnemyTrainerSprite.Visible = PlayerTrainerSprite.Visible = EnemyBallSprite.Visible = PlayerBallSprite.Visible = false;
+            MessageBoxDim = 0;
+            RaiseMessage();
+            RaiseShadows();
+        }
+
+        private void RaiseShadows()
+        {
+            OnPropertyChanged(nameof(ShadowSmallVisible)); OnPropertyChanged(nameof(ShadowMediumVisible)); OnPropertyChanged(nameof(ShadowLargeVisible));
+            OnPropertyChanged(nameof(ShadowSmallLeft)); OnPropertyChanged(nameof(ShadowMediumLeft)); OnPropertyChanged(nameof(ShadowLargeLeft));
+            OnPropertyChanged(nameof(ShadowGrow)); OnPropertyChanged(nameof(ShadowGrowY));
+        }
+
+        private PokeAnimPlayer LoadProgram(int fileIndex, int startDelay)
         {
             var bytes = _animDefsNarc?.GetRecord(fileIndex);
             var script = bytes != null ? PokeAnimScript.Parse(bytes) : null;
-            return (script != null && script.Count > 0) ? new PokeAnimPlayer(script) : null;
+            return (script != null && script.Count > 0) ? new PokeAnimPlayer(script, startDelay) : null;
         }
+
+        public void StopPlayback()
+        {
+            SendOutGraphics.StopMusic(_musicHandle);
+            _musicHandle = null;
+            _animTimer?.Stop();
+            _clock.Reset();
+            _prog = null; _progBack = null;
+            _frontFrames.Stop();
+            _backFrames.Stop();
+            var was = _mode;
+            _mode = PreviewMode.None;
+            ResetScene();
+            PushFrames();
+            PushTransforms();
+            if (was == PreviewMode.None) return;
+            RaisePlaying();
+        }
+
+        private void RaisePlaying()
+        {
+            OnPropertyChanged(nameof(IsPlaying));
+            OnPropertyChanged(nameof(FramesButtonText));
+            OnPropertyChanged(nameof(AnimationButtonText));
+            OnPropertyChanged(nameof(SendOutButtonText));
+            RaiseMessage();
+        }
+
+        // The UI timer fires irregularly, so ticks are counted against a stopwatch rather than one per callback.
+        private void OnAnimTimer()
+        {
+            if (!IsPlaying) { _animTimer?.Stop(); return; }
+            long due = (long)(_clock.Elapsed.TotalSeconds * PreviewFps);
+            if (due - _ticksRun > 4) _ticksRun = due - 1;   // after a stall, resume rather than fast-forward
+            while (IsPlaying && _ticksRun < due)
+            {
+                _ticksRun++;
+                GameTick();
+            }
+        }
+
+        internal int FrontFrameShown => _frontFrame;
+
+        internal void GameTick()
+        {
+            if (_mode == PreviewMode.SendOut) { SendOutTick(); return; }
+            _prog?.Step();
+            _progBack?.Step();
+            _frontFrames.Tick();
+            _backFrames.Tick();
+            PushFrames();
+            PushTransforms();
+            if (!SpritesPlaying) StopPlayback();
+        }
+
+        private void PushFrames()
+        {
+            int front = ClampFrame(_frontFrames.SpriteFrame), back = ClampFrame(_backFrames.SpriteFrame);
+            if (front != _frontFrame || back != _backFrame)
+            {
+                _frontFrame = front; _backFrame = back;
+                RaiseSprites();
+            }
+            if (_frontShift != _frontFrames.HorizontalShift || _backShift != _backFrames.HorizontalShift)
+            {
+                _frontShift = _frontFrames.HorizontalShift; _backShift = _backFrames.HorizontalShift;
+                RaiseLayout();
+            }
+        }
+
+        private void PushTransforms()
+        {
+            var f = _prog;
+            AnimOffsetX = f?.OffsetX ?? 0; AnimOffsetY = f?.OffsetY ?? 0;
+            AnimScaleX = f?.ScaleX ?? 1; AnimScaleY = f?.ScaleY ?? 1;
+            AnimRotation = f?.RotationDegrees ?? 0;
+            AnimMatrix = SpriteMatrix(f, _frontShift, _spriteY) * GrowMatrix(_enemyGrow, _spriteY)
+                       * global::Avalonia.Matrix.CreateTranslation(_enemySlideX, 0);
+            // A ball's colour or the wild intro's shade is a palette fade too, and wins over the script's own.
+            if (_enemyTint > 0) { AnimFadeOpacity = _enemyTint; AnimFadeBrush = TintBrush(_enemyTintRgb); }
+            else
+            {
+                AnimFadeOpacity = f?.FadeStrength ?? 0;
+                if (f != null && f.FadeStrength > 0) AnimFadeBrush = new SolidColorBrush(Color.FromRgb(f.FadeR, f.FadeG, f.FadeB));
+            }
+
+            var b = _progBack;
+            AnimBackOffsetX = b?.OffsetX ?? 0; AnimBackOffsetY = b?.OffsetY ?? 0;
+            AnimBackScaleX = b?.ScaleX ?? 1; AnimBackScaleY = b?.ScaleY ?? 1;
+            AnimBackRotation = b?.RotationDegrees ?? 0;
+            AnimBackMatrix = SpriteMatrix(b, _backShift, 0) * GrowMatrix(_playerGrow, _spriteY);
+            if (_playerTint > 0) { AnimBackFadeOpacity = _playerTint; AnimBackFadeBrush = TintBrush(_playerTintRgb); }
+            else
+            {
+                AnimBackFadeOpacity = b?.FadeStrength ?? 0;
+                if (b != null && b.FadeStrength > 0) AnimBackFadeBrush = new SolidColorBrush(Color.FromRgb(b.FadeR, b.FadeG, b.FadeB));
+            }
+        }
+
+        private static IBrush TintBrush(uint rgb) =>
+            new SolidColorBrush(Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb));
+
+        // Growing about the centre while dropping (40 − yOffset) × (1 − scale) is scaling about that point below it.
+        private static global::Avalonia.Matrix GrowMatrix(double scale, int yOffset)
+        {
+            if (scale >= 1) return global::Avalonia.Matrix.Identity;
+            double anchorY = 80 - yOffset;
+            return global::Avalonia.Matrix.CreateTranslation(-40, -anchorY)
+                 * global::Avalonia.Matrix.CreateScale(scale, scale)
+                 * global::Avalonia.Matrix.CreateTranslation(40, anchorY);
+        }
+
+        // In the 80×80 box: scale about the centre, move, then rotate about the anchor (centre less the frame
+        // shift, plus the pivot, and on the front sprite the record's Y offset).
+        private static global::Avalonia.Matrix SpriteMatrix(PokeAnimPlayer p, int frameShift, int anchorBelowCentre)
+        {
+            if (p == null) return global::Avalonia.Matrix.Identity;
+            const double centre = 40;
+            double pivotX = centre - frameShift + p.OffsetX + p.PivotX;
+            double pivotY = centre + anchorBelowCentre + p.OffsetY;
+            return global::Avalonia.Matrix.CreateTranslation(-centre, -centre)
+                 * global::Avalonia.Matrix.CreateScale(p.ScaleX, p.ScaleY)
+                 * global::Avalonia.Matrix.CreateTranslation(centre + p.OffsetX - pivotX, centre + p.OffsetY - pivotY)
+                 * global::Avalonia.Matrix.CreateRotation(p.RotationDegrees * Math.PI / 180)
+                 * global::Avalonia.Matrix.CreateTranslation(pivotX, pivotY);
+        }
+
+        // Battles tick sprite animation at 30 Hz. 60 is kept only to preview a hack that runs it faster.
+        public ObservableCollection<string> FrameRateOptions { get; } = new ObservableCollection<string> { "30 fps", "60 fps" };
+
+        /// <summary>Remembered between sessions and preview-only: it never changes what is saved.</summary>
+        public int FrameRateIndex
+        {
+            get => DSPRE.SettingsManager.Settings?.battlePreviewFps == 60 ? 1 : 0;
+            set
+            {
+                int fps = value == 1 ? 60 : 30;
+                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.battlePreviewFps == fps) return;
+                DSPRE.SettingsManager.Settings.battlePreviewFps = fps;
+                try { DSPRE.SettingsManager.Save(); } catch { }
+                OnPropertyChanged(nameof(FrameRateIndex));
+                if (IsPlaying) { _ticksRun = 0; _clock.Restart(); }
+            }
+        }
+
+        private int PreviewFps => FrameRateIndex == 1 ? 60 : 30;
 
         // ── Program-animation SCRIPT EDITOR (Phase B): editable PAST command list for the front script ──
         // NOTE: this edits the shared animation script in the pokeanime NARC, so it affects every Pokémon that
@@ -1155,40 +1946,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             int file = CurrentScriptFile();
             if (_animDefsNarc == null || file < 0) return;
             _animDefsNarc.PutRecord(file, PokeAnimScript.Serialize(BuildCommandsFromRows()));
-            StopProgramAnim();
+            StopPlayback();
             RefreshProgramScript();   // reflect the canonical (padded) form
-        }
-
-        /// <summary>Previews just the script the editor is targeting, on its own sprite (front → enemy, back slot →
-        /// player). <paramref name="edited"/> plays the current unsaved rows; otherwise the saved NARC file.</summary>
-        public void PlayScript(bool edited)
-        {
-            EnsureAnimDefsNarc();
-            StopProgramAnim();   // clears both players + delays, then we arm just the target
-
-            PokeAnimPlayer player;
-            if (edited)
-            {
-                var cmds = BuildCommandsFromRows();
-                player = cmds.Count > 0 ? new PokeAnimPlayer(cmds) : null;
-            }
-            else player = LoadProgram(CurrentScriptFile());
-            if (player == null) return;
-
-            if (_scriptTarget == 0)
-            {
-                _prog = player;
-                _frontDelay = Math.Max(0, _animFrontWait);
-            }
-            else
-            {
-                int slot = _scriptTarget - 1;
-                _progBack = player;
-                _backDelay = (slot >= 0 && slot < AnimBack.Count) ? Math.Max(0, AnimBack[slot].Wait) : 0;
-            }
-
-            _progPlaying = true;
-            OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
         }
 
         private static List<int> ParseIntList(string s)
@@ -1206,53 +1965,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return list;
         }
 
-        private void StopProgramAnim()
-        {
-            _progPlaying = false; _prog = null; _progBack = null;
-            _frontDelay = 0; _backDelay = 0;
-            AnimOffsetX = AnimOffsetY = 0; AnimScaleX = AnimScaleY = 1; AnimRotation = 0; AnimFadeOpacity = 0;
-            AnimBackOffsetX = AnimBackOffsetY = 0; AnimBackScaleX = AnimBackScaleY = 1; AnimBackRotation = 0; AnimBackFadeOpacity = 0;
-            OnPropertyChanged(nameof(IsProgramAnimPlaying)); OnPropertyChanged(nameof(ProgramAnimButtonText));
-        }
-
-        // Advances both program animations one frame (called from the 60 fps timer). Plays ONCE: each side waits its
-        // pre-delay then runs its single script; when both have finished the sprites settle and playback stops.
-        private void TickProgramAnim()
-        {
-            if (!_progPlaying) return;
-
-            // Front (enemy): wait the pre-delay, then run the script once.
-            if (_prog != null)
-            {
-                if (_frontDelay > 0) _frontDelay--;
-                else if (!_prog.Finished) _prog.Step();
-                AnimOffsetX = _prog.OffsetX; AnimOffsetY = _prog.OffsetY;
-                AnimScaleX = _prog.ScaleX; AnimScaleY = _prog.ScaleY; AnimRotation = _prog.RotationDegrees;
-                AnimFadeOpacity = _prog.FadeStrength;
-                if (_prog.FadeStrength > 0) AnimFadeBrush = new SolidColorBrush(Color.FromRgb(_prog.FadeR, _prog.FadeG, _prog.FadeB));
-            }
-
-            // Back (player): the single nature-selected variant, with its own pre-delay.
-            if (_progBack != null)
-            {
-                if (_backDelay > 0) _backDelay--;
-                else if (!_progBack.Finished) _progBack.Step();
-                AnimBackOffsetX = _progBack.OffsetX; AnimBackOffsetY = _progBack.OffsetY;
-                AnimBackScaleX = _progBack.ScaleX; AnimBackScaleY = _progBack.ScaleY; AnimBackRotation = _progBack.RotationDegrees;
-                AnimBackFadeOpacity = _progBack.FadeStrength;
-                if (_progBack.FadeStrength > 0) AnimBackFadeBrush = new SolidColorBrush(Color.FromRgb(_progBack.FadeR, _progBack.FadeG, _progBack.FadeB));
-            }
-
-            bool frontDone = _prog == null || (_frontDelay == 0 && _prog.Finished);
-            bool backDone = _progBack == null || (_backDelay == 0 && _progBack.Finished);
-            if (frontDone && backDone) StopProgramAnim();   // one-shot
-        }
-
         private void LoadSpriteData(int id)
         {
-            HasSpriteData = false; HasMovementType = false; HasHeights = false;
-            _hgeFrontSlots = null; _hgeBackSlots = null;
-            RestartHgeFrames();
+            HasSpriteData = false; HasHeights = false;
+            SetFrameSlots(null, null);
             if (!IsAvailable || id < 0) return;
             try
             {
@@ -1261,12 +1977,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 EnsureSource();
                 if (_src == null) return;
                 if (!_src.TryLoad(BaseSpeciesIdFor(id), out BattleRec rec)) return;
-                _spriteY = rec.FrontY; _shadowX = rec.ShadowX; _shadowSize = rec.ShadowSize; _movementType = rec.Movement;
+                if (RecordFamily)
+                {
+                    var record = ReadRecord();
+                    if (record == null) return;
+                    LoadFrameEntries(record.Front.Frames, record.Back.Frames);
+                }
+                _spriteY = rec.FrontY; _shadowX = rec.ShadowX; _shadowSize = rec.ShadowSize;
                 _backHeightF = rec.BackF; _backHeightM = rec.BackM; _frontHeightF = rec.FrontF; _frontHeightM = rec.FrontM;
-                OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize)); OnPropertyChanged(nameof(MovementType));
+                OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize));
                 OnPropertyChanged(nameof(FrontHeightM)); OnPropertyChanged(nameof(FrontHeightF)); OnPropertyChanged(nameof(BackHeightM)); OnPropertyChanged(nameof(BackHeightF));
                 OnPropertyChanged(nameof(FrontHeightUnified)); OnPropertyChanged(nameof(BackHeightUnified));
-                HasMovementType = rec.HasMovement; HasHeights = rec.HasHeights;
+                HasHeights = rec.HasHeights;
                 HasSpriteData = true;
             }
             catch { HasSpriteData = false; }
@@ -1276,23 +1998,22 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadSpriteDataFromHgeSource(int id)
         {
             if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) return;
-            if (!block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, out int movement)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("spriteYOffset") }, out int spriteY)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowXOffset") }, out int shadowX)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowSize") }, out int shadowSize)) return;
 
-            LoadFrameEntries(block);
+            LoadFrameEntries(HgEngineSpriteOffsets.ReadFrameSlots(block, "frontFrames"), HgEngineSpriteOffsets.ReadFrameSlots(block, "backFrames"));
 
-            _spriteY = spriteY; _shadowX = shadowX; _shadowSize = shadowSize; _movementType = movement;
+            _spriteY = spriteY; _shadowX = shadowX; _shadowSize = shadowSize;
 
             bool hasHeights = HgEngineHeightTable.TryGet(id, out int femaleBack, out int maleBack, out int femaleFront, out int maleFront);
             _backHeightF = hasHeights ? femaleBack : 0; _backHeightM = hasHeights ? maleBack : 0;
             _frontHeightF = hasHeights ? femaleFront : 0; _frontHeightM = hasHeights ? maleFront : 0;
 
-            OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize)); OnPropertyChanged(nameof(MovementType));
+            OnPropertyChanged(nameof(SpriteY)); OnPropertyChanged(nameof(ShadowX)); OnPropertyChanged(nameof(ShadowSize));
             OnPropertyChanged(nameof(FrontHeightM)); OnPropertyChanged(nameof(FrontHeightF)); OnPropertyChanged(nameof(BackHeightM)); OnPropertyChanged(nameof(BackHeightF));
             OnPropertyChanged(nameof(FrontHeightUnified)); OnPropertyChanged(nameof(BackHeightUnified));
-            HasMovementType = true; HasHeights = hasHeights;
+            HasHeights = hasHeights;
             HasSpriteData = true;
         }
 
@@ -1322,8 +2043,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 FrontY = _spriteY,
                 ShadowX = _shadowX,
                 ShadowSize = _shadowSize,
-                Movement = _movementType,
-                HasMovement = _hasMovementType,
                 BackF = _backHeightF,
                 BackM = _backHeightM,
                 FrontF = _frontHeightF,
@@ -1336,8 +2055,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Per-family storage backends ──────────────────────────────────────────────────────
         private struct BattleRec
         {
-            public int FrontY, ShadowX, ShadowSize, Movement;
-            public bool HasMovement, HasHeights;
+            public int FrontY, ShadowX, ShadowSize;
+            public bool HasHeights;
             public int BackF, BackM, FrontF, FrontM;   // height.narc, unsigned
         }
 
@@ -1432,16 +2151,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             private void Put(int idx, int v) { var r = _n.GetRecord(idx); if (r == null) return; if (r.Length < 1) r = new byte[1]; r[0] = (byte)v; _n.PutRecord(idx, r); }
         }
 
-        /// <summary>HGSS / Platinum: one combined record per mon; the 3 fields are the LAST 3 bytes (size last),
-        /// an optional movement byte at a fixed offset, and (Platinum) the per-gender heights from height.narc.</summary>
+        /// <summary>Platinum and HGSS sprite record, plus Platinum's per-gender heights.</summary>
         private sealed class CombinedTailSource : IBattleOffsetSource
         {
             private readonly OffsetNarc _narc;
-            private readonly bool _hasMovement;
-            private readonly int _movementOffset;
-            private readonly HeightNarc _heights;   // null when withHeights:false (HGSS)
-            public CombinedTailSource(DirNames dir, int recLen, bool hasMovement, int movementOffset, bool withHeights)
-            { _narc = new OffsetNarc(dir, recLen); _hasMovement = hasMovement; _movementOffset = movementOffset; _heights = withHeights ? new HeightNarc() : null; }
+            private readonly HeightNarc _heights;   // null when withHeights:false
+            public CombinedTailSource(OffsetNarc records, bool withHeights)
+            { _narc = records; _heights = withHeights ? new HeightNarc() : null; }
 
             public void Invalidate() { _narc.Invalidate(); _heights?.Invalidate(); }
 
@@ -1452,7 +2168,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (r == null || r.Length < 3) return false;
                 int n = r.Length;
                 rec.FrontY = (sbyte)r[n - 3]; rec.ShadowX = (sbyte)r[n - 2]; rec.ShadowSize = r[n - 1];
-                if (_hasMovement && _movementOffset >= 0 && _movementOffset < n) { rec.Movement = r[_movementOffset]; rec.HasMovement = true; }
                 if (_heights != null && _heights.TryLoad(id, out int bf, out int bm, out int ff, out int fm))
                 { rec.BackF = bf; rec.BackM = bm; rec.FrontF = ff; rec.FrontM = fm; rec.HasHeights = true; }
                 return true;
@@ -1464,7 +2179,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (r == null || r.Length < 3) return;
                 int n = r.Length;
                 r[n - 3] = (byte)(sbyte)rec.FrontY; r[n - 2] = (byte)(sbyte)rec.ShadowX; r[n - 1] = (byte)rec.ShadowSize;
-                if (rec.HasMovement && _movementOffset >= 0 && _movementOffset < n) r[_movementOffset] = (byte)rec.Movement;
                 _narc.PutRecord(id, r);
                 if (_heights != null && rec.HasHeights) _heights.Save(id, in rec);
             }
@@ -1532,127 +2246,23 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                         OnSpriteFormChanged();
                 };
 
-            // Timer stays at 60fps (TickProgramAnim's PAST VM needs that rate); PatternTicksPerWaitUnit scales the pokeanm pattern loop down to its real 1/30s wait unit.
+            // Polled well above the game rate; OnAnimTimer decides from the stopwatch how many ticks are due.
             _animTimer = new global::Avalonia.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(1000.0 / 60)
+                Interval = TimeSpan.FromMilliseconds(5)
             };
-            _animTimer.Tick += (_, _) => AnimTick();
-            _animTimer.Start();
+            _animTimer.Tick += (_, _) => OnAnimTimer();
+            _sound = true;
 
-            if (IsAvailable) ApplyArena();
+            if (IsAvailable)
+            {
+                ApplyArena();
+                try { LoadBallOptions(); } catch { }
+            }
         }
 
         /// <summary>Stops the preview timer (e.g. when this VM is used only to compute sprite positions elsewhere).</summary>
-        public void Detach() => _animTimer?.Stop();
-
-        // How long one wait/duration unit lasts, in 60 fps preview ticks. hg-engine's SpriteFrame
-        // durations are counted once per rendered frame, so a unit is 1/60 s there. Vanilla pokeanm's
-        // "wait" has long been read as 1/30 s, but that was never verified against the game, so the
-        // reading is exposed rather than baked in.
-        public ObservableCollection<string> FrameTimingOptions { get; } =
-            new ObservableCollection<string> { "Auto", "1/60 s per unit", "1/30 s per unit" };
-
-        /// <summary>0 auto, 1 forces 1/60 s, 2 forces 1/30 s. Remembered between sessions and
-        /// preview-only: it never changes what is written to the ROM or to hg-engine source.</summary>
-        public int FrameTimingIndex
-        {
-            get => Math.Clamp(DSPRE.SettingsManager.Settings?.battlePreviewWaitUnit ?? 0, 0, 2);
-            set
-            {
-                int v = Math.Clamp(value, 0, 2);
-                if (DSPRE.SettingsManager.Settings == null || DSPRE.SettingsManager.Settings.battlePreviewWaitUnit == v) return;
-                DSPRE.SettingsManager.Settings.battlePreviewWaitUnit = v;
-                try { DSPRE.SettingsManager.Save(); } catch { }
-                OnPropertyChanged(nameof(FrameTimingIndex));
-                _waitUnitTick = 0;
-                RestartAnimPreview();
-            }
-        }
-
-        private int TicksPerWaitUnit => FrameTimingIndex switch
-        {
-            1 => 1,
-            2 => 2,
-            _ => HgEngineProject.IsActive ? 1 : 2,
-        };
-
-        private int _waitUnitTick;
-        private int _patIndex = -1, _patCountdown;
-        private void RestartAnimPreview()
-        {
-            _patIndex = -1; _patCountdown = 0; _waitUnitTick = 0;
-            RestartHgeFrames();
-        }
-
-        /// <summary>Replays the idle run from slot 0, the way PokemonSprite_InitAnim does on every send-out.</summary>
-        private void RestartHgeFrames()
-        {
-            _hgeReplayCountdown = 0;
-            _hgeFront.Start(_hgeFrontSlots);
-            _hgeBack.Start(_hgeBackSlots);
-            ApplyHgeFrames();
-        }
-
-        private void ApplyHgeFrames()
-        {
-            int front = ClampFrame(_hgeFront.SpriteFrame), back = ClampFrame(_hgeBack.SpriteFrame);
-            if (front != _hgeFrontFrame || back != _hgeBackFrame)
-            {
-                _hgeFrontFrame = front; _hgeBackFrame = back;
-                RaiseSprites();
-            }
-            if (_hgeFrontShift != _hgeFront.HorizontalShift || _hgeBackShift != _hgeBack.HorizontalShift)
-            {
-                _hgeFrontShift = _hgeFront.HorizontalShift; _hgeBackShift = _hgeBack.HorizontalShift;
-                RaiseLayout();
-            }
-        }
-        private bool _framePaused;
-        public bool FramePaused { get => _framePaused; set => Set(ref _framePaused, value); }
-
-        private void AnimTick()
-        {
-            TickProgramAnim();   // program-animation motion (independent of the frame/pattern loop)
-            if (_framePaused) return;   // frame (pattern) loop paused for inspection
-
-            // The timer runs at 60 fps; a 1/30 s wait unit advances the frame run every second tick.
-            if (++_waitUnitTick < TicksPerWaitUnit) return;
-            _waitUnitTick = 0;
-
-            if (HgEngineProject.IsActive) { TickHgeFrames(); return; }
-
-            if (AnimSteps.Count == 0)
-            {
-                if (_frame != 0) { _frame = 0; RaiseSprites(); }   // no pattern data → static first frame
-                return;
-            }
-            if (--_patCountdown > 0) return;
-            _patIndex = (_patIndex + 1) % AnimSteps.Count;
-            var step = AnimSteps[_patIndex];
-            _patCountdown = Math.Max(1, step.Wait);   // in wait units; the caller only gets here once per unit
-            int max = MaxFrameIndex;
-            int newFrame = step.Frame < 0 ? 0 : (step.Frame > max ? max : step.Frame);
-            if (newFrame != _frame) { _frame = newFrame; RaiseSprites(); }
-        }
-
-        /// <summary>Gap between replays. The game fires this run once per send-out; the preview repeats it so
-        /// the editor still shows the animation while browsing, with each pass itself faithful.</summary>
-        private const int HgeReplayGapTicks = 45;
-
-        // One call per wait unit, so a duration counts units directly; AnimTick owns the 60 fps to
-        // wait-unit conversion for both paths (see FrameTimingIndex).
-        private void TickHgeFrames()
-        {
-            if (!_hgeFront.Active && !_hgeBack.Active)
-            {
-                if (_hgeReplayCountdown++ >= HgeReplayGapTicks) RestartHgeFrames();
-                return;
-            }
-            _hgeFront.Tick();
-            _hgeBack.Tick();
-            ApplyHgeFrames();
-        }
+        public void Detach() => StopPlayback();
 
         public void LoadMon(int id)
         {
@@ -1681,9 +2291,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _formMode = _sprites != null && _sprites.IsAlternateForms;
             _formIndex = _sprites != null ? _sprites.SelectedFormIndex : -1;
             LoadFormHeights();
-            StopProgramAnim();   // reset any in-flight program animation before switching mon
+            StopPlayback();
             LoadAnim(id);
-            OnPropertyChanged(nameof(FormMode)); OnPropertyChanged(nameof(ShowBaseHeights)); OnPropertyChanged(nameof(CanPlayProgramAnim));
+            RefreshMusic();
+            OnPropertyChanged(nameof(FormMode)); OnPropertyChanged(nameof(ShowBaseHeights)); OnPropertyChanged(nameof(CanPlay));
             RaiseLayout();
             RaiseSprites();
             SetClean();
@@ -1712,7 +2323,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
     }
 
-    /// <summary>One pattern-animation step (pokeanm ssanm): which sprite frame to show and for how many 1/30s units. <see cref="Frame"/> is the cell/pattern number (the sheet has frames 0 and 1).</summary>
+    /// <summary>A trainer or ball the send-out preview draws over the battle scene.</summary>
+    public sealed class SceneSprite : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        private Bitmap _image; public Bitmap Image { get => _image; set { if (_image != value) { _image = value; Raise(nameof(Image)); } } }
+        private double _left; public double Left { get => _left; set { if (_left != value) { _left = value; Raise(nameof(Left)); } } }
+        private double _top; public double Top { get => _top; set { if (_top != value) { _top = value; Raise(nameof(Top)); } } }
+        private bool _visible; public bool Visible { get => _visible; set { if (_visible != value) { _visible = value; Raise(nameof(Visible)); } } }
+        private double _rotation; public double Rotation { get => _rotation; set { if (_rotation != value) { _rotation = value; Raise(nameof(Rotation)); } } }
+        private double _flash; public double Flash { get => _flash; set { if (_flash != value) { _flash = value; Raise(nameof(Flash)); } } }
+    }
+
+    /// <summary>One DP pattern step: which sprite frame (0 or 1) to show and for how many ticks.</summary>
     public sealed class AnimPatternStep : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -1730,8 +2354,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _wait; public int Wait { get => _wait; set { if (_wait != value) { _wait = value; Raise(nameof(Wait)); } } }
     }
 
-    /// <summary>One hg-engine SpriteFrame slot (data/SpriteOffsets.c's .frontFrames/.backFrames): which raw
-    /// sprite frame to show, how long, and its per-frame pixel shift. FrameNo = -1 means "unused."</summary>
+    /// <summary>One frame-run slot: sprite frame, duration and pixel shift. FrameNo -1 ends the run.</summary>
     public sealed class SpriteFrameEntry : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

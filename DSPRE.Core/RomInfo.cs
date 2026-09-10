@@ -223,6 +223,8 @@ namespace DSPRE
             wazaParticle,           // effect SPA particle systems, wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
             battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs, pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
             battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            ballParticles,          // Poke Ball open bursts, one SPA per ball, wazaeffect/effectdata/ball_particle.narc (HGSS a/0/9/5)
+            trainerBackGraphics,    // player-side trainer back sprites, poketool/trgra/trbgra.narc (HGSS a/0/0/6)
             battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX), a/0/0/9 = ARC_BATT_BG_PLANM
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
             titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
@@ -2396,6 +2398,8 @@ namespace DSPRE
                         [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
                         [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\pl_batt_bg.narc",
                         [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\pl_batt_obj.narc",
+                        [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
+                        [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
@@ -2480,6 +2484,8 @@ namespace DSPRE
                         [DirNames.wazaParticle] = $@"{dataFolderName}\a\0\2\9",   // waza_particle (SPA)
                         [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",   // ARC_BATT_BG (battle backgrounds + HAIKEI scroll BGs)
                         [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",   // ARC_BATT_OBJ (battle OBJ / terrain ground platforms)
+                        [DirNames.ballParticles] = $@"{dataFolderName}\a\0\9\5",
+                        [DirNames.trainerBackGraphics] = $@"{dataFolderName}\a\0\0\6",
                         [DirNames.battleBgPlanm] = $@"{dataFolderName}\a\0\0\9",   // ARC_BATT_BG_PLANM (HGSS-only WEST_HAIKEI_CHG_EX anim data)
 
                         [DirNames.battleTowerTrainers] = $@"{dataFolderName}\a\2\0\2",

@@ -47,6 +47,11 @@ namespace DSPRE.Avalonia
         /// <summary>Loads the four cell-graphics resources at the given file indices (from the effect's CATS loads).
         /// Returns false if any archive is unmapped/missing or a file index is out of range.</summary>
         public bool Load(int charIdx, int plttIdx, int cellIdx, int anmIdx)
+            => Load(DirNames.wazaEffectChar, charIdx, DirNames.wazaEffectPltt, plttIdx,
+                    DirNames.wazaEffectCell, cellIdx, DirNames.wazaEffectCellAnm, anmIdx);
+
+        /// <summary>Same, for cell graphics in other archives.</summary>
+        public bool Load(DirNames charDir, int charIdx, DirNames plttDir, int plttIdx, DirNames cellDir, int cellIdx, DirNames anmDir, int anmIdx)
         {
             _char = null; _pltt = null; _cell = null; _anm = null;
             // RenderCellRgba's cache is keyed by a bare cell INDEX, with no idea which resource set it came
@@ -56,10 +61,10 @@ namespace DSPRE.Avalonia
             _cellRgbaCache.Clear();
             try
             {
-                string charPath = EntryPath(DirNames.wazaEffectChar, charIdx);
-                string plttPath = EntryPath(DirNames.wazaEffectPltt, plttIdx);
-                string cellPath = EntryPath(DirNames.wazaEffectCell, cellIdx);
-                string anmPath  = EntryPath(DirNames.wazaEffectCellAnm, anmIdx);
+                string charPath = EntryPath(charDir, charIdx);
+                string plttPath = EntryPath(plttDir, plttIdx);
+                string cellPath = EntryPath(cellDir, cellIdx);
+                string anmPath  = EntryPath(anmDir, anmIdx);
                 if (charPath == null || plttPath == null || cellPath == null || anmPath == null)
                 {
                     AppLogger.Warn($"WeCellAnim: missing resource path (char={charPath != null} pltt={plttPath != null} " +

@@ -74,8 +74,9 @@ namespace DSPRE.Avalonia.Views.Battle
             catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed: {ex.Message}"); }
         }
 
-        private void PlayProgramAnim_Click(object sender, RoutedEventArgs e)
-            => (DataContext as BattleDisplayEditorViewModel)?.ToggleProgramAnim();
+        private void Play_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimationPlayback();
+        private void PlayFrames_Click(object sender, RoutedEventArgs e) => VM?.ToggleFramePlayback();
+        private void PlaySendOut_Click(object sender, RoutedEventArgs e) => VM?.ToggleSendOutPlayback();
 
         private BattleDisplayEditorViewModel VM => DataContext as BattleDisplayEditorViewModel;
         private static ProgramCmdRow Row(object sender) => (sender as Control)?.DataContext as ProgramCmdRow;

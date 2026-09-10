@@ -45,6 +45,34 @@ namespace DSPRE.Avalonia
         public int FrameCount => _frameBankIndices.Length;
         public bool HasSprite => _sprite != null || _jsonBanks != null;
 
+        // Every NANR sequence as (bank, duration) frames, for callers that play a particular one.
+        private (int Bank, int Duration)[][] _sequences = Array.Empty<(int, int)[]>();
+
+        /// <summary>How many animation sequences the class has (0 when they could not be read).</summary>
+        public int SequenceCount => _sequences.Length;
+
+        /// <summary>A sequence's frames as (cell bank, duration in 60 fps units).</summary>
+        public (int Bank, int Duration)[] Sequence(int seq) =>
+            seq >= 0 && seq < _sequences.Length ? _sequences[seq] : Array.Empty<(int, int)>();
+
+        /// <summary>Renders one cell bank, the way <see cref="Render"/> renders a frame.</summary>
+        public AvaBitmap RenderBank(int bankIndex, int width, int height)
+        {
+            int frame = Array.IndexOf(_frameBankIndices, bankIndex);
+            if (frame >= 0) return Render(frame, width, height);
+            if (_sprite == null || bankIndex < 0 || bankIndex >= _sprite.Banks.Length) return null;
+            try
+            {
+                int[] oams = Enumerable.Range(0, _sprite.Banks[bankIndex].oams.Length).ToArray();
+                return ImageConverter.ToAvaloniaBitmap(_sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: oams));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("TrainerClassSpriteRenderer.RenderBank failed: " + ex.Message);
+                return null;
+            }
+        }
+
         /// <summary>Duration of the given frame in 60fps game ticks (the NANR frame header's own delay
         /// field), or 4 (a reasonable default) if unavailable.</summary>
         public int GetFrameDuration(int frame) =>
@@ -56,13 +84,18 @@ namespace DSPRE.Avalonia
 
         /// <summary>Loads the graphics for a trainer class. Returns the max frame index (FrameCount-1)
         /// for a scrubber's upper bound; see <see cref="DefaultFrame"/> for which frame to show initially.</summary>
-        public int Load(int trClassID)
+        public int Load(int trClassID) => Load(trClassID, DirNames.trainerGraphics);
+
+        /// <summary>Same, from another archive with the five-file layout, such as the back sprites.</summary>
+        public int Load(int trClassID, DirNames archive)
         {
             _pal = null; _tile = null; _sprite = null; _jsonBanks = null;
             _frameBankIndices = Array.Empty<int>(); _frameDurations = Array.Empty<int>(); DefaultFrame = 0;
+            _sequences = Array.Empty<(int, int)[]>();
             try
             {
-                string dir = gameDirs[DirNames.trainerGraphics].unpackedDir;
+                DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { archive });
+                string dir = gameDirs[archive].unpackedDir;
 
                 int paletteFileID = trClassID * 5 + 1;
                 string paletteFilename = paletteFileID.ToString("D4");
@@ -75,13 +108,14 @@ namespace DSPRE.Avalonia
                 if (gameFamily == GameFamilies.DP)
                     return 0; // DP has no NCER animation for trainer classes.
 
-                if (HgEngineProject.IsActive && TryLoadFromSource(trClassID))
+                if (archive == DirNames.trainerGraphics && HgEngineProject.IsActive && TryLoadFromSource(trClassID))
                     return FrameCount - 1;
 
                 int spriteFileID = trClassID * 5 + 2;
                 string spriteFilename = spriteFileID.ToString("D4");
                 _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
 
+                _sequences = TryReadNanrSequences(dir, trClassID);
                 var nanrSequence = TryReadNanrFrameSequence(dir, trClassID);
                 _frameBankIndices = nanrSequence?.cells ?? Enumerable.Range(0, _sprite.Banks.Length).ToArray();
                 _frameDurations = nanrSequence?.durations ?? Array.Empty<int>();
@@ -155,6 +189,21 @@ namespace DSPRE.Avalonia
                         longest.frames.Select(f => (int)f.unknown1).ToArray());
             }
             catch { return null; }
+        }
+
+        private static (int Bank, int Duration)[][] TryReadNanrSequences(string dir, int trClassID)
+        {
+            try
+            {
+                int nanrFileID = trClassID * 5 + 3;
+                string path = Path.Combine(dir, nanrFileID.ToString("D4"));
+                if (!File.Exists(path)) return Array.Empty<(int, int)[]>();
+                var anis = new NANR(null, path, nanrFileID).Struct.abnk.anis;
+                if (anis == null) return Array.Empty<(int, int)[]>();
+                return anis.Select(a => a.frames == null ? Array.Empty<(int, int)>()
+                    : a.frames.Select(f => ((int)f.data.nCell, (int)f.unknown1)).ToArray()).ToArray();
+            }
+            catch { return Array.Empty<(int, int)[]>(); }
         }
 
         /// <summary>Renders the given frame to an Avalonia bitmap, or null if there is no animated sprite.</summary>

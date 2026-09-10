@@ -36,12 +36,10 @@
                         IsVisible="{Binding HasGenderChoice}"
                         ToolTip.Tip="Which gender's sprites to show."/>
             </StackPanel>
-            <CheckBox Content="Pause frames" IsChecked="{Binding FramePaused}"
-                      ToolTip.Tip="Freeze the sprite-frame (pattern) animation to inspect a single frame."/>
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="Frame timing" VerticalAlignment="Center"/>
-              <ComboBox ItemsSource="{Binding FrameTimingOptions}" SelectedIndex="{Binding FrameTimingIndex}" Width="150"
-                        ToolTip.Tip="How long one frame wait/duration unit lasts in the preview. Auto follows the project: 1/60 s on hg-engine, 1/30 s otherwise. Affects playback speed only, never what is saved."/>
+              <TextBlock Text="Frame rate" VerticalAlignment="Center"/>
+              <ComboBox ItemsSource="{Binding FrameRateOptions}" SelectedIndex="{Binding FrameRateIndex}" Width="100"
+                        ToolTip.Tip="Battles run at 30 fps. Preview only."/>
             </StackPanel>
           </StackPanel>
 
@@ -98,7 +96,7 @@
             </StackPanel>
           </StackPanel>
 
-          <TextBlock Text="Live: reflects the sprite Y / shadow values. Battle-scene assets: PokEditor (turtleisaac)."
+          <TextBlock Text="Battle-scene assets: PokEditor (turtleisaac)."
                      FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
         </StackPanel>
 
@@ -108,10 +106,9 @@
           <!-- Party icon palette + graphic -->
           <StackPanel Spacing="4">
             <TextBlock Text="Party Icon" FontWeight="SemiBold"/>
-            <TextBlock Text="Which of the 3 icon palettes this Pokémon's party icon uses, and the icon graphic itself (icons live in NARC /a/0/2/0)."
-                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-              <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"/>
+              <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"
+                        ToolTip.Tip="Which of the 3 icon palettes the party icon uses."/>
               <StackPanel Spacing="4" VerticalAlignment="Center">
                 <Border Width="68" Height="68" Background="#E0E0E0" CornerRadius="4" Padding="2"
                         ToolTip.Tip="Live preview with the selected palette (before saving)">
@@ -141,6 +138,58 @@
             <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
             <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
                        FontSize="12" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
+
+            <!-- Send-out preview controls. -->
+            <StackPanel Spacing="6" IsVisible="{Binding HasSpriteData}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{Binding SendOutButtonText}" Click="PlaySendOut_Click" IsEnabled="{Binding CanPlay}" MinWidth="112"
+                        ToolTip.Tip="Plays the start of the battle on the game's timing."/>
+                <ComboBox ItemsSource="{Binding SendOutKindOptions}" SelectedIndex="{Binding SendOutKindIndex}" Width="112"/>
+                <ComboBox ItemsSource="{Binding SideOptions}" SelectedIndex="{Binding SideIndex}" Width="112"
+                          ToolTip.Tip="Whose Pokémon comes out."/>
+                <ToggleButton Content="Advanced options" IsChecked="{Binding AdvancedOpen}"/>
+              </StackPanel>
+
+              <Border IsVisible="{Binding AdvancedOpen}" Padding="10" CornerRadius="4"
+                      BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                <Grid ColumnDefinitions="Auto,10,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Trainer" VerticalAlignment="Center" IsEnabled="{Binding CanChooseTrainer}"/>
+                  <ComboBox Grid.Row="0" Grid.Column="2" ItemsSource="{Binding TrainerOptions}" SelectedIndex="{Binding TrainerIndex}"
+                            IsEnabled="{Binding CanChooseTrainer}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"
+                            ToolTip.Tip="Sets the sprite and the name in messages."/>
+
+                  <TextBlock Grid.Row="1" Grid.Column="0" Text="Ball" VerticalAlignment="Center" IsEnabled="{Binding BallMatters}"/>
+                  <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding BallOptions}" SelectedIndex="{Binding BallIndex}"
+                            IsEnabled="{Binding BallMatters}" HorizontalAlignment="Stretch"
+                            ToolTip.Tip="Sets the burst and the colour the Pokémon comes out in."/>
+
+                  <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Content="Play the trainer intro" IsChecked="{Binding PlayTrainerIntro}"
+                            IsEnabled="{Binding CanChooseIntro}"
+                            ToolTip.Tip="Off plays a mid-battle send-out."/>
+                  <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Content="Their Pokémon slides in like a wild one" IsChecked="{Binding TrainerSlideIn}"
+                            IsEnabled="{Binding CanSlideIn}"/>
+                  <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="Party balls" IsChecked="{Binding ShowPartyBalls}" IsEnabled="{Binding CanShowPartyBalls}" VerticalAlignment="Center"
+                              ToolTip.Tip="Trainer battles only."/>
+                    <NumericUpDown Value="{Binding PartyBallCount}" Minimum="1" Maximum="6" Increment="1" FormatString="0" Width="110"
+                                   IsEnabled="{Binding CanCountPartyBalls}"
+                                   ToolTip.Tip="Filled slots; the rest show empty."/>
+                  </StackPanel>
+                  <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Content="Shiny" IsChecked="{Binding IsShiny}"
+                            ToolTip.Tip="Shiny colours and sparkle."/>
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Text speed" VerticalAlignment="Center"/>
+                  <ComboBox Grid.Row="6" Grid.Column="2" ItemsSource="{Binding TextSpeedOptions}" SelectedIndex="{Binding TextSpeedIndex}" Width="140" HorizontalAlignment="Left"
+                            ToolTip.Tip="The in-game text speed option."/>
+                  <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="12">
+                    <CheckBox Content="Battle music" IsChecked="{Binding PlayBattleMusic}" VerticalAlignment="Center"
+                              ToolTip.Tip="Its class or species theme, else the standard one."/>
+                    <CheckBox Content="In Kanto" IsChecked="{Binding KantoMusic}" IsVisible="{Binding ShowKantoMusic}" IsEnabled="{Binding PlayBattleMusic}"
+                              VerticalAlignment="Center" ToolTip.Tip="The standard themes play their Kanto versions."/>
+                    <TextBlock Text="{Binding BattleMusicText}" IsVisible="{Binding PlayBattleMusic}" VerticalAlignment="Center" Opacity="0.7"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </StackPanel>
 
             <TabControl IsVisible="{Binding HasSpriteData}">
 
@@ -226,37 +275,32 @@
                     <ComboBox Grid.Column="2" ItemsSource="{Binding ShadowSizes}" SelectedIndex="{Binding ShadowSize}" HorizontalAlignment="Stretch"/>
                   </Grid>
 
-                  <!-- Hidden on hg-engine ROMs: this is the same source field as the Animation tab's "Front
-                       animation #" there (see ShowMovementType); only one place should edit it. -->
-                  <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding ShowMovementType}">
-                    <TextBlock Grid.Column="0" Text="Movement type" VerticalAlignment="Center"
-                               ToolTip.Tip="Animation played when the Pokémon is sent out (e.g. 0x13 = electricity flash like Raichu/Jolteon). Raw byte 0 to 255. HGSS / Platinum."/>
-                    <NumericUpDown Grid.Column="2" Value="{Binding MovementType}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-                  </Grid>
                 </StackPanel>
               </TabItem>
 
               <!-- ── Frames ──────────────────────────────────────────────────────────────── -->
               <TabItem Header="Frames">
                 <StackPanel Spacing="8" Margin="0,8,0,0">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="{Binding FramesButtonText}" Click="PlayFrames_Click" IsEnabled="{Binding CanPlay}" MinWidth="130"
+                            ToolTip.Tip="Plays the frame runs once."/>
+                    <ComboBox ItemsSource="{Binding SideOptions}" SelectedIndex="{Binding SideIndex}" Width="130"/>
+                  </StackPanel>
 
-                  <!-- hg-engine: the real frame data (data/SpriteOffsets.c), 10 fixed slots each. -->
-                  <StackPanel IsVisible="{Binding HasHgeFrameData}" Spacing="8">
-                    <TextBlock Text="Which raw sprite frame to show, how long for (in whichever unit Frame timing is set to), and its per-frame pixel shift. Frame −1 ends the run and settles back on frame 0; below −1 is a jump back to slot (−frame − 2), taken as many times as its duration says."
-                               FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
-
+                  <!-- Platinum, HGSS and hg-engine: 10 fixed slots each. -->
+                  <StackPanel IsVisible="{Binding HasFrameRuns}" Spacing="8">
                     <TextBlock Text="Front frames" FontWeight="SemiBold"/>
                     <ItemsControl ItemsSource="{Binding FrontFrameEntries}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SpriteFrameEntry">
                           <Grid ColumnDefinitions="Auto,60,Auto,50,Auto,60,Auto,60" Margin="0,0,0,4" ColumnSpacing="4">
-                            <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center" ToolTip.Tip="Sprite frame to show. -1 ends the run; below -1 repeats an earlier slot."/>
                             <NumericUpDown Grid.Column="1" Value="{Binding FrameNo}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
                             <NumericUpDown Grid.Column="3" Value="{Binding Duration}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center" ToolTip.Tip="Pixels to move the sprite sideways."/>
                             <NumericUpDown Grid.Column="5" Value="{Binding HorizontalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center" ToolTip.Tip="Stored but not used by the game."/>
                             <NumericUpDown Grid.Column="7" Value="{Binding VerticalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                           </Grid>
                         </DataTemplate>
@@ -269,13 +313,13 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SpriteFrameEntry">
                           <Grid ColumnDefinitions="Auto,60,Auto,50,Auto,60,Auto,60" Margin="0,0,0,4" ColumnSpacing="4">
-                            <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Frame" VerticalAlignment="Center" ToolTip.Tip="Sprite frame to show. -1 ends the run; below -1 repeats an earlier slot."/>
                             <NumericUpDown Grid.Column="1" Value="{Binding FrameNo}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="Dur" VerticalAlignment="Center" ToolTip.Tip="Ticks to hold, plus one. On a repeat slot, how many times to repeat."/>
                             <NumericUpDown Grid.Column="3" Value="{Binding Duration}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="H-shift" VerticalAlignment="Center" ToolTip.Tip="Pixels to move the sprite sideways."/>
                             <NumericUpDown Grid.Column="5" Value="{Binding HorizontalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
-                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="V-shift" VerticalAlignment="Center" ToolTip.Tip="Stored but not used by the game."/>
                             <NumericUpDown Grid.Column="7" Value="{Binding VerticalShift}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                           </Grid>
                         </DataTemplate>
@@ -283,13 +327,13 @@
                     </ItemsControl>
                   </StackPanel>
 
-                  <!-- Vanilla (non-hg-engine): the pattern-step editor (pokeanm ssanm), unchanged from before. -->
-                  <StackPanel IsVisible="{Binding !HasHgeFrameData}" Spacing="4">
+                  <!-- Diamond/Pearl: the pokeanm pattern steps, shared by both sprites. -->
+                  <StackPanel IsVisible="{Binding !HasFrameRuns}" Spacing="4">
                     <TextBlock Text="This Pokémon has no animation record." IsVisible="{Binding !HasAnimData}"
                                FontSize="12" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
                     <StackPanel IsVisible="{Binding HasAnimData}" Spacing="4">
-                      <TextBlock Text="Pattern steps: the looping frame animation shown on the field (and in the preview). Frame = sprite cell (0 or 1); Wait = duration in 1/30 s."
-                                 FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                      <TextBlock Text="Pattern steps" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+                                 ToolTip.Tip="Sprite frame (0 or 1) and ticks to show it."/>
                       <ItemsControl ItemsSource="{Binding AnimSteps}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:AnimPatternStep">
@@ -312,28 +356,29 @@
               <!-- ── Animation ───────────────────────────────────────────────────────────── -->
               <TabItem Header="Animation">
                 <StackPanel IsVisible="{Binding HasAnimData}" Spacing="6" Margin="0,8,0,0">
-                  <Button Content="{Binding ProgramAnimButtonText}" Click="PlayProgramAnim_Click"
-                          IsEnabled="{Binding CanPlayProgramAnim}" HorizontalAlignment="Left"
-                          ToolTip.Tip="Play this Pokémon's program animation (pokeanime) on the sprites."/>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="{Binding AnimationButtonText}" Click="Play_Click" IsEnabled="{Binding CanPlay}" MinWidth="130"
+                            ToolTip.Tip="Plays the animations once."/>
+                    <ComboBox ItemsSource="{Binding SideOptions}" SelectedIndex="{Binding SideIndex}" Width="130"/>
+                  </StackPanel>
 
-                  <TextBlock Text="Program-animation numbers reference scripts in the pokeanime NARC (the actual motion). Front plays on the enemy sprite, the first back step on the player sprite. Press ▶ Play to see them."
-                             FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                   <Grid ColumnDefinitions="160,10,150">
                     <TextBlock Grid.Column="0" Text="Front animation #" VerticalAlignment="Center"
-                               ToolTip.Tip="hg-engine: which idle-cycle animation this species/form uses (data/SpriteOffsets.c frontHeader.animation). Vanilla HGSS/Platinum: the front program-animation number."/>
+                               ToolTip.Tip="Movement script played when sent out."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontProgNum}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                   </Grid>
                   <Grid ColumnDefinitions="160,10,150">
-                    <TextBlock Grid.Column="0" Text="Front wait" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="Front start delay" VerticalAlignment="Center"
+                               ToolTip.Tip="Ticks before the front movement script starts."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontWait}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                   </Grid>
-                  <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding HasHgeFrameData}">
+                  <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding HasFrameRuns}">
                     <TextBlock Grid.Column="0" Text="Front cry delay" VerticalAlignment="Center"
-                               ToolTip.Tip="hg-engine only (frontHeader.cryDelay)."/>
+                               ToolTip.Tip="Ticks after the animation starts."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding AnimFrontCryDelay}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                   </Grid>
 
-                  <TextBlock Text="Back program steps" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="{Binding AnimBackLabel}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
                   <ItemsControl ItemsSource="{Binding AnimBack}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:AnimProgStep">
@@ -346,9 +391,9 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding HasHgeFrameData}">
+                  <Grid ColumnDefinitions="160,10,150" IsVisible="{Binding HasFrameRuns}">
                     <TextBlock Grid.Column="0" Text="Back cry delay" VerticalAlignment="Center"
-                               ToolTip.Tip="hg-engine only (backHeader.cryDelay)."/>
+                               ToolTip.Tip="Ticks after the animation starts."/>
                     <NumericUpDown Grid.Column="2" Value="{Binding AnimBackCryDelay}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
                   </Grid>
 
@@ -357,7 +402,7 @@
                        is out of scope here). -->
                   <Separator/>
                   <TextBlock Text="{Binding ProgramScriptHeader}" FontWeight="SemiBold"/>
-                  <TextBlock Text="Edits the shared animation script, which affects every Pokémon using this program number. Args are comma/space separated (dec or 0x..); padded to each command's fixed count on save."
+                  <TextBlock Text="Shared by every Pokémon that uses this animation."
                              FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Button Content="＋ Add command" Click="AddProgramCmd_Click"/>

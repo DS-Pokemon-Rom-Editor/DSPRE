@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
              xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Views.Controls"
              x:Class="DSPRE.Avalonia.Views.Battle.BattleSceneControl"
              x:DataType="vm:BattleDisplayEditorViewModel"
              Name="SceneRoot">
@@ -11,30 +12,45 @@
         <!-- Real battle-scene backdrop + terrain platforms (Arena Type selector: DSUtils.BattleGroundRenderer /
              BattleBgRenderer, same real-ROM-data renderers the Battle Script Editor uses), falling back to the
              bundled placeholder art if the ROM/NARC is unavailable or decoding fails. -->
-        <Image Source="{Binding ArenaBackdrop}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaBackdrop}" Canvas.Left="{Binding BackdropX}" Canvas.Top="0" Stretch="None" IsVisible="{Binding HasArenaGraphics}"/>
         <Image Source="{x:Static views:BattleSceneControl.BackgroundAsset}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding !HasArenaGraphics}"/>
 
-        <Image Source="{Binding ArenaGroundEnemy}" Canvas.Left="{Binding ArenaGroundEnemyLeft}" Canvas.Top="{Binding ArenaGroundEnemyTop}" IsVisible="{Binding HasArenaGraphics}"/>
-        <Image Source="{Binding ArenaGroundMine}"  Canvas.Left="{Binding ArenaGroundMineLeft}"  Canvas.Top="{Binding ArenaGroundMineTop}"  IsVisible="{Binding HasArenaGraphics}"/>
-        <Image Source="{x:Static views:BattleSceneControl.PlatformOpponentAsset}" Canvas.Left="129" Canvas.Top="72" IsVisible="{Binding !HasArenaGraphics}"/>
-        <Image Source="{x:Static views:BattleSceneControl.PlatformYouAsset}" Canvas.Left="-42" Canvas.Top="122" IsVisible="{Binding !HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaGroundEnemy}" Canvas.Left="{Binding ArenaGroundEnemyX}" Canvas.Top="{Binding ArenaGroundEnemyTop}" IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaGroundMine}"  Canvas.Left="{Binding ArenaGroundMineX}"  Canvas.Top="{Binding ArenaGroundMineTop}"  IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.PlatformOpponentAsset}" Canvas.Left="{Binding PlaceholderEnemyPlatformX}" Canvas.Top="72" IsVisible="{Binding !HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.PlatformYouAsset}" Canvas.Left="{Binding PlaceholderPlayerPlatformX}" Canvas.Top="122" IsVisible="{Binding !HasArenaGraphics}"/>
 
-        <!-- Enemy shadow (one visible per size) -->
-        <Image Source="{x:Static views:BattleSceneControl.ShadowSmallAsset}"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}"/>
-        <Image Source="{x:Static views:BattleSceneControl.ShadowMediumAsset}" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}"/>
-        <Image Source="{x:Static views:BattleSceneControl.ShadowLargeAsset}"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}"/>
+        <!-- Enemy shadow (one visible per size), grown in with the sprite. -->
+        <Canvas>
+          <Canvas.Styles>
+            <Style Selector="Image.shadow">
+              <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+            </Style>
+          </Canvas.Styles>
+          <Image Classes="shadow" Source="{x:Static views:BattleSceneControl.ShadowSmallAsset}"  Canvas.Top="83" Canvas.Left="{Binding ShadowSmallLeft}"  IsVisible="{Binding ShadowSmallVisible}">
+            <Image.RenderTransform>
+              <TransformGroup><ScaleTransform ScaleX="{Binding ShadowGrow}" ScaleY="{Binding ShadowGrow}"/><TranslateTransform Y="{Binding ShadowGrowY}"/></TransformGroup>
+            </Image.RenderTransform>
+          </Image>
+          <Image Classes="shadow" Source="{x:Static views:BattleSceneControl.ShadowMediumAsset}" Canvas.Top="83" Canvas.Left="{Binding ShadowMediumLeft}" IsVisible="{Binding ShadowMediumVisible}">
+            <Image.RenderTransform>
+              <TransformGroup><ScaleTransform ScaleX="{Binding ShadowGrow}" ScaleY="{Binding ShadowGrow}"/><TranslateTransform Y="{Binding ShadowGrowY}"/></TransformGroup>
+            </Image.RenderTransform>
+          </Image>
+          <Image Classes="shadow" Source="{x:Static views:BattleSceneControl.ShadowLargeAsset}"  Canvas.Top="82" Canvas.Left="{Binding ShadowLargeLeft}"  IsVisible="{Binding ShadowLargeVisible}">
+            <Image.RenderTransform>
+              <TransformGroup><ScaleTransform ScaleX="{Binding ShadowGrow}" ScaleY="{Binding ShadowGrow}"/><TranslateTransform Y="{Binding ShadowGrowY}"/></TransformGroup>
+            </Image.RenderTransform>
+          </Image>
+        </Canvas>
 
         <!-- Enemy (front) + player (back) sprites; passed in per scene. Each sprite and its palette-fade tint share
              one program-animation transform, and the tint is masked to the sprite's own alpha so the transparent
              (palette index 0) pixels are never coloured. -->
         <Grid Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
-               RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0,0" IsVisible="{Binding EnemyShown}">
           <Grid.RenderTransform>
-            <TransformGroup>
-              <ScaleTransform ScaleX="{Binding AnimScaleX}" ScaleY="{Binding AnimScaleY}"/>
-              <RotateTransform Angle="{Binding AnimRotation}"/>
-              <TranslateTransform X="{Binding AnimOffsetX}" Y="{Binding AnimOffsetY}"/>
-            </TransformGroup>
+            <MatrixTransform Matrix="{Binding AnimMatrix}"/>
           </Grid.RenderTransform>
           <Image Source="{Binding #SceneRoot.Enemy}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
                  HorizontalAlignment="Left" VerticalAlignment="Top"/>
@@ -46,13 +62,9 @@
         </Grid>
 
         <Grid Canvas.Left="{Binding PlayerLeft}" Canvas.Top="{Binding #SceneRoot.PlayerY}" Width="80" Height="80"
-               RenderTransformOrigin="0.5,0.5">
+               RenderTransformOrigin="0,0" IsVisible="{Binding PlayerShown}">
           <Grid.RenderTransform>
-            <TransformGroup>
-              <ScaleTransform ScaleX="{Binding AnimBackScaleX}" ScaleY="{Binding AnimBackScaleY}"/>
-              <RotateTransform Angle="{Binding AnimBackRotation}"/>
-              <TranslateTransform X="{Binding AnimBackOffsetX}" Y="{Binding AnimBackOffsetY}"/>
-            </TransformGroup>
+            <MatrixTransform Matrix="{Binding AnimBackMatrix}"/>
           </Grid.RenderTransform>
           <Image Source="{Binding #SceneRoot.Player}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
                  HorizontalAlignment="Left" VerticalAlignment="Top"/>
@@ -63,40 +75,96 @@
           </Rectangle>
         </Grid>
 
-        <!-- Battle UI chrome: the real pl_batt_obj gauge frames so an edited gauge graphic shows here,
-             falling back to the bundled placeholders when the NARC can't be decoded. -->
-        <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
-               IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
-        <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
-               IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
-        <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"
-               IsVisible="{Binding PlaceholderGaugesVisible}"/>
-        <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
-               IsVisible="{Binding PlaceholderGaugesVisible}"/>
+        <!-- Send-out only: trainers, balls, bursts, sparkles and party rows. -->
+        <Image Source="{Binding EnemyTrainerSprite.Image}" Canvas.Left="{Binding EnemyTrainerSprite.Left}" Canvas.Top="{Binding EnemyTrainerSprite.Top}"
+               Width="160" Height="160" IsVisible="{Binding EnemyTrainerSprite.Visible}" RenderOptions.BitmapInterpolationMode="None"/>
+        <Image Source="{Binding PlayerTrainerSprite.Image}" Canvas.Left="{Binding PlayerTrainerSprite.Left}" Canvas.Top="{Binding PlayerTrainerSprite.Top}"
+               Width="160" Height="160" IsVisible="{Binding PlayerTrainerSprite.Visible}" RenderOptions.BitmapInterpolationMode="None"/>
 
-        <!-- The name and level are written into each bar's own picture now, so only the health fill
-             goes on top. Games whose letters cannot be read keep the plain written sample. -->
-        <Canvas IsVisible="{Binding HasRealGauges}">
-          <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-          <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-          <Rectangle Canvas.Left="50"  Canvas.Top="42"  Width="48" Height="4" Fill="#38C838"/>
-          <!-- Your side. The captured frame only shows their gauge, so these are where DSPRE has
-               always put them and are NOT checked against a real battle. -->
-          <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-          <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-          <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
+        <Grid Canvas.Left="{Binding EnemyBallSprite.Left}" Canvas.Top="{Binding EnemyBallSprite.Top}" Width="64" Height="64"
+              IsVisible="{Binding EnemyBallSprite.Visible}" RenderTransformOrigin="50%,50%">
+          <Grid.RenderTransform>
+            <RotateTransform Angle="{Binding EnemyBallSprite.Rotation}"/>
+          </Grid.RenderTransform>
+          <Image Source="{Binding EnemyBallSprite.Image}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+          <Rectangle Fill="White" Opacity="{Binding EnemyBallSprite.Flash}" IsHitTestVisible="False">
+            <Rectangle.OpacityMask>
+              <ImageBrush Source="{Binding EnemyBallSprite.Image}" Stretch="None"/>
+            </Rectangle.OpacityMask>
+          </Rectangle>
+        </Grid>
+        <Grid Canvas.Left="{Binding PlayerBallSprite.Left}" Canvas.Top="{Binding PlayerBallSprite.Top}" Width="64" Height="64"
+              IsVisible="{Binding PlayerBallSprite.Visible}" RenderTransformOrigin="50%,50%">
+          <Grid.RenderTransform>
+            <RotateTransform Angle="{Binding PlayerBallSprite.Rotation}"/>
+          </Grid.RenderTransform>
+          <Image Source="{Binding PlayerBallSprite.Image}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+          <Rectangle Fill="White" Opacity="{Binding PlayerBallSprite.Flash}" IsHitTestVisible="False">
+            <Rectangle.OpacityMask>
+              <ImageBrush Source="{Binding PlayerBallSprite.Image}" Stretch="None"/>
+            </Rectangle.OpacityMask>
+          </Rectangle>
+        </Grid>
+
+        <Image Source="{Binding EnemyBurstImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+               RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+        <Image Source="{Binding PlayerBurstImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+               RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+        <Image Source="{Binding EnemySparkleImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+               RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+        <Image Source="{Binding PlayerSparkleImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+               RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+        <Image Source="{Binding PartyRowsImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+               RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+
+        <!-- Battle UI chrome: the real pl_batt_obj gauge frames so an edited gauge graphic shows here,
+             falling back to the bundled placeholders when the NARC can't be decoded. Each side's bar slides
+             in on its own during a send-out. -->
+        <Canvas Canvas.Left="{Binding EnemyGaugeX}" IsVisible="{Binding EnemyGaugeShown}">
+          <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+                 IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
+          <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"
+                 IsVisible="{Binding PlaceholderGaugesVisible}"/>
+          <!-- The name and level are written into each bar's own picture now, so only the health fill
+               goes on top. Games whose letters cannot be read keep the plain written sample. -->
+          <Canvas IsVisible="{Binding HasRealGauges}">
+            <TextBlock Canvas.Left="3"   Canvas.Top="24"  Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+            <TextBlock Canvas.Left="78"  Canvas.Top="24"  Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+            <Rectangle Canvas.Left="50"  Canvas.Top="42"  Width="48" Height="4" Fill="#38C838"/>
+          </Canvas>
         </Canvas>
 
-        <!-- The battle text box covers the bottom 48px of the top screen. -->
-        <Canvas Canvas.Left="0" Canvas.Top="144">
-          <Rectangle Width="256" Height="48" Fill="#494141"/>
-          <Rectangle Canvas.Left="2" Canvas.Top="2" Width="252" Height="43" Fill="#FBFBFB"/>
-          <Rectangle Canvas.Left="2" Canvas.Top="3" Width="252" Height="1"  Fill="#FBDB69"/>
-          <Rectangle Canvas.Left="2" Canvas.Top="44" Width="252" Height="1" Fill="#EBA238"/>
-          <Rectangle Width="256" Height="1" Fill="#202020"/>
-          <Rectangle Canvas.Top="47" Width="256" Height="1" Fill="#202020"/>
-          <TextBlock Canvas.Left="8" Canvas.Top="8" Width="242" FontSize="8" Foreground="#3C3C3C" TextWrapping="Wrap"
-                     Text="This message box is here to show how much of the battle screen it covers, so the preview matches what you see in game."/>
+        <Canvas Canvas.Left="{Binding PlayerGaugeX}" IsVisible="{Binding PlayerGaugeShown}">
+          <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
+                 IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
+          <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
+                 IsVisible="{Binding PlaceholderGaugesVisible}"/>
+          <!-- Your side. The captured frame only shows their gauge, so these are where DSPRE has
+               always put them and are NOT checked against a real battle. -->
+          <Canvas IsVisible="{Binding HasRealGauges}">
+            <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+            <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
+            <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
+          </Canvas>
+        </Canvas>
+
+        <!-- The battle text box: the ROM's frame and font, or the placeholder. Greys measured from real battles. -->
+        <Canvas>
+          <Image Source="{Binding MessageBoxImage}" Canvas.Left="0" Canvas.Top="144" Width="256" Height="48"
+                 IsVisible="{Binding HasRealMessageBox}" RenderOptions.BitmapInterpolationMode="None"/>
+          <controls:RomTextBlock Canvas.Left="16" Canvas.Top="152" Text="{Binding MessageBoxText}" Ink="#515159" Shadow="#A2A2AA"
+                                 IsVisible="{Binding HasRealMessageBox}"/>
+          <controls:RomTextBlock Canvas.Left="16" Canvas.Top="168" Text="{Binding MessageBoxLine2}" Ink="#515159" Shadow="#A2A2AA"
+                                 IsVisible="{Binding HasRealMessageBox}"/>
+          <Canvas Canvas.Left="0" Canvas.Top="144" IsVisible="{Binding PlaceholderMessageBoxVisible}">
+            <Rectangle Width="256" Height="48" Fill="#494141"/>
+            <Rectangle Canvas.Left="2" Canvas.Top="2" Width="252" Height="43" Fill="#FBFBFB"/>
+            <Rectangle Canvas.Left="2" Canvas.Top="3" Width="252" Height="1"  Fill="#FBDB69"/>
+            <Rectangle Canvas.Left="2" Canvas.Top="44" Width="252" Height="1" Fill="#EBA238"/>
+            <Rectangle Width="256" Height="1" Fill="#202020"/>
+            <Rectangle Canvas.Top="47" Width="256" Height="1" Fill="#202020"/>
+          </Canvas>
+          <Rectangle Canvas.Left="0" Canvas.Top="144" Width="256" Height="48" Fill="Black" Opacity="{Binding MessageBoxDim}" IsHitTestVisible="False"/>
         </Canvas>
       </Canvas>
     </Viewbox>

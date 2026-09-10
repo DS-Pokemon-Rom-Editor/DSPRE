@@ -1,18 +1,15 @@
 using System.Collections.Generic;
 
-namespace DSPRE.HgEngine
+namespace DSPRE.ROMFiles
 {
-    /// <summary>Plays one SpriteFrame[10] idle animation (data/SpriteOffsets.c's .frontFrames/.backFrames)
-    /// with the game's own state machine: a one-shot run that ends on sprite frame 0, with frameNo &lt; -1
-    /// entries acting as counted jumps rather than terminators. Treating the list as a loop of its
-    /// non-negative entries freezes every species whose run is a single step (Venusaur, Tauros, Charizard).</summary>
-    public sealed class HgEngineSpriteFramePlayer
+    /// <summary>Plays a battle sprite frame run as the game does: once, ending on frame 0.</summary>
+    public sealed class SpriteFramePlayer
     {
         /// <summary>MAX_ANIMATION_FRAMES: the array is fixed at 10 slots and running off its end ends the run.</summary>
         public const int MaxFrames = 10;
 
         private readonly int[] _loopTimers = new int[MaxFrames];
-        private IReadOnlyList<HgEngineSpriteOffsets.SpriteFrameSlot> _slots;
+        private IReadOnlyList<SpriteFrameSlot> _slots;
         private int _index;
         private int _delay;
 
@@ -25,9 +22,8 @@ namespace DSPRE.HgEngine
         /// <summary>False once the run has ended; it then rests on frame 0 until restarted.</summary>
         public bool Active { get; private set; }
 
-        /// <summary>Restarts from slot 0. A list whose first slot is the -1 terminator never becomes active,
-        /// matching the engine's own "no animation for this species" case.</summary>
-        public void Start(IReadOnlyList<HgEngineSpriteOffsets.SpriteFrameSlot> slots)
+        /// <summary>Restarts from slot 0; a run that starts with -1 never plays.</summary>
+        public void Start(IReadOnlyList<SpriteFrameSlot> slots)
         {
             _slots = slots;
             _index = 0;
@@ -45,7 +41,10 @@ namespace DSPRE.HgEngine
             HorizontalShift = slots[0].HorizontalShift;
         }
 
-        /// <summary>One game frame. A slot with duration N is held for N+1 ticks, as the engine counts it.</summary>
+        /// <summary>Returns to rest on frame 0 without playing.</summary>
+        public void Stop() => Start(null);
+
+        /// <summary>One game tick. A slot with duration N is held for N+1 ticks, as the engine counts it.</summary>
         public void Tick()
         {
             if (!Active) return;
@@ -53,9 +52,8 @@ namespace DSPRE.HgEngine
 
             _index++;
 
-            // frameNo < -1 encodes "jump to slot (-frameNo - 2)", taken until this slot's own counter
-            // reaches its duration. The bound is ours: the engine reads past the array here, and a
-            // self-referential jump chain would spin forever on the UI thread.
+            // Jump to slot (-frameNo - 2) until this slot's counter reaches its duration. The bound is ours: a
+            // jump chain that points at itself would spin forever.
             for (int guard = 0; guard < MaxFrames * MaxFrames; guard++)
             {
                 if (_index < 0 || _index >= MaxFrames || SlotAt(_index).FrameNo >= -1) break;
@@ -88,15 +86,14 @@ namespace DSPRE.HgEngine
             // verticalShift is deliberately not applied: the engine stores it but never reads it back.
         }
 
-        private HgEngineSpriteOffsets.SpriteFrameSlot SlotAt(int index) =>
-            index < _slots.Count ? _slots[index] : default;   // a short list behaves as trailing terminators
+        private SpriteFrameSlot SlotAt(int index) =>
+            index < _slots.Count ? _slots[index] : new SpriteFrameSlot(-1, 0, 0, 0);   // a short list behaves as trailing terminators
 
-        /// <summary>Every sprite frame this run can actually display, for the editor's blank-frame warnings.
-        /// Frame 0 is always included because the run ends on it.</summary>
-        public static IReadOnlyList<int> ReachableFrames(IReadOnlyList<HgEngineSpriteOffsets.SpriteFrameSlot> slots)
+        /// <summary>Every frame the run can show, always including frame 0, which it ends on.</summary>
+        public static IReadOnlyList<int> ReachableFrames(IReadOnlyList<SpriteFrameSlot> slots)
         {
             var seen = new List<int> { 0 };
-            var player = new HgEngineSpriteFramePlayer();
+            var player = new SpriteFramePlayer();
             player.Start(slots);
             if (player.Active && !seen.Contains(player.SpriteFrame)) seen.Add(player.SpriteFrame);
 
