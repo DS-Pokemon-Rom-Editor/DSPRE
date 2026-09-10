@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _model.CellIndex;
             set
             {
-                if (_model.CellIndex == value) return;
+                if (value < 0 || _model.CellIndex == value) return;
                 _model.CellIndex = value;
                 OnPropertyChanged();
                 Thumbnail = _renderThumbnail(value);
@@ -415,6 +415,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _syncingAnimText;   // guards the structured-model <-> AnimJsonText echo loop
 
         public ObservableCollection<AnimSequenceChoiceViewModel> AnimSequenceChoices { get; } = new();
+        private bool _refillingSequences;
+
+        private void RefillSequenceChoices()
+        {
+            _refillingSequences = true;
+            try
+            {
+                AnimSequenceChoices.Clear();
+                for (int i = 0; i < (_animRoot?.Sequences.Count ?? 0); i++)
+                    AnimSequenceChoices.Add(new AnimSequenceChoiceViewModel(_animRoot.Sequences[i], i));
+            }
+            finally { _refillingSequences = false; }
+        }
 
         private AnimSequenceChoiceViewModel _selectedAnimSequence;
         public AnimSequenceChoiceViewModel SelectedAnimSequence
@@ -422,6 +435,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _selectedAnimSequence;
             set
             {
+                // Refilling the choices makes the picker push null back; that is not the user's choice.
+                if (_refillingSequences) return;
                 if (!Set(ref _selectedAnimSequence, value)) return;
                 OnPropertyChanged(nameof(HasSelectedAnimSequence));
                 StopAnimPreview();
@@ -479,7 +494,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (string.IsNullOrWhiteSpace(AnimJsonText))
             {
                 _animRoot = null;
-                AnimSequenceChoices.Clear();
+                _selectedAnimSequence = null;
+                RefillSequenceChoices();
+                OnPropertyChanged(nameof(SelectedAnimSequence));
+                OnPropertyChanged(nameof(HasSelectedAnimSequence));
                 AnimFrameRows.Clear();
                 OnPropertyChanged(nameof(HasAnimFrameRows));
                 AnimModelStatusText = "";
@@ -497,9 +515,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
 
             int keepIndex = SelectedAnimSequence?.Index ?? 0;
-            AnimSequenceChoices.Clear();
-            for (int i = 0; i < (_animRoot?.Sequences.Count ?? 0); i++)
-                AnimSequenceChoices.Add(new AnimSequenceChoiceViewModel(_animRoot.Sequences[i], i));
+            RefillSequenceChoices();
 
             var restore = AnimSequenceChoices.FirstOrDefault(s => s.Index == keepIndex) ?? AnimSequenceChoices.FirstOrDefault();
             if (!ReferenceEquals(restore, _selectedAnimSequence))
@@ -530,9 +546,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             // Sequence picker labels show frame counts, so rebuild them after any add/remove.
             int keepIndex = SelectedAnimSequence?.Index ?? 0;
-            AnimSequenceChoices.Clear();
-            for (int i = 0; i < _animRoot.Sequences.Count; i++)
-                AnimSequenceChoices.Add(new AnimSequenceChoiceViewModel(_animRoot.Sequences[i], i));
+            RefillSequenceChoices();
             var restore = AnimSequenceChoices.FirstOrDefault(s => s.Index == keepIndex) ?? AnimSequenceChoices.FirstOrDefault();
             if (!ReferenceEquals(restore, _selectedAnimSequence)) _selectedAnimSequence = restore;
             OnPropertyChanged(nameof(SelectedAnimSequence));

@@ -176,7 +176,7 @@
 
                               <TextBlock Text="Pose" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
                               <ComboBox ItemsSource="{Binding #RootWindow.DataContext.AnimCellChoices}"
-                                        SelectedValue="{Binding CellIndex}" SelectedValueBinding="{Binding Index}"
+                                        SelectedIndex="{Binding CellIndex}"
                                         HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                   <DataTemplate x:DataType="vm:AnimCellChoiceViewModel">
