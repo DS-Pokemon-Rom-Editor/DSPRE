@@ -312,31 +312,25 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             DSUtils.TryUnpackNarcs(new List<DirNames> {
                 DirNames.trainerGraphics, DirNames.textArchives, DirNames.monIcons });
-            SetBattleEffectsData();
             SetMonIconsPalTableAddress();
 
-            _effectsComboTable = new List<(ushort, ushort)>();
-            _effectsComboStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0);
-            RomPatchState.flag_MainComboTableRepointed = _effectsComboStartAddr >= synthOverlayLoadAddress;
-            _effectsComboStartAddr -= RomPatchState.flag_MainComboTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+            var tables = BattleMusicTables.LoadRom();
+            _effectsComboTable = tables.Combos.Rows;
+            _effectsComboStartAddr = tables.Combos.Start;
+            RomPatchState.flag_MainComboTableRepointed = tables.Combos.Repointed;
 
-            byte comboCount;
-            string expArmPath = Filesystem.expArmPath;
+            ComboItems.Clear();
+            for (int i = 0; i < _effectsComboTable.Count; i++)
+                ComboItems.Add($"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}");
 
             if (gameFamily == GameFamilies.HGSS)
             {
-                comboCount = ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter);
-
-                _vsPokemonList = new List<(int, int)>();
-                _vsTrainerList = new List<(int, int)>();
-
-                _vsPokemonStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(vsPokemonEntryTableOffsetToRAMAddress, 4), 0);
-                RomPatchState.flag_PokemonBattleTableRepointed = _vsPokemonStartAddr >= synthOverlayLoadAddress;
-                _vsPokemonStartAddr -= RomPatchState.flag_PokemonBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
-
-                _vsTrainerStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(vsTrainerEntryTableOffsetToRAMAddress, 4), 0);
-                RomPatchState.flag_TrainerClassBattleTableRepointed = _vsTrainerStartAddr >= synthOverlayLoadAddress;
-                _vsTrainerStartAddr -= RomPatchState.flag_TrainerClassBattleTableRepointed ? synthOverlayLoadAddress : ARM9.address;
+                _vsTrainerList = tables.Classes.Rows;
+                _vsTrainerStartAddr = tables.Classes.Start;
+                RomPatchState.flag_TrainerClassBattleTableRepointed = tables.Classes.Repointed;
+                _vsPokemonList = tables.Species.Rows;
+                _vsPokemonStartAddr = tables.Species.Start;
+                RomPatchState.flag_PokemonBattleTableRepointed = tables.Species.Repointed;
 
                 _pokeNames = GetPokemonNames();
                 PokemonNames.Clear();
@@ -347,55 +341,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 for (int i = 0; i < _trcNames.Length; i++) TrainerNames.Add($"[{i:D3}] {_trcNames[i]}");
 
                 VsTrainerItems.Clear();
+                foreach (var (classID, comboID) in _vsTrainerList)
+                    VsTrainerItems.Add($"{TrainerLabel(classID)} uses Combo #{comboID}");
+
                 VsPokemonItems.Clear();
-            }
-            else
-            {
-                comboCount = 35;
-            }
-
-            // Main combo table.
-            ComboItems.Clear();
-            using (var ar = new DSUtils.EasyReader(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr))
-            {
-                for (int i = 0; i < comboCount; i++)
+                foreach (var (pokeID, comboID) in _vsPokemonList)
                 {
-                    ushort effect = ar.ReadUInt16();
-                    ushort music = ar.ReadUInt16();
-                    _effectsComboTable.Add((effect, music));
-                    ComboItems.Add($"Combo {i:D2} - Effect #{effect}, Music #{music}");
-                }
-            }
-
-            if (gameFamily == GameFamilies.HGSS)
-            {
-                // VS Trainer table.
-                using (var ar = new DSUtils.EasyReader(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr))
-                {
-                    byte trainerCount = ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter);
-                    for (int i = 0; i < trainerCount; i++)
-                    {
-                        ushort entry = ar.ReadUInt16();
-                        int classID = entry & 1023;
-                        int comboID = entry >> 10;
-                        _vsTrainerList.Add((classID, comboID));
-                        VsTrainerItems.Add($"{TrainerLabel(classID)} uses Combo #{comboID}");
-                    }
-                }
-
-                // VS Pokémon table.
-                using (var ar = new DSUtils.EasyReader(RomPatchState.flag_PokemonBattleTableRepointed ? expArmPath : arm9Path, _vsPokemonStartAddr))
-                {
-                    byte pokeCount = ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter);
-                    for (int i = 0; i < pokeCount; i++)
-                    {
-                        ushort entry = ar.ReadUInt16();
-                        int pokeID = entry & 1023;
-                        int comboID = entry >> 10;
-                        _vsPokemonList.Add((pokeID, comboID));
-                        string name = pokeID >= 0 && pokeID < _pokeNames.Length ? _pokeNames[pokeID] : "UNKNOWN";
-                        VsPokemonItems.Add($"[{pokeID:D3}] {name} uses Combo #{comboID}");
-                    }
+                    string name = pokeID >= 0 && pokeID < _pokeNames.Length ? _pokeNames[pokeID] : "UNKNOWN";
+                    VsPokemonItems.Add($"[{pokeID:D3}] {name} uses Combo #{comboID}");
                 }
                 ShowVsTables = true;
             }
