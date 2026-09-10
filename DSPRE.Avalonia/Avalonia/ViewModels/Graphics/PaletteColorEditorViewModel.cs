@@ -31,24 +31,28 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private readonly PokemonSpriteEditorViewModel _sprite;
-        private readonly bool _shiny;
-        private readonly int _index;
+        private readonly System.Action<uint> _apply;
         private readonly uint _initialArgb;
 
-        public string Title => $"{(_shiny ? "Shiny" : "Normal")} Palette, Color {_index}";
+        public string Title { get; }
 
         public ObservableCollection<FavoriteSlotVM> Favorites { get; } = new ObservableCollection<FavoriteSlotVM>();
         public ObservableCollection<RecentColorVM> LastUsed { get; } = new ObservableCollection<RecentColorVM>();
         public bool HasLastUsed => LastUsed.Count > 0;
 
         public PaletteColorEditorViewModel(PokemonSpriteEditorViewModel sprite, bool shiny, int index)
+            : this($"{(shiny ? "Shiny" : "Normal")} Palette, Color {index}",
+                   sprite.GetPalette(shiny) is uint[] pal && index < pal.Length ? pal[index] : 0xFF000000u,
+                   argb => sprite.SetPaletteColor(shiny, index, argb))
         {
-            _sprite = sprite;
-            _shiny = shiny;
-            _index = index;
-            uint[] pal = sprite.GetPalette(shiny);
-            _initialArgb = (pal != null && index < pal.Length) ? pal[index] : 0xFF000000u;
+        }
+
+        /// <summary>Edits one colour; <paramref name="apply"/> gets each change.</summary>
+        public PaletteColorEditorViewModel(string title, uint initialArgb, System.Action<uint> apply)
+        {
+            Title = title;
+            _apply = apply;
+            _initialArgb = initialArgb;
             SetFieldsFrom(_initialArgb);
             RefreshFavorites();
             RefreshLastUsed();
@@ -79,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Apply(uint argb)
         {
             SetFieldsFrom(argb);
-            _sprite.SetPaletteColor(_shiny, _index, argb);
+            _apply(argb);
         }
 
         private void SetFieldsFrom(uint argb)

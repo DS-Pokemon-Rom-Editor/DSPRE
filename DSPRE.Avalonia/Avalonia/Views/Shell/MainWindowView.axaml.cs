@@ -579,6 +579,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void TrainerSpriteEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerSpriteEditor();
 
+        private void TrainerBackSpriteEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTrainerBackSpriteEditor();
+
         private void TextEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTextEditor();
 

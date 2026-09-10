@@ -892,6 +892,24 @@ namespace DSPRE.Avalonia
             }
         }
 
+        public static void OpenTrainerBackSpriteEditor(int initialSprite = 0) => _ = OpenTrainerBackSpriteEditorAsync(initialSprite);
+
+        public static async System.Threading.Tasks.Task OpenTrainerBackSpriteEditorAsync(int initialSprite = 0)
+        {
+            if (!IsRomLoaded || BlockedForHge("The Trainer Back Sprite Editor")) return;
+
+            try
+            {
+                await RunBusyAsync("Opening Trainer Back Sprite Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerBackGraphics }));
+                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialSprite, TrainerSpriteSet.Backs)).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Trainer Back Sprite Editor: " + ex.Message, "Trainer Back Sprite Editor");
+            }
+        }
+
         /// <summary>The editor that owns a graphic, and what to call it.</summary>
         public static (string Name, System.Action Open)? EditorForGraphic(RomInfo.DirNames archive, int fileIndex)
         {
@@ -908,6 +926,9 @@ namespace DSPRE.Avalonia
 
                 case RomInfo.DirNames.trainerGraphics:
                     return ("Trainer Sprite Editor", () => OpenTrainerSpriteEditor(fileIndex / 5));
+
+                case RomInfo.DirNames.trainerBackGraphics:
+                    return ("Trainer Back Sprite Editor", () => OpenTrainerBackSpriteEditor(fileIndex / 5));
 
                 case RomInfo.DirNames.itemIcons:
                 {
@@ -1076,6 +1097,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
             new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
+            new() { Name = "Trainer Back Sprite Editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
             new() { Name = "Pokégear Rematch Editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
             new() { Name = "hg-engine Patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },

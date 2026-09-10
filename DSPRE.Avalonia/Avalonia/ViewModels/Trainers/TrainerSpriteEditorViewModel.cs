@@ -21,11 +21,47 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     public enum SpriteEditTool { Pencil, Eyedropper }
 
-    /// <summary>One swatch in the palette strip, a fixed existing palette color, not editable.</summary>
-    public class PaletteSwatchViewModel
+    /// <summary>Class sprites or back sprites.</summary>
+    public sealed class TrainerSpriteSet
     {
+        public DirNames Archive { get; private init; }
+        /// <summary>hg-engine's source folder under data/graphics, and the digits its file names use.</summary>
+        public string SourceFolder { get; private init; }
+        public int NameDigits { get; private init; }
+        public string Title { get; private init; }
+        public string Noun { get; private init; }
+        public string ItemLabel { get; private init; }
+        public Func<int, List<string>> Names { get; private init; }
+
+        public static readonly TrainerSpriteSet Classes = new()
+        {
+            Archive = DirNames.trainerGraphics, SourceFolder = "trainer_gfx", NameDigits = 3,
+            Title = "Trainer Class Sprite Editor", Noun = "class", ItemLabel = "Class:",
+            Names = _ => GetTrainerClassNames().ToList(),
+        };
+
+        public static readonly TrainerSpriteSet Backs = new()
+        {
+            Archive = DirNames.trainerBackGraphics, SourceFolder = "trainer_back_gfx", NameDigits = 2,
+            Title = "Trainer Back Sprite Editor", Noun = "back sprite", ItemLabel = "Sprite:",
+            Names = count => DSPRE.ROMFiles.TrainerBackSprites.Names(count),
+        };
+
+        public string FileStem(int id) => id.ToString("D" + NameDigits);
+    }
+
+    /// <summary>One swatch in the palette strip.</summary>
+    public class PaletteSwatchViewModel : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
         public int Index { get; }
         public IBrush Brush { get; }
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { if (_isSelected == value) return; _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
+        }
         public PaletteSwatchViewModel(int index, System.Drawing.Color color)
         {
             Index = index;
@@ -41,8 +77,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public FrameThumbnailViewModel(int index, Bitmap image) { Index = index; Image = image; }
     }
 
-    /// <summary>One selectable "pose" in a frame's pose picker: an NCER cell, labeled and thumbnailed the
-    /// same way the Sprite tab's own frame strip is.</summary>
+    /// <summary>One pose in a frame's pose picker: an NCER cell.</summary>
     public class AnimCellChoiceViewModel
     {
         public int Index { get; }
@@ -51,9 +86,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public AnimCellChoiceViewModel(int index, string label, Bitmap thumbnail) { Index = index; Label = label; Thumbnail = thumbnail; }
     }
 
-    /// <summary>One row in the frame list: a played pose + how long it holds. Edits write straight into
-    /// the underlying <see cref="AnimFrameDataJson"/> and notify the owner so it can re-serialize
-    /// AnimJsonText and refresh the thumbnail.</summary>
+    /// <summary>One frame of a sequence: a pose and how long it holds. Edits write into the model and notify the owner.</summary>
     public class AnimFrameRowViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -74,7 +107,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public AnimFrameDataJson Model => _model;
 
-        /// <summary>60fps game ticks, hg-engine's own unit; DelayMs is the friendlier readout.</summary>
         public int Delay
         {
             get => _model.FrameDelay;
@@ -84,12 +116,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (_model.FrameDelay == clamped) return;
                 _model.FrameDelay = clamped;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(DelayMs));
                 _onChanged();
             }
         }
-
-        public double DelayMs => Math.Round(Delay * 1000.0 / 60.0);
 
         public int CellIndex
         {
@@ -108,8 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public Bitmap Thumbnail { get => _thumbnail; private set { _thumbnail = value; OnPropertyChanged(); } }
     }
 
-    /// <summary>One entry in the sequence picker (hg-engine calls a sequence an "animation": idle pose,
-    /// walk cycle, battle dance, etc). A class usually has 1-2.</summary>
+    /// <summary>One entry in the sequence picker.</summary>
     public class AnimSequenceChoiceViewModel
     {
         public AnimSequenceJson Model { get; }
@@ -125,19 +153,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     }
 
     /// <summary>
-    /// Pixel-level editor for a trainer class's sprite.
-    ///
-    /// Plat/HGSS trainer classes composite per-frame OAM cells (NCER) from a shared NCGR tile sheet;
-    /// the flat sheet itself is a jumbled atlas, not a coherent picture. Editing happens on the
-    /// composited "as it looks" preview instead: each paint stroke is hit-tested against the current
-    /// frame's OAM cells (same geometry
-    /// <see cref="Ekona.Images.Actions.Get_RawImage(Bank, uint, ImageBase, PaletteBase, int, int, bool, int, int, int[])"/>
-    /// uses) to find which cell, tile bytes and palette bank own that pixel, then edits just those
-    /// bytes in place. Cells shared across frames mean an edit naturally propagates to every frame
-    /// that reuses them; frames that don't share tiles edit independently.
-    ///
-    /// DP trainer classes have no NCER (no per-class animation), so editing falls back to the flat
-    /// NCGR tile sheet directly (<see cref="_flatIndices"/> path).
+    /// Pixel editor for a trainer sprite. Plat/HGSS paint on the composited frame and write each stroke into the
+    /// cell tiles under it, so frames sharing tiles change together; DP has no cells and edits the flat sheet.
     /// </summary>
     public class TrainerSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -235,10 +252,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<PaletteSwatchViewModel> PaletteSwatches { get; } = new();
 
         private int _selectedSwatchIndex;
-        public int SelectedSwatchIndex { get => _selectedSwatchIndex; set => Set(ref _selectedSwatchIndex, value); }
+        public int SelectedSwatchIndex
+        {
+            get => _selectedSwatchIndex;
+            set { Set(ref _selectedSwatchIndex, value); foreach (var s in PaletteSwatches) s.IsSelected = s.Index == value; }
+        }
 
         private SpriteEditTool _selectedTool = SpriteEditTool.Pencil;
-        public SpriteEditTool SelectedTool { get => _selectedTool; set => Set(ref _selectedTool, value); }
+        public SpriteEditTool SelectedTool
+        {
+            get => _selectedTool;
+            set { if (Set(ref _selectedTool, value)) { OnPropertyChanged(nameof(IsPencil)); OnPropertyChanged(nameof(IsEyedropper)); } }
+        }
+        public bool IsPencil { get => _selectedTool == SpriteEditTool.Pencil; set { if (value) SelectedTool = SpriteEditTool.Pencil; } }
+        public bool IsEyedropper { get => _selectedTool == SpriteEditTool.Eyedropper; set { if (value) SelectedTool = SpriteEditTool.Eyedropper; } }
 
         private Bitmap _canvasBitmap;
         public Bitmap CanvasBitmap { get => _canvasBitmap; private set => Set(ref _canvasBitmap, value); }
@@ -252,7 +279,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _dirty || AnimJsonDirty;
             private set => Set(ref _dirty, value);
         }
-        public string UnsavedChangesDescription => $"Trainer Class Sprite Editor (class {_trClassID})";
+        public string UnsavedChangesDescription => $"{_set.Title} ({_set.Noun} {_trClassID})";
+
+        private readonly TrainerSpriteSet _set = TrainerSpriteSet.Classes;
+        public string Title => _set.Title;
+        public string ItemLabel => _set.ItemLabel;
+        public DirNames Archive => _set.Archive;
         public void SaveChanges()
         {
             Save();
@@ -277,7 +309,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (!Set(ref _animJsonText, value)) return;
-                AnimJsonDirty = true;
+                if (CanEditAnimJson) AnimJsonDirty = true;
                 if (!_syncingAnimText) TryRebuildAnimModelFromText();
             }
         }
@@ -294,6 +326,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public bool CanEditAnimJson => HgEngineProject.IsActive;
         public bool HasAnimJsonFile => _animJsonPath != null && File.Exists(_animJsonPath);
+        /// <summary>True when there is an animation to show, from hg-engine's JSON or read from the ROM.</summary>
+        public bool HasAnimation => HasAnimJsonFile || (!CanEditAnimJson && !string.IsNullOrEmpty(AnimJsonText));
 
         private void SetAnimJsonTextSilent(string text)
         {
@@ -305,22 +339,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadAnimJson(int trClassID)
         {
             _animJsonPath = HgEngineProject.IsActive
-                ? Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", "trainer_gfx", $"{trClassID:D3}_anim.json")
+                ? Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", _set.SourceFolder, $"{_set.FileStem(trClassID)}_anim.json")
                 : null;
             OnPropertyChanged(nameof(CanEditAnimJson));
             OnPropertyChanged(nameof(HasAnimJsonFile));
 
             if (_animJsonPath == null)
             {
-                SetAnimJsonTextSilent("");
-                AnimJsonStatusText = "Link an hg-engine checkout to edit this class's animation JSON.";
+                SetAnimJsonTextSilent(RomAnimationJson(trClassID) ?? "");
+                AnimJsonStatusText = "";
             }
             else if (File.Exists(_animJsonPath))
             {
                 try
                 {
                     SetAnimJsonTextSilent(File.ReadAllText(_animJsonPath));
-                    AnimJsonStatusText = _animJsonPath;
+                    AnimJsonStatusText = "";
                 }
                 catch (Exception ex)
                 {
@@ -331,7 +365,34 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             else
             {
                 SetAnimJsonTextSilent("");
-                AnimJsonStatusText = $"No {trClassID:D3}_anim.json yet for this class.";
+                AnimJsonStatusText = "";
+            }
+            OnPropertyChanged(nameof(HasAnimation));
+            OnPropertyChanged(nameof(CanCreateAnimJson));
+        }
+
+        // The ROM's compiled animation as the JSON model, for showing and playing without a checkout.
+        private string RomAnimationJson(int id)
+        {
+            try
+            {
+                var renderer = new TrainerClassSpriteRenderer();
+                renderer.Load(id, _set.Archive);
+                if (renderer.SequenceCount == 0) return null;
+                var root = new AnimJsonRoot();
+                for (int seq = 0; seq < renderer.SequenceCount; seq++)
+                {
+                    var model = new AnimSequenceJson { AnimationType = 1, PlaybackMode = 2 };
+                    foreach (var (bank, duration) in renderer.Sequence(seq))
+                        model.FrameData.Add(new AnimFrameDataJson { CellIndex = bank, FrameDelay = Math.Max(1, duration) });
+                    root.Sequences.Add(model);
+                }
+                return root.Serialize();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("TrainerSpriteEditorViewModel: animation could not be read: " + ex.Message);
+                return null;
             }
             AnimJsonDirty = false;
         }
@@ -353,7 +414,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 File.WriteAllText(_animJsonPath, AnimJsonText);
                 AnimJsonDirty = false;
-                AnimJsonStatusText = "Saved: " + _animJsonPath;
+                AnimJsonStatusText = "Saved.";
                 OnPropertyChanged(nameof(HasAnimJsonFile));
                 return null;
             }
@@ -399,7 +460,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 File.WriteAllText(_animJsonPath, template);
                 SetAnimJsonTextSilent(template);
                 AnimJsonDirty = false;
-                AnimJsonStatusText = "Created: " + _animJsonPath;
+                AnimJsonStatusText = "";
                 OnPropertyChanged(nameof(HasAnimJsonFile));
                 return null;
             }
@@ -444,6 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
         public bool HasSelectedAnimSequence => SelectedAnimSequence != null;
+        public bool CanCreateAnimJson => CanEditAnimJson && !HasAnimation;
 
         public ObservableCollection<AnimFrameRowViewModel> AnimFrameRows { get; } = new();
         public bool HasAnimFrameRows => AnimFrameRows.Count > 0;
@@ -532,6 +594,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 foreach (var frame in SelectedAnimSequence.Model.FrameData)
                     AnimFrameRows.Add(new AnimFrameRowViewModel(frame, SyncAnimModelToText, i => RenderAnimCellThumbnail(i)));
             }
+            if (!AnimPreviewPlaying) AnimPreviewBitmap = AnimFrameRows.Count > 0 ? AnimFrameRows[0].Thumbnail : null;
             OnPropertyChanged(nameof(HasAnimFrameRows));
         }
 
@@ -662,11 +725,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StatusText = "Design preview";
         }
 
-        public TrainerSpriteEditorViewModel(int trClassID)
+        public TrainerSpriteEditorViewModel(int trClassID) : this(trClassID, TrainerSpriteSet.Classes) { }
+
+        public TrainerSpriteEditorViewModel(int id, TrainerSpriteSet set)
         {
-            string[] names = GetTrainerClassNames();
-            for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
-            Load(trClassID);
+            _set = set;
+            var names = set.Names(SpriteCount());
+            for (int i = 0; i < names.Count; i++) ClassNames.Add($"[{set.FileStem(i)}] {names[i]}");
+            Load(Math.Clamp(id, 0, Math.Max(0, names.Count - 1)));
+        }
+
+        private int SpriteCount()
+        {
+            try { return Directory.GetFiles(gameDirs[_set.Archive].unpackedDir).Length / DSPRE.ROMFiles.TrainerBackSprites.FilesPerSprite; }
+            catch { return 0; }
         }
 
         // ── Load ───────────────────────────────────────────────────────────────
@@ -676,7 +748,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _trClassID = trClassID;
             try
             {
-                string dir = RomInfo.gameDirs[DirNames.trainerGraphics].unpackedDir;
+                string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
 
                 int paletteFileID = trClassID * 5 + 1;
                 string paletteFilename = paletteFileID.ToString("D4");
@@ -692,8 +764,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 {
                     if (HgEngineProject.IsActive)
                     {
-                        string trainerGfxDir = Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", "trainer_gfx");
-                        string cellPath = Path.Combine(trainerGfxDir, $"{trClassID:D3}_cell.json");
+                        string trainerGfxDir = Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", _set.SourceFolder);
+                        string cellPath = Path.Combine(trainerGfxDir, $"{_set.FileStem(trClassID)}_cell.json");
                         if (File.Exists(cellPath))
                         {
                             if (HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out var banks, out var blockSize, out string cellError))
@@ -726,7 +798,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     // e.g. a discard while already on frame 0.
                     _selectedFrameIndex = -1;
                     SelectedFrameIndex = 0; // triggers LoadFrame -> cells + canvas + swatches
-                    StatusText = $"Class {trClassID}: {FrameCount} frame(s), {_tile.BPP}bpp";
+                    StatusText = $"{Capital(_set.Noun)} {trClassID}: {FrameCount} frame(s), {_tile.BPP}bpp";
                 }
                 else
                 {
@@ -736,12 +808,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     FrameThumbnails.Clear();
                     OnPropertyChanged(nameof(HasFrames));
                     LoadFlatSheet();
-                    StatusText = $"Class {trClassID}: {_flatWidth}×{_flatHeight} tile sheet (no per-class animation on this game), {_tile.BPP}bpp";
+                    StatusText = $"{Capital(_set.Noun)} {trClassID}: {_flatWidth}×{_flatHeight} tile sheet (no animation on this game), {_tile.BPP}bpp";
                 }
 
                 OnPropertyChanged(nameof(IsFlatSheetMode));
                 OnPropertyChanged(nameof(FrameCount));
                 HasUnsavedChanges = false;
+                _paletteDirty = false;
+                _palPath = Path.Combine(dir, paletteFilename);
                 StopAnimPreview();
                 RebuildAnimCellChoices();
                 LoadAnimJson(trClassID);
@@ -894,6 +968,39 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (lx < 0 || lx >= c.Width || ly < 0 || ly >= c.Height) return 0;
             return DecodeCell(c)[ly * c.Width + lx];
+        }
+
+        private static string Capital(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+        // ── Palette colours ─────────────────────────────────────────────────────
+        private string _palPath;
+        private bool _paletteDirty;
+
+        /// <summary>The palette the swatches show, which follows the part of the sprite last painted.</summary>
+        public int ActivePaletteBank => Math.Max(0, _activePaletteBank);
+
+        public string PaletteTitle(int bank, int index) => $"{Capital(_set.Noun)} {_trClassID}, palette {bank}, colour {index}";
+
+        public uint SwatchColor(int bank, int index)
+        {
+            var pal = _pal != null && bank >= 0 && bank < _pal.Palette.Length ? _pal.Palette[bank] : null;
+            if (pal == null || index < 0 || index >= pal.Length) return 0xFF000000u;
+            return 0xFF000000u | ((uint)pal[index].R << 16) | ((uint)pal[index].G << 8) | pal[index].B;
+        }
+
+        /// <summary>Sets a palette colour, rounded to 5 bits a channel.</summary>
+        public void SetSwatchColor(int bank, int index, uint argb)
+        {
+            var pal = _pal != null && bank >= 0 && bank < _pal.Palette.Length ? _pal.Palette[bank] : null;
+            if (pal == null || index < 0 || index >= pal.Length) return;
+            int Channel(int shift) => (int)((argb >> shift) & 0xF8);
+            var color = System.Drawing.Color.FromArgb(Channel(16), Channel(8), Channel(0));
+            if (pal[index].ToArgb() == color.ToArgb()) return;
+            pal[index] = color;
+            _paletteDirty = true;
+            HasUnsavedChanges = true;
+            if (bank == ActivePaletteBank) BuildPaletteSwatches(bank);
+            if (BankCount > 0) { RebuildCompositedCanvas(); BuildFrameThumbnails(); } else RebuildFlatCanvas();
         }
 
         private void BuildPaletteSwatches(int bankIndex)
@@ -1146,6 +1253,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
 
                 _tile.Write(_tilesPath, _pal);
+                if (_paletteDirty)
+                {
+                    byte[] nclr = File.ReadAllBytes(_palPath);
+                    var colours = _pal.Palette.SelectMany(bank => bank.Select(c => 0xFF000000u | ((uint)c.R << 16) | ((uint)c.G << 8) | c.B)).ToArray();
+                    string error = Data.GraphicAssets.PatchPalette(ref nclr, colours);
+                    if (error != null) { StatusText = "Save failed: " + error; return error; }
+                    File.WriteAllBytes(_palPath, nclr);
+                    _paletteDirty = false;
+                }
 
                 if (BankCount > 0) BuildFrameThumbnails();
 

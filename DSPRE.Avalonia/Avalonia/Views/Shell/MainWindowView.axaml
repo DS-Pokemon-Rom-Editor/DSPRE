@@ -65,6 +65,7 @@
       <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Trainer Editor…"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}"/>
         <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BetaNote[TrainerSpriteEditorView]}"/>
+        <MenuItem Header="Trainer Back Sprite Editor…" Click="TrainerBackSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BetaNote[TrainerSpriteEditorView]}"/>
         <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}"
                   ToolTip.Tip="Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer"/>
         <MenuItem Header="Pokégear Rematch Editor…" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}"

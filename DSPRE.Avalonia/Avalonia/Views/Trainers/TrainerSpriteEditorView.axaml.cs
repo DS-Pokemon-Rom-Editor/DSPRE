@@ -30,13 +30,30 @@ namespace DSPRE.Avalonia.Views.Trainers
             EditorWindowChrome.Attach(this, vm);
         }
 
-        private void Pencil_Click(object sender, RoutedEventArgs e) => VM.SelectedTool = SpriteEditTool.Pencil;
-        private void Eyedropper_Click(object sender, RoutedEventArgs e) => VM.SelectedTool = SpriteEditTool.Eyedropper;
 
         private void Swatch_PointerPressed(object sender, PointerPressedEventArgs e)
         {
             if (sender is Control c && c.Tag is int index)
                 VM.SelectedSwatchIndex = index;
+        }
+
+        private void Swatch_DoubleTapped(object sender, TappedEventArgs e)
+        {
+            if (sender is Control c && c.Tag is int index) OpenColourEditor(index);
+        }
+
+        private void EditColour_Click(object sender, RoutedEventArgs e) => OpenColourEditor(VM?.SelectedSwatchIndex ?? -1);
+
+        // Takes the palette now so painting another part can't redirect the edit.
+        private void OpenColourEditor(int index)
+        {
+            var vm = VM;
+            if (vm == null || !vm.Loaded || index < 0) return;
+            vm.SelectedSwatchIndex = index;
+            int bank = vm.ActivePaletteBank;
+            var editor = new DSPRE.Avalonia.ViewModels.Graphics.PaletteColorEditorViewModel(
+                vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), argb => vm.SetSwatchColor(bank, index, argb));
+            new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor).Show(this);
         }
 
         private void Frame_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -80,14 +97,12 @@ namespace DSPRE.Avalonia.Views.Trainers
                 await DialogHelper.ShowError($"Save failed: {error}", owner: this);
         }
 
-        /// <summary>Hands this trainer class to the Graphics window. Five files a class, so the drawing
-        /// wanted is at the front of its run.</summary>
+        /// <summary>Opens the Graphics window at this sprite's drawing, the first of its five files.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as DSPRE.Avalonia.ViewModels.Trainers.TrainerSpriteEditorViewModel;
             if (vm == null) return;
-            DSPRE.Avalonia.AvaloniaEditorLauncher.OpenGraphicAt(
-                DSPRE.RomInfo.DirNames.trainerGraphics, vm.SelectedClassIndex * 5);
+            DSPRE.Avalonia.AvaloniaEditorLauncher.OpenGraphicAt(vm.Archive, vm.SelectedClassIndex * 5);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)

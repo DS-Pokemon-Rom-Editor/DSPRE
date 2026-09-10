@@ -6,7 +6,7 @@
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSpriteEditorView"
         x:Name="RootWindow"
         x:DataType="vm:TrainerSpriteEditorViewModel"
-        Title="Trainer Class Sprite Editor"
+        Title="{Binding Title}"
         Width="900" Height="760"
         MinWidth="680" MinHeight="520"
         WindowStartupLocation="CenterOwner">
@@ -14,9 +14,21 @@
     <vm:TrainerSpriteEditorViewModel/>
   </Design.DataContext>
 
+  <Window.Styles>
+    <Style Selector="Border.swatch">
+      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Border}"/>
+    </Style>
+    <Style Selector="TabControl.readonly /template/ ItemsPresenter#PART_ItemsPresenter">
+      <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.swatch.selected">
+      <Setter Property="BorderBrush" Value="White"/>
+    </Style>
+  </Window.Styles>
+
   <DockPanel Margin="8">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-      <TextBlock Text="Class:" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
       <ComboBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
     </StackPanel>
 
@@ -30,18 +42,13 @@
         <DockPanel Margin="0,8,0,0">
           <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
             <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Import PNG…" Click="Import_Click"/>
+            <Button Content="Import PNG…" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
             <Button Content="Export PNG…" Click="Export_Click"/>
-            <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
-                    ToolTip.Tip="Open this trainer class in the Graphics window, where its drawing, colours and layout sit together and can be painted by hand."/>
-            <TextBlock Text="Palette-exact PNG import only, can't add new colors. Export first for a correctly-sized template." FontSize="11"
-                       Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+            <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"/>
           </StackPanel>
 
-          <!-- Frame strip, click a frame to edit it. Only shown on Plat/HGSS (per-class animation cells). -->
-          <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasFrames}">
-            <TextBlock Text="Frames: click to edit. Edits affect every frame that reuses the same tiles." FontSize="11"
-                       Foreground="{DynamicResource Editor.Subtle}"/>
+          <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasFrames}"
+                      ToolTip.Tip="Frames that share tiles change together.">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="84">
               <ItemsControl ItemsSource="{Binding FrameThumbnails}">
                 <ItemsControl.ItemsPanel>
@@ -65,19 +72,13 @@
           <!-- Left: tools + palette swatches -->
           <DockPanel DockPanel.Dock="Left" Width="150" Margin="0,0,8,0">
             <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
-              <TextBlock Text="Tool" FontWeight="SemiBold"/>
-              <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Content="Pencil" Click="Pencil_Click"/>
-                <Button Content="Eyedropper" Click="Eyedropper_Click"/>
-              </StackPanel>
-              <TextBlock Text="{Binding SelectedTool, StringFormat='Active: {0}'}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <RadioButton GroupName="Tool" Content="Pencil" IsChecked="{Binding IsPencil}"/>
+              <RadioButton GroupName="Tool" Content="Eyedropper" IsChecked="{Binding IsEyedropper}"/>
             </StackPanel>
 
             <StackPanel DockPanel.Dock="Top" Spacing="4">
-              <TextBlock Text="Palette" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding SelectedSwatchIndex, StringFormat='Selected: color {0}'}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <TextBlock Text="Swatches follow whatever part of the sprite you're painting, since different parts can use different palettes."
-                         FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !IsFlatSheetMode}"/>
+              <TextBlock Text="Palette" FontWeight="SemiBold" ToolTip.Tip="Shows the palette of the part last painted."/>
+              <Button Content="Edit colour…" Click="EditColour_Click" HorizontalAlignment="Left"/>
             </StackPanel>
 
             <ScrollViewer>
@@ -89,9 +90,10 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:PaletteSwatchViewModel">
-                    <Border Width="28" Height="28" Margin="2" BorderThickness="2" Background="{Binding Brush}"
-                            BorderBrush="{DynamicResource Editor.Border}" PointerPressed="Swatch_PointerPressed"
-                            Tag="{Binding Index}" ToolTip.Tip="{Binding Index}"/>
+                    <Border Classes="swatch" Classes.selected="{Binding IsSelected}" Width="28" Height="28" Margin="2" BorderThickness="2"
+                            Background="{Binding Brush}" PointerPressed="Swatch_PointerPressed"
+                            DoubleTapped="Swatch_DoubleTapped" Tag="{Binding Index}"
+                            ToolTip.Tip="Double-click to edit"/>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -111,17 +113,16 @@
       <TabItem Header="Animations">
         <DockPanel Margin="0,8,0,0">
           <TextBlock DockPanel.Dock="Top" Text="{Binding AnimJsonStatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
-                     TextWrapping="Wrap" Margin="0,0,0,8"/>
-
-          <TextBlock DockPanel.Dock="Top" Text="Link an hg-engine checkout to edit animations for this class." FontSize="12"
-                     Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,8" IsVisible="{Binding !CanEditAnimJson}"/>
+                     TextWrapping="Wrap" Margin="0,0,0,8"
+                     IsVisible="{Binding AnimJsonStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
           <Button DockPanel.Dock="Top" Content="Create anim.json…" Click="CreateAnimJson_Click" HorizontalAlignment="Left" Margin="0,0,0,8"
-                  IsVisible="{Binding !HasAnimJsonFile}" IsEnabled="{Binding CanEditAnimJson}"/>
+                  IsVisible="{Binding CanCreateAnimJson}"/>
 
-          <TabControl x:Name="AnimInnerTabs" SelectionChanged="AnimInnerTabs_SelectionChanged" IsVisible="{Binding HasAnimJsonFile}">
+          <TabControl x:Name="AnimInnerTabs" SelectionChanged="AnimInnerTabs_SelectionChanged" IsVisible="{Binding HasAnimation}"
+                      Classes.readonly="{Binding !CanEditAnimJson}">
             <TabItem Header="Editor">
-              <DockPanel Margin="0,8,0,0" IsEnabled="{Binding CanEditAnimJson}">
+              <DockPanel Margin="0,8,0,0">
                 <TextBlock DockPanel.Dock="Top" Text="{Binding AnimModelStatusText}" FontSize="11" Foreground="Orange" TextWrapping="Wrap"
                            Margin="0,0,0,8" IsVisible="{Binding AnimModelStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
@@ -134,11 +135,10 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <Button Content="+ Add Sequence" Click="AddSequence_Click"/>
-                  <Button Content="Remove Sequence" Click="RemoveSequence_Click" IsEnabled="{Binding HasSelectedAnimSequence}"/>
+                  <Button Content="+ Add Sequence" Click="AddSequence_Click" IsVisible="{Binding CanEditAnimJson}"/>
+                  <Button Content="Remove Sequence" Click="RemoveSequence_Click" IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                 </StackPanel>
 
-                <!-- Preview: plays the selected sequence through once at real speed, then stops (no loop). -->
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                         Background="{DynamicResource Editor.PanelBg}" Padding="10" Margin="0,10,0,0">
                   <StackPanel Orientation="Horizontal" Spacing="12">
@@ -149,8 +149,6 @@
                       <Button Content="▶ Play once" Click="PlayAnimPreview_Click" IsEnabled="{Binding !AnimPreviewPlaying}"/>
                       <TextBlock Text="{Binding AnimPreviewFrameNumber, StringFormat='Frame {0}'}" FontSize="11"
                                  Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding AnimPreviewPlaying}"/>
-                      <TextBlock Text="Plays at real speed, then stops. Not a loop." FontSize="10"
-                                 TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}" Width="280"/>
                     </StackPanel>
                   </StackPanel>
                 </Border>
@@ -176,7 +174,7 @@
 
                               <TextBlock Text="Pose" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
                               <ComboBox ItemsSource="{Binding #RootWindow.DataContext.AnimCellChoices}"
-                                        SelectedIndex="{Binding CellIndex}"
+                                        SelectedIndex="{Binding CellIndex}" IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimJson}"
                                         HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                   <DataTemplate x:DataType="vm:AnimCellChoiceViewModel">
@@ -185,11 +183,12 @@
                                 </ComboBox.ItemTemplate>
                               </ComboBox>
 
-                              <TextBlock Text="Delay (60fps ticks)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                              <NumericUpDown Value="{Binding Delay}" Minimum="1" Maximum="600" Increment="1" FormatString="0"/>
-                              <TextBlock Text="{Binding DelayMs, StringFormat='≈ {0} ms'}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                              <TextBlock Text="Delay" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="In 60ths of a second"/>
+                              <NumericUpDown Value="{Binding Delay}" Minimum="1" Maximum="600" Increment="1" FormatString="0"
+                                             IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimJson}"/>
 
-                              <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,4,0,0">
+                              <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                          IsVisible="{Binding #RootWindow.DataContext.CanEditAnimJson}">
                                 <Button Content="↑" Click="MoveFrameUp_Click" Padding="8,2" ToolTip.Tip="Move earlier"/>
                                 <Button Content="↓" Click="MoveFrameDown_Click" Padding="8,2" ToolTip.Tip="Move later"/>
                                 <Button Content="✕" Click="RemoveFrame_Click" Padding="8,2" ToolTip.Tip="Remove frame"/>
@@ -201,13 +200,13 @@
                     </ItemsControl>
 
                     <Button Content="+ Add Frame" Click="AddFrame_Click" VerticalAlignment="Top" Margin="0,28,0,0"
-                             IsEnabled="{Binding HasSelectedAnimSequence}"/>
+                            IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                   </StackPanel>
                 </ScrollViewer>
               </DockPanel>
             </TabItem>
 
-            <TabItem Header="JSON">
+            <TabItem Header="JSON" IsVisible="{Binding CanEditAnimJson}">
               <DockPanel Margin="0,8,0,0">
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
                   <Button Content="Save Animation JSON" Click="SaveAnimJson_Click" IsEnabled="{Binding AnimJsonDirty}"/>
