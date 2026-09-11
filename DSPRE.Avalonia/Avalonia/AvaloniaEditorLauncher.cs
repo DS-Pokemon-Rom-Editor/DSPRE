@@ -538,6 +538,35 @@ namespace DSPRE.Avalonia
                 new PokegearRematchView(vm), 950, 640).ShowManaged();
         }
 
+        public static void OpenPokegearPhoneBook(int initialEntry = -1) => _ = OpenPokegearPhoneBookAsync(initialEntry);
+
+        public static async System.Threading.Tasks.Task OpenPokegearPhoneBookAsync(int initialEntry = -1)
+        {
+            if (!IsRomLoaded) return;
+            if (!PokegearPhoneBook.IsSupported)
+            {
+                AppMessages.Info("The Pokégear Phone Book only exists in HeartGold and SoulSilver.", "Not Supported");
+                return;
+            }
+            if (!BetaEditors.Allows("PokegearPhoneBookView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("PokegearPhoneBookView"), "Pokégear Phone Book");
+                return;
+            }
+
+            PokegearPhoneBookViewModel vm = null;
+            await RunBusyAsync("Opening Pokégear Phone Book…",
+                "Reading the phone book, contact names, trainers, maps and items.",
+                () =>
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                    vm = new PokegearPhoneBookViewModel(initialEntry);
+                });
+            if (vm == null) return;
+
+            new EditorHostWindow("Pokégear Phone Book", new PokegearPhoneBookView(vm), 1320, 700).ShowManaged();
+        }
+
         public static void OpenStarterEditor() => _ = OpenStarterEditorAsync();
 
         public static async System.Threading.Tasks.Task OpenStarterEditorAsync()
@@ -1100,6 +1129,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Trainer Back Sprite Editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
             new() { Name = "Pokégear Rematch Editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
+            new() { Name = "Pokégear Phone Book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
             new() { Name = "hg-engine Patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
             new() { Name = "Trainer Flag Bulk Editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },

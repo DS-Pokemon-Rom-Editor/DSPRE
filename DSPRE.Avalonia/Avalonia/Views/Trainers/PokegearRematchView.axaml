@@ -39,7 +39,10 @@
         <StackPanel Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
           <TextBlock Text="Base Trainer" FontWeight="Bold"/>
           <ComboBox ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
-          <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <Button Content="Open in Phone Book" Click="OpenPhoneBook_Click" IsVisible="{Binding HasPhoneEntry}" FontSize="11" Padding="6,1"/>
+          </StackPanel>
           <TextBlock Text="{Binding RowProblems}" IsVisible="{Binding HasRowProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
 

@@ -93,6 +93,8 @@ namespace DSPRE
         public static uint vsSeekerRematchTableOffset { get; private set; }
         public static int pokegearRematchOverlayNumber { get; private set; } = -1;
         public static uint pokegearRematchFallbackTableOffset { get; private set; }
+        /// <summary>Pokégear phone strings, whose messages from 38 on are the special contact titles. -1 when unknown.</summary>
+        public static int pokegearPhoneMessageArchive { get; private set; } = -1;
 
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
@@ -970,6 +972,7 @@ namespace DSPRE
             vsSeekerRematchTableOffset = 0;
             pokegearRematchOverlayNumber = -1;
             pokegearRematchFallbackTableOffset = 0;
+            pokegearPhoneMessageArchive = -1;
 
             switch (gameFamily)
             {
@@ -986,6 +989,8 @@ namespace DSPRE
                 case GameFamilies.HGSS:
                     pokegearRematchOverlayNumber = 26;
                     pokegearRematchFallbackTableOffset = 0x20C;
+                    // Japanese archives are numbered differently and this one hasn't been checked there.
+                    if (gameLanguage != GameLanguages.Japanese) pokegearPhoneMessageArchive = 271;
                     break;
             }
         }

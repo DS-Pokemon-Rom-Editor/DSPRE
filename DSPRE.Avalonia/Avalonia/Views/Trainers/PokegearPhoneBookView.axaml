@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        x:Class="DSPRE.Avalonia.Views.Trainers.PokegearPhoneBookView"
+        x:DataType="vm:PokegearPhoneBookViewModel">
+
+  <Panel>
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click"/>
+        <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="Filter…" Margin="12,0,0,0"/>
+        <Button Content="Help" Margin="12,0,0,0">
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <ScrollViewer MaxHeight="560" Width="470">
+                <StackPanel Spacing="10" Margin="4">
+                  <StackPanel.Styles>
+                    <Style Selector="TextBlock">
+                      <Setter Property="TextWrapping" Value="Wrap"/>
+                    </Style>
+                    <Style Selector="TextBlock.field">
+                      <Setter Property="FontWeight" Value="SemiBold"/>
+                      <Setter Property="Margin" Value="0,4,0,-8"/>
+                    </Style>
+                  </StackPanel.Styles>
+
+                  <TextBlock Text="A contact's name is the first message of the text archive shown in its heading. Edit it in the Text Editor."/>
+
+                  <TextBlock Classes="field" Text="Call type"/>
+                  <TextBlock Text="Which of the game's call routines runs this contact. Trainers share the trainer call data; Mom, Elm, the Gym Leaders and the other special types each have their own routine, so switching a trainer to one of them doesn't give it that behaviour. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
+
+                  <TextBlock Classes="field" Text="Title"/>
+                  <TextBlock Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor."/>
+
+                  <TextBlock Classes="field" Text="Trainer"/>
+                  <TextBlock Text="The trainer this contact is. After you win, the game finds the contact by this trainer to offer their number, rematches and gifts, so it must match the trainer you actually battle and the base trainer of their row in the Rematch Editor. Pick 'not a trainer' for people you never battle."/>
+
+                  <TextBlock Classes="field" Text="Map"/>
+                  <TextBlock Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
+
+                  <TextBlock Classes="field" Text="Rematch gift"/>
+                  <TextBlock Text="An item handed over each time you win a rematch against this trainer. Cheri Berry gives a random berry."/>
+
+                  <TextBlock Classes="field" Text="Call on their map"/>
+                  <TextBlock Text="The phone script a trainer contact uses when you call them from their own map. Other call types ignore it."/>
+
+                  <TextBlock Classes="field" Text="Greeting"/>
+                  <TextBlock Text="The style of greeting said at the start of a trainer's call, with a line for each time of day."/>
+
+                  <TextBlock Classes="field" Text="Rematch day"/>
+                  <TextBlock Text="The day and time when calling this trainer or Gym Leader can set up a rematch. Day covers 10:00 to 19:59. Trainers can still offer a rematch when they call you on other days; Gym Leaders also need all 16 badges. Never turns it off."/>
+
+                  <TextBlock Classes="field" Text="Random calls"/>
+                  <TextBlock Text="A random call first picks a group, 0 half the time, 1 three times in ten and 2 the rest, then a contact in that group. A contact in a small group calls more often. Never keeps them from calling at random."/>
+
+                  <TextBlock Classes="field" Text="Sort order"/>
+                  <TextBlock Text="The Pokégear can list contacts by title, by name or by location. It doesn't sort them itself: every contact keeps a position in each of the three lists, so a rename or a move doesn't change where it appears. The panel on the right shows the three lists. Drag a contact to move it, or press Auto Sort to put a whole list in alphabetical order. The numbers under Sort order are the same positions, and changing one moves the contact."/>
+                </StackPanel>
+              </ScrollViewer>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="280,*,320">
+      <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding ContactLabels}" SelectedIndex="{Binding SelectedListIndex}"/>
+
+      <ScrollViewer Grid.Column="1">
+        <StackPanel Margin="16" Spacing="10" IsEnabled="{Binding IsEntrySelected}">
+          <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Problems}" IsVisible="{Binding HasProblems}" FontSize="11"
+                     Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+            <TextBlock Grid.Row="0" Text="Call type" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+              <ComboBox ItemsSource="{Binding TypeChoices}" SelectedIndex="{Binding TypeIndex}" Width="200"/>
+              <TextBlock Text="{Binding TypeNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="1" Text="Title" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TitleChoices}" SelectedIndex="{Binding TitleIndex}" HorizontalAlignment="Stretch"/>
+
+            <TextBlock Grid.Row="2" Text="Trainer" VerticalAlignment="Center"/>
+            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"/>
+              <Button Grid.Column="1" Content="Open in Rematch Editor" Click="OpenRematch_Click" IsVisible="{Binding HasRematchRow}"/>
+            </Grid>
+
+            <TextBlock Grid.Row="3" Text="Map" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding MapChoices}" SelectedIndex="{Binding MapIndex}" HorizontalAlignment="Stretch"/>
+
+            <TextBlock Grid.Row="4" Text="Rematch gift" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding GiftIndex}" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="Given after each rematch win. Cheri Berry gives a random berry."/>
+
+            <TextBlock Grid.Row="5" Text="Call on their map" VerticalAlignment="Center"/>
+            <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding LocalScript}" Minimum="0" Maximum="65535" Increment="1" FormatString="0"
+                           Width="140" HorizontalAlignment="Left" IsEnabled="{Binding IsTrainerType}"
+                           ToolTip.Tip="Phone script used when you call this trainer from their own map"/>
+
+            <TextBlock Grid.Row="6" Text="Greeting" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding GreetingChoices}" SelectedIndex="{Binding GreetingIndex}" Width="200" HorizontalAlignment="Left"/>
+
+            <TextBlock Grid.Row="7" Text="Rematch day" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding UsesSchedule}"
+                        ToolTip.Tip="When calling this contact can set up a rematch">
+              <ComboBox ItemsSource="{Binding WeekdayChoices}" SelectedIndex="{Binding WeekdayIndex}" Width="140"/>
+              <ComboBox ItemsSource="{Binding TimeChoices}" SelectedIndex="{Binding TimeIndex}" Width="120"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="8" Text="Random calls" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GroupChoices}" SelectedIndex="{Binding GroupIndex}" Width="200" HorizontalAlignment="Left"
+                      ToolTip.Tip="How often this contact's group is picked when a random call rings"/>
+
+            <GroupBox Grid.Row="9" Grid.ColumnSpan="2" Header="Sort order" Margin="0,6,0,0"
+                      ToolTip.Tip="This contact's place in each list on the right. Changing a number moves it there.">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Title" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding TitleRank}" Minimum="1" Maximum="{Binding ContactCount}" Increment="1" FormatString="0" Width="110"/>
+                <TextBlock Text="Name" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                <NumericUpDown Value="{Binding NameRank}" Minimum="1" Maximum="{Binding ContactCount}" Increment="1" FormatString="0" Width="110"/>
+                <TextBlock Text="Location" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                <NumericUpDown Value="{Binding LocationRank}" Minimum="1" Maximum="{Binding ContactCount}" Increment="1" FormatString="0" Width="110"/>
+              </StackPanel>
+            </GroupBox>
+          </Grid>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Border Grid.Column="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+        <DockPanel Margin="6">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="2,0,0,6">
+            <TextBlock Text="Sort order" FontWeight="SemiBold" VerticalAlignment="Center"
+                       ToolTip.Tip="Drag a contact to move it, or use Alt+Up and Alt+Down"/>
+            <Button Grid.Column="1" Content="Auto Sort" Click="AutoSort_Click" ToolTip.Tip="{Binding AutoSortTip}"/>
+          </Grid>
+          <TabControl DockPanel.Dock="Top" SelectedIndex="{Binding SortTabIndex}" Margin="0,0,0,4" Padding="0">
+            <TabItem Header="Title"/>
+            <TabItem Header="Name"/>
+            <TabItem Header="Location"/>
+          </TabControl>
+          <ListBox x:Name="SortList" ItemsSource="{Binding SortRows}" SelectedIndex="{Binding SortSelectedIndex}"/>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+
+  <!-- What a sort row being dragged looks like, and where it will land. -->
+  <Canvas x:Name="DragLayer" IsHitTestVisible="False">
+    <Border x:Name="DropLine" Height="3" CornerRadius="1.5" IsVisible="False"
+            Background="{DynamicResource ComboBoxItem.ItemView.Selected.Background}"/>
+    <Border x:Name="DragGhost" IsVisible="False" Padding="10,5" CornerRadius="4" Opacity="0.92"
+            Background="{DynamicResource ComboBoxItem.ItemView.Selected.Background}"
+            BorderBrush="{DynamicResource ComboBoxItem.ItemView.Selected.Border}" BorderThickness="1"
+            BoxShadow="0 3 10 0 #60000000">
+      <TextBlock x:Name="DragGhostText" FontWeight="SemiBold"/>
+    </Border>
+  </Canvas>
+  </Panel>
+</UserControl>

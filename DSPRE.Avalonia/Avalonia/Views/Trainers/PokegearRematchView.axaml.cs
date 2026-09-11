@@ -21,5 +21,10 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void SaveRow_Click(object sender, RoutedEventArgs e) => VM?.SaveCurrentRow();
 
         private void SaveAll_Click(object sender, RoutedEventArgs e) => VM?.SaveAll();
+
+        private void OpenPhoneBook_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM?.PhoneEntry >= 0) AvaloniaEditorLauncher.OpenPokegearPhoneBook(VM.PhoneEntry);
+        }
     }
 }

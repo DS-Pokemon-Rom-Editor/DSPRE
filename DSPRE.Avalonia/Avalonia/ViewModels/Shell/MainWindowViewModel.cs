@@ -97,6 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             && BetaEditors.Allows("TrainerSpriteEditorView");
         public bool CanUseVsSeekerRematchEditor => IsRomLoaded && VsSeekerRematchTable.IsSupported;
         public bool CanUsePokegearRematchEditor => IsRomLoaded && PokegearRematchTable.IsSupported;
+        public bool CanUsePokegearPhoneBook => IsRomLoaded && PokegearPhoneBook.IsSupported && BetaEditors.Allows("PokegearPhoneBookView");
         public bool CanUseTrainerFlagBulkEditor => IsRomLoaded && HgAllows;
         public bool CanUseBattleTowerEditor => IsRomLoaded && DSPRE.ROMFiles.BattleTowerTrainerFile.IsAvailable() && DSPRE.ROMFiles.BattleTowerPokemonSetFile.IsAvailable();
         public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
@@ -214,6 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseTrainerSpriteEditor));
             OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
             OnPropertyChanged(nameof(CanUsePokegearRematchEditor));
+            OnPropertyChanged(nameof(CanUsePokegearPhoneBook));
             OnPropertyChanged(nameof(CanUseTrainerFlagBulkEditor));
             OnPropertyChanged(nameof(CanUseBattleTowerEditor));
             OnPropertyChanged(nameof(CanUseStarterEditor));

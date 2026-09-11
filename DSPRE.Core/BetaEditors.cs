@@ -50,6 +50,7 @@ namespace DSPRE
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
                 ["MartEditorView"] = "Mart editor",
+                ["PokegearPhoneBookView"] = "Pokégear Phone Book",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>

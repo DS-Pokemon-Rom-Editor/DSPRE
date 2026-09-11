@@ -23,6 +23,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private readonly List<RematchTable.Row> _rows;
         private readonly RematchTable.Location _location;
         private readonly Dictionary<ushort, int> _phoneEntryByTrainer = new();
+        private string[] _contactNames = System.Array.Empty<string>();
         private readonly HashSet<int> _dirtyRows = new();
         private List<int> _filteredIndices = new();
         private bool _suppress;
@@ -105,13 +106,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (_currentRowIndex < 0 || _phoneEntryByTrainer.Count == 0) return "";
                 return PhoneEntry >= 0
-                    ? $"Pokégear phone book entry {PhoneEntry} calls this trainer."
+                    ? $"Called by {ContactName(PhoneEntry)} in the phone book."
                     : "No phone book entry calls this trainer, so this row is never used.";
             }
         }
 
         public int PhoneEntry => _currentRowIndex >= 0 &&
             _phoneEntryByTrainer.TryGetValue(_rows[_currentRowIndex].BaseTrainerId, out int entry) ? entry : -1;
+
+        public bool HasPhoneEntry => PhoneEntry >= 0;
 
         /// <summary>Row layouts the game mishandles, one per line.</summary>
         public string RowProblems => _currentRowIndex < 0 ? ""
@@ -124,9 +127,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(IsRowSelected));
             OnPropertyChanged(nameof(RowNote));
             OnPropertyChanged(nameof(PhoneEntry));
+            OnPropertyChanged(nameof(HasPhoneEntry));
             OnPropertyChanged(nameof(RowProblems));
             OnPropertyChanged(nameof(HasRowProblems));
         }
+
+        private string ContactName(int entry) =>
+            entry >= 0 && entry < _contactNames.Length ? _contactNames[entry] : $"entry {entry}";
 
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _dirtyRows.Count > 0;
@@ -182,6 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (trainerId == 0) continue;
                 _phoneEntryByTrainer.TryAdd(trainerId, entry);
             }
+            _contactNames = PokegearContactArchives.Names(phoneTrainers.Length);
 
             UpdateReachability();
         }
@@ -224,7 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_phoneEntryByTrainer.Count == 0) return label;
 
             return _phoneEntryByTrainer.TryGetValue(row.BaseTrainerId, out int entry)
-                ? $"{label}  ·  phone entry {entry}"
+                ? $"{label}  ·  {ContactName(entry)}"
                 : $"{label}  ·  not in phone book";
         }
 
