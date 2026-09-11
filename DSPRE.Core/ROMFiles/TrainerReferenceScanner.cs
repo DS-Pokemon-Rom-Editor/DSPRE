@@ -49,6 +49,7 @@ namespace DSPRE.ROMFiles
                 [0x00D5] = new[] { 0, 1 }, // TrainerBattle
                 [0x00D6] = new[] { 0 }, // TrainerMessage; currently typed Flex in the command database
                 [0x00DA] = new[] { 0 }, // TrainerMusic
+                [0x01CC] = new[] { 0 }, // LoadPhoneDat, which finds a phone contact by trainer
                 [0x0232] = new[] { 0, 1, 2 }, // Battle2vs2
             };
 
