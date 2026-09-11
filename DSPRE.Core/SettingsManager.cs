@@ -36,6 +36,11 @@ namespace DSPRE
         public string mapImportStarterPoint { get; set; } = "";
         public string openDefaultRom { get; set; } = "";
 
+        /// <summary>The emulator Build and Run uses without asking, as an EmulatorKind name; empty asks each time.</summary>
+        public string preferredEmulator { get; set; } = "";
+        /// <summary>Where each emulator the user has pointed DSPRE at lives, by EmulatorKind name.</summary>
+        public Dictionary<string, string> emulatorPaths { get; set; } = new Dictionary<string, string>();
+
         /// <summary>
         /// Which give-a-Pokemon command the starter editor was told to treat as the starter, keyed by
         /// project folder, and what the set of candidates looked like at the time. The fingerprint is

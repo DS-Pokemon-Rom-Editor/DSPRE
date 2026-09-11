@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
+        x:Class="DSPRE.Avalonia.Views.Shell.EmulatorPickerView"
+        x:DataType="vm:EmulatorPickerViewModel"
+        Title="Choose an emulator"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:EmulatorPickerViewModel/>
+  </Design.DataContext>
+
+  <StackPanel Margin="12" Spacing="8">
+    <Grid ColumnDefinitions="Auto,10,*" RowDefinitions="Auto,6,Auto">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="Emulator" VerticalAlignment="Center"/>
+      <ComboBox Grid.Row="0" Grid.Column="2" ItemsSource="{Binding KindNames}" SelectedIndex="{Binding KindIndex}" Width="160"/>
+
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="Program" VerticalAlignment="Center"/>
+      <Grid Grid.Row="2" Grid.Column="2" ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Text="{Binding Path}" PlaceholderText="Path to the emulator"/>
+        <Button Grid.Column="1" Content="Browse…" Margin="6,0,0,0" Click="Browse_Click"/>
+      </Grid>
+    </Grid>
+
+    <CheckBox Content="Use this emulator every time" IsChecked="{Binding MakePreferred}"
+              ToolTip.Tip="Change it later in Settings."/>
+
+    <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" FontSize="12"
+               IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+      <Button Content="Build and Run" Click="Run_Click" IsDefault="True" IsEnabled="{Binding CanRun}"/>
+      <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

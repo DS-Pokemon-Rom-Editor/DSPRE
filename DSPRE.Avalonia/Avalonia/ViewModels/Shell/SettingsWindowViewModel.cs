@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -100,6 +101,48 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string[] ThemeNames { get; } = { "Dark", "Light" };
 
+        // ── Emulator for Build and Run: index 0 asks each time, the rest follow Emulators.All ──
+        public string[] EmulatorChoices { get; } = new[] { "Ask each time" }.Concat(Emulators.All.Select(Emulators.DisplayName)).ToArray();
+
+        private readonly System.Collections.Generic.Dictionary<string, string> _emulatorPaths = new();
+
+        private int _emulatorIndex;
+        public int EmulatorIndex
+        {
+            get => _emulatorIndex;
+            set { if (value >= 0 && Set(ref _emulatorIndex, value)) RaiseEmulator(); }
+        }
+
+        private EmulatorKind? SelectedEmulator => _emulatorIndex > 0 ? Emulators.All[_emulatorIndex - 1] : null;
+        public bool HasSelectedEmulator => SelectedEmulator != null;
+        public string EmulatorPath => SelectedEmulator is EmulatorKind k && _emulatorPaths.TryGetValue(k.ToString(), out var p) ? p : "";
+
+        private void RaiseEmulator()
+        {
+            OnPropertyChanged(nameof(HasSelectedEmulator));
+            OnPropertyChanged(nameof(EmulatorPath));
+        }
+
+        public async Task ChangeEmulatorPathCommand(Window owner)
+        {
+            var filters = OperatingSystem.IsWindows()
+                ? new System.Collections.Generic.List<global::Avalonia.Platform.Storage.FilePickerFileType> { new("Programs") { Patterns = new[] { "*.exe" } } }
+                : null;
+            string path = await DialogHelper.OpenFile(owner, "Choose the emulator", filters);
+            if (path == null) return;
+            var kind = SelectedEmulator ?? Emulators.Guess(path) ?? EmulatorKind.BizHawk;
+            _emulatorPaths[kind.ToString()] = path;
+            _emulatorIndex = Array.IndexOf(Emulators.All, kind) + 1;
+            OnPropertyChanged(nameof(EmulatorIndex));
+            RaiseEmulator();
+        }
+
+        public void ClearEmulatorPath()
+        {
+            if (SelectedEmulator is EmulatorKind k) _emulatorPaths.Remove(k.ToString());
+            RaiseEmulator();
+        }
+
         private int _themeIndex;
         public int ThemeIndex
         {
@@ -170,6 +213,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             CamInvertOrbitY  = SettingsManager.Settings.camInvertOrbitY;
             CamInvertZoom    = SettingsManager.Settings.camInvertZoom;
 
+            foreach (var kv in SettingsManager.Settings.emulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
+                _emulatorPaths[kv.Key] = kv.Value;
+            _emulatorIndex = Enum.TryParse(SettingsManager.Settings.preferredEmulator, out EmulatorKind preferred)
+                ? Array.IndexOf(Emulators.All, preferred) + 1 : 0;
+
             // snapshot for unsaved-changes detection
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;
@@ -200,6 +248,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.camInvertOrbitX = CamInvertOrbitX;
             SettingsManager.Settings.camInvertOrbitY = CamInvertOrbitY;
             SettingsManager.Settings.camInvertZoom   = CamInvertZoom;
+
+            SettingsManager.Settings.emulatorPaths = new System.Collections.Generic.Dictionary<string, string>(_emulatorPaths);
+            SettingsManager.Settings.preferredEmulator = SelectedEmulator?.ToString() ?? "";
 
             _oldExportPath      = ExportPath;
             _oldMapImportPath   = MapImportPath;

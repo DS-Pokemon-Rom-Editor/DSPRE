@@ -4,7 +4,7 @@
 		x:Class="DSPRE.Avalonia.Views.Shell.SettingsWindowView"
 		x:DataType="vm:SettingsWindowViewModel"
 		Title="Settings"
-		Width="880" Height="600"
+		Width="880" Height="670"
 		CanResize="False"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -49,6 +49,19 @@
 		  <TextBox Grid.Column="0" Text="{Binding OpenDefaultRom}" IsReadOnly="True"/>
 		  <Button Grid.Column="1" Content="Change Path" Margin="4,0,0,0" Click="ChangeOpenDefaultRom_Click"/>
 		  <Button Grid.Column="2" Content="Clear"        Margin="4,0,0,0" Click="ClearOpenDefaultRom_Click"/>
+		</Grid>
+	  </StackPanel>
+	</Border>
+
+	<!-- Emulator for Build and Run -->
+	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
+	  <StackPanel Spacing="4">
+		<TextBlock Text="Emulator for Build and Run" FontWeight="SemiBold"/>
+		<Grid ColumnDefinitions="160,*,Auto,Auto">
+		  <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding EmulatorChoices}" SelectedIndex="{Binding EmulatorIndex}"/>
+		  <TextBox Grid.Column="1" Text="{Binding EmulatorPath}" IsReadOnly="True" Margin="4,0,0,0" IsEnabled="{Binding HasSelectedEmulator}"/>
+		  <Button Grid.Column="2" Content="Change Path" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
+		  <Button Grid.Column="3" Content="Clear" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
 		</Grid>
 	  </StackPanel>
 	</Border>

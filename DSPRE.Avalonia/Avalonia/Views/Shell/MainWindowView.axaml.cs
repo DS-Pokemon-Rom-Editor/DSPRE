@@ -35,6 +35,12 @@ namespace DSPRE.Avalonia.Views.Shell
                     AvaloniaEditorLauncher.OpenCommandPalette(this);
                     e.Handled = true;
                 }
+                else if (e.Key == global::Avalonia.Input.Key.F5 && e.KeyModifiers == global::Avalonia.Input.KeyModifiers.None
+                         && AvaloniaEditorLauncher.IsRomLoaded)
+                {
+                    _ = BuildAndRunAsync();
+                    e.Handled = true;
+                }
             };
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
@@ -446,7 +452,12 @@ namespace DSPRE.Avalonia.Views.Shell
             });
             string path = file?.TryGetLocalPath();
             if (string.IsNullOrEmpty(path)) return;
+            await BuildRomAsync(path);
+        }
 
+        /// <summary>Repacks the project into <paramref name="path"/>, reporting failure itself. True when built.</summary>
+        private async System.Threading.Tasks.Task<bool> BuildRomAsync(string path)
+        {
             var vm = DataContext as MainWindowViewModel;
             if (vm != null)
             {
@@ -507,10 +518,62 @@ namespace DSPRE.Avalonia.Views.Shell
             if (ok)
             {
                 AppLogger.Info("ROM built successfully: " + path);
-                return;
+                return true;
             }
 
             await DialogHelper.ShowError(error ?? "Building the ROM failed. See the log for details.", "Save ROM", this);
+            return false;
+        }
+
+        private async void BuildAndRun_Click(object sender, RoutedEventArgs e) => await BuildAndRunAsync();
+
+        private bool _buildAndRunBusy;
+
+        /// <summary>Builds the ROM, hg-engine's own build on a linked checkout, and opens it in the chosen emulator.</summary>
+        public async System.Threading.Tasks.Task BuildAndRunAsync()
+        {
+            if (!AvaloniaEditorLauncher.IsRomLoaded || _buildAndRunBusy) return;
+            _buildAndRunBusy = true;
+            try
+            {
+                if (RomInfo.IsHgEngineBaseProject && !HgEngineProject.IsActive)
+                {
+                    await DialogHelper.ShowError("This project is an hg-engine checkout's own extracted ROM. Link the checkout to build it.", "Build and Run", this);
+                    return;
+                }
+
+                // Anything unsaved in an open editor would otherwise be missing from the build.
+                if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
+
+                var emulator = Emulators.Preferred() ?? await EmulatorPickerView.AskAsync(this);
+                if (emulator == null) return;
+
+                string rom;
+                if (HgEngineProject.IsActive)
+                {
+                    rom = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, "test.nds");
+                    if (!await new CompileRomView().BuildAsync(this)) return;
+                }
+                else
+                {
+                    rom = BuildAndRunRomPath();
+                    if (!await BuildRomAsync(rom)) return;
+                }
+
+                string error = Emulators.Launch(emulator.Value.Kind, emulator.Value.Path, rom);
+                if (error != null) { await DialogHelper.ShowError(error, "Build and Run", this); return; }
+                if (DataContext is MainWindowViewModel vm) vm.StatusText = $"Running {System.IO.Path.GetFileName(rom)} in {Emulators.DisplayName(emulator.Value.Kind)}.";
+            }
+            finally { _buildAndRunBusy = false; }
+        }
+
+        // A fixed name keeps the emulator's saves between runs.
+        private static string BuildAndRunRomPath()
+        {
+            string folder = SettingsManager.Settings?.exportPath;
+            if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
+                folder = System.IO.Path.GetDirectoryName(RomInfo.workDir.TrimEnd('\\', '/'));
+            return System.IO.Path.Combine(folder, (RomInfo.projectName ?? "rom") + " (DSPRE build).nds");
         }
 
         private async void ConvertDsRom_Click(object sender, RoutedEventArgs e)

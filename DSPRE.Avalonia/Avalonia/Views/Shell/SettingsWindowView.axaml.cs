@@ -46,6 +46,12 @@ namespace DSPRE.Avalonia.Views.Shell
         private void ClearOpenDefaultRom_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ClearOpenDefaultRom();
 
+        private async void ChangeEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => await VM.ChangeEmulatorPathCommand(this);
+
+        private void ClearEmulatorPath_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => VM.ClearEmulatorPath();
+
         private void CheckForUpdates_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.CheckForUpdates();
 
