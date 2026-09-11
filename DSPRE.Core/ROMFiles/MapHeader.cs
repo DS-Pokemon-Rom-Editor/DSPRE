@@ -471,7 +471,7 @@ namespace DSPRE.ROMFiles {
 
                 uint last32 = (uint)(((weatherID & 0b_1111_111) << 1) +
                     ((locationType & 0b_1111) << 8) +
-                    ((cameraAngleID & 0b_1111_1) << 12) +
+                    ((cameraAngleID & 0b_1111_11) << 12) +
                     ((followMode & 0b_11) << 18) +
                     ((battleBackground & 0b_1111_1) << 20) +
                     ((flags & 0b_1111_111) << 25));
