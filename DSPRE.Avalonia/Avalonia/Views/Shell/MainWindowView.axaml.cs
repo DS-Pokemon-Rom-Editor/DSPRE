@@ -478,15 +478,6 @@ namespace DSPRE.Avalonia.Views.Shell
                         // packed form BEFORE building, or the build just packs whatever was already on
                         // disk (e.g. patches that only ever touch the unpacked side, like the synthetic
                         // overlay used by ARM9 Expansion/Building Rotation, would silently vanish).
-                        // Packing an hg-engine checkout's own tree is the build's job, and DSPRE has no
-                        // header or banner of its own to pack it with.
-                        if (RomInfo.IsHgEngineBaseProject)
-                        {
-                            error = "This project is an hg-engine checkout's own extracted ROM. "
-                                  + "Compile ROM builds it; Save ROM cannot.";
-                            return false;
-                        }
-
                         if (!TextArchive.BuildRequiredBins()) { error = "Rebuilding text archives failed."; return false; }
                         if (!ScriptFile.BuildRequiredBins()) { error = "Rebuilding script files failed."; return false; }
 
@@ -536,12 +527,6 @@ namespace DSPRE.Avalonia.Views.Shell
             _buildAndRunBusy = true;
             try
             {
-                if (RomInfo.IsHgEngineBaseProject && !HgEngineProject.IsActive)
-                {
-                    await DialogHelper.ShowError("This project is an hg-engine checkout's own extracted ROM. Link the checkout to build it.", "Build and Run", this);
-                    return;
-                }
-
                 // Anything unsaved in an open editor would otherwise be missing from the build.
                 if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
 
@@ -570,6 +555,10 @@ namespace DSPRE.Avalonia.Views.Shell
         // A fixed name keeps the emulator's saves between runs.
         private static string BuildAndRunRomPath()
         {
+            // The file make writes, so compiled and uncompiled runs share saves.
+            if (RomInfo.IsHgEngineBaseProject)
+                return System.IO.Path.Combine(System.IO.Path.GetDirectoryName(RomInfo.workDir.TrimEnd('\\', '/')), "test.nds");
+
             string folder = SettingsManager.Settings?.exportPath;
             if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
                 folder = System.IO.Path.GetDirectoryName(RomInfo.workDir.TrimEnd('\\', '/'));

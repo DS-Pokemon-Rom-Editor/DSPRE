@@ -80,4 +80,51 @@ namespace DSPRE.Tests
             Assert.Equal(2, type);
         }
     }
+
+    /// <summary>Packing a checkout's own tree without make, as Build and Run does with compiling off.</summary>
+    [Collection("rom")]
+    public class HgEngineBaseProjectPackTests
+    {
+        [SkippableFact]
+        public void TheBaseTreePacksToTheRomMakeBuiltFromIt()
+        {
+            string checkout = Environment.GetEnvironmentVariable("DSPRE_TEST_HGENGINE_CHECKOUT");
+            Skip.If(string.IsNullOrWhiteSpace(checkout), "Set DSPRE_TEST_HGENGINE_CHECKOUT to a checkout.");
+
+            string baseDir = Path.Combine(checkout, HgEngineBase.BaseDirName);
+            string built = Path.Combine(checkout, "test.nds");
+            Skip.If(!File.Exists(built) || !Directory.Exists(baseDir), "That checkout has no build.");
+            Skip.If(File.GetLastWriteTimeUtc(built) < File.GetLastWriteTimeUtc(Path.Combine(baseDir, "arm9.bin")),
+                "base/ changed after test.nds was built.");
+
+            // Loading a project unpacks text archives into it, so the checkout is copied rather than opened.
+            string work = Path.Combine(Path.GetTempPath(), $"dspre-base-pack-{Guid.NewGuid():N}");
+            string tree = Path.Combine(work, HgEngineBase.BaseDirName);
+            string packed = Path.Combine(work, "packed.nds");
+            try
+            {
+                foreach (string file in new[] { "arm9.bin", "arm7.bin", "overarm9.bin", "overarm7.bin", "banner.bin", "header.bin" })
+                    CopyInto(Path.Combine(baseDir, file), Path.Combine(tree, file));
+                foreach (string folder in new[] { "overlay", "root" })
+                    foreach (string file in Directory.EnumerateFiles(Path.Combine(baseDir, folder), "*", SearchOption.AllDirectories))
+                        CopyInto(file, Path.Combine(tree, Path.GetRelativePath(baseDir, file)));
+
+                new RomInfo("IPKE", tree);
+                Assert.True(DSUtils.RepackROM(packed), "packing the base tree failed");
+
+                byte[] expected = File.ReadAllBytes(built), actual = File.ReadAllBytes(packed);
+                Assert.Equal(expected.Length, actual.Length);
+                // DSPRE's older ndstool writes a few card control fields, and so the header CRC, differently.
+                Assert.True(expected.AsSpan(0x20, 0x40).SequenceEqual(actual.AsSpan(0x20, 0x40)), "the layout table differs");
+                Assert.True(expected.AsSpan(0x4000).SequenceEqual(actual.AsSpan(0x4000)), "the packed contents differ");
+            }
+            finally { if (Directory.Exists(work)) Directory.Delete(work, true); }
+        }
+
+        private static void CopyInto(string from, string to)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(to));
+            File.Copy(from, to);
+        }
+    }
 }

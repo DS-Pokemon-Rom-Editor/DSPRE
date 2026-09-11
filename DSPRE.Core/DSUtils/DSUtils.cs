@@ -662,20 +662,12 @@ namespace DSPRE {
                 return RepackROMDsRom(ndsFileName);
             }
 
-            string arm9Path = Path.Combine(workDir, "arm9.bin");
-            string arm7Path = Path.Combine(workDir, "arm7.bin");
-            string y9Path = Path.Combine(workDir, "y9.bin");
-            string y7Path = Path.Combine(workDir, "y7.bin");
-            string dataPath = Path.Combine(workDir, "data");
-            string overlayPath = Path.Combine(workDir, "overlay");
-            string bannerPath = Path.Combine(workDir, "banner.bin");
-            string headerPath = Path.Combine(workDir, "header.bin");
-
+            // RomInfo's paths, so an hg-engine checkout's own tree (root/, overarm9.bin) packs too.
             Process repack = new Process();
             repack.StartInfo.Arguments = "-c " + '"' + ndsFileName + '"'
                 + " -9 " + '"' + arm9Path + '"'
                 + " -7 " + '"' + arm7Path + '"'
-                + " -y9 " + '"' + y9Path + '"'
+                + " -y9 " + '"' + overlayTablePath + '"'
                 + " -y7 " + '"' + y7Path + '"'
                 + " -d " + '"' + dataPath + '"'
                 + " -y " + '"' + overlayPath + '"'
