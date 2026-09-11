@@ -529,7 +529,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private bool _buildAndRunBusy;
 
-        /// <summary>Builds the ROM, hg-engine's own build on a linked checkout, and opens it in the chosen emulator.</summary>
+        /// <summary>Builds the ROM, optionally through hg-engine's make on a linked checkout, and opens it in the chosen emulator.</summary>
         public async System.Threading.Tasks.Task BuildAndRunAsync()
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded || _buildAndRunBusy) return;
@@ -549,7 +549,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (emulator == null) return;
 
                 string rom;
-                if (HgEngineProject.IsActive)
+                if (HgEngineProject.IsActive && (SettingsManager.Settings?.buildAndRunCompiles ?? true))
                 {
                     rom = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, "test.nds");
                     if (!await new CompileRomView().BuildAsync(this)) return;

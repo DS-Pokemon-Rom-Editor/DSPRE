@@ -31,6 +31,8 @@
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Build and Run" Click="BuildAndRun_Click" IsEnabled="{Binding IsRomLoaded}" InputGesture="F5"
                   ToolTip.Tip="Builds the ROM and opens it in your emulator."/>
+        <MenuItem Header="Also Compile hg-engine" ToggleType="CheckBox" IsChecked="{Binding BuildAndRunCompiles, Mode=TwoWay}"
+                  IsVisible="{Binding IsHgEngineLinked}"/>
         <MenuItem Header="Convert to ds-rom format…" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
         <MenuItem Header="Link hg-engine checkout…" Click="LinkHgEngine_Click" IsEnabled="{Binding IsRomLoaded}"

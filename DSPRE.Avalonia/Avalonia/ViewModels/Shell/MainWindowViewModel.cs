@@ -133,6 +133,19 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
         public bool CanCompileRom       => IsRomLoaded && HgEngineProject.IsActive;
 
+        public bool BuildAndRunCompiles
+        {
+            get => SettingsManager.Settings?.buildAndRunCompiles ?? true;
+            set
+            {
+                var settings = SettingsManager.Settings;
+                if (settings == null || settings.buildAndRunCompiles == value) return;
+                settings.buildAndRunCompiles = value;
+                SettingsManager.Save();
+                OnPropertyChanged();
+            }
+        }
+
         /// <summary>Why Compile ROM and the source-backed editors are greyed out, or nothing when they are not.</summary>
         public string HgEngineNote =>
             !IsRomLoaded ? "Open a ROM first."

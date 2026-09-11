@@ -40,6 +40,8 @@ namespace DSPRE
         public string preferredEmulator { get; set; } = "";
         /// <summary>Where each emulator the user has pointed DSPRE at lives, by EmulatorKind name.</summary>
         public Dictionary<string, string> emulatorPaths { get; set; } = new Dictionary<string, string>();
+        /// <summary>Whether Build and Run on a linked hg-engine checkout runs make first.</summary>
+        public bool buildAndRunCompiles { get; set; } = true;
 
         /// <summary>
         /// Which give-a-Pokemon command the starter editor was told to treat as the starter, keyed by
