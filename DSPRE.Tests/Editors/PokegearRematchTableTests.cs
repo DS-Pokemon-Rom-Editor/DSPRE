@@ -151,4 +151,52 @@ namespace DSPRE.Tests
             }
         }
     }
+
+    /// <summary>Rematch rows the game walks into trouble with, in HeartGold and SoulSilver.</summary>
+    public class PokegearRematchProblemTests
+    {
+        private static RematchTable.Row Row(params ushort[] ids) => new RematchTable.Row { Ids = ids };
+
+        [Fact]
+        public void VanillaShapedRowsHaveNoProblems()
+        {
+            var rows = new[] { Row(151, 151, 335, 453, 603, 0), Row(20, 20, 520, 0, 0, 0) };
+            Assert.Empty(PokegearRematchTable.Problems(rows, 0));
+            Assert.Empty(PokegearRematchTable.Problems(rows, 1));
+        }
+
+        [Fact]
+        public void ADifferentTrainerInRematchOneStopsProgress()
+        {
+            var rows = new[] { Row(151, 999, 335, 453, 603, 0) };
+            Assert.Contains(PokegearRematchTable.Problems(rows, 0), p => p.StartsWith("Rematch 1 "));
+        }
+
+        [Fact]
+        public void ATrainerInRematchFiveIsNeverReached()
+        {
+            var rows = new[] { Row(151, 151, 335, 453, 603, 700) };
+            Assert.Contains(PokegearRematchTable.Problems(rows, 0), p => p.StartsWith("Rematch 5 "));
+        }
+
+        [Fact]
+        public void ASkipRightBeforeTheEndIsFlaggedOnlyWhereItsLevelUnlocks()
+        {
+            Assert.Contains(PokegearRematchTable.Problems(new[] { Row(151, 151, 335, 0xFFFF, 0, 0) }, 0), p => p.StartsWith("Rematch 3 "));
+            Assert.Contains(PokegearRematchTable.Problems(new[] { Row(151, 151, 0xFFFF, 0xFFFF, 0, 0) }, 0), p => p.StartsWith("Rematch 3 "));
+
+            // Level 1 never unlocks, so the game falls back to the base battle instead.
+            Assert.Empty(PokegearRematchTable.Problems(new[] { Row(151, 0xFFFF, 0, 0, 0, 0) }, 0));
+            // Skips followed by a real level are the intended use.
+            Assert.Empty(PokegearRematchTable.Problems(new[] { Row(151, 151, 0xFFFF, 453, 603, 0) }, 0));
+        }
+
+        [Fact]
+        public void OnlyTheFirstRowForABaseTrainerIsUsed()
+        {
+            var rows = new[] { Row(151, 151, 335, 0, 0, 0), Row(151, 151, 453, 0, 0, 0) };
+            Assert.Empty(PokegearRematchTable.Problems(rows, 0));
+            Assert.Contains(PokegearRematchTable.Problems(rows, 1), p => p.StartsWith("Row 0 "));
+        }
+    }
 }

@@ -100,8 +100,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
-            RematchChoices.Add("(none - 0xFFFF)");
-            RematchChoices.Add("(chain ends here - 0x0000)");
+            RematchChoices.Add("(skip this level - 0xFFFF)");
+            RematchChoices.Add("(end of chain - 0x0000)");
             foreach (var n in TrainerNames) RematchChoices.Add(n);
 
             _rows = VsSeekerRematchTable.ReadAll();

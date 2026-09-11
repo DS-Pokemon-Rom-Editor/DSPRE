@@ -7,8 +7,8 @@ namespace DSPRE
 {
     /// <summary>
     /// Rows of six little-endian u16, shared by the Vs. Seeker (DP/Pt) and Pokégear (HGSS) rematch
-    /// tables. Slot 0 is the lookup trainer and the battle used before any rematch, slots 1 to 5 are the
-    /// rematch levels.
+    /// tables. Slot 0 is the lookup trainer and the battle used at level 0, slots 1 to 5 are the
+    /// rematch levels, each behind a story flag.
     /// </summary>
     public static class RematchTable
     {
@@ -16,7 +16,7 @@ namespace DSPRE
         public const int RowSize = SlotCount * 2;
         public const int RematchLevelCount = SlotCount - 1;
 
-        /// <summary>Replays the previous real battle.</summary>
+        /// <summary>No battle at this level; the game skips to the next one.</summary>
         public const ushort NoRematch = 0xFFFF;
 
         /// <summary>No further rematch.</summary>

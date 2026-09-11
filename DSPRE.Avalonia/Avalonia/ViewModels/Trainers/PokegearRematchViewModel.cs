@@ -35,8 +35,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // Choice list positions in front of the trainer names.
         private const int ChoiceChainEnd = 0;
-        private const int ChoiceReplayPrevious = 1;
+        private const int ChoiceSkip = 1;
         private const int ChoiceFirstTrainer = 2;
+
+        /// <summary>"Rematch N", with what unlocks it.</summary>
+        public IReadOnlyList<string> LevelLabels { get; } = PokegearRematchTable.LevelUnlocks
+            .Select((unlock, i) => $"Rematch {i + 1}  ·  {unlock}").ToList();
 
         public bool IsSupported => PokegearRematchTable.IsSupported;
 
@@ -59,15 +63,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (value < 0 || value >= _filteredIndices.Count)
                 {
                     _currentRowIndex = -1;
-                    OnPropertyChanged(nameof(IsRowSelected));
-                    OnPropertyChanged(nameof(RowNote));
+                    RowChanged();
                     return;
                 }
 
                 _currentRowIndex = _filteredIndices[value];
                 LoadRowIntoDetail(_currentRowIndex);
-                OnPropertyChanged(nameof(IsRowSelected));
-                OnPropertyChanged(nameof(RowNote));
+                RowChanged();
             }
         }
 
@@ -101,13 +103,29 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             get
             {
-                if (_currentRowIndex < 0) return "";
-                ushort baseTrainer = _rows[_currentRowIndex].BaseTrainerId;
-                if (_phoneEntryByTrainer.Count == 0) return "";
-                return _phoneEntryByTrainer.TryGetValue(baseTrainer, out int entry)
-                    ? $"Pokégear phone book entry {entry} calls this trainer."
-                    : "No Pokégear phone book entry calls this trainer, so this row is never reached in game.";
+                if (_currentRowIndex < 0 || _phoneEntryByTrainer.Count == 0) return "";
+                return PhoneEntry >= 0
+                    ? $"Pokégear phone book entry {PhoneEntry} calls this trainer."
+                    : "No phone book entry calls this trainer, so this row is never used.";
             }
+        }
+
+        public int PhoneEntry => _currentRowIndex >= 0 &&
+            _phoneEntryByTrainer.TryGetValue(_rows[_currentRowIndex].BaseTrainerId, out int entry) ? entry : -1;
+
+        /// <summary>Row layouts the game mishandles, one per line.</summary>
+        public string RowProblems => _currentRowIndex < 0 ? ""
+            : string.Join("\n", PokegearRematchTable.Problems(_rows, _currentRowIndex));
+
+        public bool HasRowProblems => RowProblems.Length > 0;
+
+        private void RowChanged()
+        {
+            OnPropertyChanged(nameof(IsRowSelected));
+            OnPropertyChanged(nameof(RowNote));
+            OnPropertyChanged(nameof(PhoneEntry));
+            OnPropertyChanged(nameof(RowProblems));
+            OnPropertyChanged(nameof(HasRowProblems));
         }
 
         // ── IEditorWithUnsavedChanges ──
@@ -129,8 +147,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
-            RematchChoices.Add("(chain ends here - 0x0000)");
-            RematchChoices.Add("(replay the previous level - 0xFFFF)");
+            RematchChoices.Add("(end of chain - 0x0000)");
+            RematchChoices.Add("(skip this level - 0xFFFF)");
             foreach (var n in TrainerNames) RematchChoices.Add(n);
 
             _rows = PokegearRematchTable.ReadAll(out _location, out _loadError);
@@ -165,6 +183,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _phoneEntryByTrainer.TryAdd(trainerId, entry);
             }
 
+            UpdateReachability();
+        }
+
+        private void UpdateReachability()
+        {
+            if (_phoneEntryByTrainer.Count == 0) return;
+
             var rowTrainers = new HashSet<ushort>(_rows.Where(r => !r.IsEmpty).Select(r => r.BaseTrainerId));
             int unreachableRows = _rows.Count(r => !r.IsEmpty && !_phoneEntryByTrainer.ContainsKey(r.BaseTrainerId));
             var callersWithoutRow = _phoneEntryByTrainer.Keys.Where(id => !rowTrainers.Contains(id)).ToList();
@@ -185,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (callersWithoutRow.Count > 0)
             {
                 parts.Add($"{callersWithoutRow.Count} Pokégear caller(s) have no row, " +
-                    "so they never offer a rematch");
+                    "so their rematch battles never start");
             }
             ReachabilityNote = string.Join("; ", parts) + ".";
         }
@@ -237,7 +262,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 ushort v = row.Rematch(i);
                 if (v == PokegearRematchTable.ChainEnd) slots[i] = ChoiceChainEnd;
-                else if (v == PokegearRematchTable.NoRematch) slots[i] = ChoiceReplayPrevious;
+                else if (v == PokegearRematchTable.NoRematch) slots[i] = ChoiceSkip;
                 else if (v < TrainerNames.Count) slots[i] = ChoiceFirstTrainer + v;
                 else slots[i] = -1;
             }
@@ -258,13 +283,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 int idx = slots[i];
                 if (idx == ChoiceChainEnd) row.SetRematch(i, PokegearRematchTable.ChainEnd);
-                else if (idx == ChoiceReplayPrevious) row.SetRematch(i, PokegearRematchTable.NoRematch);
+                else if (idx == ChoiceSkip) row.SetRematch(i, PokegearRematchTable.NoRematch);
                 else if (idx >= ChoiceFirstTrainer) row.SetRematch(i, (ushort)(idx - ChoiceFirstTrainer));
             }
 
             _dirtyRows.Add(_currentRowIndex);
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            OnPropertyChanged(nameof(RowNote));
+            RowChanged();
+            UpdateReachability();
             UpdateStatus();
 
             int listPos = _selectedRowListIndex;
