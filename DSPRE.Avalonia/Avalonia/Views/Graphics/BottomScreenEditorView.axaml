@@ -1,0 +1,190 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.BottomScreenEditorView"
+        x:DataType="vm:BottomScreenEditorViewModel"
+        Title="Bottom Screen"
+        Width="1340" Height="780" MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:BottomScreenEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <!-- Which screen, and what it is showing -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <StackPanel Spacing="6">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+            <Button Content="Undo" Click="Undo_Click"
+                    IsEnabled="{Binding CanUndo}" ToolTip.Tip="{Binding UndoWhat}"/>
+            <Button Content="Redo" Click="Redo_Click"
+                    IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
+          </StackPanel>
+          <TabStrip ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}"/>
+        </DockPanel>
+
+        <WrapPanel Orientation="Horizontal">
+          <CheckBox Content="Busy mode" IsChecked="{Binding ScriptRunning}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"
+                    ToolTip.Tip="How the panel looks while a script has control: the icons go see-through and only the A button stays solid"/>
+          <CheckBox Content="Running shoes on" IsChecked="{Binding ShoesOn}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
+          <CheckBox Content="A button held" IsChecked="{Binding AHeld}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
+
+          <CheckBox Content="Ask yes or no" IsChecked="{Binding YesNo}"
+                    IsVisible="{Binding IsChoicesTab}" Margin="0,0,16,0"/>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0"
+                      IsVisible="{Binding IsChoicesTab}">
+            <TextBlock Text="Answers" Classes="label"/>
+            <NumericUpDown Value="{Binding ChoiceCount}" Minimum="2" Maximum="8" Increment="1"
+                           Width="100" FormatString="0"/>
+          </StackPanel>
+
+          <ComboBox Width="190" Margin="0,0,16,0" IsVisible="{Binding IsPlatinum}"
+                    ItemsSource="{Binding AppNames}" SelectedIndex="{Binding SelectedApp}"/>
+          <CheckBox Content="Girl's casing" IsChecked="{Binding Female}"
+                    IsVisible="{Binding IsPlatinum}" Margin="0,0,16,0"/>
+          <CheckBox Content="Backlight on" IsChecked="{Binding Backlight}"
+                    IsVisible="{Binding IsPlatinum}" Margin="0,0,16,0"/>
+          <CheckBox Content="No Pokétch yet" IsChecked="{Binding NoPoketchYet}"
+                    IsVisible="{Binding IsPlatinum}" Margin="0,0,16,0"
+                    ToolTip.Tip="The Poké Ball picture shown before the player is given a Pokétch"/>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0" IsVisible="{Binding IsPlatinum}">
+            <TextBlock Text="Colour" Classes="label"/>
+            <NumericUpDown Value="{Binding Theme}" Minimum="0" Maximum="7" Increment="1"
+                           Width="90" FormatString="0"
+                           ToolTip.Tip="The Color Changer's setting"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0" IsVisible="{Binding IsPlatinum}">
+            <TextBlock Text="Time" Classes="label"/>
+            <NumericUpDown Value="{Binding Hour}" Minimum="0" Maximum="23" Increment="1"
+                           Width="90" FormatString="0" ToolTip.Tip="Hour on the watch"/>
+            <NumericUpDown Value="{Binding Minute}" Minimum="0" Maximum="59" Increment="1"
+                           Width="90" FormatString="0" ToolTip.Tip="Minute on the watch"/>
+          </StackPanel>
+          <CheckBox Content="Sprites" IsChecked="{Binding ShowSprites}" Margin="0,0,16,0"
+                    IsVisible="{Binding IsPlatinum}"
+                    ToolTip.Tip="Draw the moving pieces over the screen"/>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasBanks}">
+            <TextBlock Text="{Binding BankNote}" Classes="label"/>
+            <NumericUpDown Value="{Binding CellBank}" Minimum="0" Increment="1"
+                           Width="90" FormatString="0"
+                           ToolTip.Tip="A sprite layout holds several arrangements; step through them here"/>
+          </StackPanel>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- The pieces -->
+    <Border DockPanel.Dock="Left" Width="228" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,1,0">
+      <DockPanel Margin="6">
+        <ListBox ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:BottomScreenPieceRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Where}" FontSize="11" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- What is picked -->
+    <Border DockPanel.Dock="Right" Width="300" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="1,0,0,0">
+      <ScrollViewer>
+        <StackPanel Margin="10" Spacing="8">
+          <TextBlock Text="{Binding SelectedName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding SelectedWhat}" Classes="hint"/>
+
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Paint…" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Export PNG…" Click="Export_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Import PNG…" Click="Import_Click" IsEnabled="{Binding CanPaint}"/>
+          </StackPanel>
+
+          <Button Content="Edit animation…" Click="EditAnimation_Click" IsVisible="{Binding IsAnimation}"
+                  HorizontalAlignment="Stretch"
+                  ToolTip.Tip="Open this animation's frames, their holds and their drawings"/>
+          <TextBlock Text="{Binding CannotEditBecause}" Classes="hint"
+                     IsVisible="{Binding CannotEditBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+
+          <CheckBox Content="Fill in what the game fills in" IsChecked="{Binding FillContents}"
+                    IsVisible="{Binding HasContents}"
+                    ToolTip.Tip="Health bars, party slots and the note page, at the positions the game uses"/>
+
+          <Border IsVisible="{Binding HasCaution}" Padding="8" CornerRadius="4"
+                  Background="{DynamicResource Editor.PanelBg}"
+                  BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1">
+            <TextBlock Text="{Binding Caution}" Classes="hint"/>
+          </Border>
+
+          <Separator Margin="0,4"/>
+
+          <StackPanel IsVisible="{Binding HasColours}" Spacing="8">
+            <Border IsVisible="{Binding IsShared}" Padding="8" CornerRadius="4"
+                    Background="{DynamicResource Editor.PanelBg}"
+                    BorderBrush="{DynamicResource Editor.Warn}" BorderThickness="1">
+              <TextBlock Text="{Binding SharedNote}" Classes="hint"/>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Swatches}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" Width="288"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BottomScreenSwatch">
+                  <Border Width="18" Height="18" Margin="0" Background="{Binding Fill}"
+                          BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
+                          Tag="{Binding At}" ToolTip.Tip="{Binding Tip}"
+                          PointerPressed="Swatch_Pressed" Cursor="Hand"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- The screen being edited. Sized to the room it has rather than stretched to fill it, so the
+         casing is never cut off at the edges. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="12" Spacing="8" HorizontalAlignment="Center">
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image Source="{Binding Screen}" Width="640" Height="480" Stretch="Uniform"
+                 RenderOptions.BitmapInterpolationMode="None"/>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>
