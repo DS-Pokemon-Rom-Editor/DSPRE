@@ -1,0 +1,155 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.CellAnimationEditorView"
+        x:DataType="vm:CellAnimationEditorViewModel"
+        Title="Cell Animation"
+        Width="1180" Height="760" MinWidth="860" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+
+  <Design.DataContext>
+    <vm:CellAnimationEditorViewModel/>
+  </Design.DataContext>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="FontSize" Value="12"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+          <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
+          <Button Content="Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}"/>
+          <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding FileNote}" Classes="hint" VerticalAlignment="Center"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- Sequences. A file can hold hundreds, so there is a way to go straight to one. -->
+    <Border DockPanel.Dock="Left" Width="270" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,1,0">
+      <DockPanel Margin="6">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+          <TextBlock Text="Go to" Classes="label"/>
+          <NumericUpDown Value="{Binding JumpTo}" Minimum="0" Increment="1" Width="110" FormatString="0"
+                         ToolTip.Tip="Jump straight to a sequence by its number"/>
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:CellSequenceRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- The frames of the chosen sequence -->
+    <Border DockPanel.Dock="Right" Width="330" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="1,0,0,0">
+      <DockPanel Margin="8">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
+          <TextBlock Text="Frames" FontWeight="SemiBold"/>
+          <CheckBox Content="Change a shared drawing everywhere"
+                    IsChecked="{Binding ChangeEverywhere}"
+                    ToolTip.Tip="Off, a change gives this frame its own copy and leaves the others alone"/>
+        </StackPanel>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Frames}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CellFrameRow">
+                <Border Margin="0,0,0,6" Padding="8" CornerRadius="4"
+                        Background="{DynamicResource Editor.PanelBg}"
+                        BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="Drawing" Classes="label" Width="56"/>
+                      <NumericUpDown Value="{Binding Cell}" Minimum="0" Increment="1"
+                                     Width="110" FormatString="0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="Hold" Classes="label" Width="56"/>
+                      <NumericUpDown Value="{Binding Delay}" Minimum="0" Increment="1"
+                                     Width="110" FormatString="0"
+                                     ToolTip.Tip="In sixtieths of a second"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding SharedNote}" Classes="hint"
+                               IsVisible="{Binding IsShared}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <!-- The animation itself -->
+    <StackPanel Margin="12" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Top">
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+        <Image Source="{Binding Preview}" Width="512" Height="384" Stretch="Uniform"
+               RenderOptions.BitmapInterpolationMode="None"/>
+      </Border>
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+        <Button Content="{Binding PlayLabel}" Click="Play_Click" Width="90"/>
+      </StackPanel>
+      <!-- Where the pieces of one drawing sit. The preview follows a move straight away. -->
+      <Border IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"
+              Background="{DynamicResource Editor.PanelBg}"
+              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+        <StackPanel Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{Binding PieceHeading}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding PieceCell}" Minimum="0" Increment="1" Width="100" FormatString="0"
+                           ToolTip.Tip="Which drawing's pieces to move"/>
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding Pieces}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CellPieceRow">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Title}" Classes="label" Width="132"/>
+                  <TextBlock Text="Across" Classes="label"/>
+                  <NumericUpDown Value="{Binding Across}" Minimum="-256" Maximum="255" Increment="1"
+                                 Width="96" FormatString="0"/>
+                  <TextBlock Text="Down" Classes="label"/>
+                  <NumericUpDown Value="{Binding Down}" Minimum="-128" Maximum="127" Increment="1"
+                                 Width="96" FormatString="0"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Classes="hint" HorizontalAlignment="Center" MaxWidth="480"
+                 Text="Sequences are reached by number in the games' own code, so they cannot be added, removed or reordered here."/>
+    </StackPanel>
+
+  </DockPanel>
+</Window>
