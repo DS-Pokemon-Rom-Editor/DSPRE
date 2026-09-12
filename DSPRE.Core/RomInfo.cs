@@ -96,6 +96,18 @@ namespace DSPRE
         /// <summary>Pokégear phone strings, whose messages from 38 on are the special contact titles. -1 when unknown.</summary>
         public static int pokegearPhoneMessageArchive { get; private set; } = -1;
 
+        /// <summary>The shared menu entries a script's standard-text menus read from. -1 when unknown.</summary>
+        public static int fieldMenuEntriesArchive { get; private set; } = -1;
+
+        /// <summary>The four archives GetStdMsgNaix picks between, in order. Empty when unknown.</summary>
+        public static int[] fieldSharedMessageArchives { get; private set; } = System.Array.Empty<int>();
+
+        /// <summary>The system font's palette in the font archive, which menu windows fill and write with. -1 when unknown.</summary>
+        public static int systemFontPaletteEntry { get; private set; } = -1;
+
+        /// <summary>HGSS text bank the touch menu's labels are in. -1 when unknown.</summary>
+        public static int fieldTouchMenuTextArchive { get; private set; } = -1;
+
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
 
@@ -287,6 +299,9 @@ namespace DSPRE
 
             fonts,                  // ARC_FONT   DP graphic/font.narc, Pt graphic/pl_font.narc, HGSS a/0/1/6
             windowFrames,           // ARC_WINFRAME  the borders round a message box
+            poketch,                // Pt graphic/poketch.narc, the Pokétch on the bottom screen
+            fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
+            fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -392,6 +407,7 @@ namespace DSPRE
             SetMartOffsets();
             SetStarterOffsets();
             SetRematchTableOffsets();
+            SetFieldScriptArchives();
             SetupSpawnSettings();
 
             SetAbilityNamesTextNumber();
@@ -991,6 +1007,31 @@ namespace DSPRE
                     pokegearRematchFallbackTableOffset = 0x20C;
                     // Japanese archives are numbered differently and this one hasn't been checked there.
                     if (gameLanguage != GameLanguages.Japanese) pokegearPhoneMessageArchive = 271;
+                    break;
+            }
+        }
+
+        /// <summary>The text archives field scripts read menus and shared messages from.</summary>
+        public static void SetFieldScriptArchives()
+        {
+            fieldMenuEntriesArchive = -1;
+            fieldSharedMessageArchives = System.Array.Empty<int>();
+            systemFontPaletteEntry = -1;
+            fieldTouchMenuTextArchive = -1;
+            // Japanese archives are numbered differently and these have not been checked there.
+            if (gameLanguage == GameLanguages.Japanese) return;
+
+            switch (gameFamily)
+            {
+                case GameFamilies.Plat:
+                    fieldMenuEntriesArchive = 361;          // TEXT_BANK_MENU_ENTRIES
+                    systemFontPaletteEntry = 6;
+                    break;
+                case GameFamilies.HGSS:
+                    fieldMenuEntriesArchive = 191;
+                    fieldSharedMessageArchives = new[] { 752, 211, 30, 435 };
+                    systemFontPaletteEntry = 7;
+                    fieldTouchMenuTextArchive = 196;
                     break;
             }
         }
@@ -2413,6 +2454,7 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\pl_winframe.narc",
+                        [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -2502,6 +2544,8 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",
                         [DirNames.fonts] = $@"{dataFolderName}\a\0\1\6",
                         [DirNames.windowFrames] = $@"{dataFolderName}\a\0\3\8",
+                        [DirNames.fieldTouchMenu] = $@"{dataFolderName}\a\0\1\4",
+                        [DirNames.fieldTouchChoices] = $@"{dataFolderName}\a\2\3\7",
 
                         [DirNames.matrices] = $@"{dataFolderName}\a\0\4\1",
 
@@ -2701,6 +2745,13 @@ namespace DSPRE
         }
 
         public static bool IsTitleScreenEditorAvailable() => gameFamily == GameFamilies.HGSS;
+
+        /// <summary>
+        /// HGSS have the touch menu and the Poké Ball question screen, Platinum has the Pokétch. Diamond
+        /// and Pearl keep neither, so there is nothing for the editor to read there.
+        /// </summary>
+        public static bool IsBottomScreenEditorAvailable() =>
+            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
 
         /// <summary>
         /// Member indices of the title logo/palette/background inside a/0/4/6 for a specific game version.
