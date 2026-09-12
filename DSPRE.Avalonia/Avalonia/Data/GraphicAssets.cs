@@ -23,6 +23,7 @@ namespace DSPRE.Avalonia.Data
             Items,
             TextAndFonts, Windows,
             Places,
+            BottomScreen,
         }
 
         /// <summary>How the colours for a drawing are found.</summary>
@@ -471,6 +472,30 @@ namespace DSPRE.Avalonia.Data
                 BuildUnits = n => DungeonCutinTable.UnitsFor(
                     All.First(x => x.Dir == DirNames.dungeonCutinGraphics), n),
                 What = "The picture shown when you enter a dungeon. HeartGold and SoulSilver only." },
+
+            // What is on the bottom screen while you walk around. The nearest-palette rule lands right
+            // for both of the HGSS archives: the cursor's own colours sit immediately before it.
+            new Archive { Dir = DirNames.fieldTouchMenu, Title = "Field touch menu", In = Group.BottomScreen,
+                What = "The menu panel on the bottom screen while you walk around, with its seven icons, "
+                     + "the registered item slots, the running shoes and the A button. "
+                     + "HeartGold and SoulSilver only.",
+                DeepEditor = "Bottom Screen Editor" },
+
+            new Archive { Dir = DirNames.fieldTouchChoices, Title = "Field touch choices", In = Group.BottomScreen,
+                What = "The Poké Ball screen a script puts up to ask a question on the bottom screen, with "
+                     + "its yes/no and list arrangements and the red frame around the answer. "
+                     + "HeartGold and SoulSilver only.",
+                DeepEditor = "Bottom Screen Editor" },
+
+            new Archive { Dir = DirNames.poketch, Title = "Pokétch", In = Group.BottomScreen,
+                What = "The Pokétch on the bottom screen: its casing in both colours, every application's "
+                     + "screen and sprites, and the Poké Ball picture shown before you are given one. "
+                     + "Platinum only.",
+                DeepEditor = "Bottom Screen Editor",
+                // Nearly everything here is painted with the theme colours in member 0, which is nowhere
+                // near the drawing, so the nearest-palette rule would pick up the wrong ones.
+                ColourEntry = PoketchApps.ColoursFor,
+                ArrangementEntry = PoketchApps.ArrangementFor },
         };
 
         // ── reading ────────────────────────────────────────────────────────────────────────────────

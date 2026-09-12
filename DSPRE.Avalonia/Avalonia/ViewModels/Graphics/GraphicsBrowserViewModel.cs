@@ -209,6 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             GraphicAssets.Group.TextAndFonts => "Fonts",
             GraphicAssets.Group.Windows => "Text boxes",
             GraphicAssets.Group.Places => "Places",
+            GraphicAssets.Group.BottomScreen => "Bottom screen",
             _ => g.ToString(),
         };
 
