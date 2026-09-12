@@ -628,6 +628,91 @@ namespace DSPRE.Avalonia
             new TitleScreenEditorView().ShowManaged();
         }
 
+        /// <summary>Lists every cell animation in the game so one can be picked and opened.</summary>
+        public static void OpenCellAnimationPicker() => _ = OpenCellAnimationPickerAsync();
+
+        public static async System.Threading.Tasks.Task OpenCellAnimationPickerAsync()
+        {
+            if (!IsRomLoaded) return;
+            if (!BetaEditors.Allows("CellAnimationEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("CellAnimationEditorView")!, "Cell Animations");
+                return;
+            }
+            try
+            {
+                // Reading every archive to find the animations takes a moment, so the looking happens
+                // behind the busy overlay. The window itself is built here, on the thread that owns it.
+                var vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
+                await RunBusyAsync("Looking for animations…",
+                                   "Reading every archive in the ROM", vm.Gather);
+                vm.Ready();
+                new Views.Graphics.CellAnimationPickerView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenCellAnimationPicker failed: " + ex.Message);
+                await DialogHelper.ShowInfo("The animations could not be listed. " + ex.Message,
+                                            "Cell Animations");
+            }
+        }
+
+        /// <summary>
+        /// Opens one cell animation for editing. The caller says which files go together, because an
+        /// animation on its own has no drawing: it names cells in a layout, which in turn names tiles.
+        /// </summary>
+        /// <param name="sharedSheet">
+        /// A sheet the game loads into sprite memory ahead of this one, or -1. The cells of some screens
+        /// count their tiles from where that sheet ends.
+        /// </param>
+        public static void OpenCellAnimationEditor(RomInfo.DirNames dir, int animation, int cells,
+                                                   int sprites, int palette, int paletteRow, string what,
+                                                   int sharedSheet = -1)
+        {
+            if (!IsRomLoaded) return;
+            if (animation < 0)
+            {
+                _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell Animation");
+                return;
+            }
+            if (!BetaEditors.Allows("CellAnimationEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("CellAnimationEditorView")!, "Cell Animation");
+                return;
+            }
+
+            try
+            {
+                var vm = new ViewModels.Graphics.CellAnimationEditorViewModel(
+                    dir, animation, cells, sprites, palette, paletteRow, what, sharedSheet);
+                new Views.Graphics.CellAnimationEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenCellAnimationEditor failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("That animation could not be opened. " + ex.Message,
+                                          "Cell Animation");
+            }
+        }
+
+        public static void OpenBottomScreenEditor()
+        {
+            if (!IsRomLoaded) return;
+            if (!RomInfo.IsBottomScreenEditorAvailable())
+            {
+                _ = DialogHelper.ShowInfo(
+                    "The Bottom Screen editor is available for Platinum, HeartGold and SoulSilver ROMs.",
+                    "Bottom Screen");
+                return;
+            }
+            if (!BetaEditors.Allows("BottomScreenEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("BottomScreenEditorView")!, "Bottom Screen");
+                return;
+            }
+            new BottomScreenEditorView().ShowManaged();
+        }
+
         public static void OpenTrainerCardEditor()
         {
             if (!IsRomLoaded) return;
@@ -1109,6 +1194,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
             new() { Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
             new() { Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
+            new() { Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = OpenBottomScreenEditor },
+            new() { Name = "Cell Animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
             new() { Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
             new() { Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
             new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },

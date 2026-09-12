@@ -698,6 +698,12 @@ namespace DSPRE.Avalonia.Views.Shell
         private void TitleScreenEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTitleScreenEditor();
 
+        private void BottomScreenEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBottomScreenEditor();
+
+        private void CellAnimations_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenCellAnimationPicker();
+
         private void TrainerCardEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerCardEditor();
 

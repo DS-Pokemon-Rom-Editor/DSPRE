@@ -46,6 +46,8 @@ namespace DSPRE
                 ["DungeonCutinEditorView"] = "Dungeon Cut-in editor",
                 ["TrainerCardEditorView"] = "Trainer Card editor",
                 ["TrainerSpriteEditorView"] = "Trainer Sprite editor",
+                ["BottomScreenEditorView"] = "Bottom Screen editor",
+                ["CellAnimationEditorView"] = "Cell Animation editor",
                 ["ProjectChecksView"] = "Project checks",
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
@@ -133,7 +135,8 @@ namespace DSPRE
             if (window.StartsWith("HgEngine", StringComparison.Ordinal)) return "hg-engine";
             if (window is "FontEditorView" or "TilesetBuilderView" or "BannerEditorView"
                        or "TitleScreenEditorView" or "DungeonCutinEditorView"
-                       or "TrainerCardEditorView" or "TrainerSpriteEditorView") return "Graphics";
+                       or "TrainerCardEditorView" or "TrainerSpriteEditorView"
+                       or "BottomScreenEditorView" or "CellAnimationEditorView") return "Graphics";
             return "Tools";
         }
     }

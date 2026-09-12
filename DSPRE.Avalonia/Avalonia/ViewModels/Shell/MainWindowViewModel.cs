@@ -116,6 +116,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public string TrainerCardEditorNote => EditorNote(
             "TrainerCardEditorView", RomInfo.IsTrainerCardEditorAvailable(),
             "The Trainer Card editor is available for Platinum, HeartGold and SoulSilver ROMs.");
+        public bool CanUseBottomScreenEditor => IsRomLoaded && RomInfo.IsBottomScreenEditorAvailable()
+            && BetaEditors.Allows("BottomScreenEditorView");
+        public string BottomScreenEditorNote => EditorNote(
+            "BottomScreenEditorView", RomInfo.IsBottomScreenEditorAvailable(),
+            "The Bottom Screen editor is available for Platinum, HeartGold and SoulSilver ROMs.");
 
         private string EditorNote(string window, bool supported, string unsupported)
         {
@@ -225,6 +230,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(DungeonCutinEditorNote));
             OnPropertyChanged(nameof(TitleScreenEditorNote));
             OnPropertyChanged(nameof(TrainerCardEditorNote));
+            OnPropertyChanged(nameof(CanUseBottomScreenEditor));
+            OnPropertyChanged(nameof(BottomScreenEditorNote));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
             OnPropertyChanged(nameof(CanUseTrophyGardenEditor));
