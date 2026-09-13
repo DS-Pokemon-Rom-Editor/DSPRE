@@ -98,6 +98,35 @@ namespace DSPRE.Tests
             Assert.Equal(9, silent.Count);
         }
 
+        /// <summary>
+        /// A sound is one channel in the ROM, but playing, drawing and saving all work in interleaved stereo.
+        /// Handing them a single channel played it an octave high and half as long.
+        /// </summary>
+        [SkippableFact]
+        public void ASoundComesBackInBothEarsAtItsOwnLength()
+        {
+            Skip.If(!Ready(), "the extracted game project these tests read is not on this machine");
+            var vm = new AudioEditorViewModel(null);
+            Assert.True(vm.Sounds.Count > 0);
+
+            var sound = vm.Sounds.First(s => s.IsSample);
+            vm.SelectedSound = sound;
+            for (int tab = 0; tab < 8 && !ReferenceEquals(vm.Selected, sound); tab++) vm.SelectedTab = tab;
+            Assert.Same(sound, vm.Selected);
+
+            const int rate = 32000;
+            short[] pcm = vm.RenderSelected(rate);
+            Assert.NotNull(pcm);
+            Assert.Equal(0, pcm.Length % 2);
+            for (int i = 0; i < pcm.Length; i += 2) Assert.Equal(pcm[i], pcm[i + 1]);
+
+            var source = SoundArchive.Sample(sound.WaveArc, sound.SampleIndex);
+            double wanted = source.Pcm.Length / (double)source.SampleRate;
+            double got = pcm.Length / 2.0 / rate;
+            Assert.True(System.Math.Abs(got - wanted) < wanted * 0.01 + 0.01,
+                        $"the sound lasts {got:0.000}s where the sample is {wanted:0.000}s");
+        }
+
         [SkippableFact]
         public void PickingOnOneTabDoesNotWipeThePickOnAnother()
         {

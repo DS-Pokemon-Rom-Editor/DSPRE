@@ -13,11 +13,17 @@ namespace DSPRE.Avalonia.Data
         private int _pos;
         public WaveFormat WaveFormat { get; }
 
-        public PcmVoice(short[] interleavedStereoPcm, int sampleRate)
+        public PcmVoice(short[] interleavedStereoPcm, int sampleRate, bool loop = false)
         {
             _pcm = interleavedStereoPcm;
+            _loop = loop;
             WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
         }
+
+        private readonly bool _loop;
+
+        /// <summary>Held voices give silence without moving on, so they pick up where they stopped.</summary>
+        public volatile bool Paused;
 
         // Samples left in a fade-out, or -1 while playing normally.
         private int _fadeLeft = -1, _fadeLength;
@@ -31,6 +37,20 @@ namespace DSPRE.Avalonia.Data
 
         public int Read(float[] buffer, int offset, int count)
         {
+            if (Paused && _fadeLeft < 0)
+            {
+                Array.Clear(buffer, offset, count);
+                return count;
+            }
+            if (_loop && _fadeLeft < 0 && _pcm.Length > 0)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    if (_pos >= _pcm.Length) _pos = 0;
+                    buffer[offset + i] = _pcm[_pos++] / 32768f;
+                }
+                return count;
+            }
             int n = Math.Max(0, Math.Min(count, _pcm.Length - _pos));
             if (_fadeLeft >= 0) n = Math.Min(n, _fadeLeft);
             for (int i = 0; i < n; i++)
@@ -61,7 +81,11 @@ namespace DSPRE.Avalonia.Data
 
         public void Play(short[] interleavedStereoPcm, int sampleRate) => Start(interleavedStereoPcm, sampleRate);
 
-        public object Start(short[] interleavedStereoPcm, int sampleRate)
+        public object Start(short[] interleavedStereoPcm, int sampleRate) => Begin(interleavedStereoPcm, sampleRate, loop: false);
+
+        public object StartLooping(short[] interleavedStereoPcm, int sampleRate) => Begin(interleavedStereoPcm, sampleRate, loop: true);
+
+        private object Begin(short[] interleavedStereoPcm, int sampleRate, bool loop)
         {
             if (!OperatingSystem.IsWindows()) return null;
             if (interleavedStereoPcm == null || interleavedStereoPcm.Length == 0) return null;
@@ -69,10 +93,15 @@ namespace DSPRE.Avalonia.Data
             lock (_gate)
             {
                 EnsureStarted(sampleRate);
-                var voice = new PcmVoice(interleavedStereoPcm, sampleRate);
+                var voice = new PcmVoice(interleavedStereoPcm, sampleRate, loop);
                 _mixer.AddMixerInput(voice);
                 return voice;
             }
+        }
+
+        public void SetPaused(object handle, bool paused)
+        {
+            if (handle is PcmVoice voice) voice.Paused = paused;
         }
 
         public void Stop()

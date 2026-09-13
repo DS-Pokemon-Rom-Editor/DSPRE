@@ -127,18 +127,18 @@ namespace DSPRE.Avalonia.Data
                         break;
                     }
 
-                    // Key-split (multi-region) instrument: up to 8 ascending key-range boundary bytes, stopping
-                    // at the first 0, then one 12-byte region per boundary (region i covers keyRanges[i-1]+1
-                    // through keyRanges[i], the first region starting at key 0).
+                    // Key-split (multi-region) instrument: eight ascending key-range boundary bytes, then one
+                    // 12-byte region per boundary (region i covers keyRanges[i-1]+1 through keyRanges[i], the
+                    // first region starting at key 0). The driver walks all eight, so a zero is a boundary like
+                    // any other and only a region past the end of the record stops the walk.
                     case 0x11 when at + 8 <= d.Length:
                     {
                         var keyRanges = new int[8];
                         int nRgns = 0;
                         for (int k = 0; k < 8; k++)
                         {
-                            int v = d[at + k];
-                            if (v == 0) break;
-                            keyRanges[k] = v;
+                            keyRanges[k] = d[at + k];
+                            if (at + 8 + k * 12 + 12 > d.Length) break;
                             nRgns++;
                         }
                         for (int r = 0; r < nRgns; r++)
@@ -165,6 +165,13 @@ namespace DSPRE.Avalonia.Data
                         inst.Regions.Add(rgn);
                         break;
                     }
+
+                    // A null record (5) is a program the bank deliberately leaves silent, and a direct record
+                    // (4) plays from an address in memory that an archive on disk cannot resolve. Both leave the
+                    // instrument with no regions, so notes on them are silent rather than the program being lost.
+                    case 4:
+                    case 5:
+                        break;
 
                     default:
                         inst = null;   // nothing else is a playable record

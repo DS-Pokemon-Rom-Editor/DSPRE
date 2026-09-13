@@ -15,6 +15,12 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Fades out one sound started with <see cref="Start"/>, leaving the rest playing.</summary>
         void Stop(object handle);
+
+        /// <summary>Plays from the start again each time it runs out, for music, until stopped.</summary>
+        object StartLooping(short[] interleavedStereoPcm, int sampleRate) => Start(interleavedStereoPcm, sampleRate);
+
+        /// <summary>Holds a sound where it is, or lets it carry on, the way a fanfare holds the music.</summary>
+        void SetPaused(object handle, bool paused) { }
     }
 
     /// <summary>Does nothing. The default until a shell wires in a real backend, so builds/shells that don't

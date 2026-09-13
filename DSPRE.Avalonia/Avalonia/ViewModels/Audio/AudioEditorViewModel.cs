@@ -264,9 +264,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 if (it == null) return "Pick something to hear it.";
                 if (it.IsCry) return it.Name + ". A cry is a sample of its own, so it can be replaced.";
                 if (it.IsSample)
-                    return $"{it.Detail}, sound {it.SampleIndex}. This is one of the sounds the game is "
-                         + "built from, so it can be replaced. Whatever plays it will play the new one, "
-                         + "and more than one tune or effect may be using it.";
+                    return $"{it.Detail}, sound {it.SampleIndex}. One of the sounds the game is built from, so it "
+                         + "can be replaced. More than one tune or effect may use it.";
                 return it.Name + ". This is written-out notes played on the game's own instruments, so it "
                      + "can be saved as sound but a WAV cannot be put in its place. The sounds it plays "
                      + "are on the Sounds tab, and those can be replaced.";
@@ -304,11 +303,26 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             {
                 var s = SoundArchive.Sample(item.WaveArc, item.SampleIndex);
                 if (s?.Pcm == null || s.Pcm.Length == 0) return null;
-                return Resample(s.Pcm, s.SampleRate, playAt);
+                return Stereo(Resample(s.Pcm, s.SampleRate, playAt));
             }
 
             var sdat = SoundArchive.Load();
-            return sdat == null ? null : SseqPlayer.Render(sdat, item.Number);
+            return sdat == null ? null : SseqPlayer.Render(sdat, item.Number, playAt, PreviewSeconds);
+        }
+
+        /// <summary>
+        /// How much of a tune to render for a listen. Long enough to get past an introduction and reach the
+        /// part somebody would recognise.
+        /// </summary>
+        public const double PreviewSeconds = 45.0;
+
+        /// <summary>The same sound in both ears, which is the shape everything here plays, draws and saves.</summary>
+        private static short[] Stereo(short[] mono)
+        {
+            if (mono == null) return null;
+            var both = new short[mono.Length * 2];
+            for (int i = 0; i < mono.Length; i++) both[i * 2] = both[i * 2 + 1] = mono[i];
+            return both;
         }
 
         /// <summary>Stretches a sample to the rate the player runs at, so it sounds at its own pitch.</summary>
@@ -386,17 +400,15 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 var item = Selected;
                 if (item == null) return "Pick a cry, a piece of music, a fanfare or a sound effect first.";
                 if (item.IsSample)
-                    return "This is one recording rather than a set of instruments, so there is no bank to "
-                         + "save. Save it as a WAV instead.";
+                    return "This is a single recording, so there is no bank to save. Save it as a WAV.";
                 if (BankOfSelection < 0)
                     return "This does not say which bank of instruments it plays on, so there is nothing "
                          + "to save.";
                 var sdat = SoundArchive.Load();
                 string name = sdat != null && sdat.BankNames.TryGetValue(BankOfSelection, out var n)
                               && !string.IsNullOrWhiteSpace(n) ? n : "bank " + BankOfSelection;
-                return $"Saves {name}, the set of instruments this is played on, as a SoundFont that any "
-                     + "music program can load. Open it alongside the MIDI and the notes play on the "
-                     + "game's own sounds.";
+                return $"Saves {name}, the instruments this plays on, as a SoundFont. Open it with the MIDI "
+                     + "to hear the game's own sounds.";
             }
         }
 
