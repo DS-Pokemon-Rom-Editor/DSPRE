@@ -312,17 +312,18 @@ namespace DSPRE.Avalonia
                 Spacing = 6,
             };
 
-            void AddBtn(string label, MsgResult result)
+            void AddBtn(string label, MsgResult result, bool enterOrEscape = false)
             {
-                var btn = new Button { Content = label, MinWidth = 72 };
+                var btn = new Button { Content = label, MinWidth = 72, IsDefault = enterOrEscape, IsCancel = enterOrEscape };
                 btn.Click += (_, _) => { tcs.TrySetResult(result); win.Close(); };
                 btnRow.Children.Add(btn);
             }
 
             switch (buttons)
             {
+                // Only a lone OK answers Enter; a question should not be answered by a stray key.
                 case MsgButtons.Ok:
-                    AddBtn("OK", MsgResult.Ok);
+                    AddBtn("OK", MsgResult.Ok, enterOrEscape: true);
                     break;
                 case MsgButtons.YesNo:
                     AddBtn("Yes", MsgResult.Yes);
