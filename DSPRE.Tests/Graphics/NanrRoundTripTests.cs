@@ -108,8 +108,7 @@ namespace DSPRE.Tests
             => Check(TestRoms.Platinum, "CPUE", "Platinum");
 
         /// <summary>
-        /// The things measured across every real file. Each is a constant the writer leans on, so a game
-        /// that broke one would break the writer silently.
+        /// Each of these is a constant the writer leans on, and a game breaking one breaks it silently.
         /// </summary>
         [SkippableFact]
         public void TheThingsTheWriterReliesOnHoldEverywhere()

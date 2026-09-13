@@ -23,6 +23,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int Frames { get; init; }
         public bool Extended { get; init; }
 
+        /// <summary>How many drawings the paired layout holds, and how many tiles the paired sheet has.</summary>
+        public int Banks { get; init; }
+        public int SheetTiles { get; init; }
+
+        /// <summary>
+        /// The editor that already specialises in this archive, if any. Trainer sprites and Pokemon sprites
+        /// have their own editors that know about poses, genders and the hg-engine sources; this window edits
+        /// the animation file itself, which is a different job, so it points at them rather than competing.
+        /// </summary>
+        public string DeepEditor { get; init; }
+
         public string Title => $"{ArchiveName}  #{Animation}";
 
         public string Detail
@@ -34,14 +45,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     $"{Sequences} sequence{(Sequences == 1 ? "" : "s")}",
                     $"{Frames} frame{(Frames == 1 ? "" : "s")}",
                 };
-                bits.Add(Cells >= 0 ? $"layout {Cells}" : "no layout found");
+                bits.Add(Cells >= 0 ? $"layout {Cells}" : "no layout in this archive");
+                if (Cells >= 0 && Banks == 0) bits.Add("that layout is empty");
+                if (Sprites >= 0 && SheetTiles == 0) bits.Add("its sheet is empty");
                 if (Extended) bits.Add("extended block");
                 return string.Join(", ", bits);
             }
         }
 
-        /// <summary>Whether there is enough here to draw anything.</summary>
-        public bool Drawable => Cells >= 0 && Sprites >= 0;
+        /// <summary>
+        /// Whether there is enough here to draw anything. Finding a layout and a sheet is not enough: a few
+        /// archives pair an animation with files that turn out to be empty, and offering those opens an
+        /// editor with a blank preview.
+        /// </summary>
+        public bool Drawable => Cells >= 0 && Sprites >= 0 && Banks > 0 && SheetTiles > 0;
     }
 
     /// <summary>
@@ -88,14 +105,61 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Hides the ones with nothing to draw them from, which cannot usefully be opened.</summary>
         public bool DrawableOnly { get => _drawableOnly; set { if (Set(ref _drawableOnly, value)) Show(); } }
 
+        private bool _hideSpecialised = true;
+        /// <summary>
+        /// Hides the archives whose own editor does this same job better. Trainer and Pokemon sprites are
+        /// handled there, and listing their hundreds of animations as equals buries the archives this
+        /// window is the only way to reach.
+        /// </summary>
+        public bool HideSpecialised
+        {
+            get => _hideSpecialised;
+            set { if (Set(ref _hideSpecialised, value)) Show(); }
+        }
+
+        // These own poses, colours and source images. Frame order and timing are this window's job.
+        private static readonly string[] OwnsTheArtwork =
+        {
+            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokemon Sprite Editor",
+        };
+
+        private static bool DoneBetterElsewhere(CellAnimationFound row) =>
+            !string.IsNullOrEmpty(row.DeepEditor)
+            && Array.IndexOf(OwnsTheArtwork, row.DeepEditor) >= 0;
+
         private int _selected = -1;
-        public int SelectedIndex { get => _selected; set => Set(ref _selected, value); }
+        public int SelectedIndex
+        {
+            get => _selected;
+            set { if (Set(ref _selected, value)) RaiseSelection(); }
+        }
+
+        // The hint and the link button follow the picked row, so they have to be told when it changes.
+        private void RaiseSelection()
+        {
+            OnPropertyChanged(nameof(Selected));
+            OnPropertyChanged(nameof(DeepEditorName));
+            OnPropertyChanged(nameof(HasDeepEditor));
+            OnPropertyChanged(nameof(DeepEditorHint));
+        }
 
         public CellAnimationFound Selected =>
             _selected >= 0 && _selected < Found.Count ? Found[_selected] : null;
 
         private string _status = "";
         public string StatusText { get => _status; private set => Set(ref _status, value); }
+
+        /// <summary>
+        /// The editor that specialises in the picked file's archive, if any. Trainer and Pokemon sprites
+        /// have their own editors that know about poses, genders and hg-engine sources; this window edits
+        /// the animation file itself. Saying so beats quietly doing a worse version of their job.
+        /// </summary>
+        public string DeepEditorName => Selected?.DeepEditor;
+        public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
+        public string DeepEditorHint => HasDeepEditor
+            ? $"The {DeepEditorName} does more with these: poses, colours and the source files. This window "
+              + "edits the animation itself, which it does not."
+            : "";
 
         public string Summary => $"{_all.Count} animation files in this game"
                                + (_all.Count == 0 ? "" : $", {_all.Count(a => a.Drawable)} with art to draw");
@@ -111,11 +175,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 rows = rows.Where(r => r.ArchiveName.Contains(q, StringComparison.OrdinalIgnoreCase)
                                     || r.Animation.ToString() == q);
             }
-            foreach (var r in rows) Found.Add(r);
+
+            // After the search, so the count describes what was held back from what is on screen.
+            var matched = rows.ToList();
+            int specialised = matched.Count(DoneBetterElsewhere);
+            if (_hideSpecialised) matched = matched.Where(r => !DoneBetterElsewhere(r)).ToList();
+
+            foreach (var r in matched) Found.Add(r);
             _selected = Found.Count > 0 ? 0 : -1;
             OnPropertyChanged(nameof(SelectedIndex));
-            OnPropertyChanged(nameof(Selected));
-            StatusText = $"{Found.Count} shown";
+            RaiseSelection();
+            StatusText = $"{Found.Count} shown"
+                       + (_hideSpecialised && specialised > 0
+                            ? $", {specialised} hidden that another editor does better"
+                            : "");
         }
 
         // Walks every archive the game maps and reads whatever turns out to be an animation.
@@ -153,40 +226,163 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 catch { kinds[i] = GraphicAssets.Kind.Unknown; }
             }
 
+            // What the graphics census says about this archive, where it says anything. Its entry hooks were
+            // read from the editors that own these files, so they are worth more than a guess at a distance.
+            var described = GraphicAssets.All.FirstOrDefault(a => a.Dir == dir);
+
+            // Reading a layout or a sheet is not free and the same one is asked about repeatedly, so each is
+            // read once per archive.
+            var banksAt = new Dictionary<int, List<DsBgScreen.Oam[]>>();
+            var tilesAt = new Dictionary<int, int>();
+
+            List<DsBgScreen.Oam[]> BanksOf(int at)
+            {
+                if (at < 0 || at >= count) return new List<DsBgScreen.Oam[]>();
+                if (!banksAt.TryGetValue(at, out var banks))
+                {
+                    try { banks = DsBgScreen.ReadCells(bytes[at]); }
+                    catch { banks = new List<DsBgScreen.Oam[]>(); }
+                    banksAt[at] = banks;
+                }
+                return banks;
+            }
+
+            int TilesOf(int at)
+            {
+                if (at < 0 || at >= count) return 0;
+                if (!tilesAt.TryGetValue(at, out int tiles))
+                {
+                    try { tiles = DsBgScreen.ReadCharacters(bytes[at]).Length / 32; }
+                    catch { tiles = 0; }
+                    tilesAt[at] = tiles;
+                }
+                return tiles;
+            }
+
             for (int i = 0; i < count; i++)
             {
                 if (kinds[i] != GraphicAssets.Kind.CellAnimation) continue;
                 var file = NanrFile.Read(bytes[i]);
                 if (file == null) continue;
 
+                // Which drawings this animation actually names. A layout too short to hold them is the wrong
+                // layout however close it sits.
+                var wanted = new SortedSet<int>();
+                for (int s = 0; s < file.Sequences.Count; s++)
+                    for (int f = 0; f < file.Sequences[s].Frames.Count; f++)
+                    {
+                        int cell = file.CellOf(s, f);
+                        if (cell >= 0) wanted.Add(cell);
+                    }
+                int topCell = wanted.Count == 0 ? -1 : wanted.Max;
+
+                int cells = BestFit(kinds, i, GraphicAssets.Kind.CellLayout,
+                                    at => BanksOf(at).Count > topCell);
+                var chosen = BanksOf(cells);
+                int topTile = HighestTile(chosen, wanted);
+
+                // A file the archive names outright beats one picked by distance, and still has to reach
+                // the tiles those drawings read.
+                int sprites = Declared(described?.DrawingEntry, i, kinds, GraphicAssets.Kind.TileGraphic);
+                if (sprites >= 0 && topTile >= 0 && TilesOf(sprites) <= topTile) sprites = -1;
+                if (sprites < 0)
+                    sprites = BestFit(kinds, i, GraphicAssets.Kind.TileGraphic,
+                                      at => TilesOf(at) > topTile);
+
+                int colours = Declared(described?.ColourEntry, i, kinds, GraphicAssets.Kind.Palette);
+                if (colours < 0) colours = Nearest(kinds, i, GraphicAssets.Kind.Palette);
+
                 found.Add(new CellAnimationFound
                 {
                     Archive = dir,
                     ArchiveName = dir.ToString(),
                     Animation = i,
-                    Cells = Nearest(kinds, i, GraphicAssets.Kind.CellLayout),
-                    Sprites = Nearest(kinds, i, GraphicAssets.Kind.TileGraphic),
-                    Palette = Nearest(kinds, i, GraphicAssets.Kind.Palette),
+                    Cells = cells,
+                    Sprites = sprites,
+                    Palette = colours,
                     Sequences = file.Sequences.Count,
                     Frames = file.Sequences.Sum(s => s.Frames.Count),
                     Extended = file.HasExtendedData,
+                    Banks = chosen.Count,
+                    SheetTiles = TilesOf(sprites),
+                    DeepEditor = described?.DeepEditor,
                 });
             }
             return found;
         }
 
-        // These archives keep a thing's files together, so the nearest one of a kind is the right one, and
+        /// <summary>
+        /// The file an archive's own description points at, or -1 when it names none, points outside the
+        /// archive, or points at something that is not the kind of file wanted.
+        /// </summary>
+        private static int Declared(Func<int, int> entry, int from, GraphicAssets.Kind[] kinds,
+                                    GraphicAssets.Kind want)
+        {
+            if (entry == null) return -1;
+            int at;
+            try { at = entry(from); } catch { return -1; }
+            if (at < 0 || at >= kinds.Length || at == from) return -1;
+            return kinds[at] == want ? at : -1;
+        }
+
+        /// <summary>The highest tile the named drawings read, so a sheet that cannot reach it is ruled out.</summary>
+        private static int HighestTile(List<DsBgScreen.Oam[]> banks, SortedSet<int> used)
+        {
+            int top = -1;
+            foreach (int b in used)
+            {
+                if (b < 0 || b >= banks.Count) continue;
+                foreach (var piece in banks[b])
+                {
+                    if (piece == null) continue;
+                    int wide = Math.Max(1, piece.Width / 8), tall = Math.Max(1, piece.Height / 8);
+                    top = Math.Max(top, piece.Tile + wide * tall - 1);
+                }
+            }
+            return top;
+        }
+
+        // These archives keep a thing's files together, so the nearest one of a kind is usually right, and
         // the one before is preferred because colours and layouts are written ahead of what uses them.
-        private static int Nearest(GraphicAssets.Kind[] kinds, int from, GraphicAssets.Kind want)
+        private static IEnumerable<int> Candidates(GraphicAssets.Kind[] kinds, int from, GraphicAssets.Kind want)
         {
             for (int step = 1; step < kinds.Length; step++)
             {
                 int before = from - step;
-                if (before >= 0 && kinds[before] == want) return before;
+                if (before >= 0 && kinds[before] == want) yield return before;
                 int after = from + step;
-                if (after < kinds.Length && kinds[after] == want) return after;
+                if (after < kinds.Length && kinds[after] == want) yield return after;
             }
+        }
+
+        private static int Nearest(GraphicAssets.Kind[] kinds, int from, GraphicAssets.Kind want)
+        {
+            foreach (int at in Candidates(kinds, from, want)) return at;
             return -1;
+        }
+
+        /// <summary>
+        /// How many neighbours of a kind are worth considering. Enough to get past a file sitting between an
+        /// animation and the sheet it belongs to, and not enough to wander off into another object's files.
+        /// </summary>
+        private const int Neighbourhood = 4;
+
+        /// <summary>
+        /// The nearest file of a kind that suits the animation, falling back to the nearest of that kind.
+        /// The search stops after a few neighbours: a screen loading a shared sheet ahead of its own counts
+        /// tiles across both, so its own sheet is legitimately too small to serve the animation.
+        /// </summary>
+        private static int BestFit(GraphicAssets.Kind[] kinds, int from, GraphicAssets.Kind want,
+                                   Func<int, bool> fits)
+        {
+            int first = -1, looked = 0;
+            foreach (int at in Candidates(kinds, from, want))
+            {
+                if (first < 0) first = at;
+                if (fits(at)) return at;
+                if (++looked >= Neighbourhood) break;
+            }
+            return first;
         }
     }
 }

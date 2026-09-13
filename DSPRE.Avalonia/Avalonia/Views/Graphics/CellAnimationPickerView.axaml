@@ -21,18 +21,25 @@
 
   <DockPanel Margin="10">
 
-    <Border DockPanel.Dock="Bottom" Padding="0,8,0,0">
+    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+      <TextBlock Text="{Binding DeepEditorHint}" Classes="hint" IsVisible="{Binding HasDeepEditor}"/>
       <DockPanel>
-        <Button DockPanel.Dock="Right" Content="Open" Click="Open_Click" Width="90"/>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+          <Button Content="{Binding DeepEditorName}" Click="DeepEditor_Click"
+                  IsVisible="{Binding HasDeepEditor}"/>
+          <Button Content="Open" Click="Open_Click" Width="90"/>
+        </StackPanel>
         <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
       </DockPanel>
-    </Border>
+    </StackPanel>
 
     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
       <TextBlock Text="{Binding Summary}" Classes="hint"/>
       <TextBox Text="{Binding Search}" Watermark="Search by archive or file number"/>
       <CheckBox Content="Only the ones with art to draw them" IsChecked="{Binding DrawableOnly}"
                 ToolTip.Tip="An animation needs a layout and a sheet of tiles before anything can be shown"/>
+      <CheckBox Content="Hide the ones another editor does better" IsChecked="{Binding HideSpecialised}"
+                ToolTip.Tip="Trainer and Pokémon sprites have editors that own their poses and colours. Turn this off to reach their animation files anyway."/>
     </StackPanel>
 
     <ListBox ItemsSource="{Binding Found}" SelectedIndex="{Binding SelectedIndex}"

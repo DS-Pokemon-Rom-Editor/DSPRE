@@ -665,9 +665,14 @@ namespace DSPRE.Avalonia
         /// A sheet the game loads into sprite memory ahead of this one, or -1. The cells of some screens
         /// count their tiles from where that sheet ends.
         /// </param>
+        /// <param name="poketchApp">
+        /// The Pokétch application this animation belongs to, or -1. Given one, the editor draws the sprite
+        /// inside that application's casing and screen instead of on an empty background, and offers a way
+        /// back to it.
+        /// </param>
         public static void OpenCellAnimationEditor(RomInfo.DirNames dir, int animation, int cells,
                                                    int sprites, int palette, int paletteRow, string what,
-                                                   int sharedSheet = -1)
+                                                   int sharedSheet = -1, int poketchApp = -1)
         {
             if (!IsRomLoaded) return;
             if (animation < 0)
@@ -684,7 +689,7 @@ namespace DSPRE.Avalonia
             try
             {
                 var vm = new ViewModels.Graphics.CellAnimationEditorViewModel(
-                    dir, animation, cells, sprites, palette, paletteRow, what, sharedSheet);
+                    dir, animation, cells, sprites, palette, paletteRow, what, sharedSheet, poketchApp);
                 new Views.Graphics.CellAnimationEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
@@ -695,7 +700,11 @@ namespace DSPRE.Avalonia
             }
         }
 
-        public static void OpenBottomScreenEditor()
+        /// <param name="poketchApp">
+        /// A Pokétch application to open on, or -1 for whatever the window shows by default. An animation
+        /// opened from an application uses this to go back to the one it belongs to.
+        /// </param>
+        public static void OpenBottomScreenEditor(int poketchApp = -1)
         {
             if (!IsRomLoaded) return;
             if (!RomInfo.IsBottomScreenEditorAvailable())
@@ -710,7 +719,35 @@ namespace DSPRE.Avalonia
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("BottomScreenEditorView")!, "Bottom Screen");
                 return;
             }
-            new BottomScreenEditorView().ShowManaged();
+
+            // A second window on the same screen would leave two views of one thing, each able to edit it.
+            // So an open one is brought forward and pointed at the application asked for instead.
+            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
+                       ?.Windows;
+            var already = open == null ? null
+                : System.Linq.Enumerable.FirstOrDefault(
+                    System.Linq.Enumerable.OfType<BottomScreenEditorView>(open));
+            if (already != null)
+            {
+                ShowPoketchApp(already, poketchApp);
+                already.Activate();
+                return;
+            }
+
+            var view = new BottomScreenEditorView();
+            ShowPoketchApp(view, poketchApp);
+            view.ShowManaged();
+        }
+
+        // The list the window offers starts with the casing itself, so an application sits one along from
+        // where it is in the Pokétch's own table.
+        private static void ShowPoketchApp(BottomScreenEditorView view, int poketchApp)
+        {
+            if (poketchApp < 0 || view?.DataContext is not ViewModels.Graphics.BottomScreenEditorViewModel vm)
+                return;
+            int at = System.Array.FindIndex(Data.PoketchApps.All, a => a.Id == poketchApp);
+            if (at >= 0) vm.SelectedApp = at + 1;
         }
 
         public static void OpenTrainerCardEditor()
@@ -1194,7 +1231,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
             new() { Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
             new() { Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
-            new() { Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = OpenBottomScreenEditor },
+            new() { Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
             new() { Name = "Cell Animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
             new() { Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
             new() { Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },

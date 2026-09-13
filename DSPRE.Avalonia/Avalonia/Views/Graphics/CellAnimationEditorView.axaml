@@ -54,6 +54,10 @@
           <NumericUpDown Value="{Binding JumpTo}" Minimum="0" Increment="1" Width="110" FormatString="0"
                          ToolTip.Tip="Jump straight to a sequence by its number"/>
         </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+          <Button Content="Add on the end" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
+          <Button Content="Remove the last" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
+        </StackPanel>
         <ListBox ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate>
@@ -74,7 +78,26 @@
             BorderThickness="1,0,0,0">
       <DockPanel Margin="8">
         <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
-          <TextBlock Text="Frames" FontWeight="SemiBold"/>
+          <TextBlock Text="This sequence" FontWeight="SemiBold"/>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Plays" Classes="label" Width="56"/>
+            <ComboBox ItemsSource="{Binding PlayModes}" SelectedIndex="{Binding PlayModeIndex}" Width="150"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanLoop}">
+            <TextBlock Text="Back to" Classes="label" Width="56"/>
+            <NumericUpDown Value="{Binding LoopStart}" Minimum="1" Maximum="{Binding FrameCount}"
+                           Increment="1" Width="110" FormatString="0"
+                           ToolTip.Tip="The frame it returns to. Earlier frames play once on the way in."/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Draws" Classes="label" Width="56"/>
+            <ComboBox ItemsSource="{Binding AnimationTypes}" SelectedIndex="{Binding AnimationTypeIndex}"
+                      Width="150"/>
+          </StackPanel>
+          <TextBlock Text="{Binding AnimationTypeWarning}" Classes="hint"
+                     IsVisible="{Binding HasAnimationTypeWarning}"/>
+
+          <TextBlock Text="Frames" FontWeight="SemiBold" Margin="0,8,0,0"/>
           <CheckBox Content="Change a shared drawing everywhere"
                     IsChecked="{Binding ChangeEverywhere}"
                     ToolTip.Tip="Off, a change gives this frame its own copy and leaves the others alone"/>
@@ -97,10 +120,36 @@
                       <TextBlock Text="Hold" Classes="label" Width="56"/>
                       <NumericUpDown Value="{Binding Delay}" Minimum="0" Increment="1"
                                      Width="110" FormatString="0"
-                                     ToolTip.Tip="In sixtieths of a second"/>
+                                     ToolTip.Tip="In sixtieths of a second. A hold of none is passed straight over."/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanTurn}">
+                      <TextBlock Text="Turn" Classes="label" Width="56"/>
+                      <NumericUpDown Value="{Binding Turn}" Minimum="-360" Maximum="360" Increment="5"
+                                     Width="110" FormatString="0.#"
+                                     ToolTip.Tip="In degrees"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanTurn}">
+                      <TextBlock Text="Stretch" Classes="label" Width="56"/>
+                      <NumericUpDown Value="{Binding StretchAcross}" Minimum="-8" Maximum="8" Increment="0.1"
+                                     Width="74" FormatString="0.00"/>
+                      <NumericUpDown Value="{Binding StretchDown}" Minimum="-8" Maximum="8" Increment="0.1"
+                                     Width="74" FormatString="0.00"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CanShift}">
+                      <TextBlock Text="Move" Classes="label" Width="56"/>
+                      <NumericUpDown Value="{Binding ShiftAcross}" Minimum="-512" Maximum="512" Increment="1"
+                                     Width="74" FormatString="0"/>
+                      <NumericUpDown Value="{Binding ShiftDown}" Minimum="-512" Maximum="512" Increment="1"
+                                     Width="74" FormatString="0"/>
                     </StackPanel>
                     <TextBlock Text="{Binding SharedNote}" Classes="hint"
                                IsVisible="{Binding IsShared}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                      <Button Content="Add after" Click="AddFrame_Click" Tag="{Binding Number}"
+                              FontSize="11" Padding="7,2"/>
+                      <Button Content="Remove" Click="RemoveFrame_Click" Tag="{Binding Number}"
+                              FontSize="11" Padding="7,2"/>
+                    </StackPanel>
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -118,6 +167,12 @@
       </Border>
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
         <Button Content="{Binding PlayLabel}" Click="Play_Click" Width="90"/>
+        <CheckBox Content="Inside the Pokétch" IsChecked="{Binding InCasing}"
+                  IsVisible="{Binding InPoketch}" VerticalAlignment="Center"
+                  ToolTip.Tip="Draw the sprite in the application's own screen, where a player sees it"/>
+        <Button Content="{Binding PoketchAppName}" Click="BackToPoketch_Click"
+                IsVisible="{Binding InPoketch}"
+                ToolTip.Tip="Open the Bottom Screen editor on the application this belongs to"/>
       </StackPanel>
       <!-- Where the pieces of one drawing sit. The preview follows a move straight away. -->
       <Border IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"
@@ -148,7 +203,7 @@
       </Border>
 
       <TextBlock Classes="hint" HorizontalAlignment="Center" MaxWidth="480"
-                 Text="Sequences are reached by number in the games' own code, so they cannot be added, removed or reordered here."/>
+                 Text="Sequences are reached by number in the games' own code, so they cannot be reordered."/>
     </StackPanel>
 
   </DockPanel>
