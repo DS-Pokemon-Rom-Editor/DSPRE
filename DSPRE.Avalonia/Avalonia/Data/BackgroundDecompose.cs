@@ -23,8 +23,6 @@ namespace DSPRE.Avalonia.Data
             public string Whynot;
         }
 
-        private static int U16(byte[] d, int o) => d[o] | (d[o + 1] << 8);
-
         /// <summary>
         /// Reads a painted picture back into the tile sheet the background is drawn from.
         /// </summary>
@@ -53,12 +51,12 @@ namespace DSPRE.Avalonia.Data
 
             // How many squares of the screen use each tile, so sharing can be reported rather than
             // discovered afterwards.
-            int cols = w / 8, rows = h / 8, blocksX = (cols + 31) / 32;
+            int cols = w / 8, rows = h / 8, entryBytes = NitroBgCodec.EntryBytes(scr);
             var usedBy = new Dictionary<int, int>();
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
-                    int e = EntryAt(scr, mapData, blocksX, tx, ty);
+                    int e = EntryAt(scr, mapData, cols, entryBytes, tx, ty);
                     if (e < 0) continue;
                     int tile = e & 0x3FF;
                     usedBy[tile] = usedBy.TryGetValue(tile, out int n) ? n + 1 : 1;
@@ -74,7 +72,7 @@ namespace DSPRE.Avalonia.Data
             {
                 for (int tx = 0; tx < cols; tx++)
                 {
-                    int e = EntryAt(scr, mapData, blocksX, tx, ty);
+                    int e = EntryAt(scr, mapData, cols, entryBytes, tx, ty);
                     if (e < 0) continue;
                     int tile = e & 0x3FF, palNo = (e >> 12) & 0xF;
                     bool flipH = ((e >> 10) & 1) != 0, flipV = ((e >> 11) & 1) != 0;
@@ -126,12 +124,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The arrangement entry for one square of the screen.</summary>
-        private static int EntryAt(byte[] scr, int mapData, int blocksX, int tx, int ty)
-        {
-            int mapIdx = ((ty / 32) * blocksX + (tx / 32)) * 1024 + (ty % 32) * 32 + (tx % 32);
-            int mo = mapData + mapIdx * 2;
-            return mo + 1 < scr.Length ? U16(scr, mo) : -1;
-        }
+        private static int EntryAt(byte[] scr, int mapData, int cols, int entryBytes, int tx, int ty)
+            => NitroBgCodec.EntryAt(scr, mapData, NitroBgCodec.SquareIndex(cols, tx, ty), entryBytes);
 
         /// <summary>Which colour a tile's number points at, taking the square's own bank into account.</summary>
         private static int ColourOf((byte r, byte g, byte b)[] colours, int palCount, bool is8,

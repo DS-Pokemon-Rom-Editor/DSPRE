@@ -88,9 +88,10 @@ namespace DSPRE.Avalonia.Data
             int w = NitroBgCodec.U16(nscr, nrcs + 0x08);
             int size = NitroBgCodec.U32(nscr, nrcs + 0x10);
             int at = nrcs + 0x14;
-            int count = Math.Max(0, Math.Min(size, nscr.Length - at)) / 2;
+            int entryBytes = NitroBgCodec.EntryBytes(nscr);
+            int count = Math.Max(0, Math.Min(size, nscr.Length - at)) / entryBytes;
             var entries = new ushort[count];
-            for (int i = 0; i < count; i++) entries[i] = (ushort)NitroBgCodec.U16(nscr, at + i * 2);
+            for (int i = 0; i < count; i++) entries[i] = (ushort)NitroBgCodec.EntryAt(nscr, at, i, entryBytes);
             return (w / TileSize, entries);
         }
 

@@ -15,7 +15,8 @@ namespace DSPRE.Avalonia.Data
         public static byte[] Inflate(byte[] b)
         {
             if (b == null) return null;
-            if (b.Length > 0 && b[0] == 0x10) { try { return NSMBe4.ROM.LZ77_Decompress(b); } catch { return b; } }
+            // A glyph font also starts with 0x10, but only a compressed file gives a nonzero size after it.
+            if (b.Length > 3 && b[0] == 0x10 && (b[1] | b[2] | b[3]) != 0) { try { return NSMBe4.ROM.LZ77_Decompress(b); } catch { return b; } }
             return b;
         }
 
@@ -84,6 +85,38 @@ namespace DSPRE.Avalonia.Data
         public static int SquareCount(int cols, int rows)
             => cols <= 32 ? cols * rows : ((cols + 31) / 32) * ((rows + 31) / 32) * 1024;
 
+        /// <summary>Bytes per arrangement entry: a plain affine screen (NRCS +0x0E is 1) stores a one-byte tile number.</summary>
+        public static int EntryBytes(byte[] scr)
+        {
+            int nrcs = scr == null ? -1 : Find(scr, "NRCS", 0);
+            return nrcs >= 0 && nrcs + 0x10 <= scr.Length && U16(scr, nrcs + 0x0E) == 1 ? 1 : 2;
+        }
+
+        /// <summary>The entry for one square, or -1 when the file stops short of it.</summary>
+        public static int EntryAt(byte[] scr, int mapAt, int square, int entryBytes)
+        {
+            int at = mapAt + square * entryBytes;
+            if (at < 0 || at + entryBytes > scr.Length) return -1;
+            return entryBytes == 1 ? scr[at] : U16(scr, at);
+        }
+
+        /// <summary>Stores one square's entry, refusing a square past the file or a value its entry size cannot hold.</summary>
+        public static bool PutEntry(byte[] scr, int mapAt, int square, int entryBytes, int entry)
+        {
+            int at = mapAt + square * entryBytes;
+            if (at < 0 || at + entryBytes > scr.Length || entry < 0 || entry >= (1 << (8 * entryBytes))) return false;
+            scr[at] = (byte)entry;
+            if (entryBytes == 2) scr[at + 1] = (byte)(entry >> 8);
+            return true;
+        }
+
+        /// <summary>How many whole tiles a drawing file has room for.</summary>
+        public static int TileRoom(byte[] chr)
+        {
+            var (is8, at) = ReadTileHeader(chr);
+            return chr == null ? 0 : Math.Max(0, chr.Length - at) / (is8 ? 64 : 32);
+        }
+
         private static void ReadNcgrHeader(byte[] chr, out bool is8, out int tileBytes)
         {
             var head = ReadTileHeader(chr);
@@ -129,15 +162,15 @@ namespace DSPRE.Avalonia.Data
             ReadNcgrHeader(chr, out bool is8, out int tileBytes);
 
             var (w, h, mapData) = ReadScreenHeader(scr);
+            int entryBytes = EntryBytes(scr);
 
             var rgba = new byte[w * h * 4];
             int cols = w / 8, rows = h / 8;
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
-                    int mo = mapData + SquareIndex(cols, tx, ty) * 2;
-                    if (mo + 1 >= scr.Length) continue;
-                    int e = U16(scr, mo);
+                    int e = EntryAt(scr, mapData, SquareIndex(cols, tx, ty), entryBytes);
+                    if (e < 0) continue;
                     int tile = e & 0x3FF, palNo = (e >> 12) & 0xF;
                     bool flipH = ((e >> 10) & 1) != 0, flipV = ((e >> 11) & 1) != 0;
                     BlitTile(rgba, w, chr, tileBytes, is8, colors, palCount, tile, palNo, flipH, flipV, transparentZero, tx, ty);

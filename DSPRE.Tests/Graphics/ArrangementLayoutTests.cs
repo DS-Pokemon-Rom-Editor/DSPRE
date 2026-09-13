@@ -39,7 +39,7 @@ namespace DSPRE.Tests
                     int height = NitroBgCodec.U16(data, 0x1a);
                     if (width < 8 || height < 8) continue;
                     result.Add(new Arrangement($"{archive.Title}[{i}]", data, width / 8, height / 8,
-                        NitroBgCodec.U32(data, 0x20) / 2));
+                        NitroBgCodec.U32(data, 0x20) / NitroBgCodec.EntryBytes(data)));
                 }
             }
             return result;

@@ -360,11 +360,9 @@ namespace DSPRE.Avalonia.Data
         private static void WriteMapData(byte[] scrRaw, ushort[] mapEntries)
         {
             int mapDataOffset = NitroBgCodec.ReadScreenHeader(scrRaw).MapAt;
+            int entryBytes = NitroBgCodec.EntryBytes(scrRaw);
             for (int i = 0; i < mapEntries.Length; i++)
-            {
-                scrRaw[mapDataOffset + i * 2] = (byte)(mapEntries[i] & 0xFF);
-                scrRaw[mapDataOffset + i * 2 + 1] = (byte)(mapEntries[i] >> 8);
-            }
+                NitroBgCodec.PutEntry(scrRaw, mapDataOffset, i, entryBytes, mapEntries[i]);
         }
     }
 }
