@@ -163,8 +163,16 @@ namespace DSPRE
             if (RomInfo.trainerClassPrizeMulTableIsPaired)
                 return TryWritePairedPrizeMul(ovPath, classId, multiplier, out error);
 
-            if (!TryResolveByteTable(ovPath, RomInfo.trainerClassPrizeMulTablePointerOffset, ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out byte[] table, out error))
+            byte[] table;
+            if (RomInfo.trainerClassPrizeMulTablePointerOffset == 0)
+            {
+                try { table = DSUtils.ReadFromFile(ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount); }
+                catch (Exception ex) { error = ex.Message; return false; }
+            }
+            else if (!TryResolveByteTable(ovPath, RomInfo.trainerClassPrizeMulTablePointerOffset, ovPath, RomInfo.trainerClassPrizeMulTableVanillaOffset, RomInfo.trainerClassPrizeMulTableVanillaCount, out table, out error))
+            {
                 return false;
+            }
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
 
             bool repointed = false;
