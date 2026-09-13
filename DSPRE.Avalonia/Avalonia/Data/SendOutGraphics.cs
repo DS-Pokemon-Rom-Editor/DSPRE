@@ -58,6 +58,7 @@ namespace DSPRE.Avalonia.Data
         private readonly Dictionary<(int Ball, int Cell), AvaBitmap> _ballCells = new();
         private readonly ScriptNarc _burstNarc = new ScriptNarc(DirNames.ballParticles);
         private readonly Dictionary<int, SpaArchive> _bursts = new();
+        private readonly Random _sealRandom = new();
 
         public CellSequence[] BallSequences(int ball) => LoadBall(ball).Seqs;
 
@@ -111,6 +112,33 @@ namespace DSPRE.Avalonia.Data
             }
             return true;
         }
+
+        /// <summary>Adds a placed seal's burst, the first emitter of its particle file, at the seal's spot. False when there is none.</summary>
+        public bool AddSeal(SpaParticlePreview into, BallSeal seal, int x, int y, bool enemySide)
+        {
+            if (seal == null) return false;
+            if (!_bursts.TryGetValue(seal.Particle, out var arc))
+            {
+                var bytes = _burstNarc.Available ? _burstNarc.Get(seal.Particle) : null;
+                arc = bytes != null ? SpaArchive.Parse(bytes) : null;
+                _bursts[seal.Particle] = arc;
+            }
+            if (arc == null || arc.Emitters.Count == 0) return false;
+
+            var em = arc.Emitters[0];
+            var (baseX, baseY) = SealEffect.ScreenPosition(x, y, enemySide);
+            var tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
+            double cx = baseX + em.PosX, cy = baseY - em.PosY;
+            // One shared generator, so no two bursts repeat.
+            var sim = new SpaSimulator(em, em.AxisX, em.AxisY, seed: _sealRandom.Next()) { AnchorX = cx, AnchorY = cy };
+            into.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
+                em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
+                baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: true));
+            return true;
+        }
+
+        /// <summary>Forgets a particle file read earlier, after it has been edited.</summary>
+        public void ForgetParticles(int entry) => _bursts.Remove(entry);
 
         // ── Trainers ────────────────────────────────────────────────────────────────────────────
         private TrainerClassSpriteRenderer _front, _back;

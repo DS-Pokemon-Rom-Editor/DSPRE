@@ -124,6 +124,8 @@ namespace DSPRE
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint effectsComboTableOffsetToRAMAddress { get; internal set; }
+        /// <summary>Diamond and Pearl also point two bytes into the combo table from here.</summary>
+        public static uint effectsComboTableSecondPointerOffset { get; internal set; }
 
         public static uint vsTrainerEntryTableOffsetToSizeLimiter { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToSizeLimiter { get; internal set; }
@@ -242,7 +244,11 @@ namespace DSPRE
             battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX), a/0/0/9 = ARC_BATT_BG_PLANM
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
             titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
-            trainerCardGraphics,    // HGSS + Platinum only. Trainer card face/back + trainer-pose art.
+            trainerCardGraphics,    // Trainer card face/back + trainer-pose art.
+            weatherGraphics,        // HGSS only. DP and Platinum keep weather in synthOverlay.
+            areaWindowGraphics,     // Place-name banner frames. DP uses one loose file.
+            sealGraphics,           // Ball Capsule editor screens and seal stickers.
+            trainerCapsules,        // Capsules on trainers' Pokemon. Not in DP.
 
             synthOverlay,
             dynamicHeaders,
@@ -409,6 +415,7 @@ namespace DSPRE
             SetRematchTableOffsets();
             SetFieldScriptArchives();
             SetupSpawnSettings();
+            SetMonIconsPalTableAddress();
 
             SetAbilityNamesTextNumber();
             SetAttackNamesTextNumber();
@@ -525,27 +532,37 @@ namespace DSPRE
             }
         }
 
+        private static readonly Dictionary<uint, string> SignpostImages = new Dictionary<uint, string>
+        {
+            [91] = "brown_sign", [92] = "red_sign", [93] = "gray_sign", [94] = "route_sign", [95] = "blue_sign", [96] = "blue_sign",
+        };
+
+        /// <summary>
+        /// Overworld ids with no sprite of their own and a stand-in picture for each: DP and Platinum's 3D models,
+        /// and ids 101 to 116, which take their picture from variables 0x4020 to 0x402F.
+        /// </summary>
         public static void Set3DOverworldsDict()
         {
-            ow3DSpriteDict = new Dictionary<uint, string>()
-            {
-                [91] = "brown_sign",
-                [92] = "red_sign",
-                [93] = "gray_sign",
-                [94] = "route_sign",
-                [95] = "blue_sign", //to fix this one (gym_sign)
-                [96] = "blue_sign",
-                [101] = "dawn_platinum", // depends on value of variable 0x4020
-                //[174] = "dppt_suitcase",
-            };
+            ow3DSpriteDict = new Dictionary<uint, string>();
+            if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat) return;
 
-            // Special Objects whose sprites depend on a variable value (0x4021-0x402F)
-            for (uint i = 102; i <= 116; i++)
+            for (uint id = FirstVariableOverworld; id <= LastVariableOverworld; id++) ow3DSpriteDict[id] = "overworld";
+            try
             {
-                ow3DSpriteDict[i] = "overworld";
+                if (string.IsNullOrEmpty(OWtablePath)) SetOWtable();
+                foreach (var (id, state) in OverworldSpriteTableExpansion.ReadRenderStates())
+                    if (state.DrawType == 2)
+                        ow3DSpriteDict[id] = SignpostImages.TryGetValue(id, out string sign) ? sign : "overworld";
             }
-
+            catch (Exception ex) { AppLogger.Error("The 3D overworld ids could not be read: " + ex.Message); }
         }
+
+        public const uint FirstVariableOverworld = 101, LastVariableOverworld = 116;
+
+        /// <summary>Whether an overworld id takes its picture from a map variable rather than the sprite table.</summary>
+        public static bool IsVariableOverworld(uint id) =>
+            (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
+            && id >= FirstVariableOverworld && id <= LastVariableOverworld;
 
         public static void SetHeaderTableOffset()
         {
@@ -1195,6 +1212,20 @@ namespace DSPRE
             }
         }
 
+        /// <summary>The candidate right after the render table's 0xFFFF row, else the last candidate.</summary>
+        private static uint FirstAfterSentinel(string path, params uint[] candidates)
+        {
+            try
+            {
+                byte[] data = File.ReadAllBytes(path);
+                foreach (uint at in candidates)
+                    if (at >= 8 && at + 8 <= data.Length && BitConverter.ToUInt32(data, (int)at - 8) == 0xFFFF)
+                        return at;
+            }
+            catch { }
+            return candidates[candidates.Length - 1];
+        }
+
         public static void SetOWtable()
         {
             switch (gameFamily)
@@ -1208,7 +1239,8 @@ namespace DSPRE
                             break;
 
                         case GameLanguages.Japanese:
-                            OWTableOffset = 0x23BB8;
+                            // Japanese revisions differ, so take the offset that follows the render table.
+                            OWTableOffset = FirstAfterSentinel(OWtablePath, 0x23BAC, 0x23BB8);
                             break;
 
                         default:
@@ -1390,6 +1422,15 @@ namespace DSPRE
                     vsPokemonEntryTableOffsetToSizeLimiter = vsPokemonEntryTableOffsetToRAMAddress - 0xA;
                     vsTrainerEntryTableOffsetToSizeLimiter = vsTrainerEntryTableOffsetToRAMAddress - 0xA;
                     effectsComboTableOffsetToSizeLimiter = effectsComboTableOffsetToRAMAddress - 0x1E;
+                    break;
+
+                case GameFamilies.DP:
+                    // The second pointer has to agree before the table is trusted.
+                    if (gameLanguage == GameLanguages.English)
+                    {
+                        effectsComboTableOffsetToRAMAddress = 0x47580;
+                        effectsComboTableSecondPointerOffset = 0x4759C;
+                    }
                     break;
 
                 case GameFamilies.Plat:
@@ -2352,6 +2393,9 @@ namespace DSPRE
                         [DirNames.trainerProperties] = $@"{dataFolderName}\poketool\trainer\trdata.narc",
                         [DirNames.trainerParty] = $@"{dataFolderName}\poketool\trainer\trpoke.narc",
                         [DirNames.trainerGraphics] = $@"{dataFolderName}\poketool\trgra\trfgra.narc",
+                        [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
+                        [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
+                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
                         [DirNames.moveData] = $@"{dataFolderName}\poketool\waza\waza_tbl.narc",
 
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\poke_icon.narc",
@@ -2397,6 +2441,9 @@ namespace DSPRE
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\poketool\trmsg\trtbl.narc",
 
                         [DirNames.eggMoves] = $@"{customNarcFolderName}/egg_moves.narc",
+
+                        [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
+                        [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
                     };
 
                     //Personal Data archive is different for Pearl
@@ -2450,6 +2497,9 @@ namespace DSPRE
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
+                        [DirNames.areaWindowGraphics] = $@"{dataFolderName}\arc\area_win_gra.narc",
+                        [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
+                        [DirNames.trainerCapsules] = $@"{dataFolderName}\application\custom_ball\edit\pl_cb_data.narc",
 
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
@@ -2540,6 +2590,9 @@ namespace DSPRE
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
+                        [DirNames.areaWindowGraphics] = $@"{dataFolderName}\a\1\6\3",
+                        [DirNames.sealGraphics] = $@"{dataFolderName}\a\0\8\7",
+                        [DirNames.trainerCapsules] = $@"{dataFolderName}\a\1\8\5",
 
                         [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",
                         [DirNames.fonts] = $@"{dataFolderName}\a\0\1\6",
@@ -2591,7 +2644,8 @@ namespace DSPRE
 
                         [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0",
                         [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6",
-                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\a\0\4\9"
+                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\a\0\4\9",
+                        [DirNames.weatherGraphics] = $@"{dataFolderName}\a\0\6\3"
                     };
 
                     //Encounter archive is different for SS
@@ -2689,10 +2743,10 @@ namespace DSPRE
                     }
                     break;
             }
+            if (ow3DSpriteDict == null) Set3DOverworldsDict();
+            // Ids with no sprite get a placeholder row so they can be picked; a patched table may already hold one.
             foreach (uint k in ow3DSpriteDict.Keys)
-            {
-                OverworldTable.Add(k, (0x3D3D, 0x3D3D)); //ADD 3D overworld data (spriteID and properties are dummy values)
-            }
+                if (!OverworldTable.ContainsKey(k)) OverworldTable[k] = (0x3D3D, 0x3D3D);
             overworldTableKeys = OverworldTable.Keys.ToArray();
         }
 
@@ -2746,12 +2800,9 @@ namespace DSPRE
 
         public static bool IsTitleScreenEditorAvailable() => gameFamily == GameFamilies.HGSS;
 
-        /// <summary>
-        /// HGSS have the touch menu and the Poké Ball question screen, Platinum has the Pokétch. Diamond
-        /// and Pearl keep neither, so there is nothing for the editor to read there.
-        /// </summary>
+        /// <summary>HGSS have the touch menu and the Poké Ball question screen; Diamond, Pearl and Platinum have the Pokétch.</summary>
         public static bool IsBottomScreenEditorAvailable() =>
-            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
+            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
 
         /// <summary>
         /// Member indices of the title logo/palette/background inside a/0/4/6 for a specific game version.
@@ -2766,22 +2817,29 @@ namespace DSPRE
         /// <summary>Member indices of the title screen's copyright text strip inside a/0/4/6. </summary>
         public static (int ncgr, int nclr, int nscr) TitleScreenCopyrightMembers => (15, 16, 17);
 
-        public static bool IsTrainerCardEditorAvailable() =>
-            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
+        /// <summary>The text bank naming the Ball Capsule seals in the US games.</summary>
+        public static int SealNamesTextNumber => gameFamily switch
+        {
+            GameFamilies.DP => 10,
+            GameFamilies.Plat => 12,
+            _ => 15,
+        };
 
-        // Shared NCGR + front/back NSCR; rankPalettes are the 7 selectable NCLRs (Normal/Bronze/Kap/
-        // Silver/Gold/Black/no-Pokédex). HGSS and Platinum are separate archives, not shared.
+        public static bool IsTrainerCardEditorAvailable() =>
+            gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
+
+        // rankPalettes are the seven selectable card colours; each family numbers its archive differently.
         public static (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) TrainerCardMembers =>
-            gameFamily == GameFamilies.Plat
-                ? (27, 35, 36, new[] { 0, 1, 2, 3, 4, 5, 6 })
-                : (41, 47, 48, new[] { 0, 1, 2, 3, 4, 5, 6 });
+            gameFamily == GameFamilies.Plat ? (27, 35, 36, new[] { 0, 1, 2, 3, 4, 5, 6 })
+            : gameFamily == GameFamilies.DP ? (23, 30, 31, new[] { 0, 1, 2, 3, 4, 5, 6 })
+            : (41, 47, 48, new[] { 0, 1, 2, 3, 4, 5, 6 });
 
         public static readonly string[] TrainerCardRankNames =
             { "Normal", "Bronze", "Kap", "Silver", "Gold", "Black", "No Pokédex" };
 
         // Shared NCGR + one NSCR per gender; always uses rankPalettes[0] (Normal), matching the game.
         public static (int ncgr, int maleNscr, int femaleNscr) TrainerCardTrainerMembers =>
-            gameFamily == GameFamilies.Plat ? (31, 40, 41) : (44, 54, 55);
+            gameFamily == GameFamilies.Plat ? (31, 40, 41) : gameFamily == GameFamilies.DP ? (27, 35, 36) : (44, 54, 55);
 
         /// <summary>Checks if the Starter Pokémon editor is available for the current ROM. </summary>
         public static bool IsStarterEditorAvailable()
