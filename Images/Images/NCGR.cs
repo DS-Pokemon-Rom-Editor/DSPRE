@@ -12,6 +12,9 @@ namespace Images
     {
         sNCGR ncgr;
 
+        // Some files store 0xFFFF instead of a tile count, leaving the size to the pixel data.
+        private bool _noStoredSize;
+
         public NCGR(string file, int id, string fileName = "") : base(file, id, fileName) { }
 
         public override void Read(string fileIn)
@@ -47,6 +50,7 @@ namespace Images
             ncgr.rahc.unknown3 = br.ReadUInt32();
             ncgr.rahc.data = br.ReadBytes((int)ncgr.rahc.size_tiledata);
 
+            _noStoredSize = ncgr.rahc.nTilesX == 0xFFFF;
             if (ncgr.rahc.nTilesX != 0xFFFF)
             {
                 ncgr.rahc.nTilesX *= 8;
@@ -78,7 +82,7 @@ namespace Images
         public override void Write(string fileOut, PaletteBase palette)
         {
             Update_Struct();
-            BinaryWriter bw = new BinaryWriter(File.OpenWrite(fileOut));
+            BinaryWriter bw = new BinaryWriter(File.Create(fileOut));
 
             // Common header
             bw.Write(ncgr.header.id);
@@ -117,21 +121,22 @@ namespace Images
 
         private void Update_Struct()
         {
-            ncgr.rahc.nTilesX = (ushort)(Width / 8);
-            ncgr.rahc.nTilesY = (ushort)(Height / 8);
+            ncgr.rahc.nTilesX = _noStoredSize ? (ushort)0xFFFF : (ushort)(Width / 8);
+            ncgr.rahc.nTilesY = _noStoredSize ? (ushort)0xFFFF : (ushort)(Height / 8);
 
             ncgr.rahc.data = Tiles;
             if (this.FormTile == TileForm.Lineal && ncgr.order == TileForm.Horizontal)
             {
-                ncgr.rahc.data = Actions.HorizontalToLineal(Tiles, ncgr.rahc.nTilesX, ncgr.rahc.nTilesY, BPP, TileSize);
+                ncgr.rahc.data = Actions.HorizontalToLineal(Tiles, Width / 8, Height / 8, BPP, TileSize);
                 Set_Tiles(ncgr.rahc.data, this.Width, this.Height, this.FormatColor, ncgr.order, true);
             }
 
             ncgr.rahc.depth = FormatColor;
 
             ncgr.rahc.size_tiledata = (uint)ncgr.rahc.data.Length;
-            ncgr.rahc.size_section = ncgr.rahc.size_tiledata + 0x24;
-            ncgr.header.file_size = ncgr.rahc.size_section + 0x10;
+            // The character section's own header is 32 bytes; a position section, when present, adds 16 more.
+            ncgr.rahc.size_section = ncgr.rahc.size_tiledata + 0x20;
+            ncgr.header.file_size = ncgr.rahc.size_section + 0x10 + (ncgr.header.nSection == 2 ? 0x10u : 0u);
         }
 
         public struct sNCGR  // Nintendo Character Graphic Resource
