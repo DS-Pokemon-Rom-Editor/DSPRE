@@ -20,6 +20,13 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public BattleGaugeTextTests(ITestOutputHelper o) => _out = o;
 
+        private static string Project(string name) => name switch
+        {
+            "Platinum" => TestRoms.Platinum,
+            "Diamond" => TestRoms.Diamond,
+            _ => TestRoms.HeartGold,
+        };
+
         private static bool Open(string code, string project)
         {
             if (!Directory.Exists(project)) return false;
@@ -46,9 +53,10 @@ namespace DSPRE.Tests
         [Theory]
         [InlineData("CPUE", "Platinum")]
         [InlineData("IPKE", "HeartGold")]
+        [InlineData("ADAE", "Diamond")]
         public void TheGaugesOwnLettersAreFoundInTheBattleOverlay(string code, string name)
         {
-            string project = name == "Platinum" ? TestRoms.Platinum : TestRoms.HeartGold;
+            string project = Project(name);
             if (!Open(code, project)) { _out.WriteLine($"{name}: not unpacked here, skipped"); return; }
 
             Assert.True(BattleGaugeText.IsAvailable,
@@ -77,9 +85,10 @@ namespace DSPRE.Tests
         [Theory]
         [InlineData("CPUE", "Platinum")]
         [InlineData("IPKE", "HeartGold")]
+        [InlineData("ADAE", "Diamond")]
         public void TheGenderSymbolsAreThereAndAreNotTheSamePicture(string code, string name)
         {
-            string project = name == "Platinum" ? TestRoms.Platinum : TestRoms.HeartGold;
+            string project = Project(name);
             if (!Open(code, project)) { _out.WriteLine($"{name}: not unpacked here, skipped"); return; }
             if (!BattleGaugeText.IsAvailable) { Assert.Fail($"{name}: {BattleGaugeText.Unavailable}"); }
 
@@ -94,16 +103,26 @@ namespace DSPRE.Tests
                 _out.WriteLine($"{name} {label}: ink per tile {string.Join(" ", block.Select(Ink))}");
             }
 
+            // Index 0 is see-through, so the background is the most common other colour.
+            static bool[] Drawn(BattleGaugeText.Tile t)
+            {
+                var drawn = t.Pixels.Where(p => p != 0).ToArray();
+                if (drawn.Length == 0) return new bool[64];
+                byte ground = drawn.GroupBy(p => p).OrderByDescending(g => g.Count()).First().Key;
+                return t.Pixels.Select(p => p != 0 && p != ground).ToArray();
+            }
+            static int DrawnInk(BattleGaugeText.Tile t) => Drawn(t).Count(on => on);
+
             // The symbol sits on the left, the "Lv" on the right, so the left tiles are what to compare.
-            int femaleSymbol = Ink(female[0]) + Ink(female[2]);
-            int maleSymbol = Ink(male[0]) + Ink(male[2]);
-            int noneSymbol = Ink(none[0]) + Ink(none[2]);
+            int femaleSymbol = DrawnInk(female[0]) + DrawnInk(female[2]);
+            int maleSymbol = DrawnInk(male[0]) + DrawnInk(male[2]);
+            int noneSymbol = DrawnInk(none[0]) + DrawnInk(none[2]);
             _out.WriteLine($"{name}: ink in the symbol half, female {femaleSymbol}, male {maleSymbol}, none {noneSymbol}");
 
             Assert.True(femaleSymbol > noneSymbol, $"{name}: the female symbol is no darker than no symbol");
             Assert.True(maleSymbol > noneSymbol, $"{name}: the male symbol is no darker than no symbol");
-            Assert.False(Shape(female[0]).SequenceEqual(Shape(male[0]))
-                      && Shape(female[2]).SequenceEqual(Shape(male[2])),
+            Assert.False(Drawn(female[0]).SequenceEqual(Drawn(male[0]))
+                      && Drawn(female[2]).SequenceEqual(Drawn(male[2])),
                          $"{name}: male and female came back as the same picture");
 
             // The bottom right tile of every block is the "Lv", and its top four rows are the number
@@ -136,9 +155,10 @@ namespace DSPRE.Tests
         [Theory]
         [InlineData("CPUE", "Platinum")]
         [InlineData("IPKE", "HeartGold")]
+        [InlineData("ADAE", "Diamond")]
         public void EachStatusWordIsItsOwnPicture(string code, string name)
         {
-            string project = name == "Platinum" ? TestRoms.Platinum : TestRoms.HeartGold;
+            string project = Project(name);
             if (!Open(code, project)) { _out.WriteLine($"{name}: not unpacked here, skipped"); return; }
             if (!BattleGaugeText.IsAvailable) { Assert.Fail($"{name}: {BattleGaugeText.Unavailable}"); }
 
@@ -171,19 +191,6 @@ namespace DSPRE.Tests
             // Five different words, so they cannot all carry the same amount of ink.
             Assert.True(inkPerWord.Distinct().Count() > 1,
                         $"{name}: every status word came back identical, so one tile is being read five times");
-        }
-
-        /// <summary>Diamond is laid out differently, so it says no rather than drawing nonsense.</summary>
-        [SkippableFact]
-        public void DiamondSaysItCannotRatherThanReadingTheWrongTiles()
-        {
-            Skip.If(!Open("ADAE", TestRoms.Diamond), "Diamond not unpacked here");
-
-            _out.WriteLine("Diamond: " + (BattleGaugeText.Unavailable ?? "reported as available"));
-            Assert.False(BattleGaugeText.IsAvailable,
-                         "Diamond's gauge pictures sit at different tile numbers, so it must not be read this way");
-            Assert.False(string.IsNullOrWhiteSpace(BattleGaugeText.Unavailable),
-                         "it should say why, so the editor can tell the user");
         }
 
         /// <summary>Opening a second ROM must not keep the first one's pictures.</summary>

@@ -118,9 +118,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Drawn Name(string name, int widthInTiles = 8)
         {
-            // The name alone would come out right on Diamond, since it needs only the font and the
-            // gauge's colours. It is refused all the same: half a gauge in the game's own letters and
-            // half in a desktop font is a worse thing to look at than the old sample.
+            // Refused with the rest so a gauge never mixes the game's letters with a desktop font.
             if (!IsAvailable) return null;
 
             FieldFont font;
@@ -153,7 +151,7 @@ namespace DSPRE.Avalonia.Data
                         // things the numbers use: nothing, the letter, then its shadow.
                         byte v = font.PixelAt(glyph, x, y);
                         if (v == 0) continue;
-                        var colour = Palette()[NumberColour(v) % Palette().Length];
+                        var colour = Palette()[NumberColour(v, NameShadow) % Palette().Length];
                         int put = (y * made.Width + at + x) * 4;
                         made.Rgba[put] = colour.R;
                         made.Rgba[put + 1] = colour.G;
@@ -177,17 +175,14 @@ namespace DSPRE.Avalonia.Data
             return made;
         }
 
-        // The digits in the number font are not colours. Every pixel is one of three placeholders,
-        // 0 for background, 1 for the letter and 2 for its shadow, and the game swaps them for real
-        // palette indices as it loads them. A battle asks for letter 0xe, shadow 2, background 0xf,
-        // and the level deliberately shares the same one as the HP numbers. Drawing the placeholders
-        // as if they were palette indices is why they came out washed out before.
-        private const byte NumberLetter = 0x0e, NumberShadow = 0x02, NumberBack = 0x0f;
+        // Number font pixels are placeholders (0 background, 1 letter, 2 shadow) that the game swaps for
+        // palette indices as it loads them; the shadow's index differs by game.
+        private const byte NumberLetter = 0x0e, NameShadow = 0x02, NumberBack = 0x0f;
 
-        private static byte NumberColour(byte placeholder) => placeholder switch
+        private static byte NumberColour(byte placeholder, byte shadow) => placeholder switch
         {
             1 => NumberLetter,
-            2 => NumberShadow,
+            2 => shadow,
             _ => NumberBack,
         };
 
@@ -210,7 +205,7 @@ namespace DSPRE.Avalonia.Data
                     int px = atX + x;
                     if (px < 0 || px >= into.Width) continue;
 
-                    var colour = palette[NumberColour(tile.At(x, y)) % palette.Length];
+                    var colour = palette[NumberColour(tile.At(x, y), BattleGaugeText.DigitShadow) % palette.Length];
                     int at = (py * into.Width + px) * 4;
                     into.Rgba[at] = colour.R;
                     into.Rgba[at + 1] = colour.G;
