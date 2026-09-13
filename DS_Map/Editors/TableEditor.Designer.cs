@@ -271,6 +271,7 @@
             this.pbEffectsTrainerChooseMainCombobox.Name = "pbEffectsTrainerChooseMainCombobox";
             this.pbEffectsTrainerChooseMainCombobox.Size = new System.Drawing.Size(218, 21);
             this.pbEffectsTrainerChooseMainCombobox.TabIndex = 41;
+            this.pbEffectsTrainerChooseMainCombobox.SelectedIndexChanged += new System.EventHandler(this.pbEffectsTrainerChooseMainCombobox_SelectedIndexChanged);
             // 
             // HOWVsTrainerButton
             // 
@@ -366,6 +367,7 @@
             this.pbEffectsPokemonChooseMainCombobox.Name = "pbEffectsPokemonChooseMainCombobox";
             this.pbEffectsPokemonChooseMainCombobox.Size = new System.Drawing.Size(218, 21);
             this.pbEffectsPokemonChooseMainCombobox.TabIndex = 41;
+            this.pbEffectsPokemonChooseMainCombobox.SelectedIndexChanged += new System.EventHandler(this.pbEffectsPokemonChooseMainCombobox_SelectedIndexChanged);
             // 
             // HOWvsPokemonButton
             // 

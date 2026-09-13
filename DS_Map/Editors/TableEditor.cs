@@ -540,6 +540,22 @@ namespace DSPRE.Editors
             }
         }
 
+        private void pbEffectsPokemonChooseMainCombobox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!Helpers.HandlersDisabled)
+            {
+                vsPokemonDirty = true;
+            }
+        }
+
+        private void pbEffectsTrainerChooseMainCombobox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!Helpers.HandlersDisabled)
+            {
+                vsTrainerDirty = true;
+            }
+        }
+
         #endregion
 
     }
