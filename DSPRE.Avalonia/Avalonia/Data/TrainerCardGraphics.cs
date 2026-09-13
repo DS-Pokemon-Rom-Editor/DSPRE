@@ -11,8 +11,15 @@ namespace DSPRE.Avalonia.Data
         public const int TrainerWidth = 256, TrainerHeight = 192;
 
         private const int CardTileCols = 32, CardTileRows = 24;
-        private const int CardTileCapacity = 512;
-        private const int TrainerTileCapacity = 512;
+
+        // Limited by the drawing file's room and by the tile numbers each arrangement can store.
+        private static int TileCapacity(byte[] chr, params byte[][] screens)
+        {
+            int capacity = NitroBgCodec.TileRoom(chr);
+            foreach (var scr in screens)
+                capacity = Math.Min(capacity, NitroBgCodec.EntryBytes(scr) == 1 ? 256 : 1024);
+            return capacity;
+        }
 
         private readonly ScriptNarc _narc = new(DirNames.trainerCardGraphics);
         public bool Available => _narc.Available;
@@ -102,13 +109,14 @@ namespace DSPRE.Avalonia.Data
             RawImage backPng = front ? ComposeCardBack(0) : png;
             if (frontPng == null || backPng == null) return "Could not decode the current card design.";
 
+            int capacity = TileCapacity(chrRaw, facaRaw, backRaw);
             EncodedTiles frontTiles, backTiles;
             try
             {
                 frontTiles = QuantizeAndTile(frontPng, tileCols: CardTileCols, tileRows: CardTileRows,
-                    tileCapacity: CardTileCapacity, maxColors: 256);
+                    tileCapacity: capacity, maxColors: 256);
                 backTiles = QuantizeAndTile(backPng, tileCols: CardTileCols, tileRows: CardTileRows,
-                    tileCapacity: CardTileCapacity, maxColors: 256);
+                    tileCapacity: capacity, maxColors: 256);
             }
             catch (Exception ex) { return ex.Message; }
 
@@ -121,13 +129,13 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < frontTiles.Colors.Count; i++) palette[i] = frontTiles.Colors[i];
             for (int i = 0; i < backTiles.Colors.Count; i++) palette[backBase + i] = backTiles.Colors[i];
 
-            var merged = MergeTilePools(frontTiles, backTiles, backBase, CardTileCapacity, reserveZero: false);
+            var merged = MergeTilePools(frontTiles, backTiles, backBase, capacity, reserveZero: false);
             if (merged == null)
-                return $"Front + back design needs more than {CardTileCapacity} unique 8x8 tiles once deduplicated. Simplify the images.";
+                return $"Front + back design needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
 
+            if (!WriteMapData(facaRaw, merged.FrontMapEntries) || !WriteMapData(backRaw, merged.BackMapEntries))
+                return "The card's arrangement files are too small for a whole card.";
             WriteTileData(chrRaw, merged.TileData);
-            WriteMapData(facaRaw, merged.FrontMapEntries);
-            WriteMapData(backRaw, merged.BackMapEntries);
 
             _narc.Put(m.ncgr, chrRaw);
             _narc.Put(m.facaNscr, facaRaw);
@@ -167,13 +175,14 @@ namespace DSPRE.Avalonia.Data
             RawImage femalePng = male ? ComposeTrainer(false) : png;
             if (malePng == null || femalePng == null) return "Could not decode the current trainer pose.";
 
+            int capacity = TileCapacity(chrRaw, maleRaw, femaleRaw);
             EncodedTiles maleTiles, femaleTiles;
             try
             {
                 maleTiles = QuantizeAndTile(malePng, tileCols: TrainerWidth / 8, tileRows: TrainerHeight / 8,
-                    tileCapacity: TrainerTileCapacity, maxColors: 255, reserveZero: true);
+                    tileCapacity: capacity, maxColors: 255, reserveZero: true);
                 femaleTiles = QuantizeAndTile(femalePng, tileCols: TrainerWidth / 8, tileRows: TrainerHeight / 8,
-                    tileCapacity: TrainerTileCapacity, maxColors: 255, reserveZero: true);
+                    tileCapacity: capacity, maxColors: 255, reserveZero: true);
             }
             catch (Exception ex) { return ex.Message; }
 
@@ -186,13 +195,13 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < maleTiles.Colors.Count; i++) palette[1 + i] = maleTiles.Colors[i];
             for (int i = 0; i < femaleTiles.Colors.Count; i++) palette[femaleBase + i] = femaleTiles.Colors[i];
 
-            var merged = MergeTilePools(maleTiles, femaleTiles, femaleBase, TrainerTileCapacity, reserveZero: true);
+            var merged = MergeTilePools(maleTiles, femaleTiles, femaleBase, capacity, reserveZero: true);
             if (merged == null)
-                return $"Male + female pose needs more than {TrainerTileCapacity} unique 8x8 tiles once deduplicated. Simplify the images.";
+                return $"Male + female pose needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
 
+            if (!WriteMapData(maleRaw, merged.FrontMapEntries) || !WriteMapData(femaleRaw, merged.BackMapEntries))
+                return "The trainer's arrangement files are too small for a whole pose.";
             WriteTileData(chrRaw, merged.TileData);
-            WriteMapData(maleRaw, merged.FrontMapEntries);
-            WriteMapData(femaleRaw, merged.BackMapEntries);
             WritePalette(palRaw, palette);
 
             _narc.Put(t.ncgr, chrRaw);
@@ -366,14 +375,15 @@ namespace DSPRE.Avalonia.Data
             Array.Copy(tiles, 0, memberRaw, tileBytesOffset, tiles.Length);
         }
 
-        private static void WriteMapData(byte[] scrRaw, ushort[] mapEntries)
+        // Checks the file is long enough before writing any square.
+        private static bool WriteMapData(byte[] scrRaw, ushort[] mapEntries)
         {
             int mapDataOffset = NitroBgCodec.ReadScreenHeader(scrRaw).MapAt;
+            int entryBytes = NitroBgCodec.EntryBytes(scrRaw);
+            if (mapDataOffset + mapEntries.Length * entryBytes > scrRaw.Length) return false;
             for (int i = 0; i < mapEntries.Length; i++)
-            {
-                scrRaw[mapDataOffset + i * 2] = (byte)(mapEntries[i] & 0xFF);
-                scrRaw[mapDataOffset + i * 2 + 1] = (byte)(mapEntries[i] >> 8);
-            }
+                if (!NitroBgCodec.PutEntry(scrRaw, mapDataOffset, i, entryBytes, mapEntries[i])) return false;
+            return true;
         }
     }
 }

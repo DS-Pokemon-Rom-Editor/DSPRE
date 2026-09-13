@@ -72,9 +72,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
         public bool CanUseHgEngineFormEditor => IsRomLoaded && HgEngineProject.IsActive
             && BetaEditors.Allows("HgEngineFormEditorView");
-        /// <summary>Diamond and Pearl keep the battle screen's pieces elsewhere, so it is not read there.</summary>
-        public bool CanUseBattleScreen  => IsRomLoaded && Beta["BattleScreenEditorView"]
-                                        && RomInfo.gameFamily != RomInfo.GameFamilies.DP;
+        public bool CanUseBattleScreen  => IsRomLoaded && Beta["BattleScreenEditorView"];
 
         public bool CanUseMoveEditor    => IsRomLoaded && HgAllows;
         public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
@@ -115,12 +113,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             "The Dungeon Cut-in editor is available for English and Spanish HeartGold and SoulSilver ROMs.");
         public string TrainerCardEditorNote => EditorNote(
             "TrainerCardEditorView", RomInfo.IsTrainerCardEditorAvailable(),
-            "The Trainer Card editor is available for Platinum, HeartGold and SoulSilver ROMs.");
+            "The Trainer Card editor is not available for this ROM.");
         public bool CanUseBottomScreenEditor => IsRomLoaded && RomInfo.IsBottomScreenEditorAvailable()
             && BetaEditors.Allows("BottomScreenEditorView");
         public string BottomScreenEditorNote => EditorNote(
             "BottomScreenEditorView", RomInfo.IsBottomScreenEditorAvailable(),
-            "The Bottom Screen editor is available for Platinum, HeartGold and SoulSilver ROMs.");
+            "The Bottom Screen editor is not available for this ROM.");
 
         private string EditorNote(string window, bool supported, string unsupported)
         {
@@ -163,9 +161,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
         public bool CanUseHeadbuttEditor => IsHgssRom;
-        // Music & Battle Tables: conditional music + VS posters are HGSS, battle-FX combos
-        // are Plat+HGSS; nothing in it exists on DP.
-        public bool CanUseMiscTables    => IsRomLoaded && gameFamily != GameFamilies.DP;
+        // Diamond and Pearl only have the battle music table, where it is supported.
+        public bool CanUseMiscTables    => IsRomLoaded && (gameFamily != GameFamilies.DP || DSPRE.ROMFiles.BattleMusicTables.IsSupported);
 
         // ── Busy state while a ROM is being opened/unpacked/saved, or an editor is unpacking its own data ──
         private bool _isBusy;
