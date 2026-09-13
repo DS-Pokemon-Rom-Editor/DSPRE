@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Data
 
         public static Kind Identify(byte[] b)
         {
-            if (b == null || b.Length < 4) return Kind.Empty;
+            if (b == null || b.Length < 4 || BuildingModelTextureSets.IsNoTexturesStandIn(b)) return Kind.Empty;
             switch (System.Text.Encoding.ASCII.GetString(b, 0, 4))
             {
                 case "BMD0": return Kind.Model;
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.Data
                     break;
 
                 case Kind.Empty:
-                    o.ShowNote = o.SaveNote = "This entry is empty.";
+                    o.ShowNote = o.SaveNote = EmptyNote(a, index);
                     break;
 
                 default:
@@ -682,6 +682,9 @@ namespace DSPRE.Avalonia.Data
             if (now == Kind.NotThreeD || now == Kind.Empty)
                 return "That file is not 3D data. " + CanConvertAMesh;
 
+            if (HoldsTextureSets(a) && now != Kind.TextureBundle)
+                return $"Only a set of pictures (BTX0) goes in this archive, and that file holds {ShortName(now)}.";
+
             if (was != Kind.NotThreeD && was != Kind.Empty && now != was)
                 return $"This entry holds {ShortName(was)} and that file holds {ShortName(now)}. Put a "
                      + "file of the same kind in, or pick the entry that kind belongs in.";
@@ -690,12 +693,29 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
+        private static bool HoldsTextureSets(Archive a) =>
+            a.Dir == DirNames.buildingTextures || a.Dir == DirNames.mapTextures;
+
+        /// <summary>Why an entry is empty, where the game's own tables say.</summary>
+        private static string EmptyNote(Archive a, int index)
+        {
+            if (a.Dir != DirNames.buildingTextures) return "This entry is empty.";
+            IReadOnlyList<int> areas;
+            try { areas = BuildingModelTextureSets.AreasThatNeverReadSet(index); }
+            catch { return "This entry is empty."; }
+            if (areas.Count == 0) return "This entry is empty.";
+            string which = areas.Count == 1 ? $"area {areas[0]}" : "areas " + string.Join(", ", areas);
+            return $"No building textures: no buildings in {which}.";
+        }
+
         /// <summary>Whether an entry can have a file put in over it, and why not when it cannot.</summary>
         public static string CannotImportBecause(Archive a, int index)
         {
             var narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
             var there = narc.Get(index);
+            // A texture archive says what belongs in it, so an empty or stand-in entry can still be filled.
+            if (HoldsTextureSets(a) && Identify(there) == Kind.Empty) return null;
             if (there == null || there.Length == 0)
                 return "This entry is empty, so there is nothing to say what belongs here.";
             var kind = Identify(there);

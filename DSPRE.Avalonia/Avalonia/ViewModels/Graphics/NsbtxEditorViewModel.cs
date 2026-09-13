@@ -15,6 +15,7 @@ using DSPRE.Avalonia;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
+using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using static DSPRE.RomInfo;
@@ -137,8 +138,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 string path = PackPath(index);
                 if (!File.Exists(path)) { StatusText = "Pack not found."; return; }
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                    NSBTXLoader.LoadNsbtx(fs, out _textures, out _palettes);
+                byte[] raw = File.ReadAllBytes(path);
+                if (!IsTextureSet(raw))
+                {
+                    _textures = new List<NSBMDTexture>();
+                    _palettes = new List<NSBMDPalette>();
+                    _suppress = true;
+                    TextureNames.Clear(); PaletteNames.Clear();
+                    _suppress = false;
+                    _textureIndex = _paletteIndex = -1;
+                    OnPropertyChanged(nameof(TextureIndex));
+                    OnPropertyChanged(nameof(PaletteIndex));
+                    Preview = null;
+                    PreviewReason = WhyNoTextureSet(index, raw);
+                    StatusText = $"Pack {index}: no texture set.";
+                    return;
+                }
+                using (var ms = new MemoryStream(raw))
+                    NSBTXLoader.LoadNsbtx(ms, out _textures, out _palettes);
 
                 _suppress = true;
                 TextureNames.Clear(); PaletteNames.Clear();
@@ -159,6 +176,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = "Load failed: " + ex.Message;
                 AppLogger.Error("NSBTX pack load failed: " + ex);
             }
+        }
+
+        private static bool IsTextureSet(byte[] b) =>
+            b != null && b.Length >= 4 && b[0] == (byte)'B' && b[1] == (byte)'T' && b[2] == (byte)'X' && b[3] == (byte)'0';
+
+        // A building pack's area tables can say why it holds no textures.
+        private string WhyNoTextureSet(int index, byte[] raw)
+        {
+            if (!_mapTextures && BuildingModelTextureSets.IsNoTexturesStandIn(raw))
+            {
+                IReadOnlyList<int> areas;
+                try { areas = BuildingModelTextureSets.AreasThatNeverReadSet(index); }
+                catch { areas = Array.Empty<int>(); }
+                if (areas.Count > 0)
+                    return $"No building textures: no buildings in {(areas.Count == 1 ? "area " + areas[0] : "areas " + string.Join(", ", areas))}.";
+                return "No building textures.";
+            }
+            return "This pack is not a texture set (BTX0).";
         }
 
         private void RenderPreview()
@@ -269,7 +304,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             var filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import texture pack", new[] { filter });
             if (path == null) return;
-            if (!await DialogHelper.AskYesNo($"Replace texture pack {_packIndex} with this file?", "Import")) return;
+            try
+            {
+                if (!IsTextureSet(File.ReadAllBytes(path)))
+                {
+                    await DialogHelper.ShowError("That file is not a texture set (BTX0).", "Import");
+                    return;
+                }
+            }
+            catch (Exception ex) { await DialogHelper.ShowError($"That file could not be read:\n{ex.Message}", "Import"); return; }
+
+            string question = $"Replace texture pack {_packIndex} with this file?";
+            if (!_mapTextures)
+            {
+                IReadOnlyList<int> unused;
+                try { unused = BuildingModelTextureSets.AreasThatNeverReadSet(_packIndex); }
+                catch { unused = Array.Empty<int>(); }
+                if (unused.Count > 0)
+                    question += " The areas using it have no buildings, so the game will not read it.";
+            }
+            if (!await DialogHelper.AskYesNo(question, "Import")) return;
             try
             {
                 File.Copy(path, PackPath(_packIndex), true);

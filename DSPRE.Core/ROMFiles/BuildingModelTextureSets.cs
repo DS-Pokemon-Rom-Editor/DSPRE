@@ -90,6 +90,15 @@ namespace DSPRE.ROMFiles
             return result;
         }
 
+        /// <summary>Four zero bytes standing in for the textures of an area with no buildings.</summary>
+        public static bool IsNoTexturesStandIn(byte[] file) =>
+            file != null && file.Length == 4 && file[0] == 0 && file[1] == 0 && file[2] == 0 && file[3] == 0;
+
+        /// <summary>The areas that use a building texture set while placing no buildings, so never read it.</summary>
+        public static IReadOnlyList<int> AreasThatNeverReadSet(int setId) =>
+            ReadCurrentRom().Where(s => s.TextureSetId == setId && s.ModelIds.Count == 0)
+                            .SelectMany(s => s.AreaIds).Distinct().OrderBy(x => x).ToArray();
+
         private static IEnumerable<string> NumberedFiles(string directory) =>
             Directory.Exists(directory)
                 ? Directory.EnumerateFiles(directory).OrderBy(x => x, StringComparer.Ordinal)

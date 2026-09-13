@@ -47,6 +47,37 @@ namespace DSPRE.Tests
             Assert.Equal("Pick something on the left to see it.", browser.Details);
         }
 
+        /// <summary>Diamond's set 43 is the no-buildings stand-in, used only by area 47, and can still be replaced.</summary>
+        [SkippableFact]
+        public void DiamondSetFortyThreeIsTheNoBuildingsStandIn()
+        {
+            Skip.IfNot(Directory.Exists(TestRoms.Diamond), "The Diamond test ROM project is not available.");
+            new RomInfo("ADAE", TestRoms.Diamond);
+
+            var textures = ModelAssets.All.First(a => a.Dir == RomInfo.DirNames.buildingTextures);
+            var narc = new ScriptNarc(textures.Dir);
+            Assert.True(narc.Available);
+            byte[] set43 = narc.Get(43);
+
+            Assert.True(BuildingModelTextureSets.IsNoTexturesStandIn(set43));
+            Assert.Equal(new[] { 47 }, BuildingModelTextureSets.AreasThatNeverReadSet(43));
+            Assert.Equal(ModelAssets.Kind.Empty, ModelAssets.Identify(set43));
+            Assert.Null(ModelAssets.CannotImportBecause(textures, 43));
+            Assert.Contains("area 47", ModelAssets.WhatCanBeDone(textures, 43).ShowNote);
+
+            // Every other set is a real texture set.
+            for (int i = 0; i < narc.Count; i++)
+                if (i != 43) Assert.Equal(ModelAssets.Kind.TextureBundle, ModelAssets.Identify(narc.Get(i)));
+        }
+
+        [SkippableFact]
+        public void PlatinumReusedSetFortyThreeForRealTextures()
+        {
+            Skip.IfNot(Directory.Exists(TestRoms.Platinum), "The Platinum test ROM project is not available.");
+            new RomInfo("CPUE", TestRoms.Platinum);
+            Assert.Empty(BuildingModelTextureSets.AreasThatNeverReadSet(43));
+        }
+
         private static void Check(string code, string path, bool expectIndoor)
         {
             Skip.IfNot(Directory.Exists(path), $"The {code} test ROM project is not available.");
