@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.Data
             bool loop = s != null && s.Loop;
 
             // Put it back the way the game keeps that slot, so nothing else has to be told it changed.
-            // Cries are squeezed, but a music instrument may be kept whole, and some are a byte a sample.
+            // Retail cries are a byte a sample; an instrument may be a byte a sample, kept whole, or squeezed.
             int waveType = s?.Encoding ?? -1;
             if (waveType < 0 || waveType > 2) waveType = squeeze ? 2 : 1;
 

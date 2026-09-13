@@ -217,7 +217,12 @@ namespace DSPRE.Avalonia.Data
             // Keep whatever else was in the archive; a cry archive holds one wave, but do not assume it.
             var waves = sdat.GetWaveArchive(arc) ?? new System.Collections.Generic.List<SwavSample>();
             var replaced = new System.Collections.Generic.List<SwavSample>(waves);
-            var fresh = new SwavSample { SampleRate = rate, Loop = false, LoopStartSample = 0, Pcm = pcm };
+            // Keep the replaced cry's sample encoding.
+            var fresh = new SwavSample
+            {
+                SampleRate = rate, Loop = false, LoopStartSample = 0, Pcm = pcm,
+                Encoding = waves.Count > 0 ? waves[0].Encoding : 0,
+            };
             if (replaced.Count == 0) replaced.Add(fresh); else replaced[0] = fresh;
 
             byte[] rebuilt = CryFiles.BuildArchive(replaced);
