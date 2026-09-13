@@ -86,7 +86,8 @@ namespace DSPRE
 
             setSeed(newSeed);
 
-            uint random = 0;
+            // A class with no rolls shifts the seed itself into the personality.
+            uint random = newSeed;
 
             while (trainerClassIdx > 0)
             {
