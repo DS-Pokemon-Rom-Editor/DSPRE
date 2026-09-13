@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.ParticleEditorView"
+        x:DataType="vm:ParticleEditorViewModel"
+        Title="{Binding Title}" Width="1180" Height="820" WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:ParticleEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <ComboBox ItemsSource="{Binding EmitterNames}" SelectedIndex="{Binding EmitterIndex}" Width="160"/>
+        <CheckBox Content="Only this emitter" IsChecked="{Binding OnlySelected}" Margin="8,0"/>
+        <Button Content="Replay" Click="Replay_Click" Width="80"/>
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
+        <Button Content="Revert" Click="Revert_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
+      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+    </Border>
+
+    <Grid ColumnDefinitions="*,10,Auto" Margin="8">
+      <DockPanel Grid.Column="0">
+        <TextBox DockPanel.Dock="Top" Text="{Binding FieldFilter}" PlaceholderText="Filter fields" Margin="0,0,0,6"/>
+        <ListBox ItemsSource="{Binding Fields}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ParticleFieldRow">
+              <Grid ColumnDefinitions="110,220,*" Height="30">
+                <TextBlock Grid.Column="0" Text="{Binding Group}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+                <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                  <NumericUpDown IsVisible="{Binding IsNumber}" Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                                 Increment="{Binding Step}" FormatString="{Binding Format}" Width="150" IsEnabled="{Binding CanEdit}"/>
+                  <CheckBox IsVisible="{Binding IsFlag}" IsChecked="{Binding IsOn}" IsEnabled="{Binding CanEdit}"
+                            ToolTip.Tip="{Binding LockedNote}"/>
+                  <Button IsVisible="{Binding IsColor}" Width="60" Height="22" Background="{Binding Swatch}" Click="Colour_Click"/>
+                  <TextBlock IsVisible="{Binding IsColor}" Text="{Binding ColorText}" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <StackPanel Grid.Column="2" Spacing="8" Width="520">
+        <TextBlock Text="Preview" FontWeight="SemiBold"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="514" Height="386" Background="#101418">
+          <Image Source="{Binding Frame}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+        </Border>
+        <TextBlock Text="Textures" FontWeight="SemiBold" Margin="0,6,0,0"/>
+        <ListBox ItemsSource="{Binding Textures}" MaxHeight="260">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ParticleTextureRow">
+              <Grid ColumnDefinitions="72,*,Auto,Auto" Height="68">
+                <Border Grid.Column="0" Width="64" Height="64" Background="#303030">
+                  <Image Source="{Binding Picture}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                </Border>
+                <TextBlock Grid.Column="1" Text="{Binding Info}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="8,0"/>
+                <Button Grid.Column="2" Content="Export" Click="ExportTexture_Click" Margin="4,0"/>
+                <Button Grid.Column="3" Content="Replace" Click="ReplaceTexture_Click" IsEnabled="{Binding CanReplace}"
+                        ToolTip.Tip="{Binding CannotReplace}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+    </Grid>
+  </DockPanel>
+</Window>
