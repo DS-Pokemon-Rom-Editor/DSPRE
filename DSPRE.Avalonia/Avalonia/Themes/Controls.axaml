@@ -22,6 +22,7 @@
                 <MergeResourceInclude Source="ControlStyles/Separator.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/TabControl.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/TabItem.axaml"/>
+                <MergeResourceInclude Source="ControlStyles/TabStripItem.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/GridSplitter.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/TextBox.axaml"/>
                 <MergeResourceInclude Source="ControlStyles/ComboBox.axaml"/>

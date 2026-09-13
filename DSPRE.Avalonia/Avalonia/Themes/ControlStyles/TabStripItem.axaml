@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A TabStrip is a tab bar whose content lives elsewhere in the window. Avalonia's default draws its
+         items as bare text, which does not read as tabs at all, so this mirrors the TabItem theme: the
+         selected item is a lighter gradient at full height with a rounded top, unselected ones are darker
+         and recessed by 2px. -->
+    <ControlTheme x:Key="{x:Type TabStripItem}" TargetType="{x:Type TabStripItem}">
+        <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
+        <Setter Property="Background" Value="{DynamicResource TabItem.Static.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+        <Setter Property="Margin" Value="0,0,-1,0"/>
+        <Setter Property="Padding" Value="12,4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border x:Name="mainBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="1,1,1,0"
+                        CornerRadius="3,3,0,0"
+                        Margin="0,2,0,0">
+                    <Panel>
+                        <Border x:Name="innerContrast"
+                                BorderBrush="{DynamicResource Button.InnerContrast}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="2,2,0,0">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              Margin="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <Border x:Name="bottomSeam" VerticalAlignment="Bottom" Height="1" Margin="1,0,1,0"
+                                Background="#1C1C1C" IsVisible="False"/>
+                    </Panel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover:not(:selected) /template/ Border#mainBorder">
+            <Setter Property="Background" Value="{DynamicResource TabItem.MouseOver.Background}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Button.MouseOver.Border}"/>
+        </Style>
+
+        <Style Selector="^:selected">
+            <Setter Property="ZIndex" Value="1"/>
+            <Style Selector="^ /template/ Border#mainBorder">
+                <Setter Property="Background" Value="{DynamicResource TabItem.Selected.Background}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource Button.Static.Border}"/>
+                <Setter Property="Margin" Value="0,0,0,-1"/>
+            </Style>
+        </Style>
+        <Style Selector="^:not(:selected) /template/ Border#innerContrast">
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="^:not(:selected) /template/ Border#bottomSeam">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>
