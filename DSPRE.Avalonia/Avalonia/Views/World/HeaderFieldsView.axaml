@@ -44,7 +44,7 @@
               <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
-              <TextBlock Classes="fieldlabel" Text="Area settings"/>
+              <TextBlock Classes="fieldlabel" Text="Map type"/>
               <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaSettingsItems}" SelectedIndex="{Binding AreaSettingsIndex}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2" IsVisible="{Binding ShowAreaIcon}">

@@ -97,7 +97,7 @@ namespace DSPRE.Editors
                     cameraComboBox.Items.AddRange(PokeDatabase.CameraAngles.DPPtCameraDict.Values.ToArray());
                     musicDayComboBox.Items.AddRange(PokeDatabase.MusicDB.DPMusicDict.Values.ToArray());
                     musicNightComboBox.Items.AddRange(PokeDatabase.MusicDB.DPMusicDict.Values.ToArray());
-                    areaSettingsComboBox.Items.AddRange(PokeDatabase.ShowName.DPShowNameValues);
+                    areaSettingsComboBox.Items.AddRange(PokeDatabase.MapType.DPPtValues);
                     weatherComboBox.Items.AddRange(PokeDatabase.Weather.DPWeatherDict.Values.ToArray());
                     wildPokeUpDown.Maximum = 65535;
 
@@ -116,7 +116,7 @@ namespace DSPRE.Editors
                     cameraComboBox.Items.AddRange(PokeDatabase.CameraAngles.DPPtCameraDict.Values.ToArray());
                     musicDayComboBox.Items.AddRange(PokeDatabase.MusicDB.PtMusicDict.Values.ToArray());
                     musicNightComboBox.Items.AddRange(PokeDatabase.MusicDB.PtMusicDict.Values.ToArray());
-                    areaSettingsComboBox.Items.AddRange(PokeDatabase.ShowName.PtShowNameValues);
+                    areaSettingsComboBox.Items.AddRange(PokeDatabase.MapType.DPPtValues);
                     weatherComboBox.Items.AddRange(PokeDatabase.Weather.PtWeatherDict.Values.ToArray());
                     wildPokeUpDown.Maximum = 65535;
 

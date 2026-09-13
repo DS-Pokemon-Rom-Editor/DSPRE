@@ -404,7 +404,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MusicDay.Load(PokeDatabase.MusicDB.DPMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.DPMusicDict);
                     Weather.Load(PokeDatabase.Weather.DPWeatherDict);
-                    foreach (var s in PokeDatabase.ShowName.DPShowNameValues) AreaSettingsItems.Add(s);
+                    foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
                     ShowAreaIcon = false;
                     WildPokeMax = 65535;
                     break;
@@ -413,7 +413,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MusicDay.Load(PokeDatabase.MusicDB.PtMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.PtMusicDict);
                     Weather.Load(PokeDatabase.Weather.PtWeatherDict);
-                    foreach (var s in PokeDatabase.ShowName.PtShowNameValues) AreaSettingsItems.Add(s);
+                    foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
                     foreach (var s in PokeDatabase.Area.PtAreaIconValues) AreaIconItems.Add(s);
                     ShowAreaIcon = true;
                     WildPokeMax = 65535;
