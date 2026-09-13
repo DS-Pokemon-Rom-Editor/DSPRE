@@ -4,16 +4,21 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Player-side trainer sprites, five files each like the class sprites.
+    /// Player-side trainer sprites, laid out per entry the same way as the class sprites.
     /// </summary>
     public static class TrainerBackSprites
     {
-        public const int FilesPerSprite = 5;
+        public static int FilesPerSprite => TrainerGraphicsLayout.Stride;
 
         private static readonly string[] Platinum =
         {
             "Lucas", "Dawn", "Barry", "Cheryl", "Riley", "Marley", "Buck", "Mira",
             "Lucas (Diamond and Pearl)", "Dawn (Diamond and Pearl)", "Barry (Diamond and Pearl)",
+        };
+
+        private static readonly string[] Diamond =
+        {
+            "Lucas", "Dawn", "Barry", "Cheryl", "Riley", "Marley", "Buck", "Mira",
         };
 
         private static readonly string[] HeartGold =
@@ -31,6 +36,7 @@ namespace DSPRE.ROMFiles
             {
                 GameFamilies.HGSS => HeartGold,
                 GameFamilies.Plat => Platinum,
+                GameFamilies.DP => Diamond,
                 _ => System.Array.Empty<string>(),
             };
             var names = new List<string>(count);

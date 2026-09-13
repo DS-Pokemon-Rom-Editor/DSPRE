@@ -263,13 +263,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var trp = new TrainerProperties((ushort)trainerId, s);
                 _currentIsDouble = trp.doubleBattle;
 
-                if (gameFamily != GameFamilies.DP)
-                {
-                    FrameMax = _sprite.Load(trp.trainerClass);
-                    OnPropertyChanged(nameof(HasSprite));
-                    if (_frame > FrameMax) { _frame = 0; OnPropertyChanged(nameof(Frame)); }
-                    ClassImage = _sprite.Render((int)_frame, 96, 96);
-                }
+                FrameMax = _sprite.Load(trp.trainerClass);
+                OnPropertyChanged(nameof(HasSprite));
+                if (_frame > FrameMax) { _frame = 0; OnPropertyChanged(nameof(Frame)); }
+                ClassImage = _sprite.Render((int)_frame, 96, 96);
             }
             catch (Exception ex) { AppLogger.Error("LoadTrainer: " + ex.Message); }
 

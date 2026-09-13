@@ -10,17 +10,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>
-    /// Reusable trainer-class sprite renderer, extracted from the WinForms
-    /// <c>TrainerEditor.LoadTrainerClassPic</c>/<c>UpdateTrainerClassPic</c>. Loads a
-    /// trainer class's NCLR/NCGR (+ NCER for Plat/HGSS) from the trainerGraphics NARC
-    /// and renders an animation frame to an Avalonia bitmap.
-    ///
-    /// Shared by the Avalonia Trainer Editor and the Table Editor (whose VS-Trainer
-    /// preview was previously omitted for lack of this renderer). DP trainer classes
-    /// have no NCER (no animation), so <see cref="FrameCount"/> is 0 and
-    /// <see cref="Render"/> returns null.
-    /// </summary>
+    /// <summary>Renders trainer class sprite frames for the Trainer Editor and the Table Editor.</summary>
     public sealed class TrainerClassSpriteRenderer
     {
         private PaletteBase _pal;
@@ -43,8 +33,14 @@ namespace DSPRE.Avalonia
         private int[] _frameBankIndices = Array.Empty<int>();
         private int[] _frameDurations = Array.Empty<int>();
 
-        public int FrameCount => _frameBankIndices.Length;
-        public bool HasSprite => _sprite != null || _jsonBanks != null;
+        // Diamond and Pearl: the drawing is the finished picture, with no cells.
+        private bool _flat;
+
+        // The file holds square frame slots side by side; class sprites draw in one, back sprites in both.
+        private int[] _flatSlots = Array.Empty<int>();
+
+        public int FrameCount => _flat ? _flatSlots.Length : _frameBankIndices.Length;
+        public bool HasSprite => _sprite != null || _jsonBanks != null || _flat;
 
         // Every NANR sequence as (bank, duration) frames, for callers that play a particular one.
         private (int Bank, int Duration)[][] _sequences = Array.Empty<(int, int)[]>();
@@ -59,6 +55,7 @@ namespace DSPRE.Avalonia
         /// <summary>Renders one cell bank, the way <see cref="Render"/> renders a frame.</summary>
         public AvaBitmap RenderBank(int bankIndex, int width, int height)
         {
+            if (_flat) return Render(bankIndex, width, height);
             int frame = Array.IndexOf(_frameBankIndices, bankIndex);
             if (frame >= 0) return Render(frame, width, height);
             if (_sprite == null || bankIndex < 0 || bankIndex >= _sprite.Banks.Length) return null;
@@ -87,10 +84,10 @@ namespace DSPRE.Avalonia
         /// for a scrubber's upper bound; see <see cref="DefaultFrame"/> for which frame to show initially.</summary>
         public int Load(int trClassID) => Load(trClassID, DirNames.trainerGraphics);
 
-        /// <summary>Same, from another archive with the five-file layout, such as the back sprites.</summary>
+        /// <summary>Same, from another archive laid out the same way, such as the back sprites.</summary>
         public int Load(int trClassID, DirNames archive)
         {
-            _pal = null; _tile = null; _sprite = null; _jsonBanks = null;
+            _pal = null; _tile = null; _sprite = null; _jsonBanks = null; _flat = false; _flatSlots = Array.Empty<int>();
             _frameBankIndices = Array.Empty<int>(); _frameDurations = Array.Empty<int>(); DefaultFrame = 0;
             _sequences = Array.Empty<(int, int)[]>();
             try
@@ -98,22 +95,33 @@ namespace DSPRE.Avalonia
                 DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { archive });
                 string dir = gameDirs[archive].unpackedDir;
 
-                int paletteFileID = trClassID * 5 + 1;
+                int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
                 string paletteFilename = paletteFileID.ToString("D4");
                 _pal = new NCLR(Path.Combine(dir, paletteFilename), paletteFileID, paletteFilename);
 
-                int tilesFileID = trClassID * 5;
+                int tilesFileID = TrainerGraphicsLayout.DrawingEntry(trClassID);
                 string tilesFilename = tilesFileID.ToString("D4");
                 _tile = new NCGR(Path.Combine(dir, tilesFilename), tilesFileID, tilesFilename);
 
-                if (gameFamily == GameFamilies.DP)
-                    return 0; // DP has no NCER animation for trainer classes.
+                if (TrainerGraphicsLayout.PixelsAreScrambled && _tile.Tiles != null)
+                {
+                    var pixels = (byte[])_tile.Tiles.Clone();
+                    SpriteScrambling.Unscramble(pixels, 0, pixels.Length);
+                    _tile.Set_Tiles(pixels);
+                }
+
+                if (!TrainerGraphicsLayout.HasCells)
+                {
+                    _flat = true;
+                    _flatSlots = DrawnSlots();
+                    return Math.Max(0, FrameCount - 1);
+                }
 
                 bool back = archive == DirNames.trainerBackGraphics;
                 if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
                     return FrameCount - 1;
 
-                int spriteFileID = trClassID * 5 + 2;
+                int spriteFileID = TrainerGraphicsLayout.CellsEntry(trClassID);
                 string spriteFilename = spriteFileID.ToString("D4");
                 _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
 
@@ -131,7 +139,7 @@ namespace DSPRE.Avalonia
             catch (Exception ex)
             {
                 AppLogger.Error("TrainerClassSpriteRenderer.Load failed: " + ex.Message);
-                _pal = null; _tile = null; _sprite = null; _jsonBanks = null; _frameBankIndices = Array.Empty<int>();
+                _pal = null; _tile = null; _sprite = null; _jsonBanks = null; _flat = false; _flatSlots = Array.Empty<int>(); _frameBankIndices = Array.Empty<int>();
                 return 0;
             }
         }
@@ -179,7 +187,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                int nanrFileID = trClassID * 5 + 3;
+                int nanrFileID = TrainerGraphicsLayout.AnimationEntry(trClassID);
                 string path = Path.Combine(dir, nanrFileID.ToString("D4"));
                 if (!File.Exists(path)) return null;
 
@@ -198,7 +206,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                int nanrFileID = trClassID * 5 + 3;
+                int nanrFileID = TrainerGraphicsLayout.AnimationEntry(trClassID);
                 string path = Path.Combine(dir, nanrFileID.ToString("D4"));
                 if (!File.Exists(path)) return Array.Empty<(int, int)[]>();
                 var anis = new NANR(null, path, nanrFileID).Struct.abnk.anis;
@@ -209,9 +217,78 @@ namespace DSPRE.Avalonia
             catch { return Array.Empty<(int, int)[]>(); }
         }
 
+        /// <summary>One square frame slot cut out of the sheet.</summary>
+        private static DSPRE.RawImage Slot(DSPRE.RawImage whole, int slot)
+        {
+            int size = whole.Height;
+            if (size <= 0 || (slot + 1) * size > whole.Width) return whole;
+
+            var frame = new DSPRE.RawImage(size, size);
+            for (int y = 0; y < size; y++)
+                Array.Copy(whole.Bgra, y * whole.Stride + slot * size * 4, frame.Bgra, y * frame.Stride, size * 4);
+            return frame;
+        }
+
+        /// <summary>The slots with anything drawn in them.</summary>
+        private int[] DrawnSlots()
+        {
+            byte[] px = _tile?.Tiles;
+            int size = _tile?.Height ?? 0;
+            if (px == null || size <= 0 || _tile.BPP != 4) return new[] { 0 };
+
+            int w = _tile.Width, slots = Math.Max(1, w / size);
+            var drawn = new System.Collections.Generic.List<int>();
+            for (int s = 0; s < slots; s++)
+            {
+                bool any = false;
+                for (int y = 0; y < size && !any; y++)
+                    for (int x = s * size; x < (s + 1) * size && !any; x++)
+                    {
+                        int i = x + y * w;
+                        if (i / 2 < px.Length && (i % 2 == 0 ? px[i / 2] & 0x0F : px[i / 2] >> 4) != 0) any = true;
+                    }
+                if (any) drawn.Add(s);
+            }
+            return drawn.Count > 0 ? drawn.ToArray() : new[] { 0 };
+        }
+
+        /// <summary>Makes colour zero transparent, since a flat drawing sets every pixel.</summary>
+        private void ClearColourZero(DSPRE.RawImage raw)
+        {
+            byte[] px = _tile?.Tiles;
+            if (raw == null || px == null || _tile.BPP != 4) return;
+
+            int w = _tile.Width, h = _tile.Height;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int i = x + y * w;
+                    if (i / 2 >= px.Length) return;
+                    int colour = i % 2 == 0 ? px[i / 2] & 0x0F : px[i / 2] >> 4;
+                    if (colour == 0) raw.SetPixel(x, y, 0, 0, 0, 0);
+                }
+            }
+        }
+
         /// <summary>Renders the given frame to an Avalonia bitmap, or null if there is no animated sprite.</summary>
         public AvaBitmap Render(int frame, int width, int height)
         {
+            if (_flat)
+            {
+                try
+                {
+                    var flat = _tile.Get_RawImage(_pal);
+                    ClearColourZero(flat);
+                    int slot = _flatSlots.Length == 0 ? 0 : _flatSlots[Math.Clamp(frame, 0, _flatSlots.Length - 1)];
+                    return ImageConverter.ToAvaloniaBitmap(Slot(flat, slot));
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("TrainerClassSpriteRenderer.Render failed: " + ex.Message);
+                    return null;
+                }
+            }
             if (_frameBankIndices.Length == 0) return null;
             try
             {

@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             var (dataOff, dataSize, bpp, width, height, tiled) = shape.Value;
-            if (a.ScrambledPixels) Unscramble(raw, dataOff, dataSize);
+            if (Scrambled(a)) SpriteScrambling.Unscramble(raw, dataOff, dataSize);
 
             int pixels = width * height;
             var idx = new byte[pixels];
@@ -99,82 +99,8 @@ namespace DSPRE.Avalonia.Data
             };
         }
 
-        /// <summary>Undoes the scrambling on a Pokemon battle sprite's pixels, in place.</summary>
-        private static void Unscramble(byte[] data, int off, int size)
-        {
-            int words = size / 2;
-            if (words <= 0 || off < 0 || off + words * 2 > data.Length) return;
-
-            ushort At(int i) => (ushort)(data[off + i * 2] | (data[off + i * 2 + 1] << 8));
-            void Put(int i, ushort v) { data[off + i * 2] = (byte)(v & 0xFF); data[off + i * 2 + 1] = (byte)(v >> 8); }
-
-            unchecked
-            {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.DP)
-                {
-                    uint key = At(0);
-                    for (int i = 0; i < words; i++)
-                    {
-                        Put(i, (ushort)(At(i) ^ (ushort)(key & 0xFFFF)));
-                        key = key * 1103515245 + 24691;
-                    }
-                }
-                else
-                {
-                    uint key = At(words - 1);
-                    for (int i = words - 1; i >= 0; i--)
-                    {
-                        Put(i, (ushort)(At(i) ^ (ushort)(key & 0xFFFF)));
-                        key = key * 1103515245 + 24691;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Puts the scrambling back on, so an edited sprite reads the same way the game expects.
-        /// </summary>
-        private static void Scramble(byte[] data, int off, int size, ushort seed)
-        {
-            int words = size / 2;
-            if (words <= 0 || off < 0 || off + words * 2 > data.Length) return;
-
-            ushort At(int i) => (ushort)(data[off + i * 2] | (data[off + i * 2 + 1] << 8));
-            void Put(int i, ushort v) { data[off + i * 2] = (byte)(v & 0xFF); data[off + i * 2 + 1] = (byte)(v >> 8); }
-
-            Put(RomInfo.gameFamily != RomInfo.GameFamilies.DP ? 0 : words - 1, 0);
-
-            unchecked
-            {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.DP)
-                {
-                    uint key = seed;
-                    for (int i = 0; i < words; i++)
-                    {
-                        Put(i, (ushort)(At(i) ^ (ushort)(key & 0xFFFF)));
-                        key = key * 1103515245 + 24691;
-                    }
-                }
-                else
-                {
-                    uint key = seed;
-                    for (int i = words - 1; i >= 0; i--)
-                    {
-                        Put(i, (ushort)(At(i) ^ (ushort)(key & 0xFFFF)));
-                        key = key * 1103515245 + 24691;
-                    }
-                }
-            }
-        }
-
-        /// <summary>The word the scrambling was seeded from, which has to be kept to put it back.</summary>
-        private static ushort ScrambleSeed(byte[] data, int off, int size)
-        {
-            int words = size / 2;
-            if (words <= 0) return 0;
-            int at = RomInfo.gameFamily != RomInfo.GameFamilies.DP ? 0 : words - 1;
-            return (ushort)(data[off + at * 2] | (data[off + at * 2 + 1] << 8));
-        }
+        /// <summary>Whether this archive's pixels are scrambled in the game being edited.</summary>
+        private static bool Scrambled(Archive a) => a.ScrambledNow?.Invoke() ?? a.ScrambledPixels;
 
         /// <summary>
         /// Where the pixels are in a drawing, what shape they make, and whether they are stored in eight by
@@ -456,7 +382,7 @@ namespace DSPRE.Avalonia.Data
 
             var tiled = isTiled ? Retile(straightIndices, width, height) : straightIndices;
             var outp = (byte[])stored.Clone();
-            ushort seed = a.ScrambledPixels ? ScrambleSeed(stored, dataOff, dataSize) : (ushort)0;
+            ushort seed = Scrambled(a) ? SpriteScrambling.Seed(stored, dataOff, dataSize) : (ushort)0;
 
             if (bpp == 8)
             {
@@ -470,7 +396,7 @@ namespace DSPRE.Avalonia.Data
                     outp[dataOff + i / 2] = (byte)((tiled[i] & 0x0F) | ((tiled[i + 1] & 0x0F) << 4));
             }
 
-            if (a.ScrambledPixels) Scramble(outp, dataOff, dataSize, seed);
+            if (Scrambled(a)) SpriteScrambling.Scramble(outp, dataOff, dataSize, seed);
 
             if (marker != 0)
             {

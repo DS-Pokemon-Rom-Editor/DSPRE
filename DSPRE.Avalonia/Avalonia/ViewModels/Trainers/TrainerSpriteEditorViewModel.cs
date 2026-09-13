@@ -174,6 +174,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private PaletteBase _pal;
         private ImageBase _tile;
         private SpriteBase _sprite; // null on DP (no NCER), flat-sheet fallback mode; also null when _jsonBanks is used
+
+        // Descrambling zeroes the seed word, so it is kept to scramble again on save.
+        private ushort? _scrambleSeed;
         private string _tilesPath;
 
         // hg-engine path: cell geometry read from *_cell.json instead of the compiled narc, same nitrogfx
@@ -749,18 +752,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
 
-                int paletteFileID = trClassID * 5 + 1;
+                int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
                 string paletteFilename = paletteFileID.ToString("D4");
                 _pal = new NCLR(Path.Combine(dir, paletteFilename), paletteFileID, paletteFilename);
 
-                int tilesFileID = trClassID * 5;
+                int tilesFileID = TrainerGraphicsLayout.DrawingEntry(trClassID);
                 string tilesFilename = tilesFileID.ToString("D4");
                 _tilesPath = Path.Combine(dir, tilesFilename);
                 _tile = new NCGR(_tilesPath, tilesFileID, tilesFilename);
 
                 _sprite = null; _jsonBanks = null;
                 _sourcePngPath = null;
-                if (RomInfo.gameFamily != GameFamilies.DP)
+                if (TrainerGraphicsLayout.HasCells)
                 {
                     if (HgEngineProject.IsActive)
                     {
@@ -783,7 +786,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                     if (_jsonBanks == null)
                     {
-                        int spriteFileID = trClassID * 5 + 2;
+                        int spriteFileID = TrainerGraphicsLayout.CellsEntry(trClassID);
                         string spriteFilename = spriteFileID.ToString("D4");
                         _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
                     }
@@ -809,7 +812,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     FrameThumbnails.Clear();
                     OnPropertyChanged(nameof(HasFrames));
                     LoadFlatSheet();
-                    StatusText = $"{Capital(_set.Noun)} {trClassID}: {_flatWidth}×{_flatHeight} tile sheet (no animation on this game), {_tile.BPP}bpp";
+                    StatusText = $"{Capital(_set.Noun)} {trClassID}: {_flatWidth}×{_flatHeight} tile sheet, {_tile.BPP}bpp";
                 }
 
                 OnPropertyChanged(nameof(IsFlatSheetMode));
@@ -1020,6 +1023,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _flatWidth = _tile.Width;
             _flatHeight = _tile.Height;
+
+            _scrambleSeed = null;
+            if (TrainerGraphicsLayout.PixelsAreScrambled && _tile.Tiles != null)
+            {
+                var pixels = (byte[])_tile.Tiles.Clone();
+                _scrambleSeed = SpriteScrambling.Seed(pixels, 0, pixels.Length);
+                SpriteScrambling.Unscramble(pixels, 0, pixels.Length);
+                _tile.Set_Tiles(pixels);
+            }
 
             byte[] rasterBytes = _tile.FormTile == TileForm.Horizontal
                 ? Actions.LinealToHorizontal(_tile.Tiles, _flatWidth, _flatHeight, _tile.BPP, _tile.TileSize)
@@ -1252,6 +1264,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     byte[] nativeBytes = _tile.FormTile == TileForm.Horizontal
                         ? Actions.HorizontalToLineal(rasterBytes, _flatWidth, _flatHeight, bpp, _tile.TileSize)
                         : rasterBytes;
+                    if (_scrambleSeed.HasValue)
+                        SpriteScrambling.Scramble(nativeBytes, 0, nativeBytes.Length, _scrambleSeed.Value);
                     _tile.Set_Tiles(nativeBytes);
                 }
 
