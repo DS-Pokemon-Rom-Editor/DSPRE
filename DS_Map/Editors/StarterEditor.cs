@@ -45,10 +45,27 @@ namespace DSPRE.Editors
                 UpdatePokemonIcon(pictureBoxStarter3, comboBoxStarter3.SelectedIndex);
 
                 bool isHgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-                bool heldItemSupported = !isHgss || RomInfo.IsHgssStarterExtrasAvailable();
-                labelHeldItem.Visible = heldItemSupported;
+
+                // Diamond, Pearl and Platinum give the starter its item from the script that hands it over,
+                // so writing one here went somewhere else and broke that script.
+                bool heldItemSupported = isHgss && RomInfo.IsHgssStarterExtrasAvailable();
                 comboBoxHeldItem.Visible = heldItemSupported;
                 pictureBoxHeldItem.Visible = heldItemSupported;
+                labelHeldItem.Visible = true;
+                if (heldItemSupported)
+                {
+                    labelHeldItem.AutoSize = true;
+                    labelHeldItem.Text = "Held Item:";
+                }
+                else
+                {
+                    labelHeldItem.AutoSize = false;
+                    labelHeldItem.Size = new System.Drawing.Size(275, 46);
+                    labelHeldItem.Text = RomInfo.gameFamily == RomInfo.GameFamilies.Plat
+                        ? "The held item and level come from the script that gives you the starter, in script file 427."
+                        : "The held item and level come from the script that gives you the starter.";
+                }
+
                 if (heldItemSupported)
                 {
                     string[] itemNames = RomInfo.GetItemNames();
