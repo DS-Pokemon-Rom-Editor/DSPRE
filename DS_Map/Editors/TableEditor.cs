@@ -23,21 +23,24 @@ namespace DSPRE.Editors
         private bool conditionalMusicDirty = false;
         private bool effectsComboDirty = false;
         private bool vsTrainerDirty = false;
+        private bool vsPokemonDirty = false;
 
         #region IEditorWithUnsavedChanges Implementation
-        public bool HasUnsavedChanges => conditionalMusicDirty || effectsComboDirty || vsTrainerDirty;
+        public bool HasUnsavedChanges => conditionalMusicDirty || effectsComboDirty || vsTrainerDirty || vsPokemonDirty;
         public string UnsavedChangesDescription => "Table Editor";
         public void SaveChanges()
         {
             if (conditionalMusicDirty) saveConditionalMusicTableBTN_Click(null, null);
             if (effectsComboDirty) saveEffectComboBTN_Click(null, null);
             if (vsTrainerDirty) saveVSTrainerEntryBTN_Click(null, null);
+            if (vsPokemonDirty) saveVSPokemonEntryBTN_Click(null, null);
         }
         public void DiscardChanges()
         {
             conditionalMusicDirty = false;
             effectsComboDirty = false;
             vsTrainerDirty = false;
+            vsPokemonDirty = false;
         }
         #endregion
 
@@ -388,7 +391,38 @@ namespace DSPRE.Editors
 
         private void saveVSPokemonEntryBTN_Click(object sender, EventArgs e)
         {
+            int index = pbEffectsVsPokemonListbox.SelectedIndex;
+            if (index < 0)
+            {
+                return;
+            }
 
+            // The table's own limiter rather than the vanilla count, so an expanded table still writes.
+            int entryCount = ARM9.ReadByte(RomInfo.vsPokemonEntryTableOffsetToSizeLimiter);
+            if (index >= entryCount)
+            {
+                return;
+            }
+
+            int pokemonID = pbEffectsPokemonCombobox.SelectedIndex;
+            int comboID = pbEffectsPokemonChooseMainCombobox.SelectedIndex;
+            if (pokemonID < 0 || comboID < 0)
+            {
+                return;
+            }
+
+            vsPokemonEffectsList[index] = (pokemonID, comboID);
+            String expArmPath = Filesystem.expArmPath;
+            using (DSUtils.EasyWriter wr = new DSUtils.EasyWriter(PatchToolboxDialog.flag_PokemonBattleTableRepointed ? expArmPath : RomInfo.arm9Path, vsPokemonTableStartAddress + 2 * index))
+            {
+                wr.Write((ushort)((pokemonID & 1023) + (comboID << 10)));
+            };
+            vsPokemonDirty = false;
+
+            Helpers.DisableHandlers();
+            string pokeName = pokemonID < pokeNames.Length ? pokeNames[pokemonID] : pokemonID.ToString();
+            pbEffectsVsPokemonListbox.Items[index] = "[" + pokemonID.ToString("D3") + "]" + " " + pokeName + " uses Combo #" + comboID;
+            Helpers.EnableHandlers();
         }
 
         private void saveVSTrainerEntryBTN_Click(object sender, EventArgs e)
@@ -499,6 +533,27 @@ namespace DSPRE.Editors
             ComboBox cb = sender as ComboBox;
             tbEditorPokeminiPictureBox.Image = DSUtils.GetPokePic(cb.SelectedIndex, tbEditorPokeminiPictureBox.Width, tbEditorPokeminiPictureBox.Height);
             tbEditorPokeminiPictureBox.Update();
+
+            if (!Helpers.HandlersDisabled)
+            {
+                vsPokemonDirty = true;
+            }
+        }
+
+        private void pbEffectsPokemonChooseMainCombobox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!Helpers.HandlersDisabled)
+            {
+                vsPokemonDirty = true;
+            }
+        }
+
+        private void pbEffectsTrainerChooseMainCombobox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!Helpers.HandlersDisabled)
+            {
+                vsTrainerDirty = true;
+            }
         }
 
         #endregion
