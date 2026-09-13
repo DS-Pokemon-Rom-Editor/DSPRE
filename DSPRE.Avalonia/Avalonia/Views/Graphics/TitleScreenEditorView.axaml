@@ -145,7 +145,7 @@
 		  </Border>
 		  <Button Content="▶ Play Intro" Click="PlayIntro_Click" HorizontalAlignment="Left"/>
 		  <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-					 Text="Recreation of the logo animation, not 100% accurate to what the game does."/>
+					 Text="A recreation of the logo animation, close to the game's."/>
 		</StackPanel>
 	  </Border>
 

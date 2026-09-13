@@ -109,7 +109,7 @@
                       ToolTip.Tip="{Binding SavePictureHelp}"/>
               <Button Content="Save file as it is" Click="SaveRaw_Click"
                       IsEnabled="{Binding HasSelection}"
-                      ToolTip.Tip="Save the whole entry exactly as it sits in the ROM. Always possible, and the only way to keep everything about an entry that is not a picture."/>
+                      ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a PNG would drop."/>
               <Button Content="Put a picture in" Click="Replace_Click"
                       IsEnabled="{Binding CanReplace}"
                       ToolTip.Tip="{Binding ReplaceHelp}"/>

@@ -283,7 +283,7 @@
           <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="11"
                      Foreground="{DynamicResource Editor.Subtle}"
                      IsVisible="{Binding !ShowRockSmashItemTables}"
-                     Text="The item drop tables live at a fixed, hand-verified offset that is currently only confirmed for English HeartGold/SoulSilver, so editing them is disabled for this ROM's language. The per-header odds and table below are plain NARC data and work regardless of language."/>
+                     Text="Drop tables can only be edited on English HeartGold and SoulSilver. The per-header odds and the table below work in any language."/>
 
           <TextBlock DockPanel.Dock="Top" Text="{Binding RockSmashCount}" FontSize="11" Margin="0,0,0,4"/>
 

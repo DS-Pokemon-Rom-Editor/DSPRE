@@ -34,13 +34,13 @@
                   <TextBlock Text="A contact's name is the first message of the text archive shown in its heading. Edit it in the Text Editor."/>
 
                   <TextBlock Classes="field" Text="Call type"/>
-                  <TextBlock Text="Which of the game's call routines runs this contact. Trainers share the trainer call data; Mom, Elm, the Gym Leaders and the other special types each have their own routine, so switching a trainer to one of them doesn't give it that behaviour. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
+                  <TextBlock Text="Which call routine runs this contact. Each special type has its own routine, so a trainer switched to one keeps the trainer call data. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
 
                   <TextBlock Classes="field" Text="Title"/>
                   <TextBlock Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor."/>
 
                   <TextBlock Classes="field" Text="Trainer"/>
-                  <TextBlock Text="The trainer this contact is. After you win, the game finds the contact by this trainer to offer their number, rematches and gifts, so it must match the trainer you actually battle and the base trainer of their row in the Rematch Editor. Pick 'not a trainer' for people you never battle."/>
+                  <TextBlock Text="The trainer this contact is. The game matches it after a win to offer their number, rematches and gifts, so it must match the trainer battled and their Rematch Editor row. Pick 'not a trainer' for people you never battle."/>
 
                   <TextBlock Classes="field" Text="Map"/>
                   <TextBlock Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
@@ -61,7 +61,7 @@
                   <TextBlock Text="A random call first picks a group, 0 half the time, 1 three times in ten and 2 the rest, then a contact in that group. A contact in a small group calls more often. Never keeps them from calling at random."/>
 
                   <TextBlock Classes="field" Text="Sort order"/>
-                  <TextBlock Text="The Pokégear can list contacts by title, by name or by location. It doesn't sort them itself: every contact keeps a position in each of the three lists, so a rename or a move doesn't change where it appears. The panel on the right shows the three lists. Drag a contact to move it, or press Auto Sort to put a whole list in alphabetical order. The numbers under Sort order are the same positions, and changing one moves the contact."/>
+                  <TextBlock Text="The Pokégear lists contacts by title, by name or by location. Each contact keeps its own position in all three, so renaming or moving one leaves the order alone. Drag a contact, or press Auto Sort, to change a list."/>
                 </StackPanel>
               </ScrollViewer>
             </Flyout>

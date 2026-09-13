@@ -122,7 +122,7 @@
     <DockPanel Margin="14,12,14,10">
 
       <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding HasNoPicture}"
-                 Text="Open a PNG to see it twice: as it is, and as the game would draw it. Anything the screen cannot hold shows up as a difference."/>
+                 Text="Open a PNG to see it as it is and as the game would draw it. Differences are what the screen cannot hold."/>
 
       <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding Refused}" Margin="0,0,0,10"
                  Text="Nothing was made. The reason is on the right."/>

@@ -46,7 +46,7 @@
               <TextBlock Text="Ground" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
               <ComboBox ItemsSource="{Binding Terrains}" SelectedIndex="{Binding TerrainIndex, Mode=TwoWay}"
                         FontSize="12" Margin="0,0,12,0"
-                        ToolTip.Tip="What the Pokemon stand on. This comes from the tile you are standing on rather than from the place's header, so it is a choice here."/>
+                        ToolTip.Tip="What the Pokemon stand on. The tile the player stands on picks this, so choose it here."/>
               <TextBlock Text="Time" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
               <ComboBox ItemsSource="{Binding TimesOfDay}" SelectedIndex="{Binding TimeOfDay, Mode=TwoWay}"
                         FontSize="12"

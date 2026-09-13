@@ -77,7 +77,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!IsAvailable)
             {
-                StatusText = "Trophy Garden is only available on Diamond, Pearl and Platinum.";
+                StatusText = "Trophy Garden is only in Diamond, Pearl and Platinum.";
                 return;
             }
 

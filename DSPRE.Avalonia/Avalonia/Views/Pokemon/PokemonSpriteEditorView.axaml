@@ -219,7 +219,7 @@
                       ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference sheet covering both genders; artwork is unchanged."/>
               <Button Classes="sprite-btn" Content="Export Both" Click="ExportShinyFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
-            <TextBlock Text="Shiny colors come from this species' own hg-engine source (male back.png); the other poses don't have an independent shiny file to import."
+            <TextBlock Text="Shiny colours come from this species' hg-engine source (male back.png), the only shiny file there is."
                        IsVisible="{Binding IsHgEngineSourced}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">

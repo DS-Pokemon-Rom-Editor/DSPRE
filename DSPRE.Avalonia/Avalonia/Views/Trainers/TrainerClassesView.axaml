@@ -58,7 +58,7 @@
 
           <StackPanel Spacing="2" IsEnabled="{Binding MusicEnabled}">
             <TextBlock Text="Eye contact music [Main]"
-                       ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Not every class has one; disabled means this class never initiates eye-contact battle music."/>
+                       ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Disabled means this class has none."/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
           </StackPanel>
 

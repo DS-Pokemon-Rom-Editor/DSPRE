@@ -44,7 +44,7 @@
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Wipe type (unused)"/>
 				<TextBox Text="{Binding SelectedRow.WipeType}" Width="80"
-				         ToolTip.Tip="The game always fades in here and never reads this, so changing it does nothing. It is kept so importing and exporting does not lose what a ROM has."/>
+				         ToolTip.Tip="The game never reads this, so changing it does nothing. It is kept so import and export do not lose it."/>
 			  </StackPanel>
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Name line"/>

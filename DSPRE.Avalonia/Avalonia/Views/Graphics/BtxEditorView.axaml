@@ -84,7 +84,7 @@
 
           <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
             <TextBlock Text="Renderer / animation (read-only)" FontWeight="SemiBold"
-                       ToolTip.Tip="Opaque resource IDs and code pointers cloned from another entry, not safe to hand-edit, shown for reference when picking a clone source below."/>
+                       ToolTip.Tip="Resource IDs and code pointers cloned from another entry. Shown for reference when picking a clone source below."/>
             <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
           </StackPanel>
@@ -102,7 +102,7 @@
     </Grid>
 
     <TextBlock Grid.Column="4" IsVisible="{Binding !IsPlatinum}"
-               Text="Changing how an overworld is drawn, and adding or removing entries, only works on Platinum. This ROM shows the pictures on the left and nothing else."
+               Text="Only Platinum can change how an overworld is drawn, or add and remove entries. This ROM shows the pictures on the left."
                TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
   </Grid>
 </Window>

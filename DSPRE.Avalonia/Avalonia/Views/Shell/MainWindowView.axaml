@@ -227,7 +227,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-          <TextBlock Text="Tip: press Ctrl+P anytime to jump to any editor by name."
+          <TextBlock Text="Press Ctrl+P to jump to any editor by name."
                      FontSize="12" Opacity="0.6" TextAlignment="Center" Margin="0,8,0,0"/>
         </StackPanel>
       </Border>

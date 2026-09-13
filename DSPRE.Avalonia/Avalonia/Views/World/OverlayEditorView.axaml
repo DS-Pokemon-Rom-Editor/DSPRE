@@ -23,7 +23,7 @@
 	  <StackPanel Spacing="4">
 		<TextBlock Text="Read only: ds-rom handles the compression" FontWeight="Bold" Foreground="#3A2E00"/>
 		<TextBlock TextWrapping="Wrap" Foreground="#4A3B00"
-				   Text="Overlays are kept uncompressed on disk so they can be edited. Marked Compressed shows which ones are compressed again when you save the ROM. That choice lives in overlays.yaml and cannot be changed here."/>
+				   Text="Overlays sit uncompressed on disk so they can be edited. Compressed marks the ones compressed again on Save ROM, a choice that lives in overlays.yaml."/>
 	  </StackPanel>
 	</Border>
 

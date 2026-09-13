@@ -27,7 +27,7 @@
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
-                  ToolTip.Tip="Opens a look-only window that runs the map, so its water moves the way it does in game."/>
+                  ToolTip.Tip="Plays the map, with its water moving as it does in game."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="📥 Import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
@@ -47,19 +47,19 @@
             <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
           </StackPanel>
           <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
-                    ToolTip.Tip="Show collision painted on the actual map mesh (conforms to the surface). Uncheck for a flat plane you can raise. Needs an Overlay mode selected above; not available in 'This header' / 'Full matrix' view (always shown as a flat plane there)."/>
+                    ToolTip.Tip="Paint collision on the map surface. Off gives a flat plane you can raise. Needs an Overlay mode; 'This header' and 'Full matrix' always use the flat plane."/>
           <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
           <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
                   Value="{Binding OverlayHeight}" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"
                   ToolTip.Tip="Lift the flat permission plane off the map surface (in tiles)"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <CheckBox Content="Textured" IsChecked="{Binding ShowTextures}" VerticalAlignment="Center"
-                    ToolTip.Tip="Show real textures vs. a flat per-material colour view of the mesh"/>
+                    ToolTip.Tip="Show real textures. Off shows a flat colour per material."/>
           <CheckBox Content="Gizmos" IsChecked="False" VerticalAlignment="Center" IsVisible="{Binding ShowBetaFeatures}"
                     IsCheckedChanged="Gizmos_Toggled"
-                    ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+                    ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>
           <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsStitchedView}" VerticalAlignment="Center"
-                    ToolTip.Tip="Full-matrix / this-header stitch: ON = DS-true fixed 32-tile grid (underfilled maps gap, overhang overlaps); OFF = continuous geometry-sized layout"/>
+                    ToolTip.Tip="Stitch maps on a fixed 32-tile grid, the way the DS does. Off lays them out by their geometry."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <ToggleButton Content="✋ Move buildings" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
                         ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile. In 'This header' view this works across every map shown."/>
@@ -71,7 +71,7 @@
           <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <TextBlock Text="View:" VerticalAlignment="Center"/>
             <ToggleButton Content="2D" IsChecked="{Binding Flat2D}" VerticalAlignment="Center" Padding="6,2"
-                          ToolTip.Tip="Flat top-down view with no perspective, the way the old editor drew permissions. Easier to paint accurately."/>
+                          ToolTip.Tip="Flat top-down view, easier to paint accurately."/>
             <Button Content="Top" Click="CamTop_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Top-down camera" IsEnabled="{Binding !Flat2D}"/>
             <Button Content="Iso" Click="CamIso_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Isometric (3/4) camera" IsEnabled="{Binding !Flat2D}"/>
             <Button Content="Front" Click="CamFront_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Front camera" IsEnabled="{Binding !Flat2D}"/>

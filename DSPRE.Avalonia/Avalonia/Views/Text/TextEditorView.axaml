@@ -103,7 +103,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="Border:" VerticalAlignment="Center" FontSize="12"/>
               <ComboBox Width="110" ItemsSource="{Binding BorderNames}" SelectedIndex="{Binding BorderIndex}"
-                        ToolTip.Tip="The games let the player pick between twenty of these in Options."/>
+                        ToolTip.Tip="Which message box border to draw with."/>
             </StackPanel>
             <Button Content="Next stop" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
           </StackPanel>

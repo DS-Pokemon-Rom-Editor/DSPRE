@@ -53,7 +53,7 @@
       <DockPanel Margin="6">
         <TextBlock DockPanel.Dock="Top" Text="Letters" FontWeight="SemiBold" Margin="0,0,0,4"/>
         <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
-                   Text="The number is the picture's place in the font, and beside it the character that writes it. Most letters are drawn; only the empty slots are called out."/>
+                   Text="The number is the picture's place in the font, beside the character it writes. Empty slots are marked."/>
 
         <TextBox DockPanel.Dock="Top" Text="{Binding Search}" Margin="0,0,0,4"
                  PlaceholderText="Find a letter, or type its number"/>
@@ -100,7 +100,7 @@
           <StackPanel Spacing="8" Width="230">
             <TextBlock Text="Shade" FontWeight="SemiBold"/>
             <TextBlock Classes="hint"
-                       Text="Two bits a pixel gives four. Left button paints the one picked here, right button rubs out."/>
+                       Text="Four shades, two bits a pixel. Left button paints the shade picked here. Right button rubs out."/>
             <ComboBox x:Name="ShadePicker" SelectedIndex="1" Width="200">
               <ComboBoxItem>Nothing</ComboBoxItem>
               <ComboBoxItem>Ink</ComboBoxItem>

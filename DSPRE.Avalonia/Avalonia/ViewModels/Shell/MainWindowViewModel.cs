@@ -190,7 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Live status-bar line ───────────────────────────────────────────────
-        public const string IdleStatus = "Editors open from the menus, or press Ctrl+P and type an editor's name.";
+        public const string IdleStatus = "Open an editor from the menus, or press Ctrl+P and type its name.";
         private string _statusText = IdleStatus;
         public string StatusText
         {

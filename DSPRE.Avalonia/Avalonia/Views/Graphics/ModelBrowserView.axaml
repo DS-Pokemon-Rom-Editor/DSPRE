@@ -211,7 +211,7 @@
                     IsEnabled="{Binding CanPutFileIn}" ToolTip.Tip="{Binding PutFileInHelp}"/>
             <Button Content="Save file as it is" Click="SaveRaw_Click" HorizontalAlignment="Stretch"
                     IsEnabled="{Binding HasSelection}"
-                    ToolTip.Tip="Save the whole entry exactly as it sits in the ROM. Always possible, and the only way to keep everything about an entry that is not a model."/>
+                    ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a 3D file would drop."/>
           </StackPanel>
 
         </StackPanel>

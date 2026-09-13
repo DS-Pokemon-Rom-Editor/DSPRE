@@ -79,7 +79,7 @@
 		<TextBlock Grid.Column="0" Text="Theme" VerticalAlignment="Center" Margin="0,0,8,0"/>
 		<ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ThemeNames}"
 		          SelectedIndex="{Binding ThemeIndex}"/>
-		<TextBlock Grid.Column="2" Text="Takes effect straight away and is remembered." VerticalAlignment="Center" Margin="8,0,0,0"
+		<TextBlock Grid.Column="2" Text="Takes effect straight away." VerticalAlignment="Center" Margin="8,0,0,0"
 		           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
 	  </Grid>
 	</Border>
@@ -121,7 +121,7 @@
 		  <CheckBox Content="Invert rotate Y" IsChecked="{Binding CamInvertOrbitY}" Margin="0,0,18,0"/>
 		  <CheckBox Content="Invert zoom"     IsChecked="{Binding CamInvertZoom}"/>
 		</WrapPanel>
-		<TextBlock Text="In the 3D views: left-drag pans, right-drag rotates, mouse wheel zooms. Changes take effect after you click Save."
+		<TextBlock Text="In the 3D views: left-drag pans, right-drag rotates, the wheel zooms. Takes effect when you Save."
 				   FontSize="12" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap"/>
 	  </StackPanel>
 	</Border>

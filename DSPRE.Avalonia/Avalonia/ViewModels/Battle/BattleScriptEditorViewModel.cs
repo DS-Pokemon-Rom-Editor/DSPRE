@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var pcm = SseqPlayer.Render(sdat, soundId);
                 if (pcm == null || pcm.Length == 0) return $"Sound {soundId} rendered to no audio (an unsupported instrument type, most likely).";
                 AudioOutput.Current.Play(pcm, 32000);
-                if (AudioOutput.Current is NullAudioOutput) return "No audio backend is wired up in this shell (the pure cross-platform preview build has no sound output yet).";
+                if (AudioOutput.Current is NullAudioOutput) return "This build has no sound output yet.";
                 return null;
             }
             catch (System.Exception ex) { return ex.ToString(); }

@@ -108,7 +108,7 @@
 
           <TextBlock Text="Sample" FontWeight="SemiBold"/>
           <TextBlock Classes="hint"
-                     Text="Only for the preview. Nothing here is written to the ROM; it is so you can see whether an edited bar still fits a long name or a full bar."/>
+                     Text="Preview only, nothing is written to the ROM. Use it to check an edited bar against a long name or a full bar."/>
           <TextBlock Text="How many Pokemon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"
                     IsVisible="{Binding GaugeTextIsReal}">

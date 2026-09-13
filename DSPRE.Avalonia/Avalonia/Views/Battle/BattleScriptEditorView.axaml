@@ -29,7 +29,7 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, written like a command: 'CommandName label=value label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex; settings with named options use the option word (like target=Attacker). Labels can be given in any order; unlabeled values just fill whichever slots are left, in order. Lines starting with // are comments. The raw 'OPCODE 1 2 3' form is still accepted. Edits are shared with the cards and repacked into the ROM on save."
+      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line: 'CommandName label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex, and named options use their word, like target=Attacker. Labels come in any order; unlabelled values fill the slots left, in order. Lines starting with // are comments. 'OPCODE 1 2 3' still works. Edits are shared with the cards and repacked on save."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
@@ -70,8 +70,8 @@
                the shorthands back up, naming the numbers, lining the columns up and indenting the loops. -->
           <TabItem Header="Read">
             <Panel>
-            <!-- The three reading views only exist for the move animations. On the other archives this tab
-                 used to be an empty box with nothing to say why, so it now says where to go instead. -->
+            <!-- The three reading views only exist for the move animations, so other archives get a line
+                 saying where to go instead. -->
             <TextBlock IsVisible="{Binding !IsWest}" Margin="16" TextWrapping="Wrap"
                        VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
                        Text="The three reading views are for the move animations. Pick &quot;Move animation (WEST)&quot; in the Archive list above to use them. This archive is edited in the Cards and Text tabs."/>

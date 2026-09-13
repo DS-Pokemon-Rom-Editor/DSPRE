@@ -10,8 +10,8 @@
 
     <StackPanel Spacing="6">
       <TextBlock Text="What do you want to change?" FontWeight="SemiBold"/>
-      <RadioButton GroupName="mode" Content="Change image, keep palettes" IsChecked="True" Click="ModeImage_Click"/>
-      <RadioButton GroupName="mode" Content="Change palette, keep image" Click="ModePalette_Click"/>
+      <RadioButton GroupName="mode" Content="Replace the image only" IsChecked="True" Click="ModeImage_Click"/>
+      <RadioButton GroupName="mode" Content="Replace the palette only" Click="ModePalette_Click"/>
       <RadioButton GroupName="mode" Content="Change full artwork (image and palette together)" Click="ModeFull_Click"/>
       <RadioButton GroupName="mode" Content="Import a sprite sheet (Back + Front together)" Click="ModeSheet_Click"/>
     </StackPanel>

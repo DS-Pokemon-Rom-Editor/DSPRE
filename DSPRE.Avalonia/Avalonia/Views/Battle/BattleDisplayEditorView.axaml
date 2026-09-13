@@ -205,7 +205,7 @@
                   <!-- Per-gender sprite heights (DP / Platinum, height.narc). Signed. Hidden while viewing a form. -->
                   <StackPanel IsVisible="{Binding ShowBaseHeights}" Spacing="6">
                     <CheckBox Content="Edit both genders together" IsChecked="{Binding UnifiedEdit}"
-                              ToolTip.Tip="Unified: one field per axis writes both ♂ and ♀. Unchecked: edit each gender separately."/>
+                              ToolTip.Tip="One field per axis writes both ♂ and ♀. Off edits each gender separately."/>
 
                     <!-- Unified edit: one field per axis, writes both genders. -->
                     <StackPanel IsVisible="{Binding UnifiedEdit}" Spacing="6">
