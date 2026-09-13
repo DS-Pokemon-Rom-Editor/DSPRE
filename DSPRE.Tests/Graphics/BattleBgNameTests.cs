@@ -92,6 +92,7 @@ namespace DSPRE.Tests
         {
             var checks = new (string code, string path, string name, int chr, int pal, int scr)[]
             {
+                ("ADAE", TestRoms.Diamond, "Diamond", 53, 208, 50),
                 ("CPUE", TestRoms.Platinum, "Platinum", 65, 291, 62),
                 ("IPKE", TestRoms.HeartGold, "HeartGold", 59, 295, 56),
             };
@@ -114,6 +115,36 @@ namespace DSPRE.Tests
                 Assert.StartsWith(stem, names[pal], StringComparison.Ordinal);
                 Assert.StartsWith(stem, names[scr], StringComparison.Ordinal);
                 _out.WriteLine($"{name}: {chr}/{pal}/{scr} all name {stem}");
+            }
+            Assert.True(checkedGames > 0, "no game was unpacked here, so nothing was checked");
+        }
+
+        /// <summary>Every backdrop's drawing and daytime colours are the files named for that backdrop.</summary>
+        [Fact]
+        public void EveryBackdropReadsItsOwnDrawingAndColours()
+        {
+            int checkedGames = 0;
+            foreach (var (code, path, name) in Games)
+            {
+                if (!Directory.Exists(path)) { _out.WriteLine($"{name}: not unpacked here, skipped"); continue; }
+                try { new RomInfo(code, path); } catch { continue; }
+                checkedGames++;
+
+                var names = BattleBgNames.Names();
+                for (int bg = 0; bg < BattleBgRenderer.BackdropCount; bg++)
+                {
+                    var files = BattleBgRenderer.BackdropFiles(bg);
+                    Assert.True(files.Drawing < names.Length && files.PaletteDay < names.Length,
+                                $"{name}: backdrop {bg} points past the name list");
+                    string tag = $"BG{bg:D2}";
+                    Assert.True(names[files.Drawing].Contains(tag, StringComparison.Ordinal)
+                                && names[files.Drawing].Contains("_NCGR", StringComparison.Ordinal),
+                                $"{name}: backdrop {bg}'s drawing is {names[files.Drawing]}");
+                    Assert.True(names[files.PaletteDay].Contains(tag + "_D", StringComparison.Ordinal)
+                                && names[files.PaletteDay].Contains("_NCLR", StringComparison.Ordinal),
+                                $"{name}: backdrop {bg}'s day colours are {names[files.PaletteDay]}");
+                }
+                _out.WriteLine($"{name}: {BattleBgRenderer.BackdropCount} backdrops read their own files");
             }
             Assert.True(checkedGames > 0, "no game was unpacked here, so nothing was checked");
         }

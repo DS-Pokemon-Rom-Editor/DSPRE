@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Data
             (112,308,113,113), (119,311,116,117), (119,311,116,117), (119,311,116,117), (124,315,125,125), (129,317,130,130),
             (131,318,132,132), (138,323,136,137), (139,324,140,140), (141,326,142,142), (146,329,143,144), (150,330,147,148),
             (151,331,152,152), (153,332,154,154), (155,333,156,156), (160,334,157,158), (161,335,162,162), (52,286,53,53),
-            (163,336,164,165), (163,338,164,165), (166,337,168,-1), (78,295,79,79), (90,300,91,91), (85,298,83,83),
+            (163,336,164,165), (163,338,164,165), (166,337,168,167), (78,295,79,79), (90,300,91,91), (85,298,83,83),
             (114,310,115,115), (122,314,123,123), (120,313,121,121), (134,322,135,135),
         };
 
@@ -48,26 +48,45 @@ namespace DSPRE.Avalonia.Data
             (113,315,114,-1), (123,323,124,-1), (121,322,122,-1), (135,331,136,-1), (98,309,96,97),
         };
 
+        // Diamond and Pearl, from the table in overlay 8.
+        private static readonly (int chr, int pal, int scr, int scrRev)[] DpTable =
+        {
+            (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,238,50,51),
+            (57,209,54,55), (57,242,54,55), (57,245,54,55), (58,210,59,59), (58,210,59,59), (58,236,59,59),
+            (58,237,59,59), (58,244,59,59), (64,211,60,60), (64,213,60,60), (64,221,60,60), (64,229,60,60),
+            (64,221,60,60), (69,214,70,70), (77,216,74,75), (83,218,80,81), (87,219,84,85), (88,220,89,89),
+            (90,222,91,91), (93,223,94,94), (99,224,98,98), (99,256,98,98), (100,225,101,101), (100,226,101,101),
+            (100,225,101,101), (107,228,104,105), (107,228,104,105), (107,228,104,105), (112,232,113,113), (117,234,118,118),
+            (119,235,120,120), (126,240,124,125), (127,241,128,128), (129,243,130,130), (134,246,131,132), (138,247,135,136),
+            (139,248,140,140), (141,249,142,142), (143,250,144,144), (148,251,145,146), (149,252,150,150), (40,203,41,41),
+            (151,253,152,153), (151,255,152,153), (154,254,156,155), (66,212,67,67), (78,217,79,79), (73,215,71,71),
+            (102,227,103,103), (110,231,111,111), (108,230,109,109), (122,239,123,123),
+        };
+
         private static (int chr, int pal, int scr, int scrRev)[] Table =>
-            RomInfo.gameFamily == GameFamilies.HGSS ? HgssTable : PlatTable;
+            RomInfo.gameFamily == GameFamilies.HGSS ? HgssTable
+            : RomInfo.gameFamily == GameFamilies.DP ? DpTable
+            : PlatTable;
 
         public static bool HasBg(int bgId) => bgId >= 0 && bgId < Table.Length;
         public static int BgCount => Table.Length;
 
-        // The real battle-scene backdrops (scenery behind the platforms), distinct from the move-effect BGs
-        // above. Character file = base graphic index (3) + bg_id, one shared tilemap (index 2) for every
-        // bg_id, 23 backdrops (BG00..BG22). Day/eve/night palette base is per-family: Platinum pl_batt_bg
-        // = 172..240, HGSS a/0/0/7 = 176..244. The wrong base still lands on some valid palette, so mixing
-        // them up renders wrong colours instead of failing loudly.
-        public const int BackdropCount = 23;
+        // Scenery behind the platforms, not the move-effect BGs above. A wrong palette base still lands on a
+        // valid palette, so a mix-up shows wrong colours instead of failing.
+        public static int BackdropCount => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 12 : 23;
         private const int BackdropChr0 = 3, BackdropScr = 2;
-        private static int BackdropPal0 => RomInfo.gameFamily == RomInfo.GameFamilies.HGSS ? 176 : 172;
+        private static int BackdropPal0 => RomInfo.gameFamily switch
+        {
+            RomInfo.GameFamilies.HGSS => 176,
+            RomInfo.GameFamilies.DP => 158,
+            _ => 172,
+        };
 
         /// <summary>Which files in the archive make up one backdrop. </summary>
         public static (int Drawing, int Tilemap, int PaletteDay) BackdropFiles(int bgId)
             => (BackdropChr0 + bgId, BackdropScr, BackdropPal0 + bgId * 3);
 
-        /// <summary>Builds the real battle-scene backdrop for bg_id 0..22 (timeZone 0=day,1=eve,2=night), or null.</summary>
+        /// <summary>Builds the backdrop for a bg_id below <see cref="BackdropCount"/> (timeZone 0=day, 1=evening, 2=night), or null.</summary>
         public BgImage BuildBackdrop(int bgId, int timeZone = 0)
         {
             if (bgId < 0 || bgId >= BackdropCount || !_narc.Available) return null;
