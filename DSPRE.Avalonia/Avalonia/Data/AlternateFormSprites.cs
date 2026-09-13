@@ -42,11 +42,21 @@ namespace DSPRE.Avalonia.Data
             _ => GetFormDataHGSS(),
         };
 
+        /// <summary>The Substitute doll and battle shadow, stored after the forms but not offered as forms.</summary>
+        public static Form[] ExtrasForCurrentGame() => RomInfo.isHGE ? Array.Empty<Form>() : RomInfo.gameFamily switch
+        {
+            RomInfo.GameFamilies.DP => new Form[] { new("Substitute doll", 208, 209, 210, 210), new("Shadow", 211, 211, 212, 212) },
+            RomInfo.GameFamilies.Plat => new Form[] { new("Substitute doll", 248, 249, 250, 250), new("Shadow", 251, 251, 252, 252) },
+            _ => new Form[] { new("Substitute doll", 256, 257, 258, 258), new("Shadow", 259, 259, 260, 260) },
+        };
+
+        private static IEnumerable<Form> FormsAndExtras() => ForCurrentGame().Concat(ExtrasForCurrentGame());
+
         /// <summary>The colours a form's drawing uses. Both its drawings share one set, and the only
         /// other set is the shiny one, so there is nothing to work out from the file's position.</summary>
         public static int ColoursFor(int fileIndex, bool shiny)
         {
-            foreach (var f in ForCurrentGame())
+            foreach (var f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;
                 if (fileIndex == f.BackSpriteIndex || fileIndex == f.FrontSpriteIndex)
@@ -64,7 +74,7 @@ namespace DSPRE.Avalonia.Data
             // Several forms can share one pair of drawings: the table gives Egg and Bad Egg the same art,
             // and listing them as separate rows showing the same picture helps nobody.
             var byDrawing = new Dictionary<(int, int), List<Form>>();
-            foreach (var f in ForCurrentGame())
+            foreach (var f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;     // no place in this archive at all
                 var key = (f.BackSpriteIndex, f.FrontSpriteIndex);
@@ -88,7 +98,8 @@ namespace DSPRE.Avalonia.Data
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = archive, Index = index, Name = what });
                     spokenFor.Add(index);
                 }
-                Add(first.BackSpriteIndex, "Back");
+                bool oneDrawing = first.BackSpriteIndex == first.FrontSpriteIndex;
+                Add(first.BackSpriteIndex, oneDrawing ? "Drawing" : "Back");
                 Add(first.FrontSpriteIndex, "Front");
                 foreach (var g in group)
                 {
@@ -114,10 +125,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The form a given file belongs to, and which of its four parts that file is.</summary>
         public static (Form Form, string Part)? WhoOwns(int fileIndex)
         {
-            foreach (var f in ForCurrentGame())
+            foreach (var f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;
-                if (fileIndex == f.BackSpriteIndex) return (f, "Back");
+                if (fileIndex == f.BackSpriteIndex) return (f, f.BackSpriteIndex == f.FrontSpriteIndex ? "Drawing" : "Back");
                 if (fileIndex == f.FrontSpriteIndex) return (f, "Front");
                 if (fileIndex == f.NormalPaletteIndex) return (f, "Colours");
                 if (fileIndex == f.ShinyPaletteIndex) return (f, "Shiny colours");

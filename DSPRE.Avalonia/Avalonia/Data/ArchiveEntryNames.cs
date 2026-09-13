@@ -28,14 +28,15 @@ namespace DSPRE.Avalonia.Data
             + "KOGOREBI_NCLR KOGOREBI_NCGR KOGOREBI_NSCR DOUKUTU_NCLR DOUKUTU_NCGR DOUKUTU_NSCR WEATHER_CELL_RESDAT "
             + "WEATHER_CELLANM_RESDAT WEATHER_CHAR_RESDAT WEATHER_PLTT_RESDAT";
 
-        /// <summary>FontHeartGold: 10 entries.</summary>
+        /// <summary>FontHeartGold: 11 entries.</summary>
         public const string FontHeartGold =
-            "system_dat talk_dat button_dat unknown_dat touch_dat num_lz_dat dis_change_ncgr system_ncrl "
-            + "talk_ncrl touch_ncrl";
+            "font_system font_message font_subscreen font_unown font_4 font_special_chars_NCGR "
+            + "screen_indicators_NCGR font_special_chars_NCLR screen_indicators_NCLR font_extra_NCLR font_5";
 
-        /// <summary>FontPlatinum: 8 entries.</summary>
+        /// <summary>FontPlatinum, also Diamond and Pearl: 8 entries.</summary>
         public const string FontPlatinum =
-            "system_dat talk_dat button_dat unknown_dat num_lz_dat dis_change_ncgr system_ncrl talk_ncrl";
+            "font_system font_message font_subscreen font_unown font_special_chars_NCGR screen_indicators_NCGR "
+            + "font_special_chars_NCLR screen_indicators_NCLR";
 
     }
 }

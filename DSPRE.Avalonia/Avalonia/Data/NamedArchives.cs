@@ -9,6 +9,11 @@ namespace DSPRE.Avalonia.Data
     /// <summary>Grouping and naming for the archives whose contents the games name themselves.</summary>
     public static class NamedArchives
     {
+        /// <summary>HeartGold keeps field weather in its own archive; the other games in synthOverlay.</summary>
+        public static DirNames WeatherDir => gameFamily == GameFamilies.HGSS ? DirNames.weatherGraphics : DirNames.synthOverlay;
+
+        private static bool IsWeather(DirNames dir) => dir == DirNames.weatherGraphics || dir == DirNames.synthOverlay;
+
         /// <summary>The names for one archive in the game that is open, or empty when there are none.</summary>
         public static IReadOnlyList<string> Names(DirNames dir)
         {
@@ -16,7 +21,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 bool johto = gameFamily == GameFamilies.HGSS;
-                if (dir == DirNames.synthOverlay)
+                if (dir == WeatherDir)
                     packed = johto ? ArchiveEntryNames.WeatherHeartGold : ArchiveEntryNames.WeatherPlatinum;
                 else if (dir == DirNames.fonts)
                     packed = johto ? ArchiveEntryNames.FontHeartGold : ArchiveEntryNames.FontPlatinum;
@@ -24,9 +29,13 @@ namespace DSPRE.Avalonia.Data
             catch { }
 
             if (packed == null) return Array.Empty<string>();
-            return packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                         .Select(n => n == "-" ? "" : n)
-                         .ToList();
+            var names = packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                              .Select(n => n == "-" ? "" : n)
+                              .ToList();
+            // Diamond and Pearl lack the two three-file weather sets Platinum keeps at entries 55 to 60.
+            if (dir == DirNames.synthOverlay && gameFamily == GameFamilies.DP && names.Count >= 61)
+                names.RemoveRange(55, 6);
+            return names;
         }
 
         /// <summary>What to call a thing, in the words somebody looking for it would use.</summary>
@@ -34,7 +43,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (string.IsNullOrEmpty(thing)) return null;
 
-            if (dir == DirNames.synthOverlay)
+            if (IsWeather(dir))
             {
                 foreach (var (name, says) in Weather)
                     if (thing.Equals(name, StringComparison.Ordinal)) return says;
@@ -81,16 +90,15 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly (string Name, string Says)[] Fonts =
         {
-            ("system", "System font"),
-            ("talk", "Dialogue font"),
-            ("button", "Button font"),
-            ("touch", "Touch screen font"),
-            ("unknown", "Spare font"),
-            ("num_lz", "Numbers"),
-            ("dis_change", "Font size change marks"),
-            ("system_ncrl", "System font widths"),
-            ("talk_ncrl", "Dialogue font widths"),
-            ("touch_ncrl", "Touch screen font widths"),
+            ("font_system", "System font"),
+            ("font_message", "Dialogue font"),
+            ("font_subscreen", "Touch screen font"),
+            ("font_unown", "Unown font"),
+            ("font_special_chars", "Special characters"),
+            ("screen_indicators", "Screen indicators"),
+            ("font_extra", "Extra font colours"),
+            ("font_4", "Font 4"),
+            ("font_5", "Font 5"),
         };
 
         private static string Pretty(string name)
