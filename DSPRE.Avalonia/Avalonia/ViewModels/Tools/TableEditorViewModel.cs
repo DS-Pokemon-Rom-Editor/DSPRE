@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // ── Battle Effects setup ───────────────────────────────────────────────────
         private void SetupBattleEffects()
         {
-            if (gameFamily != GameFamilies.HGSS && gameFamily != GameFamilies.Plat)
+            if (!BattleMusicTables.IsSupported)
             {
                 ShowEffectsCombos = false;
                 ShowVsTables = false;
@@ -322,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 ShowEffectsCombos = false;
                 ShowVsTables = false;
-                _tablesNote = "Link the hg-engine checkout to edit these tables.";
+                _tablesNote = isHGE ? "Link the hg-engine checkout to edit these tables." : null;
                 return;
             }
             _effectsComboTable = tables.Combos.Rows;

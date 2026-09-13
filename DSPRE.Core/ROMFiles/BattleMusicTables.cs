@@ -20,7 +20,7 @@ namespace DSPRE.ROMFiles
         }
 
         public readonly Table<(ushort Transition, ushort Sequence)> Combos = new Table<(ushort, ushort)>();
-        /// <summary>HGSS only. Platinum decides these in code.</summary>
+        /// <summary>HGSS only. Diamond, Pearl and Platinum decide these in code.</summary>
         public readonly Table<(int Class, int Combo)> Classes = new Table<(int, int)>();
         public readonly Table<(int Species, int Combo)> Species = new Table<(int, int)>();
 
@@ -29,7 +29,9 @@ namespace DSPRE.ROMFiles
 
         internal BattleMusicTables(bool fromHgEngineSource = false) => FromHgEngineSource = fromHgEngineSource;
 
-        public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat;
+        // Only the English Diamond and Pearl layout is known.
+        public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat
+            || (gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.English);
 
         // ── Selection ────────────────────────────────────────────────────────────────────────────
 
@@ -54,9 +56,27 @@ namespace DSPRE.ROMFiles
             [144] = 21, [145] = 21, [146] = 21, [487] = 22, [377] = 23, [378] = 23, [379] = 23,
         };
 
+        // Diamond and Pearl pick rows in code like Platinum, from their own lists; the table holds 31 rows.
+        private const int DpComboCount = 31, DpNormalTrainer = 29, DpNormalWild = 30;
+        private static readonly Dictionary<int, int> DpClassCombo = new Dictionary<int, int>
+        {
+            [62] = 0, [74] = 1, [75] = 2, [76] = 3, [77] = 4, [78] = 5, [64] = 6, [79] = 7,   // gym leaders
+            [65] = 8, [66] = 9, [67] = 10, [68] = 11,                                         // Elite Four
+            [69] = 12, [63] = 13,                                                             // Cynthia, rival
+            [73] = 21, [89] = 21, [72] = 22, [87] = 22, [88] = 22, [86] = 23,                 // Team Galactic
+            [97] = 28,                                                                        // Tower Tycoon
+        };
+        private static readonly Dictionary<int, int> DpSpeciesCombo = new Dictionary<int, int>
+        {
+            [492] = 14, [483] = 15, [484] = 15, [480] = 16, [482] = 16, [481] = 17, [493] = 18,
+            [479] = 19, [485] = 19, [486] = 19, [487] = 19, [491] = 19, [488] = 20,
+        };
+
         /// <summary>The theme for a battle against this trainer class, or -1.</summary>
         public int TrainerSequence(int trainerClass, bool kanto = false)
         {
+            if (gameFamily == GameFamilies.DP)
+                return ComboSequence(DpClassCombo.TryGetValue(trainerClass, out int d) ? d : DpNormalTrainer);
             if (gameFamily == GameFamilies.Plat)
                 return ComboSequence(PtClassCombo.TryGetValue(trainerClass, out int c) ? c : PtNormalTrainer);
 
@@ -69,6 +89,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The theme for a wild battle with this species, or -1.</summary>
         public int WildSequence(int species, bool kanto = false)
         {
+            if (gameFamily == GameFamilies.DP)
+                return ComboSequence(DpSpeciesCombo.TryGetValue(species, out int d) ? d : DpNormalWild);
             if (gameFamily == GameFamilies.Plat)
                 return ComboSequence(PtSpeciesCombo.TryGetValue(species, out int c) ? c : PtNormalWild);
 
@@ -105,7 +127,9 @@ namespace DSPRE.ROMFiles
             var t = new BattleMusicTables();
 
             bool hgss = gameFamily == GameFamilies.HGSS;
-            int comboCount = hgss ? ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter) : PtNormalWild + 1;
+            if (gameFamily == GameFamilies.DP && !DpPointersAgree()) return null;
+            int comboCount = hgss ? ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter)
+                : gameFamily == GameFamilies.DP ? DpComboCount : PtNormalWild + 1;
             Locate(t.Combos, effectsComboTableOffsetToRAMAddress);
             using (var r = new DSUtils.EasyReader(t.Combos.Path, t.Combos.Start))
                 for (int i = 0; i < comboCount; i++) t.Combos.Rows.Add((r.ReadUInt16(), r.ReadUInt16()));
@@ -117,6 +141,11 @@ namespace DSPRE.ROMFiles
             }
             return t;
         }
+
+        // A second pointer sits two bytes into the same table; if they disagree, the layout is not the known one.
+        private static bool DpPointersAgree() =>
+            BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableSecondPointerOffset, 4), 0)
+            == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
 
         // A row is an id in the low 10 bits and a combo in the high 6.
         private static void ReadPacked(Table<(int, int)> table, uint pointerOffset, int count)

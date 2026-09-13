@@ -66,6 +66,27 @@ namespace DSPRE.Tests
             Assert.Equal(1204, t.WildSequence(378));     // Regice
         }
 
+        [SkippableFact]
+        public void DiamondPicksTheClassAndSpeciesThemes()
+        {
+            Skip.If(!Directory.Exists(TestRoms.Diamond), "Diamond test project not configured");
+            new RomInfo("ADAE", TestRoms.Diamond);
+            var t = BattleMusicTables.LoadRom();
+
+            Assert.NotNull(t);
+            Assert.Equal(31, t.Combos.Rows.Count);
+            Assert.Equal((ushort)0x0C, t.Combos.Rows[0].Transition);
+            Assert.Equal((ushort)1117, t.Combos.Rows[0].Sequence);
+            Assert.Equal((ushort)0xFFFF, t.Combos.Rows[29].Transition);   // the standard trainer row
+            Assert.Equal((ushort)1119, t.Combos.Rows[29].Sequence);
+            Assert.Equal((ushort)0xFFFF, t.Combos.Rows[30].Transition);   // the standard wild row
+            Assert.Equal((ushort)1116, t.Combos.Rows[30].Sequence);
+
+            Assert.Equal(1117, t.TrainerSequence(62));
+            Assert.Equal(1119, t.TrainerSequence(2));    // Youngster
+            Assert.Equal(1116, t.WildSequence(19));      // Rattata
+        }
+
         private const string Sounds = @"
 #define SEQ_GS_VS_TRAINER             1117
 #define SEQ_GS_VS_GYMREADER           1118
