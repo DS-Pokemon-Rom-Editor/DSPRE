@@ -200,7 +200,11 @@ namespace DSPRE.Avalonia.Data
             { (8, 8), (8, 8), (8, 8), (8, 8) },
         };
 
-        /// <summary>The cells of a cell bank, each a list of sprites with the first on top.</summary>
+        /// <summary>
+        /// The cells of a cell bank, each a list of sprites with the first on top. Where a file carries a
+        /// transfer partition per bank, tile numbers count from that bank's own slice of the sheet, and the
+        /// offset is folded in here so callers need not know.
+        /// </summary>
         public static List<Oam[]> ReadCells(byte[] ncer)
         {
             var cells = new List<Oam[]>();
@@ -212,6 +216,32 @@ namespace DSPRE.Avalonia.Data
             int table = kbec + 8 + NitroBgCodec.U32(ncer, kbec + 12);
             int entry = type == 1 ? 16 : 8;
             int oams = table + count * entry;
+
+            // A piece's tile number counts in units of the sprite mapping's boundary, not in single tiles.
+            // Trainer layouts record mapping 1, so their numbers step in twos: a 64 by 64 body at 0 fills
+            // 64 tiles and the next piece says 32, which only stops overlapping the body once doubled.
+            int mapping = (int)NitroBgCodec.U32(ncer, kbec + 16) & 0xFF;
+            int perUnit = 1 << Math.Clamp(mapping, 0, 3);
+
+            // Where each bank's slice of the sheet begins, in tiles. Zero when the file keeps no partitions,
+            // which is how the Pokétch and the battle objects are stored.
+            var firstTile = new int[count];
+            int partitions = (int)NitroBgCodec.U32(ncer, kbec + 20);
+            if (partitions != 0)
+            {
+                int head = kbec + 8 + partitions;
+                if (head + 8 <= ncer.Length)
+                {
+                    int list = head + (int)NitroBgCodec.U32(ncer, head + 4);
+                    for (int i = 0; i < count; i++)
+                    {
+                        int at = list + i * 8;
+                        if (at + 8 > ncer.Length) break;
+                        firstTile[i] = (int)NitroBgCodec.U32(ncer, at) / 32;
+                    }
+                }
+            }
+
             for (int i = 0; i < count; i++)
             {
                 int at = table + i * entry;
@@ -231,7 +261,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         X = x, Y = y, Width = w, Height = h,
                         FlipH = ((a1 >> 12) & 1) != 0, FlipV = ((a1 >> 13) & 1) != 0,
-                        Tile = a2 & 0x3FF, Palette = a2 >> 12,
+                        Tile = (a2 & 0x3FF) * perUnit + firstTile[i], Palette = a2 >> 12,
                     };
                 }
                 cells.Add(list);

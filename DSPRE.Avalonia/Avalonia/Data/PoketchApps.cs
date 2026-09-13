@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
             public int Arrangement = -1;    // NSCR, where those tiles go
             public int Sprites = -1;        // NCGR for the OBJ sheet
             public int Cells = -1;          // NCER, which carries the sprite positions
-            public int Animation = -1;      // NANR, read-only until there is a writer
+            public int Animation = -1;      // NANR, the frame order and how long each frame is held
             public int TilesUsed;           // of TileCeiling, drawing plus any text window
             public int SpriteTilesUsed;     // of TileCeiling, including the shared digits where used
             public bool UsesDigitSheet;     // members 2, 3, 4

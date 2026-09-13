@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using DSPRE.Avalonia.Data;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
@@ -180,7 +181,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int CellBank
         {
             get => _bank;
-            set { if (Set(ref _bank, Math.Max(0, value))) { OnPropertyChanged(nameof(BankNote)); Draw(); } }
+            set
+            {
+                if (!Set(ref _bank, Math.Max(0, value))) return;
+                // Stepping a bank by hand is a way of looking through the drawings, so it stops the run
+                // rather than fighting it for the same picture.
+                Stop();
+                _motion = PoketchScreen.Motion.Still;
+                OnPropertyChanged(nameof(BankNote));
+                Draw();
+            }
         }
 
         private int _bankCount;
@@ -255,7 +265,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedIndex
         {
             get => _selectedIndex;
-            set { if (Set(ref _selectedIndex, value)) RaiseSelection(); }
+            // The picked piece decides what the screen shows on the Poké Ball tab, so it redraws. Refresh
+            // draws for itself after raising, which is why this sits here and not in RaiseSelection.
+            set { if (Set(ref _selectedIndex, value)) { RaiseSelection(); Draw(); } }
         }
 
         public BottomScreenPiece Selected =>
@@ -263,7 +275,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasSelection => Selected != null;
         public string SelectedName => Selected?.Name ?? "Nothing picked";
-        public string SelectedWhat => Selected?.What ?? "Pick a piece.";
+        public string SelectedWhat => Selected == null ? "Pick a piece." : Selected.What ?? "";
+
+        /// <summary>Most pieces need no explaining, so the line goes away rather than stating the obvious.</summary>
+        public bool HasWhat => Selected == null || !string.IsNullOrEmpty(Selected.What);
         public bool CanPaint => Selected != null && Selected.Drawing >= 0 && Selected.ReadOnlyBecause == null;
 
         /// <summary>Why the buttons are off for this piece, or null when they are on.</summary>
@@ -299,6 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 _hgss = IsHgss ? HgssTouchScreen.Load() : null;
                 _poketch = IsPlatinum ? PoketchScreen.Load() : null;
+                if (IsPlatinum) LoadAnimation();
                 if (RomInfo.fieldTouchMenuTextArchive >= 0)
                     try { _words = new TextArchive(RomInfo.fieldTouchMenuTextArchive); } catch { _words = null; }
             }
@@ -351,8 +367,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedApp
         {
             get => _app;
-            set { if (Set(ref _app, value)) Refresh(); }
+            // Each application has its own animation file, so the run has to be given the new one rather
+            // than left holding the last application's frames.
+            set { if (Set(ref _app, value)) { Stop(); LoadAnimation(); Refresh(); } }
         }
+
+        /// <summary>
+        /// Which application is up, as the Pokétch itself numbers them, or -1 for the frame. An animation
+        /// opened from here is told this so it can draw inside the casing rather than on nothing.
+        /// </summary>
+        public int PoketchAppId =>
+            _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1].Id : -1;
 
         /// <summary>
         /// Every piece of one of the screens, with the files it is drawn from. Static and free of anything
@@ -366,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 list.Add(new BottomScreenPiece
                 {
-                    Name = "Panel", What = "The panel behind everything on the menu screen.",
+                    Name = "Panel",
                     Archive = DirNames.fieldTouchMenu, Drawing = MenuTiles, Arrangement = MenuMap,
                     PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
                 });
@@ -374,14 +399,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     list.Add(new BottomScreenPiece
                     {
                         Name = IconNames[i],
-                        What = "One of the seven buttons down the panel.",
                         Archive = DirNames.fieldTouchMenu, Drawing = IconDrawings[i], Cells = IconCells,
                         PaletteMember = IconPalettes, PaletteRow = 0,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Side buttons",
-                    What = "The registered item slots, running shoes, A button and the mark beside MENU.",
+                    What = "Item slots, running shoes, the A button and the mark beside MENU.",
                     Archive = DirNames.fieldTouchMenu, Drawing = ButtonDrawing, Cells = ButtonCells,
                     PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
                 });
@@ -391,14 +415,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Poké Ball screen",
-                    What = "The screen a script puts up to ask something.",
                     Archive = DirNames.fieldTouchChoices, Drawing = ChoiceTiles, Arrangement = PokeBallMap,
                     PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Yes and no boxes",
-                    What = "Where the boxes sit for a yes or no question.",
                     Archive = DirNames.fieldTouchChoices, Arrangement = YesNoMap,
                     PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                 });
@@ -406,14 +428,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     list.Add(new BottomScreenPiece
                     {
                         Name = $"List of {n}",
-                        What = $"Where the boxes sit for {n} answers.",
                         Archive = DirNames.fieldTouchChoices, Arrangement = n,
                         PaletteMember = ChoicePalettes, PaletteRow = 0, PaletteRows = 5,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Answer frame",
-                    What = "The red frame drawn around the answer the cursor is on.",
                     Archive = DirNames.fieldTouchChoices, Drawing = CursorDrawing, Cells = CursorCells,
                     PaletteMember = CursorPalette, PaletteRow = 0,
                 });
@@ -457,9 +477,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     list.Add(new BottomScreenPiece
                     {
                         Name = "Sprite positions",
-                        What = a.Animation >= 0
-                             ? "Where each piece of a sprite sits within it."
-                             : "Where each piece of a sprite sits within it, which is read from the file.",
                         Archive = DirNames.poketch, Cells = a.Cells,
                         Animation = a.Animation,
                         Sprites = a.Sprites,
@@ -477,8 +494,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     {
                         Name = "Animation",
                         What = PoketchApps.AnimationsWithTransforms.Contains(a.Animation)
-                             ? "The frame order, and a turn or a stretch on each frame."
-                             : "The frame order.",
+                             ? "These frames carry a turn or a stretch."
+                             : null,
                         Archive = DirNames.poketch, Animation = a.Animation,
                         Cells = a.Cells, Drawing = -1,
                         PaletteMember = ThemePalettes, PaletteRow = row,
@@ -492,28 +509,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Casing",
-                    What = "The Pokétch casing. Row 0 is the girl's, row 1 the boy's.",
+                    What = "Row 0 is the girl's, row 1 the boy's.",
                     Archive = DirNames.poketch, Drawing = CaseTiles, Arrangement = CaseMap,
                     PaletteMember = CasePalettes, PaletteRow = female ? 0 : 1,
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Watch face",
-                    What = "The Digital Watch inside the casing.",
                     Archive = DirNames.poketch, Drawing = WatchTiles, Arrangement = WatchMap,
                     PaletteMember = ThemePalettes, PaletteRow = theme * 2 + (backlight ? 1 : 0),
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Watch digits",
-                    What = "Where the four digits of the time are taken from.",
                     Archive = DirNames.poketch, Arrangement = WatchDigits,
                     PaletteMember = ThemePalettes, PaletteRow = theme * 2 + (backlight ? 1 : 0),
                 });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Before you have one",
-                    What = "The Poké Ball picture shown until the player is given a Pokétch.",
+                    What = "Shown until the player is given a Pokétch.",
                     Archive = DirNames.poketch, Drawing = UnavailableTiles, Arrangement = UnavailableMap,
                     PaletteMember = UnavailablePalette, PaletteRow = 0,
                 });
@@ -557,7 +572,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     rgba = _hgss.RenderMenu(_font, Word, ScriptRunning, AHeld, ShoesOn, -1,
                                             ScriptRunning ? HgssTouchScreen.TalkMessage : HgssTouchScreen.CheckMessage);
                 else if (IsChoicesTab && _hgss != null)
-                    rgba = _hgss.RenderChoices(_font, SampleLabels(), YesNo, 0, true);
+                {
+                    // Picking a layout on the left shows that layout, so the boxes for five answers are
+                    // seen where they land rather than described.
+                    var (labels, yesNo) = ChoiceShown();
+                    rgba = _hgss.RenderChoices(_font, labels, yesNo, 0, labels != null);
+                }
                 else if (IsPlatinum && _poketch != null)
                     rgba = PoketchShot();
 
@@ -592,14 +612,209 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                       ShowSprites ? app.Cells : -1,
                                       CellBank,
                                       FillContents ? app.SpriteSlots : null,
-                                      FillContents ? app.Fills : null);
+                                      FillContents ? app.Fills : null,
+                                      _motion);
+        }
+
+        // ── Playing the application's own animation ───────────────────────────────────
+
+        private NanrFile _animation;
+        private int _sequence;
+        private PoketchScreen.Motion _motion = PoketchScreen.Motion.Still;
+
+        private DispatcherTimer _timer;
+        private readonly System.Diagnostics.Stopwatch _clock = new();
+        private int _frame, _shown, _ticksRun, _held;
+        private bool _reverse;
+
+        /// <summary>The Pokétch hands its animations two frames of time per screen refresh.</summary>
+        private const int TicksPerRefresh = 2;
+
+        public bool Playing => _timer != null;
+        public string PlayLabel => Playing ? "Stop" : "Play";
+
+        /// <summary>Whether this application has an animation to run at all.</summary>
+        public bool CanPlay => _animation != null && _animation.Sequences.Count > 0;
+
+        /// <summary>
+        /// Which of the animation's sequences to run. Several of these files hold one sequence per pose or
+        /// per angle, so the choice matters as much as the play button.
+        /// </summary>
+        public int PlaySequence
+        {
+            get => _sequence;
+            set
+            {
+                if (!Set(ref _sequence, value)) return;
+                OnPropertyChanged(nameof(PlayNote));
+                if (Playing) { Stop(); Play(); }
+            }
+        }
+
+        public int PlaySequenceCount => _animation?.Sequences.Count ?? 0;
+
+        public string PlayNote
+        {
+            get
+            {
+                if (_animation == null) return null;
+                if (_sequence < 0 || _sequence >= _animation.Sequences.Count) return null;
+                var s = _animation.Sequences[_sequence];
+                string mode = s.PlayMode switch
+                {
+                    2 => "loops",
+                    3 => "backwards",
+                    4 => "loops backwards",
+                    _ => "once",
+                };
+                return $"Sequence {_sequence} of {_animation.Sequences.Count}, "
+                     + $"{s.Frames.Count} frame{(s.Frames.Count == 1 ? "" : "s")}, {mode}";
+            }
+        }
+
+        // Read alongside the screens so the preview has the frame order and holds to run, not just banks.
+        private void LoadAnimation()
+        {
+            _animation = null;
+            _sequence = 0;
+            _motion = PoketchScreen.Motion.Still;
+            try
+            {
+                var app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
+                if (app == null || app.Animation < 0) return;
+                _animation = NanrFile.Read(
+                    NitroBgCodec.Inflate(new ScriptNarc(DirNames.poketch).Get(app.Animation)));
+            }
+            catch (Exception ex) { AppLogger.Error("Poketch animation: " + ex.Message); }
+
+            OnPropertyChanged(nameof(CanPlay));
+            OnPropertyChanged(nameof(PlaySequence));
+            OnPropertyChanged(nameof(PlaySequenceCount));
+            OnPropertyChanged(nameof(PlayNote));
+        }
+
+        public void TogglePlay()
+        {
+            if (Playing) Stop(); else Play();
+        }
+
+        private void Play()
+        {
+            if (!CanPlay) return;
+            if (_sequence < 0 || _sequence >= _animation.Sequences.Count) return;
+            if (_animation.Sequences[_sequence].Frames.Count == 0) return;
+
+            uint mode = _animation.Sequences[_sequence].PlayMode;
+            _reverse = mode == 3 || mode == 4;
+            _frame = _reverse ? _animation.Sequences[_sequence].Frames.Count - 1 : 0;
+            _shown = _frame;
+            _held = 0; _ticksRun = 0;
+            _clock.Restart();
+
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+            _timer.Tick += Beat;
+            _timer.Start();
+            OnPropertyChanged(nameof(Playing));
+            OnPropertyChanged(nameof(PlayLabel));
+            ShowFrame();
+        }
+
+        /// <summary>Stops the run. The frame it stopped on stays on screen.</summary>
+        public void Stop()
+        {
+            if (_timer == null) return;
+            _timer.Stop();
+            _timer.Tick -= Beat;
+            _timer = null;
+            _clock.Stop();
+            OnPropertyChanged(nameof(Playing));
+            OnPropertyChanged(nameof(PlayLabel));
+        }
+
+        // Same rules as the animation editor's playback: zero holds are skipped, loops return to the
+        // sequence's loop start, backwards modes turn round at each end.
+        private void Beat(object sender, EventArgs e)
+        {
+            if (!CanPlay || _sequence < 0 || _sequence >= _animation.Sequences.Count) { Stop(); return; }
+            var s = _animation.Sequences[_sequence];
+            if (s.Frames.Count == 0) { Stop(); return; }
+
+            int due = (int)(_clock.Elapsed.TotalSeconds * 60 * TicksPerRefresh);
+            if (due - _ticksRun > 4 * TicksPerRefresh) _ticksRun = due - 1;
+
+            bool loops = s.PlayMode == 2 || s.PlayMode == 4;
+            bool backwards = s.PlayMode == 3 || s.PlayMode == 4;
+            int loopStart = Math.Clamp(s.LoopStartFrame, 0, s.Frames.Count - 1);
+            int was = _shown;
+
+            while (_ticksRun < due && Playing)
+            {
+                _ticksRun++;
+                _held++;
+
+                for (int steps = 0; Playing && _held >= s.Frames[_frame].Delay && steps <= s.Frames.Count; steps++)
+                {
+                    _held = 0;
+                    _frame += _reverse ? -1 : 1;
+
+                    if (_frame >= s.Frames.Count || _frame < loopStart)
+                    {
+                        if (backwards)
+                        {
+                            bool atStart = _frame < loopStart;
+                            _reverse = !_reverse;
+                            _frame = Math.Clamp(_frame, loopStart, s.Frames.Count - 1);
+                            if (atStart && !loops) { Stop(); break; }
+                        }
+                        else if (loops) _frame = loopStart;
+                        else { _frame = s.Frames.Count - 1; Stop(); break; }
+                    }
+
+                    if (s.Frames[_frame].Delay > 0) { _shown = _frame; break; }
+                }
+            }
+            if (_shown != was) ShowFrame();
+        }
+
+        // A frame names a drawing and what to do with it. Both come from the animation, so the preview shows
+        // the pose the game would show rather than whichever bank was last stepped to.
+        private void ShowFrame()
+        {
+            if (_animation == null) return;
+            var (turn, across, down) = _animation.TurnOf(_sequence, _shown);
+            var (shiftX, shiftY) = _animation.ShiftOf(_sequence, _shown);
+            _motion = new PoketchScreen.Motion(turn, across, down, shiftX, shiftY);
+
+            int cell = _animation.CellOf(_sequence, _shown);
+            if (!Set(ref _bank, Math.Max(0, cell))) Draw();
+            else { OnPropertyChanged(nameof(BankNote)); Draw(); }
         }
 
         // Stand-in wording. A script supplies the real words, so these are only here to show the boxes with
         // something in them.
-        private string[] SampleLabels() =>
-            YesNo ? new[] { "YES", "NO" }
-                  : Enumerable.Range(1, ChoiceCount).Select(n => "Answer " + n).ToArray();
+        private static string[] SampleLabels(int count, bool yesNo) =>
+            yesNo ? new[] { "YES", "NO" }
+                  : Enumerable.Range(1, count).Select(n => "Answer " + n).ToArray();
+
+        /// <summary>
+        /// Which arrangement the preview draws, and its words. A picked layout wins over the toolbar, so
+        /// the Poké Ball screen on its own shows no boxes and "List of 5" shows five of them.
+        /// </summary>
+        private (string[] Labels, bool YesNo) ChoiceShown()
+        {
+            int count = ChoiceCount;
+            bool yesNo = YesNo;
+
+            var p = Selected;
+            if (p != null && p.Arrangement >= 0)
+            {
+                if (p.Arrangement == YesNoMap) { yesNo = true; count = 2; }
+                else if (p.Arrangement >= 2 && p.Arrangement <= 8) { yesNo = false; count = p.Arrangement; }
+                else if (p.Arrangement == PokeBallMap) return (null, false);
+            }
+
+            return (SampleLabels(count, yesNo), yesNo);
+        }
 
         // ── Colours ───────────────────────────────────────────────────────────────────
 
@@ -609,6 +824,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasSelection));
             OnPropertyChanged(nameof(SelectedName));
             OnPropertyChanged(nameof(SelectedWhat));
+            OnPropertyChanged(nameof(HasWhat));
             OnPropertyChanged(nameof(CanPaint));
             OnPropertyChanged(nameof(CannotEditBecause));
             OnPropertyChanged(nameof(IsAnimation));

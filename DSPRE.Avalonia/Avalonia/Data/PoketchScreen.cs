@@ -118,12 +118,31 @@ namespace DSPRE.Avalonia.Data
         // The window the casing leaves for an application, in pixels: tile (2,2), 24 by 20 tiles.
         private const int WindowX = 16, WindowY = 16, WindowW = 192, WindowH = 160;
 
+        /// <summary>
+        /// The middle of the window an application draws in. Where a sprite really goes is in the game's
+        /// code, so this is only for showing a frame that has no recorded position, never for claiming one.
+        /// </summary>
+        public static (int X, int Y) MiddleOfScreen => (WindowX + WindowW / 2, WindowY + WindowH / 2);
+
+        /// <summary>
+        /// What one frame of an animation does to the sprite. Five of this archive's animations carry a turn,
+        /// a stretch or a shift per frame, so a frame drawn without them is the right picture in the wrong
+        /// place. The resting values leave the sprite exactly where the cells put it.
+        /// </summary>
+        public readonly record struct Motion(double Degrees, double ScaleX, double ScaleY, int ShiftX, int ShiftY)
+        {
+            public static readonly Motion Still = new(0, 1, 1, 0, 0);
+            public bool Moves => Degrees != 0 || ScaleX != 1 || ScaleY != 1 || ShiftX != 0 || ShiftY != 0;
+        }
+
         /// <param name="slots">Where to repeat the sprite, or null to show it in the middle.</param>
         /// <param name="fills">Rectangles a running game fills in, drawn only when asked for.</param>
+        /// <param name="motion">What the frame being shown does to the sprite.</param>
         public byte[] RenderApp(bool female, int theme, bool backlight, int tiles, int arrangement,
                                 int sprites = -1, int cells = -1, int bank = 0,
                                 (int X, int Y)[] slots = null,
-                                (int X, int Y, int W, int H, int Colour)[] fills = null)
+                                (int X, int Y, int W, int H, int Colour)[] fills = null,
+                                Motion? motion = null)
         {
             var s = new DsBgScreen();
 
@@ -189,9 +208,17 @@ namespace DSPRE.Avalonia.Data
                     // Only where the game's own table says. Drawing a sprite in the middle of the window
                     // because its real place is unknown looks right and is wrong, which is worse than
                     // leaving it out.
+                    var m = motion ?? Motion.Still;
                     if (slots != null)
                         foreach (var (sx, sy) in slots)
-                            DsBgScreen.DrawCell(rgba, cell, chars, _ => colours, sx, sy);
+                        {
+                            if (m.Moves)
+                                DsBgScreen.DrawCellTurned(rgba, cell, chars, _ => colours,
+                                                          sx + m.ShiftX, sy + m.ShiftY,
+                                                          m.Degrees, m.ScaleX, m.ScaleY);
+                            else
+                                DsBgScreen.DrawCell(rgba, cell, chars, _ => colours, sx, sy);
+                        }
                 }
             }
             return rgba;

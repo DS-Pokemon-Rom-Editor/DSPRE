@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             AvaloniaXamlLoader.Load(this);
             DataContext = new BottomScreenEditorViewModel();
             EditorWindowChrome.Attach(this, VM);
+            // The animation runs on a timer, so it has to be let go of when the window closes.
+            Closed += (_, _) => VM?.Stop();
         }
 
         private static GraphicAssets.Archive ArchiveOf(BottomScreenPiece piece) =>
@@ -86,8 +88,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             string what = $"{VM.AppName} animation {piece.Animation}";
             AvaloniaEditorLauncher.OpenCellAnimationEditor(
                 piece.Archive, piece.Animation, piece.Cells, piece.Sprites,
-                piece.PaletteMember, piece.PaletteRow, what, piece.SharedSheet);
+                piece.PaletteMember, piece.PaletteRow, what, piece.SharedSheet, VM.PoketchAppId);
         }
+
+        private void Play_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
 
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
 

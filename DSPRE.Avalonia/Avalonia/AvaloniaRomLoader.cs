@@ -72,6 +72,9 @@ namespace DSPRE.Avalonia
             // The font and its letter numbering belong to the ROM that was open, not the new one.
             Views.Controls.FieldMessageBoxView.Font = null;
             Views.Controls.FieldMessageBoxView.Frame = null;
+            Views.Controls.FieldMenuWindowView.Font = null;
+            Views.Controls.FieldMenuWindowView.Frame = null;
+            Views.Controls.FieldMenuWindowView.Colours = null;
             Views.Controls.PoketchView.Screen = null;
             Views.Controls.HgssTouchScreenView.Screen = null;
             Views.Controls.HgssTouchScreenView.Font = null;

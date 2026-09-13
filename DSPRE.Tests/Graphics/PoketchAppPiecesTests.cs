@@ -114,7 +114,9 @@ namespace DSPRE.Tests
             int coinToss = PoketchApps.All.ToList().FindIndex(a => a.Name == "Coin Toss") + 1;
             var plain = BottomScreenEditorViewModel.PiecesFor(Poketch, app: coinToss)
                                                    .Single(p => p.Name == "Animation");
-            Assert.DoesNotContain("turn", plain.What);
+            // A plain animation row carries no subtitle at all: "Animation" is the whole story, and a line
+            // restating it is the sort of filler the panel is better without.
+            Assert.Null(plain.What);
 
             // Animation files can be written now, so neither row is read-only. Both name the layout their
             // frames draw from, which a frame number means nothing without.
