@@ -194,7 +194,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             f = v; OnPropertyChanged(n); return true;
         }
 
-        private readonly DirNames _dir;
+        private readonly ArchiveFiles _source;
         private readonly int _animation, _cells, _sprites, _palette, _paletteRow, _sharedSheet;
         private NanrFile _file;
         private List<DsBgScreen.Oam[]> _banks = new();
@@ -233,8 +233,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public CellAnimationEditorViewModel(DirNames dir, int animation, int cells, int sprites,
                                             int palette, int paletteRow, string what, int sharedSheet = -1,
                                             int poketchApp = -1)
+            : this(ArchiveFiles.Mapped(dir), animation, cells, sprites, palette, paletteRow, what, sharedSheet, poketchApp)
         {
-            _dir = dir; _animation = animation; _cells = cells; _sprites = sprites;
+        }
+
+        public CellAnimationEditorViewModel(ArchiveFiles source, int animation, int cells, int sprites,
+                                            int palette, int paletteRow, string what, int sharedSheet = -1,
+                                            int poketchApp = -1)
+        {
+            _source = source; _animation = animation; _cells = cells; _sprites = sprites;
             _palette = palette; _paletteRow = paletteRow; _sharedSheet = sharedSheet;
             Subject = what;
 
@@ -321,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                var narc = new ScriptNarc(_dir);
+                var narc = _source;
                 if (!narc.Available) { StatusText = "This game does not have that archive."; return; }
 
                 // These files are kept squeezed down in the ROM. How each was stored is remembered, so
@@ -852,9 +859,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     if (trouble != null) { StatusText = trouble; return; }
                 }
 
-                var narc = new ScriptNarc(_dir);
-                narc.Put(_animation, animation);
-                if (positions != null) narc.Put(_cells, positions);
+                var files = new Dictionary<int, byte[]> { [_animation] = animation };
+                if (positions != null) files[_cells] = positions;
+                _source.Put(files);
 
                 Dirty = false;
                 StatusText = "Saved.";
@@ -1073,7 +1080,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // Sprite memory holds the shared sheet first, then this screen's own, and the cells count tiles
         // across both. Laying them out the same way here is what puts the tiles back where the cells expect.
-        private static byte[] Sheet(ScriptNarc narc, int own, int shared)
+        private static byte[] Sheet(ArchiveFiles narc, int own, int shared)
         {
             byte[] mine = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(narc.Get(own)));
             if (shared < 0) return mine;

@@ -29,8 +29,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             var pick = VM?.Selected;
             if (pick == null) return;
             AvaloniaEditorLauncher.OpenCellAnimationEditor(
-                pick.Archive, pick.Animation, pick.Cells, pick.Sprites, pick.Palette, 0,
-                $"{pick.ArchiveName} animation {pick.Animation}");
+                pick.Source, pick.Animation, pick.Cells, pick.Sprites, pick.Palette, pick.PaletteRow,
+                pick.Label == null ? $"{pick.ArchiveName} animation {pick.Animation}" : $"{pick.Label}, {pick.ArchiveName} animation {pick.Animation}");
         }
 
         // Some archives already have an editor that knows far more about them than this window does.
@@ -40,14 +40,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             var pick = VM?.Selected;
             if (pick?.DeepEditor == null) return;
 
-            // Five files to a trainer class, six to a Pokemon, so the animation's own number says which.
+            // The animation's number says which class or Pokemon; files per trainer class vary by game.
             switch (pick.DeepEditor)
             {
                 case "Trainer Sprite Editor":
-                    AvaloniaEditorLauncher.OpenTrainerSpriteEditor(pick.Animation / 5);
+                    AvaloniaEditorLauncher.OpenTrainerSpriteEditor(TrainerGraphicsLayout.ClassOf(pick.Animation));
                     break;
                 case "Trainer Back Sprite Editor":
-                    AvaloniaEditorLauncher.OpenTrainerBackSpriteEditor(pick.Animation / 5);
+                    AvaloniaEditorLauncher.OpenTrainerBackSpriteEditor(TrainerGraphicsLayout.ClassOf(pick.Animation));
                     break;
                 case "Pokemon Sprite Editor":
                 case "Pokemon Editor":

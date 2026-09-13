@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
@@ -14,7 +16,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     public sealed class CellAnimationFound
     {
         public DirNames Archive { get; init; }
+        public ArchiveFiles Source { get; init; }
         public string ArchiveName { get; init; }
+
+        /// <summary>What the drawing shows, such as the Pokemon an icon belongs to.</summary>
+        public string Label { get; init; }
+
+        /// <summary>Which bank of the palette file the drawing is painted with.</summary>
+        public int PaletteRow { get; init; }
         public int Animation { get; init; }
         public int Cells { get; init; }
         public int Sprites { get; init; }
@@ -34,7 +43,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public string DeepEditor { get; init; }
 
-        public string Title => $"{ArchiveName}  #{Animation}";
+        public string Title => Label == null ? $"{ArchiveName}  #{Animation}" : $"{ArchiveName}  #{Animation}  {Label}";
 
         public string Detail
         {
@@ -173,6 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 string q = _search.Trim();
                 rows = rows.Where(r => r.ArchiveName.Contains(q, StringComparison.OrdinalIgnoreCase)
+                                    || (r.Label?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
                                     || r.Animation.ToString() == q);
             }
 
@@ -191,26 +201,57 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                             : "");
         }
 
-        // Walks every archive the game maps and reads whatever turns out to be an animation.
         private void Look()
         {
             _all.Clear();
-            var dirs = gameDirs?.Keys.ToList() ?? new List<DirNames>();
-            foreach (var dir in dirs)
-                _all.AddRange(InArchive(dir));
+            _all.AddRange(Everywhere());
             OnPropertyChanged(nameof(Summary));
         }
 
-        /// <summary>
-        /// Every animation in one archive, with the files each one draws from. Separate and static so the
-        /// pairing can be checked against what the games are known to do.
-        /// </summary>
-        public static List<CellAnimationFound> InArchive(DirNames dir)
+        /// <summary>Every animation in the ROM, mapped archives first, then unmapped NARCs so none is missed.</summary>
+        public static List<CellAnimationFound> Everywhere()
         {
             var found = new List<CellAnimationFound>();
-            ScriptNarc narc;
-            try { narc = new ScriptNarc(dir); } catch { return found; }
-            if (!narc.Available) return found;
+            var mappedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var dir in gameDirs?.Keys.ToList() ?? new List<DirNames>())
+            {
+                try { mappedFiles.Add(Path.GetFullPath(Path.Combine(workDir ?? "", gameDirs[dir].packedDir))); } catch { }
+                // That slot holds map headers once the dynamic headers patch is applied, not graphics.
+                if (dir == DirNames.dynamicHeaders) continue;
+                found.AddRange(InArchive(dir));
+            }
+
+            if (string.IsNullOrEmpty(dataPath) || !Directory.Exists(dataPath)) return found;
+            foreach (string path in Directory.EnumerateFiles(dataPath, "*", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
+            {
+                string full;
+                try { full = Path.GetFullPath(path); } catch { continue; }
+                if (mappedFiles.Contains(full) || !StartsLikeANarc(full)) continue;
+                string name = Path.GetRelativePath(dataPath, full).Replace('\\', '/');
+                found.AddRange(InArchive(ArchiveFiles.Loose(full, name)));
+            }
+            return found;
+        }
+
+        private static bool StartsLikeANarc(string path)
+        {
+            try
+            {
+                using var s = File.OpenRead(path);
+                var head = new byte[4];
+                return s.Read(head, 0, 4) == 4 && head[0] == 'N' && head[1] == 'A' && head[2] == 'R' && head[3] == 'C';
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Every animation in one archive, with the files each one draws from.</summary>
+        public static List<CellAnimationFound> InArchive(DirNames dir) => InArchive(ArchiveFiles.Mapped(dir));
+
+        public static List<CellAnimationFound> InArchive(ArchiveFiles narc)
+        {
+            var found = new List<CellAnimationFound>();
+            try { if (!narc.Available) return found; } catch { return found; }
+            DirNames dir = narc.Dir ?? default;
 
             // What each file in this archive is, so neighbours can be recognised.
             int count = narc.Count;
@@ -226,9 +267,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 catch { kinds[i] = GraphicAssets.Kind.Unknown; }
             }
 
-            // What the graphics census says about this archive, where it says anything. Its entry hooks were
-            // read from the editors that own these files, so they are worth more than a guess at a distance.
-            var described = GraphicAssets.All.FirstOrDefault(a => a.Dir == dir);
+            // This archive's own entry hooks, where it has them, beat a guess from neighbouring files.
+            var described = narc.Dir == null ? null : GraphicAssets.All.FirstOrDefault(a => a.Dir == dir);
 
             // Reading a layout or a sheet is not free and the same one is asked about repeatedly, so each is
             // read once per archive.
@@ -259,8 +299,41 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return tiles;
             }
 
+            // Every party icon shares one animation, so it is offered once per Pokemon with its own drawing and colour bank.
+            if (narc.Dir == DirNames.monIcons)
+            {
+                const int IconAnimation = 1, IconLayout = 2, IconPalette = 0;
+                var iconFile = IconAnimation < count && kinds[IconAnimation] == GraphicAssets.Kind.CellAnimation
+                    ? NanrFile.Read(bytes[IconAnimation]) : null;
+                if (iconFile != null)
+                {
+                    string[] names;
+                    try { names = GetPokemonNames(); } catch { names = Array.Empty<string>(); }
+                    int banks = BanksOf(IconLayout).Count;
+                    for (int f = PokemonIconFiles.SharedFiles + 1; f < count; f++)
+                    {
+                        var icon = PokemonIconFiles.Describe(f);
+                        if (icon == null) continue;
+                        int row;
+                        try { row = DSUtils.GetMonIconPaletteId(f - PokemonIconFiles.SharedFiles); } catch { row = 0; }
+                        found.Add(new CellAnimationFound
+                        {
+                            Archive = dir, Source = narc, ArchiveName = narc.Name,
+                            Label = PokemonIconFiles.Label(icon, names),
+                            Animation = IconAnimation, Cells = IconLayout, Sprites = f, Palette = IconPalette, PaletteRow = row,
+                            Sequences = iconFile.Sequences.Count,
+                            Frames = iconFile.Sequences.Sum(s => s.Frames.Count),
+                            Extended = iconFile.HasExtendedData,
+                            Banks = banks, SheetTiles = TilesOf(f),
+                            DeepEditor = described?.DeepEditor,
+                        });
+                    }
+                }
+            }
+
             for (int i = 0; i < count; i++)
             {
+                if (narc.Dir == DirNames.monIcons) break;
                 if (kinds[i] != GraphicAssets.Kind.CellAnimation) continue;
                 var file = NanrFile.Read(bytes[i]);
                 if (file == null) continue;
@@ -292,10 +365,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 int colours = Declared(described?.ColourEntry, i, kinds, GraphicAssets.Kind.Palette);
                 if (colours < 0) colours = Nearest(kinds, i, GraphicAssets.Kind.Palette);
 
+                int paletteRow = 0;
+                try { if (sprites >= 0 && described?.ColourBank != null) paletteRow = Math.Max(0, described.ColourBank(sprites)); } catch { }
+
                 found.Add(new CellAnimationFound
                 {
                     Archive = dir,
-                    ArchiveName = dir.ToString(),
+                    Source = narc,
+                    ArchiveName = narc.Name,
+                    PaletteRow = paletteRow,
                     Animation = i,
                     Cells = cells,
                     Sprites = sprites,
