@@ -3,9 +3,8 @@ using System;
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>
-    /// Platinum's field bottom screen out of graphic/poketch.narc: the Poké Ball picture before the player has
-    /// a Pokétch, and the Pokétch frame over the Digital Watch once they do. Recipe from the pokeplatinum
-    /// decomp's applications/poketch (poketch_graphics.c, digital_watch/graphics.c, unavailable/graphics.c).
+    /// The Diamond, Pearl and Platinum field bottom screen: the Poké Ball picture before the player has a
+    /// Pokétch, then the Pokétch frame over the Digital Watch.
     /// </summary>
     public sealed class PoketchScreen
     {
@@ -28,7 +27,8 @@ namespace DSPRE.Avalonia.Data
 
         // Board tiles are loaded 64 tiles in, and the board arrangement already counts from there.
         private const int BoardTileOffset = 64, BoardCharBase = 0x4000;
-        private const int SolidTile = 164;
+        // Diamond's casing sheet is 21 tiles wide, not 32.
+        private static int SolidTile => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 152 : 164;
 
         private readonly Func<int, byte[]> _member;
 
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                if (RomInfo.gameFamily != RomInfo.GameFamilies.Plat) return null;
+                if (RomInfo.gameFamily != RomInfo.GameFamilies.Plat && RomInfo.gameFamily != RomInfo.GameFamilies.DP) return null;
                 var narc = new ScriptNarc(RomInfo.DirNames.poketch);
                 if (!narc.Available) return null;
                 var cache = new byte[narc.Count][];
@@ -100,8 +100,15 @@ namespace DSPRE.Avalonia.Data
             foreach (var (x, d) in new[] { (3, hour / 10), (8, hour % 10), (15, minute / 10), (20, minute % 10) })
                 s.Copy(2, x, 7, 4, 9, digits, 4 * d, 0, DigitStripWidth);
 
-            s.Put(0, ButtonBlock(up == Look.Hold ? 16 : up == Look.Lock ? 12 : 8, 4, 6), 28, 4, 4, 8);
-            s.Put(0, ButtonBlock(down == Look.Hold ? 28 : down == Look.Lock ? 24 : 20, 2, 4), 28, 12, 4, 8);
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            {
+                s.Put(0, DpButtonBlock(up == Look.Hold ? 80 : up == Look.Lock ? 76 : 72), 27, 11, 4, 11);
+            }
+            else
+            {
+                s.Put(0, ButtonBlock(up == Look.Hold ? 16 : up == Look.Lock ? 12 : 8, 4, 6), 28, 4, 4, 8);
+                s.Put(0, ButtonBlock(down == Look.Hold ? 28 : down == Look.Lock ? 24 : 20, 2, 4), 28, 12, 4, 8);
+            }
             return s.Render();
         }
 
@@ -235,6 +242,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which part of the Pokétch a touch at bottom-screen pixel x, y lands on.</summary>
         public static Spot HitTest(int x, int y)
         {
+            // Diamond and Pearl have one side button, reported as Up.
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            {
+                if (x >= 16 && x <= 207 && y >= 16 && y <= 175) return Spot.Screen;
+                if (x >= 220 && x <= 244 && y >= 96 && y <= 172) return Spot.Up;
+                return Spot.None;
+            }
             if (x >= 16 && x < 207 && y >= 16 && y < 175) return Spot.Screen;
             if (x >= 224 && x < 255 && y >= 32 && y < 96) return Spot.Up;
             if (x >= 224 && x < 255 && y >= 96 && y < 160) return Spot.Down;
@@ -267,6 +281,18 @@ namespace DSPRE.Avalonia.Data
                     block[y * 4 + x] = (ushort)((15 << 12) | (BoardTileOffset + baseTile + row + x));
                 if (y < stretchStart || y >= stretchEnd) row += 32;
             }
+            return block;
+        }
+
+        // Diamond's one button is 4 by 11 tiles from five source rows of its 21-wide sheet, the middle row seven times.
+        private static ushort[] DpButtonBlock(int baseTile)
+        {
+            const int SheetWidth = 21;
+            int[] sourceRow = { 0, 1, 2, 2, 2, 2, 2, 2, 2, 3, 4 };
+            var block = new ushort[4 * 11];
+            for (int y = 0; y < 11; y++)
+                for (int x = 0; x < 4; x++)
+                    block[y * 4 + x] = (ushort)((15 << 12) | (BoardTileOffset + baseTile + sourceRow[y] * SheetWidth + x));
             return block;
         }
     }

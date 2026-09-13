@@ -81,6 +81,19 @@ namespace DSPRE.Tests
             SweepTab(BottomScreenEditorViewModel.Tab.Poketch);
         }
 
+        /// <summary>Diamond has the Pokétch too, with the same applications and its own casing.</summary>
+        [SkippableFact]
+        public void DiamondsPoketchIsReadAndDrawn()
+        {
+            Skip.If(!Ready(TestRoms.Diamond, "ADAE"), "Diamond is not unpacked here");
+            SweepTab(BottomScreenEditorViewModel.Tab.Poketch);
+
+            var screen = PoketchScreen.Load();
+            Assert.NotNull(screen);
+            byte[] watch = screen.RenderWatch(false, 0, false, 12, 34, PoketchScreen.Look.Free, PoketchScreen.Look.Free);
+            Assert.Equal(DsBgScreen.Width * DsBgScreen.Height * 4, watch.Length);
+        }
+
         /// <summary>
         /// The seven icons are all painted from one row, so the editor has to say so before somebody
         /// recolours the Pokédex button and finds the other six have moved with it.

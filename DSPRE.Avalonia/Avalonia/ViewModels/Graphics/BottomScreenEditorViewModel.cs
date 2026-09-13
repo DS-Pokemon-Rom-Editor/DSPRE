@@ -126,12 +126,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (Design.IsDesignMode) { _loading = false; return; }
 
             IsHgss = gameFamily == GameFamilies.HGSS;
-            IsPlatinum = gameFamily == GameFamilies.Plat;
+            HasPoketch = gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
 
             foreach (string t in IsHgss ? new[] { "Menu", "Poké Ball screen" } : new[] { "Pokétch" })
                 TabNames.Add(t);
 
-            if (IsPlatinum)
+            if (HasPoketch)
             {
                 AppNames.Add("Pokétch frame");
                 foreach (var a in PoketchApps.All) AppNames.Add(a.Name);
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public bool IsHgss { get; }
-        public bool IsPlatinum { get; }
+        public bool HasPoketch { get; }
 
         public ObservableCollection<string> TabNames { get; } = new();
 
@@ -313,8 +313,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 _hgss = IsHgss ? HgssTouchScreen.Load() : null;
-                _poketch = IsPlatinum ? PoketchScreen.Load() : null;
-                if (IsPlatinum) LoadAnimation();
+                _poketch = HasPoketch ? PoketchScreen.Load() : null;
+                if (HasPoketch) LoadAnimation();
                 if (RomInfo.fieldTouchMenuTextArchive >= 0)
                     try { _words = new TextArchive(RomInfo.fieldTouchMenuTextArchive); } catch { _words = null; }
             }
@@ -578,7 +578,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     var (labels, yesNo) = ChoiceShown();
                     rgba = _hgss.RenderChoices(_font, labels, yesNo, 0, labels != null);
                 }
-                else if (IsPlatinum && _poketch != null)
+                else if (HasPoketch && _poketch != null)
                     rgba = PoketchShot();
 
                 Screen = rgba == null ? null : ToBitmap(rgba, DsBgScreen.Width, DsBgScreen.Height);
