@@ -248,59 +248,87 @@ namespace DSPRE.Avalonia.Data
         // (uses idx = emission·16/total), instead of clumping into a wedge with random angles.
         private void Emit(int emIdx, int emCount)
         {
-            // The the particle library shapes are 3D; the preview camera is orthographic facing −Z, so we emit in 3D then keep (x,y).
-            // The circle/cylinder shapes lie in the plane perpendicular to circle_axis (Z = screen plane → a full
-            // on-screen ring; Y/X → an edge-on ring that projects to a horizontal/vertical spread, as in-game).
-            double ux, uy, uz = 0;         // unit emission direction; z (depth) is kept only to drive an X/Y-axis spin
-            double rscale = 1.0;           // radius multiplier (1 = surface, rand = volume)
-            double lox = 0, loy = 0;       // cylinder length offset (along the cylinder axis = circle_axis)
+            // Circles, cylinders and hemispheres lie on two axes across circle_axis; spheres ignore it.
+            var (c1, c2, up) = OrthogonalAxes();
+            double R() => _rng.NextDouble() * 2.0 - 1.0;
+            (double, double, double) Tilt(double lx, double ly, double lz) =>
+                (lx * c1.X + ly * c2.X + lz * up.X, lx * c1.Y + ly * c2.Y + lz * up.Y, lx * c1.Z + ly * c2.Z + lz * up.Z);
+            double posX, posY, posZ;
+            double tanX = 0, tanY = 0, tanZ = 0;   // cylinder surface: its ring direction sets the velocity
+            bool ringVelocity = false;
             switch (_e.InitPosType)
             {
-                case 0:                                                     // ZERO
-                    ux = uy = 0; break;
-                case 1:                                                     // SPHERE (surface)
-                case 4: { var (sx, sy, sz) = Sphere(); ux = sx; uy = sy; uz = sz; if (_e.InitPosType == 4) rscale = _rng.NextDouble(); break; }
-                case 2:                                                     // CIRCLE (random angle in plane)
-                case 5: { double a = _rng.NextDouble() * Math.PI * 2.0; (ux, uy, uz) = CirclePlane(a); if (_e.InitPosType == 5) rscale = _rng.NextDouble(); break; }
-                case 3: { double a = Math.PI * 2.0 * emIdx / Math.Max(1, emCount); (ux, uy, uz) = CirclePlane(a); break; }  // CIRCLE_RI (even)
-                case 6: case 7:                                            // CYLINDER (spl_gen): circle⟂axis × radius + random along the axis (length)
+                case 1:   // SPHERE_SURFACE
                 {
-                    double a = _rng.NextDouble() * Math.PI * 2.0; (ux, uy, uz) = CirclePlane(a);
-                    if (_e.InitPosType == 7) rscale = _rng.NextDouble();   // CYLINDER_RI = volume radius
-                    double lz = (_rng.NextDouble() * 2.0 - 1.0) * _e.Length;
-                    if (_e.CircleAxis == 1) loy = lz; else if (_e.CircleAxis == 2) lox = lz;   // axis Z → into screen (unseen)
+                    var (sx, sy, sz) = Sphere();
+                    posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius;
                     break;
                 }
-                case 8: case 9: { var (sx, sy, sz) = Sphere(); ux = sx; uy = Math.Abs(sy); uz = sz; if (_e.InitPosType == 9) rscale = _rng.NextDouble(); break; }  // SEMISPHERE
-                default: { double a = _rng.NextDouble() * Math.PI * 2.0; (ux, uy, uz) = CirclePlane(a); break; }
+                case 2:   // CIRCLE_BORDER
+                {
+                    double a = _rng.NextDouble() * Math.PI * 2.0;
+                    (posX, posY, posZ) = Tilt(Math.Cos(a) * _e.Radius, Math.Sin(a) * _e.Radius, 0);
+                    break;
+                }
+                case 3:   // CIRCLE_BORDER_UNIFORM: evenly spaced, sine on the first axis
+                {
+                    double a = Math.PI * 2.0 * emIdx / Math.Max(1, emCount);
+                    (posX, posY, posZ) = Tilt(Math.Sin(a) * _e.Radius, Math.Cos(a) * _e.Radius, 0);
+                    break;
+                }
+                case 4:   // SPHERE: each component scaled by its own random factor
+                {
+                    var (sx, sy, sz) = Sphere();
+                    posX = sx * _e.Radius * R(); posY = sy * _e.Radius * R(); posZ = sz * _e.Radius * R();
+                    break;
+                }
+                case 5:   // CIRCLE
+                {
+                    double a = _rng.NextDouble() * Math.PI * 2.0;
+                    (posX, posY, posZ) = Tilt(Math.Cos(a) * _e.Radius * R(), Math.Sin(a) * _e.Radius * R(), 0);
+                    break;
+                }
+                case 6:   // CYLINDER_SURFACE
+                {
+                    double a = _rng.NextDouble() * Math.PI * 2.0, cx = Math.Cos(a), cy = Math.Sin(a);
+                    (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, R() * _e.Length);
+                    (tanX, tanY, tanZ) = Tilt(cx, cy, 0);
+                    ringVelocity = true;
+                    break;
+                }
+                case 7:   // CYLINDER
+                {
+                    double a = _rng.NextDouble() * Math.PI * 2.0, cx = Math.Cos(a), cy = Math.Sin(a);
+                    (posX, posY, posZ) = Tilt(cx * _e.Radius * R(), cy * _e.Radius * R(), R() * _e.Length);
+                    break;
+                }
+                case 8:   // HEMISPHERE_SURFACE: flipped onto the side the axes face
+                case 9:   // HEMISPHERE
+                {
+                    var (sx, sy, sz) = Sphere();
+                    double d = sx * up.X + sy * up.Y + sz * up.Z;
+                    if (_e.InitPosType == 8 ? d <= 0 : d < 0) { sx = -sx; sy = -sy; sz = -sz; }
+                    if (_e.InitPosType == 8) { posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius; }
+                    else
+                    {
+                        posX = sx * _e.Radius * (R() * 0.5 + 0.5);
+                        posY = sy * _e.Radius * (R() * 0.5 + 0.5);
+                        posZ = sz * _e.Radius * (R() * 0.5 + 0.5);
+                    }
+                    break;
+                }
+                default:  // POINT
+                    posX = posY = posZ = 0;
+                    break;
             }
-            double r = _e.Radius * rscale;
-            // Spawn position on the emission shape. VOLUME shapes (sphere/circle/hemisphere interiors) scale
-            // EACH component by its OWN random factor (FX_MUL(pos.c, radius) x RangeFX32/...):
-            // the shape switch above provides the direction and a per-type rscale; the per-component spread
-            // for volume types is applied here.
-            double posX = ux * r + lox, posY = uy * r + loy, posZ = uz * r;
-            if (_e.InitPosType == 4 || _e.InitPosType == 5)          // SPHERE / CIRCLE interiors: ±rand per component
-            {
-                posX = ux * _e.Radius * (_rng.NextDouble() * 2.0 - 1.0);
-                posY = uy * _e.Radius * (_rng.NextDouble() * 2.0 - 1.0);
-                posZ = uz * _e.Radius * (_rng.NextDouble() * 2.0 - 1.0);
-            }
-            else if (_e.InitPosType == 9)                            // HEMISPHERE interior: rand/2 + 0.5 per component
-            {
-                posX = ux * _e.Radius * ((_rng.NextDouble() * 2.0 - 1.0) * 0.5 + 0.5);
-                posY = uy * _e.Radius * ((_rng.NextDouble() * 2.0 - 1.0) * 0.5 + 0.5);
-                posZ = uz * _e.Radius * ((_rng.NextDouble() * 2.0 - 1.0) * 0.5 + 0.5);
-            }
-            // Radial velocity direction = normalize(spawn position); a POINT emitter (pos 0) gets a RANDOM 3D
-            // direction (posNorm): point bursts are omnidirectional, not static.
+            // Velocity points away from the centre; a particle born at the centre gets a random direction.
             double nx, ny, nz;
+            if (ringVelocity) { (nx, ny, nz) = Norm(tanX, tanY, tanZ); }
+            else
             {
                 double pl = Math.Sqrt(posX * posX + posY * posY + posZ * posZ);
                 if (pl > 1e-9) { nx = posX / pl; ny = posY / pl; nz = posZ / pl; }
                 else { var (sx, sy, sz) = Sphere(); nx = sx; ny = sy; nz = sz; }
-                if (_e.InitPosType == 6)   // CYLINDER_SURFACE: direction = the circle dir (no length component)
-                { nx = ux; ny = uy; nz = uz; }
             }
             // randomAttenuation: velocity magnitudes and base scale spread ±rnd/256 per particle
             // (DoubleScaledRange); lifetime attenuates downward (ScaledRange), minimum 1 frame.
@@ -354,16 +382,33 @@ namespace DSPRE.Avalonia.Data
         // the scaled random-range helper: uniform multiplier in [1 − r/256, 1].
         private double Scaled(int rnd) => rnd == 0 ? 1.0 : 1.0 - (rnd / 256.0) * _rng.NextDouble();
 
-        // A point on the unit circle in the plane perpendicular to circle_axis → (x, y, z); z is the depth component.
-        private (double, double, double) CirclePlane(double ang)
+        // Two unit axes spanning the plane across circle_axis, and their normal.
+        private ((double X, double Y, double Z) c1, (double X, double Y, double Z) c2, (double X, double Y, double Z) up) OrthogonalAxes()
         {
-            double c = Math.Cos(ang), s = Math.Sin(ang);
+            double ax, ay, az;
             switch (_e.CircleAxis)
             {
-                case 1: return (c, 0, s);   // axis Y → ring in XZ plane (horizontal on screen, z = depth)
-                case 2: return (0, c, s);   // axis X → ring in YZ plane (vertical on screen, z = depth)
-                default: return (c, s, 0);  // axis Z (screen plane) / arbitrary → full on-screen ring
+                case 0: ax = 0; ay = 0; az = 1; break;
+                case 1: ax = 0; ay = 1; az = 0; break;
+                case 2: ax = 1; ay = 0; az = 0; break;
+                default:                                 // the emitter's own axis
+                    (ax, ay, az) = Norm(_e.AxisX, _e.AxisY, _e.AxisZ);
+                    if (ax == 0 && ay == 0 && az == 0) ay = 1;
+                    break;
             }
+            // The world up vector, unless the axis is up itself.
+            double vx = 0, vy = 1, vz = 0;
+            if (Math.Abs(Math.Abs(ay) - 1.0) < 1e-9) { vx = 1; vy = 0; }
+            var c1 = Norm(ay * vz - az * vy, az * vx - ax * vz, ax * vy - ay * vx);
+            var c2 = Norm(ay * c1.Z - az * c1.Y, az * c1.X - ax * c1.Z, ax * c1.Y - ay * c1.X);
+            var up = Norm(c1.Y * c2.Z - c1.Z * c2.Y, c1.Z * c2.X - c1.X * c2.Z, c1.X * c2.Y - c1.Y * c2.X);
+            return (c1, c2, up);
+        }
+
+        private static (double X, double Y, double Z) Norm(double x, double y, double z)
+        {
+            double l = Math.Sqrt(x * x + y * y + z * z);
+            return l < 1e-12 ? (0.0, 0.0, 0.0) : (x / l, y / l, z / l);
         }
 
         // A random unit vector on a 3D sphere → (x, y, z).

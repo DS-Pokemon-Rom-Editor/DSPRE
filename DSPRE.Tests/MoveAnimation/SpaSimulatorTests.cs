@@ -11,6 +11,41 @@ namespace DSPRE.Tests
     public class SpaSimulatorTests
     {
         [Fact]
+        public void ACircleOnTheEmitterAxisLiesAcrossThatAxis()
+        {
+            // circle_axis 3 uses the emitter's own axis; an upright axis lays the ring flat.
+            var e = new SpaEmitter
+            {
+                InitPosType = 2, CircleAxis = 3, AxisY = 1, Radius = 10, GenNum = 24, EmitterLife = 1, GenInterval = 1,
+                ParticleLife = 5, AirResist = 128, BaseAlpha = 31, BaseScale = 1,
+            };
+            var sim = new SpaSimulator(e);
+            sim.Step();
+            var ps = sim.Particles().ToList();
+            Assert.Equal(24, ps.Count);
+            Assert.All(ps, p => Assert.Equal(0.0, p.Y, 6));
+            Assert.All(ps, p => Assert.Equal(10.0, System.Math.Sqrt(p.X * p.X + p.Z * p.Z), 6));
+            Assert.Contains(ps, p => System.Math.Abs(p.Z) > 5);
+        }
+
+        [Fact]
+        public void AHemisphereAroundTheScreenAxisOpensTowardTheCamera()
+        {
+            // The hemisphere faces the normal of the axes across circle_axis: +Z for the Z axis.
+            var e = new SpaEmitter
+            {
+                InitPosType = 8, CircleAxis = 0, Radius = 5, GenNum = 40, EmitterLife = 1, GenInterval = 1,
+                ParticleLife = 5, AirResist = 128, BaseAlpha = 31, BaseScale = 1,
+            };
+            var sim = new SpaSimulator(e);
+            sim.Step();
+            var ps = sim.Particles().ToList();
+            Assert.Equal(40, ps.Count);
+            Assert.All(ps, p => Assert.True(p.Z >= 0, $"particle at z {p.Z} is behind the emitter"));
+            Assert.Contains(ps, p => p.Y < -1);
+        }
+
+        [Fact]
         public void AirResistMultiplier_128IsNoDamping()
         {
             Assert.Equal(1.0, SpaSimulator.AirResistMultiplier(128), 3);

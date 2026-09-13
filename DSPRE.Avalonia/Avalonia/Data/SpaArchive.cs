@@ -14,6 +14,20 @@ namespace DSPRE.Avalonia.Data
         // the texture parameters flip flags (bits 14-15): the texture is a quadrant the hardware reflects across the particle
         // centre to build a symmetric sprite (e.g. a ring stored as one quarter). Mirror it at draw time.
         public bool MirrorX, MirrorY;
+        public bool RepeatS, RepeatT;   // without repeat, a coordinate past 1 clamps to the edge texel
+        public int ResourceOffset = -1;   // file offset of this texture's 32-byte resource header
+    }
+
+    /// <summary>Where one emitter record and each optional block it carries sit in the file.</summary>
+    public sealed class SpaRecordLayout
+    {
+        public int Offset, Length;
+        public uint Flags;
+        private readonly int[] _blocks = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+
+        /// <summary>File offset of the block, or -1 when this record does not carry it.</summary>
+        public int BlockOffset(SpaBlock block) => _blocks[(int)block];
+        internal void SetBlock(SpaBlock block, int offset) => _blocks[(int)block] = offset;
     }
 
     /// <summary>
@@ -75,6 +89,7 @@ namespace DSPRE.Avalonia.Data
         public double ChildVelRatio, ChildSclEnd;
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
+        public int TileS = 1, TileT = 1; // texture widths across the quad
         public double Aspect = 1.0;     // base.aspect (fx16): billboard sclX = sclY × aspect (non-square sprites)
         // misc.scaleAnimDir (the resource header, bits 28-30 of the word at +72): which axes the scale anim
         // drives (0 = both, 1 = X only, 2 = Y only; the hardware billboard-build step applies it per-axis). A thin quad
@@ -117,6 +132,7 @@ namespace DSPRE.Avalonia.Data
         public int TextureCount;
         public int TextureOffset, TextureSize;
         public List<SpaEmitter> Emitters { get; } = new List<SpaEmitter>();
+        public List<SpaRecordLayout> Records { get; } = new List<SpaRecordLayout>();
 
         /// <summary>Where reading the emitters stopped. </summary>
         public int EmittersEndAt;
@@ -221,24 +237,29 @@ namespace DSPRE.Avalonia.Data
                 e.FlipT = (etc2 & 2) != 0;
                 e.RepeatS = ((etc1 >> 24) & 0x3) >= 1;
                 e.RepeatT = ((etc1 >> 26) & 0x3) >= 1;
+                e.TileS = 1 << ((etc1 >> 24) & 0x3);
+                e.TileT = 1 << ((etc1 >> 26) & 0x3);
                 // base.offset_x/offset_y (fx16 @ 80/82): the billboard QUAD centre offset in half-size units;
                 // spl_draw_bb passes these to drawXYPlane, so the quad spans (offset±1). Anchors e.g. the Bite
                 // jaws so the upper fang hangs DOWN from its top point and the lower fang rises UP (we_044).
                 e.OffsetX = (short)U16(off + 80) / 4096.0;
                 e.OffsetY = (short)U16(off + 82) / 4096.0;
                 a.Emitters.Add(e);
+                var layout = new SpaRecordLayout { Offset = off, Flags = flag };
+                layout.SetBlock(SpaBlock.Header, off);
 
                 // parse / advance past this record's variable-length blocks (in flag order)
                 int p = off + BaseSize;
-                if (e.UseScaleAnm) { ParseScl(e, p, U16); p += SclAnmSize; }
-                if (e.UseColorAnm) { ParseClr(e, p, U16); p += ClrAnmSize; }
-                if (e.UseAlphaAnm) { ParseAlp(e, p, U16); p += AlpAnmSize; }
-                if (e.UseTexAnm) { ParseTexAnm(e, p, d); p += TexAnmSize; }
-                if (e.UseChild) { ParseChild(e, p, d); p += ChldSize; }
+                if (e.UseScaleAnm) { layout.SetBlock(SpaBlock.ScaleAnim, p); ParseScl(e, p, U16); p += SclAnmSize; }
+                if (e.UseColorAnm) { layout.SetBlock(SpaBlock.ColorAnim, p); ParseClr(e, p, U16); p += ClrAnmSize; }
+                if (e.UseAlphaAnm) { layout.SetBlock(SpaBlock.AlphaAnim, p); ParseAlp(e, p, U16); p += AlpAnmSize; }
+                if (e.UseTexAnm) { layout.SetBlock(SpaBlock.TexAnim, p); ParseTexAnm(e, p, d); p += TexAnmSize; }
+                if (e.UseChild) { layout.SetBlock(SpaBlock.Child, p); ParseChild(e, p, d); p += ChldSize; }
                 // Fields in order (bits 24..29): gravity(8) random(8) magnet(16) spin(4) collision(8) convergence(16).
                 int fp = p;
                 if ((flag & (1u << 24)) != 0)
                 {
+                    layout.SetBlock(SpaBlock.Gravity, fp);
                     if (fp + 6 <= d.Length)
                     {
                         e.GravityX = (short)U16(fp) / PtPerPixel; e.GravityY = (short)U16(fp + 2) / PtPerPixel;
@@ -248,6 +269,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 if ((flag & (1u << 25)) != 0)             // the randomization helper: VecFx16 mag(6) + u16 intvl(2)
                 {
+                    layout.SetBlock(SpaBlock.Random, fp);
                     if (fp + 8 <= d.Length)
                     {
                         e.RandMagX = (short)U16(fp) / PtPerPixel; e.RandMagY = (short)U16(fp + 2) / PtPerPixel;
@@ -258,6 +280,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 if ((flag & (1u << 26)) != 0)             // the magnet field: VecFx32 pos(12) + fx16 mag(2) + u16(2)
                 {
+                    layout.SetBlock(SpaBlock.Magnet, fp);
                     if (fp + 14 <= d.Length)
                     {
                         e.MagnetX = Px(I32(fp)); e.MagnetY = Px(I32(fp + 4));   // target point (particle px space)
@@ -269,11 +292,13 @@ namespace DSPRE.Avalonia.Data
                 }
                 if ((flag & (1u << 27)) != 0)
                 {
+                    layout.SetBlock(SpaBlock.Spin, fp);
                     if (fp + 4 <= d.Length) { e.SpinRadian = (short)U16(fp); e.SpinAxis = U16(fp + 2) & 0x3; }   // the spin field: radian + axis_type(0=X,1=Y,2=Z)
                     fp += 4;
                 }
                 if ((flag & (1u << 28)) != 0)             // the simple collision-plane field: fx32 y(4) + fx16 coeff_bounce(2) + etc(2)
                 {
+                    layout.SetBlock(SpaBlock.Collision, fp);
                     if (fp + 8 <= d.Length)
                     {
                         e.CollY = Px(I32(fp)); e.CollBounce = (short)U16(fp + 4) / 4096.0;
@@ -283,6 +308,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 if ((flag & (1u << 29)) != 0)             // the convergence field: VecFx32 pos(12) + fx16 ratio(2) + u16(2)
                 {
+                    layout.SetBlock(SpaBlock.Convergence, fp);
                     if (fp + 14 <= d.Length)
                     {
                         e.ConvX = Px(I32(fp)); e.ConvY = Px(I32(fp + 4));
@@ -292,6 +318,8 @@ namespace DSPRE.Avalonia.Data
                     }
                     fp += 16;
                 }
+                layout.Length = fp - off;
+                a.Records.Add(layout);
                 off = fp;
             }
             a.EmittersEndAt = off;
@@ -304,44 +332,55 @@ namespace DSPRE.Avalonia.Data
         private void DecodeTextures(byte[] d)
         {
             int RI32(int o) => d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24);
-            int RU16(int o) => d[o] | (d[o + 1] << 8);
 
             int pos = TextureOffset;
             for (int i = 0; i < TextureCount; i++)
             {
                 if (pos < 0 || pos + 32 > d.Length) break;
-                int param = RI32(pos + 4);
-                int texSize = RI32(pos + 8);
-                int pltOfst = RI32(pos + 12), pltSize = RI32(pos + 16);
-                int pltIdxOfst = RI32(pos + 20), pltIdxSize = RI32(pos + 24);
+                Textures.Add(DecodeResource(d, pos, Textures));
                 int totalSize = RI32(pos + 28);
-
-                int fmt = param & 0xF;
-                int w = 8 << ((param >> 4) & 0xF);
-                int h = 8 << ((param >> 8) & 0xF);
-                bool color0Transparent = ((param >> 16) & 1) != 0;
-                bool overlapped = ((param >> 17) & 1) != 0;
-                int sharedNo = (param >> 18) & 0xFF;
-                bool flipS = ((param >> 14) & 1) != 0;   // the texture parameters.flp bit0 → mirror across S
-                bool flipT = ((param >> 15) & 1) != 0;   // .flp bit1 → mirror across T (quadrant → full sprite)
-
-                SpaTexture tex;
-                if (overlapped && sharedNo >= 0 && sharedNo < Textures.Count)
-                {
-                    var shared = Textures[sharedNo];
-                    tex = new SpaTexture { Width = shared.Width, Height = shared.Height, Rgba = shared.Rgba, Format = shared.Format };
-                }
-                else
-                {
-                    byte[] texdata = Slice(d, pos + 32, texSize);
-                    RGBA[] pal = (pltSize > 0) ? ReadPalette(d, pos + pltOfst, pltSize, RU16) : null;
-                    byte[] spdata = (fmt == 5 && pltIdxSize > 0) ? Slice(d, pos + pltIdxOfst, pltIdxSize) : null;
-                    tex = DecodeOne(fmt, w, h, texdata, pal, spdata, color0Transparent);
-                }
-                tex.MirrorX = flipS; tex.MirrorY = flipT;
-                Textures.Add(tex);
-                pos += totalSize > 0 ? totalSize : (32 + texSize);
+                pos += totalSize > 0 ? totalSize : (32 + RI32(pos + 8));
             }
+        }
+
+        /// <summary>Decodes the texture resource whose header starts at <paramref name="pos"/>.</summary>
+        internal static SpaTexture DecodeResource(byte[] d, int pos, IReadOnlyList<SpaTexture> earlier)
+        {
+            int RI32(int o) => d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24);
+            int RU16(int o) => d[o] | (d[o + 1] << 8);
+
+            int param = RI32(pos + 4);
+            int texSize = RI32(pos + 8);
+            int pltOfst = RI32(pos + 12), pltSize = RI32(pos + 16);
+            int pltIdxOfst = RI32(pos + 20), pltIdxSize = RI32(pos + 24);
+
+            int fmt = param & 0xF;
+            int w = 8 << ((param >> 4) & 0xF);
+            int h = 8 << ((param >> 8) & 0xF);
+            bool color0Transparent = ((param >> 16) & 1) != 0;
+            bool overlapped = ((param >> 17) & 1) != 0;
+            int sharedNo = (param >> 18) & 0xFF;
+            bool flipS = ((param >> 14) & 1) != 0;   // the texture parameters.flp bit0 → mirror across S
+            bool flipT = ((param >> 15) & 1) != 0;   // .flp bit1 → mirror across T (quadrant → full sprite)
+            bool repeatS = ((param >> 12) & 1) != 0, repeatT = ((param >> 13) & 1) != 0;
+
+            SpaTexture tex;
+            if (overlapped && sharedNo >= 0 && sharedNo < earlier.Count)
+            {
+                var shared = earlier[sharedNo];
+                tex = new SpaTexture { Width = shared.Width, Height = shared.Height, Rgba = shared.Rgba, Format = shared.Format };
+            }
+            else
+            {
+                byte[] texdata = Slice(d, pos + 32, texSize);
+                RGBA[] pal = (pltSize > 0) ? ReadPalette(d, pos + pltOfst, pltSize, RU16) : null;
+                byte[] spdata = (fmt == 5 && pltIdxSize > 0) ? Slice(d, pos + pltIdxOfst, pltIdxSize) : null;
+                tex = DecodeOne(fmt, w, h, texdata, pal, spdata, color0Transparent);
+            }
+            tex.MirrorX = flipS; tex.MirrorY = flipT;
+            tex.RepeatS = repeatS; tex.RepeatT = repeatT;
+            tex.ResourceOffset = pos;
+            return tex;
         }
 
         private static SpaTexture DecodeOne(int fmt, int w, int h, byte[] texdata, RGBA[] pal, byte[] spdata, bool color0Transparent)

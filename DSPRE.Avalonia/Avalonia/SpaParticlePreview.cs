@@ -39,11 +39,13 @@ namespace DSPRE.Avalonia
             // The full emitter resource, for draw parameters that vary per particle KIND (child drawType /
             // polygon rot-axis / reference plane / dpolFaceEmitter). Null only in legacy callers.
             public readonly SpaEmitter Em;
+            // Depth changes neither size nor place.
+            public readonly bool Orthographic;
             public Layer(SpaSimulator sim, IReadOnlyList<SpaTexture> textures, SpaTexture baseTex, double centerX, double centerY,
                          int drawType, bool repeatS = false, bool repeatT = false, double aspect = 1.0, double dbbScale = 0.0,
                          double offsetX = 0.0, double offsetY = 0.0, double baseZ = 0.0, bool viewReversed = false,
-                         bool flipS = false, bool flipT = false, SpaEmitter em = null)
-            { Sim = sim; Textures = textures; BaseTex = baseTex; CenterX = centerX; CenterY = centerY; DrawType = drawType; RepeatS = repeatS; RepeatT = repeatT; Aspect = aspect <= 0 ? 1.0 : aspect; DbbScale = dbbScale; OffsetX = offsetX; OffsetY = offsetY; BaseZ = baseZ; ViewReversed = viewReversed; FlipS = flipS; FlipT = flipT; Em = em; }
+                         bool flipS = false, bool flipT = false, SpaEmitter em = null, bool orthographic = false)
+            { Sim = sim; Textures = textures; BaseTex = baseTex; CenterX = centerX; CenterY = centerY; DrawType = drawType; RepeatS = repeatS; RepeatT = repeatT; Aspect = aspect <= 0 ? 1.0 : aspect; DbbScale = dbbScale; OffsetX = offsetX; OffsetY = offsetY; BaseZ = baseZ; ViewReversed = viewReversed; FlipS = flipS; FlipT = flipT; Em = em; Orthographic = orthographic; }
 
             public SpaTexture TexFor(int texNo)
                 => (Textures != null && texNo >= 0 && texNo < Textures.Count) ? Textures[texNo] : BaseTex;
@@ -99,7 +101,7 @@ namespace DSPRE.Avalonia
                 // 4096/172 (PT_LCD_DOT), so the perspective factor for a particle at depth z (px-units,
                 // +z toward camera) is f = 4 / (4 − z/23.81): 1.0 exactly at the player plane, ≈0.757 at the
                 // enemy plane (Z_BB), matching the game's smaller enemy-side rendering.
-                double fBase = EyeDist / (EyeDist - layer.BaseZ / PxPerUnit);
+                double fBase = layer.Orthographic ? 1.0 : EyeDist / (EyeDist - layer.BaseZ / PxPerUnit);
                 if (fBase <= 0) continue;   // anchor behind the camera, nothing sane to draw
                 double mirror = layer.ViewReversed ? -1.0 : 1.0;
                 foreach (var p in layer.Sim.Particles())
@@ -109,19 +111,19 @@ namespace DSPRE.Avalonia
                     int drawType = p.IsChild && layer.Em != null ? layer.Em.ChildDrawType : layer.DrawType;
                     bool directional = drawType == 1;             // the directional-billboard draw type
                     bool polygonType = drawType >= 2 && layer.Em != null;   // POLYGON / DIRECTIONAL_POLYGON(_CENTER)
-                    // The displayed texture can change per particle/frame (texture animation). Mirror is per-texture
-                    // (its flip bit) gated by the emitter's tex_repeat.
+                    // The quad spans tileS by tileT texture widths; the texture's repeat and flip bits decide what lies past the first.
                     var tex = layer.TexFor(p.TexNo);
                     bool textured = tex != null && tex.Rgba != null && tex.Width > 0 && tex.Height > 0;
-                    bool mirrorX = textured && tex.MirrorX && layer.RepeatS;
-                    bool mirrorY = textured && tex.MirrorY && layer.RepeatT;
+                    int tileS = layer.Em?.TileS ?? (layer.RepeatS ? 2 : 1);
+                    int tileT = layer.Em?.TileT ?? (layer.RepeatT ? 2 : 1);
                     // Reconstruct the world-plane position from the screen anchor (exact at the anchor plane),
                     // add the particle's own offsets, then project through the camera. +Y up → screen Y flips.
                     double zTot = layer.BaseZ + p.Z;
                     double zEff = layer.ViewReversed ? -zTot : zTot;
                     double depth = EyeDist - zEff / PxPerUnit;
-                    if (depth < 0.25) continue;                       // behind / clipping the camera
-                    double f = EyeDist / depth;
+                    if (!layer.Orthographic && depth < 0.25) continue;   // behind / clipping the camera
+                    // The orthographic view box matches the perspective one at the target, so scale stays at the anchor plane's.
+                    double f = layer.Orthographic ? 1.0 : EyeDist / depth;
                     double worldX = ((layer.CenterX - Width / 2.0) / fBase + p.X * WorldToPx) * mirror;
                     double worldY = (Height / 2.0 - layer.CenterY) / fBase + p.Y * WorldToPx;
                     double px = Width / 2.0 + worldX * f;
@@ -172,7 +174,7 @@ namespace DSPRE.Avalonia
                         if (layer.OffsetX != 0 || layer.OffsetY != 0)
                             for (int k = 0; k < 3; k++) C3[k] += layer.OffsetX * A3[k] + layer.OffsetY * B3[k];
                         if (textured)
-                            BlitQuad3D(tex, C3, A3, B3, p.R, p.G, p.B, p.Alpha, mirrorX, mirrorY, layer.FlipS, layer.FlipT);
+                            BlitQuad3D(tex, C3, A3, B3, p.R, p.G, p.B, p.Alpha, tileS, tileT, layer.FlipS, layer.FlipT, layer.Orthographic);
                         else
                             Splat((int)Math.Round(px), (int)Math.Round(py), Math.Max(1, (int)Math.Round(sc * DotRadiusPx * f)), p.R, p.G, p.B, p.Alpha);
                         continue;
@@ -221,7 +223,7 @@ namespace DSPRE.Avalonia
                         py += layer.OffsetX * axy - layer.OffsetY * ayy;
                     }
                     if (textured)
-                        BlitQuad(tex, px, py, axx, axy, ayx, ayy, p.R, p.G, p.B, p.Alpha, mirrorX, mirrorY,
+                        BlitQuad(tex, px, py, axx, axy, ayx, ayy, p.R, p.G, p.B, p.Alpha, tileS, tileT,
                                  layer.FlipS, layer.FlipT);
                     else
                         Splat((int)Math.Round(px), (int)Math.Round(py), Math.Max(1, (int)Math.Round(sc * DotRadiusPx)), p.R, p.G, p.B, p.Alpha);
@@ -251,7 +253,8 @@ namespace DSPRE.Avalonia
         /// intersect the quad's plane, map the hit to local (u,v) via the dual basis, sample. This is
         /// what the DS does per-vertex with hardware perspective, no linearisation.</summary>
         private void BlitQuad3D(SpaTexture tex, double[] C, double[] A, double[] B,
-                                byte r, byte g, byte b, double alpha, bool mirrorX, bool mirrorY, bool flipS, bool flipT)
+                                byte r, byte g, byte b, double alpha, int tileS, int tileT, bool flipS, bool flipT,
+                                bool orthographic = false)
         {
             if (alpha <= 0) return;
             double nx = A[1] * B[2] - A[2] * B[1], ny = A[2] * B[0] - A[0] * B[2], nz = A[0] * B[1] - A[1] * B[0];
@@ -266,8 +269,8 @@ namespace DSPRE.Avalonia
                 for (int su = -1; su <= 1; su += 2)
                 {
                     double cx = C[0] + su * A[0] + sv * B[0], cy = C[1] + su * A[1] + sv * B[1], cz = C[2] + su * A[2] + sv * B[2];
-                    double depth = EyeZpu - cz; if (depth < 1) depth = 1;
-                    double ff = EyeZpu / depth;
+                    double ff = 1.0;
+                    if (!orthographic) { double depth = EyeZpu - cz; if (depth < 1) depth = 1; ff = EyeZpu / depth; }
                     double sx = Width / 2.0 + cx * ff, sy = Height / 2.0 - cy * ff;
                     if (sx < minX) minX = sx; if (sx > maxX) maxX = sx;
                     if (sy < minY) minY = sy; if (sy > maxY) maxY = sy;
@@ -282,20 +285,31 @@ namespace DSPRE.Avalonia
                 double dy0 = Height / 2.0 - y;
                 for (int x = x0; x <= x1; x++)
                 {
-                    double dx0 = x - Width / 2.0, dz0 = -EyeZpu;      // ray direction through this pixel
-                    double nDotD = nx * dx0 + ny * dy0 + nz * dz0;
-                    if (Math.Abs(nDotD) < 1e-9) continue;             // ray parallel to the plane
-                    double s = nDotPE / nDotD;
-                    if (s <= 1e-6) continue;                          // plane behind the eye
-                    double qx = s * dx0 - C[0], qy = s * dy0 - C[1], qz = EyeZpu + s * dz0 - C[2];
+                    double dx0 = x - Width / 2.0, qx, qy, qz;
+                    if (orthographic)
+                    {
+                        // Every ray runs straight into the screen, so solve the plane's depth under this pixel.
+                        if (Math.Abs(nz) < 1e-9) continue;            // quad seen edge-on
+                        qx = dx0 - C[0]; qy = dy0 - C[1];
+                        qz = -(nx * qx + ny * qy) / nz;
+                    }
+                    else
+                    {
+                        double dz0 = -EyeZpu;                         // ray direction through this pixel
+                        double nDotD = nx * dx0 + ny * dy0 + nz * dz0;
+                        if (Math.Abs(nDotD) < 1e-9) continue;         // ray parallel to the plane
+                        double s = nDotPE / nDotD;
+                        if (s <= 1e-6) continue;                      // plane behind the eye
+                        qx = s * dx0 - C[0]; qy = s * dy0 - C[1]; qz = EyeZpu + s * dz0 - C[2];
+                    }
                     double u = qx * dAx + qy * dAy + qz * dAz;
                     double v = qx * dBx + qy * dBy + qz * dBz;
                     if (u < -1 || u > 1 || v < -1 || v > 1) continue;
                     if (flipS) u = -u;
                     if (flipT) v = -v;
                     // Texcoords: the plane build puts (s,t)=(0,0) at local (−1,+1), texture TOP at +B.
-                    int tx = mirrorX ? (int)((1.0 - Math.Abs(u)) * tex.Width) : (int)((u + 1.0) * 0.5 * tex.Width);
-                    int ty = mirrorY ? (int)((1.0 - Math.Abs(v)) * tex.Height) : (int)((1.0 - v) * 0.5 * tex.Height);
+                    int tx = (int)(TexelCoord((u + 1.0) * 0.5 * tileS, tex.RepeatS, tex.MirrorX) * tex.Width);
+                    int ty = (int)(TexelCoord((1.0 - v) * 0.5 * tileT, tex.RepeatT, tex.MirrorY) * tex.Height);
                     if (tx < 0) tx = 0; else if (tx >= tex.Width) tx = tex.Width - 1;
                     if (ty < 0) ty = 0; else if (ty >= tex.Height) ty = tex.Height - 1;
                     int ti = (ty * tex.Width + tx) * 4;
@@ -310,6 +324,17 @@ namespace DSPRE.Avalonia
                     _buf[i + 3] = Over(_buf[i + 3], 255 * contrib, invc);
                 }
             }
+        }
+
+        /// <summary>Maps a texture coordinate into [0, 1): clamped unless the texture repeats, mirrored on odd repeats when it also flips.</summary>
+        internal static double TexelCoord(double c, bool repeat, bool flip)
+        {
+            const double Edge = 0.999999;
+            if (!repeat) return Math.Clamp(c, 0.0, Edge);
+            if (!flip) return Math.Clamp(c - Math.Floor(c), 0.0, Edge);
+            double m = c % 2.0;
+            if (m < 0) m += 2.0;
+            return Math.Clamp(m < 1.0 ? m : 2.0 - m, 0.0, Edge);
         }
 
         // ── World-space quad math for the polygon draw types (matches the hardware quad build) ──
@@ -362,7 +387,7 @@ namespace DSPRE.Avalonia
         // axis-aligned billboard the axes are (sclX,0)/(0,sclY); for a directional billboard they rotate with the
         // particle's velocity. Modulated by the particle colour+alpha and blended additively (the glow look).
         private void BlitQuad(SpaTexture tex, double cx, double cy, double axX, double axY, double ayX, double ayY,
-                              byte r, byte g, byte b, double alpha, bool mirrorX, bool mirrorY,
+                              byte r, byte g, byte b, double alpha, int tileS, int tileT,
                               bool flipS = false, bool flipT = false)
         {
             if (alpha <= 0) return;
@@ -387,10 +412,9 @@ namespace DSPRE.Avalonia
                     // the quadrant-reflect below, which reconstructs a full sprite from a stored quarter).
                     if (flipS) u = -u;
                     if (flipT) v = -v;
-                    // Mirror (flip-wrap + tex_repeat ≥ 1): the quad maps its CENTRE to the texture's far edge and its
-                    // edges to texel 0, so reflect from centre outward as (1 − |t|) → texel; else map −1..1 linearly.
-                    int tx = mirrorX ? (int)((1.0 - Math.Abs(u)) * tex.Width) : (int)((u + 1.0) * 0.5 * tex.Width);
-                    int ty = mirrorY ? (int)((1.0 - Math.Abs(v)) * tex.Height) : (int)((v + 1.0) * 0.5 * tex.Height);
+                    // Texcoord (0,0) at the top-left corner to (tileS,tileT) at the bottom-right.
+                    int tx = (int)(TexelCoord((u + 1.0) * 0.5 * tileS, tex.RepeatS, tex.MirrorX) * tex.Width);
+                    int ty = (int)(TexelCoord((v + 1.0) * 0.5 * tileT, tex.RepeatT, tex.MirrorY) * tex.Height);
                     if (tx < 0) tx = 0; else if (tx >= tex.Width) tx = tex.Width - 1;
                     if (ty < 0) ty = 0; else if (ty >= tex.Height) ty = tex.Height - 1;
                     int ti = (ty * tex.Width + tx) * 4;
