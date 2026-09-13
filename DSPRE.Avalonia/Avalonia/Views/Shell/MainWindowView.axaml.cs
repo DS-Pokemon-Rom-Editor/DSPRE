@@ -357,6 +357,16 @@ namespace DSPRE.Avalonia.Views.Shell
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
+
+            // Nothing else dismisses the welcome window, and a loaded project makes it redundant.
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
+                is global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                foreach (var w in System.Linq.Enumerable.ToList(
+                             System.Linq.Enumerable.OfType<WelcomeView>(desktop.Windows)))
+                    w.Close();
+            }
+
             RefreshGameIcon();
             if (RomInfo.isHGE)
                 await HandleHgEngineDetectedAsync(vm, autoLinkHgEnginePath);
