@@ -162,20 +162,28 @@ namespace DSPRE.Editors
 
         public int LoadTrainerClassPic(int trClassID)
         {
-            int paletteFileID = (trClassID * 5 + 1);
+            int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
             string paletteFilename = paletteFileID.ToString("D4");
             trainerPal = new NCLR(gameDirs[DirNames.trainerGraphics].unpackedDir + "\\" + paletteFilename, paletteFileID, paletteFilename);
 
-            int tilesFileID = trClassID * 5;
+            int tilesFileID = TrainerGraphicsLayout.DrawingEntry(trClassID);
             string tilesFilename = tilesFileID.ToString("D4");
             trainerTile = new NCGR(gameDirs[DirNames.trainerGraphics].unpackedDir + "\\" + tilesFilename, tilesFileID, tilesFilename);
 
-            if (gameFamily == GameFamilies.DP)
+            if (TrainerGraphicsLayout.PixelsAreScrambled && trainerTile.Tiles != null)
             {
+                byte[] pixels = (byte[])trainerTile.Tiles.Clone();
+                TrainerGraphicsLayout.Unscramble(pixels);
+                trainerTile.Set_Tiles(pixels);
+            }
+
+            if (!TrainerGraphicsLayout.HasCells)
+            {
+                trainerSprite = null;
                 return 0;
             }
 
-            int spriteFileID = (trClassID * 5 + 2);
+            int spriteFileID = TrainerGraphicsLayout.CellsEntry(trClassID);
             string spriteFilename = spriteFileID.ToString("D4");
             trainerSprite = new NCER(gameDirs[DirNames.trainerGraphics].unpackedDir + "\\" + spriteFilename, spriteFileID, spriteFilename);
 
@@ -185,7 +193,15 @@ namespace DSPRE.Editors
         {
             if (trainerSprite == null)
             {
-                AppLogger.Error("Sprite is null!");
+                // Diamond and Pearl keep no cells, so the drawing is already the finished picture.
+                if (trainerTile == null || trainerPal == null)
+                {
+                    AppLogger.Error("Sprite is null!");
+                    return;
+                }
+
+                pb.Image = TrainerGraphicsLayout.FlatPicture(trainerTile, trainerPal);
+                pb.Update();
                 return;
             }
 
@@ -201,6 +217,7 @@ namespace DSPRE.Editors
             pb.Image = trSprite;
             pb.Update();
         }
+
 
 
         public void SetupTrainerEditor(MainProgram parent, bool force=false)

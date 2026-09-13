@@ -580,6 +580,7 @@
       <DependentUpon>BuildingEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="RomInfo.cs" />
+    <Compile Include="TrainerGraphicsLayout.cs" />
     <Compile Include="CommonScriptId.cs" />
     <Compile Include="ROMFiles\ScriptCommand.cs" />
     <Compile Include="ScintillaUtils\HotKeyManager.cs" />
