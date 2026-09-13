@@ -152,7 +152,7 @@
 
               <Border IsVisible="{Binding AdvancedOpen}" Padding="10" CornerRadius="4"
                       BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                <Grid ColumnDefinitions="Auto,10,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                <Grid ColumnDefinitions="Auto,10,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Trainer" VerticalAlignment="Center" IsEnabled="{Binding CanChooseTrainer}"/>
                   <ComboBox Grid.Row="0" Grid.Column="2" ItemsSource="{Binding TrainerOptions}" SelectedIndex="{Binding TrainerIndex}"
                             IsEnabled="{Binding CanChooseTrainer}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"
@@ -187,6 +187,10 @@
                               VerticalAlignment="Center" ToolTip.Tip="The standard themes play their Kanto versions."/>
                     <TextBlock Text="{Binding BattleMusicText}" IsVisible="{Binding PlayBattleMusic}" VerticalAlignment="Center" Opacity="0.7"/>
                   </StackPanel>
+                  <TextBlock Grid.Row="8" Grid.Column="0" Text="Nature" VerticalAlignment="Center" IsVisible="{Binding CanPickNature}"/>
+                  <ComboBox Grid.Row="8" Grid.Column="2" ItemsSource="{Binding NatureOptions}" SelectedIndex="{Binding NatureIndex}" Width="140" HorizontalAlignment="Left"
+                            IsVisible="{Binding CanPickNature}" MaxDropDownHeight="360"
+                            ToolTip.Tip="Picks the back animation."/>
                 </Grid>
               </Border>
             </StackPanel>
