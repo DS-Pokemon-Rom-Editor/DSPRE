@@ -1998,7 +1998,8 @@ namespace DSPRE.Editors
                     uint spriteID = RomInfo.OverworldTable[currentEvFile.overworlds[overworldsListBox.SelectedIndex].overlayTableEntry].spriteID;
                     if (spriteID == 0x3D3D)
                     {
-                        spriteIDlabel.Text = "3D Overworld";
+                        spriteIDlabel.Text = RomInfo.IsVariableOverworld(currentEvFile.overworlds[overworldsListBox.SelectedIndex].overlayTableEntry)
+                            ? "Variable sprite" : "3D Overworld";
                     }
                     else
                     {
@@ -2112,7 +2113,7 @@ namespace DSPRE.Editors
 
             if (spriteID == 0x3D3D)
             {
-                spriteIDlabel.Text = "3D Overworld";
+                spriteIDlabel.Text = RomInfo.IsVariableOverworld(overlayTableEntryID) ? "Variable sprite" : "3D Overworld";
             }
             else
             {

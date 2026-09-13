@@ -38,19 +38,6 @@ namespace DSPRE
         private const int TextureTableIndex = 2;
         private const int RenderPropsTableIndex = 1;
 
-        /// <summary>Byte distance from the vanilla render-properties table to the vanilla texture
-        /// table in an *unpatched* Platinum ROM (259 render-properties rows, including the sentinel
-        /// skipped here since it's counted from row 0 of each table's own start). Derived from the
-        /// source-confirmed struct sizes (see fieldobj_drawdata.c), not guessed. Needs verifying
-        /// against a real ROM once this ships.</summary>
-        private const long VanillaRenderPropsToTextureDeltaPlat = 259 * 8;
-        private const int VanillaRenderPropsRowCountPlat = 259;
-
-        /// <summary>Same, for Diamond/Pearl English: render-properties table at Overlay 5 0x225BC,
-        /// texture table at 0x22BCC (the latter matches RomInfo.OWTableOffset for DP English), so the
-        /// delta is the render-properties table's own size (193 entries + 1 terminator row).</summary>
-        private const long VanillaRenderPropsToTextureDeltaDP = 194 * 8;
-        private const int VanillaRenderPropsRowCountDP = 193;
 
         public struct OwRenderState
         {
@@ -294,33 +281,52 @@ namespace DSPRE
                 return new SimpleTable { Path = _path, Start = t.Start, EntrySize = t.EntrySize, RowCount = t.OriginalRowCount + (int)_usedCount };
             }
 
-            // Vanilla: table 1 sits a fixed byte distance before table 2 in the same overlay-5 file
-            // DSPRE already resolves for the texture table (RomInfo.OWtablePath / OWTableOffset).
-            if (RomInfo.gameFamily == GameFamilies.Plat)
-            {
-                return new SimpleTable
-                {
-                    Path = RomInfo.OWtablePath,
-                    Start = RomInfo.OWTableOffset - VanillaRenderPropsToTextureDeltaPlat,
-                    EntrySize = 8,
-                    RowCount = VanillaRenderPropsRowCountPlat,
-                };
-            }
+            return FindVanillaRenderTable();
+        }
 
-            // The vanilla DP offsets below are only verified for English; other languages fall through
-            // to the "unsupported" SimpleTable (Path == null) rather than risk reading the wrong table.
-            if (RomInfo.gameFamily == GameFamilies.DP && RomInfo.gameLanguage == GameLanguages.English)
-            {
-                return new SimpleTable
-                {
-                    Path = RomInfo.OWtablePath,
-                    Start = RomInfo.OWTableOffset - VanillaRenderPropsToTextureDeltaDP,
-                    EntrySize = 8,
-                    RowCount = VanillaRenderPropsRowCountDP,
-                };
-            }
+        /// <summary>
+        /// The render-properties table sits directly before the texture table and ends in a 0xFFFF row.
+        /// Rows with unknown bits reject a wrong texture table offset.
+        /// </summary>
+        private static SimpleTable FindVanillaRenderTable()
+        {
+            if (RomInfo.gameFamily != GameFamilies.DP && RomInfo.gameFamily != GameFamilies.Plat) return new SimpleTable();
+            string path = RomInfo.OWtablePath;
+            if (path == null || !File.Exists(path)) return new SimpleTable();
 
-            return new SimpleTable();
+            byte[] data = File.ReadAllBytes(path);
+            long sentinel = RomInfo.OWTableOffset - 8;
+            if (sentinel < 8 || sentinel + 8 > data.Length || ReadU32(data, sentinel) != 0xFFFF) return new SimpleTable();
+
+            long start = sentinel;
+            while (start >= 8 && ReadU32(data, start - 8) != 0xFFFF) start -= 8;
+            int rows = (int)((sentinel - start) / 8);
+            if (rows <= 0) return new SimpleTable();
+            for (int r = 0; r < rows; r++)
+            {
+                uint bits = ReadU32(data, start + r * 8L + 4);
+                if ((bits >> 12) != 0 || (bits & 0xF) > 2) return new SimpleTable();
+            }
+            return new SimpleTable { Path = path, Start = start, EntrySize = 8, RowCount = rows };
+        }
+
+        /// <summary>Whether this ROM's render-properties table was found, patched or not.</summary>
+        public static bool IsRenderTableAvailable => GetRenderStateTable().Path != null;
+
+        /// <summary>Every row of the render-properties table, in table order.</summary>
+        public static IReadOnlyList<(uint Id, OwRenderState State)> ReadRenderStates()
+        {
+            var rows = new List<(uint, OwRenderState)>();
+            SimpleTable t = GetRenderStateTable();
+            if (t.Path == null || !File.Exists(t.Path)) return rows;
+            byte[] data = File.ReadAllBytes(t.Path);
+            for (int r = 0; r < t.RowCount; r++)
+            {
+                long off = t.Start + (long)r * t.EntrySize;
+                if (off + t.EntrySize > data.Length) break;
+                rows.Add((ReadU32(data, off), UnpackRenderState(ReadU32(data, off + 4))));
+            }
+            return rows;
         }
 
         private static OwRenderState UnpackRenderState(uint bits) => new OwRenderState
