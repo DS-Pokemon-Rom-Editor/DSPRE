@@ -943,6 +943,8 @@ namespace DSPRE.Avalonia.Gl
             float cp = (float)Math.Cos(pitch), sp = (float)Math.Sin(pitch);
             float rx = cy, rz = sy;
             float ux = sy * sp, uy = cp, uz = -cy * sp;
+            // Towards the camera, which is right cross up.
+            float tx = -sy * cp, ty = sp, tz = cy * cp;
 
             _f.Enable(GlFunctions.GL_BLEND);
             _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
@@ -955,8 +957,12 @@ namespace DSPRE.Avalonia.Gl
             _f.Uniform1i(_texLoc, 0);
             _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
 
+            // Without depth writes the last sprite drawn wins, so the farthest go first.
+            var order = new List<GpuSprite>(_gpuSprites);
+            order.Sort((a, b) => (a.Cx * tx + a.Cy * ty + a.Cz * tz).CompareTo(b.Cx * tx + b.Cy * ty + b.Cz * tz));
+
             var buf = new float[6 * 8];
-            foreach (var s in _gpuSprites)
+            foreach (var s in order)
             {
                 float ax = rx * s.HalfW, az = rz * s.HalfW;
                 float bx = ux * (s.HalfH * 2f), by = uy * (s.HalfH * 2f), bz = uz * (s.HalfH * 2f);
