@@ -269,10 +269,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        // Jumping to a different species rebuilds VariantNames for that species, but this is called from
-        // inside the very ComboBox item click that's still resolving selection against the OLD list --
-        // mutating it synchronously here crashed the app for real (confirmed live). Posting defers the
-        // rebuild to the next UI dispatch, after the click has fully finished.
+        // Called from inside a ComboBox item click that is still resolving selection against the old
+        // VariantNames, so rebuilding it synchronously crashes. Posting defers it past the click.
         private void JumpToSpecies(int id) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             FormPseudoIdSelected?.Invoke(id);
@@ -588,8 +586,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            // Species with form-table entries also store their default form there, not in the main NARC (confirmed against real GameFreak source, PokeGraArcDataGet in poke_tool.c).
-            // If the loaded species already IS one of the entries (viewing Castform Sunny or Mega Venusaur directly), select it in place instead of redirecting back into itself.
+            // Species with form-table entries store their default form there, not in the main NARC. One
+            // that is itself an entry is selected in place rather than redirected back into itself.
             int selfIndex = -1;
             for (int i = 0; i < _currentFormData.Length; i++)
             {

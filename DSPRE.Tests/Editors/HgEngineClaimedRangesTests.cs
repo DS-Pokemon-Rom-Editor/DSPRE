@@ -149,8 +149,7 @@ namespace DSPRE.Tests
                 _out.WriteLine($"{(overlay < 0 ? "arm9" : "overlay " + overlay)}: {claims.Count} claims, " +
                     $"0x{claims.Min(c => c.Offset):X}..0x{claims.Max(c => c.Offset + c.Length):X}");
 
-                // An address that resolved against the wrong base shows up immediately as a negative or
-                // absurd offset, which is the mistake worth catching here.
+                // An address resolved against the wrong base shows up as a negative or absurd offset.
                 Assert.All(claims, c => Assert.True(c.Offset >= 0, $"{c} resolved before the start of the file"));
                 Assert.All(claims, c => Assert.True(c.Offset < 0x400000, $"{c} resolved past any plausible size"));
                 Assert.All(claims, c => Assert.True(c.Length > 0, c.ToString()));

@@ -12,9 +12,8 @@ namespace DSPRE.Tests
     /// Shared lifecycle for staging a disposable ROM: copy the configured project, point RomInfo at
     /// the copy, edit through the real readers and writers, repack, and clean up.
     ///
-    /// Every stager under this folder used to reimplement that, and six of them pinned their output
-    /// to one machine's scratch directory. Output location now comes from DSPRE_EXPERIMENT_OUTPUT or
-    /// falls back to the system temp directory, so nothing machine-specific belongs in the source.
+    /// Output location comes from DSPRE_EXPERIMENT_OUTPUT or the system temp directory, so nothing
+    /// machine-specific belongs in the source.
     ///
     /// A ROM edit is only proven by what the game does with it, so the useful unit is an experiment:
     /// a control ROM plus one or more variants differing in a single field. Open the experiment twice

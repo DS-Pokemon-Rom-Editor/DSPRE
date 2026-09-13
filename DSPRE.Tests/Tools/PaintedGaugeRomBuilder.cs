@@ -14,9 +14,8 @@ namespace DSPRE.Tests
     /// Builds a Platinum ROM with the enemy HP bar painted through the assembled-picture path, so that
     /// path can be looked at in a running battle rather than only in a test.
     ///
-    /// The sprite path was proven in a real battle already. This one is different: the picture is put
-    /// together from pieces by a cell layout, and the paint is taken apart again and written back into
-    /// whichever piece each pixel belongs to. Nothing about that has been seen by the game.
+    /// Here a cell layout assembles the picture from pieces, so the paint has to be taken apart again
+    /// and written back into whichever piece each pixel belongs to.
     ///
     /// The enemy gauge is SINGLE_GAGE1, drawing 188 and layout 187, per gauge.c's GaugeObjParam_bb. A
     /// solid block is painted across the middle of it in a colour the gauge already has. A tool rather

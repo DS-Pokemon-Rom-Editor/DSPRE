@@ -71,8 +71,8 @@ namespace DSPRE.Tests
         }
 
         /// <summary>
-        /// The four status healers are the case that used to break: one bottle drawing, four sets of
-        /// colours. Every one of them has to have a row of its own, with its own colours.
+        /// The four status healers share one bottle drawing across four sets of colours, and each needs a
+        /// row of its own with its own colours.
         /// </summary>
         [Fact]
         public void ItemsSharingADrawingEachKeepTheirOwnRow()
@@ -109,8 +109,7 @@ namespace DSPRE.Tests
         }
 
         /// <summary>
-        /// The first two files and the last two are not any item's icon, and used to show as the archive's
-        /// own title with a file number. The archive's own index names them.
+        /// The first two files and the last two are not any item's icon. The archive's own index names them.
         /// </summary>
         [Fact]
         public void TheFilesThatAreNotAnItemAreNamed()
@@ -129,8 +128,7 @@ namespace DSPRE.Tests
                 Assert.Equal("Back arrow", RowNaming(files - 1));
                 Assert.Equal("Back arrow", RowNaming(files - 2));
 
-                // Nothing is left named after the archive itself, which is what a row nobody accounted
-                // for used to look like.
+                // A row named after the archive itself is one nobody accounted for.
                 var vague = rows.Where(u => u.Name == a.Title).ToList();
                 _out.WriteLine($"{name}: {vague.Count} rows still named after the archive");
                 Assert.Empty(vague);

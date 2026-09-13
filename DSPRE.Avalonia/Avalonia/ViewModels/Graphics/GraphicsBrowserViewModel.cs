@@ -291,8 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             _partIndex = -1;
             OnPropertyChanged(nameof(PartIndex));
-            // Open on something you can look at. The colours come first in the file for a lot of these,
-            // so picking a Pokemon used to show a row of swatches rather than the Pokemon.
+            // Open on something you can look at; the colours come first in a lot of these archives.
             _partIndex = Parts.Count > 0 ? Math.Max(0, FirstWorthShowing()) : -1;
             OnPropertyChanged(nameof(PartIndex));
             OnPropertyChanged(nameof(HasParts));

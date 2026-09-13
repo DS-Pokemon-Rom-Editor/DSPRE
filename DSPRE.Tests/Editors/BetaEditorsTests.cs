@@ -115,8 +115,8 @@ namespace DSPRE.Tests
         // ── what the welcome guide and the tour say about it ──────────────────────────
 
         /// <summary>
-        /// The welcome guide gains a page about the unfinished editors, and only in that mode. The
-        /// pages used to be a static array, so this also pins that the count and the indexes follow.
+        /// The welcome guide gains a page about the unfinished editors, and only in that mode, so the
+        /// page count and the indexes have to follow.
         /// </summary>
         [Fact]
         public void TheWelcomeGuideExplainsBetaOnlyWhenItApplies()

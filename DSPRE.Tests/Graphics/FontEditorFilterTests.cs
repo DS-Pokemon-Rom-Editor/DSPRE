@@ -53,9 +53,7 @@ namespace DSPRE.Tests
             _out.WriteLine($"letter {drawnUnmapped.Index} (drawn) says \"{drawnUnmapped.Describe}\", "
                          + $"letter {empty.Index} says \"{empty.Describe}\"");
 
-            // Nearly every letter is drawn, so the list stays quiet about it and speaks up only for
-            // the handful of empty slots. Announcing "drawn" on four hundred odd rows buried the
-            // couple of dozen that are the interesting ones.
+            // Nearly every letter is drawn, so the list speaks up only for the empty slots.
             Assert.Equal("", drawnUnmapped.Describe);
             Assert.Equal("empty", empty.Describe);
             Assert.DoesNotContain(vm.Glyphs.Where(g => g.HasPicture), g => g.Describe == "empty");

@@ -246,7 +246,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ATriggerIsFoundByPositionAloneWhenNoVariableIsGiven()
         {
-            // Used to ask the watcher what the variable holds before deciding.
+            // Position alone decides it; the watcher is not asked what the variable holds.
             var events = Events(Area(4, 4, w: 1, h: 1, variable: 0x4001, expected: 7, script: 21));
             Assert.NotNull(FieldInteraction.TriggerAt(events, 4, 4, null));
         }

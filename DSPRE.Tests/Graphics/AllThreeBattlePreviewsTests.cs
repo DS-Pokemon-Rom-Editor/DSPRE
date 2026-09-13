@@ -13,8 +13,8 @@ using Xunit.Abstractions;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// Three editors draw a battle, and all three have to draw the gauge with the game's own pictures.
-    /// Two of them used to write the name and level in a desktop font, which never looked like the game.
+    /// Three editors draw a battle, and all three have to draw the gauge with the game's own pictures
+    /// rather than a desktop font.
     ///
     /// The check that matters here is the one a build cannot make: a view asks for a picture by name, and
     /// a name that does not exist on the view model binds to nothing and silently draws an empty box.

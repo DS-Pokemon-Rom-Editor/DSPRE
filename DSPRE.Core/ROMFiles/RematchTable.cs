@@ -58,7 +58,7 @@ namespace DSPRE
             public bool DeriveOffset;
         }
 
-        /// <summary>Where the table turned out to be.</summary>
+        /// <summary>Where the table sits.</summary>
         public sealed class Location
         {
             public int OverlayNumber;

@@ -59,8 +59,8 @@ namespace DSPRE.Tests
             _out.WriteLine($"{name}: the HP numbers use {used.Count} colours: "
                          + string.Join("  ", used.Select(c => $"{c.Item1},{c.Item2},{c.Item3}")));
 
-            // A digit is a light letter, a dark shadow and the panel behind it. Fewer than three
-            // colours means the placeholders were drawn straight, which is the mistake this guards.
+            // A digit is a light letter, a dark shadow and the panel behind it, so fewer than three
+            // colours means the placeholders were drawn straight.
             Assert.True(used.Count >= 3,
                         $"{name}: a number came out in {used.Count} colours, so it was not recoloured");
 

@@ -12,15 +12,11 @@ namespace DSPRE.ROMFiles
     /// routine, the rival's early-game team, tag-battle partners, the starter-cries table (HGSS), and the
     /// professor/rival dialogue that names the chosen species.
     ///
-    /// Starters aren't a NARC table in Gen 4, DP/Pt keep them as a fixed word-table in an overlay, HGSS bakes
-    /// them straight into compiled ARM9 code. This is a from-scratch port of Universal Pokémon Randomizer
-    /// FVX's <c>Gen4RomHandler.getStarters</c>/<c>setStarters</c> (byte offsets/patterns verified against its
-    /// gen4_offsets.ini and Gen4Constants.java), adapted to two DSPRE-specific improvements: dialogue text is
-    /// patched with a surgical old-name/old-type → new-name/new-type substring swap instead of a hardcoded
-    /// English rewrite (so localized ROMs keep their own language), and the rival/tag-battle script search
-    /// patterns are built from the *current* starter species rather than a hardcoded vanilla ID, so editing
-    /// starters more than once in the same project keeps working instead of silently no-op'ing after the first
-    /// edit.
+    /// Starters aren't a NARC table in Gen 4: DP and Platinum keep them as a fixed word-table in an overlay,
+    /// HGSS bakes them into compiled ARM9 code. Ported from Universal Pokemon Randomizer FVX's
+    /// <c>Gen4RomHandler.getStarters</c>/<c>setStarters</c>. Dialogue is patched by swapping the old name and
+    /// type for the new ones, so localized ROMs keep their language, and the script search patterns are built
+    /// from the current starter species, so editing twice in one project still works.
     /// </summary>
     public static class StarterPokemonData
     {

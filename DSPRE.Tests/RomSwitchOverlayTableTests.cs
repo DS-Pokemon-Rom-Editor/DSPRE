@@ -8,10 +8,9 @@ using Xunit.Abstractions;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// The overlay table belongs to one ROM. It used to be read once and kept for the rest of the
-    /// session, so opening a second ROM left every overlay address and size pointing at the first one.
-    /// On HeartGold that made the overworld sprite table read from the wrong offset and come back
-    /// empty, which takes every person out of the Event Editor and the animated preview.
+    /// The overlay table belongs to one ROM, so it has to be read again when another opens. Kept across
+    /// a switch, every overlay address and size points at the previous ROM, and on HeartGold that reads
+    /// the overworld sprite table from the wrong offset and comes back empty.
     /// </summary>
     [Collection("rom")]
     public class RomSwitchOverlayTableTests
