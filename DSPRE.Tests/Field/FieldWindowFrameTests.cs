@@ -148,6 +148,35 @@ namespace DSPRE.Tests
             }
         }
 
+        /// <summary>
+        /// Menus and the yes/no box are filled and written in the system font's colours; the border's own
+        /// colour 15 is black, which is what turned them black.
+        /// </summary>
+        [SkippableTheory]
+        [InlineData("IPKE", "HeartGold")]
+        [InlineData("CPUE", "Platinum")]
+        public void MenuWindowsAreWhiteWithGreyWriting(string code, string game)
+        {
+            string project = code == "IPKE" ? TestRoms.HeartGold : TestRoms.Platinum;
+            Skip.If(!Directory.Exists(project), $"{game} not unpacked here");
+            new RomInfo(code, project);
+
+            uint[] font = FieldWindowFrame.LoadSystemFontColours();
+            Assert.NotNull(font);
+            Assert.Equal(0xFF5A5A52u, font[1]);     // letters
+            Assert.Equal(0xFFACBDBDu, font[2]);     // their shadow
+            Assert.Equal(0xFFFFFFFFu, font[15]);    // the paper
+
+            var standard = FieldWindowFrame.LoadStandard();
+            Assert.NotNull(standard);
+            byte[] rgba = standard.ComposeStandard(6, 4, out int w, out int h, font[15]);
+            int at = (h / 2 * w + w / 2) * 4;
+            Assert.Equal(new byte[] { 0xFF, 0xFF, 0xFF, 0xFF }, rgba.Skip(at).Take(4).ToArray());
+            // The border itself is still drawn from its own colours.
+            Assert.Equal(0, rgba[3]);                // a see-through corner
+            Assert.Equal(0xFF, rgba[(4 * w + w / 2) * 4 + 3]);
+        }
+
         [Fact]
         public void TheBorderStretchesToWhateverWidthItIsAskedFor()
         {

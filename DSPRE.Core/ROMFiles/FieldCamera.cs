@@ -90,6 +90,28 @@ namespace DSPRE.ROMFiles
             new FieldCameraEntry(16, "Battle Tower indoors",      0x29aec1, -0x29fe, false, 0x5c1, 150,  900, 0, 0, 0),
         };
 
+        // sCameraTypes in field_camera.c. Platinum's rows carry no shift.
+        private static readonly FieldCameraEntry[] PlatinumTable =
+        {
+            new FieldCameraEntry( 0, "Normal",                    0x29aec1, -0x29fe, false, 0x5c1, 150,  900, 0, 0, 0),
+            new FieldCameraEntry( 1, "Pastoria Gym",              0x29aec1, -0x309e, false, 0x5c1, 150,  900, 0, 0, 0),
+            new FieldCameraEntry( 2, "Zoomed in",                 0x20374c, -0x26de, false, 0x770, 150,  900, 0, 0, 0),
+            new FieldCameraEntry( 3, "Canalave Gym",              0x29aec1, -0x29fe, false, 0x5c1, 150,  900, 0, 0, 0),
+            new FieldCameraEntry( 4, "Indoors, flat view",        0x61b89b, -0x239e, true,  0x281, 150, 1735, 0, 0, 0),
+            new FieldCameraEntry( 5, "Spear Pillar",              0x13c805, -0x29fd, false, 0xc01,  10, 1008, 0, 0, 0),
+            new FieldCameraEntry( 6, "Mt. Coronet, south side",   0x3628df, -0x33fd, false, 0x481, 115, 1221, 0, 0, 0),
+            new FieldCameraEntry( 7, "Mt. Coronet, north side",   0x29aec1, -0x29fd, false, 0x5c1, 153, 1031, 0, 0, 0),
+            new FieldCameraEntry( 8, "Stark Mountain",            0x296ec1, -0x321d, false, 0x701, 150, 1034, 0, 0, 0),
+            new FieldCameraEntry( 9, "Oreburgh Gym",              0x1659ac, -0x1cdd, false, 0xab0, 150,  900, 0, 0, 0),
+            new FieldCameraEntry(10, "Veilstone Gym",             0x4b25b1, -0x2b3d, false, 0x341, 150, 1746, 0, 0, 0),
+            new FieldCameraEntry(11, "Slightly zoomed out",       0x2a3d55, -0x291d, false, 0x5c1, 230, 1127, 0, 0, 0),
+            new FieldCameraEntry(12, "Cave",                      0x23e93f, -0x2cfd, false, 0x6c1, 150,  900, 0, 0, 0),
+            new FieldCameraEntry(13, "Iron Island cave",          0x20374c, -0x21fd, false, 0x770, 150,  900, 0, 0, 0),
+            new FieldCameraEntry(14, "Hall of Origin",            0x0a9765, -0x37bc, false, 0x1501, 10, 1008, 0, 0, 0),
+            new FieldCameraEntry(15, "Lake Acuity",               0x28dedf, -0x26de, false, 0x5f0, 150,  900, 0, 0, 0),
+            new FieldCameraEntry(16, "Unused",                    0x14aec0, -0x29fe, false, 0xb01, 150,  900, 0, 0, 0),
+        };
+
         public static IReadOnlyList<FieldCameraEntry> Entries => Table;
 
         public static int Count => Table.Length;
@@ -97,6 +119,17 @@ namespace DSPRE.ROMFiles
         /// <summary>The row a header's camera number picks. Out of range falls back to the normal one.</summary>
         public static FieldCameraEntry Entry(int cameraId) =>
             cameraId >= 0 && cameraId < Table.Length ? Table[cameraId] : Table[0];
+
+        /// <summary>The camera table the given game uses.</summary>
+        public static IReadOnlyList<FieldCameraEntry> EntriesFor(RomInfo.GameFamilies family) =>
+            family == RomInfo.GameFamilies.HGSS ? Table : PlatinumTable;
+
+        /// <summary>The row a header's camera number picks in the given game.</summary>
+        public static FieldCameraEntry Entry(int cameraId, RomInfo.GameFamilies family)
+        {
+            var table = EntriesFor(family);
+            return cameraId >= 0 && cameraId < table.Count ? table[cameraId] : table[0];
+        }
 
         /// <summary>The ordinary walking-about camera, which is what most maps use.</summary>
         public static FieldCameraEntry Normal => Table[0];

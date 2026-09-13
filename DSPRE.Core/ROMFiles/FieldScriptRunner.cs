@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Plays a script's steps out on the field's own clock instead of reporting them all at once, so a
-    /// movement can be watched happening and a wait actually waits.
+    /// Plays a script out on the field's own clock the way the script VM does: commands run one after
+    /// another within a frame until one of them has to wait, and a satisfied wait lets the next command
+    /// run on the following frame.
     /// </summary>
     public sealed class FieldScriptRunner
     {
@@ -14,92 +15,230 @@ namespace DSPRE.ROMFiles
         {
             /// <summary>Start a movement on an overworld. Return how many frames it will take, or 0.</summary>
             public Func<int, int, int> StartMovement;
+            /// <summary>Whether any movement a script started is still playing. Null counts the frames instead.</summary>
+            public Func<bool> MovementsRunning;
             /// <summary>Play a sound. The kind says which of the three it is.</summary>
             public Action<ScriptEffectKind, int> PlaySound;
+            /// <summary>Whether a sound of this kind is still playing, for the commands that wait on one.</summary>
+            public Func<ScriptEffectKind, bool> SoundPlaying;
             /// <summary>Start the view shaking: across, down, how many times, frames each.</summary>
             public Action<int, int, int, int> ShakeCamera;
             /// <summary>Move the view to one of the alternative settings. Returns how long it takes.</summary>
             public Func<int, int> MoveCamera;
-            /// <summary>Show a line of dialogue. </summary>
-            public Func<string, bool> ShowMessage;
-            /// <summary>Anything else, reported so the panel can list it.</summary>
+            /// <summary>Start printing a message. Return false when there is no box to print it in.</summary>
+            public Func<ScriptEffect, bool> ShowMessage;
+            /// <summary>Whether the message is still printing or waiting on a press part way through.</summary>
+            public Func<bool> MessagePrinting;
+            /// <summary>Open the box empty.</summary>
+            public Action OpenMessage;
+            /// <summary>Close the box. True leaves the words on screen.</summary>
+            public Action<bool> CloseMessage;
+            /// <summary>The script stopped on something only the watcher can answer.</summary>
+            public Action<ScriptQuestion> Ask;
+            /// <summary>Turning, locking and showing or hiding people.</summary>
+            public Action<ScriptEffect> Apply;
+            /// <summary>Every step, reported so the panel can list it.</summary>
             public Action<ScriptStep> Report;
         }
 
-        private readonly List<ScriptStep> _steps = new List<ScriptStep>();
+        /// <summary>What the script is waiting on.</summary>
+        public enum WaitKind { None, Yield, Frames, Movement, Message, Button, Question, Sound }
+
+        /// <summary>
+        /// A WaitMovement finds its count at zero three frames after the last step lands: one to mark the
+        /// list ended, one for the watcher to count it off, one for the script to look.
+        /// </summary>
+        public const int MovementEndLatency = 3;
+
+        /// <summary>How many commands can run in one frame before the runner assumes a loop.</summary>
+        public const int CommandsPerFrame = 512;
+
+        /// <summary>
+        /// HGSS swapping its touch screen fades it out over two frames, builds the new one and fades back in, and
+        /// the script waits for all of it.
+        /// </summary>
+        public const int TouchScreenSwapFrames = 6;
+
         private readonly Hooks _hooks;
+        private readonly List<ScriptStep> _fixed = new List<ScriptStep>();
+        private ScriptWalker _walker;
         private int _at;
+        private bool _started, _ended;
         private int _holdFrames;
-        private bool _waitingOnReader;
+        private int _movementUntil;
+        private int _frame;
+        private ScriptEffectKind _soundKind;
+        private bool _pressed, _padPressed;
+        private bool _buttonTakesPad, _buttonTurns;
 
         public FieldScriptRunner(Hooks hooks) { _hooks = hooks ?? new Hooks(); }
 
+        /// <summary>What it is waiting on now.</summary>
+        public WaitKind Waiting { get; private set; }
+
         /// <summary>Whether there is still something to play.</summary>
-        public bool Running => _at < _steps.Count || _holdFrames > 0 || _waitingOnReader;
+        public bool Running => _started && !_ended;
 
         /// <summary>Which step it is on, for showing progress.</summary>
-        public int StepIndex => Math.Min(_at, _steps.Count);
-        public int StepCount => _steps.Count;
+        public int StepIndex => _at;
+        public int StepCount => _walker?.Steps.Count ?? _fixed.Count;
 
         /// <summary>How many frames it is still holding for, so a caller can say what it is waiting on.</summary>
-        public int HoldingFrames => _holdFrames;
+        public int HoldingFrames => Waiting == WaitKind.Frames ? _holdFrames : 0;
 
-        /// <summary>True while a message is up and the reader has not moved on.</summary>
-        public bool WaitingOnReader => _waitingOnReader;
+        /// <summary>True while a message is printing or a button wait is up.</summary>
+        public bool WaitingOnReader => Waiting == WaitKind.Message || Waiting == WaitKind.Button;
 
-        /// <summary>Starts playing a set of steps from the beginning.</summary>
+        /// <summary>Whether a button wait also ends on the d-pad.</summary>
+        public bool ButtonTakesPad => Waiting == WaitKind.Button && _buttonTakesPad;
+
+        /// <summary>Whether that d-pad press also turns the player, the way WaitButton does.</summary>
+        public bool ButtonTurnsPlayer => ButtonTakesPad && _buttonTurns;
+
+        /// <summary>Plays a script as the walker runs it, a command at a time.</summary>
+        public void Play(ScriptWalker walker)
+        {
+            Reset();
+            _walker = walker;
+            _started = walker != null;
+        }
+
+        /// <summary>Plays a fixed list of steps from the beginning.</summary>
         public void Play(IEnumerable<ScriptStep> steps)
         {
-            _steps.Clear();
-            if (steps != null) _steps.AddRange(steps);
-            _at = 0;
-            _holdFrames = 0;
-            _waitingOnReader = false;
+            Reset();
+            if (steps != null) _fixed.AddRange(steps);
+            _started = true;
         }
 
         public void Stop()
         {
-            _steps.Clear();
-            _at = 0;
-            _holdFrames = 0;
-            _waitingOnReader = false;
+            Reset();
+            _started = false;
         }
 
-        /// <summary>The reader has pressed on, so a message stops holding the script up.</summary>
-        public void ReaderMovedOn() => _waitingOnReader = false;
+        private void Reset()
+        {
+            _fixed.Clear();
+            _walker = null;
+            _at = 0;
+            _holdFrames = 0;
+            _movementUntil = 0;
+            _frame = 0;
+            _ended = false;
+            _pressed = _padPressed = false;
+            Waiting = WaitKind.None;
+        }
+
+        /// <summary>The player pressed A or B, or the d-pad when <paramref name="pad"/> is set.</summary>
+        public void Pressed(bool pad = false)
+        {
+            if (pad) _padPressed = true;
+            else _pressed = true;
+        }
 
         /// <summary>Moves the clock on. Call once a frame.</summary>
         public void Advance(int frames)
         {
-            for (int i = 0; i < frames; i++)
+            for (int i = 0; i < frames && Running; i++)
             {
-                if (_waitingOnReader) return;
-                if (_holdFrames > 0) { _holdFrames--; continue; }
-                if (_at >= _steps.Count) return;
-                DoOne(_steps[_at++]);
+                _frame++;
+                bool ran = Waiting == WaitKind.None;
+                if (Waiting == WaitKind.Yield)
+                {
+                    // A command that yields without pausing hands the next command the very next frame.
+                    Waiting = WaitKind.None;
+                    ran = true;
+                }
+                else if (Waiting != WaitKind.None && Satisfied())
+                {
+                    // The check that finds a wait over only switches the script back on.
+                    Waiting = WaitKind.None;
+                }
+
+                if (ran) RunCommands();
+                _pressed = _padPressed = false;
             }
         }
 
-        // Holds for a run of frames counting the one it started on.
-        private void Hold(int frames) => _holdFrames = Math.Max(0, frames - 1);
+        private bool Satisfied()
+        {
+            switch (Waiting)
+            {
+                case WaitKind.Frames:
+                    return --_holdFrames <= 0;
+                case WaitKind.Movement:
+                    // Movement runs after the script in a frame, so moving now can still land this frame.
+                    if (_hooks.MovementsRunning?.Invoke() == true)
+                    {
+                        _movementUntil = Math.Max(_movementUntil, _frame);
+                        return false;
+                    }
+                    return _frame >= _movementUntil + MovementEndLatency;
+                case WaitKind.Message:
+                    return !(_hooks.MessagePrinting?.Invoke() ?? false);
+                case WaitKind.Button:
+                    return _pressed || (_buttonTakesPad && _padPressed);
+                case WaitKind.Question:
+                    return _walker == null || _walker.Pending == null;
+                case WaitKind.Sound:
+                    return !(_hooks.SoundPlaying?.Invoke(_soundKind) ?? false);
+                default:
+                    return true;
+            }
+        }
+
+        private void RunCommands()
+        {
+            for (int budget = CommandsPerFrame; budget > 0 && Waiting == WaitKind.None && Running; budget--)
+            {
+                var step = NextStep();
+                if (step == null) return;
+                DoOne(step);
+            }
+        }
+
+        private ScriptStep NextStep()
+        {
+            if (_walker == null)
+            {
+                if (_at < _fixed.Count) return _fixed[_at++];
+                _ended = true;
+                return null;
+            }
+
+            while (_at >= _walker.Steps.Count)
+            {
+                if (_walker.Pending != null)
+                {
+                    Waiting = WaitKind.Question;
+                    _hooks.Ask?.Invoke(_walker.Pending);
+                    return null;
+                }
+                if (_walker.Finished) { _ended = true; return null; }
+                _walker.Next();
+            }
+            return _walker.Steps[_at++];
+        }
 
         private void DoOne(ScriptStep step)
         {
-            var effect = step.Effect;
-            if (effect == null)
-            {
-                _hooks.Report?.Invoke(step);
-                if (step.Kind == ScriptStepKind.Message)
-                    _waitingOnReader = _hooks.ShowMessage?.Invoke(step.Text) ?? false;
-                return;
-            }
-
             _hooks.Report?.Invoke(step);
+            var effect = step.Effect;
+            if (effect == null) return;
+
             switch (effect.Kind)
             {
                 case ScriptEffectKind.Movement:
-                    // The frame it starts on is the first of its frames, so it holds for one less.
-                    Hold(_hooks.StartMovement?.Invoke(effect.A, effect.B) ?? 0);
+                {
+                    int frames = _hooks.StartMovement?.Invoke(effect.A, effect.B) ?? 0;
+                    // The first step moves on the frame the command runs.
+                    _movementUntil = Math.Max(_movementUntil, _frame + Math.Max(0, frames - 1));
+                    break;
+                }
+
+                case ScriptEffectKind.WaitMovement:
+                    Waiting = WaitKind.Movement;
                     break;
 
                 case ScriptEffectKind.SoundEffect:
@@ -110,9 +249,14 @@ namespace DSPRE.ROMFiles
                     _hooks.PlaySound?.Invoke(effect.Kind, effect.A);
                     break;
 
+                case ScriptEffectKind.Wait:
+                    if (_hooks.SoundPlaying == null) break;
+                    _soundKind = (ScriptEffectKind)effect.A;
+                    Waiting = WaitKind.Sound;
+                    break;
+
                 case ScriptEffectKind.CameraShake:
                     _hooks.ShakeCamera?.Invoke(effect.A, effect.B, effect.C, effect.D);
-                    // The shake holds the script up for as long as it runs: count times, frames each.
                     Hold(Math.Max(0, effect.C) * Math.Max(1, effect.D));
                     break;
 
@@ -120,10 +264,60 @@ namespace DSPRE.ROMFiles
                     Hold(_hooks.MoveCamera?.Invoke(effect.A) ?? 0);
                     break;
 
-                case ScriptEffectKind.Wait:
-                    // Whatever it is waiting on has already been counted, so there is nothing to add.
+                case ScriptEffectKind.Message:
+                {
+                    bool shown = _hooks.ShowMessage?.Invoke(effect) ?? false;
+                    // An instant message is drawn and the script carries straight on.
+                    if (shown && effect.A != 1) Waiting = WaitKind.Message;
+                    break;
+                }
+
+                case ScriptEffectKind.OpenMessage:
+                    _hooks.OpenMessage?.Invoke();
+                    break;
+
+                case ScriptEffectKind.CloseMessage:
+                    _hooks.CloseMessage?.Invoke(effect.A == 1);
+                    break;
+
+                case ScriptEffectKind.WaitButton:
+                    _buttonTakesPad = effect.A != 0;
+                    _buttonTurns = effect.A == 2;
+                    _pressed = _padPressed = false;
+                    Waiting = WaitKind.Button;
+                    break;
+
+                case ScriptEffectKind.WaitFrames:
+                    // Wait 0 counts down from 65536, which is what the games do with it too.
+                    _holdFrames = effect.A == 0 ? 65536 : effect.A;
+                    Waiting = WaitKind.Frames;
+                    break;
+
+                case ScriptEffectKind.Lock:
+                case ScriptEffectKind.Release:
+                    _hooks.Apply?.Invoke(effect);
+                    // LockAll and ReleaseAll give up the rest of the frame; the single-object ones do not.
+                    if (effect.A < 0) Waiting = WaitKind.Yield;
+                    break;
+
+                case ScriptEffectKind.TouchScreen:
+                    _hooks.Apply?.Invoke(effect);
+                    Hold(TouchScreenSwapFrames);
+                    break;
+
+                case ScriptEffectKind.FacePlayer:
+                case ScriptEffectKind.ShowObject:
+                case ScriptEffectKind.CameraObject:
+                    _hooks.Apply?.Invoke(effect);
                     break;
             }
+        }
+
+        private void Hold(int frames)
+        {
+            if (frames <= 0) return;
+            _holdFrames = frames;
+            Waiting = WaitKind.Frames;
         }
     }
 

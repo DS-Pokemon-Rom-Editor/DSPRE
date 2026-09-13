@@ -36,6 +36,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             public Overworld Event;
             public OverworldAnimator Motion;
             public float FootX, FootY, FootZ;   // where it stands, in normalized render space
+            /// <summary>Set once a script adds or removes them; until then their flag decides.</summary>
+            public bool? OnMap;
+        }
+
+        public AnimatedPreviewViewModel()
+        {
+            GameState.Changed += (_, _) => GameStateChanged();
         }
 
         private NsbmdRenderModel _scene;
@@ -120,9 +127,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // says what it would do.
         public FieldPlayer Player { get; private set; }
 
-        // What the watcher has said the game's variables hold, so a trigger is only asked about once.
-        private readonly Dictionary<ushort, int> _variables = new Dictionary<ushort, int>();
-
         private bool _showLevelScripts;
         /// <summary>Whether the side panel listing what the map runs by itself is on show.</summary>
         public bool ShowLevelScripts
@@ -199,7 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void StringVarsChanged()
         {
             // Whatever is on screen should read the new word without waiting for the next message.
-            if (_spokenLines.Count > 0) LayOutMessage();
+            LayOutMessage();
             StatusText = Describe();
         }
 
@@ -291,23 +295,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RunArrivalLevelScripts()
         {
             _firedWatchers.Clear();
-            _arriving.Clear();
-            foreach (var t in FieldLevelScripts.OnArrival(_levelScripts)) _arriving.Enqueue(t);
-            RunNextArrivalScript();
-        }
+            foreach (var t in FieldLevelScripts.OnArrival(_levelScripts))
+                RunWhileLoading(t.scriptTriggered,
+                    $"{FieldLevelScripts.WhenItRuns(t)}, so the map runs script {t.scriptTriggered}.");
 
-        /// <summary>Starts the next script the map runs on arrival. </summary>
-        private void RunNextArrivalScript()
-        {
-            while (_arriving.Count > 0 && !ScriptRunning)
-            {
-                var t = _arriving.Dequeue();
-                ScriptLines.Add($"{FieldLevelScripts.WhenItRuns(t)}, so the map starts script {t.scriptTriggered}.");
-                RunScript(t.scriptTriggered, "");
-            }
+            // These run before anybody is put on the map, so a flag they set decides who is there.
+            foreach (var npc in _npcs)
+                if (npc.OnMap == null && npc.Event.flag != 0 && GameState.TryGetFlag(npc.Event.flag, out bool set))
+                    npc.OnMap = !set;
+            Rebuild();
         }
-
-        private readonly Queue<LevelScriptTrigger> _arriving = new Queue<LevelScriptTrigger>();
 
         /// <summary>
         /// The engine gives the variable-watching level scripts a chance on every step you take, in the
@@ -331,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         private int VariableValue(int variable) =>
-            _variables.TryGetValue((ushort)variable, out int v) ? v : 0;
+            GameState.TryGetVar(variable, out long v) ? (int)v : 0;
 
         /// <summary>
         /// Sets one of the map's variables, which is how somebody makes a watching level script go off
@@ -339,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         public void SetVariable(int variable, int value)
         {
-            _variables[(ushort)variable] = value;
+            GameState.SetVar(variable, value);
             CheckLevelScriptWatchers();
         }
         private Trigger _pendingTrigger;
@@ -355,10 +352,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     ScriptLines.Clear(); Question = null; _walker = null; _pendingTrigger = null;
                     ClearMessage();
-                    _runner?.Stop(); _shake = null; _cameraMove = null;
-                    foreach (var npc in _npcs) npc.Motion?.StopScript();
+                    _runner?.Stop(); _shake = null; _cameraMove = null; _cameraObject = null; _talkTarget = null;
+                    foreach (var npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; npc.OnMap = null; }
                     _firedWatchers.Clear();
-                    _arriving.Clear();
+                    ResetTouchScreen();
                 }
                 else
                 {
@@ -367,6 +364,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     RunArrivalLevelScripts();
                 }
                 OnPropertyChanged(nameof(CanStepInto));
+                OnPropertyChanged(nameof(ShowTouchScreen));
+                OnPropertyChanged(nameof(ScriptStatusText));
                 Rebuild();
             }
         }
@@ -439,11 +438,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
+        /// <summary>Whether the player could stand on a tile: open, dry, and nobody already on it.</summary>
+        private bool CanStand(int x, int z) =>
+            (_collision == null || _collision.IsEmpty
+             || (!_collision.IsBlocked(x, z) && !FieldTileBehaviors.IsWater(_collision.TypeAt(x, z), _family)))
+            && !SomebodyOn(x, z, null, false);
+
         /// <summary>Stands the player next to a tile, facing it. </summary>
         public void StandBeside(int ox, int oz)
         {
             // Standing one tile away in each direction, looking back the other way.
-            var tries = new (int dx, int dz, MoveFacing look)[]
+            var tries = new List<(int dx, int dz, MoveFacing look)>
             {
                 (0, 1, MoveFacing.Up),        // below it, looking up
                 (0, -1, MoveFacing.Down),
@@ -451,11 +456,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 (-1, 0, MoveFacing.Right),
             };
 
+            // Somebody standing there is usually spoken to from the side they face, so that side goes first.
+            var there = _npcs.FirstOrDefault(n => FieldInteraction.TileX(n.Event) == ox && FieldInteraction.TileZ(n.Event) == oz);
+            if (there != null)
+            {
+                var (fx, fz) = FieldPlayer.Step(there.Motion.Facing);
+                int front = tries.FindIndex(t => t.dx == fx && t.dz == fz);
+                if (front > 0) { var pick = tries[front]; tries.RemoveAt(front); tries.Insert(0, pick); }
+            }
+
             foreach (var (dx, dz, look) in tries)
             {
                 int x = ox + dx, z = oz + dz;
-                bool blocked = _collision != null && !_collision.IsEmpty && _collision.IsBlocked(x, z);
-                if (blocked || SomebodyOn(x, z, null, false)) continue;
+                if (!CanStand(x, z)) continue;
                 _startFacing = look;
                 StartTile = (x, z);
                 return;
@@ -484,9 +497,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         private (int x, int z)? NearestFreeTile(int x, int z, int reach = 3)
         {
-            bool Free(int tx, int tz) =>
-                (_collision == null || _collision.IsEmpty || !_collision.IsBlocked(tx, tz))
-                && !SomebodyOn(tx, tz, null, false);
+            bool Free(int tx, int tz) => CanStand(tx, tz);
 
             if (Free(x, z)) return (x, z);
 
@@ -605,13 +616,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Whether this overworld is on the map, going by its flag.</summary>
         public bool IsPresent(Overworld ow) => FieldInteraction.IsPresent(ow, FlagIsSet);
 
+        /// <summary>Whether somebody is on the map now: their flag, unless a script has added or removed them.</summary>
+        private bool IsOnMap(Npc n) => n.OnMap ?? IsPresent(n.Event);
+
         /// <summary>Whether somebody is standing on a tile, or on their way onto it. </summary>
         private bool SomebodyOn(int x, int z, Npc except, bool countPlayer)
         {
             foreach (var npc in _npcs)
             {
                 if (npc == except) continue;
-                if (!IsPresent(npc.Event) || !npc.Motion.Visible) continue;
+                if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
                 int hx = FieldInteraction.TileX(npc.Event), hz = FieldInteraction.TileZ(npc.Event);
                 if (hx + npc.Motion.OffsetX == x && hz + npc.Motion.OffsetZ == z) return true;
                 if (hx + npc.Motion.FromOffsetX == x && hz + npc.Motion.FromOffsetZ == z) return true;
@@ -629,7 +643,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void FlagsChanged()
         {
             _flagsSet.Clear();
-            foreach (var f in EventFlags) if (f.IsSet) _flagsSet.Add(f.Number);
+            foreach (var f in EventFlags)
+            {
+                if (f.IsSet) _flagsSet.Add(f.Number);
+                // A flag ticked here is one a script checking it should find set.
+                if (f.IsSet) GameState.SetFlag(f.Number, true);
+                else if (GameState.TryGetFlag(f.Number, out bool was) && was) GameState.SetFlag(f.Number, false);
+            }
 
             OnPropertyChanged(nameof(HiddenCount));
             OnPropertyChanged(nameof(HiddenSummary));
@@ -638,7 +658,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>How many people the flags are currently taking off the map.</summary>
-        public int HiddenCount => _npcs.Count(n => !IsPresent(n.Event));
+        public int HiddenCount => _npcs.Count(n => !IsOnMap(n));
 
         public string HiddenSummary => HiddenCount == 0
             ? "Everybody is on the map."
@@ -664,8 +684,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// bank is read for how many pictures it has so a person, a following Pokemon and the hero each
         /// get paced the way the games pace them.
         /// </summary>
-        private static int PictureFor(ushort entry, MoveFacing facing, int cell, bool walking) =>
-            FieldSpriteAnimation.PictureFor(OverworldSprites.FrameCount(entry), (int)facing, cell, walking);
+        private static int PictureFor(ushort entry, MoveFacing facing, FieldWalkCycle cycle) =>
+            FieldSpriteAnimation.PictureFor(OverworldSprites.FrameCount(entry), (int)facing, cycle);
 
         /// <summary>Whether any overworld here is gated on a flag at all.</summary>
         public bool HasEventFlags => EventFlags.Count > 0;
@@ -677,6 +697,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private FieldScriptRunner _runner;
         private FieldCameraShake _shake;
         private Func<int, IReadOnlyList<ScriptAction>> _actionsFor;
+
+        // Counts field frames whether or not the scene is animating, so script waits keep time.
+        private int _scriptFrame;
 
         /// <summary>Plays a sound. The window points this at the ROM's own sound archive.</summary>
         public Action<ScriptEffectKind, int> PlaySound { get; set; }
@@ -727,13 +750,47 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool ScriptRunning => _runner != null && _runner.Running;
 
         /// <summary>What the script is doing, for the panel.</summary>
-        public string ScriptProgressText => _runner == null || !_runner.Running
-            ? "" : $"Step {_runner.StepIndex} of {_runner.StepCount}";
+        public string ScriptProgressText
+        {
+            get
+            {
+                if (!ScriptRunning) return "";
+                switch (_runner.Waiting)
+                {
+                    case FieldScriptRunner.WaitKind.Message: return MessageHasMore ? "Waiting for A to turn the page" : "Printing a message";
+                    case FieldScriptRunner.WaitKind.Button: return "Waiting for A or B";
+                    case FieldScriptRunner.WaitKind.Movement: return "Waiting for everyone to finish moving";
+                    case FieldScriptRunner.WaitKind.Frames: return $"Waiting {_runner.HoldingFrames} frames";
+                    case FieldScriptRunner.WaitKind.Question: return "Waiting for an answer";
+                    case FieldScriptRunner.WaitKind.Sound: return "Waiting for a sound to finish";
+                    default: return "Running";
+                }
+            }
+        }
+
+        /// <summary>What the preview has been told about flags and variables, kept across every script it runs.</summary>
+        public ScriptGameState GameState { get; } = new ScriptGameState();
+
+        /// <summary>Finds the file a shared script lives in. The window points this at the ROM.</summary>
+        public Func<int, ScriptSource> CommonScripts { get; set; }
+
+        /// <summary>Reads a message out of any archive: archive, then message.</summary>
+        public Func<int, int, string> ArchiveText { get; set; }
+
+        /// <summary>Which archive each of the four shared message archives is.</summary>
+        public Func<int, int> SharedArchive { get; set; }
+
+        /// <summary>Reads one of the shared menu entries.</summary>
+        public Func<int, string> MenuText { get; set; }
 
         private FieldScriptRunner Runner => _runner ??= new FieldScriptRunner(new FieldScriptRunner.Hooks
         {
             StartMovement = StartMovement,
-            PlaySound = (kind, id) => { if (_playSounds) PlaySound?.Invoke(kind, id); },
+            MovementsRunning = () => (Player?.IsScripted ?? false)
+                                     || _npcs.Any(n => n.Motion.IsScripted)
+                                     || (_cameraObject?.Motion.IsScripted ?? false),
+            PlaySound = StartSound,
+            SoundPlaying = kind => _soundEnds.TryGetValue(kind, out int end) && end > _scriptFrame,
             ShakeCamera = (x, y, count, frames) => _shake = new FieldCameraShake(x, y, count, frames),
             MoveCamera = row =>
             {
@@ -741,26 +798,148 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _cameraMove = new FieldCameraMove(row, CameraEntry.PitchDegrees);
                 return _cameraMove.TotalFrames;
             },
-            ShowMessage = text => { ShowMessage(Spoken(text)); return MessageVisible; },
+            ShowMessage = StartMessage,
+            MessagePrinting = () => _printer != null && !_printer.Finished,
+            OpenMessage = () => { _printer = null; _boxText = ""; _boxOpen = true; RaiseMessageChanged(); },
+            CloseMessage = keepWords =>
+            {
+                if (_printer != null) _boxText = _printer.Text;
+                _printer = null;
+                // The frozen close leaves the tiles drawn until something draws over them.
+                if (!keepWords) { _boxOpen = false; _boxText = null; }
+                RaiseMessageChanged();
+            },
+            Ask = q => Question = q,
+            Apply = ApplyEffect,
             Report = step => ScriptLines.Add(step.Text),
         });
 
+        // When each kind of sound started, and when it ends once the window knows how long it is.
+        private readonly Dictionary<ScriptEffectKind, int> _soundEnds = new Dictionary<ScriptEffectKind, int>();
+        private readonly Dictionary<ScriptEffectKind, int> _soundStarts = new Dictionary<ScriptEffectKind, int>();
+
+        private void StartSound(ScriptEffectKind kind, int id)
+        {
+            if (!_playSounds || PlaySound == null) { _soundEnds.Remove(kind); return; }
+            // Until the window has worked out how long it is, it counts as still playing.
+            _soundStarts[kind] = _scriptFrame;
+            _soundEnds[kind] = int.MaxValue;
+            PlaySound(kind, id);
+        }
+
+        /// <summary>The window says how many frames a sound it was asked to play lasts.</summary>
+        public void SoundLength(ScriptEffectKind kind, int frames)
+        {
+            if (_soundStarts.TryGetValue(kind, out int start)) _soundEnds[kind] = start + Math.Max(0, frames);
+        }
+
+        /// <summary>The overworld a script means by a number, which may be a variable holding one.</summary>
+        private int ResolveObject(int number)
+        {
+            if (!FieldScriptValues.IsVariable(number)) return number;
+            return GameState.TryGetVar(number, out long v) ? (int)v : -1;
+        }
+
+        private Npc NpcById(int id) => _npcs.FirstOrDefault(n => n.Event.owID == id && IsOnMap(n));
+
         /// <summary>
-        /// Sets an overworld walking through a movement, and says how long it will take so the script waits
-        /// for it.
+        /// Sets somebody walking through a movement, and says how long it will take. The script does not
+        /// wait for it unless it asks to.
         /// </summary>
         private int StartMovement(int overworldId, int movementNumber)
         {
-            var actions = _actionsFor?.Invoke(movementNumber);
+            var actions = _walker?.ActionsFor(movementNumber) ?? _actionsFor?.Invoke(movementNumber);
             var steps = FieldMovementScript.Parse(actions);
             if (steps.Count == 0) return 0;
 
-            var npc = _npcs.FirstOrDefault(n => n.Event.owID == overworldId);
-            if (npc == null) return 0;
-
-            npc.Motion.PlayScript(steps);
+            int who = ResolveObject(overworldId);
+            if (who == ScriptWalker.PlayerObject)
+            {
+                if (Player == null) return 0;
+                Player.PlayScript(steps);
+            }
+            else if (who == ScriptWalker.CameraObject)
+            {
+                if (_cameraObject == null) return 0;
+                _cameraObject.Motion.PlayScript(steps);
+            }
+            else
+            {
+                var npc = NpcById(who);
+                if (npc == null) return 0;
+                npc.Motion.PlayScript(steps);
+            }
             return FieldMovementScript.TotalFrames(steps);
         }
+
+        private static MoveFacing Opposite(MoveFacing f) => f switch
+        {
+            MoveFacing.Up => MoveFacing.Down,
+            MoveFacing.Down => MoveFacing.Up,
+            MoveFacing.Left => MoveFacing.Right,
+            _ => MoveFacing.Left,
+        };
+
+        /// <summary>Turning, locking and showing or hiding people, as a script asks.</summary>
+        private void ApplyEffect(ScriptEffect e)
+        {
+            switch (e.Kind)
+            {
+                case ScriptEffectKind.FacePlayer:
+                    // It turns against the way the player faces, not towards where the player stands.
+                    if (_talkTarget != null && Player != null) _talkTarget.Motion.Face(Opposite(Player.Facing));
+                    break;
+
+                case ScriptEffectKind.Lock:
+                case ScriptEffectKind.Release:
+                {
+                    bool paused = e.Kind == ScriptEffectKind.Lock;
+                    if (e.A < 0) foreach (var n in _npcs) n.Motion.Paused = paused;
+                    else if (NpcById(ResolveObject(e.A)) is Npc one) one.Motion.Paused = paused;
+                    break;
+                }
+
+                case ScriptEffectKind.ShowObject:
+                {
+                    int id = ResolveObject(e.A);
+                    var npc = _npcs.FirstOrDefault(n => n.Event.owID == id);
+                    if (npc == null) break;
+                    if (e.B == 1)
+                    {
+                        // AddObject only brings somebody back while their flag is clear.
+                        bool hidden = npc.Event.flag != 0 && (GameState.TryGetFlag(npc.Event.flag, out bool set) ? set : FlagIsSet(npc.Event.flag));
+                        if (!hidden) npc.OnMap = true;
+                    }
+                    else
+                    {
+                        npc.OnMap = false;
+                        if (npc.Event.flag != 0) GameState.SetFlag(npc.Event.flag, true);
+                    }
+                    break;
+                }
+
+                case ScriptEffectKind.TouchScreen:
+                    _touchSwapFrames = FieldScriptRunner.TouchScreenSwapFrames;
+                    _touchSwapToChoices = e.A == 1;
+                    OnPropertyChanged(nameof(TouchScreenBrightness));
+                    break;
+
+                case ScriptEffectKind.CameraObject:
+                    _cameraObject = e.C == 1
+                        ? new CameraObjectState { TileX = e.A, TileZ = e.B, Motion = new OverworldAnimator(null, MoveFacing.Down) }
+                        : null;
+                    break;
+            }
+        }
+
+        /// <summary>The invisible thing a script can hand the camera to, and walk about to pan it.</summary>
+        private sealed class CameraObjectState
+        {
+            public int TileX, TileZ;
+            public OverworldAnimator Motion;
+        }
+
+        private CameraObjectState _cameraObject;
 
         private bool _showFlags;
         public bool ShowFlags { get => _showFlags; set => Set(ref _showFlags, value); }
@@ -789,7 +968,110 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             set { if (Set(ref _cameraId, value)) { OnPropertyChanged(nameof(CameraEntry)); OnPropertyChanged(nameof(CameraDescription)); } }
         }
 
-        public FieldCameraEntry CameraEntry => FieldCamera.Entry(_cameraId);
+        private RomInfo.GameFamilies _family = RomInfo.gameFamily;
+
+        /// <summary>Which game is being previewed: the two keep different camera tables and menus.</summary>
+        public RomInfo.GameFamilies Family
+        {
+            get => _family;
+            set
+            {
+                if (!Set(ref _family, value)) return;
+                OnPropertyChanged(nameof(CameraEntry));
+                OnPropertyChanged(nameof(CameraDescription));
+                OnPropertyChanged(nameof(IsHeartGold));
+                OnPropertyChanged(nameof(IsPlatinum));
+                OnPropertyChanged(nameof(ShowTouchScreen));
+            }
+        }
+
+        /// <summary>HeartGold and SoulSilver put some of their menus on the touch screen.</summary>
+        public bool IsHeartGold => _family == RomInfo.GameFamilies.HGSS;
+
+        public bool IsPlatinum => _family == RomInfo.GameFamilies.Plat;
+
+        // ── HeartGold and SoulSilver's touch screen ─────────────────────────────
+        private bool _touchShowsChoices;
+        private int _touchSwapFrames;
+        private bool _touchSwapToChoices;
+        private int _touchBlink = -1;
+        private int _touchLabelShown = -1;
+
+        /// <summary>Whether the Poké Ball screen touch questions use is up instead of the touch menu.</summary>
+        public bool TouchScreenShowsChoices => _touchShowsChoices;
+
+        /// <summary>How bright the touch screen is, dipping to black and back while it swaps.</summary>
+        public double TouchScreenBrightness
+        {
+            get
+            {
+                if (_touchSwapFrames <= 0) return 1;
+                double half = FieldScriptRunner.TouchScreenSwapFrames / 2.0;
+                return Math.Abs(_touchSwapFrames - half) / half;
+            }
+        }
+
+        /// <summary>Whether the red frame is up round the touch entry the cursor is on; it blinks when one is picked.</summary>
+        public bool TouchCursorShown => global::DSPRE.Avalonia.Data.HgssTouchScreen.BlinkShows(_touchBlink);
+
+        /// <summary>Whether the touch question on show is a yes/no rather than a list.</summary>
+        public bool TouchChoiceIsYesNo => _question?.Kind == ScriptQuestion.QuestionKind.YesNo;
+
+        /// <summary>The entries of the touch question on show, or none.</summary>
+        public IReadOnlyList<string> TouchChoiceItems => HasTouchChoice ? ChoiceAllItems : Array.Empty<string>();
+
+        /// <summary>The words the touch menu's A button shows: NEXT while a message is up, TALK facing somebody, CHECK otherwise.</summary>
+        public int TouchALabel
+        {
+            get
+            {
+                if (MessageVisible) return global::DSPRE.Avalonia.Data.HgssTouchScreen.NextMessage;
+                if (Player == null) return global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
+                var (x, z) = FieldInteraction.TalkTile(Player, _collision);
+                return NpcAt(x, z) != null ? global::DSPRE.Avalonia.Data.HgssTouchScreen.TalkMessage : global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
+            }
+        }
+
+        private void ResetTouchScreen()
+        {
+            _touchShowsChoices = false;
+            _touchSwapFrames = 0;
+            _touchBlink = -1;
+            OnPropertyChanged(nameof(TouchScreenShowsChoices));
+            OnPropertyChanged(nameof(TouchScreenBrightness));
+            OnPropertyChanged(nameof(TouchCursorShown));
+        }
+
+        /// <summary>A touch list writes the entry's description into the top screen's message box as the cursor moves.</summary>
+        private void ShowDescription(string text)
+        {
+            _printer = null;
+            _boxText = ExpandVars(text);
+            _boxOpen = true;
+            RaiseMessageChanged();
+        }
+
+        /// <summary>A touch on one of the touch screen's entries, which picks it straight away.</summary>
+        public void TouchChoice(int index)
+        {
+            if (_question == null || !_question.OnTouchScreen || _touchBlink >= 0) return;
+            if (index < 0 || index >= _question.Options.Count) return;
+            _choiceCursor = index;
+            foreach (var entry in ChoiceEntries) entry.IsSelected = entry.Index == index;
+            OnPropertyChanged(nameof(ChoiceCursor));
+            OnPropertyChanged(nameof(ChoiceCursorRow));
+            ConfirmChoice();
+        }
+
+        private bool _hasPoketch = true;
+
+        /// <summary>Whether the player has been given the Pokétch, which the preview cannot read from a save.</summary>
+        public bool HasPoketch { get => _hasPoketch; set => Set(ref _hasPoketch, value); }
+
+        /// <summary>Known once a script has asked, and it picks the Pokétch's casing.</summary>
+        public bool PlayerIsFemale => GameState.TryGetFact("CheckPlayerGender", out long gender) && gender == 1;
+
+        public FieldCameraEntry CameraEntry => FieldCamera.Entry(_cameraId, _family);
 
         /// <summary>What the step-in camera is doing, for the toolbar.</summary>
         public string CameraDescription
@@ -812,26 +1094,348 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             private set
             {
                 Set(ref _question, value);
-                OnPropertyChanged(nameof(HasQuestion));
-                OnPropertyChanged(nameof(QuestionPrompt));
                 AnswerOptions.Clear();
                 if (value != null) foreach (var o in value.Options) AnswerOptions.Add(o.Label);
+                _choiceCursor = value == null ? 0 : Math.Min(Math.Max(0, value.InitialCursor), Math.Max(0, value.Options.Count - 1));
+                _choiceScroll = 0;
+                KeepCursorOnShow();
+                TypedAnswer = "0";
+                OnPropertyChanged(nameof(HasQuestion));
+                OnPropertyChanged(nameof(HasStatePrompt));
+                OnPropertyChanged(nameof(HasChoiceWindow));
+                OnPropertyChanged(nameof(HasTouchChoice));
+                OnPropertyChanged(nameof(QuestionPrompt));
+                OnPropertyChanged(nameof(QuestionTitle));
                 OnPropertyChanged(nameof(AcceptsTypedAnswer));
+                OnPropertyChanged(nameof(ChoiceItems));
+                OnPropertyChanged(nameof(ChoiceAllItems));
+                OnPropertyChanged(nameof(TouchChoiceItems));
+                OnPropertyChanged(nameof(TouchChoiceIsYesNo));
+                OnPropertyChanged(nameof(ChoiceCursor));
+                OnPropertyChanged(nameof(ChoiceCursorRow));
+                OnPropertyChanged(nameof(ChoiceCursorX));
+                OnPropertyChanged(nameof(ChoiceRowOffset));
+                OnPropertyChanged(nameof(ChoiceLeft));
+                OnPropertyChanged(nameof(ChoiceTop));
+                OnPropertyChanged(nameof(ChoiceIndent));
+                OnPropertyChanged(nameof(ChoiceWidthTiles));
+                OnPropertyChanged(nameof(ChoiceHeightTiles));
+                OnPropertyChanged(nameof(ScriptProgressText));
+                OnPropertyChanged(nameof(ScriptStatusText));
+                RebuildChoiceEntries();
             }
         }
+
+        /// <summary>One entry of a menu on show, for the touch screen buttons.</summary>
+        public sealed class ChoiceEntry : INotifyPropertyChanged
+        {
+            public int Index { get; init; }
+            public string Label { get; init; }
+            private bool _selected;
+            public bool IsSelected
+            {
+                get => _selected;
+                set { if (_selected == value) return; _selected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
+            }
+            public event PropertyChangedEventHandler PropertyChanged;
+        }
+
+        public ObservableCollection<ChoiceEntry> ChoiceEntries { get; } = new ObservableCollection<ChoiceEntry>();
+
+        private void RebuildChoiceEntries()
+        {
+            ChoiceEntries.Clear();
+            if (_question == null || !_question.IsInGame) return;
+            for (int i = 0; i < _question.Options.Count; i++)
+                ChoiceEntries.Add(new ChoiceEntry { Index = i, Label = _question.Options[i].Label, IsSelected = i == _choiceCursor });
+        }
+
+        private bool ChoiceIsList => _question?.Kind == ScriptQuestion.QuestionKind.Menu && _question.IsList;
+
+        /// <summary>How far the words sit in from the writing area's left edge, leaving room for the cursor.</summary>
+        public int ChoiceIndent => _question?.Kind == ScriptQuestion.QuestionKind.YesNo ? 8 : ChoiceIsList ? 12 : 11;
+
+        /// <summary>Where the cursor sits: at the edge in a menu, two pixels in on a list.</summary>
+        public int ChoiceCursorX => ChoiceIsList ? 2 : 0;
+
+        /// <summary>A list's rows start a pixel lower than a menu's.</summary>
+        public int ChoiceRowOffset => ChoiceIsList ? 1 : 0;
+
+        /// <summary>How many rows a list shows before it scrolls.</summary>
+        public const int ListRows = 8;
+
+        /// <summary>The yes/no window is six tiles by four; a menu sizes itself to its entries.</summary>
+        public int ChoiceWidthTiles => _question?.Kind == ScriptQuestion.QuestionKind.YesNo ? 6 : 0;
+        public int ChoiceHeightTiles => _question?.Kind == ScriptQuestion.QuestionKind.YesNo ? 4
+            : ChoiceIsList ? Math.Min(_question.Options.Count, ListRows) * 2 : 0;
+
+        /// <summary>Whether the bottom screen is drawn under the top one.</summary>
+        public bool ShowTouchScreen => _stepInto && (IsHeartGold || IsPlatinum);
+
+        /// <summary>A line saying what is going on, at the top of the side panel.</summary>
+        public string ScriptStatusText => ScriptRunning ? ScriptProgressText
+            : HasStatePrompt ? "Waiting for an answer"
+            : "Arrow keys act as the D-pad. Enter acts as A, X acts as B";
+
+        /// <summary>Stops the script where it is, taking the box and any question down.</summary>
+        public void StopScript()
+        {
+            _runner?.Stop();
+            _pendingTrigger = null;
+            Question = null;
+            ClearMessage();
+            foreach (var npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; }
+            _cameraObject = null;
+            ResetTouchScreen();
+            ScriptLines.Add("Stopped.");
+            OnPropertyChanged(nameof(ScriptRunning));
+            OnPropertyChanged(nameof(ScriptStatusText));
+            Rebuild();
+        }
+
         public bool HasQuestion => _question != null;
+
+        /// <summary>The preview needs telling something the game would already know.</summary>
+        public bool HasStatePrompt => _question != null && !_question.IsInGame;
+
+        /// <summary>A yes/no box or a menu, drawn on the top screen where the game draws it.</summary>
+        public bool HasChoiceWindow => _question != null && _question.IsInGame && !_question.OnTouchScreen;
+
+        /// <summary>A yes/no the game asks with buttons on the touch screen.</summary>
+        public bool HasTouchChoice => _question != null && _question.IsInGame && _question.OnTouchScreen;
+
         public string QuestionPrompt => _question?.Prompt ?? "";
+
+        public string QuestionTitle => _question == null ? ""
+            : _question.FromPreview ? "Step on it?"
+            : _question.Kind == ScriptQuestion.QuestionKind.Flag ? "Is this flag set?"
+            : _question.Kind == ScriptQuestion.QuestionKind.Fact ? "Something the game knows"
+            : "What does this variable hold?";
+
         public bool AcceptsTypedAnswer => _question?.AcceptsAnyNumber == true;
         public ObservableCollection<string> AnswerOptions { get; } = new ObservableCollection<string>();
 
         private string _typedAnswer = "0";
         public string TypedAnswer { get => _typedAnswer; set => Set(ref _typedAnswer, value); }
 
+        /// <summary>The rows of the yes/no box or menu on show; a long list shows eight at a time.</summary>
+        public IReadOnlyList<string> ChoiceItems =>
+            _question == null ? Array.Empty<string>()
+            : ChoiceIsList ? _question.Options.Skip(_choiceScroll).Take(ListRows).Select(o => o.Label).ToList()
+            : _question.Options.Select(o => o.Label).ToList();
+
+        /// <summary>Every entry, which is what the window's width is measured from.</summary>
+        public IReadOnlyList<string> ChoiceAllItems =>
+            _question == null ? Array.Empty<string>() : _question.Options.Select(o => o.Label).ToList();
+
+        private int _choiceCursor;
+        private int _choiceScroll;
+
+        /// <summary>The row the cursor is on, counted from the first row on show.</summary>
+        public int ChoiceCursorRow => _choiceCursor - _choiceScroll;
+
+        private void KeepCursorOnShow()
+        {
+            if (!ChoiceIsList) { _choiceScroll = 0; return; }
+            if (_choiceCursor < _choiceScroll) _choiceScroll = _choiceCursor;
+            if (_choiceCursor >= _choiceScroll + ListRows) _choiceScroll = _choiceCursor - ListRows + 1;
+        }
+
+        /// <summary>Which entry the cursor is on.</summary>
+        public int ChoiceCursor
+        {
+            get => _choiceCursor;
+            set
+            {
+                if (_question == null) return;
+                int n = _question.Options.Count;
+                if (n == 0) return;
+                int clamped = Math.Min(Math.Max(0, value), n - 1);
+                if (!Set(ref _choiceCursor, clamped)) return;
+                PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
+                foreach (var e in ChoiceEntries) e.IsSelected = e.Index == clamped;
+                int scroll = _choiceScroll;
+                KeepCursorOnShow();
+                if (scroll != _choiceScroll) OnPropertyChanged(nameof(ChoiceItems));
+                OnPropertyChanged(nameof(ChoiceCursorRow));
+                string about = _question.Descriptions != null && clamped < _question.Descriptions.Count ? _question.Descriptions[clamped] : null;
+                if (_question.OnTouchScreen && !string.IsNullOrEmpty(about)) ShowDescription(about);
+            }
+        }
+
+        /// <summary>SEQ_SE_CONFIRM in Platinum and SEQ_SE_DP_SELECT in HGSS, which are the same sequence.</summary>
+        public const int MenuSound = 1500;
+
+        /// <summary>Where the window sits on the top screen, in tiles, to its top-left writing corner.</summary>
+        public int ChoiceLeft => _question?.Kind == ScriptQuestion.QuestionKind.YesNo ? YesNoLeft : _question?.X ?? 0;
+        public int ChoiceTop => _question?.Kind == ScriptQuestion.QuestionKind.YesNo ? YesNoTop : _question?.Y ?? 0;
+
+        /// <summary>The yes/no window's writing area starts at tile 25, 13 in both games.</summary>
+        public const int YesNoLeft = 25, YesNoTop = 13;
+
+        /// <summary>Moves the cursor up or down. Menus of four or more wrap round.</summary>
+        public void MoveChoiceCursor(int delta)
+        {
+            if (_question == null || !_question.IsInGame) return;
+            int n = _question.Options.Count;
+            if (n == 0 || _touchBlink >= 0) return;
+            if (_question.OnTouchScreen)
+            {
+                int to = global::DSPRE.Avalonia.Data.HgssTouchScreen.Neighbour(n, TouchChoiceIsYesNo, _choiceCursor, 0, Math.Sign(delta));
+                if (to >= 0) ChoiceCursor = to;
+                return;
+            }
+            int next = _choiceCursor + delta;
+            if (n >= 4 && !ChoiceIsList) next = ((next % n) + n) % n;
+            ChoiceCursor = next;
+        }
+
+        /// <summary>Left and right on a list jump a page at a time.</summary>
+        public void PageChoice(int pages)
+        {
+            if (_question != null && _question.OnTouchScreen)
+            {
+                if (_touchBlink >= 0) return;
+                int to = global::DSPRE.Avalonia.Data.HgssTouchScreen.Neighbour(_question.Options.Count, TouchChoiceIsYesNo, _choiceCursor, Math.Sign(pages), 0);
+                if (to >= 0) ChoiceCursor = to;
+                return;
+            }
+            if (!ChoiceIsList) return;
+            ChoiceCursor = _choiceCursor + pages * ListRows;
+        }
+
+        /// <summary>A on the yes/no box or menu.</summary>
+        public void ConfirmChoice()
+        {
+            if (_question == null || !_question.IsInGame || _touchBlink >= 0) return;
+            PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
+            // A touch choice blinks its red frame before the choice counts.
+            if (_question.OnTouchScreen) { _touchBlink = 0; OnPropertyChanged(nameof(TouchCursorShown)); return; }
+            AnswerOption(_choiceCursor);
+        }
+
+        /// <summary>B on the yes/no box, which answers no, or on a menu that lets you back out.</summary>
+        public void CancelChoice()
+        {
+            if (_question == null || !_question.IsInGame || _touchBlink >= 0) return;
+            if (_question.OnTouchScreen)
+            {
+                // B picks NO, or a list's last entry when the list can be backed out of.
+                if (_question.Kind == ScriptQuestion.QuestionKind.Menu && !_question.Cancellable) return;
+                TouchChoice(_question.Options.Count - 1);
+                return;
+            }
+            if (_question.Kind == ScriptQuestion.QuestionKind.YesNo)
+            {
+                PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
+                AnswerQuestion(1);
+            }
+            else if (_question.Cancellable)
+            {
+                PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
+                AnswerQuestion(ScriptWalker.MenuCancelled);
+            }
+            else if (!ChoiceIsList)
+            {
+                // A menu that cannot be backed out of still beeps; the script just never hears about it.
+                PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
+            }
+        }
+
+        /// <summary>One flag or variable the preview knows, shown so it can be changed or forgotten.</summary>
+        public sealed class GameStateEntry : INotifyPropertyChanged
+        {
+            private readonly ScriptGameState _state;
+            public GameStateEntry(ScriptGameState state, bool isFlag, int number, string fact = null)
+            { _state = state; IsFlag = isFlag; Number = number; Fact = fact; }
+
+            public bool IsFlag { get; }
+            public int Number { get; }
+            /// <summary>Set for something the save would know, remembered by what was asked.</summary>
+            public string Fact { get; }
+            public bool IsVariable => !IsFlag;
+
+            public string Label => Fact != null ? Fact
+                : IsFlag ? (Number >= 0x10000 ? $"Trainer flag {Number - 0x10000}" : $"Flag {Number}")
+                : FieldScriptValues.Describe(Number);
+
+            public bool IsSet
+            {
+                get => _state.TryGetFlag(Number, out bool set) && set;
+                set => _state.SetFlag(Number, value);
+            }
+
+            public string Value
+            {
+                get => Fact != null ? (_state.TryGetFact(Fact, out long f) ? f.ToString() : "")
+                     : _state.TryGetVar(Number, out long v) ? v.ToString() : "";
+                set
+                {
+                    if (!long.TryParse(value, out long v)) return;
+                    if (Fact != null) _state.SetFact(Fact, v);
+                    else _state.SetVar(Number, v);
+                }
+            }
+
+            public void Forget()
+            {
+                if (Fact != null) _state.ForgetFact(Fact);
+                else if (IsFlag) _state.ForgetFlag(Number);
+                else _state.ForgetVar(Number);
+            }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+            internal void Refresh()
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSet)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+            }
+        }
+
+        /// <summary>Every flag and variable the preview has been told about or seen a script set.</summary>
+        public ObservableCollection<GameStateEntry> GameStateEntries { get; } = new ObservableCollection<GameStateEntry>();
+
+        public bool HasGameState => GameStateEntries.Count > 0;
+
+        private void GameStateChanged()
+        {
+            OnPropertyChanged(nameof(PlayerIsFemale));
+            var wanted = GameState.Facts.Keys.OrderBy(k => k).Select(k => (false, -1, k))
+                .Concat(GameState.Flags.Keys.OrderBy(k => k).Select(k => (true, k, (string)null)))
+                .Concat(GameState.Vars.Keys.OrderBy(k => k).Select(k => (false, k, (string)null)))
+                .ToList();
+
+            bool same = wanted.Count == GameStateEntries.Count
+                        && wanted.Select((w, i) => GameStateEntries[i].IsFlag == w.Item1 && GameStateEntries[i].Number == w.Item2
+                                                   && GameStateEntries[i].Fact == w.Item3).All(x => x);
+            if (same)
+            {
+                foreach (var e in GameStateEntries) e.Refresh();
+                return;
+            }
+
+            GameStateEntries.Clear();
+            foreach (var (isFlag, number, fact) in wanted) GameStateEntries.Add(new GameStateEntry(GameState, isFlag, number, fact));
+            OnPropertyChanged(nameof(HasGameState));
+        }
+
+        /// <summary>Forgets everything the preview has been told, so the next script asks again.</summary>
+        public void ForgetGameState() => GameState.Clear();
+
         /// <summary>Where the player is standing in the scene.</summary>
         public (float x, float y, float z) PlayerWorldPosition()
         {
             if (Player == null || _tileToWorld == null) return (0f, 0f, 0f);
             return _tileToWorld(Player.DrawX, Player.DrawZ);
+        }
+
+        /// <summary>What the camera follows: the player, or the object a script handed it to.</summary>
+        private (float x, float y, float z) FollowedPosition()
+        {
+            if (_cameraObject != null && _tileToWorld != null)
+                return _tileToWorld(_cameraObject.TileX + _cameraObject.Motion.DrawOffsetX,
+                                    _cameraObject.TileZ + _cameraObject.Motion.DrawOffsetZ);
+            return PlayerWorldPosition();
         }
 
         // Only the camera's height lags; it keeps up with the player across the ground.
@@ -843,7 +1447,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         public (float x, float y, float z) CameraTarget()
         {
-            var now = PlayerWorldPosition();
+            var now = FollowedPosition();
             if (_cameraTrail.Count == 0) return now;
             return (now.x, _cameraTrail.Peek(), now.z);
         }
@@ -851,7 +1455,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RememberCameraTrail()
         {
             if (Player == null || _tileToWorld == null) return;
-            _cameraTrail.Enqueue(PlayerWorldPosition().y);
+            _cameraTrail.Enqueue(FollowedPosition().y);
             // The games keep one more than the delay, so the oldest one held is six frames old.
             while (_cameraTrail.Count > FieldCamera.TrailFrames + 1) _cameraTrail.Dequeue();
         }
@@ -860,6 +1464,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string Move(MoveFacing dir)
         {
             if (Player == null || _question != null) return null;
+
+            if (ScriptRunning)
+            {
+                // WaitButton also carries on at a direction, and turns the player to face it.
+                if (_runner.ButtonTakesPad)
+                {
+                    if (_runner.ButtonTurnsPlayer) Player.Face(dir);
+                    _runner.Pressed(pad: true);
+                    Rebuild();
+                }
+                return null;
+            }
+
+            CloseLeftoverBox();
             var result = Player.Go(dir);
             Rebuild();
 
@@ -884,46 +1502,64 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             var warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
-                ScriptLines.Add($"This is a way through to header {warp.header}, arriving at its warp {warp.anchor}. "
-                                + "The preview stays where it is.");
+                ScriptLines.Add($"A way through to header {warp.header}, warp {warp.anchor}. "
+                                + "The preview stays put.");
                 OpenDoorAt(Player.TileX, Player.TileZ);
             }
 
-            // Whether a trigger would really go off depends on a variable the preview has no way of
-            // knowing, so rather than guess it asks outright whether to set it off.
             var waiting = FieldInteraction.TriggerAt(_events, Player.TileX, Player.TileZ, null);
             if (waiting == null) return;
+
+            // A trigger only goes off when its variable holds the value it waits for.
+            if (GameState.TryGetVar(waiting.variableWatched, out long held))
+            {
+                if (held == waiting.expectedVarValue) { ScriptLines.Clear(); RunScript(waiting.scriptNumber, "The trigger goes off."); }
+                return;
+            }
 
             _pendingTrigger = waiting;
             Question = new ScriptQuestion
             {
                 Kind = ScriptQuestion.QuestionKind.YesNo,
-                Subject = $"the trigger on this tile",
-                Prompt = $"There is a trigger here. It runs script {waiting.scriptNumber} when variable "
-                       + $"{waiting.variableWatched} is {waiting.expectedVarValue}. Set it off?",
+                FromPreview = true,
+                Subject = "the trigger on this tile",
+                Prompt = $"There is a trigger here. It runs script {waiting.scriptNumber} when "
+                       + $"{FieldScriptValues.Describe(waiting.variableWatched)} is {waiting.expectedVarValue}.",
                 Options = new[] { ("Set it off", 1L), ("Leave it", 0L) },
             };
             ScriptLines.Add(Question.Prompt);
         }
 
-        /// <summary>Talks to whatever the player is facing and runs its script. </summary>
+        private Npc _talkTarget;
+
+        /// <summary>Who is standing on a tile right now, wherever they have wandered to.</summary>
+        private Npc NpcAt(int x, int z) => _npcs.FirstOrDefault(n =>
+            IsOnMap(n) && n.Motion.Visible
+            && FieldInteraction.TileX(n.Event) + n.Motion.OffsetX == x
+            && FieldInteraction.TileZ(n.Event) + n.Motion.OffsetZ == z);
+
+        /// <summary>A while a script runs, otherwise talks to whatever the player is facing.</summary>
         public void Interact()
         {
             if (Player == null || _question != null) return;
-
-            // A box already open means the player is reading; the key press turns the page instead.
-            if (MessageVisible) { AdvanceMessage(); return; }
+            if (ScriptRunning) { PressA(); return; }
+            if (CloseLeftoverBox()) return;
 
             ScriptLines.Clear();
-            ClearMessage();
 
             var (x, z) = FieldInteraction.TalkTile(Player, _collision);
-            var ow = FieldInteraction.OverworldAt(_events, x, z, FlagIsSet);
-            if (ow != null) { RunScript(ow.scriptNumber, $"You talk to overworld {ow.owID}."); return; }
+            var npc = NpcAt(x, z);
+            if (npc != null)
+            {
+                _talkTarget = npc;
+                RunScript(npc.Event.scriptNumber, $"You talk to overworld {npc.Event.owID}.");
+                return;
+            }
 
             var sign = FieldInteraction.SpawnableAt(_events, x, z, Player.Facing);
             if (sign != null)
             {
+                _talkTarget = null;
                 string what = (SpawnableKind)sign.type == SpawnableKind.Signboard ? "read the sign"
                             : (SpawnableKind)sign.type == SpawnableKind.HiddenItem ? "find something hidden"
                             : "look at it";
@@ -934,15 +1570,36 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ScriptLines.Add("There is nothing there to talk to.");
         }
 
-        /// <summary>Starts the script viewer on one script, whatever kind of event asked for it.</summary>
+        /// <summary>
+        /// A box a finished script left up stays drawn in the games until something draws over it; the
+        /// preview takes it down the next time you do anything.
+        /// </summary>
+        private bool CloseLeftoverBox()
+        {
+            if (ScriptRunning || !_boxOpen) return false;
+            ClearMessage();
+            return true;
+        }
+
+        private void ConfigureWalker(ScriptWalker w)
+        {
+            w.State = GameState;
+            w.CommonScripts = CommonScripts;
+            w.ArchiveText = ArchiveText;
+            w.SharedArchive = SharedArchive;
+            w.MenuText = MenuText;
+            w.PlayerPosition = () => Player == null ? ((int, int)?)null : (Player.TileX, Player.TileZ);
+        }
+
+        /// <summary>Starts a script playing out, whatever kind of event asked for it.</summary>
         private void RunScript(int scriptNumber, string opening)
         {
-            ScriptLines.Add(opening);
+            if (!string.IsNullOrEmpty(opening)) ScriptLines.Add(opening);
 
             int? trainer = TrainerScripts.TrainerIdFor(scriptNumber);
             if (trainer != null)
-                ScriptLines.Add($"Script {scriptNumber} is one of the trainer scripts, which stands for "
-                    + $"trainer {trainer}{(TrainerScripts.IsDouble(scriptNumber) ? ", a two against two battle" : "")}.");
+                ScriptLines.Add($"Script {scriptNumber} is the trainer script for "
+                    + $"trainer {trainer}{(TrainerScripts.IsDouble(scriptNumber) ? ", a double battle" : "")}.");
 
             // Say which file it comes from when it is not the map's own.
             string home = _scriptHome?.Invoke(scriptNumber);
@@ -953,14 +1610,43 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _walker = _walkerFor(scriptNumber);
             if (_walker == null) { ScriptLines.Add("That script could not be read."); return; }
 
-            _walker.Start(_walkerStartId?.Invoke(scriptNumber) ?? scriptNumber);
+            ConfigureWalker(_walker);
+            _walker.Begin(_walkerStartId?.Invoke(scriptNumber) ?? scriptNumber);
+            // The engine notes who was spoken to before the script's first command runs.
+            if (_talkTarget != null) GameState.SetVar(ScriptWalker.LastTalkedVar, _talkTarget.Event.owID);
 
-            Question = _walker.Pending;
+            Question = null;
             _shake = null;
             _cameraMove = null;
-            Runner.Play(_walker.Steps);
+            Runner.Play(_walker);
             OnPropertyChanged(nameof(ScriptRunning));
             OnPropertyChanged(nameof(ScriptProgressText));
+            OnPropertyChanged(nameof(ScriptStatusText));
+        }
+
+        /// <summary>
+        /// Runs a script straight through with nobody to ask, the way the ones that set a map up as it loads
+        /// run before anything is on screen.
+        /// </summary>
+        private void RunWhileLoading(int scriptNumber, string opening)
+        {
+            ScriptLines.Add(opening);
+            var w = _walkerFor?.Invoke(scriptNumber);
+            if (w == null) return;
+
+            ConfigureWalker(w);
+            w.GuessUnknowns = true;
+            w.Begin(_walkerStartId?.Invoke(scriptNumber) ?? scriptNumber);
+            while (w.Next()) { }
+            // Anything that still stopped to ask is a yes/no or a menu, which cannot come up while loading.
+            while (w.Pending != null && !w.Finished) { w.Answer(0); while (w.Next()) { } }
+
+            foreach (var s in w.Steps)
+            {
+                ScriptLines.Add(s.Text);
+                if (s.Effect?.Kind == ScriptEffectKind.ShowObject) ApplyEffect(s.Effect);
+            }
+            Rebuild();
         }
 
         /// <summary>Plays the door on a tile, which is the only time the games play one. </summary>
@@ -1004,7 +1690,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private readonly List<OneShot> _playingOnce = new List<OneShot>();
 
-        /// <summary>Answers the question the script stopped on, and lets it carry on.</summary>
+        /// <summary>Answers the question on show, and lets the script carry on.</summary>
         public void AnswerQuestion(long value)
         {
             if (_question == null) return;
@@ -1019,7 +1705,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (value != 0)
                 {
                     // Setting it off means the variable held what it was waiting for.
-                    _variables[trigger.variableWatched] = trigger.expectedVarValue;
+                    GameState.SetVar(trigger.variableWatched, trigger.expectedVarValue);
+                    ScriptLines.Clear();
                     RunScript(trigger.scriptNumber, "The trigger goes off.");
                 }
                 else
@@ -1029,9 +1716,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 return;
             }
 
-            if (_walker == null) return;
+            if (_walker == null) { Question = null; return; }
             _walker.Answer(value);
-            ShowWalkerState();
+            Question = null;
         }
 
         public void AnswerTyped()
@@ -1045,46 +1732,57 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 AnswerQuestion(_question.Options[index].Value);
         }
 
-        private void ShowWalkerState()
-        {
-            ScriptLines.Clear();
-            foreach (var step in _walker.Steps) ScriptLines.Add(step.Text);
-            Question = _walker.Pending;
-            ShowMessagesFrom(_walker.Steps);
-        }
-
         // ── the box an NPC talks from ────────────────────────────────
-        private readonly List<FieldMessageFrame> _frames = new List<FieldMessageFrame>();
-        private int _frameIndex;
+        private FieldTextPrinter _printer;
+        private bool _boxOpen;
+        private string _boxText;
+        private List<FieldMessageFrame> _frames = new List<FieldMessageFrame>();
+        private bool _aPressed, _aHeld;
 
         /// <summary>Measures a run of letters. The window points this at the ROM's own font.</summary>
         public Func<string, int> MeasureText { get; set; } = t => (t ?? "").Length * 6;
 
-        private FieldMessageFrame Current =>
-            _frameIndex >= 0 && _frameIndex < _frames.Count ? _frames[_frameIndex] : null;
+        public ObservableCollection<string> TextSpeedNames { get; } =
+            new ObservableCollection<string> { "Slow text", "Mid text", "Fast text" };
+
+        private static readonly FieldTextSpeed[] TextSpeeds = { FieldTextSpeed.Slow, FieldTextSpeed.Mid, FieldTextSpeed.Fast };
+
+        private int _textSpeedIndex = 1;
+
+        /// <summary>The Options menu's text speed. New games start on mid.</summary>
+        public int TextSpeedIndex
+        {
+            get => _textSpeedIndex;
+            set { if (value >= 0 && value < TextSpeeds.Length) Set(ref _textSpeedIndex, value); }
+        }
+
+        public FieldTextSpeed TextSpeed => TextSpeeds[_textSpeedIndex];
 
         /// <summary>What the box is showing, or null when there is no box.</summary>
-        public string MessageText => Current?.Text;
+        public string MessageText => !_boxOpen ? null : _printer?.Text ?? _boxText ?? "";
 
-        public bool MessageVisible => Current != null;
+        public bool MessageVisible => _boxOpen;
 
-        /// <summary>Whether the box is waiting for the player before it goes on.</summary>
-        public bool MessageHasMore => Current != null && Current.Wait != MessageWait.None;
+        /// <summary>Whether the arrow is up, waiting for a press to turn the page.</summary>
+        public bool MessageHasMore => _printer?.WaitingForPress == true;
+
+        /// <summary>How far the arrow has bobbed down, in DS pixels.</summary>
+        public int MessageArrowOffset => _printer?.ArrowOffset ?? 0;
+
+        /// <summary>How far the lines have slid up part way through a scroll, in DS pixels.</summary>
+        public int MessageScrollPixels => _printer?.ScrollPixels ?? 0;
 
         /// <summary>What pressing will do, for the preview to say out loud.</summary>
         public string MessageWaitText
         {
             get
             {
-                var f = Current;
-                if (f == null) return "";
-                switch (f.Wait)
-                {
-                    case MessageWait.Clear: return "A or B clears the box and starts again";
-                    case MessageWait.Scroll: return "A or B scrolls up a line";
-                    case MessageWait.Simple: return "A or B carries on";
-                    default: return "A or B closes the box";
-                }
+                if (!ScriptRunning) return _boxOpen ? "Any key takes the box down" : "";
+                if (MessageHasMore) return "A turns the page";
+                if (_printer != null && !_printer.Finished) return "A hurries the text along";
+                if (_runner.Waiting == FieldScriptRunner.WaitKind.Button)
+                    return _runner.ButtonTakesPad ? "A, B or a direction carries on" : "A or B carries on";
+                return "";
             }
         }
 
@@ -1093,11 +1791,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var f = Current;
-                if (f == null) return null;
-                if (f.TooWide && f.TooManyLines) return "This runs past the edge and past the bottom of the box.";
-                if (f.TooWide) return "A line here runs past the edge of the box.";
-                if (f.TooManyLines) return "There are more lines here than the box can show.";
+                if (!_boxOpen || _frames.Count == 0) return null;
+                bool wide = _frames.Any(f => f.TooWide), tall = _frames.Any(f => f.TooManyLines);
+                if (wide && tall) return "This runs past the edge and past the bottom of the box.";
+                if (wide) return "A line here runs past the edge of the box.";
+                if (tall) return "There are more lines here than the box can show.";
                 return null;
             }
         }
@@ -1123,45 +1821,46 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string MessageFontNote { get; set; }
         public bool HasMessageFontNote => !string.IsNullOrEmpty(MessageFontNote);
 
-        // What the script actually said, gaps and all.
-        private readonly List<string> _spokenLines = new List<string>();
+        // What the script actually said, so a changed word can be put back in.
+        private string _spoken;
 
         private void ClearMessage()
         {
-            _frames.Clear();
-            _spokenLines.Clear();
-            _frameIndex = 0;
+            _printer = null;
+            _boxOpen = false;
+            _boxText = null;
+            _spoken = null;
+            _frames = new List<FieldMessageFrame>();
             RaiseMessageChanged();
         }
 
-        private void ShowMessagesFrom(IReadOnlyList<ScriptStep> steps)
+        /// <summary>Starts printing a message into the box, the way a message command does.</summary>
+        private bool StartMessage(ScriptEffect effect)
         {
-            if (steps == null) { ClearMessage(); return; }
-            ShowMessages(steps.Where(s => s.Kind == ScriptStepKind.Message).Select(s => Spoken(s.Text)));
+            if (string.IsNullOrEmpty(effect?.Text)) return false;
+            _spoken = effect.Text;
+            _frames = FieldMessageScript.Frames(ExpandVars(effect.Text), MeasureText);
+            _printer = new FieldTextPrinter(_frames, TextSpeed, skippable: effect.B != 1, instant: effect.A == 1)
+            {
+                PageTurned = () => { if (_playSounds) PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound); },
+            };
+            _boxOpen = true;
+            if (_printer.Finished) { _boxText = _printer.Text; _printer = null; }
+            RaiseMessageChanged();
+            return true;
         }
 
-        /// <summary>Puts one thing in the box, played out the way the games would play it.</summary>
-        public void ShowMessage(string text) => ShowMessages(new[] { text });
+        /// <summary>Puts one thing in the box and prints it, the way a message command would.</summary>
+        public void ShowMessage(string text) => StartMessage(new ScriptEffect(ScriptEffectKind.Message) { Text = text });
 
-        /// <summary>Puts several things in the box, one after another.</summary>
-        public void ShowMessages(IEnumerable<string> texts)
-        {
-            _spokenLines.Clear();
-            if (texts != null)
-                foreach (string t in texts)
-                    if (!string.IsNullOrWhiteSpace(t))
-                        _spokenLines.Add(t);
-            _frameIndex = 0;
-            LayOutMessage();
-        }
-
-        /// <summary>Lays the box out from what the script said, with the words put in. </summary>
+        /// <summary>Lays the box out again with the words put in, for when a word changes.</summary>
         private void LayOutMessage()
         {
-            _frames.Clear();
-            foreach (string t in _spokenLines)
-                _frames.AddRange(FieldMessageScript.Frames(ExpandVars(t), MeasureText));
-            if (_frameIndex >= _frames.Count) _frameIndex = Math.Max(0, _frames.Count - 1);
+            if (_spoken == null || _printer != null) return;
+            var frames = FieldMessageScript.Frames(ExpandVars(_spoken), MeasureText);
+            if (frames.Count == 0) return;
+            _frames = frames;
+            _boxText = frames[frames.Count - 1].Text;
             RaiseMessageChanged();
         }
 
@@ -1171,7 +1870,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public static string Spoken(string stepText)
         {
             if (string.IsNullOrEmpty(stepText)) return "";
-            foreach (var (open, close) in new[] { ('\u201c', '\u201d'), ('"', '"') })
+            foreach (var (open, close) in new[] { ('“', '”'), ('"', '"') })
             {
                 int a = stepText.IndexOf(open);
                 int b = stepText.LastIndexOf(close);
@@ -1180,25 +1879,23 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return stepText;
         }
 
-        /// <summary>The player presses: on to the next thing the box does, or shut it.</summary>
-        public void AdvanceMessage()
+        /// <summary>A or B went down. It is read on the next field frame, the way the games read the keys.</summary>
+        public void PressA()
         {
-            if (!MessageVisible) return;
-            if (MessageHasMore) _frameIndex++;
-            else
-            {
-                _frames.Clear();
-                _frameIndex = 0;
-                _runner?.ReaderMovedOn();     // the script was waiting on this being read
-            }
-            RaiseMessageChanged();
+            _aPressed = true;
+            _aHeld = true;
         }
+
+        /// <summary>A or B came back up, which stops the text hurrying.</summary>
+        public void ReleaseA() => _aHeld = false;
 
         private void RaiseMessageChanged()
         {
             OnPropertyChanged(nameof(MessageText));
             OnPropertyChanged(nameof(MessageVisible));
             OnPropertyChanged(nameof(MessageHasMore));
+            OnPropertyChanged(nameof(MessageArrowOffset));
+            OnPropertyChanged(nameof(MessageScrollPixels));
             OnPropertyChanged(nameof(MessageWaitText));
             OnPropertyChanged(nameof(MessageWarning));
             OnPropertyChanged(nameof(HasMessageWarning));
@@ -1282,6 +1979,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _jointed.Clear();
             _playingOnce.Clear();
             _cameraTrail.Clear();
+            _talkTarget = null;
+            _cameraObject = null;
             _indoor = indoor;
             _collision = collision;
             _tileToWorld = tileToWorld;
@@ -1402,12 +2101,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private string Describe()
         {
-            int people = _npcs.Count(n => IsPresent(n.Event));
+            int people = _npcs.Count(n => IsOnMap(n));
             string water;
             if (_animatedMaterials.Count > 0)
                 water = $"{_animatedMaterials.Count} moving surface{(_animatedMaterials.Count == 1 ? "" : "s")}";
-            else if (_terrain == null) water = "this area plays no terrain animation";
-            else water = "the area's terrain animation doesn't touch anything on this map";
+            else if (_terrain == null) water = "no terrain animation here";
+            else water = "terrain animation touches nothing on this map";
 
             string buildings = _movingBuildings > 0
                 ? $", {_movingBuildings} moving building{(_movingBuildings == 1 ? "" : "s")}" : "";
@@ -1441,45 +2140,102 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Moves the clock on by however many game frames have passed and rebuilds what is drawn.</summary>
         public void Advance(int frames)
         {
-            if (!_playing || frames <= 0 || _scene == null) return;
-            foreach (var npc in _npcs) npc.Motion?.Advance(frames);
+            if (!_playing || frames <= 0) return;
+            bool wasRunning = ScriptRunning;
+            for (int i = 0; i < frames; i++) FieldFrame();
+            Frame = _frame + frames;
+            Rebuild();
+            if (wasRunning || ScriptRunning || _boxOpen)
+            {
+                RaiseMessageChanged();
+                OnPropertyChanged(nameof(ScriptProgressText));
+                OnPropertyChanged(nameof(ScriptStatusText));
+            }
+        }
+
+        /// <summary>
+        /// One pass of the field: the keys are read, the script runs until something makes it wait, then
+        /// everybody moves, then the printer runs twice.
+        /// </summary>
+        private void FieldFrame()
+        {
+            _scriptFrame++;
+            bool press = _aPressed;
+            _aPressed = false;
+
+            if (_runner != null && _runner.Running)
+            {
+                if (press) _runner.Pressed();
+                _runner.Advance(1);
+                if (!_runner.Running) ScriptFinished();
+            }
+
+            foreach (var npc in _npcs) npc.Motion?.Advance(1);
+            _cameraObject?.Motion.Advance(1);
+
+            if (_touchSwapFrames > 0)
+            {
+                _touchSwapFrames--;
+                if (_touchSwapFrames == FieldScriptRunner.TouchScreenSwapFrames / 2)
+                {
+                    _touchShowsChoices = _touchSwapToChoices;
+                    OnPropertyChanged(nameof(TouchScreenShowsChoices));
+                }
+                OnPropertyChanged(nameof(TouchScreenBrightness));
+            }
+            if (_touchBlink >= 0)
+            {
+                _touchBlink++;
+                OnPropertyChanged(nameof(TouchCursorShown));
+                if (_touchBlink >= global::DSPRE.Avalonia.Data.HgssTouchScreen.BlinkFrames)
+                {
+                    _touchBlink = -1;
+                    OnPropertyChanged(nameof(TouchCursorShown));
+                    AnswerOption(_choiceCursor);
+                }
+            }
+            int touchLabel = TouchALabel;
+            if (touchLabel != _touchLabelShown) { _touchLabelShown = touchLabel; OnPropertyChanged(nameof(TouchALabel)); }
 
             if (_shake != null)
             {
-                _shake.Advance(frames);
+                _shake.Advance(1);
                 if (!_shake.Running) _shake = null;
             }
-            _cameraMove?.Advance(frames);
-            if (_runner != null && _runner.Running)
-            {
-                _runner.Advance(frames);
-                OnPropertyChanged(nameof(ScriptProgressText));
-                if (!_runner.Running)
-                {
-                    OnPropertyChanged(nameof(ScriptRunning));
-                    // Whatever the map still had queued up gets its turn now.
-                    if (_arriving.Count > 0) RunNextArrivalScript();
-                    else CheckLevelScriptWatchers();
-                }
-            }
+            _cameraMove?.Advance(1);
 
             if (Player != null)
             {
-                bool wasWalking = Player.IsWalking;
-                for (int i = 0; i < frames; i++) { Player.Advance(1); RememberCameraTrail(); }
+                bool walking = Player.IsWalking && !Player.IsScripted;
+                Player.Advance(1);
+                RememberCameraTrail();
                 // Whatever is under the tile only happens once the player has actually arrived on it.
-                if (wasWalking && !Player.IsWalking) ArriveOnTile();
+                if (walking && !Player.IsWalking) ArriveOnTile();
+            }
+
+            if (_printer != null)
+            {
+                _printer.Frame(press, _aHeld);
+                if (_printer.Finished) _boxText = _printer.Text;
             }
 
             foreach (var shot in _playingOnce)
             {
-                shot.Frame += frames;
+                shot.Frame++;
                 int length = shot.Joint?.FrameCount ?? shot.Pattern?.FrameCount ?? 1;
                 if (shot.Frame >= length) { shot.Frame = length - 1; shot.Done = true; }
             }
             _playingOnce.RemoveAll(x => x.Done && x.Frame <= 0);
-            Frame = _frame + frames;
-            Rebuild();
+        }
+
+        private void ScriptFinished()
+        {
+            if (_printer != null) { _boxText = _printer.Text; _printer = null; }
+            OnPropertyChanged(nameof(ScriptRunning));
+            OnPropertyChanged(nameof(ScriptProgressText));
+            OnPropertyChanged(nameof(ScriptStatusText));
+            RaiseMessageChanged();
+            CheckLevelScriptWatchers();
         }
 
         /// <summary>Winds the clock back to the start and gives everyone their original facing again.</summary>
@@ -1509,9 +2265,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 cz = (int)_events.overworlds.Average(o => o.yMatrixPosition * MapFile.mapSize + o.yMapPosition);
             }
 
-            bool Free(int x, int z) =>
-                (_collision == null || _collision.IsEmpty || !_collision.IsBlocked(x, z))
-                && !SomebodyOn(x, z, null, false);
+            bool Free(int x, int z) => CanStand(x, z);
 
             // Spiral out from the middle until an open tile turns up.
             for (int r = 0; r < MapFile.mapSize; r++)
@@ -1524,6 +2278,31 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                                                    (x, z) => SomebodyOn(x, z, null, false));
                     }
             return null;
+        }
+
+        /// <summary>
+        /// The mark an emote puts up: two tiles over the head, bouncing up and settling before it holds.
+        /// </summary>
+        private void AddEmote(List<NsbmdGlControl.SpriteInstance> sprites, float x, float y, float z, int frame, string name)
+        {
+            var pix = FieldEmoteMarks.For(name);
+            if (pix == null) return;
+            int bounce = frame >= 1 && frame - 1 < FieldMovementScript.EmoteBounce.Length ? FieldMovementScript.EmoteBounce[frame - 1] : 0;
+            if (frame < 1) return;          // the mark appears on the frame after the action starts
+            float unit = _tileX / 16f;
+            float halfW = _tileX * pix.Width / (OverworldSprites.PixelsPerTile * 2f);
+            float halfH = _tileX * pix.Height / (OverworldSprites.PixelsPerTile * 2f);
+            sprites.Add(new NsbmdGlControl.SpriteInstance
+            {
+                Cx = x,
+                Cy = y + (32 + bounce) * unit + halfH,
+                Cz = z + unit,
+                HalfW = halfW,
+                HalfH = halfH,
+                Rgba = pix.Rgba,
+                Width = pix.Width,
+                Height = pix.Height,
+            });
         }
 
         private void Rebuild()
@@ -1604,10 +2383,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_showPeople)
                 foreach (var npc in _npcs)
                 {
-                    if (!IsPresent(npc.Event) || !npc.Motion.Visible) continue;
+                    if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
                     var pix = OverworldSprites.Get(npc.Event.overlayTableEntry, (ushort)npc.Motion.Facing,
-                                                   PictureFor(npc.Event.overlayTableEntry, npc.Motion.Facing,
-                                                              npc.Motion.AnimationCell, npc.Motion.IsWalking));
+                                                   PictureFor(npc.Event.overlayTableEntry, npc.Motion.Facing, npc.Motion.Cycle));
                     if (pix == null || pix.Width <= 0 || pix.Height <= 0) continue;
                     float halfW = HalfWidthOf(pix), halfH = HalfHeightOf(pix);
                     sprites.Add(new NsbmdGlControl.SpriteInstance
@@ -1630,7 +2408,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)_startFacing,
                                                FieldSpriteAnimation.PictureFor(
                                                    OverworldSprites.FrameCount(PlayerSpriteEntry),
-                                                   (int)_startFacing, 0, false));
+                                                   (int)_startFacing, null));
                 if (pix != null && pix.Width > 0 && pix.Height > 0)
                 {
                     var foot = _tileToWorld(_startTile.Value.x, _startTile.Value.z);
@@ -1649,11 +2427,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
             }
 
-            if (_stepInto && Player != null && _tileToWorld != null)
+            if (_stepInto && Player != null && _tileToWorld != null && Player.Visible)
             {
                 var pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)Player.Facing,
-                                               PictureFor(PlayerSpriteEntry, Player.Facing,
-                                                          Player.AnimationCell, Player.IsWalking));
+                                               PictureFor(PlayerSpriteEntry, Player.Facing, Player.Cycle));
                 if (pix != null && pix.Width > 0 && pix.Height > 0)
                 {
                     var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
@@ -1661,7 +2438,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
                         Cx = foot.x,
-                        Cy = foot.y + halfH,
+                        Cy = foot.y + halfH + Player.HopHeight * _tileX,
                         Cz = foot.z,
                         HalfW = HalfWidthOf(pix),
                         HalfH = halfH,
@@ -1670,6 +2447,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                         Height = pix.Height,
                     });
                 }
+            }
+
+            if (_showPeople)
+            {
+                foreach (var npc in _npcs)
+                    if (IsOnMap(npc) && npc.Motion.EmoteFrame >= 0)
+                        AddEmote(sprites, npc.FootX + npc.Motion.DrawOffsetX * _tileX, npc.FootY,
+                                 npc.FootZ + npc.Motion.DrawOffsetZ * _tileZ, npc.Motion.EmoteFrame, npc.Motion.EmoteName);
+            }
+            if (_stepInto && Player != null && _tileToWorld != null && Player.EmoteFrame >= 0)
+            {
+                var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
+                AddEmote(sprites, foot.x, foot.y, foot.z, Player.EmoteFrame, Player.EmoteName);
             }
 
             Sprites = sprites;

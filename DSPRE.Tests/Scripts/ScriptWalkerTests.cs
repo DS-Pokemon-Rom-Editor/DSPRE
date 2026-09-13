@@ -50,25 +50,37 @@ namespace DSPRE.Tests
             Assert.DoesNotContain("End_Movement", step.Text);   // the end marker is not an instruction
         }
 
-        [Fact]
-        public void MovementZeroIsTheFirstOneBecauseMovementsCountFromZero()
+        [Theory]
+        [InlineData(1u, "WalkNorth8", "WalkSouth8")]    // read from a ROM, movements are numbered from one
+        [InlineData(2u, "WalkSouth8", "WalkNorth8")]
+        public void AMovementIsFoundByItsOwnNumberNotItsPlaceInTheList(uint number, string wanted, string other)
         {
-            // Scripts count from one but movements count from zero: every exported script file that has
-            // movements at all starts at action_0, and none of the 965 has a script_0.
-            var file = File(new[] { Cmd("Movement 3 0", 3, 0), Cmd("End") });
-
-            var movements = new List<List<ScriptAction>>
+            var file = File(new[] { Cmd($"Movement 3 {number}", 3, number), Cmd("End") });
+            var actions = new List<ScriptActionContainer>
             {
-                new List<ScriptAction> { Act("WalkNorth8"), Act("End_Movement") },   // this is movement 0
-                new List<ScriptAction> { Act("WalkSouth8"), Act("End_Movement") },   // and this is 1
+                new ScriptActionContainer(1, new List<ScriptAction> { Act("WalkNorth8"), Act("End_Movement") }),
+                new ScriptActionContainer(2, new List<ScriptAction> { Act("WalkSouth8"), Act("End_Movement") }),
             };
-            var w = new ScriptWalker(file.scripts, file.functions, null,
-                                     n => n >= 0 && n < movements.Count ? movements[n] : null);
+            var w = new ScriptWalker(file.scripts, file.functions, null, ScriptWalker.ActionsById(actions));
             w.Start(1);
 
             var step = w.Steps.First(x => x.Kind == ScriptStepKind.Movement);
-            Assert.Contains("WalkNorth8", step.Text);
-            Assert.DoesNotContain("WalkSouth8", step.Text);
+            Assert.Contains(wanted, step.Text);
+            Assert.DoesNotContain(other, step.Text);
+        }
+
+        [Fact]
+        public void AFileWhoseMovementsStartAtZeroStillFindsThem()
+        {
+            var actions = new List<ScriptActionContainer>
+            {
+                new ScriptActionContainer(0, new List<ScriptAction> { Act("WalkNorth8") }),
+                new ScriptActionContainer(1, new List<ScriptAction> { Act("WalkSouth8") }),
+            };
+            var lookup = ScriptWalker.ActionsById(actions);
+            Assert.Equal("WalkNorth8", lookup(0)[0].name);
+            Assert.Equal("WalkSouth8", lookup(1)[0].name);
+            Assert.Null(lookup(2));
         }
 
         [Fact]
@@ -221,14 +233,138 @@ namespace DSPRE.Tests
         }
 
         [Fact]
-        public void AYesNoBoxAsksTheWatcher()
+        public void AYesNoBoxWritesYesAsZeroForTheCompareThatFollows()
         {
-            var file = File(new[] { Cmd("YesNoBox VAR_0x8000", 0x8000), Cmd("End") });
+            // ShowYesNoMenu writes MENU_YES 0 or MENU_NO 1 into its variable; the script then compares it.
+            (List<ScriptCommandContainer>, List<ScriptCommandContainer>) Build() => File(new[]
+            {
+                Cmd("YesNoBox 32780", 0x800C),
+                Cmd("CompareVarValue 32780 0", 0x800C, 0),
+                Cmd("JumpIf EQUAL Function_2", 1, 2),
+                Cmd("Message 1", 1),
+                Cmd("End"),
+            }, (2, new[] { Cmd("Message 2", 2), Cmd("End") }));
+
+            var yes = Walker(Build(), id => "text " + id);
+            yes.Start(1);
+            Assert.Equal(ScriptQuestion.QuestionKind.YesNo, yes.Pending.Kind);
+            Assert.True(yes.Pending.IsInGame);
+            Assert.Equal(("YES", 0L), yes.Pending.Options[0]);
+            yes.Answer(ScriptWalker.YesValue);
+            while (yes.Next()) { }
+
+            // Nothing is asked about the variable: the box already said what it holds.
+            Assert.True(yes.Finished);
+            Assert.Contains(yes.Steps, s => s.Text.Contains("text 2"));
+
+            var no = Walker(Build(), id => "text " + id);
+            no.Start(1);
+            no.Answer(1);
+            while (no.Next()) { }
+            Assert.True(no.Finished);
+            Assert.Contains(no.Steps, s => s.Text.Contains("text 1"));
+        }
+
+        [Fact]
+        public void AnAnsweredVariableIsNotAskedAboutAgain()
+        {
+            var file = File(new[]
+            {
+                Cmd("CompareVarValue 16385 3", 0x4001, 3),
+                Cmd("CompareVarValue 16385 4", 0x4001, 4),
+                Cmd("End"),
+            });
             var w = Walker(file);
             w.Start(1);
-            Assert.Equal(ScriptQuestion.QuestionKind.YesNo, w.Pending.Kind);
-            w.Answer(1);
+            Assert.NotNull(w.Pending);
+            w.Answer(3);
+            while (w.Next()) { }
             Assert.True(w.Finished);
+            Assert.Single(w.Steps, s => s.Kind == ScriptStepKind.Question);
+            Assert.True(w.State.TryGetVar(0x4001, out long held) && held == 3);
+        }
+
+        [Fact]
+        public void SettingAFlagAnswersTheCheckThatFollows()
+        {
+            var file = File(new[] { Cmd("SetFlag 40", 40), Cmd("CheckFlag 40", 40), Cmd("End") });
+            var w = Walker(file);
+            w.Start(1);
+            Assert.True(w.Finished);
+            Assert.Null(w.Pending);
+        }
+
+        [Fact]
+        public void TheOldAndNewNamesOfACommandWalkTheSame()
+        {
+            // The newer database names many commands only by number, so the number picks the old name.
+            string Legacy(ushort id) => id switch { 0x5E => "Movement", 0x02 => "End", 0x2C => "Message", _ => null };
+
+            foreach (var (move, message, end) in new[] { ("ApplyMovement 3 7", "NPCMsg 5", "End"), ("ScrCmd_094 3 7", "ScrCmd_045 5", "ScrCmd_002") })
+            {
+                var file = File(new[]
+                {
+                    new ScriptCommand(move, new List<byte[]> { BitConverter.GetBytes((ushort)3), BitConverter.GetBytes((ushort)7) }, 0x5E),
+                    new ScriptCommand(message, new List<byte[]> { BitConverter.GetBytes((ushort)5) }, 0x2C),
+                    new ScriptCommand(end, new List<byte[]>(), 0x02),
+                });
+                var w = new ScriptWalker(file.scripts, file.functions, id => "words " + id) { LegacyNameOf = Legacy };
+                w.Start(1);
+
+                Assert.True(w.Finished);
+                var effects = w.Steps.Where(s => s.Effect != null).Select(s => s.Effect.Kind).ToArray();
+                Assert.Equal(new[] { ScriptEffectKind.Movement, ScriptEffectKind.Message }, effects);
+                Assert.Equal("words 5", w.Steps.First(s => s.Effect?.Kind == ScriptEffectKind.Message).Effect.Text);
+            }
+        }
+
+        [Fact]
+        public void AMenuIsBuiltFromItsEntriesAndItsAnswerLandsInTheVariable()
+        {
+            var file = File(new[]
+            {
+                Cmd("MultiLocalText 20 3 0 1 32780", 20, 3, 0, 1, 0x800C),
+                Cmd("AddMultiOption 10 0", 10, 0),
+                Cmd("AddMultiOption 11 1", 11, 1),
+                Cmd("ShowMulti"),
+                Cmd("End"),
+            });
+            var w = Walker(file, id => id == 10 ? "BUY" : id == 11 ? "SELL" : null);
+            w.Start(1);
+
+            Assert.Equal(ScriptQuestion.QuestionKind.Menu, w.Pending.Kind);
+            Assert.Equal(new[] { "BUY", "SELL" }, w.Pending.Options.Select(o => o.Label));
+            Assert.Equal((20, 3), (w.Pending.X, w.Pending.Y));
+            Assert.True(w.Pending.Cancellable);
+
+            w.Answer(1);
+            while (w.Next()) { }
+            Assert.True(w.State.TryGetVar(0x800C, out long picked) && picked == 1);
+        }
+
+        [Fact]
+        public void ThePlayersPositionIsReadRatherThanAsked()
+        {
+            var file = File(new[]
+            {
+                Cmd("GetPlayerPosition 16384 16385", 0x4000, 0x4001),
+                Cmd("CompareVarValue 16385 397", 0x4001, 397),
+                Cmd("End"),
+            });
+            var w = new ScriptWalker(file.scripts, file.functions) { PlayerPosition = () => (549, 397) };
+            w.Start(1);
+            Assert.True(w.Finished);
+            Assert.DoesNotContain(w.Steps, s => s.Kind == ScriptStepKind.Question);
+        }
+
+        [Fact]
+        public void WhileAMapLoadsNothingIsAsked()
+        {
+            var file = File(new[] { Cmd("CheckFlag 9", 9), Cmd("CompareVarValue 16385 3", 0x4001, 3), Cmd("End") });
+            var w = new ScriptWalker(file.scripts, file.functions) { GuessUnknowns = true };
+            w.Start(1);
+            Assert.True(w.Finished);
+            Assert.False(w.State.TryGetFlag(9, out _));
         }
 
         [Fact]

@@ -6,8 +6,9 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// Playing a script out on the field's clock: a movement holds things up while it runs, a shake holds
-    /// for as long as it shakes, and a message holds until the reader presses on.
+    /// Playing a script out on the field's clock the way the script VM does: movements run side by side
+    /// until WaitMovement, a shake holds for as long as it shakes, a message holds until it is printed, and
+    /// every satisfied wait hands the next command the following frame.
     /// </summary>
     public class FieldScriptRunnerTests
     {
@@ -15,33 +16,164 @@ namespace DSPRE.Tests
             => new ScriptStep { Kind = kind, Text = text, Effect = effect };
 
         [Fact]
-        public void AMovementHoldsTheScriptUpForAsLongAsItTakes()
+        public void AMovementDoesNotHoldTheScriptUpOnItsOwn()
         {
+            // ApplyMovement returns straight away, so two in a row start together on the same frame.
             var started = new List<(int who, int which)>();
-            var after = new List<string>();
-
+            var seen = new List<string>();
             var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
             {
                 StartMovement = (who, which) => { started.Add((who, which)); return 24; },
-                Report = s => { if (s.Effect == null) after.Add(s.Text); },
+                Report = s => seen.Add(s.Text),
             });
 
             runner.Play(new[]
             {
-                Step(ScriptStepKind.Movement, "move", new ScriptEffect(ScriptEffectKind.Movement, 3, 7)),
+                Step(ScriptStepKind.Movement, "npc", new ScriptEffect(ScriptEffectKind.Movement, 3, 7)),
+                Step(ScriptStepKind.Movement, "player", new ScriptEffect(ScriptEffectKind.Movement, 255, 8)),
                 Step(ScriptStepKind.Command, "afterwards"),
             });
 
             runner.Advance(1);
-            Assert.Equal(new[] { (3, 7) }, started);
-            Assert.Empty(after);
+            Assert.Equal(new[] { (3, 7), (255, 8) }, started);
+            Assert.Equal(new[] { "npc", "player", "afterwards" }, seen);
+        }
 
-            // Still holding while the movement plays.
-            runner.Advance(23);
-            Assert.Empty(after);
+        [Fact]
+        public void WaitMovementHoldsUntilEveryMovementHasLandedAndThreeFramesMore()
+        {
+            var seen = new List<string>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
+            {
+                StartMovement = (who, which) => who == 1 ? 8 : 16,
+                Report = s => { if (s.Effect == null) seen.Add(s.Text); },
+            });
+
+            runner.Play(new[]
+            {
+                Step(ScriptStepKind.Movement, "short", new ScriptEffect(ScriptEffectKind.Movement, 1, 0)),
+                Step(ScriptStepKind.Movement, "long", new ScriptEffect(ScriptEffectKind.Movement, 2, 0)),
+                Step(ScriptStepKind.Command, "wait", new ScriptEffect(ScriptEffectKind.WaitMovement)),
+                Step(ScriptStepKind.Command, "afterwards"),
+            });
+
+            // The longer movement lands on frame 16, the script sees it on 19 and carries on at 20.
+            runner.Advance(18);
+            Assert.Equal(FieldScriptRunner.WaitKind.Movement, runner.Waiting);
+            runner.Advance(1);
+            Assert.Empty(seen);
+            runner.Advance(1);
+            Assert.Equal(new[] { "afterwards" }, seen);
+        }
+
+        [Fact]
+        public void WaitTimeRunsTheNextCommandFramesPlusOneLater()
+        {
+            var seen = new List<string>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks { Report = s => { if (s.Effect == null) seen.Add(s.Text); } });
+
+            runner.Play(new[]
+            {
+                Step(ScriptStepKind.Command, "wait", new ScriptEffect(ScriptEffectKind.WaitFrames, 30)),
+                Step(ScriptStepKind.Command, "afterwards"),
+            });
+
+            runner.Advance(31);
+            Assert.Empty(seen);
+            runner.Advance(1);
+            Assert.Equal(new[] { "afterwards" }, seen);
+        }
+
+        [Fact]
+        public void LockAllGivesUpTheRestOfItsFrame()
+        {
+            var seen = new List<string>();
+            var locks = new List<int>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
+            {
+                Apply = e => locks.Add(e.A),
+                Report = s => seen.Add(s.Text),
+            });
+
+            runner.Play(new[]
+            {
+                Step(ScriptStepKind.Command, "lock", new ScriptEffect(ScriptEffectKind.Lock, -1)),
+                Step(ScriptStepKind.Command, "next"),
+            });
 
             runner.Advance(1);
-            Assert.Equal(new[] { "afterwards" }, after);
+            Assert.Equal(new[] { "lock" }, seen);
+            Assert.Equal(new[] { -1 }, locks);
+            runner.Advance(1);
+            Assert.Equal(new[] { "lock", "next" }, seen);
+        }
+
+        [Fact]
+        public void AButtonWaitEndsOnAPressAndTheDPadOnlyWhenItSaysSo()
+        {
+            var seen = new List<string>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks { Report = s => { if (s.Effect == null) seen.Add(s.Text); } });
+
+            runner.Play(new[]
+            {
+                Step(ScriptStepKind.Command, "a only", new ScriptEffect(ScriptEffectKind.WaitButton, 0)),
+                Step(ScriptStepKind.Command, "pad too", new ScriptEffect(ScriptEffectKind.WaitButton, 2)),
+                Step(ScriptStepKind.Command, "done"),
+            });
+
+            runner.Advance(1);
+            Assert.False(runner.ButtonTakesPad);
+            runner.Pressed(pad: true);
+            runner.Advance(5);
+            Assert.Equal(FieldScriptRunner.WaitKind.Button, runner.Waiting);
+
+            runner.Pressed();
+            runner.Advance(2);
+            Assert.True(runner.ButtonTakesPad);
+            Assert.True(runner.ButtonTurnsPlayer);
+            runner.Pressed(pad: true);
+            runner.Advance(2);
+            Assert.Equal(new[] { "done" }, seen);
+        }
+
+        [Fact]
+        public void AQuestionHoldsUntilTheWalkerIsAnswered()
+        {
+            ScriptCommand Cmd(string name, params long[] values) =>
+                new ScriptCommand(name, values.Select(v => System.BitConverter.GetBytes((ushort)v)).ToList());
+
+            var walker = new ScriptWalker(
+                new List<ScriptCommandContainer>
+                {
+                    new ScriptCommandContainer(1, ScriptFile.ContainerTypes.Script, -1, new List<ScriptCommand>
+                    {
+                        Cmd("CheckFlag 5", 5),
+                        Cmd("PlayFanfare 1500", 1500),
+                        Cmd("End"),
+                    }),
+                },
+                new List<ScriptCommandContainer>()) { LegacyNameOf = _ => null };
+
+            ScriptQuestion asked = null;
+            var played = new List<int>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
+            {
+                Ask = q => asked = q,
+                PlaySound = (k, id) => played.Add(id),
+            });
+
+            walker.Begin(1);
+            runner.Play(walker);
+            runner.Advance(10);
+            Assert.NotNull(asked);
+            Assert.Empty(played);
+
+            walker.Answer(1);
+            runner.Advance(1);          // the check finds it answered
+            Assert.Empty(played);
+            runner.Advance(1);
+            Assert.Equal(new[] { 1500 }, played);
+            runner.Advance(1);
             Assert.False(runner.Running);
         }
 
@@ -106,7 +238,8 @@ namespace DSPRE.Tests
                 Step(ScriptStepKind.Command, "afterwards"),
             });
 
-            runner.Advance(24);
+            // The shake runs 24 frames; the script finds it over on the last and carries on the next.
+            runner.Advance(25);
             Assert.Equal(new[] { (4, 2, 3, 8) }, shakes);
             Assert.Empty(seen);
 
@@ -115,19 +248,21 @@ namespace DSPRE.Tests
         }
 
         [Fact]
-        public void AMessageWaitsForTheReaderRatherThanAClock()
+        public void AMessageWaitsForThePrinterRatherThanAClock()
         {
             var shown = new List<string>();
             var seen = new List<string>();
+            bool printing = false;
             var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
             {
-                ShowMessage = t => { shown.Add(t); return true; },
+                ShowMessage = e => { shown.Add(e.Text); printing = true; return true; },
+                MessagePrinting = () => printing,
                 Report = s => seen.Add(s.Text),
             });
 
             runner.Play(new[]
             {
-                Step(ScriptStepKind.Message, "hello"),
+                Step(ScriptStepKind.Message, "hello", new ScriptEffect(ScriptEffectKind.Message) { Text = "hello" }),
                 Step(ScriptStepKind.Command, "afterwards"),
             });
 
@@ -135,11 +270,34 @@ namespace DSPRE.Tests
             Assert.Equal(new[] { "hello" }, shown);
             Assert.True(runner.WaitingOnReader);
 
-            // However long the clock runs, it stays put until the reader moves on.
+            // However long the clock runs, it stays put until the printer is done.
             runner.Advance(600);
             Assert.DoesNotContain("afterwards", seen);
 
-            runner.ReaderMovedOn();
+            printing = false;
+            runner.Advance(1);
+            Assert.DoesNotContain("afterwards", seen);
+            runner.Advance(1);
+            Assert.Contains("afterwards", seen);
+        }
+
+        [Fact]
+        public void AnInstantMessageDoesNotWait()
+        {
+            var seen = new List<string>();
+            var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
+            {
+                ShowMessage = _ => true,
+                MessagePrinting = () => true,
+                Report = s => seen.Add(s.Text),
+            });
+
+            runner.Play(new[]
+            {
+                Step(ScriptStepKind.Message, "all at once", new ScriptEffect(ScriptEffectKind.Message, 1) { Text = "x" }),
+                Step(ScriptStepKind.Command, "afterwards"),
+            });
+
             runner.Advance(1);
             Assert.Contains("afterwards", seen);
         }
@@ -153,12 +311,13 @@ namespace DSPRE.Tests
             var runner = new FieldScriptRunner(new FieldScriptRunner.Hooks
             {
                 ShowMessage = _ => false,          // the box refused to open
+                MessagePrinting = () => true,
                 Report = s => seen.Add(s.Text),
             });
 
             runner.Play(new[]
             {
-                Step(ScriptStepKind.Message, "nothing to show"),
+                Step(ScriptStepKind.Message, "nothing to show", new ScriptEffect(ScriptEffectKind.Message) { Text = "x" }),
                 Step(ScriptStepKind.Command, "afterwards"),
             });
 

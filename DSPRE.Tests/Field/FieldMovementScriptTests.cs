@@ -18,15 +18,25 @@ namespace DSPRE.Tests
         [InlineData("WalkNorth8", FieldActionKind.Walk, 1, 8)]
         [InlineData("WalkSouth32", FieldActionKind.Walk, 1, 32)]
         [InlineData("WalkEast1", FieldActionKind.Walk, 1, 1)]
-        [InlineData("WalkOnSpotWest16", FieldActionKind.Walk, 0, 16)]
+        // On-the-spot walks and delays run one frame past their number (unk_020655F4.c).
+        [InlineData("WalkOnSpotWest16", FieldActionKind.Walk, 0, 17)]
         [InlineData("JumpNorth8", FieldActionKind.Jump, 1, 8)]
         [InlineData("JumpWest16", FieldActionKind.Jump, 1, 16)]
         [InlineData("JumpOnSpotEast8", FieldActionKind.Jump, 0, 8)]
         [InlineData("JumpFarSouth", FieldActionKind.Jump, 2, 16)]
-        [InlineData("JumpVeryFarWest", FieldActionKind.Jump, 3, 32)]
+        [InlineData("JumpVeryFarWest", FieldActionKind.Jump, 3, 12)]
         [InlineData("RunEast", FieldActionKind.Walk, 1, 4)]
         [InlineData("FaceNorth", FieldActionKind.Face, 0, 1)]
-        [InlineData("Delay16", FieldActionKind.Delay, 0, 16)]
+        [InlineData("Delay16", FieldActionKind.Delay, 0, 17)]
+        [InlineData("EmoteExclamation", FieldActionKind.Emote, 0, 38)]
+        // The decomp's own spellings read the same.
+        [InlineData("WalkNormalNorth", FieldActionKind.Walk, 1, 8)]
+        [InlineData("WalkFastEast", FieldActionKind.Walk, 1, 4)]
+        [InlineData("WalkOnSpotNormalSouth", FieldActionKind.Walk, 0, 9)]
+        [InlineData("JumpOnSpotFastWest", FieldActionKind.Jump, 0, 8)]
+        [InlineData("JumpNearSlowWest", FieldActionKind.Jump, 1, 16)]
+        [InlineData("JumpFartherEast", FieldActionKind.Jump, 3, 12)]
+        [InlineData("EmoteExclamationMark", FieldActionKind.Emote, 0, 38)]
         public void EachActionSaysHowFarItGoesAndHowLongItTakes(
             string name, FieldActionKind kind, int tiles, int frames)
         {
@@ -44,6 +54,47 @@ namespace DSPRE.Tests
         [InlineData("RunEast", MoveFacing.Right)]
         public void NorthSouthWestAndEastMapOntoTheWayItFaces(string name, MoveFacing facing)
             => Assert.Equal(facing, FieldMovementScript.ParseOne(name).Facing);
+
+        [Theory]
+        [InlineData(0x0C, "WalkNorth8", FieldActionKind.Walk, MoveFacing.Up, 1, 8)]
+        [InlineData(0x0F, "WalkNormalEast", FieldActionKind.Walk, MoveFacing.Right, 1, 8)]
+        [InlineData(0x21, "WalkOnSpotSouth8", FieldActionKind.Walk, MoveFacing.Down, 0, 9)]
+        [InlineData(0x3F, "Delay8", FieldActionKind.Delay, MoveFacing.Down, 0, 9)]
+        [InlineData(0x4B, "EmoteExclamation", FieldActionKind.Emote, MoveFacing.Down, 0, 38)]
+        [InlineData(0x5A, "RunWest", FieldActionKind.Walk, MoveFacing.Left, 1, 4)]
+        [InlineData(0x5F, "JumpVeryFarEast", FieldActionKind.Jump, MoveFacing.Right, 3, 12)]
+        public void TheActionNumberDecidesWhateverTheDatabaseCallsIt(int id, string name, FieldActionKind kind,
+                                                                      MoveFacing facing, int tiles, int frames)
+        {
+            // A misleading name is ignored when the number is known.
+            var steps = FieldMovementScript.Parse(new[]
+            {
+                new ScriptAction { id = (ushort)id, name = "SomethingElse" },
+                new ScriptAction { id = 0xFE, name = "End" },
+            });
+
+            var step = Assert.Single(steps);
+            Assert.Equal(kind, step.Kind);
+            Assert.Equal(tiles, step.Tiles);
+            Assert.Equal(frames, step.Frames);
+            if (kind != FieldActionKind.Delay && kind != FieldActionKind.Emote) Assert.Equal(facing, step.Facing);
+
+            var byName = FieldMovementScript.ParseOne(name);
+            Assert.Equal((step.Kind, step.Tiles, step.Frames), (byName.Kind, byName.Tiles, byName.Frames));
+        }
+
+        [Fact]
+        public void AnEmoteLeavesTheWayItFacesAlone()
+        {
+            var a = Idle();
+            a.PlayScript(FieldMovementScript.Parse(new[] { Act("FaceWest"), Act("EmoteExclamation"), Act("End") }));
+            a.Advance(1);
+            Assert.True(a.EmoteFrame >= 0);
+            Assert.Equal(MoveFacing.Left, a.Facing);
+            a.Advance(40);
+            Assert.Equal(-1, a.EmoteFrame);
+            Assert.Equal(MoveFacing.Left, a.Facing);
+        }
 
         [Fact]
         public void TheEndMarkerStopsTheMovement()

@@ -44,9 +44,99 @@ namespace DSPRE.ROMFiles
                 byte[] pal = NarcEntry(narc, paletteEntry);
                 if (gfx == null || pal == null) return null;
 
-                byte[] tiles = ReadTiles(gfx);
+                byte[] tiles = ReadTiles(gfx, TileCount);
                 uint[] colours = ReadColours(pal);
                 return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, paletteEntry);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// The plain one-tile border menus and the yes/no box use: the archive's first picture with its first
+        /// palette, standard_system in the Platinum decomp.
+        /// </summary>
+        public static FieldWindowFrame LoadStandard()
+        {
+            try
+            {
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out var dirs)) return null;
+                string path = dirs.packedDir;
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+
+                byte[] narc = File.ReadAllBytes(path);
+                int palette = FirstPaletteIndex(narc);
+                if (palette < 0) return null;
+                byte[] gfx = NarcEntry(narc, 0);
+                byte[] pal = NarcEntry(narc, palette);
+                if (gfx == null || pal == null) return null;
+
+                byte[] tiles = ReadTiles(gfx, StandardTileCount);
+                uint[] colours = ReadColours(pal);
+                return tiles == null || colours == null ? null : new FieldWindowFrame(tiles, colours, palette);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>The corners, edges and middle of the standard border.</summary>
+        public const int StandardTileCount = 9;
+
+        /// <summary>
+        /// Paints the standard border round a writing area of the given size in tiles, one tile each side, and
+        /// fills the middle with the paper. The window underneath takes its colours from the system font's
+        /// palette, not the border's, whose colour 15 is black.
+        /// </summary>
+        public byte[] ComposeStandard(int tilesWide, int tilesHigh, out int width, out int height, uint paperArgb = 0xFFFFFFFFu)
+        {
+            int cols = tilesWide + 2, rows = tilesHigh + 2;
+            int w = cols * TileSize, h = rows * TileSize;
+            width = w; height = h;
+
+            var rgba = new byte[w * h * 4];
+            void Put(int col, int row, int tile)
+            {
+                for (int y = 0; y < TileSize; y++)
+                    for (int x = 0; x < TileSize; x++)
+                    {
+                        uint c = paperArgb;
+                        if (tile >= 0)
+                        {
+                            byte index = _tiles[tile * TileSize * TileSize + y * TileSize + x];
+                            c = index < _colours.Length ? _colours[index] : 0;
+                        }
+                        int at = ((row * TileSize + y) * w + col * TileSize + x) * 4;
+                        rgba[at + 0] = (byte)(c >> 16);
+                        rgba[at + 1] = (byte)(c >> 8);
+                        rgba[at + 2] = (byte)c;
+                        rgba[at + 3] = (byte)(c >> 24);
+                    }
+            }
+
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                {
+                    bool top = r == 0, bottom = r == rows - 1, left = c == 0, right = c == cols - 1;
+                    int tile = top ? (left ? 0 : right ? 2 : 1)
+                             : bottom ? (left ? 6 : right ? 8 : 7)
+                             : left ? 3 : right ? 5 : -1;
+                    Put(c, r, tile);
+                }
+            return rgba;
+        }
+
+        /// <summary>
+        /// The system font's sixteen colours: menu windows are filled with 15 and written in 1 with a 2 shadow.
+        /// Null when the font archive cannot be read.
+        /// </summary>
+        public static uint[] LoadSystemFontColours()
+        {
+            try
+            {
+                if (RomInfo.systemFontPaletteEntry < 0) return null;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return null;
+                string path = dirs.packedDir;
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+                byte[] pal = NarcEntry(File.ReadAllBytes(path), RomInfo.systemFontPaletteEntry);
+                return pal == null ? null : ReadColours(pal);
             }
             catch { return null; }
         }
@@ -99,17 +189,17 @@ namespace DSPRE.ROMFiles
             return rgba;
         }
 
-        // Eighteen tiles, two pixels a byte with the left one in the low half.
-        private static byte[] ReadTiles(byte[] ncgr)
+        // Tiles of 4-bit pixels, two a byte with the left one in the low half.
+        private static byte[] ReadTiles(byte[] ncgr, int count)
         {
             if (ncgr.Length < 0x30 || ncgr[0] != 'R' || ncgr[1] != 'G' || ncgr[2] != 'C' || ncgr[3] != 'N') return null;
             int section = 0x10;
             int size = BitConverter.ToInt32(ncgr, section + 24);
             int at = section + 32;
-            if (size < TileCount * 32 || at + size > ncgr.Length) return null;
+            if (size < count * 32 || at + size > ncgr.Length) return null;
 
-            var tiles = new byte[TileCount * TileSize * TileSize];
-            for (int t = 0; t < TileCount; t++)
+            var tiles = new byte[count * TileSize * TileSize];
+            for (int t = 0; t < count; t++)
                 for (int i = 0; i < 32; i++)
                 {
                     byte b = ncgr[at + t * 32 + i];

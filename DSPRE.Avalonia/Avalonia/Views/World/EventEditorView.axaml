@@ -26,7 +26,7 @@
                 PointerPressed="Pegman_PointerPressed"
                 PointerMoved="Pegman_PointerMoved"
                 PointerReleased="Pegman_PointerReleased"
-                ToolTip.Tip="Drag me onto the map and let go, and the walk starts from there.">
+                ToolTip.Tip="Drag me onto the map to set where the walk starts.">
           <StackPanel Orientation="Horizontal" Spacing="5">
             <Image x:Name="PegmanIcon" Width="26" Height="26"
                    RenderOptions.BitmapInterpolationMode="None"/>
@@ -34,9 +34,9 @@
           </StackPanel>
         </Border>
         <Button Content="▶ Step in here" Click="StepInHere_Click" IsVisible="{Binding ShowBetaFeatures}"
-                ToolTip.Tip="Walk the map starting next to the selected event, so you can talk to them or set the trigger off straight away."/>
+                ToolTip.Tip="Walk the map from beside the selected event."/>
         <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
-                ToolTip.Tip="Opens a look-only window that runs the map: the water moves and the people turn and wander the way their movement code says. Scripts are not run."/>
+                ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts do not run."/>
         <Button Content="📷 Screenshot" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
@@ -74,16 +74,16 @@
                         ToolTip.Tip="Highlights each map's out-of-bounds tile boundary. Only available for a matrix of 4 cells or fewer (an expensive per-tile scan on larger ones)."/>
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="12" IsVisible="{Binding ShowBetaFeatures}"
                         IsCheckedChanged="Gizmos_Toggled"
-                        ToolTip.Tip="Show the expected 32×32 tile-cell boundary (cyan) vs the actual map model extent (yellow)"/>
+                        ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>
               <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="12"
-                        ToolTip.Tip="Stitch as a DS-true fixed 32-tile grid (ON) vs continuous geometry-sized layout (OFF)"/>
+                        ToolTip.Tip="Stitch on a fixed 32-tile grid like the DS. Off lays maps out by their geometry."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
                             ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ToggleButton x:Name="Mode2DToggle" Content="2D" IsChecked="{Binding Flat2D}" FontSize="12" Padding="6,2"
-                            ToolTip.Tip="Flat top-down view with no perspective, the way the old editor looked. Still shows every map in the header at once."/>
+                            ToolTip.Tip="Flat top-down view, showing every map in the header at once."/>
               <Button Content="Top" Click="CamTop_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Top-down camera"
                       IsEnabled="{Binding !Flat2D}"/>
               <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"
@@ -198,7 +198,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleHGE}" Margin="0,4,0,0">
                     <TextBlock Text="Item ID" FontWeight="Bold"
-                               ToolTip.Tip="HG Engine reads the item straight from this event's data (script is locked to 7000), instead of picking one of many per-item scripts."/>
+                               ToolTip.Tip="hg-engine reads the item from this event's data, with the script locked to 7000."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwItemIdHGE}"/>
                   </StackPanel>
 
@@ -207,7 +207,7 @@
                     <ComboBox ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
-                    <TextBlock Text="Trainer 0 is the empty slot, not a real trainer. Pick another one or the battle has nobody in it."
+                    <TextBlock Text="Trainer 0 is the empty slot. Pick another or the battle has nobody in it."
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
                     <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
@@ -231,7 +231,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
                     <TextBlock Text="{Binding OwScriptSectionLabel}" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
-                    <TextBlock Text="This type runs the game's shared message script, so this number picks the message, not a script."
+                    <TextBlock Text="This type runs the shared message script, so this number picks the message."
                                FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
                                IsVisible="{Binding OwScriptIsMessageId}"/>
                     <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"
@@ -250,7 +250,7 @@
                   <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
                   <TextBlock Text="Param 2" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="Stored and preserved with the event, but nothing in the field code reads it."/>
+                             ToolTip.Tip="Kept with the event. Nothing in the game reads it."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
 
                   <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"

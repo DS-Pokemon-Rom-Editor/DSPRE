@@ -1,18 +1,17 @@
-using System;
-
 namespace DSPRE.ROMFiles
 {
-    /// <summary>Which picture out of an overworld's sprite bank to show while it walks.</summary>
+    /// <summary>
+    /// Which picture of an overworld's sprite bank to show. A person's bank holds four pictures for each way of
+    /// facing, up, down, left then right, in the order standing, one foot, standing, the other foot; the hero's
+    /// adds sixteen running pictures after the walk; a pair Pokémon's holds two for each facing.
+    /// </summary>
     public static class FieldSpriteAnimation
     {
-        /// <summary>How long a person holds each picture, in frames.</summary>
-        public const int FramesPerPicture = 4;
-
-        /// <summary>How long a following Pokemon holds each picture, in frames.</summary>
-        public const int FramesPerPictureFollowing = 10;
-
         /// <summary>The first sixteen pictures of the hero's bank are the walk; the rest is the run.</summary>
         public const int WalkingPictures = 16;
+
+        /// <summary>How long a pair Pokémon holds each of its pictures, in frames.</summary>
+        public const int FramesPerPairPicture = 10;
 
         /// <summary>How many pictures a bank keeps for each way of facing.</summary>
         public static int PerFacing(int frameCount)
@@ -22,8 +21,8 @@ namespace DSPRE.ROMFiles
             return frameCount == 8 ? 2 : 4;
         }
 
-        /// <summary>Which picture of the bank to show. </summary>
-        public static int PictureFor(int frameCount, int facing, int cell, bool moving)
+        /// <summary>Which picture of the bank to show for this facing, with <paramref name="cycle"/> null for standing still.</summary>
+        public static int PictureFor(int frameCount, int facing, FieldWalkCycle cycle)
         {
             int per = PerFacing(frameCount);
             if (per <= 0) return 0;
@@ -31,11 +30,18 @@ namespace DSPRE.ROMFiles
 
             int start = facing * per;
             if (start + per > frameCount) return 0;      // an odd bank; stay on something that exists
-            if (!moving || per == 1) return start;
+            if (per == 1) return start;
 
-            int hold = per == 2 ? FramesPerPictureFollowing : FramesPerPicture;
-            if (cell < 0) cell = 0;
-            return start + (cell / hold) % per;
+            if (per == 2)
+            {
+                // Down starts half way through its loop.
+                int t = ((cycle?.PairFrame ?? 0) + (facing == 1 ? FramesPerPairPicture / 2 : 0)) % (FramesPerPairPicture * 2);
+                return start + t / FramesPerPairPicture;
+            }
+
+            if (cycle != null && cycle.Running && frameCount >= WalkingPictures * 2)
+                return WalkingPictures + start + cycle.RunFrame / 4;
+            return start + (cycle?.Frame ?? 0) / 4;
         }
     }
 }

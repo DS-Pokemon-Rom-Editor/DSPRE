@@ -431,7 +431,7 @@ namespace DSPRE.Tests
         }
 
         [Fact]
-        public void ReadingOnePageAtATimeGetsThroughTheWholeThingAndThenCloses()
+        public void ReadingOnePageAtATimeGetsThroughTheWholeThing()
         {
             var vm = new AnimatedPreviewViewModel { MeasureText = t => (t ?? "").Length * 6 };
             Assert.False(vm.MessageVisible);
@@ -439,35 +439,60 @@ namespace DSPRE.Tests
             vm.ShowMessage(string.Join(" ", Enumerable.Repeat("WORD", 60)));
             Assert.True(vm.MessageVisible);
 
-            int pages = 0;
-            while (vm.MessageVisible)
+            int pages = 0, frames = 0;
+            while (frames++ < 5000)
             {
-                Assert.True(pages++ < 100, "the box never closed");
                 // Never more lines than the box shows, and never wider than it is.
                 var lines = vm.MessageText.Split('\n');
                 Assert.True(lines.Length <= FieldMessageWindow.LinesPerPage);
                 foreach (var l in lines)
                     Assert.True(l.Length * 6 <= FieldMessageWindow.TextWidth);
 
-                // The arrow is shown on every page but the last.
-                Assert.Equal(pages < 100 && vm.MessageHasMore, vm.MessageHasMore);
-                vm.AdvanceMessage();
+                if (vm.MessageHasMore) { pages++; vm.PressA(); vm.ReleaseA(); }
+                vm.Advance(1);
+                if (!vm.MessageHasMore && vm.MessageText.Contains("WORD") && frames > 2000) break;
             }
 
             Assert.True(pages > 1, "this should have taken more than one page");
-            Assert.Null(vm.MessageText);
+            // A message leaves the box up; only the script closes it.
+            Assert.True(vm.MessageVisible);
         }
 
         [Fact]
-        public void TheArrowOnlyShowsWhileThereIsMoreToRead()
+        public void LettersArriveTwoPrintTicksApartAtMidSpeed()
+        {
+            var vm = new AnimatedPreviewViewModel { MeasureText = t => (t ?? "").Length * 6 };
+            vm.ShowMessage("ABCDEFGH");
+
+            vm.Advance(1);                               // two ticks: the first letter, then a wait
+            Assert.Equal("A", vm.MessageText);
+            vm.Advance(1);
+            Assert.Equal("A", vm.MessageText);           // four ticks a letter is two frames
+            vm.Advance(1);
+            Assert.Equal("AB", vm.MessageText);
+
+            // Holding A after a press prints a letter every tick.
+            vm.PressA();
+            vm.Advance(2);
+            Assert.True(vm.MessageText.Length >= 5, vm.MessageText);
+        }
+
+        [Fact]
+        public void TheArrowOnlyShowsWhileAWaitIsUp()
         {
             var vm = new AnimatedPreviewViewModel { MeasureText = t => (t ?? "").Length * 6 };
             vm.ShowMessage("short");
-
             Assert.True(vm.MessageVisible);
+            vm.Advance(30);
             Assert.False(vm.MessageHasMore);      // it all fits, so nothing follows
-            vm.AdvanceMessage();
-            Assert.False(vm.MessageVisible);
+
+            vm.ShowMessage("one\\rtwo");
+            vm.Advance(30);
+            Assert.True(vm.MessageHasMore);
+            vm.PressA(); vm.ReleaseA();
+            vm.Advance(30);
+            Assert.False(vm.MessageHasMore);
+            Assert.Equal("two", vm.MessageText);
         }
 
         [Fact]
@@ -610,7 +635,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ThePreviewTakesTheCameraItsHeaderAsksFor()
         {
-            var vm = new AnimatedPreviewViewModel();
+            var vm = new AnimatedPreviewViewModel { Family = RomInfo.GameFamilies.HGSS };
             Assert.Equal(0, vm.CameraId);
             Assert.Equal(FieldCamera.Normal.Id, vm.CameraEntry.Id);
 

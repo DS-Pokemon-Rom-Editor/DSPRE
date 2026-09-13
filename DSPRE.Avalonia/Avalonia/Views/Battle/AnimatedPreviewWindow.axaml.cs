@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.Avalonia.Views.Controls;
 using DSPRE.ROMFiles;
 using global::Avalonia.Controls;
+using global::Avalonia.Input;
+using global::Avalonia.Interactivity;
 using global::Avalonia.Threading;
 
 namespace DSPRE.Avalonia.Views.Battle
@@ -22,6 +26,9 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private Gl3DPointerNavigation _nav;
 
+        /// <summary>The preview's view model, for whoever opens the window to hand it the ROM's lookups.</summary>
+        public AnimatedPreviewViewModel ViewModel => _vm;
+
         public AnimatedPreviewWindow()
         {
             InitializeComponent();
@@ -35,9 +42,20 @@ namespace DSPRE.Avalonia.Views.Battle
             _nav.PaintAt = PlaceStartAt;
             Opened += (_, _) => { Start(); Focus(); };
             // Catch the keys on the way down rather than on the way back up.
-            AddHandler(global::Avalonia.Input.InputElement.KeyDownEvent, OnKey,
-                       global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
+            AddHandler(KeyDownEvent, OnKey, RoutingStrategies.Tunnel);
+            AddHandler(KeyUpEvent, OnKeyUp, RoutingStrategies.Tunnel);
             Closed += (_, _) => Stop();
+
+            // The log follows the script as it plays.
+            _vm.ScriptLines.CollectionChanged += (_, _) =>
+                Dispatcher.UIThread.Post(() => { if (_vm.ScriptLines.Count > 0) ScriptLog.ScrollIntoView(_vm.ScriptLines.Count - 1); },
+                                         DispatcherPriority.Background);
+
+            // The question needs the keyboard, so it gets it.
+            _vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(AnimatedPreviewViewModel.HasStatePrompt) && !_vm.HasStatePrompt) Focus();
+            };
         }
 
         /// <summary>Shows the scene the editor already has on screen. </summary>
@@ -60,21 +78,37 @@ namespace DSPRE.Avalonia.Views.Battle
             _vm.SetStringVars(stringVars);
             _vm.MusicDayId = musicDayId;
             _vm.MusicNightId = musicNightId;
-            // The game's own letters, straight out of the ROM that is open, so an edited font shows.
             _vm.PlaySound = PlayFieldSound;
+            // The game's own letters and borders, straight out of the ROM that is open, so edited ones show.
             FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
+            FieldMenuWindowView.Font = FieldFont.LoadSystemFont();
+            FieldMenuWindowView.Frame = FieldWindowFrame.LoadStandard();
+            FieldMenuWindowView.Colours = FieldWindowFrame.LoadSystemFontColours();
+            PoketchView.Screen = DSPRE.Avalonia.Data.PoketchScreen.Load();
+            Poketch.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
+            HgssTouchScreenView.Screen = DSPRE.Avalonia.Data.HgssTouchScreen.Load();
+            HgssTouchScreenView.Font = FieldFont.LoadFromArchive(DSPRE.Avalonia.Data.HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+            HgssTouchScreenView.Text = TouchMenuText;
+            TouchMenu.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
+            TouchMenu.ChoiceTouched = index => _vm.TouchChoice(index);
+            TouchMenu.APressed = () => { _vm.Interact(); Apply(); };
+            TouchMenu.AReleased = () => _vm.ReleaseA();
             if (_vm.BorderNames.Count == 0)
             {
-                for (int i = 0; i < FieldWindowFrame.FrameCount; i++) _vm.BorderNames.Add($"Frame {i}");
+                for (int i = 0; i < FieldWindowFrame.FrameCount; i++) _vm.BorderNames.Add($"Frame {i + 1}");
                 _vm.BorderChanged += (_, _) =>
                 {
                     FieldMessageBoxView.Frame = FieldWindowFrame.Load(_vm.BorderIndex);
                     MessageBox.InvalidateVisual();
                 };
+                // The list filled after the box was bound, which leaves it showing nothing picked.
+                int picked = _vm.BorderIndex;
+                _vm.BorderIndex = -1;
+                _vm.BorderIndex = picked;
             }
             FieldMessageBoxView.Frame = FieldWindowFrame.Load(_vm.BorderIndex);
             _vm.MessageFontNote = FieldMessageBoxView.Font == null
-                ? "Showing stand-in letters: the game's own font could not be read from this ROM."
+                ? "Stand-in letters: this ROM's font could not be read."
                 : null;
             // Wrap with the same measurements the box draws with, so lines land where they are put.
             _vm.MeasureText = FieldMessageBoxView.Measure;
@@ -165,6 +199,10 @@ namespace DSPRE.Avalonia.Views.Battle
         private SdatArchive _sdat;
         private bool _sdatTried;
 
+        // A page turn plays the same short sound over and over, so it is rendered once.
+        private readonly ConcurrentDictionary<(ScriptEffectKind, int), short[]> _rendered =
+            new ConcurrentDictionary<(ScriptEffectKind, int), short[]>();
+
         private SdatArchive Sdat()
         {
             if (_sdatTried) return _sdat;
@@ -173,34 +211,92 @@ namespace DSPRE.Avalonia.Views.Battle
             return _sdat;
         }
 
-        /// <summary>Plays what a script asked for. </summary>
+        // The music playing now, and how many fanfares are holding it.
+        private object _music;
+        private int _musicToken;
+        private int _musicHolds;
+
+        /// <summary>Long enough that a loop back to the start is rarely heard in a preview.</summary>
+        private const double MusicSeconds = 150;
+
+        /// <summary>Plays what a script asked for, and tells the preview how long it lasts.</summary>
         private void PlayFieldSound(ScriptEffectKind kind, int id)
         {
-            if (kind == ScriptEffectKind.MusicStop) { AudioOutput.Current.Stop(); return; }
+            if (kind == ScriptEffectKind.MusicStop) { StopMusic(); return; }
+            if (kind == ScriptEffectKind.Music) { StartMusic(id); return; }
+            if (!_vm.PlaySounds) { _vm.SoundLength(kind, 0); return; }
 
             var sdat = Sdat();
-            if (sdat == null) return;
+            if (sdat == null) { _vm.SoundLength(kind, 0); return; }
+
+            // A fanfare holds the music (Snd_MePlay), and the music carries on once it is over.
+            bool holdsMusic = kind == ScriptEffectKind.Fanfare;
+            if (holdsMusic && _music != null && _musicHolds++ == 0) AudioOutput.Current.SetPaused(_music, true);
 
             System.Threading.Tasks.Task.Run(() =>
             {
+                short[] pcm = null;
                 try
                 {
                     // A cry is not a sequence of its own: the games play the one shared sequence with the
                     // Pokemon's own instruments in place of its (snd_play.c:1091), so the species number
                     // goes in as the bank.
-                    var pcm = kind == ScriptEffectKind.Cry
-                        ? SoundArchive.RenderCry(id)
-                        : SseqPlayer.Render(sdat, id);
+                    pcm = _rendered.GetOrAdd((kind, id), key => key.Item1 == ScriptEffectKind.Cry
+                        ? SoundArchive.RenderCry(key.Item2)
+                        : SseqPlayer.Render(sdat, key.Item2));
                     if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
                 }
                 catch { /* a preview should never put an error dialog up mid-animation */ }
+
+                // Interleaved stereo at 32 kHz, counted in 30 Hz field frames.
+                double seconds = pcm == null ? 0 : pcm.Length / 2.0 / 32000.0;
+                int frames = (int)Math.Ceiling(seconds * AnimatedPreviewViewModel.FramesPerSecond);
+                Dispatcher.UIThread.Post(() => _vm.SoundLength(kind, frames));
+
+                if (!holdsMusic) return;
+                System.Threading.Thread.Sleep(TimeSpan.FromSeconds(seconds));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_musicHolds > 0 && --_musicHolds == 0 && _music != null) AudioOutput.Current.SetPaused(_music, false);
+                });
             });
+        }
+
+        /// <summary>Starts a piece of music looping, in place of whatever was playing.</summary>
+        private void StartMusic(int id)
+        {
+            StopMusic();
+            if (!_vm.PlaySounds) return;
+            var sdat = Sdat();
+            if (sdat == null) return;
+
+            int token = ++_musicToken;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                short[] pcm = null;
+                try { pcm = SseqPlayer.Render(sdat, id, 32000, MusicSeconds); } catch { }
+                if (pcm == null || pcm.Length == 0) return;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    // Something else was asked for while this one was being rendered.
+                    if (token != _musicToken) return;
+                    _music = AudioOutput.Current.StartLooping(pcm, 32000);
+                    if (_musicHolds > 0) AudioOutput.Current.SetPaused(_music, true);
+                });
+            });
+        }
+
+        private void StopMusic()
+        {
+            _musicToken++;
+            if (_music != null) AudioOutput.Current.Stop(_music);
+            _music = null;
         }
 
         private void MapMusicChanged()
         {
-            if (!_vm.PlaySounds || !_vm.PlayMapMusic) { AudioOutput.Current.Stop(); return; }
-            PlayFieldSound(ScriptEffectKind.Music, _vm.MapMusicId);
+            if (!_vm.PlaySounds || !_vm.PlayMapMusic) { StopMusic(); return; }
+            StartMusic(_vm.MapMusicId);
         }
 
         /// <summary>
@@ -231,14 +327,14 @@ namespace DSPRE.Avalonia.Views.Battle
             if (tile != null) _vm.StandOn(tile.Value.x, tile.Value.z);
         }
 
-        private void PlayPause_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        private void PlayPause_Click(object sender, RoutedEventArgs e)
         {
             _vm.Playing = !_vm.Playing;
             _lastTick = DateTime.UtcNow;
             _frames.Reset();
         }
 
-        private void Restart_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        private void Restart_Click(object sender, RoutedEventArgs e)
         {
             _vm.Restart();
             _lastTick = DateTime.UtcNow;
@@ -246,30 +342,72 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         // ── Stepping in ──────────────────────────────────────────────────────────────────
-        private void OnKey(object sender, global::Avalonia.Input.KeyEventArgs e)
+        private static bool IsA(Key k) => k == Key.Enter || k == Key.Space || k == Key.Z;
+        private static bool IsB(Key k) => k == Key.X || k == Key.Back;
+
+        private void OnKey(object sender, KeyEventArgs e)
         {
             if (!_vm.StepInto) return;
 
             // Typing an answer is typing, so leave the box alone while it has the focus.
-            if (FocusManager?.GetFocusedElement() is TextBox) return;
+            if (FocusManager?.GetFocusedElement() is TextBox)
+            {
+                if (e.Key == Key.Enter && _vm.HasStatePrompt && _vm.AcceptsTypedAnswer) { _vm.AnswerTyped(); e.Handled = true; }
+                return;
+            }
 
-            // You cannot walk off while somebody is still talking to you.
-            if (_vm.MessageVisible
-                && e.Key != global::Avalonia.Input.Key.Enter
-                && e.Key != global::Avalonia.Input.Key.Space) { e.Handled = true; return; }
+            // Esc gives up on whatever is running, the way the Stop button does.
+            if (e.Key == Key.Escape)
+            {
+                if (_vm.ScriptRunning || _vm.HasQuestion) { _vm.StopScript(); e.Handled = true; }
+                else if (_vm.MessageVisible) { _vm.Interact(); e.Handled = true; }
+                return;
+            }
 
+            if (_vm.HasStatePrompt)
+            {
+                // Number keys pick the answers in order, and Y and N answer a two-way question.
+                int pick = e.Key >= Key.D1 && e.Key <= Key.D9 ? e.Key - Key.D1
+                         : e.Key >= Key.NumPad1 && e.Key <= Key.NumPad9 ? e.Key - Key.NumPad1
+                         : e.Key == Key.Y ? 0 : e.Key == Key.N ? 1 : -1;
+                if (pick >= 0 && pick < _vm.AnswerOptions.Count) { _vm.AnswerOption(pick); e.Handled = true; }
+                return;
+            }
+
+            if (_vm.HasChoiceWindow || _vm.HasTouchChoice)
+            {
+                if (e.Key == Key.Up) _vm.MoveChoiceCursor(-1);
+                else if (e.Key == Key.Down) _vm.MoveChoiceCursor(1);
+                else if (e.Key == Key.Left) _vm.PageChoice(-1);
+                else if (e.Key == Key.Right) _vm.PageChoice(1);
+                else if (IsA(e.Key)) _vm.ConfirmChoice();
+                else if (IsB(e.Key)) _vm.CancelChoice();
+                else return;
+                e.Handled = true;
+                return;
+            }
+
+            if (e.KeyModifiers != KeyModifiers.None) return;
             switch (e.Key)
             {
-                case global::Avalonia.Input.Key.Up:    Say(_vm.Move(MoveFacing.Up)); break;
-                case global::Avalonia.Input.Key.Down:  Say(_vm.Move(MoveFacing.Down)); break;
-                case global::Avalonia.Input.Key.Left:  Say(_vm.Move(MoveFacing.Left)); break;
-                case global::Avalonia.Input.Key.Right: Say(_vm.Move(MoveFacing.Right)); break;
-                case global::Avalonia.Input.Key.Enter:
-                case global::Avalonia.Input.Key.Space: _vm.Interact(); break;
-                default: return;
+                case Key.Up:    Say(_vm.Move(MoveFacing.Up)); break;
+                case Key.Down:  Say(_vm.Move(MoveFacing.Down)); break;
+                case Key.Left:  Say(_vm.Move(MoveFacing.Left)); break;
+                case Key.Right: Say(_vm.Move(MoveFacing.Right)); break;
+                default:
+                    if (IsA(e.Key)) _vm.Interact();
+                    // B only does anything while a script is listening for it.
+                    else if (IsB(e.Key) && (_vm.ScriptRunning || _vm.MessageVisible)) _vm.PressA();
+                    else return;
+                    break;
             }
             e.Handled = true;
             Apply();
+        }
+
+        private void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            if (IsA(e.Key) || IsB(e.Key)) _vm.ReleaseA();
         }
 
         private void Say(string message)
@@ -277,13 +415,43 @@ namespace DSPRE.Avalonia.Views.Battle
             if (!string.IsNullOrEmpty(message)) _vm.ScriptLines.Add(message);
         }
 
-        private void Answer_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        private void Answer_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button b && b.Content is string label)
                 _vm.AnswerOption(_vm.AnswerOptions.IndexOf(label));
+            Focus();
         }
 
-        private void AnswerTyped_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => _vm.AnswerTyped();
+        private void AnswerTyped_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.AnswerTyped();
+            Focus();
+        }
+
+        /// <summary>The touch menu's words out of the ROM, with the player's name and the like put in.</summary>
+        private string TouchMenuText(int message)
+        {
+            if (RomInfo.fieldTouchMenuTextArchive < 0) return null;
+            string text = _vm.ArchiveText?.Invoke(RomInfo.fieldTouchMenuTextArchive, message);
+            return text == null ? null : _vm.ExpandVars(text);
+        }
+
+        private void StopScript_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.StopScript();
+            Focus();
+        }
+
+        private void ForgetState_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control { DataContext: AnimatedPreviewViewModel.GameStateEntry entry }) entry.Forget();
+            Focus();
+        }
+
+        private void ForgetAll_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.ForgetGameState();
+            Focus();
+        }
     }
 }

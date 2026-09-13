@@ -21,12 +21,31 @@ namespace DSPRE.Avalonia.Views.Controls
         public static readonly StyledProperty<bool> HasMoreProperty =
             AvaloniaProperty.Register<FieldMessageBoxView, bool>(nameof(HasMore));
 
+        public static readonly StyledProperty<int> ArrowOffsetProperty =
+            AvaloniaProperty.Register<FieldMessageBoxView, int>(nameof(ArrowOffset));
+
+        public static readonly StyledProperty<int> ScrollPixelsProperty =
+            AvaloniaProperty.Register<FieldMessageBoxView, int>(nameof(ScrollPixels));
+
+        public static readonly StyledProperty<bool> IsOpenProperty =
+            AvaloniaProperty.Register<FieldMessageBoxView, bool>(nameof(IsOpen), true);
+
         public string Text { get => GetValue(TextProperty); set => SetValue(TextProperty, value); }
         public bool HasMore { get => GetValue(HasMoreProperty); set => SetValue(HasMoreProperty, value); }
 
+        /// <summary>How far the arrow has bobbed down, in DS pixels.</summary>
+        public int ArrowOffset { get => GetValue(ArrowOffsetProperty); set => SetValue(ArrowOffsetProperty, value); }
+
+        /// <summary>How far the lines have slid up part way through a scroll, in DS pixels.</summary>
+        public int ScrollPixels { get => GetValue(ScrollPixelsProperty); set => SetValue(ScrollPixelsProperty, value); }
+
+        /// <summary>Whether the box is up, which it can be with nothing written in it yet.</summary>
+        public bool IsOpen { get => GetValue(IsOpenProperty); set => SetValue(IsOpenProperty, value); }
+
         static FieldMessageBoxView()
         {
-            AffectsRender<FieldMessageBoxView>(TextProperty, HasMoreProperty, FitToFrameProperty);
+            AffectsRender<FieldMessageBoxView>(TextProperty, HasMoreProperty, FitToFrameProperty,
+                                               ArrowOffsetProperty, ScrollPixelsProperty, IsOpenProperty);
         }
 
         public FieldMessageBoxView()
@@ -108,7 +127,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public override void Render(DrawingContext ctx)
         {
             string text = Text;
-            if (string.IsNullOrEmpty(text)) return;
+            if (!IsOpen || text == null) return;
 
             var (ox, oy, s) = Screen();
             var frame = new Rect(ox + FieldMessageWindow.FrameLeft * s, oy + FieldMessageWindow.FrameTop * s,
@@ -119,10 +138,13 @@ namespace DSPRE.Avalonia.Views.Controls
 
             if (!DrawRomFrame(ctx, frame, textArea)) DrawPlainFrame(ctx, frame, s);
 
-            if (RomFontReady) DrawWithRomFont(ctx, text, textArea);
-            else DrawWithOrdinaryType(ctx, text, ox, oy, s);
+            using (ctx.PushClip(textArea))
+            {
+                if (RomFontReady) DrawWithRomFont(ctx, text, textArea);
+                else DrawWithOrdinaryType(ctx, text, ox, oy, s);
+            }
 
-            if (HasMore) DrawMoreArrow(ctx, frame, s);
+            if (HasMore) DrawMoreArrow(ctx, ox, oy, s, ArrowOffset);
         }
 
         // The games' own border, which also paints the paper the writing sits on.
@@ -197,15 +219,18 @@ namespace DSPRE.Avalonia.Views.Controls
             }
             if (_page == null) return;
 
+            // Part way through a scroll the whole page slides up, and a third line can peek in below.
+            double lift = ScrollPixels * textArea.Height / FieldMessageWindow.TextHeight;
             ctx.DrawImage(_page,
-                new Rect(0, 0, FieldMessageWindow.TextWidth, FieldMessageWindow.TextHeight),
-                textArea);
+                new Rect(0, 0, FieldMessageWindow.TextWidth, _page.PixelSize.Height),
+                new Rect(textArea.X, textArea.Y - lift, textArea.Width,
+                         textArea.Height * _page.PixelSize.Height / FieldMessageWindow.TextHeight));
         }
 
         // Paints one page of letters at the size the DS would, so it can be blown up without blurring.
         private static WriteableBitmap RenderPage(string text)
         {
-            int w = FieldMessageWindow.TextWidth, h = FieldMessageWindow.TextHeight;
+            int w = FieldMessageWindow.TextWidth, h = FieldMessageWindow.TextHeight + FieldMessageWindow.LineHeight;
             var bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
                                           PixelFormat.Bgra8888, AlphaFormat.Premul);
 
@@ -220,7 +245,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 }
 
                 string[] lines = text.Replace("\r\n", "\n").Split('\n');
-                for (int line = 0; line < lines.Length && line < FieldMessageWindow.LinesPerPage; line++)
+                for (int line = 0; line < lines.Length && line <= FieldMessageWindow.LinesPerPage; line++)
                 {
                     int penX = 0;
                     int top = line * FieldMessageWindow.LineHeight;
@@ -268,22 +293,22 @@ namespace DSPRE.Avalonia.Views.Controls
             }
         }
 
-        // The little triangle that says there is another page waiting.
-        private static void DrawMoreArrow(DrawingContext ctx, Rect frame, double s)
+        // The arrow that says another page is waiting: a 2x2 tile cursor at pixels 240-255, 168-183,
+        // bobbing down 0, 1, 2 and 1 pixels.
+        private static void DrawMoreArrow(DrawingContext ctx, double ox, double oy, double s, int bob)
         {
-            double size = 5 * s;
-            double x = frame.Right - 8 * s;
-            double y = frame.Bottom - 7 * s;
+            double left = ox + 244 * s, top = oy + (173 + bob) * s;
+            double width = 8 * s, depth = 5 * s;
 
             var g = new StreamGeometry();
             using (var c = g.Open())
             {
-                c.BeginFigure(new Point(x - size, y - size / 2), true);
-                c.LineTo(new Point(x, y - size / 2));
-                c.LineTo(new Point(x - size / 2, y + size / 2));
+                c.BeginFigure(new Point(left, top), true);
+                c.LineTo(new Point(left + width, top));
+                c.LineTo(new Point(left + width / 2, top + depth));
                 c.EndFigure(true);
             }
-            ctx.DrawGeometry(new SolidColorBrush(Color.FromRgb(0x28, 0x30, 0x48)), null, g);
+            ctx.DrawGeometry(new SolidColorBrush(Color.FromRgb(0xE0, 0x38, 0x30)), new Pen(new SolidColorBrush(Color.FromRgb(0x60, 0x18, 0x18)), Math.Max(1, s * 0.6)), g);
         }
     }
 }

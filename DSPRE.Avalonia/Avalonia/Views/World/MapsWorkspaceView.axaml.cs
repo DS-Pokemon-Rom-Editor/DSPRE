@@ -178,6 +178,7 @@ namespace DSPRE.Avalonia.Views.World
             int id = (int)vm.LevelScriptId;
             LevelScriptsVM.InitialIndex = id;
             if (LevelScriptsVM.ScriptNames.Count > 0) LevelScriptsVM.SelectedScriptIndex = id;
+            EventVM.LevelScriptId = id;
         }
 
         private void RetargetText()
@@ -186,6 +187,7 @@ namespace DSPRE.Avalonia.Views.World
             int id = (int)vm.TextArchiveId;
             TextVM.InitialIndex = id;
             if (TextVM.ArchiveNames.Count > 0) TextVM.SelectedArchiveIndex = id;
+            EventVM.TextArchiveId = id;
         }
 
         /// <summary>Builds the Wild Encounters tab's editor. Rebuilds from scratch on EVERY ROM load
@@ -200,8 +202,7 @@ namespace DSPRE.Avalonia.Views.World
                 // hg-engine owns encounter data; editing it here would be overwritten on its next build.
                 EncountersTab.Content = new global::Avalonia.Controls.TextBlock
                 {
-                    Text = "Wild encounters are managed by hg-engine and can't be edited here.\n" +
-                           "Edit them through your hg-engine project instead.",
+                    Text = "hg-engine manages wild encounters. Edit them in your hg-engine project.",
                     Margin = new global::Avalonia.Thickness(16),
                     Opacity = 0.75,
                     TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
@@ -256,9 +257,8 @@ namespace DSPRE.Avalonia.Views.World
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
 
-        /// <summary>Builds a playable .nds, same flow as the File menu's "Save ROM…", just reachable
-        /// without leaving the Maps workspace (this used to be the only visible Save button here, easily
-        /// mistaken for "save the whole ROM" when it only ever saved the current header's own fields).</summary>
+        /// <summary>Builds a playable .nds, the same flow as the File menu's "Save ROM…", reachable
+        /// without leaving the Maps workspace.</summary>
         private async void SaveRom_Click(object sender, RoutedEventArgs e)
         {
             if (TopLevel.GetTopLevel(this) is MainWindowView main) await main.SaveRomAsync();

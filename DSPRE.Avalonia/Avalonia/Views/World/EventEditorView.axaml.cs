@@ -190,12 +190,20 @@ namespace DSPRE.Avalonia.Views.World
                 await DialogHelper.ShowError("Load an event file with a map first, so there is something to animate.", "Animated preview");
                 return;
             }
+            OpenPreview();
+        }
+
+        /// <summary>Opens the animated preview on what the editor is showing, with the ROM's script lookups.</summary>
+        private AnimatedPreviewWindow OpenPreview()
+        {
             var owner = TopLevel.GetTopLevel(this) as Window;
             var win = new AnimatedPreviewWindow();
+            VM.ConfigureScriptPreview(win.ViewModel);
             win.ShowFor(owner, VM.Model3D, VM.Area, VM.Events, ow => VM.EventFoot(ow), VM.Collision,
                         (x, z) => VM.TileFoot(x, z), n => VM.WalkerFor(n),
                         n => VM.WalkerStartId(n), n => VM.ScriptHome(n), VM.CameraId,
                         VM.MusicDayId, VM.MusicNightId, n => VM.ActionsFor(n), LoadLevelScripts(VM.LevelScriptId), VM.GatherStringVars());
+            return win;
         }
 
         /// <summary>The map's level script file, or null when there is none to read. </summary>
@@ -319,16 +327,7 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         /// <summary>Opens the preview walking from a tile.</summary>
-        private void StartWalkAt(int tileX, int tileZ)
-        {
-            var owner = TopLevel.GetTopLevel(this) as Window;
-            var win = new AnimatedPreviewWindow();
-            win.ShowFor(owner, VM.Model3D, VM.Area, VM.Events, ow => VM.EventFoot(ow), VM.Collision,
-                        (x, z) => VM.TileFoot(x, z), n => VM.WalkerFor(n),
-                        n => VM.WalkerStartId(n), n => VM.ScriptHome(n), VM.CameraId,
-                        VM.MusicDayId, VM.MusicNightId, n => VM.ActionsFor(n), LoadLevelScripts(VM.LevelScriptId), VM.GatherStringVars());
-            win.StepInOn(tileX, tileZ);
-        }
+        private void StartWalkAt(int tileX, int tileZ) => OpenPreview().StepInOn(tileX, tileZ);
 
         /// <summary>
         /// Opens the preview already standing next to the selected event, so you can talk to that person or
@@ -348,13 +347,7 @@ namespace DSPRE.Avalonia.Views.World
                 return;
             }
 
-            var owner = TopLevel.GetTopLevel(this) as Window;
-            var win = new AnimatedPreviewWindow();
-            win.ShowFor(owner, VM.Model3D, VM.Area, VM.Events, ow => VM.EventFoot(ow), VM.Collision,
-                        (x, z) => VM.TileFoot(x, z), n => VM.WalkerFor(n),
-                        n => VM.WalkerStartId(n), n => VM.ScriptHome(n), VM.CameraId,
-                        VM.MusicDayId, VM.MusicNightId, n => VM.ActionsFor(n), LoadLevelScripts(VM.LevelScriptId), VM.GatherStringVars());
-            win.StepInBeside(tile.Value.x, tile.Value.z);
+            OpenPreview().StepInBeside(tile.Value.x, tile.Value.z);
         }
 
         private async void Screenshot_Click(object sender, RoutedEventArgs e)

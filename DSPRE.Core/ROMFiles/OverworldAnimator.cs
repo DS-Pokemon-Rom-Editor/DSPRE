@@ -31,8 +31,16 @@ namespace DSPRE.ROMFiles
         private int _fromX, _fromZ;
         private int _stepFramesLeft;
 
-        /// <summary>Which way the sprite currently faces.</summary>
-        public MoveFacing Facing { get; private set; }
+        /// <summary>Which way the sprite currently faces. Turning starts the walk again from the first foot.</summary>
+        public MoveFacing Facing
+        {
+            get => _facing;
+            private set { _facing = value; Cycle.Face(value); }
+        }
+        private MoveFacing _facing;
+
+        /// <summary>The clock its pictures run on.</summary>
+        public FieldWalkCycle Cycle { get; } = new FieldWalkCycle();
 
         /// <summary>The tile it belongs to, in tiles from where it was placed. </summary>
         public int OffsetX { get; private set; }
@@ -106,12 +114,6 @@ namespace DSPRE.ROMFiles
         /// <summary>How high off the ground it is, in tiles, while it is mid-hop.</summary>
         public float HopHeight => _hop;
 
-        /// <summary>
-        /// How many frames it has spent moving, which is what picks the walking picture.
-        /// </summary>
-        public int AnimationCell => _animCell;
-        private int _animCell;
-
         /// <summary>Which step of the movement it is on, for showing progress.</summary>
         public int ScriptStepIndex => _scriptStep;
 
@@ -121,6 +123,32 @@ namespace DSPRE.ROMFiles
         /// <summary>The step it is playing now, or null when no script is running.</summary>
         public FieldMovementStep CurrentScriptStep =>
             _scripted != null && _scriptStep < _scripted.Count ? _scripted[_scriptStep] : null;
+
+        /// <summary>How many frames into an emote it is, or -1 when no mark is up.</summary>
+        public int EmoteFrame
+        {
+            get
+            {
+                var step = CurrentScriptStep;
+                if (step == null || step.Kind != FieldActionKind.Emote) return -1;
+                return Math.Max(1, step.Frames) - _scriptFramesLeft;
+            }
+        }
+
+        /// <summary>Which emote is up, by its action name, for picking the mark to draw.</summary>
+        public string EmoteName => EmoteFrame >= 0 ? CurrentScriptStep?.Name : null;
+
+        /// <summary>
+        /// Set by LockAll and Lock: it stops choosing where to go next, finishing any step already under
+        /// way. A script's movement still plays.
+        /// </summary>
+        public bool Paused { get; set; }
+
+        /// <summary>Turns it on the spot, the way FacePlayer does.</summary>
+        public void Face(MoveFacing facing) => Facing = facing;
+
+        /// <summary>Puts it on show or hides it.</summary>
+        public void SetVisible(bool visible) => Visible = visible;
 
         /// <summary>Hands this overworld a movement to play out. </summary>
         public void PlayScript(List<FieldMovementStep> steps)
@@ -158,7 +186,8 @@ namespace DSPRE.ROMFiles
                 _scriptToX = OffsetX; _scriptToZ = OffsetZ;
 
                 if (step.Kind == FieldActionKind.Appear) { Visible = step.Visible ?? true; continue; }
-                if (step.Kind != FieldActionKind.Delay) Facing = step.Facing;
+                if (step.Kind == FieldActionKind.Face || step.Kind == FieldActionKind.Walk || step.Kind == FieldActionKind.Jump)
+                    Facing = step.Facing;
 
                 if (step.Tiles > 0)
                 {
@@ -175,13 +204,22 @@ namespace DSPRE.ROMFiles
             var step = CurrentScriptStep;
             if (step == null) { StopScript(); return; }
 
-            _scriptFramesLeft--;
             int total = Math.Max(1, step.Frames);
+            int index = total - _scriptFramesLeft;
+            _scriptFramesLeft--;
             float gone = (total - _scriptFramesLeft) / (float)total;
 
-            // Only steps that actually go somewhere drive the walking pictures; turning on the spot
-            // and waiting leave the sprite standing.
-            if (step.Kind == FieldActionKind.Walk || step.Kind == FieldActionKind.Jump) _animCell++;
+            // Walks and hops move the pictures on at their own speed; a walk on the spot lasts a frame longer
+            // than the walk it copies and holds that last frame. Anything else lets the feet settle.
+            Cycle.Tick();
+            if (step.Kind == FieldActionKind.Walk || step.Kind == FieldActionKind.Jump)
+            {
+                bool onSpot = step.Kind == FieldActionKind.Walk && step.Tiles == 0;
+                int speed = onSpot ? Math.Max(1, total - 1) : total;
+                if (step.Run) Cycle.Dash();
+                else if (!onSpot || index < speed) Cycle.Walk(speed);
+            }
+            else Cycle.Rest();
 
             // A hop rises and falls over the step, which is what tells a jump apart from a walk.
             _hop = step.Kind == FieldActionKind.Jump ? (float)Math.Sin(gone * Math.PI) * 0.5f : 0f;
@@ -216,7 +254,8 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            if (_move == null) return;
+            for (int i = 0; i < frames; i++) Cycle.Tick();
+            if (_move == null) { Cycle.Rest(); return; }
             switch (_move.Kind)
             {
                 case MoveKind.Static:
@@ -224,7 +263,8 @@ namespace DSPRE.ROMFiles
                 case MoveKind.Special:
                     return;
                 case MoveKind.FaceFixed:
-                    if (_move.Facings.Count > 0) Facing = _move.Facings[0];
+                    // A locked overworld keeps whatever way a script turned it.
+                    if (!Paused && _move.Facings.Count > 0) Facing = _move.Facings[0];
                     return;
             }
 
@@ -233,12 +273,14 @@ namespace DSPRE.ROMFiles
                 // A step in progress has to finish before anything else happens.
                 if (_stepFramesLeft > 0)
                 {
-                    _animCell++;
+                    Cycle.Walk(WalkFrames);
                     _stepFramesLeft--;
                     if (_stepFramesLeft == 0) { _fromX = OffsetX; _fromZ = OffsetZ; _framesUntilNext = NextWait(); }
                     continue;
                 }
 
+                Cycle.Rest();
+                if (Paused) continue;
                 if (--_framesUntilNext > 0) continue;
                 Act();
                 if (_stepFramesLeft == 0) _framesUntilNext = NextWait();

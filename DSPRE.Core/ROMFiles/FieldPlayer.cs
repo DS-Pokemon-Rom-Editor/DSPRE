@@ -43,6 +43,7 @@ namespace DSPRE.ROMFiles
             TileX = StartX = _fromX = tileX;
             TileZ = StartZ = _fromZ = tileZ;
             Facing = StartFacing = facing;
+            _cycle.Face(facing);
             _collision = collision;
             _occupied = occupied;
         }
@@ -53,10 +54,60 @@ namespace DSPRE.ROMFiles
             TileZ = _fromZ = StartZ;
             Facing = StartFacing;
             _stepFramesLeft = 0;
+            _cycle.CopyFrom(new FieldWalkCycle());
+            _cycle.Face(StartFacing);
         }
 
         /// <summary>True while the player is part way between two tiles.</summary>
-        public bool IsWalking => _stepFramesLeft > 0;
+        public bool IsWalking => _script != null ? _script.IsWalking : _stepFramesLeft > 0;
+
+        // A script's movement is played by the same code that plays an overworld's.
+        private OverworldAnimator _script;
+        private int _scriptX, _scriptZ;
+
+        /// <summary>True while a script is moving the player.</summary>
+        public bool IsScripted => _script != null;
+
+        /// <summary>Whether the player is on show. A movement can hide them.</summary>
+        public bool Visible => _script?.Visible ?? _visible;
+        private bool _visible = true;
+
+        /// <summary>How high off the ground the player is mid-hop, in tiles.</summary>
+        public float HopHeight => _script?.HopHeight ?? 0f;
+
+        /// <summary>How many frames into an emote the player is, or -1.</summary>
+        public int EmoteFrame => _script?.EmoteFrame ?? -1;
+        public string EmoteName => _script?.EmoteName;
+
+        /// <summary>Plays a movement from a script, starting from wherever the player stands.</summary>
+        public void PlayScript(List<FieldMovementStep> steps)
+        {
+            if (steps == null || steps.Count == 0) return;
+            _stepFramesLeft = 0;
+            _fromX = TileX; _fromZ = TileZ;
+            _scriptX = TileX; _scriptZ = TileZ;
+            bool shown = Visible;
+            _script = new OverworldAnimator(null, Facing);
+            _script.Cycle.CopyFrom(_cycle);
+            _script.SetVisible(shown);
+            _script.PlayScript(steps);
+            FollowScript();
+        }
+
+        private void FollowScript()
+        {
+            if (_script == null) return;
+            Facing = _script.Facing;
+            TileX = _scriptX + _script.OffsetX;
+            TileZ = _scriptZ + _script.OffsetZ;
+            _fromX = _scriptX + _script.FromOffsetX;
+            _fromZ = _scriptZ + _script.FromOffsetZ;
+            if (_script.IsScripted) return;
+            _cycle.CopyFrom(_script.Cycle);
+            _visible = _script.Visible;
+            _fromX = TileX; _fromZ = TileZ;
+            _script = null;
+        }
 
         /// <summary>
         /// The tile being left, which is the same as <see cref="TileX"/> unless a step is running.
@@ -64,15 +115,13 @@ namespace DSPRE.ROMFiles
         public int FromX => _fromX;
         public int FromZ => _fromZ;
 
-        /// <summary>
-        /// How many frames have been spent walking, which is what picks the walking picture.
-        /// </summary>
-        public int AnimationCell => _animCell;
-        private int _animCell;
+        /// <summary>The clock the player's pictures run on.</summary>
+        public FieldWalkCycle Cycle => _script?.Cycle ?? _cycle;
+        private readonly FieldWalkCycle _cycle = new FieldWalkCycle();
 
         /// <summary>Where to draw the player, which is between tiles while a step is running.</summary>
-        public float DrawX => Blend(_fromX, TileX);
-        public float DrawZ => Blend(_fromZ, TileZ);
+        public float DrawX => _script != null ? _scriptX + _script.DrawOffsetX : Blend(_fromX, TileX);
+        public float DrawZ => _script != null ? _scriptZ + _script.DrawOffsetZ : Blend(_fromZ, TileZ);
 
         private float Blend(int from, int to)
         {
@@ -84,10 +133,14 @@ namespace DSPRE.ROMFiles
         /// <summary>Moves the walk along. Call once per rendered frame with how many frames have passed.</summary>
         public void Advance(int frames)
         {
-            if (_stepFramesLeft <= 0 || frames <= 0) return;
-            _animCell += Math.Min(frames, _stepFramesLeft);
-            _stepFramesLeft = Math.Max(0, _stepFramesLeft - frames);
-            if (_stepFramesLeft == 0) { _fromX = TileX; _fromZ = TileZ; }
+            if (_script != null && frames > 0) { _script.Advance(frames); FollowScript(); return; }
+            for (int i = 0; i < frames; i++)
+            {
+                _cycle.Tick();
+                if (_stepFramesLeft <= 0) { _cycle.Rest(); continue; }
+                _cycle.Walk(WalkFrames);
+                if (--_stepFramesLeft == 0) { _fromX = TileX; _fromZ = TileZ; }
+            }
         }
 
         public static (int dx, int dz) Step(MoveFacing f)
@@ -111,9 +164,9 @@ namespace DSPRE.ROMFiles
         public StepResult Go(MoveFacing dir)
         {
             // A step already running has to finish before another can start.
-            if (_stepFramesLeft > 0) return StepResult.Walking;
+            if (_stepFramesLeft > 0 || _script != null) return StepResult.Walking;
 
-            if (Facing != dir) { Facing = dir; return StepResult.Turned; }
+            if (Facing != dir) { Facing = dir; _cycle.Face(dir); return StepResult.Turned; }
 
             var (dx, dz) = Step(dir);
             int nx = TileX + dx, nz = TileZ + dz;
@@ -130,7 +183,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>Turns without trying to move, for looking at something next to you.</summary>
-        public void Face(MoveFacing dir) => Facing = dir;
+        public void Face(MoveFacing dir) { Facing = dir; _cycle.Face(dir); }
     }
 
     /// <summary>What a spawnable is. </summary>

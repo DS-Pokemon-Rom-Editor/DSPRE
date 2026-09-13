@@ -1562,10 +1562,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 var header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
                 if (header == null) return null;
-                var actions = new ScriptFile(header.scriptFileID)?.allActions;
-                // Movements count from zero, unlike scripts, so the number is the position already.
-                return actions != null && movementNumber >= 0 && movementNumber < actions.Count
-                    ? actions[movementNumber].commands : null;
+                return ScriptWalker.ActionsById(new ScriptFile(header.scriptFileID)?.allActions)?.Invoke(movementNumber);
             }
             catch { return null; }
         }
@@ -1727,11 +1724,63 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return new ScriptWalker(file.allScripts, file.allFunctions,
                     id => text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null,
                     // The file's movements sit alongside its scripts, so a Movement can say what it does.
-                    // They count from zero, so the number is the position in the list already.
-                    n => file.allActions != null && n >= 0 && n < file.allActions.Count
-                         ? file.allActions[n].commands : null);
+                    ScriptWalker.ActionsById(file.allActions));
             }
             catch (Exception ex) { AppLogger.Error("Script walker failed: " + ex.Message); return null; }
+        }
+
+        private readonly Dictionary<int, TextArchive> _previewArchives = new Dictionary<int, TextArchive>();
+        private readonly Dictionary<int, ScriptSource> _previewCommonScripts = new Dictionary<int, ScriptSource>();
+
+        private string PreviewMessage(int archive, int id)
+        {
+            if (archive < 0) return null;
+            try
+            {
+                if (!_previewArchives.TryGetValue(archive, out var text))
+                    _previewArchives[archive] = text = new TextArchive(archive);
+                return text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null;
+            }
+            catch { _previewArchives[archive] = null; return null; }
+        }
+
+        /// <summary>Hands the preview what it needs to follow scripts out of the map's own files.</summary>
+        public void ConfigureScriptPreview(ViewModels.Battle.AnimatedPreviewViewModel preview)
+        {
+            if (preview == null) return;
+            _previewArchives.Clear();
+            _previewCommonScripts.Clear();
+
+            preview.Family = gameFamily;
+            preview.ArchiveText = PreviewMessage;
+            preview.MenuText = id => PreviewMessage(fieldMenuEntriesArchive, id);
+            preview.SharedArchive = which =>
+                which >= 0 && which < fieldSharedMessageArchives.Length ? fieldSharedMessageArchives[which] : -1;
+            preview.CommonScripts = id =>
+            {
+                if (_previewCommonScripts.TryGetValue(id, out var cached)) return cached;
+                ScriptSource source = null;
+                try
+                {
+                    var common = CommonScriptId.Resolve(gameFamily, id);
+                    if (common.Kind == CommonScriptId.Kind.Resolved)
+                    {
+                        var file = new ScriptFile(common.ScriptArchiveId);
+                        int textArchive = common.TextArchiveId;
+                        source = new ScriptSource
+                        {
+                            Scripts = file.allScripts,
+                            Functions = file.allFunctions,
+                            Messages = m => PreviewMessage(textArchive, m),
+                            Actions = ScriptWalker.ActionsById(file.allActions),
+                            StartId = common.ManualUserId,
+                        };
+                    }
+                }
+                catch (Exception ex) { AppLogger.Error("Shared script for the preview failed: " + ex.Message); }
+                _previewCommonScripts[id] = source;
+                return source;
+            };
         }
 
         /// <summary>The number to start the walker at. </summary>
