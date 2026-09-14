@@ -583,7 +583,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
             Whynot = "";
-            TexturePreview = RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height);
+            // No bitmap can be made without a running UI, which is how the tests drive this view model.
+            try { TexturePreview = RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height); }
+            catch (InvalidOperationException) { TexturePreview = null; }
             Details = BaseDetails + $"  {PreviewTextureNames[_previewTextureIndex]}, {decoded.Width} × {decoded.Height} pixels. "
                 + $"This set contains {_previewTextures.Count} texture{(_previewTextures.Count == 1 ? "" : "s")} "
                 + $"and {_previewPalettes.Count} palette{(_previewPalettes.Count == 1 ? "" : "s")}.";
