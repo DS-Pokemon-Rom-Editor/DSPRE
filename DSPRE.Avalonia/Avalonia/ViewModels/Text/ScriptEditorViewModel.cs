@@ -965,14 +965,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 .OrderBy(f => f.Id);
             foreach (HgEngineOwnedFile owned in ownedScripts)
             {
-                // hg-engine assembles this script on every build, so the decompiled copy is not the file
-                // that ends up in the ROM and must not be offered as a second way to edit it.
-                _sourceFiles.RemoveAll(path =>
+                // hg-engine builds this script from its source, so the source takes the decompiled copy's place.
+                int at = _sourceFiles.FindIndex(path =>
                     _scriptIdByPath.TryGetValue(path, out int id) && id == owned.Id);
-
                 _managedByPath[owned.FullPath] = owned;
                 _scriptIdByPath[owned.FullPath] = owned.Id;
-                _sourceFiles.Add(owned.FullPath);
+                if (at >= 0) { _sourceFiles[at] = owned.FullPath; continue; }
+
+                int after = _sourceFiles.FindIndex(path =>
+                    _scriptIdByPath.TryGetValue(path, out int id) && id > owned.Id);
+                if (after < 0) _sourceFiles.Add(owned.FullPath);
+                else _sourceFiles.Insert(after, owned.FullPath);
             }
 
             foreach (string file in _sourceFiles)
@@ -989,10 +992,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private int InitialSelection()
         {
-            int exact = _sourceFiles.FindIndex(path =>
-                _scriptIdByPath.TryGetValue(path, out int id) && id == InitialIndex);
+            int exact = IndexOfScriptFile(InitialIndex);
             if (exact >= 0) return exact;
             return Math.Min(Math.Max(0, InitialIndex), _sourceFiles.Count - 1);
+        }
+
+        // The list is sorted by path and hg-engine's own scripts are moved to its end, so a position is not a file number.
+        private int IndexOfScriptFile(int fileId) => _sourceFiles.FindIndex(path =>
+            _scriptIdByPath.TryGetValue(path, out int id) && id == fileId);
+
+        /// <summary>Shows script file <paramref name="fileId"/>, when the list holds it.</summary>
+        public void SelectScriptFile(int fileId)
+        {
+            InitialIndex = fileId;
+            int at = IndexOfScriptFile(fileId);
+            if (at >= 0) SelectedScriptIndex = at;
         }
 
         private int NextScriptId()

@@ -169,7 +169,7 @@ namespace DSPRE.Avalonia.Views.World
             var vm = VM; if (vm == null) return;
             int id = (int)vm.ScriptFileId;
             ScriptsVM.InitialIndex = id;
-            if (ScriptsVM.ScriptNames.Count > 0) ScriptsVM.SelectedScriptIndex = id;
+            if (ScriptsVM.ScriptNames.Count > 0) ScriptsVM.SelectScriptFile(id);
         }
 
         private void RetargetLevelScripts()
