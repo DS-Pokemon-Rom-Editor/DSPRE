@@ -288,7 +288,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassItems, formatted);
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
-        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+        public void Detach()
+        {
+            AppEvents.NamesChanged -= OnNamesChanged;
+            Data.TrainerCapsuleCatalog.Changed -= ShowCapsuleNames;
+        }
+
+        // A new list instance after a save makes every picker refresh its rows.
+        private void ShowCapsuleNames()
+        {
+            var names = Data.TrainerCapsuleCatalog.Names();
+            foreach (var mon in Party) mon.CapsuleNames = names;
+        }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
@@ -366,6 +377,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     Party.Add(mon);
                 }
                 ApplyHgeGatingToParty();
+                if (_ballEnabled && Data.TrainerCapsuleCatalog.Available)
+                {
+                    ShowCapsuleNames();
+                    Data.TrainerCapsuleCatalog.Changed += ShowCapsuleNames;
+                }
 
                 StatusText = $"Loaded {TrainerNames.Count} trainers ({gameFamily}).";
                 if (TrainerNames.Count > 0)

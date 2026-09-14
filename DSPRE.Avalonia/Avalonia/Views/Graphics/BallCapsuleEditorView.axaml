@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        xmlns:vmb="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
+        x:Class="DSPRE.Avalonia.Views.Graphics.BallCapsuleEditorView"
+        x:DataType="vm:BallCapsuleEditorViewModel"
+        Title="Ball Capsules" Width="1360" Height="860" WindowStartupLocation="CenterScreen">
+  <Design.DataContext>
+    <vm:BallCapsuleEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <ComboBox ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}" Width="220" MaxDropDownHeight="420"/>
+        <TextBlock Text="{Binding UsedByText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520"
+                   Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="{Binding UsedByText}"/>
+        <Button Content="Clear" Click="Clear_Click" Width="70"/>
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"
+                ToolTip.Tip="Writes the trainer capsules."/>
+      </WrapPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
+      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+    </Border>
+
+    <Grid ColumnDefinitions="260,10,Auto,10,*" Margin="8">
+      <DockPanel Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="Seals" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <TextBox DockPanel.Dock="Top" x:Name="SealFind" Text="{Binding SealFilter}" PlaceholderText="Find a seal" Margin="0,0,0,6"/>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+          <Button Content="Place" Click="Place_Click" Width="70"/>
+          <Button Content="Edit sticker" Click="EditSticker_Click" Width="90"/>
+          <Button Content="Edit particles" Click="EditParticles_Click" Width="96"/>
+        </StackPanel>
+        <ListBox x:Name="SealList" ItemsSource="{Binding ShownSeals}" DoubleTapped="SealList_DoubleTapped">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:SealChoice">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Image Source="{Binding Sticker}" Width="32" Height="32" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <StackPanel Grid.Column="2" Spacing="6">
+        <TextBlock Text="Capsule" FontWeight="SemiBold"/>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Width="514" Height="386">
+          <Canvas x:Name="BoardCanvas" Width="512" Height="384" Background="#202020" ClipToBounds="True">
+            <Image Source="{Binding Board}" Width="512" Height="384" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
+            <Ellipse x:Name="BoardRing" Width="240" Height="240" Stroke="#80FFFFFF" StrokeThickness="1" IsHitTestVisible="False"/>
+            <Image x:Name="Ghost" IsVisible="False" Width="64" Height="64" Opacity="0.8" ZIndex="100"
+                   IsHitTestVisible="False" RenderOptions.BitmapInterpolationMode="None"/>
+          </Canvas>
+        </Border>
+        <TextBlock Text="Right-click a seal to remove it." FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="4" Spacing="8">
+        <TextBlock Text="Preview" FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>
+          <Button Content="{Binding Battle.SendOutButtonText}" Click="Play_Click" MinWidth="120"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" x:DataType="vmb:BattleDisplayEditorViewModel" DataContext="{Binding Battle}">
+          <ComboBox ItemsSource="{Binding SideOptions}" SelectedIndex="{Binding SideIndex}" Width="150"/>
+          <ComboBox ItemsSource="{Binding TextSpeedOptions}" SelectedIndex="{Binding TextSpeedIndex}" Width="130"/>
+        </StackPanel>
+        <views:BattleSceneControl x:DataType="vmb:BattleDisplayEditorViewModel" DataContext="{Binding Battle}"
+                                  Width="512" Height="384" HorizontalAlignment="Left"
+                                  Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
+                                  EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
+      </StackPanel>
+    </Grid>
+  </DockPanel>
+</Window>

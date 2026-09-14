@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Trainers"
+        xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerEditorView"
         x:DataType="vm:TrainerEditorViewModel"
         Title="Trainer Editor"
@@ -179,9 +180,34 @@
                           <TextBlock Text="IV (diff.)" FontSize="10"/>
                           <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
                         </StackPanel>
-                        <StackPanel Width="110" IsVisible="{Binding BallEnabled}">
-                          <TextBlock Text="Ball seals" FontSize="10"/>
-                          <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BallSeals}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding BallEnabled}">
+                          <StackPanel Width="150">
+                            <TextBlock Text="Ball Capsule" FontSize="10"/>
+                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
+                                      MaxDropDownHeight="360"/>
+                            <Button Content="Design…" Click="DesignCapsule_Click" Margin="0,2,0,0" FontSize="11" Padding="6,1"
+                                    ToolTip.Tip="Open in Ball Capsules"/>
+                          </StackPanel>
+                          <Border Width="64" Height="64" CornerRadius="32" Background="#2A7FA8C8" BorderBrush="#557FA8C8" BorderThickness="1"
+                                  ClipToBounds="True">
+                            <ItemsControl ItemsSource="{Binding CapsuleStickers}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.Styles>
+                                <Style Selector="ContentPresenter" x:DataType="data:CapsuleSticker">
+                                  <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                                  <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                                </Style>
+                              </ItemsControl.Styles>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="data:CapsuleSticker">
+                                  <Image Source="{Binding Sticker}" Width="17" Height="17" ToolTip.Tip="{Binding Name}"
+                                         RenderOptions.BitmapInterpolationMode="None"/>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </Border>
                         </StackPanel>
                       </WrapPanel>
 

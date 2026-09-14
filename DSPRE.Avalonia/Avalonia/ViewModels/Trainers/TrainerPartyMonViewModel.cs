@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -211,7 +212,41 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private int _genderIndex; public int GenderIndex { get => _genderIndex; set { if (Set(ref _genderIndex, value)) Touch(); } }
         private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (Set(ref _abilityIndex, value)) Touch(); } }
         private decimal _difficulty; public decimal Difficulty { get => _difficulty; set { if (Set(ref _difficulty, value)) Touch(); } }
-        private decimal _ballSeals; public decimal BallSeals { get => _ballSeals; set { if (Set(ref _ballSeals, value)) Touch(); } }
+        private decimal _ballSeals;
+        public decimal BallSeals
+        {
+            get => _ballSeals;
+            set
+            {
+                if (!Set(ref _ballSeals, value)) return;
+                OnPropertyChanged(nameof(CapsuleIndex));
+                ShowCapsule();
+                Touch();
+            }
+        }
+
+        // Picker row N is capsule N; row 0 is none.
+        private IList<string> _capsuleNames = Array.Empty<string>();
+        public IList<string> CapsuleNames
+        {
+            get => _capsuleNames;
+            set { _capsuleNames = value ?? Array.Empty<string>(); OnPropertyChanged(); OnPropertyChanged(nameof(CapsuleIndex)); ShowCapsule(); }
+        }
+
+        public int CapsuleIndex
+        {
+            get => _ballSeals >= 0 && _ballSeals < _capsuleNames.Count ? (int)_ballSeals : -1;
+            set { if (value >= 0 && value < _capsuleNames.Count) BallSeals = value; }
+        }
+
+        /// <summary>The chosen capsule's seals, placed on a 64 by 64 picture of the ball.</summary>
+        public ObservableCollection<Data.CapsuleSticker> CapsuleStickers { get; } = new();
+
+        public void ShowCapsule()
+        {
+            CapsuleStickers.Clear();
+            foreach (var s in Data.TrainerCapsuleCatalog.Stickers((int)_ballSeals)) CapsuleStickers.Add(s);
+        }
 
         private Bitmap _pokemonIcon;
         public Bitmap PokemonIcon { get => _pokemonIcon; set => Set(ref _pokemonIcon, value); }

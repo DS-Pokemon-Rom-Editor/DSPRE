@@ -10,6 +10,12 @@ namespace DSPRE.Avalonia.Views.Trainers
         private TrainerEditorViewModel VM => DataContext as TrainerEditorViewModel;
         private bool _setupDone;
 
+        private void DesignCapsule_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon)
+                AvaloniaEditorLauncher.OpenBallCapsuleEditorAt((int)mon.BallSeals);
+        }
+
         public TrainerEditorView()
         {
             InitializeComponent();
