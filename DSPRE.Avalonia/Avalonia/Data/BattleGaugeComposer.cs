@@ -98,6 +98,36 @@ namespace DSPRE.Avalonia.Data
             },
         };
 
+        // Diamond and Pearl's name field is a tile narrower; their other gauges match Platinum.
+        private static readonly Layout DiamondPearlPlayerSingle = new()
+        {
+            Graphic = "SINGLE_GAGE2", X = 198, Y = 116,
+            Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
+            LvMark = new[] { (0x52, 2), (0x5a, 2) },
+            LvDigits = new[] { (0x54, 3), (0x5c, 3) },
+            Hp = new[] { (0, 0), (0x68, 3) },
+            HpMax = (0x6c, 3),
+            Status = 0x23,
+        };
+
+        private static bool TryLayout(Kind kind, out Layout layout)
+        {
+            if (kind == Kind.PlayerSingle && RomInfo.gameFamily == RomInfo.GameFamilies.DP)
+            {
+                layout = DiamondPearlPlayerSingle;
+                return true;
+            }
+            return Layouts.TryGetValue(kind, out layout);
+        }
+
+        /// <summary>Where a gauge's centre sits on screen in this game.</summary>
+        public static (int X, int Y) CentreOf(Kind kind) =>
+            TryLayout(kind, out var l) ? (l.X, l.Y) : (0, 0);
+
+        /// <summary>Where the green health fill starts on screen: Diamond and Pearl's bar begins a tile earlier.</summary>
+        public static int HealthFillLeft(Kind kind) =>
+            CentreOf(kind).X + (kind == Kind.PlayerSingle && RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 0 : 8);
+
         /// <summary>What to write on a gauge.</summary>
         public sealed class Showing
         {
@@ -122,7 +152,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Which gauge picture a slot uses, by the name the game gives it.</summary>
         public static string GraphicOf(Kind kind) =>
-            Layouts.TryGetValue(kind, out var l) ? l.Graphic : null;
+            TryLayout(kind, out var l) ? l.Graphic : null;
 
         public static string NameOf(Kind kind) => kind switch
         {
@@ -144,7 +174,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Drawn Build(Kind kind, Showing showing)
         {
-            if (!BattleGaugeText.IsAvailable || !Layouts.TryGetValue(kind, out var layout)) return null;
+            if (!BattleGaugeText.IsAvailable || !TryLayout(kind, out var layout)) return null;
 
             var narc = new ScriptNarc(RomInfo.DirNames.battleObj);
             if (!narc.Available) return null;

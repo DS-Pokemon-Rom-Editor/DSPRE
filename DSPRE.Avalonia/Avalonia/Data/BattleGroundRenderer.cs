@@ -19,13 +19,32 @@ namespace DSPRE.Avalonia.Data
     {
         public sealed class GroundImage { public byte[] Rgba; public int Width, Height, Left, Top; }
 
-        // GROUND_ID (0..9) → human label.
-        public static readonly string[] TerrainNames =
-            { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor" };
+        // GROUND_ID to label.
+        private static readonly string[] DpTerrainNames =
+            { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor", "Marsh" };
+        private static readonly string[] PtTerrainNames =
+            { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor", "Marsh",
+              "Bridge", "Aaron", "Bertha", "Flint", "Lucian", "Cynthia", "Distortion World",
+              "Battle Tower", "Battle Factory", "Battle Arcade", "Battle Castle", "Battle Hall", "Giratina" };
+        private static readonly string[] HgssTerrainNames =
+            { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor", "Marsh",
+              "Unused", "Will", "Koga", "Bruno", "Karen", "Lance", "Distortion World",
+              "Battle Tower", "Battle Factory", "Battle Arcade", "Battle Castle", "Battle Hall", "Giratina" };
+        public static string[] TerrainNames => gameFamily switch
+        {
+            GameFamilies.DP => DpTerrainNames,
+            GameFamilies.HGSS => HgssTerrainNames,
+            _ => PtTerrainNames,
+        };
 
-        // GROUND_ID → GROUND## graphic set, in the order of the game's GroundResourceID_Mine[]/Enemy[]/Palette[] tables
-        // (e.g. GRAVEL(0) uses GROUND02, LAWN(2) uses GROUND00, WATER(7) uses GROUND01).
-        private static readonly int[] GroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6 };
+        // GROUND_ID to GROUND## graphic set per side. Id 11 draws your side from GROUND10 and theirs, with its colours, from GROUND08.
+        private static readonly int[] DpGroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8 };
+        private static readonly int[] PtHgssMineGfx =
+            { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
+        private static readonly int[] PtHgssEnemyGfx =
+            { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
+        private static int[] MineGfx => gameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssMineGfx;
+        private static int[] EnemyGfx => gameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssEnemyGfx;
 
 
         // GROUND_MINE_X/Y, GROUND_ENEMY_X/Y: the CATS actor screen position (the cell origin). Get_Image
@@ -34,10 +53,6 @@ namespace DSPRE.Avalonia.Data
 
         public static int TerrainCount => TerrainNames.Length;
 
-        // Editor convenience: a matching scene backdrop (bg_id 0..22) for a terrain (GROUND_ID). bg_id and ground_id
-        // are set independently per-zone in the game data, so there is no canonical 1:1; this reuses the GROUND##
-        // graphic number (which parallels the BATTLE_BG## scene numbering) as a sensible default; the Backdrop
-        // selector still overrides it. Returns -1 for none.
         /// <summary>
         /// Which files make up the ground one Pokemon stands on, found by the names the game gives
         /// them. The numbers differ per game, so a constant is right for one family and wrong for the
@@ -46,24 +61,25 @@ namespace DSPRE.Avalonia.Data
         public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
             TerrainFiles(int terrainId)
         {
-            if (terrainId < 0 || terrainId >= GroundGfx.Length) return null;
-            int gg = GroundGfx[terrainId];
-            int mineDraw = BattleObjects.Find($"GROUND{gg:D2}_M", "Drawing");
-            int enemyDraw = BattleObjects.Find($"GROUND{gg:D2}_E", "Drawing");
+            if (terrainId < 0 || terrainId >= MineGfx.Length) return null;
+            int mine = MineGfx[terrainId], enemy = EnemyGfx[terrainId];
+            int mineDraw = BattleObjects.Find($"GROUND{mine:D2}_M", "Drawing");
+            int enemyDraw = BattleObjects.Find($"GROUND{enemy:D2}_E", "Drawing");
             int mineLayout = BattleObjects.Find("GROUND00_M", "As it appears");
             int enemyLayout = BattleObjects.Find("GROUND00_E", "As it appears");
-            int palDay = BattleObjects.Find($"BATT_GROUND{gg:D2}_D", "Colours");
+            int palDay = BattleObjects.Find($"BATT_GROUND{enemy:D2}_D", "Colours");
             if (mineDraw < 0 || enemyDraw < 0 || mineLayout < 0 || enemyLayout < 0 || palDay < 0) return null;
             return (mineDraw, enemyDraw, mineLayout, enemyLayout, palDay);
         }
 
+        // A default only: backdrop and ground are set independently per zone, and GROUND## numbering parallels BATTLE_BG##.
         public static int BackdropForTerrain(int terrainId)
-            => terrainId >= 0 && terrainId < GroundGfx.Length ? Math.Min(GroundGfx[terrainId], 22) : -1;
+            => terrainId >= 0 && terrainId < MineGfx.Length ? Math.Min(MineGfx[terrainId], BattleBgRenderer.BackdropCount - 1) : -1;
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleObj);
         public bool Available => _narc.Available;
 
-        /// <summary>Builds the (mine, enemy) ground platforms for a terrain (GROUND_ID 0..9), or (null,null) if the
+        /// <summary>Builds the (mine, enemy) ground platforms for a terrain (a GROUND_ID), or (null,null) if the
         /// archive is unmapped/missing. <paramref name="timeZone"/> 0=day,1=evening,2=night selects the palette.</summary>
         public (GroundImage mine, GroundImage enemy) Build(int terrainId, int timeZone = 0)
         {
@@ -77,22 +93,18 @@ namespace DSPRE.Avalonia.Data
             return (mine, enemy);
         }
 
-        // HP-gauge frames (GaugeObjParam_aa/bb, single battle): the PLAYER gauge = SINGLE_GAGE2 at (192,116),
-        // the ENEMY gauge = SINGLE_GAGE1 at (58,36); both use GAGE_PALETTE_NCLR. All in pl_batt_obj. This renders only
-        // the static frame cell (bank 0); the HP bar fill + name/level/HP text are drawn at runtime, overlaid in the UI.
+        // Only the static single-battle gauge frame; the fill and text are overlaid in the UI.
         public GroundImage BuildGauge(bool player)
         {
             if (!_narc.Available) return null;
-            // Looked up by the name the game gives each file: the numbers differ per game, and the
-            // ones that were written in here were Platinum and HeartGold's, so Diamond drew the wrong
-            // files. SINGLE_GAGE2 is your side, SINGLE_GAGE1 is theirs (gauge.c).
+            // Found by name because file numbers differ per game. SINGLE_GAGE2 is your side, SINGLE_GAGE1 theirs.
             string thing = player ? "SINGLE_GAGE2" : "SINGLE_GAGE1";
             int drawing = BattleObjects.Find(thing, "Drawing");
             int layout = BattleObjects.Find(thing, "As it appears");
             int colours = BattleObjects.Find("GAGE_PALETTE", "Colours");
             if (drawing < 0 || layout < 0 || colours < 0) return null;
-            return player ? Render(drawing, colours, layout, 192, 116)
-                          : Render(drawing, colours, layout, 58, 36);
+            var at = BattleGaugeComposer.CentreOf(player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle);
+            return Render(drawing, colours, layout, at.X, at.Y);
         }
 
         private GroundImage Render(int ncgrIdx, int nclrIdx, int ncerIdx, int posX, int posY)

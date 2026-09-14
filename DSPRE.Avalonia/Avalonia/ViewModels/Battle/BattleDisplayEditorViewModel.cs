@@ -203,6 +203,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public Bitmap GaugeEnemyImage { get => _gaugeEnemyImage; private set => Set(ref _gaugeEnemyImage, value); }
         public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
         public bool PlaceholderGaugesVisible => !HasRealGauges;
+        /// <summary>The gauge picture is 256 wide, centred on the bar.</summary>
+        public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
+        public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
 
         // HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.
         public IBrush GaugeTextBrush => gameFamily == GameFamilies.HGSS
@@ -242,6 +245,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             catch { GaugePlayerImage = GaugeEnemyImage = null; }
             OnPropertyChanged(nameof(HasRealGauges));
             OnPropertyChanged(nameof(PlaceholderGaugesVisible));
+            OnPropertyChanged(nameof(PlayerGaugeImageLeft));
+            OnPropertyChanged(nameof(PlayerHealthFillLeft));
             OnPropertyChanged(nameof(GaugeTextBrush));
             foreach (var n in new[] { nameof(GaugeTextIsReal), nameof(GaugeNameImage), nameof(GaugeLevelImage) })
                 OnPropertyChanged(n);
@@ -1201,7 +1206,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Shows both sprites in their shiny colours, and a send-out plays the sparkle.</summary>
         public bool IsShiny { get => _isShiny; set { if (Set(ref _isShiny, value)) { StopPlayback(); RaiseSprites(); } } }
 
-        public IReadOnlyList<string> TextSpeedOptions { get; } = new[] { "Slow text", "Mid text", "Fast text" };
+        // Diamond and Pearl pick one of three back animations by nature.
+        private static readonly byte[] DpBackSlotForNature =
+            { 0, 2, 0, 0, 0, 1, 1, 1, 0, 1, 2, 0, 1, 0, 0, 2, 2, 2, 2, 1, 1, 2, 1, 2, 1 };
+        public bool CanPickNature => gameFamily == GameFamilies.DP && !HgEngineProject.IsActive;
+        public IReadOnlyList<string> NatureOptions { get; } = DVCalculator.Natures.Select(n => n.Split(':')[0]).ToArray();
+        private int _natureIndex;
+        public int NatureIndex { get => _natureIndex; set { if (value >= 0 && Set(ref _natureIndex, value)) StopPlayback(); } }
+        private int BackSlot => CanPickNature ? DpBackSlotForNature[Math.Clamp(_natureIndex, 0, DpBackSlotForNature.Length - 1)] : 0;
+
+        public IReadOnlyList<string> TextSpeedOptions { get; } = new[] { "Slow text", "Mid text", "Fast text", "Instant text" };
         private int _textSpeedIndex = (int)TextSpeed.Mid;
         public int TextSpeedIndex { get => _textSpeedIndex; set { if (value >= 0 && Set(ref _textSpeedIndex, value)) StopPlayback(); } }
 
@@ -1443,7 +1457,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             EnsureAnimDefsNarc();
             if (frames) _backFrames.Start(_backSlots);
-            if (movement && AnimBack.Count > 0) _progBack = LoadProgram(AnimBack[0].Number, AnimBack[0].Wait);
+            int slot = BackSlot;
+            if (movement && slot < AnimBack.Count) _progBack = LoadProgram(AnimBack[slot].Number, AnimBack[slot].Wait);
         }
 
         private bool FrontBusy => _frontFrames.Active || (_prog?.Active ?? false);
@@ -1476,6 +1491,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 Text = MessageFor,
             };
             _sendOut = new SendOutSequence(options);
+            _waitingSeals.Clear();
             _enemyBurst = new SpaParticlePreview(256, 192);
             _playerBurst = new SpaParticlePreview(256, 192);
             _enemySparkle = _playerSparkle = null;
@@ -1501,6 +1517,43 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try { AudioOutput.Current.Stop(); } catch { }
         }
 
+        /// <summary>The Ball Capsule used on send-out, whose seals replace the ball burst; null for the plain burst.</summary>
+        public BallCapsule Capsule { get; set; }
+
+        private IReadOnlyList<BallSeal> _seals;
+        private sealed class WaitingSeal { public int Ticks; public BallSeal Seal; public int X, Y; public bool Enemy; }
+        private readonly List<WaitingSeal> _waitingSeals = new();
+
+        private bool OpenWithCapsule(bool enemySide)
+        {
+            if (Capsule == null || Capsule.IsEmpty) return false;
+            _seals ??= BallSeals.Read();
+            foreach (var placed in Capsule.Seals)
+            {
+                if (placed.Seal <= 0 || placed.Seal >= _seals.Count || _seals[placed.Seal] == null) continue;
+                var seal = _seals[placed.Seal];
+                _waitingSeals.Add(new WaitingSeal
+                {
+                    Ticks = SealEffect.DelayTicks(seal, placed.X, placed.Y), Seal = seal, X = placed.X, Y = placed.Y, Enemy = enemySide,
+                });
+            }
+            return true;
+        }
+
+        private void LaunchDueSeals()
+        {
+            for (int i = _waitingSeals.Count - 1; i >= 0; i--)
+            {
+                var w = _waitingSeals[i];
+                if (w.Ticks-- > 0) continue;
+                _gfx.AddSeal(w.Enemy ? _enemyBurst : _playerBurst, w.Seal, w.X, w.Y, w.Enemy);
+                _waitingSeals.RemoveAt(i);
+            }
+        }
+
+        /// <summary>Forgets a seal particle file already read, so an edit shows on the next send-out.</summary>
+        public void ForgetSealParticles(int entry) => _gfx?.ForgetParticles(entry);
+
         // Running players step first so the sequence sees what finished; anything started shows its first state.
         private void SendOutTick()
         {
@@ -1508,8 +1561,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _progBack?.Step();
             _frontFrames.Tick();
             _backFrames.Tick();
-            bool enemyBursting = _enemyBurst.HasEmitters && !_enemyBurst.AllFinished;
-            bool playerBursting = _playerBurst.HasEmitters && !_playerBurst.AllFinished;
+            bool enemyBursting = (_enemyBurst.HasEmitters && !_enemyBurst.AllFinished) || _waitingSeals.Exists(w => w.Enemy);
+            bool playerBursting = (_playerBurst.HasEmitters && !_playerBurst.AllFinished) || _waitingSeals.Exists(w => !w.Enemy);
             StepSparkle(ref _enemySparkle, img => EnemySparkleImage = img);
             StepSparkle(ref _playerSparkle, img => PlayerSparkleImage = img);
 
@@ -1524,8 +1577,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (s.EnemyAnimStarts) StartFront(frames: true, movement: true);
             if (s.PlayerAnimStarts) StartBack(frames: true, movement: true);
-            if (s.EnemyBallOpens) { _gfx.AddBurst(_enemyBurst, _sendOutBall, enemySide: true); PlaySound(_ballOpenSound); }
-            if (s.PlayerBallOpens) { _gfx.AddBurst(_playerBurst, _sendOutBall, enemySide: false); PlaySound(_ballOpenSound); }
+            if (s.EnemyBallOpens) { if (!OpenWithCapsule(enemySide: true)) _gfx.AddBurst(_enemyBurst, _sendOutBall, enemySide: true); PlaySound(_ballOpenSound); }
+            if (s.PlayerBallOpens) { if (!OpenWithCapsule(enemySide: false)) _gfx.AddBurst(_playerBurst, _sendOutBall, enemySide: false); PlaySound(_ballOpenSound); }
+            LaunchDueSeals();
             if (s.EnemyCry) PlaySound(_cry);
             if (s.PlayerCry) PlaySound(_cry);
             if (s.EnemySparkleStarts) _enemySparkle = StartSparkle(enemySide: true);
@@ -1540,7 +1594,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             EnemyBurstImage = StepBurst(_enemyBurst);
             PlayerBurstImage = StepBurst(_playerBurst);
 
-            if (s.Done && !SpritesPlaying && _enemySparkle == null && _playerSparkle == null
+            if (s.Done && !SpritesPlaying && _enemySparkle == null && _playerSparkle == null && _waitingSeals.Count == 0
                 && !(_enemyBurst.HasEmitters && !_enemyBurst.AllFinished) && !(_playerBurst.HasEmitters && !_playerBurst.AllFinished))
                 StopPlayback();
         }

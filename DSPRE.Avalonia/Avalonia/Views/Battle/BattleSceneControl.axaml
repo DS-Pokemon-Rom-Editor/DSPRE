@@ -135,7 +135,7 @@
         </Canvas>
 
         <Canvas Canvas.Left="{Binding PlayerGaugeX}" IsVisible="{Binding PlayerGaugeShown}">
-          <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
+          <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
                  IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
           <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
                  IsVisible="{Binding PlaceholderGaugesVisible}"/>
@@ -144,7 +144,7 @@
           <Canvas IsVisible="{Binding HasRealGauges}">
             <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
             <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-            <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
+            <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="118" Width="48" Height="4" Fill="#38C838"/>
           </Canvas>
         </Canvas>
 
