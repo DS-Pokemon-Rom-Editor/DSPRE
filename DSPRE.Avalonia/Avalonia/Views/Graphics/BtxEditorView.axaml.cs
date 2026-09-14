@@ -17,6 +17,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             DataContext = vm;
             InitializeComponent();
             EditorWindowChrome.Attach(this, vm);
+            Closed += (_, _) => vm.StopPreview();
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)

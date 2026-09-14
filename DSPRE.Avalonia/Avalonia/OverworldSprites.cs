@@ -105,6 +105,20 @@ namespace DSPRE.Avalonia
             }
         }
 
+        /// <summary>Every picture of a sprite bank in the order their names number them, drawn with one of its palettes.</summary>
+        public static List<SpritePixels> Pictures(byte[] btx0, int palette = 0)
+        {
+            var pictures = new List<SpritePixels>();
+            if (btx0 == null || btx0.Length <= 4) return pictures;
+            using var stream = new MemoryStream(btx0, writable: false);
+            var nsbtx = new NSBTX_File(stream);
+            if (nsbtx.texInfo.names == null || nsbtx.texInfo.num_objs <= 0) return pictures;
+            int pal = palette > 0 && palette < nsbtx.palInfo.num_objs ? palette : 0;
+            foreach (int i in NumericOrder(nsbtx))
+                pictures.Add(ToRgba(nsbtx.GetRawImage(i, pal).bmp));
+            return pictures;
+        }
+
         /// <summary>
         /// The bank's pictures in the order their names number them, since the file keeps them sorted as
         /// text and ".10" then lands before ".2".

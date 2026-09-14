@@ -12,7 +12,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 
+using Avalonia.Threading;
 using DSPRE.Avalonia.Data;
+using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     public sealed class OverworldGraphicsProfileOption
@@ -21,6 +23,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public uint SpriteMember { get; init; }
         public string Label { get; init; }
         public override string ToString() => Label;
+    }
+
+    /// <summary>One way of facing, drawn standing, walking and running as the field animates it.</summary>
+    public sealed class FacingPreview : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void Changed(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        public string Label { get; init; }
+        public int Facing { get; init; }
+        public double Width { get; init; }
+        public double Height { get; init; }
+        public bool HasWalking { get; init; }
+        public bool HasRunning { get; init; }
+
+        private Bitmap _looking, _walking, _running;
+        public Bitmap Looking { get => _looking; set { if (!ReferenceEquals(_looking, value)) { _looking = value; Changed(nameof(Looking)); } } }
+        public Bitmap Walking { get => _walking; set { if (!ReferenceEquals(_walking, value)) { _walking = value; Changed(nameof(Walking)); } } }
+        public Bitmap Running { get => _running; set { if (!ReferenceEquals(_running, value)) { _running = value; Changed(nameof(Running)); } } }
     }
 
     public class BtxEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
@@ -67,7 +88,83 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         private Bitmap _currentImage;
-        public Bitmap CurrentImage { get => _currentImage; private set => Set(ref _currentImage, value); }
+        public Bitmap CurrentImage { get => _currentImage; private set { Set(ref _currentImage, value); BuildFacings(); } }
+
+        // ── Facing previews ────────────────────────────────────────────────────
+        public ObservableCollection<FacingPreview> Facings { get; } = new();
+        public bool HasFacings => Facings.Count > 0;
+
+        private readonly List<Bitmap> _pictures = new();
+        private readonly FieldWalkCycle _walk = new(), _run = new();
+        private DispatcherTimer _previewTimer;
+
+        private void BuildFacings()
+        {
+            Facings.Clear();
+            _pictures.Clear();
+            if (_btxData != null && HasSelectedEntry)
+            {
+                try
+                {
+                    foreach (var p in OverworldSprites.Pictures(_btxData, _isShiny && HasShinyPalette ? 1 : 0))
+                        _pictures.Add(p != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("Overworld pictures could not be read: " + ex.Message);
+                    _pictures.Clear();
+                }
+            }
+
+            int count = _pictures.Count;
+            if (count >= 4)
+            {
+                int per = FieldSpriteAnimation.PerFacing(count);
+                var first = _pictures.FirstOrDefault(b => b != null);
+                double width = (first?.PixelSize.Width ?? 32) * 3, height = (first?.PixelSize.Height ?? 32) * 3;
+                foreach (var (facing, label) in new[] { (1, "Down"), (0, "Up"), (2, "Left"), (3, "Right") })
+                    Facings.Add(new FacingPreview
+                    {
+                        Label = label, Facing = facing, Width = width, Height = height,
+                        HasWalking = per == 4,
+                        HasRunning = per == 4 && count >= FieldSpriteAnimation.WalkingPictures * 2,
+                    });
+            }
+            OnPropertyChanged(nameof(HasFacings));
+            ShowFacingFrames();
+
+            if (Facings.Count == 0) { _previewTimer?.Stop(); return; }
+            if (_previewTimer == null)
+            {
+                // The field draws its people on a 30 Hz clock, and a normal step is 8 ticks.
+                _previewTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.0 / 30) };
+                _previewTimer.Tick += (_, _) =>
+                {
+                    _walk.Tick();
+                    _walk.Walk(8);
+                    _run.Tick();
+                    _run.Dash();
+                    ShowFacingFrames();
+                };
+            }
+            _previewTimer.Start();
+        }
+
+        private void ShowFacingFrames()
+        {
+            int count = _pictures.Count;
+            bool pair = FieldSpriteAnimation.PerFacing(count) == 2;
+            foreach (var f in Facings)
+            {
+                f.Looking = PictureAt(FieldSpriteAnimation.PictureFor(count, f.Facing, pair ? _walk : null));
+                if (f.HasWalking) f.Walking = PictureAt(FieldSpriteAnimation.PictureFor(count, f.Facing, _walk));
+                if (f.HasRunning) f.Running = PictureAt(FieldSpriteAnimation.PictureFor(count, f.Facing, _run));
+            }
+        }
+
+        private Bitmap PictureAt(int index) => index >= 0 && index < _pictures.Count ? _pictures[index] : null;
+
+        public void StopPreview() => _previewTimer?.Stop();
 
         private bool _isShiny;
         public bool IsShiny
@@ -110,9 +207,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             LoadEntry(_selectedIndex);
         }
 
-        // ── Platinum overworld properties (render state + expansion patch add/delete) ──────────
-        // Everything in this section is Platinum-only. HGSS/DP keep the plain texture browser above.
-        public bool IsPlatinum => RomInfo.gameFamily == GameFamilies.Plat;
+        // ── Overworld properties (render state + expansion patch add/delete) ──────────
+        // Diamond, Pearl and Platinum keep a render-properties table; HeartGold and SoulSilver do not.
+        private bool _hasRenderTable;
+        public bool HasRenderTable => _hasRenderTable;
 
         public bool IsExpansionApplied => OverworldSpriteTableExpansion.IsApplied;
         public string ExpansionStatusText => IsExpansionApplied
@@ -157,6 +255,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── Runtime constructor ────────────────────────────────────────────────
         public BtxEditorViewModel(bool _)
         {
+            try { _hasRenderTable = OverworldSpriteTableExpansion.IsRenderTableAvailable; }
+            catch (Exception ex) { AppLogger.Error("Render table lookup failed: " + ex.Message); }
             LoadEntryList();
             if (OwEntries.Count > 0)
             {
@@ -171,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OwEntries.Clear();
             foreach (var key in _owKeys)
                 OwEntries.Add(OverworldLabels.Of(key)
-                    + (IsPlatinum && OverworldSpriteTableExpansion.IsCustomEntry(key) ? " (custom)" : ""));
+                    + (IsExpansionApplied && OverworldSpriteTableExpansion.IsCustomEntry(key) ? " (custom)" : ""));
         }
 
         // ── Load entry ─────────────────────────────────────────────────────────
@@ -191,6 +291,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             uint key    = _owKeys[index];
             uint sprite = RomInfo.OverworldTable[key].spriteID;
+            if (sprite == 0x3D3D)
+            {
+                _btxData = null;
+                CurrentImage = null;
+                HasShinyPalette = false;
+                OnPropertyChanged(nameof(ShinyPaletteNote));
+                StatusText = RomInfo.IsVariableOverworld(key)
+                    ? "This id takes its picture from a map variable."
+                    : "This object is a 3D model.";
+                LoadOverworldProperties(key);
+                return;
+            }
             string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
 
             if (_modifiedFiles.TryGetValue(key, out byte[] mod))
@@ -223,7 +335,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void LoadOverworldProperties(uint key)
         {
-            if (!IsPlatinum) { ClearOverworldProperties(); return; }
+            if (!HasRenderTable) { ClearOverworldProperties(); return; }
 
             IsSelectedEntryCustom = OverworldSpriteTableExpansion.IsCustomEntry(key);
 

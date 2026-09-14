@@ -347,7 +347,7 @@ namespace NSMBe4.NSBMD
 
         readonly int[] bitDepth = { 0, 8, 2, 4, 8, 2, 8, 16 };
 
-        public NSBTX_File(FileStream f) {
+        public NSBTX_File(Stream f) {
             using (EndianBinaryReader er = new EndianBinaryReader(f, Endianness.LittleEndian)) {
                 if (f.Length <= 4) {
                     AppMessages.Error("Error: Texture file is too small.");
