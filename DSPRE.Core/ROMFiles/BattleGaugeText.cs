@@ -6,11 +6,8 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The letters a battle writes onto a gauge, none of which are in the gauge picture: the name comes
-    /// from the system font, the numbers from a small number font, and "Lv" and the gender symbol from
-    /// tiles in the battle overlay. The overlay is found by searching it for the number font's own "Lv"
-    /// rather than by address, so a romhack that has moved things still works. Diamond and Pearl lay
-    /// theirs out differently, so <see cref="IsAvailable"/> says no and the caller falls back.
+    /// The letters a battle writes onto a gauge. "Lv" and the gender symbol are found by searching the
+    /// battle overlay rather than by address, so a romhack that has moved things still works.
     /// </summary>
     public static class BattleGaugeText
     {
@@ -31,33 +28,67 @@ namespace DSPRE.ROMFiles
         /// <summary>The "Lv" the gauge shares with the number font, which is what finds the overlay.</summary>
         private const int BattleLvRightHalf = 24;
 
-        // In the overlay, each gender block is 16 by 16: two tiles across, two down. The gauge draws the
-        // "Lv" four rows lower than the tile top, which is why only half of it matches the font.
-        private static readonly Dictionary<Gender, int[]> GenderBlocks = new()
-        {
-            [Gender.Female] = new[] { 0x3c, 0x3d, 0x48, 0x49 },
-            [Gender.Male] = new[] { 0x3e, 0x3f, 0x4a, 0x4b },
-            [Gender.Genderless] = new[] { 0x40, 0x41, 0x4c, 0x4d },
-        };
-
         /// <summary>The slash between the two HP numbers, which the games place at this tile.</summary>
         private const int SlashTile = 0x45;
 
         /// <summary>What is wrong with a Pokemon, as the gauge shows it.</summary>
         public enum Status { None, Paralysis, Freeze, Sleep, Poison, Burn }
 
-        // Each status word is three tiles across and one row tall, which is why they sit three apart.
-        // Both Platinum and HeartGold put them in the same places. Badly poisoned has no word of its
-        // own: the games show the same one as ordinary poison.
+        private sealed class Layout
+        {
+            public int AnchorAt;             // bytes from tile 0 to the half tile of "Lv" the search finds
+            public int TableTiles;
+            public Dictionary<Gender, int[]> Genders;
+            public bool GenderIsOneRow;      // two tiles to be drawn four rows lower, not a 2 by 2 block
+            public int NoStatusTile;
+            public byte DigitShadow;
+        }
+
+        // Platinum and HeartGold store each gender block 16 by 16, already lowered four rows, so only half
+        // its "Lv" matches the font. Badly poisoned reuses the poison word.
+        private static readonly Layout PlatinumAndJohto = new()
+        {
+            AnchorAt = 0x49 * 32,
+            TableTiles = 0x4e,
+            Genders = new()
+            {
+                [Gender.Female] = new[] { 0x3c, 0x3d, 0x48, 0x49 },
+                [Gender.Male] = new[] { 0x3e, 0x3f, 0x4a, 0x4b },
+                [Gender.Genderless] = new[] { 0x40, 0x41, 0x4c, 0x4d },
+            },
+            NoStatusTile = 0x26,
+            DigitShadow = 2,
+        };
+
+        // Diamond and Pearl keep the mark and "Lv" as one 16 by 8 row that the gauge lowers four rows as it draws.
+        private static readonly Layout DiamondPearl = new()
+        {
+            AnchorAt = 0x3d * 32 + 16,
+            TableTiles = 0x46,
+            Genders = new()
+            {
+                [Gender.Female] = new[] { 0x3c, 0x3d },
+                [Gender.Male] = new[] { 0x3e, 0x3f },
+                [Gender.Genderless] = new[] { 0x40, 0x41 },
+            },
+            GenderIsOneRow = true,
+            NoStatusTile = 0x38,
+            DigitShadow = 1,
+        };
+
+        private static Layout Current => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? DiamondPearl : PlatinumAndJohto;
+
         private static readonly Dictionary<Status, int> StatusWords = new()
         {
-            [Status.None] = 0x26,
             [Status.Paralysis] = 0x29,
             [Status.Freeze] = 0x2c,
             [Status.Sleep] = 0x2f,
             [Status.Poison] = 0x32,
             [Status.Burn] = 0x35,
         };
+
+        /// <summary>The colour a digit's shadow placeholder becomes in this game's battle.</summary>
+        public static byte DigitShadow => Current.DigitShadow;
 
         /// <summary>How many tiles across a status word is.</summary>
         public const int StatusTiles = 3;
@@ -92,8 +123,19 @@ namespace DSPRE.ROMFiles
         public static Tile[] GenderAndLv(Gender gender)
         {
             var read = Read();
-            if (read == null || !GenderBlocks.TryGetValue(gender, out int[] tiles)) return null;
-            return tiles.Select(t => TileAt(read.Overlay, read.TilesAt + t * 32)).ToArray();
+            var layout = Current;
+            if (read == null || !layout.Genders.TryGetValue(gender, out int[] tiles)) return null;
+            var stored = tiles.Select(t => TileAt(read.Overlay, read.TilesAt + t * 32)).ToArray();
+            if (!layout.GenderIsOneRow) return stored;
+
+            // Uncovered rows take the strip's background, or the bar would show through.
+            byte ground = stored[1].Pixels[0];
+            var block = new[] { new Tile(), new Tile(), new Tile(), new Tile() };
+            foreach (var t in block) Array.Fill(t.Pixels, ground);
+            for (int side = 0; side < 2; side++)
+                for (int y = 0; y < 8; y++)
+                    Array.Copy(stored[side].Pixels, y * 8, block[y < 4 ? side : side + 2].Pixels, ((y + 4) % 8) * 8, 8);
+            return block;
         }
 
         /// <summary>
@@ -103,7 +145,8 @@ namespace DSPRE.ROMFiles
         public static Tile[] StatusWord(Status status)
         {
             var read = Read();
-            if (read == null || !StatusWords.TryGetValue(status, out int first)) return null;
+            int first = status == Status.None ? Current.NoStatusTile : StatusWords.TryGetValue(status, out int at) ? at : -1;
+            if (read == null || first < 0) return null;
             return Enumerable.Range(0, StatusTiles)
                              .Select(i => TileAt(read.Overlay, read.TilesAt + (first + i) * 32))
                              .ToArray();
@@ -139,9 +182,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Which entry of the font archive holds the number font, or -1 when we do not know.</summary>
         private static int NumberFontEntry => RomInfo.gameFamily switch
         {
+            RomInfo.GameFamilies.DP => 4,
             RomInfo.GameFamilies.Plat => 4,
             RomInfo.GameFamilies.HGSS => 5,
-            _ => -1,                          // DP is laid out differently, see the note on the class
+            _ => -1,
         };
 
         private static Pieces Read()
@@ -155,7 +199,7 @@ namespace DSPRE.ROMFiles
             int entry = NumberFontEntry;
             if (entry < 0)
             {
-                _why = "Only Platinum and HeartGold or SoulSilver are read this way so far.";
+                _why = "This game's gauge text is not read yet.";
                 return null;
             }
 
@@ -183,9 +227,10 @@ namespace DSPRE.ROMFiles
                 int at = IndexOf(bytes, needle);
                 if (at < 0) continue;
 
-                // That half tile is the lower left of the female block, eight tiles before the slash.
-                int tilesAt = at - 0x41 * 32 - 8 * 32;
-                if (tilesAt < 0 || tilesAt + 0x4e * 32 > bytes.Length) continue;
+                // That half tile belongs to the female "Lv", whose place in the table differs by family.
+                var layout = Current;
+                int tilesAt = at - layout.AnchorAt;
+                if (tilesAt < 0 || tilesAt + layout.TableTiles * 32 > bytes.Length) continue;
 
                 _read = new Pieces
                 {
@@ -209,6 +254,8 @@ namespace DSPRE.ROMFiles
                 return null;
             }
 
+            // Not every editor that draws a gauge unpacks the fonts first, and a failed read is kept for the ROM.
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.fonts });
             string dir = RomInfo.gameDirs[RomInfo.DirNames.fonts].unpackedDir;
             if (!Directory.Exists(dir)) { _why = "The font archive is not unpacked."; return null; }
 
