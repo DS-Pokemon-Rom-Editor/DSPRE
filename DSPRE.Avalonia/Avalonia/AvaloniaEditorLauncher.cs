@@ -88,6 +88,10 @@ namespace DSPRE.Avalonia
 
             try
             {
+                // The species list is counted from the personal data, which a fresh project has not unpacked yet.
+                await RunBusyAsync("Opening Audio Editor…", UnpackHint,
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }));
+
                 string[] names;
                 try { names = GetPokemonNamesWithForms(GetPersonalFilesCount()); }
                 catch { names = System.Array.Empty<string>(); }
@@ -315,8 +319,8 @@ namespace DSPRE.Avalonia
 
         public static void OpenTableEditor()
         {
-            // Nothing in this editor (conditional music / battle-FX combos / VS posters) exists on DP.
-            if (!IsRomLoaded || gameFamily == GameFamilies.DP) return;
+            // Diamond and Pearl have only the effect combos, and only on supported ROMs.
+            if (!IsRomLoaded || (gameFamily == GameFamilies.DP && !DSPRE.ROMFiles.BattleMusicTables.IsSupported)) return;
             new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
@@ -673,6 +677,13 @@ namespace DSPRE.Avalonia
         public static void OpenCellAnimationEditor(RomInfo.DirNames dir, int animation, int cells,
                                                    int sprites, int palette, int paletteRow, string what,
                                                    int sharedSheet = -1, int poketchApp = -1)
+            => OpenCellAnimationEditor(Data.ArchiveFiles.Mapped(dir), animation, cells, sprites, palette, paletteRow,
+                                       what, sharedSheet, poketchApp);
+
+        /// <summary>The same, for an archive DSPRE does not map, which is read and saved in place.</summary>
+        public static void OpenCellAnimationEditor(Data.ArchiveFiles source, int animation, int cells,
+                                                   int sprites, int palette, int paletteRow, string what,
+                                                   int sharedSheet = -1, int poketchApp = -1)
         {
             if (!IsRomLoaded) return;
             if (animation < 0)
@@ -689,7 +700,7 @@ namespace DSPRE.Avalonia
             try
             {
                 var vm = new ViewModels.Graphics.CellAnimationEditorViewModel(
-                    dir, animation, cells, sprites, palette, paletteRow, what, sharedSheet, poketchApp);
+                    source, animation, cells, sprites, palette, paletteRow, what, sharedSheet, poketchApp);
                 new Views.Graphics.CellAnimationEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
@@ -710,7 +721,7 @@ namespace DSPRE.Avalonia
             if (!RomInfo.IsBottomScreenEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
-                    "The Bottom Screen editor is available for Platinum, HeartGold and SoulSilver ROMs.",
+                    "The Bottom Screen editor is available for Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs.",
                     "Bottom Screen");
                 return;
             }
@@ -756,7 +767,7 @@ namespace DSPRE.Avalonia
             if (!RomInfo.IsTrainerCardEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
-                    "The Trainer Card editor is available for Platinum, HeartGold and SoulSilver ROMs.",
+                    "The Trainer Card editor is available for Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs.",
                     "Trainer Card Editor");
                 return;
             }
@@ -766,6 +777,107 @@ namespace DSPRE.Avalonia
                 return;
             }
             new TrainerCardEditorView().ShowManaged();
+        }
+
+        /// <summary>Opens one particle file for editing; <paramref name="changed"/> hears which entry was saved.</summary>
+        public static void OpenParticleEditor(DirNames archive, int entry, string what, System.Action<int> changed,
+                                              bool orthographic = false)
+        {
+            if (!IsRomLoaded) return;
+            if (gameDirs.ContainsKey(archive)) DSUtils.TryUnpackNarcs(new List<DirNames> { archive });
+            OpenParticleEditor(Data.ArchiveFiles.Mapped(archive), entry, what, changed, orthographic);
+        }
+
+        /// <summary>The same, for any archive, including ones DSPRE does not map, which are saved in place.</summary>
+        public static void OpenParticleEditor(Data.ArchiveFiles source, int entry, string what, System.Action<int> changed,
+                                              bool orthographic = false)
+        {
+            if (!IsRomLoaded) return;
+            if (!BetaEditors.Allows("ParticleEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("ParticleEditorView")!, "Particles");
+                return;
+            }
+            try
+            {
+                var vm = new ViewModels.Graphics.ParticleEditorViewModel(source, entry, what, changed, orthographic);
+                new Views.Graphics.ParticleEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenParticleEditor failed: " + ex.Message);
+                _ = DialogHelper.ShowInfo("These particles could not be opened. " + ex.Message, "Particles");
+            }
+        }
+
+        /// <summary>Lists every particle file by what it is for.</summary>
+        public static void OpenParticleLibrary() => _ = OpenParticleLibraryAsync();
+
+        public static async System.Threading.Tasks.Task OpenParticleLibraryAsync()
+        {
+            if (!IsRomLoaded) return;
+            if (!BetaEditors.Allows("ParticleLibraryView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("ParticleLibraryView")!, "Particles");
+                return;
+            }
+            try
+            {
+                var vm = new ViewModels.Graphics.ParticleLibraryViewModel();
+                await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM", () =>
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> {
+                        DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub }
+                        .Where(d => gameDirs.ContainsKey(d)).ToList());
+                    vm.Gather();
+                });
+                vm.Ready();
+                new Views.Graphics.ParticleLibraryView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenParticleLibrary failed: " + ex.Message);
+                await DialogHelper.ShowInfo("The particles could not be listed. " + ex.Message, "Particles");
+            }
+        }
+
+        public static void OpenBallCapsuleEditor() => _ = OpenBallCapsuleEditorAsync();
+
+        /// <summary>Opens Ball Capsules on one trainer capsule, numbered the way a party entry names it.</summary>
+        public static void OpenBallCapsuleEditorAt(int trainerCapsule) => _ = OpenBallCapsuleEditorAsync(trainerCapsule);
+
+        public static async System.Threading.Tasks.Task OpenBallCapsuleEditorAsync(int trainerCapsule = 0)
+        {
+            if (!IsRomLoaded) return;
+            if (!BetaEditors.Allows("BallCapsuleEditorView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("BallCapsuleEditorView")!, "Ball Capsules");
+                return;
+            }
+            Dictionary<int, List<string>> usedBy = null;
+            try
+            {
+                await RunBusyAsync("Opening Ball Capsules…", UnpackHint, () =>
+                {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> {
+                        DirNames.personalPokeData, DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites,
+                        DirNames.monIcons, DirNames.sealGraphics, DirNames.trainerCapsules, DirNames.fonts, DirNames.windowFrames }
+                        .Where(d => gameDirs.ContainsKey(d)).ToList());
+                    Data.SendOutGraphics.Unpack();
+                    usedBy = Data.TrainerCapsuleCatalog.UsedBy();
+                });
+                SetMonIconsPalTableAddress();
+
+                string[] names = GetPokemonNamesWithForms(GetPersonalFilesCount());
+                var vm = new ViewModels.Graphics.BallCapsuleEditorViewModel(names) { UsedBy = usedBy };
+                if (trainerCapsule > 0) vm.CapsuleIndex = trainerCapsule;
+                new Views.Graphics.BallCapsuleEditorView(vm).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                AppLogger.Error("OpenBallCapsuleEditor failed: " + ex.Message);
+                await DialogHelper.ShowError("The Ball Capsule editor could not be opened: " + ex.Message, "Ball Capsules");
+            }
         }
 
         public static async System.Threading.Tasks.Task OpenBannerEditorAsync()
@@ -971,6 +1083,7 @@ namespace DSPRE.Avalonia
             {
                 ($"Go to Pokémon #{n}",        "pokemon species mon personal", () => { _ = OpenPokemonEditorAsync(n); }),
                 ($"Go to Move #{n}",           "move attack",                  () => OpenMoveDataEditor(n)),
+                ($"Go to Move animation #{n}", "move animation effect particles", () => OpenBattleScriptEditor(3, n)),
                 ($"Go to TM / HM #{n}",        "tm hm machine",                () => OpenTMEditor(n)),
                 ($"Go to Item #{n}",           "item",                         () => OpenItemEditor(n)),
                 ($"Go to Trainer #{n}",        "trainer battle party",         () => OpenTrainerEditor(n)),
@@ -1014,10 +1127,10 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the graphics window already looking at one file.</summary>
-        public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex)
-            => _ = OpenGraphicAtAsync(archive, fileIndex);
+        public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex, bool preferAssembled = false)
+            => _ = OpenGraphicAtAsync(archive, fileIndex, preferAssembled);
 
-        private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex)
+        private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex, bool preferAssembled)
         {
             try
             {
@@ -1031,7 +1144,7 @@ namespace DSPRE.Avalonia
                 var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
                 await RunBusyAsync("Opening Graphics…", UnpackHint, vm.Scan);
                 vm.Publish();
-                bool found = vm.JumpTo(a, fileIndex);
+                bool found = vm.JumpTo(a, fileIndex, preferAssembled);
                 new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
                 if (!found)
                     vm.Status = "That graphic could not be found in this game, so the whole list is shown instead.";
@@ -1070,16 +1183,18 @@ namespace DSPRE.Avalonia
                     return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(fileIndex / 6); });
 
                 case RomInfo.DirNames.monIcons:
-                    // Seven files come before the run of one per Pokemon.
-                    int species = fileIndex - 7;
-                    if (species < 0) return null;
-                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(species); });
+                {
+                    var icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(fileIndex);
+                    if (icon == null) return null;
+                    int entry = icon.EditorId;
+                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(entry); });
+                }
 
                 case RomInfo.DirNames.trainerGraphics:
-                    return ("Trainer Sprite Editor", () => OpenTrainerSpriteEditor(fileIndex / 5));
+                    return ("Trainer Sprite Editor", () => OpenTrainerSpriteEditor(TrainerGraphicsLayout.ClassOf(fileIndex)));
 
                 case RomInfo.DirNames.trainerBackGraphics:
-                    return ("Trainer Back Sprite Editor", () => OpenTrainerBackSpriteEditor(fileIndex / 5));
+                    return ("Trainer Back Sprite Editor", () => OpenTrainerBackSpriteEditor(TrainerGraphicsLayout.ClassOf(fileIndex)));
 
                 case RomInfo.DirNames.itemIcons:
                 {
@@ -1096,6 +1211,9 @@ namespace DSPRE.Avalonia
 
                 case RomInfo.DirNames.trainerCardGraphics:
                     return ("Trainer Card Editor", OpenTrainerCardEditor);
+
+                case RomInfo.DirNames.sealGraphics:
+                    return ("Ball Capsules", OpenBallCapsuleEditor);
 
                 default:
                     return null;
@@ -1155,18 +1273,9 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
 
-            // Diamond and Pearl lay the battle screen out differently enough that this editor cannot
-            // read it, and it was failing to open at all rather than saying so.
-            if (DSPRE.RomInfo.gameFamily == DSPRE.RomInfo.GameFamilies.DP)
+            if (!BetaEditors.Allows("BattleScreenEditorView"))
             {
-                await DialogHelper.ShowInfo(
-                    "The battle screen is only read on Platinum, HeartGold and SoulSilver so far. "
-                  + "Diamond and Pearl keep its pieces elsewhere.", "Battle screen");
-                return;
-            }
-            if (!BetaEditors.Allows("MartEditorView"))
-            {
-                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("MartEditorView"), "Mart Editor");
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("BattleScreenEditorView"), "Battle screen");
                 return;
             }
             if (BlockedForHgeArchive("The Battle Screen Editor",
@@ -1235,6 +1344,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Cell Animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
             new() { Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
             new() { Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
+            new() { Name = "Particles",             Keywords = "spa particle emitter effect move animation seal burst sparkle", Run = OpenParticleLibrary },
+            new() { Name = "Ball Capsules",         Keywords = "seal sticker capsule poke ball send out particles effect", Run = OpenBallCapsuleEditor },
             new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
