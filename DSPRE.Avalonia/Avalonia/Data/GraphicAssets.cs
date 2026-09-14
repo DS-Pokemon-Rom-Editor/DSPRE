@@ -56,6 +56,9 @@ namespace DSPRE.Avalonia.Data
             public Func<int, int> PixelWidthOf; // when the width differs entry by entry; 0 to fall back
             public bool ScrambledPixels;        // the pixels are run through a rolling key and must be undone
 
+            /// <summary>Whether the pixels are scrambled, when that differs by game.</summary>
+            public Func<bool> ScrambledNow;
+
             // Several of these files hold more than one picture: a party icon is two frames of an animation
             // stacked up, a battle sprite is two side by side.
             public int FrameWidth, FrameHeight; // 0 for both when the file holds a single picture
@@ -356,7 +359,7 @@ namespace DSPRE.Avalonia.Data
                 NameOf = i => AlternateFormSprites.WhoOwns(i)?.Form.Name,
                 BuildUnits = count => AlternateFormSprites.UnitsFor(
                     All.First(x => x.Dir == DirNames.otherPokemonBattleSprites), count) },
-            // Seven files come first, then one icon per Pokemon, per DSUtils.cs:1338 (species + 7).
+            // Seven shared files, then one icon per Pokemon, then eggs and forms (PokemonIconFiles).
             new Archive { Dir = DirNames.monIcons, Title = "Pokemon party icons", In = Group.PokemonIcons,
                 What = "The small pictures used in the party, the box and the menus.",
                 Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokemon Editor",
@@ -366,34 +369,45 @@ namespace DSPRE.Avalonia.Data
                     if (i < 7) return 0;
                     try { return DSUtils.GetMonIconPaletteId(i - 7); } catch { return 0; }
                 },
-                NameOf = i => i < 7 ? null : FromList(RomInfo.GetPokemonNames, i - 7),
+                NameOf = i =>
+                {
+                    var icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(i);
+                    if (icon == null) return null;
+                    try { return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, RomInfo.GetPokemonNames()); }
+                    catch { return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, null); }
+                },
                 BuildUnits = n => GraphicUnits.PartyIcons(All.First(x => x.Dir == DirNames.monIcons), n) },
 
-            // Five files per trainer class, per TrainerSpriteEditorViewModel.cs:646-678.
             new Archive { Dir = DirNames.trainerGraphics, Title = "Trainer sprites", In = Group.Trainers,
                 What = "Every trainer class as it appears when a battle starts.",
                 DeepEditor = "Trainer Sprite Editor",
                 Stride = 5,
                 PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
-                StrideNow = () => RomInfo.gameFamily == RomInfo.GameFamilies.DP ? 2 : 5,
-                PartNamesNow = () => RomInfo.gameFamily == RomInfo.GameFamilies.DP
-                    ? new[] { "Drawing", "Colours" }
-                    : new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
-                // Five files a class, and which is which is not a guess: TrainerClassSpriteRenderer reads
-                // the drawing at 5n, the colours at 5n+1, the layout at 5n+2 and the animation at 5n+3.
-                ColourEntry = i => (i / 5) * 5 + 1,
-                DrawingEntry = i => (i / 5) * 5,
-                NameOf = i => FromList(RomInfo.GetTrainerClassNames, i / 5) },
+                StrideNow = () => TrainerGraphicsLayout.Stride,
+                ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                PartNamesNow = () => TrainerGraphicsLayout.HasCells
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" }
+                    : new[] { "Drawing", "Colours" },
+                ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
+                DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
+                NameOf = i => FromList(RomInfo.GetTrainerClassNames, TrainerGraphicsLayout.ClassOf(i)) },
             new Archive { Dir = DirNames.trainerBackGraphics, Title = "Trainer back sprites", In = Group.Trainers,
                 What = "The player and partners seen from behind, throwing a Poké Ball.",
                 DeepEditor = "Trainer Back Sprite Editor",
                 Stride = 5,
                 PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
-                ColourEntry = i => (i / 5) * 5 + 1,
-                DrawingEntry = i => (i / 5) * 5,
-                NameOf = i => DSPRE.ROMFiles.TrainerBackSprites.Names(i / 5 + 1)[i / 5] },
+                StrideNow = () => TrainerGraphicsLayout.Stride,
+                ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                PartNamesNow = () => TrainerGraphicsLayout.HasCells
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" }
+                    : new[] { "Drawing", "Colours" },
+                ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
+                DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
+                NameOf = i => DSPRE.ROMFiles.TrainerBackSprites.Names(TrainerGraphicsLayout.ClassOf(i) + 1)[TrainerGraphicsLayout.ClassOf(i)] },
             new Archive { Dir = DirNames.trainerCardGraphics, Title = "Trainer card", In = Group.Trainers,
                 What = "The trainer card's face and back, and the poses drawn on it.",
+                DrawingEntry = GraphicUnits.TrainerCardDrawingFor,
+                ColourEntry = GraphicUnits.TrainerCardColoursFor,
                 BuildUnits = n => GraphicUnits.TrainerCard(
                     All.First(x => x.Dir == DirNames.trainerCardGraphics), n) },
 
@@ -463,10 +477,22 @@ namespace DSPRE.Avalonia.Data
                 What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the "
                      + "weather; in HeartGold and SoulSilver it is something else.",
                 DeepEditor = "Header Editor" },
-            // Grouped by what the files are rather than by anything the games say about them.
-            new Archive { Dir = DirNames.dynamicHeaders, Title = "Location banner", In = Group.Places,
+            new Archive { Dir = DirNames.weatherGraphics, Title = "Weather", In = Group.Windows,
+                What = "The weather drawn over the map screen.",
+                DeepEditor = "Header Editor" },
+            // One drawing and its colours per banner style, numbered one below the header's area icon.
+            new Archive { Dir = DirNames.areaWindowGraphics, Title = "Location banner", In = Group.Places,
                 What = "The banner shown when you walk into a new place.", DeepEditor = "Header Editor",
-                BuildUnits = n => GraphicUnits.ByDrawing(All.First(x => x.Dir == DirNames.dynamicHeaders), n) },
+                ColourEntry = i => i | 1,
+                BuildUnits = n => GraphicUnits.AreaWindows(All.First(x => x.Dir == DirNames.areaWindowGraphics), n) },
+
+            // Seal stickers share one set of colours; the capsule screens have their own.
+            new Archive { Dir = DirNames.sealGraphics, Title = "Ball Capsules", In = Group.Items,
+                What = "The seals stuck on a Ball Capsule and the screens they are placed on.",
+                DeepEditor = "Ball Capsules",
+                BuildUnits = n => GraphicUnits.SealGraphics(All.First(x => x.Dir == DirNames.sealGraphics), n),
+                ColourEntry = i => gameFamily == GameFamilies.HGSS ? (i is >= 39 and <= 119 ? 6 : -1)
+                                 : i is >= 184 and <= 264 ? 293 : i == 267 ? 287 : i is 268 or 269 ? 288 : -1 },
 
             new Archive { Dir = DirNames.dungeonCutinGraphics, Title = "Place splash screens", In = Group.Places,
                 BuildUnits = n => DungeonCutinTable.UnitsFor(
@@ -490,7 +516,7 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.poketch, Title = "Pokétch", In = Group.BottomScreen,
                 What = "The Pokétch on the bottom screen: its casing in both colours, every application's "
                      + "screen and sprites, and the Poké Ball picture shown before you are given one. "
-                     + "Platinum only.",
+                     + "Diamond, Pearl and Platinum.",
                 DeepEditor = "Bottom Screen Editor",
                 // Nearly everything here is painted with the theme colours in member 0, which is nowhere
                 // near the drawing, so the nearest-palette rule would pick up the wrong ones.

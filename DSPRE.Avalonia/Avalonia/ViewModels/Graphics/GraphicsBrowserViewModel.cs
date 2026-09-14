@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>
         /// Opens the window already looking at one file, for an editor handing a graphic over.
         /// </summary>
-        public bool JumpTo(GraphicAssets.Archive archive, int fileIndex)
+        public bool JumpTo(GraphicAssets.Archive archive, int fileIndex, bool preferAssembled = false)
         {
             if (archive == null) return false;
 
@@ -116,7 +116,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!Shown.Contains(row)) Shown.Insert(0, row);
             Selected = row;
 
-            int at = Parts.ToList().FindIndex(pt => pt.Index == fileIndex);
+            // A sprite whose drawing is scattered tiles reads as broken, so a caller can land on it put together.
+            int at = preferAssembled ? Parts.ToList().FindIndex(pt => pt.Name == "As it appears") : -1;
+            if (at < 0) at = Parts.ToList().FindIndex(pt => pt.Index == fileIndex);
             if (at >= 0) PartIndex = at;
             return true;
         }

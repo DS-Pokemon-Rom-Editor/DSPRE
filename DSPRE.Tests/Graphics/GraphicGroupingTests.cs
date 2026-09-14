@@ -40,7 +40,8 @@ namespace DSPRE.Tests
                  || partName.StartsWith("Their layout", StringComparison.Ordinal)
                  || partName.StartsWith("Arrangement", StringComparison.Ordinal)
                  || partName.StartsWith("Timing", StringComparison.Ordinal)
-                 || partName.StartsWith("Shiny colours", StringComparison.Ordinal));
+                 || partName.StartsWith("Shiny colours", StringComparison.Ordinal)
+                 || partName.EndsWith(", shared", StringComparison.Ordinal));
 
         [Theory]
         [MemberData(nameof(Games))]
@@ -73,7 +74,9 @@ namespace DSPRE.Tests
                     {
                         if (pt.Archive != null && pt.Archive.Dir != a.Dir) continue;
                         if (!owners.TryGetValue(pt.Index, out var who)) owners[pt.Index] = who = new List<string>();
-                        if (MustBeExclusive(pt.Name)) who.Add(u.Name);
+                        // A part seen through its row's own view of the archive shows a file the rows share.
+                        bool view = pt.Archive != null && !ReferenceEquals(pt.Archive, u.Archive);
+                        if (MustBeExclusive(pt.Name) && !view) who.Add(u.Name);
                         else if (who.Count == 0) who.Add("(shared) " + u.Name);
                     }
 
@@ -93,6 +96,43 @@ namespace DSPRE.Tests
             Assert.True(archives > 10, $"{game}: only {archives} archives were read");
             Assert.Empty(missing);
             Assert.Empty(doubled);
+        }
+
+        /// <summary>The weather's names run one to one with its files and say what each file is.</summary>
+        [SkippableTheory]
+        [MemberData(nameof(Games))]
+        public void TheWeatherNamesMatchTheWeatherFiles(string code, string path, string game)
+        {
+            Skip.If(!Directory.Exists(path), $"{game} not unpacked here");
+            new RomInfo(code, path);
+
+            var dir = NamedArchives.WeatherDir;
+            var narc = new ScriptNarc(dir);
+            Skip.If(!narc.Available, $"{game} has no weather archive");
+            var names = NamedArchives.Names(dir);
+            _out.WriteLine($"{game}: {dir}, {narc.Count} files, {names.Count} names");
+            Assert.Equal(narc.Count, names.Count);
+
+            int checkedKinds = 0;
+            for (int i = 0; i < names.Count; i++)
+            {
+                var (_, part) = BattleObjects.Split(names[i]);
+                GraphicAssets.Kind? wanted = part switch
+                {
+                    "Drawing" => GraphicAssets.Kind.TileGraphic,
+                    "Colours" => GraphicAssets.Kind.Palette,
+                    "Arrangement" => GraphicAssets.Kind.TileMap,
+                    "As it appears" => GraphicAssets.Kind.CellLayout,
+                    "Animation" => GraphicAssets.Kind.CellAnimation,
+                    _ => null,
+                };
+                if (wanted == null) continue;
+                var kind = GraphicAssets.Identify(GraphicAssets.Unsqueeze(narc.Get(i)));
+                Assert.True(kind == wanted, $"{game}: file {i} is named {names[i]} but is {kind}");
+                checkedKinds++;
+            }
+            _out.WriteLine($"{game}: {checkedKinds} files are the kind their names say");
+            Assert.True(checkedKinds > 20, $"{game}: only {checkedKinds} names said what their file is");
         }
 
         /// <summary>The check above proves able to fail: an archive whose grouping drops a file has to be

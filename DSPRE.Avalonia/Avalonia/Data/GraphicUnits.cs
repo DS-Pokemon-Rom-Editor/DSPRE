@@ -139,6 +139,8 @@ namespace DSPRE.Avalonia.Data
                 if (files == null) continue;
                 var (mine, enemy, mineCell, enemyCell, palDay) = files.Value;
                 if (mine >= fileCount || enemy >= fileCount || palDay + 2 >= fileCount) continue;
+                // The bridge borrows both sides from other terrains, so it has no files of its own to show.
+                if (spokenFor.Contains(mine) && spokenFor.Contains(enemy)) continue;
 
                 var u = new GraphicAssets.Unit
                 {
@@ -293,6 +295,64 @@ namespace DSPRE.Avalonia.Data
             var u = new GraphicAssets.Unit { Archive = a, Name = name };
             u.Parts.Add(Part(a, index, part));
             return u;
+        }
+
+
+        // ── the Ball Capsule editor's seals and screens ────────────────────────────────────────────
+
+        /// <summary>One row per seal, drawn through its layout, plus the capsule editor's screens.</summary>
+        public static List<GraphicAssets.Unit> SealGraphics(GraphicAssets.Archive a, int fileCount)
+        {
+            var units = new List<GraphicAssets.Unit>();
+            var spokenFor = new HashSet<int>();
+            void Row(string name, bool claim, params (int Index, string Part)[] parts)
+            {
+                var u = new GraphicAssets.Unit { Archive = a, Name = name };
+                foreach (var (index, part) in parts)
+                {
+                    if (index < 0 || index >= fileCount) continue;
+                    u.Parts.Add(Part(a, index, part));
+                    if (claim) spokenFor.Add(index);
+                }
+                if (u.Parts.Count > 0) units.Add(u);
+            }
+
+            bool johto = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            int layout = johto ? 38 : 93, animation = johto ? 36 : 1, colours = johto ? 6 : 293;
+            IReadOnlyList<DSPRE.ROMFiles.BallSeal> seals;
+            try { seals = DSPRE.ROMFiles.BallSeals.Read(); } catch { seals = Array.Empty<DSPRE.ROMFiles.BallSeal>(); }
+            foreach (var seal in seals)
+            {
+                if (seal == null || seal.Sprite >= fileCount) continue;
+                // Every sticker shares one layout, so each row's view of it names that seal's own drawing and colours.
+                int sprite = seal.Sprite;
+                var own = new GraphicAssets.Archive
+                {
+                    Dir = a.Dir, Title = a.Title, In = a.In, What = a.What, DeepEditor = a.DeepEditor,
+                    DrawingEntry = i => i == layout ? sprite : -1,
+                    ColourEntry = i => i == layout || i == sprite ? colours : (a.ColourEntry?.Invoke(i) ?? -1),
+                };
+                var u = new GraphicAssets.Unit { Archive = a, Name = $"{seal.Name} sticker" };
+                if (layout < fileCount)
+                    u.Parts.Add(new GraphicAssets.UnitPart { Archive = own, Index = layout, Name = "As it appears", Kind = GraphicAssets.Kind.CellLayout });
+                u.Parts.Add(Part(a, sprite, "Drawing"));
+                if (animation < fileCount) u.Parts.Add(Part(a, animation, "Animation, shared"));
+                if (colours < fileCount) u.Parts.Add(Part(a, colours, "Colours, shared"));
+                units.Add(u);
+                spokenFor.Add(sprite);
+            }
+            foreach (int shared in new[] { layout, animation, colours }) spokenFor.Add(shared);
+
+            if (!johto)
+            {
+                Row("Capsule editor, lower screen", true, (267, "Drawing"), (283, "Capsule arrangement"),
+                    (282, "Seal case arrangement"), (287, "Colours"));
+                Row("Capsule editor, top screen", true, (268, "Drawing"), (284, "Arrangement"),
+                    (269, "Second drawing"), (285, "Second arrangement"), (288, "Colours"));
+            }
+
+            FillGaps(units, a, fileCount, spokenFor);
+            return units;
         }
 
 
@@ -483,12 +543,77 @@ namespace DSPRE.Avalonia.Data
             try { return RomInfo.TrainerCardMembers.ncgr; } catch { return -1; }
         }
 
+        /// <summary>The drawing a card or pose arrangement is laid out from; the nearest drawing in the archive is a different picture.</summary>
+        public static int TrainerCardDrawingFor(int index)
+        {
+            try
+            {
+                var card = RomInfo.TrainerCardMembers;
+                if (index == card.facaNscr || index == card.backNscr) return card.ncgr;
+                var pose = RomInfo.TrainerCardTrainerMembers;
+                if (index == pose.maleNscr || index == pose.femaleNscr) return pose.ncgr;
+            }
+            catch { }
+            return -1;
+        }
+
+        /// <summary>The card and the pose are both drawn in the Normal rank's colours.</summary>
+        public static int TrainerCardColoursFor(int index)
+        {
+            try
+            {
+                var card = RomInfo.TrainerCardMembers;
+                var pose = RomInfo.TrainerCardTrainerMembers;
+                if (index == card.ncgr || index == card.facaNscr || index == card.backNscr
+                    || index == pose.ncgr || index == pose.maleNscr || index == pose.femaleNscr)
+                    return card.rankPalettes[0];
+            }
+            catch { }
+            return -1;
+        }
+
+        // ── the banner shown on entering a place ───────────────────────────────────────────────────
+
+        /// <summary>One row per banner style, a drawing and its colours, named as the Header Editor names it.</summary>
+        public static List<GraphicAssets.Unit> AreaWindows(GraphicAssets.Archive a, int fileCount)
+        {
+            var units = new List<GraphicAssets.Unit>();
+            var spokenFor = new HashSet<int>();
+            for (int style = 0; style * 2 + 1 < fileCount; style++)
+            {
+                var u = new GraphicAssets.Unit { Archive = a, Name = AreaWindowName(style) };
+                u.Parts.Add(Part(a, style * 2, "Drawing"));
+                u.Parts.Add(Part(a, style * 2 + 1, "Colours"));
+                spokenFor.Add(style * 2);
+                spokenFor.Add(style * 2 + 1);
+                units.Add(u);
+            }
+            FillGaps(units, a, fileCount, spokenFor);
+            return units;
+        }
+
+        // Area icon 0 shows no banner, so style k is the header's area icon k + 1.
+        private static string AreaWindowName(int style)
+        {
+            string label = null;
+            try
+            {
+                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+                    DSPRE.Resources.PokeDatabase.Area.HGSSAreaIconsDict.TryGetValue((byte)(style + 1), out label);
+                else if (style + 1 < DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues.Length)
+                    label = DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues[style + 1];
+            }
+            catch { }
+            if (label != null && label.StartsWith("[") && label.Contains(']')) label = label.Substring(label.IndexOf(']') + 1).Trim();
+            return string.IsNullOrEmpty(label) ? $"Banner {style + 1}" : $"{label} banner";
+        }
+
         // ── the small pictures in the party and the box ────────────────────────────────────────────
 
-        /// <summary>One row per Pokemon, with its alternate forms' icons under it. </summary>
+        /// <summary>One row per Pokemon, with its alternate forms' icons under it, and one for the eggs. </summary>
         public static List<GraphicAssets.Unit> PartyIcons(GraphicAssets.Archive a, int fileCount)
         {
-            const int LeadIn = 7;            // DSUtils.cs: the icon for a species is species + 7
+            const int LeadIn = DSPRE.ROMFiles.PokemonIconFiles.SharedFiles;
             var units = new List<GraphicAssets.Unit>();
             var spokenFor = new HashSet<int>();
 
@@ -507,40 +632,30 @@ namespace DSPRE.Avalonia.Data
             string[] names;
             try { names = RomInfo.GetPokemonNames(); } catch { names = Array.Empty<string>(); }
 
-            // Which forms belong to which Pokemon, from the same table the Pokemon Editor reads.
-            var formsOf = new Dictionary<int, List<(string Name, int IconId)>>();
-            try
+            // Files run species by species, then eggs and forms, so every species has its row before its forms.
+            var rowOf = new Dictionary<int, GraphicAssets.Unit>();
+            GraphicAssets.Unit eggs = null;
+            for (int file = LeadIn; file < fileCount; file++)
             {
-                foreach (var extra in DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles)
+                var icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(file);
+                if (icon == null) continue;
+
+                if (icon.IsEgg)
                 {
-                    if (!formsOf.TryGetValue(extra.monId, out var list))
-                        formsOf[extra.monId] = list = new List<(string, int)>();
-                    list.Add((extra.description, extra.iconId));
+                    if (eggs == null) units.Add(eggs = new GraphicAssets.Unit { Archive = a, Name = "Eggs" });
+                    eggs.Parts.Add(Part(a, file, DSPRE.ROMFiles.PokemonIconFiles.Label(icon, names)));
+                    spokenFor.Add(file);
+                    continue;
                 }
-            }
-            catch { }
 
-            for (int species = 0; species < names.Length; species++)
-            {
-                int file = species + LeadIn;
-                if (file >= fileCount) break;
-                string who = names[species]?.Trim();
-                if (string.IsNullOrEmpty(who) || who.Trim('-').Length == 0) continue;
-
-                var u = new GraphicAssets.Unit { Archive = a, Name = who };
-                u.Parts.Add(Part(a, file, "Icon"));
+                if (!rowOf.TryGetValue(icon.Species, out var u))
+                {
+                    string who = DSPRE.ROMFiles.PokemonIconFiles.Label(new DSPRE.ROMFiles.PokemonIconFiles.Icon { Species = icon.Species }, names);
+                    units.Add(u = new GraphicAssets.Unit { Archive = a, Name = who });
+                    rowOf[icon.Species] = u;
+                }
+                u.Parts.Add(Part(a, file, icon.Form ?? "Icon"));
                 spokenFor.Add(file);
-
-                if (formsOf.TryGetValue(species, out var forms))
-                    foreach (var f in forms)
-                    {
-                        int at = f.IconId + LeadIn;
-                        if (at < 0 || at >= fileCount || spokenFor.Contains(at)) continue;
-                        u.Parts.Add(Part(a, at, f.Name));
-                        spokenFor.Add(at);
-                    }
-
-                units.Add(u);
             }
 
             FillGaps(units, a, fileCount, spokenFor);
