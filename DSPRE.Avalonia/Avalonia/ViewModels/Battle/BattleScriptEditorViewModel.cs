@@ -535,6 +535,26 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
         }
 
+        /// <summary>The particle files this script loads, in load order, each with whether its slot draws orthographic.</summary>
+        public IReadOnlyList<(int File, bool Orthographic)> ParticleFilesOfMove()
+        {
+            var found = new List<(int File, bool Orthographic)>();
+            if (!IsWest) return found;
+            var projection = new Dictionary<int, int>();
+            foreach (var c in BuildCommands())
+            {
+                string op = WestOpcodes.Name(_version, c.OpId);
+                if (op == "WEST_CAMERA_CHG" && c.Args.Length >= 2) projection[c.Args[0]] = c.Args[1];
+                if (op is not ("WEST_LOAD_PARTICLE" or "WEST_LOAD_PARTICLE_EX") || c.Args.Length < 2) continue;
+                bool ortho = !projection.TryGetValue(c.Args[0], out int p) || p != 0;
+                if (!found.Exists(f => f.File == c.Args[1])) found.Add((c.Args[1], ortho));
+            }
+            return found;
+        }
+
+        /// <summary>The move being edited.</summary>
+        public int FileIndex => _fileIndex;
+
         private List<WazaSeqCommand> BuildCommands()
         {
             var list = new List<WazaSeqCommand>();
@@ -1087,6 +1107,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool ShadowHidden => IsCellPlaying && _hideShadowThisMove;
         public bool RealGaugesVisible => HasRealGauges && GaugesVisible;
         public bool PlaceholderGaugesVisible => !HasRealGauges && GaugesVisible;
+        public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
+        public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
 
         private int GetMoveFlagField(int moveId = -1)
         {
@@ -1170,6 +1192,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(nameof(ShowPlaceholderGauges));
                 OnPropertyChanged(nameof(RealGaugesVisible));
                 OnPropertyChanged(nameof(PlaceholderGaugesVisible));
+                OnPropertyChanged(nameof(PlayerGaugeImageLeft));
+                OnPropertyChanged(nameof(PlayerHealthFillLeft));
             }
             catch { }
         }

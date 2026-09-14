@@ -525,10 +525,11 @@ namespace DSPRE.Avalonia
                     case "WEST_LOAD_PARTICLE_EX":
                         if (c.Args.Length >= 2) _slot[c.Args[0]] = c.Args[1];
                         break;
-                    // CAMERA_CHG no,mode / CAMERA_REVERCE no,flag: set the per-particle-slot camera
-                    // mode/reverse flag; downstream anchor lookups use the turned-camera coordinate set, which
-                    // we reproduce by mirroring that slot's layers (ViewReversed).
+                    // CAMERA_CHG no,projection: 0 perspective, 1 orthographic. CAMERA_REVERCE no,flag turns the
+                    // camera round, shown by mirroring the slot's layers.
                     case "WEST_CAMERA_CHG":
+                        if (c.Args.Length >= 2) _cameraProjection[c.Args[0]] = c.Args[1];
+                        break;
                     case "WEST_CAMERA_REVERCE":
                         if (c.Args.Length >= 2) _cameraMode[c.Args[0]] = c.Args[1];
                         break;
@@ -777,7 +778,7 @@ namespace DSPRE.Avalonia
             if (ax != 0 || ay != 0) { axX = ax; axY = -ay; }
             else { axX = em.AxisX; axY = em.AxisY; }
             var sim = new SpaSimulator(em, axX, axY) { AnchorX = cx, AnchorY = cy };   // spawn anchor (for EMIT_ROTATION re-centering)
-            // EmitCall_CameraReverse* (cb 1/2) with an enemy attacker, or a WEST_CAMERA_CHG/REVERCE on this
+            // EmitCall_CameraReverse* (cb 1/2) with an enemy attacker, or a WEST_CAMERA_REVERCE on this
             // slot: the game turns the particle camera 180°, mirroring the layer (and rotation chirality).
             bool reversed = ((callback == 1 || callback == 2) && _attackerIsEnemy)
                             || (_cameraMode.TryGetValue(ptc, out int camMode) && camMode != 0);
@@ -785,7 +786,8 @@ namespace DSPRE.Avalonia
             // texcoord span (tex_repeat ≥ 1), that's what builds a ring/flare from one stored quarter.
             _renderer.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
                 em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
-                baseZ: z + em.PosZ, viewReversed: reversed, flipS: em.FlipS, flipT: em.FlipT, em: em));
+                baseZ: z + em.PosZ, viewReversed: reversed, flipS: em.FlipS, flipT: em.FlipT, em: em,
+                orthographic: IsOrthographic(ptc)));
             _lastSim = sim;
             TrackSim(ptc, sim);
             return sim;
@@ -793,6 +795,10 @@ namespace DSPRE.Avalonia
 
         // WEST_CAMERA_CHG/REVERCE per particle-slot camera state (we_sys camera_mode[]/camera_flag[]).
         private readonly Dictionary<int, int> _cameraMode = new Dictionary<int, int>();
+        private readonly Dictionary<int, int> _cameraProjection = new Dictionary<int, int>();
+
+        // Every slot starts orthographic; only a CAMERA_CHG to 0 makes it perspective.
+        private bool IsOrthographic(int ptc) => !_cameraProjection.TryGetValue(ptc, out int projection) || projection != 0;
 
         // Remember which emitters a particle slot spawned, so WEST_EXIT_PARTICLE can stop exactly those.
         private void TrackSim(int ptc, SpaSimulator sim)
@@ -936,7 +942,8 @@ namespace DSPRE.Avalonia
             bool opReversed = _cameraMode.TryGetValue(ptc, out int opCam) && opCam != 0;
             _renderer.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, sx, sy, em.DrawType,
                 em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
-                baseZ: opZ, viewReversed: opReversed, flipS: em.FlipS, flipT: em.FlipT, em: em));
+                baseZ: opZ, viewReversed: opReversed, flipS: em.FlipS, flipT: em.FlipT, em: em,
+                orthographic: IsOrthographic(ptc)));
             _lastSim = sim;
             TrackSim(ptc, sim);
         }

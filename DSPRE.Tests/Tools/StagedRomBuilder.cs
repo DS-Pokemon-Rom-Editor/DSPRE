@@ -27,7 +27,10 @@ namespace DSPRE.Tests
         private readonly ITestOutputHelper _out;
         public StagedRomBuilder(ITestOutputHelper o) { _out = o; }
 
-        private static readonly string Source = TestRoms.Platinum;
+        // DSPRE_STAGE_SOURCE, _CODE and _TRAINER pick another game or trainer; unset, they stage the Platinum rival.
+        private static string Source => Environment.GetEnvironmentVariable("DSPRE_STAGE_SOURCE") is { Length: > 0 } s ? s : TestRoms.Platinum;
+        private static string Code => Environment.GetEnvironmentVariable("DSPRE_STAGE_CODE") is { Length: > 0 } c ? c : "CPUE";
+        private static int Trainer => int.TryParse(Environment.GetEnvironmentVariable("DSPRE_STAGE_TRAINER"), out int t) ? t : RivalChimchar;
 
         // Output location comes from DSPRE_EXPERIMENT_OUTPUT (see RomExperiment), so no
         // machine-specific path is committed here.
@@ -55,9 +58,10 @@ namespace DSPRE.Tests
             var moves = list.Split(',', StringSplitOptions.RemoveEmptyEntries)
                             .Select(x => int.Parse(x.Trim())).ToList();
             Assert.True(moves.Count > 0, "DSPRE_STAGE_MOVES was set but held no move numbers");
-            Assert.True(Directory.Exists(Source), "the Platinum project is not there, so nothing was built");
+            Assert.True(Directory.Exists(Source), "the source project is not there, so nothing was built");
 
-            string work = Path.Combine(Scratch, "plat_staged");
+            string prefix = Code == "CPUE" ? "plat" : Code.ToLowerInvariant();
+            string work = Path.Combine(Scratch, prefix + "_staged");
             if (!Directory.Exists(work)) { _out.WriteLine("copying the project once"); CopyTree(Source, work); }
 
             string outDir = Path.Combine(Scratch, "roms");
@@ -66,17 +70,18 @@ namespace DSPRE.Tests
             int built = 0;
             foreach (int move in moves)
             {
-                string outRom = Path.Combine(outDir, $"plat_move{move:D3}.nds");
+                string outRom = Path.Combine(outDir, $"{prefix}_move{move:D3}.nds");
                 if (File.Exists(outRom)) { _out.WriteLine($"move {move}: already built"); continue; }
 
-                new RomInfo("CPUE", work);
-                string suffix = RivalChimchar.ToString("D4");
+                new RomInfo(Code, work);
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty });
+                string suffix = Trainer.ToString("D4");
                 string propPath = Directory.GetFiles(gameDirs[DirNames.trainerProperties].unpackedDir)
                     .First(p => Path.GetFileName(p).StartsWith(suffix, StringComparison.Ordinal));
                 string partyPath = Directory.GetFiles(gameDirs[DirNames.trainerParty].unpackedDir)
                     .First(p => Path.GetFileName(p).StartsWith(suffix, StringComparison.Ordinal));
 
-                var trp = new TrainerProperties((ushort)RivalChimchar, new MemoryStream(File.ReadAllBytes(propPath)));
+                var trp = new TrainerProperties((ushort)Trainer, new MemoryStream(File.ReadAllBytes(propPath)));
                 var tf = new TrainerFile(trp, new MemoryStream(File.ReadAllBytes(partyPath)), "AAAAAAA");
                 tf.trp.chooseMoves = true;
 
@@ -90,11 +95,17 @@ namespace DSPRE.Tests
                     tf.trp.partyCount = 2;
                 }
 
+                // DSPRE_STAGE_SPECIES and DSPRE_STAGE_LEVEL keep the trainer's party alive long enough to use the move.
+                bool swapSpecies = ushort.TryParse(Environment.GetEnvironmentVariable("DSPRE_STAGE_SPECIES"), out ushort species);
+                bool setLevel = ushort.TryParse(Environment.GetEnvironmentVariable("DSPRE_STAGE_LEVEL"), out ushort level);
+
                 int touched = 0;
                 for (int i = 0; i < tf.trp.partyCount; i++)
                 {
                     var poke = tf.party[i];
                     if (poke == null) continue;
+                    if (swapSpecies) poke.pokeID = species;
+                    if (setLevel) poke.level = level;
                     poke.moves = new ushort[] { (ushort)move, (ushort)move, (ushort)move, (ushort)move };
                     touched++;
                 }

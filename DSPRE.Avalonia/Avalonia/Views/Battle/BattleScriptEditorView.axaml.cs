@@ -22,6 +22,29 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         private BattleScriptEditorViewModel VM => DataContext as BattleScriptEditorViewModel;
+
+        private void EditParticles_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || sender is not Button button) return;
+            var files = VM.ParticleFilesOfMove();
+            string move = $"Move {VM.FileIndex}";
+            void Open((int File, bool Orthographic) f) => AvaloniaEditorLauncher.OpenParticleEditor(
+                RomInfo.DirNames.wazaParticle, f.File, $"{move}, particle file {f.File}", null, f.Orthographic);
+            if (files.Count == 0)
+            {
+                _ = DialogHelper.ShowInfo("This script loads no particle files.", "Edit particles");
+                return;
+            }
+            if (files.Count == 1) { Open(files[0]); return; }
+            var menu = new MenuFlyout();
+            foreach (var f in files)
+            {
+                var item = new MenuItem { Header = $"Particle file {f.File}" };
+                item.Click += (_, _) => Open(f);
+                menu.Items.Add(item);
+            }
+            menu.ShowAt(button);
+        }
         private static ScriptCmdRow Row(object sender) => (sender as Control)?.DataContext as ScriptCmdRow;
 
         // ── Text tab (AvaloniaEdit) wiring: live two-way sync with the VM + red-squiggle error markers ──

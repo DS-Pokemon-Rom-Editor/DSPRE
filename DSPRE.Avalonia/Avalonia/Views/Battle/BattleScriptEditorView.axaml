@@ -29,7 +29,7 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line: 'CommandName label=value' (for example 'AddParticles slot=0 data=482 behavior=3'). Values are decimal or 0x-hex, and named options use their word, like target=Attacker. Labels come in any order; unlabelled values fill the slots left, in order. Lines starting with // are comments. 'OPCODE 1 2 3' still works. Edits are shared with the cards and repacked on save."
+      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, like AddParticles slot=0 data=482. Lines starting with // are comments."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
@@ -65,21 +65,15 @@
       </Grid.IsVisible>
       <Grid Grid.Column="0" RowDefinitions="*,Auto">
         <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
-          <!-- Three ways of reading the same commands. Nothing here writes a command out as a sentence:
-               these are instruction streams with timing in them, so what makes them readable is folding
-               the shorthands back up, naming the numbers, lining the columns up and indenting the loops. -->
           <TabItem Header="Read">
             <Panel>
-            <!-- The three reading views only exist for the move animations, so other archives get a line
-                 saying where to go instead. -->
             <TextBlock IsVisible="{Binding !IsWest}" Margin="16" TextWrapping="Wrap"
                        VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
-                       Text="The three reading views are for the move animations. Pick &quot;Move animation (WEST)&quot; in the Archive list above to use them. This archive is edited in the Cards and Text tabs."/>
+                       Text="Only move animations can be read here. Use the Cards or Text tab."/>
             <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsWest}">
               <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
                 <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
-                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center"
-                          ToolTip.Tip="Three ways of reading the same commands. Switching never changes them.">
+                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
                   <ComboBoxItem Content="Guided"/>
                   <ComboBoxItem Content="Script"/>
                   <ComboBoxItem Content="Raw"/>
@@ -233,7 +227,7 @@
                    position) with fallback to the bundled placeholders; both hide during a move per the WazaData flag -->
               <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
                      IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
-              <Image Source="{Binding GaugePlayerImage}" Canvas.Left="64"  Canvas.Top="-12" Width="256" Height="256"
+              <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
                      IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
               <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
               <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
@@ -259,14 +253,12 @@
                 <!-- player (lower-right) -->
                 <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                 <TextBlock Canvas.Left="210" Canvas.Top="102" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
-                <Rectangle Canvas.Left="200" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
-                <!-- player HP numbers (cur/max) below the bar; the foe's gauge shows no numbers in-game.
-                     The game puts these glyphs on rows 125-131 and they were landing on 130-135, running
-                     over the bottom of the frame. Measured off a Platinum capture. -->
+                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="118" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="48" Height="2" Fill="#000000"/>
+                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
+                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
+                <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
+                <!-- Only your own bar shows HP numbers. -->
                 <TextBlock Canvas.Left="210" Canvas.Top="121" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}"/>
               </Canvas>
               <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"/>
@@ -275,6 +267,8 @@
         </Border>
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4">
           <Button Content="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
+          <Button x:Name="EditParticlesButton" Content="Edit particles" Click="EditParticles_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"
+                  ToolTip.Tip="This move's particle files"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                     ToolTip.Tip="Preview the move cast from the enemy (top) side: flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
