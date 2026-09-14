@@ -1752,6 +1752,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex)
             {
                 StatusText = $"Error saving hg-engine sprites: {ex.Message}";
+                AppLogger.Error("hg-engine sprite save failed: " + ex.Message);
             }
             return true;
         }

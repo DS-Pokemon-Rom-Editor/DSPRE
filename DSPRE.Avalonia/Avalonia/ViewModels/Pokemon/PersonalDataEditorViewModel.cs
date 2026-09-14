@@ -188,6 +188,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _hgIconPaletteIndex;
             set
             {
+                // The ComboBox reports -1 while it refills.
+                if (value < 0 || value >= IconPaletteOptions.Count)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(HgIconPaletteIndex)));
+                    return;
+                }
                 if (!Set(ref _hgIconPaletteIndex, value) || _loading || _current == null) return;
                 if (!HgEngineIconPalette.TrySetPaletteId(_currentId, value, out string error))
                     AppLogger.Error($"hg-engine icon palette write failed for species {_currentId}: {error}");

@@ -569,10 +569,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         private int _partyPaletteIndex;
+        private int _savedPartyPaletteIndex;
         public int PartyPaletteIndex
         {
             get => _partyPaletteIndex;
-            set { if (Set(ref _partyPaletteIndex, value)) { if (!_loading) SetDirty(); RefreshPreview(); } }
+            set
+            {
+                // The ComboBox reports -1 while it refills.
+                if (value < 0 || value >= PartyPalettes.Count)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(PartyPaletteIndex)));
+                    return;
+                }
+                if (Set(ref _partyPaletteIndex, value)) { if (!_loading) SetDirty(); RefreshPreview(); }
+            }
         }
 
         // Live preview of the party icon rendered with the CURRENTLY-SELECTED palette (before saving).
@@ -2338,6 +2348,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _partyPaletteIndex = (pal >= 0 && pal < PartyPalettes.Count) ? pal : 0;
             }
             catch { _partyPaletteIndex = 0; }
+            _savedPartyPaletteIndex = _partyPaletteIndex;
             OnPropertyChanged(nameof(PartyPaletteIndex));
             RefreshPreview();
             LoadFormOptions(id);
@@ -2360,10 +2371,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsAvailable || _currentId < 0) return;
             try
             {
-                if (HgEngineProject.IsActive)
-                    HgEngineIconPalette.TrySetPaletteId(_currentId, _partyPaletteIndex, out _);
-                else
-                    DSPRE.DSUtils.SetMonIconPaletteId(IconIdFor(_currentId), (byte)_partyPaletteIndex);
+                // Personal Data writes this table as soon as it changes; an untouched value here would undo that.
+                if (_partyPaletteIndex != _savedPartyPaletteIndex)
+                {
+                    if (HgEngineProject.IsActive)
+                    {
+                        if (!HgEngineIconPalette.TrySetPaletteId(_currentId, _partyPaletteIndex, out string paletteError))
+                            throw new InvalidOperationException(paletteError);
+                    }
+                    else
+                        DSPRE.DSUtils.SetMonIconPaletteId(IconIdFor(_currentId), (byte)_partyPaletteIndex);
+                    _savedPartyPaletteIndex = _partyPaletteIndex;
+                }
                 if (_pendingIconGraphic != null)
                 {
                     DSPRE.DSUtils.SetMonIconGraphic(IconIdFor(_currentId), _partyPaletteIndex, _pendingIconGraphic);
@@ -2373,7 +2392,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 SaveNotice.Saved(UnsavedChangesDescription);
                 RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
             }
-            catch { /* surfaced by the global error net */ }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Battle Display save failed: " + ex.Message);
+                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + ex.Message, "Save Error");
+            }
         }
     }
 
