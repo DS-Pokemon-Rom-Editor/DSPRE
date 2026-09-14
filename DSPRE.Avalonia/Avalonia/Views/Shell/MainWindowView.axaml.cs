@@ -714,6 +714,12 @@ namespace DSPRE.Avalonia.Views.Shell
         private void CellAnimations_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCellAnimationPicker();
 
+        private void Particles_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenParticleLibrary();
+
+        private void BallCapsules_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBallCapsuleEditor();
+
         private void TrainerCardEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerCardEditor();
 

@@ -124,6 +124,10 @@
                   ToolTip.Tip="{Binding BottomScreenEditorNote}"/>
         <MenuItem Header="Cell Animations…" Click="CellAnimations_Click" IsEnabled="{Binding Beta[CellAnimationEditorView]}"
                   ToolTip.Tip="{Binding BetaNote[CellAnimationEditorView]}"/>
+        <MenuItem Header="Particles…" Click="Particles_Click" IsEnabled="{Binding Beta[ParticleLibraryView]}"
+                  ToolTip.Tip="{Binding BetaNote[ParticleLibraryView]}"/>
+        <MenuItem Header="Ball Capsules…" Click="BallCapsules_Click" IsEnabled="{Binding Beta[BallCapsuleEditorView]}"
+                  ToolTip.Tip="{Binding BetaNote[BallCapsuleEditorView]}"/>
         <MenuItem Header="Picture to Background…" Click="TilesetBuilder_Click"
                   ToolTip.Tip="Turn a PNG into the colours, tiles and arrangement a background is drawn from" IsEnabled="{Binding Beta[TilesetBuilderView]}"/>
         <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>

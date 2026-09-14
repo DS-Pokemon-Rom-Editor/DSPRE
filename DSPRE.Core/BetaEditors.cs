@@ -48,6 +48,9 @@ namespace DSPRE
                 ["TrainerSpriteEditorView"] = "Trainer Sprite editor",
                 ["BottomScreenEditorView"] = "Bottom Screen editor",
                 ["CellAnimationEditorView"] = "Cell Animation editor",
+                ["BallCapsuleEditorView"] = "Ball Capsule editor",
+                ["ParticleEditorView"] = "Particle editor",
+                ["ParticleLibraryView"] = "Particle library",
                 ["ProjectChecksView"] = "Project checks",
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
@@ -136,7 +139,9 @@ namespace DSPRE
             if (window is "FontEditorView" or "TilesetBuilderView" or "BannerEditorView"
                        or "TitleScreenEditorView" or "DungeonCutinEditorView"
                        or "TrainerCardEditorView" or "TrainerSpriteEditorView"
-                       or "BottomScreenEditorView" or "CellAnimationEditorView") return "Graphics";
+                       or "BottomScreenEditorView" or "CellAnimationEditorView"
+                       or "BallCapsuleEditorView" or "ParticleEditorView"
+                       or "ParticleLibraryView") return "Graphics";
             return "Tools";
         }
     }
