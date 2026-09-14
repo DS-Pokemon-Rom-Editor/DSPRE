@@ -5,7 +5,7 @@ namespace DSPRE.Avalonia.Data
 {
     public enum SendOutKind { Wild, Trainer }
     public enum PreviewSides { Both, Theirs, Yours }
-    public enum TextSpeed { Slow, Mid, Fast }
+    public enum TextSpeed { Slow, Mid, Fast, Instant }
     public enum SendOutMessage { None, Challenged, WildAppeared, EnemySentOut, Go }
 
     /// <summary>What a send-out preview plays.</summary>
@@ -405,6 +405,14 @@ namespace DSPRE.Avalonia.Data
             _run++;
             if (_printed < _full.Length)
             {
+                // Preview-only speed: the whole message at once.
+                if (Options.Speed == TextSpeed.Instant)
+                {
+                    _printed = _full.Length;
+                    MessageText = _full;
+                    _finishRun = _run + 1;
+                    return;
+                }
                 if (_run < _nextRun) return;
                 char c = _full[_printed++];
                 MessageText = _full.Substring(0, _printed);
