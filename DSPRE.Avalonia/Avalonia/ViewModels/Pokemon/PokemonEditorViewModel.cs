@@ -55,7 +55,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SetBaseTitle(string t) { _baseTitle = t; OnPropertyChanged(nameof(Title)); }
 
         // ─── Pokémon selector (shared) ────────────────────────────────────────────
-        public int MaxMonIndex => PokemonNames.Count > 0 ? PokemonNames.Count - 1 : 0;
+        // The pending species' list entry has no data to load, so the number box stops before it.
+        public int MaxMonIndex => System.Math.Max(0, PokemonNames.Count - 1 - (_pendingSpecies != null ? 1 : 0));
 
         private int _selectedMonIndex = 1;
         /// <summary>What putting a cry in actually does, and what sort of file it takes. </summary>
@@ -74,6 +75,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set
             {
                 if (value == _selectedMonIndex || value < 0 || value >= PokemonNames.Count) return;
+                if (_pendingSpecies != null && value == _pendingListIndex)
+                {
+                    // Put the selector back once the control has finished applying the pick.
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(
+                        () => OnPropertyChanged(nameof(SelectedMonIndex)),
+                        global::Avalonia.Threading.DispatcherPriority.Background);
+                    return;
+                }
                 if (HasUnsavedChanges) { _ = ConfirmDiscardAsync(value); return; }
                 _selectedMonIndex = value;
                 OnPropertyChanged();
@@ -83,6 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ─── Dirty (delegates to all sub-VMs) ────────────────────────────────────
         public bool HasUnsavedChanges =>
+            _pendingSpecies != null ||
             PersonalVM.HasUnsavedChanges ||
             LearnsetVM.HasUnsavedChanges ||
             EvolutionsVM.HasUnsavedChanges ||
@@ -90,7 +100,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             BattleDisplayVM.HasUnsavedChanges;
 
         public string UnsavedChangesDescription =>
-            $"Pokémon Editor (#{_selectedMonIndex} {(PokemonNames.Count > _selectedMonIndex ? PokemonNames[_selectedMonIndex] : "")})";
+            $"Pokémon Editor (#{_selectedMonIndex} {(PokemonNames.Count > _selectedMonIndex ? PokemonNames[_selectedMonIndex] : "")}"
+            + (_pendingSpecies != null ? $", new Pokémon {_pendingSpecies.DisplayName}" : "") + ")";
 
         public void SaveChanges() => SaveAll();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -103,6 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EvolutionsVM.DiscardChanges();
             SpriteVM.DiscardChanges();
             BattleDisplayVM.DiscardChanges();
+            DropPendingSpecies();
         }
 
         // ─── Undo / redo (routes to the visible tab) ──────────────────────────────
@@ -221,17 +233,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Save all ─────────────────────────────────────────────────────────────
         public void SaveAll()
         {
+            // A new species' save can ask about source comments, which needs the async path.
+            if (_pendingSpecies != null) { _ = SaveAllAsync(); return; }
             if (PersonalVM.HasUnsavedChanges)   ((IEditorWithUnsavedChanges)PersonalVM).SaveChanges();
             if (LearnsetVM.HasUnsavedChanges)   LearnsetVM.SaveChanges();
             if (EvolutionsVM.HasUnsavedChanges) EvolutionsVM.SaveChanges();
             if (BattleDisplayVM.HasUnsavedChanges) BattleDisplayVM.SaveChanges();
             if (SpriteVM.HasUnsavedChanges) SpriteVM.SaveChanges();
             // Announced after the children so the one visible notice names the whole save.
-            SaveNotice.Saved(UnsavedChangesDescription);
+            if (!HasUnsavedChanges) SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public async Task<bool> SaveAllAsync()
         {
+            // The tabs save before a new species is added: adding one moves every form after it up an id.
             if (PersonalVM.HasUnsavedChanges &&
                 !await ((IEditorWithUnsavedChanges)PersonalVM).SaveChangesAsync())
                 return false;
@@ -250,30 +265,89 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (SpriteVM.HasUnsavedChanges) return false;
             }
 
+            int added = -1;
+            if (_pendingSpecies != null && (added = await SavePendingSpeciesAsync()) < 0) return false;
+
             SaveNotice.Saved(UnsavedChangesDescription);
+            if (added >= 0 && added < PokemonNames.Count && !HasUnsavedChanges)
+            {
+                // The same index can now be a different species, so load it even when it is already selected.
+                _selectedMonIndex = added;
+                OnPropertyChanged(nameof(SelectedMonIndex));
+                LoadMon(added);
+            }
             return !HasUnsavedChanges;
         }
 
-        /// <summary>hg-engine-only: mints a brand new base species ("fakemon"; a new form of an
-        /// existing species is a separate, much higher-risk operation not supported here yet) and jumps
-        /// straight to editing it.</summary>
+        // ─── New species (hg-engine) ──────────────────────────────────────────────
+        private HgEngineSpeciesExpansion.FakemonPlan _pendingSpecies;
+        private int _pendingListIndex = -1;
+
+        public bool HasPendingSpecies => _pendingSpecies != null;
+        public bool CanAddSpecies => _pendingSpecies == null;
+        public string PendingSpeciesBanner => _pendingSpecies != null ? $"{_pendingSpecies.DisplayName} is created when you save." : null;
+
+        /// <summary>hg-engine-only: adds a brand new base species ("fakemon"; a new form of an existing
+        /// species is not supported here). Nothing is written until Save All; Discard drops it.</summary>
         public async Task AddNewFakemonAsync(Window owner)
         {
-            if (!HgEngineProject.IsActive) return;
+            if (!HgEngineProject.IsActive || _pendingSpecies != null) return;
             string name = await DialogHelper.PromptText("New species' display name:", "Add New Pokémon", owner: owner);
-            if (name == null) return;
+            if (name == null || _pendingSpecies != null) return;
 
-            if (!HgEngineSpeciesExpansion.TryAddFakemon(name, out int newSpeciesId, out string error))
+            // Checked now so a name the checkout can't take is refused before it looks added.
+            if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out var plan, out string error))
             {
                 await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", owner);
                 return;
             }
 
+            _pendingSpecies = plan;
+            _pendingListIndex = PokemonNames.Count;
+            PokemonNames.Add($"{plan.SpeciesId:D3} {plan.DisplayName} (not saved)");
+            RaisePendingSpecies();
+        }
+
+        private void DropPendingSpecies()
+        {
+            if (_pendingSpecies == null) return;
+            if (_pendingListIndex >= 0 && _pendingListIndex < PokemonNames.Count) PokemonNames.RemoveAt(_pendingListIndex);
+            _pendingSpecies = null;
+            _pendingListIndex = -1;
+            RaisePendingSpecies();
+        }
+
+        private void RaisePendingSpecies()
+        {
+            OnPropertyChanged(nameof(HasPendingSpecies));
+            OnPropertyChanged(nameof(CanAddSpecies));
+            OnPropertyChanged(nameof(PendingSpeciesBanner));
+            OnPropertyChanged(nameof(MaxMonIndex));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(Title));
+        }
+
+        /// <summary>Writes the pending species as one source save, then brings names and unpacked data up to
+        /// date. Returns its id, or -1 when it was not written and is still pending.</summary>
+        private async Task<int> SavePendingSpeciesAsync()
+        {
+            string name = _pendingSpecies.DisplayName;
+            HgEngineSpeciesExpansion.FakemonPlan written = null;
+            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+                HgEngineSpeciesExpansion.TryWriteFakemon(name, out written, out string writeError) ? null : writeError);
+            if (!saved)
+            {
+                if (error != null) await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", _owner);
+                return -1;
+            }
+
+            HgEngineSpeciesExpansion.FinishFakemon(written);
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> {
                 RomInfo.DirNames.personalPokeData, RomInfo.DirNames.learnsets, RomInfo.DirNames.evolutions });
+            DropPendingSpecies();
 
             // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
-            // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the assignment below.
+            // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the selection.
             string[] refreshed = RomInfo.GetPokemonNames();
             var decorated = new string[refreshed.Length];
             for (int i = 0; i < refreshed.Length; i++) decorated[i] = $"{i:D3} {refreshed[i]}";
@@ -281,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(MaxMonIndex));
             AppEvents.RaiseNamesChanged();
 
-            SelectedMonIndex = newSpeciesId;
+            return written.SpeciesId;
         }
 
         private async System.Threading.Tasks.Task ConfirmDiscardAsync(int pendingIndex)
