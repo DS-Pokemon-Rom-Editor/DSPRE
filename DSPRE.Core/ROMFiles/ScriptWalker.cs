@@ -356,7 +356,9 @@ namespace DSPRE.ROMFiles
             _index = 0;
             if (_current == null)
             {
-                Add(ScriptStepKind.Ended, $"There is no script {scriptNumber} in this file.", null);
+                Add(ScriptStepKind.Ended, scriptNumber == EventFile.NoScript
+                    ? "Script 0 runs nothing."
+                    : $"There is no script {scriptNumber} in this file.", null);
                 Finished = true;
             }
         }
@@ -1289,24 +1291,11 @@ namespace DSPRE.ROMFiles
             _ => "equal to",
         };
 
-        // A file's own numbering starts at 1, so a raw 0 names the first script rather than nothing. The
-        // event editor has always read it that way; matching on the id alone reported "there is no script 0"
-        // for a script that is there.
         private static ScriptCommandContainer FindScript(ScriptSource source, int number)
-        {
-            var scripts = source?.Scripts;
-            if (scripts == null || scripts.Count == 0) return null;
-            return number == 0 ? scripts[0]
-                               : scripts.FirstOrDefault(s => s.manualUserID == (uint)number);
-        }
+            => source?.Scripts?.FirstOrDefault(s => s.manualUserID == (uint)number);
 
         private static ScriptCommandContainer FindFunction(ScriptSource source, int number)
-        {
-            var functions = source?.Functions;
-            if (functions == null || functions.Count == 0) return null;
-            return number == 0 ? functions[0]
-                               : functions.FirstOrDefault(f => f.manualUserID == (uint)number);
-        }
+            => source?.Functions?.FirstOrDefault(f => f.manualUserID == (uint)number);
 
         private void Add(ScriptStepKind kind, string text, string command, ScriptEffect effect = null)
         {

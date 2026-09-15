@@ -519,5 +519,16 @@ namespace DSPRE.Tests
             Assert.True(w.Finished);
             Assert.Contains(w.Steps, s => s.Text.Contains("no script 42"));
         }
+
+        [Fact]
+        public void ScriptZeroRunsNothingRatherThanTheFirstScript()
+        {
+            var file = File(new[] { Cmd("SetFlag 5", 5), Cmd("End") });
+            var w = Walker(file);
+            w.Start(0);
+            Assert.True(w.Finished);
+            var step = Assert.Single(w.Steps);
+            Assert.Equal("Script 0 runs nothing.", step.Text);
+        }
     }
 }

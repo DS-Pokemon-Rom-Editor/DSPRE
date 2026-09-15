@@ -37,7 +37,7 @@ namespace DSPRE.ROMFiles {
     }
 
     public override string ToString() {
-      return "Starts Script " + scriptTriggered;
+      return scriptTriggered == EventFile.NoScript ? "Starts no script" : "Starts Script " + scriptTriggered;
     }
   }
 }

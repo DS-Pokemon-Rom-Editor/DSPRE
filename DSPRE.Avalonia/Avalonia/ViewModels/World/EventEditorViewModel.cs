@@ -712,6 +712,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// archive the way the old editor's per-event "go to script" buttons did.</summary>
         public void GoToScript(int scriptNumber)
         {
+            if (scriptNumber == EventFile.NoScript) { StatusText = "This event has no script."; return; }
             var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
             if (result.Kind == CommonScriptId.Kind.Resolved)
             {
@@ -1236,7 +1237,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The scripts defined in the header's paired script file (via <see cref="MapHeader.scriptFileID"/>),
         /// so Overworld/Trigger/Spawnable "Script" fields can be picked from a dropdown of what's actually
         /// callable here instead of a free-form number. Values are each script's <c>manualUserID</c>, the
-        /// number these events' <c>scriptNumber</c> fields reference, not necessarily a plain 0..N-1 run.</summary>
+        /// number these events' <c>scriptNumber</c> fields reference, after "No script" for 0.</summary>
         public ObservableCollection<string> AvailableScripts { get; } = new ObservableCollection<string>();
         private readonly List<uint> _availableScriptIds = new List<uint>();
 
@@ -1246,6 +1247,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             _pairedScriptFileId = scriptFileId;
             AvailableScripts.Clear();
             _availableScriptIds.Clear();
+            _availableScriptIds.Add(EventFile.NoScript);
+            AvailableScripts.Add("No script");
             if (scriptFileId >= 0)
             {
                 try
@@ -1267,14 +1270,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
         }
 
-        // Raw script number 0 conventionally means "the first script in this file", not "none": a
-        // script file's own manualUserID numbering starts at 1, so there's no script literally numbered
-        // 0 to match against directly.
-        private int IndexOfAvailableScript(decimal rawValue)
-        {
-            if (rawValue == 0 && _availableScriptIds.Count > 0) return 0;
-            return _availableScriptIds.IndexOf((uint)rawValue);
-        }
+        private int IndexOfAvailableScript(decimal rawValue) => _availableScriptIds.IndexOf((uint)rawValue);
 
         private int _matrixId = -1;
         private int _headerId = -1;

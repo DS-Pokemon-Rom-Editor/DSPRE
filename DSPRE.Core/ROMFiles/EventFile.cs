@@ -20,6 +20,9 @@ namespace DSPRE.ROMFiles {
         #region Fields
         public static readonly string DefaultFilter = "Event File (*.evt, *.ev)|*.evt;*.ev";
 
+        /// <summary>The game runs a file whose only command is End for script 0.</summary>
+        public const ushort NoScript = 0;
+
         public int ID { get; set; } = -1;
         public List<Spawnable> spawnables = new List<Spawnable>();
         public List<Overworld> overworlds = new List<Overworld>();
@@ -226,7 +229,7 @@ namespace DSPRE.ROMFiles {
                     msg += "Hidden Item";
                     break;
             }
-            return msg + $", [Scr {scriptNumber}]";
+            return msg + (scriptNumber == EventFile.NoScript ? ", [No script]" : $", [Scr {scriptNumber}]");
         }
         #endregion
     }
@@ -523,7 +526,7 @@ namespace DSPRE.ROMFiles {
             return ToString(hexMode: false);
         }
         public string ToString(bool hexMode) {
-            string msg = "Run script " + scriptNumber;
+            string msg = scriptNumber == EventFile.NoScript ? "No script" : "Run script " + scriptNumber;
             if (variableWatched != 0) {
                 if (hexMode) {
                     msg += $" when Var 0x{variableWatched:X4} is 0x{expectedVarValue:X4}";

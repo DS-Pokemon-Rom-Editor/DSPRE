@@ -532,7 +532,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < _events.triggers.Count; i++)
                 {
                     var t = _events.triggers[i];
-                    StartBesideNames.Add($"Beside trigger {i}, script {t.scriptNumber}");
+                    StartBesideNames.Add(t.scriptNumber == EventFile.NoScript
+                        ? $"Beside trigger {i}, no script"
+                        : $"Beside trigger {i}, script {t.scriptNumber}");
                     _startPlaces.Add((FieldInteraction.TileX(t), FieldInteraction.TileZ(t)));
                 }
                 for (int i = 0; i < _events.warps.Count; i++)
@@ -1523,7 +1525,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 Kind = ScriptQuestion.QuestionKind.YesNo,
                 FromPreview = true,
                 Subject = "the trigger on this tile",
-                Prompt = $"There is a trigger here. It runs script {waiting.scriptNumber} when "
+                Prompt = (waiting.scriptNumber == EventFile.NoScript
+                            ? "There is a trigger here with no script. It goes off when "
+                            : $"There is a trigger here. It runs script {waiting.scriptNumber} when ")
                        + $"{FieldScriptValues.Describe(waiting.variableWatched)} is {waiting.expectedVarValue}.",
                 Options = new[] { ("Set it off", 1L), ("Leave it", 0L) },
             };

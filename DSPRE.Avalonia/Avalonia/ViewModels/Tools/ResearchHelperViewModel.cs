@@ -481,10 +481,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             var sf = _cachedScriptFiles[idx];
             int count = sf.allScripts?.Count ?? 0;
+            // Position is the script number, so 0 lists the events that run nothing.
+            ScriptIdEntries.Add("No script");
             for (int i = 0; i < count; i++)
                 ScriptIdEntries.Add($"Script {i + 1}");
 
-            if (ScriptIdEntries.Count > 0) SelectedScriptIdIndex = 0;
+            SelectedScriptIdIndex = count > 0 ? 1 : 0;
         }
 
         public void SearchScriptIdUsage()
@@ -493,10 +495,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             { StatusText = "Select a script file and script ID."; return; }
 
             var sf = _cachedScriptFiles[SelectedScriptFileIndex];
-            int scriptId = SelectedScriptIdIndex + 1; // 1-based
+            int scriptId = SelectedScriptIdIndex;
+            string label = ScriptIdEntries[scriptId];
 
             ScriptIdResults.Clear();
-            StatusText = $"Searching for Script {scriptId} in files associated with script file {sf.fileID}...";
+            StatusText = $"Searching for {label} in files associated with script file {sf.fileID}...";
 
             // Find event files linked to headers that use this script file
             var assocEventIds = new HashSet<int>();
@@ -541,7 +544,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     }
             }
 
-            StatusText = $"Found {ScriptIdResults.Count} uses of Script {scriptId}";
+            StatusText = $"Found {ScriptIdResults.Count} uses of {label}";
         }
 
         // ── Overworld Watcher ────────────────────────────────────────────────────
