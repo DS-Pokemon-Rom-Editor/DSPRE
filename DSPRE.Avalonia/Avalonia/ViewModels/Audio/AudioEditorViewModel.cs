@@ -4,13 +4,17 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using DSPRE.Avalonia.Data;
+using DSPRE.Editors;
 
 namespace DSPRE.Avalonia.ViewModels.Audio
 {
     /// <summary>One thing you can listen to, whichever part of the ROM it came from.</summary>
-    public sealed class AudioItem
+    public sealed class AudioItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         /// <summary>Where to find it: a sequence number, or a species number for a cry.</summary>
         public int Number;
 
@@ -31,11 +35,25 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// own number: HeartGold's bank 474 is BANK_PV504, Rotom's Wash form.</summary>
         public int NamedNumber;
 
-        public string Label => $"{Number,5}  {Name}";
+        private bool _isPending;
+        /// <summary>Imported and not saved yet.</summary>
+        public bool IsPending
+        {
+            get => _isPending;
+            set
+            {
+                if (_isPending == value) return;
+                _isPending = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsPending)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+            }
+        }
+
+        public string Label => $"{Number,5}  {Name}" + (_isPending ? "  (not saved)" : "");
     }
 
     /// <summary>Everything the ROM can play, in one place.</summary>
-    public class AudioEditorViewModel : INotifyPropertyChanged
+    public class AudioEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -262,6 +280,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             {
                 var it = Selected;
                 if (it == null) return "Pick something to hear it.";
+                if (it.IsCry && it.IsPending) return it.Name + ". The new cry is not saved yet.";
+                if (it.IsSample && it.IsPending) return $"{it.Detail}, sound {it.SampleIndex}. The new sound is not saved yet.";
                 if (it.IsCry) return it.Name + ". A cry is a sample of its own, so it can be replaced.";
                 if (it.IsSample)
                     return $"{it.Detail}, sound {it.SampleIndex}. One of the sounds the game is built from, so it "
@@ -289,6 +309,169 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         private string _status = "";
         public string Status { get => _status; set => Set(ref _status, value); }
 
+        // ── imports waiting for Save ────────────────────────────────────────────────
+
+        // On hg-engine an imported cry is a checkout file, so it is held here until the user saves.
+        private readonly Dictionary<AudioItem, SoundArchive.PendingCry> _pendingCries = new();
+
+        // Everything else replaces a sample in the ROM's sound archive, held in the order it was imported.
+        private sealed class HeldSample
+        {
+            public AudioItem Item;
+            public SoundArchive.PendingSample Sample;
+        }
+        private readonly List<HeldSample> _pendingSamples = new();
+
+        // Rendering runs off the UI thread, so the held list and the archive built from it share a lock.
+        private readonly object _heldLock = new();
+        private SdatArchive _withHeld;
+        private int _heldVersion;
+
+        public bool HasUnsavedChanges
+        {
+            get { lock (_heldLock) return _pendingCries.Count + _pendingSamples.Count > 0; }
+        }
+
+        public string UnsavedChangesDescription
+        {
+            get
+            {
+                int cries, sounds;
+                lock (_heldLock)
+                {
+                    cries = _pendingCries.Count + _pendingSamples.Count(h => h.Item.IsCry);
+                    sounds = _pendingSamples.Count(h => !h.Item.IsCry);
+                }
+                string c = cries == 1 ? "1 imported cry" : $"{cries} imported cries";
+                string s = sounds == 1 ? "1 imported sound" : $"{sounds} imported sounds";
+                return cries > 0 && sounds > 0 ? c + " and " + s : sounds > 0 ? s : c;
+            }
+        }
+
+        /// <summary>Holds a cry until Save, replacing one already held for the same Pokemon.</summary>
+        public void StageCry(AudioItem item, SoundArchive.PendingCry cry)
+        {
+            if (item == null || cry == null) return;
+            lock (_heldLock) _pendingCries[item] = cry;
+            item.IsPending = true;
+            PendingChanged();
+            Status = $"Ready to save to {cry.RelPath}.";
+        }
+
+        /// <summary>Holds a replacement sample until Save, replacing one already held for the same slot.</summary>
+        public void StageSample(AudioItem item, SoundArchive.PendingSample sample)
+        {
+            if (item == null || sample?.Sample == null) return;
+            lock (_heldLock)
+            {
+                var same = _pendingSamples.FirstOrDefault(h => h.Sample.WaveArc == sample.WaveArc && h.Sample.Index == sample.Index);
+                if (same == null) _pendingSamples.Add(new HeldSample { Item = item, Sample = sample });
+                else
+                {
+                    // Two rows can reach one slot, and only the latest import will be written there.
+                    if (!ReferenceEquals(same.Item, item)) same.Item.IsPending = false;
+                    same.Item = item;
+                    same.Sample = sample;
+                }
+                _withHeld = null; _heldVersion++;
+            }
+            item.IsPending = true;
+            PendingChanged();
+            Status = "Imported. Save writes it to the ROM.";
+        }
+
+        /// <summary>The sound archive as it will be once saved, which is what is played until then.</summary>
+        private SdatArchive Archive()
+        {
+            List<SoundArchive.PendingSample> held;
+            int version;
+            lock (_heldLock)
+            {
+                if (_pendingSamples.Count == 0) return SoundArchive.Load();
+                if (_withHeld != null) return _withHeld;
+                held = _pendingSamples.Select(h => h.Sample).ToList();
+                version = _heldVersion;
+            }
+
+            // Built outside the lock: encoding takes long enough that the UI thread must not wait on it.
+            var built = SoundArchive.WithSamples(held, out string problem);
+            if (built == null)
+            {
+                AppLogger.Error("Held sounds could not be previewed: " + problem);
+                return SoundArchive.Load();
+            }
+            lock (_heldLock) if (version == _heldVersion) _withHeld = built;
+            return built;
+        }
+
+        /// <summary>Writes everything held: the sound archive in one rewrite, then any checkout cries. Null on
+        /// success, otherwise why not, with whatever was not written still held.</summary>
+        public string Save()
+        {
+            if (!HasUnsavedChanges) return null;
+
+            List<HeldSample> samples;
+            lock (_heldLock) samples = _pendingSamples.ToList();
+            if (samples.Count > 0)
+            {
+                if (!SoundArchive.WriteSamples(samples.Select(h => h.Sample).ToList(), out string problem))
+                {
+                    PendingChanged();
+                    return problem;
+                }
+                lock (_heldLock) { _pendingSamples.Clear(); _withHeld = null; _heldVersion++; }
+                foreach (var h in samples) h.Item.IsPending = false;
+            }
+
+            bool wroteCheckout = false;
+            List<KeyValuePair<AudioItem, SoundArchive.PendingCry>> cries;
+            lock (_heldLock) cries = _pendingCries.ToList();
+            foreach (var kv in cries)
+            {
+                if (!SoundArchive.WriteCheckoutCry(kv.Value, out string problem))
+                {
+                    PendingChanged();
+                    return problem;
+                }
+                lock (_heldLock) _pendingCries.Remove(kv.Key);
+                kv.Key.IsPending = false;
+                wroteCheckout = true;
+            }
+            PendingChanged();
+            Status = wroteCheckout ? "Saved. Compile the ROM to hear the new cries in game." : "Saved.";
+            return null;
+        }
+
+        public void SaveChanges() => Save();
+
+        public Task<bool> SaveChangesAsync()
+        {
+            string problem = Save();
+            return problem != null
+                ? Task.FromException<bool>(new InvalidOperationException(problem))
+                : Task.FromResult(!HasUnsavedChanges);
+        }
+
+        public void DiscardChanges()
+        {
+            List<AudioItem> items;
+            lock (_heldLock)
+            {
+                items = _pendingCries.Keys.Concat(_pendingSamples.Select(h => h.Item)).ToList();
+                _pendingCries.Clear();
+                _pendingSamples.Clear();
+                _withHeld = null; _heldVersion++;
+            }
+            foreach (var item in items) item.IsPending = false;
+            PendingChanged();
+        }
+
+        private void PendingChanged()
+        {
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(SelectedDescription));
+        }
+
         // ── doing something with it ─────────────────────────────────────────────────
 
         /// <summary>The sound of whatever is picked, ready to play or save.</summary>
@@ -296,18 +479,54 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         {
             var item = Selected;
             if (item == null) return null;
-            if (item.IsCry) return SoundArchive.RenderCry(item.Number);
+
+            // A checkout cry only becomes part of the archive when the ROM is compiled, so the WAV itself
+            // is what can be heard before then.
+            if (item.IsCry && HeldCheckoutWav(item) is byte[] wav)
+            {
+                var pcm = CryFiles.ReadWav(wav, out int rate, out _);
+                return pcm == null ? null : Stereo(Resample(pcm, rate, playAt));
+            }
+
+            var sdat = Archive();
+            if (item.IsCry) return SoundArchive.RenderCry(sdat, item.Number);
 
             // A sound has no sequence to play it, so what is heard is the sample itself.
             if (item.IsSample)
             {
-                var s = SoundArchive.Sample(item.WaveArc, item.SampleIndex);
+                var s = SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
                 if (s?.Pcm == null || s.Pcm.Length == 0) return null;
                 return Stereo(Resample(s.Pcm, s.SampleRate, playAt));
             }
 
-            var sdat = SoundArchive.Load();
             return sdat == null ? null : SseqPlayer.Render(sdat, item.Number, playAt, PreviewSeconds);
+        }
+
+        private byte[] HeldCheckoutWav(AudioItem item)
+        {
+            lock (_heldLock) return _pendingCries.TryGetValue(item, out var cry) ? cry.Wav : null;
+        }
+
+        /// <summary>Writes the picked cry or sound out as a WAV, as it will be once saved. False when there is
+        /// nothing there to write.</summary>
+        public bool ExportSelectedSample(string path)
+        {
+            var item = Selected;
+            if (item == null || !(item.IsCry || item.IsSample)) return false;
+
+            if (item.IsCry && HeldCheckoutWav(item) is byte[] wav)
+            {
+                System.IO.File.WriteAllBytes(path, wav);
+                return true;
+            }
+
+            var sdat = Archive();
+            var sample = item.IsCry
+                ? SoundArchive.CrySample(sdat, item.Number)
+                : SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
+            if (sample?.Pcm == null || sample.Pcm.Length == 0) return false;
+            System.IO.File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
+            return true;
         }
 
         /// <summary>
@@ -419,7 +638,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             int bank = BankOfSelection;
             if (bank < 0) { whynot = SaveSoundFontHelp; return null; }
 
-            var sdat = SoundArchive.Load();
+            var sdat = Archive();
             string name = sdat != null && sdat.BankNames.TryGetValue(bank, out var n)
                           && !string.IsNullOrWhiteSpace(n) ? n : "Bank " + bank;
             var made = SoundFontWriter.Build(sdat, bank, name);

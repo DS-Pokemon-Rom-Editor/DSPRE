@@ -161,11 +161,14 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>The sample a species' cry is made from, as it sits in the ROM. </summary>
-        public static SwavSample CrySample(int species)
+        public static SwavSample CrySample(int species) => CrySample(Load(), species);
+
+        /// <summary>The same, from an archive that may hold replacements not saved yet. Replacing a file
+        /// leaves the archive's tables alone, so the ROM's own lookup still finds the right one.</summary>
+        public static SwavSample CrySample(SdatArchive sdat, int species)
         {
-            var sdat = Load();
             int arc = CryWaveArchive(species);
-            if (sdat == null || arc < 0) return null;
+            if (sdat == null || arc < 0 || arc >= sdat.WaveArcs.Count) return null;
             var waves = sdat.GetWaveArchive(arc);
             return waves != null && waves.Count > 0 ? waves[0] : null;
         }
@@ -180,21 +183,25 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// Puts a WAV in as a species' cry, writing the sound archive back to the ROM folder.
+        /// Puts a WAV in as a species' cry and writes the sound archive at once. Only the tests call it, as
+        /// the reference for PrepareCry and WriteSamples.
         /// </summary>
-        public static bool ImportCry(int species, string path, out string problem)
+        internal static bool ImportCry(int species, string path, out string problem)
             => ImportCry(species, path, out problem, out _);
 
         /// <param name="note">Set when the cry went somewhere other than the ROM, and the user needs to
         /// know what still has to happen for it to be heard in game.</param>
-        public static bool ImportCry(int species, string path, out string problem, out string note)
+        internal static bool ImportCry(int species, string path, out string problem, out string note)
         {
             problem = null;
             note = null;
 
-            // hg-engine builds the whole sound archive from sound/cries, so the cry belongs there; writing
-            // it into the ROM's copy would last until the next compile and no longer.
-            if (CriesLiveInWaveArchives) return ImportCryToCheckout(species, path, out problem, out note);
+            // hg-engine builds the sound archive from sound/cries, so a cry written to the ROM's copy is lost on the next compile.
+            if (CriesLiveInWaveArchives)
+            {
+                problem = "On hg-engine a cry is saved to the checkout with the editor's Save.";
+                return false;
+            }
 
             var sdat = Load();
             string sdatPath = PathFor();
@@ -236,49 +243,235 @@ namespace DSPRE.Avalonia.Data
             return true;
         }
 
-        /// <summary>Puts a cry into the linked checkout's sound/cries, which is what its build reads.</summary>
-        private static bool ImportCryToCheckout(int species, string path, out string problem, out string note)
+        /// <summary>True when an imported cry goes into the linked checkout rather than the ROM.</summary>
+        public static bool CriesGoToCheckout => CriesLiveInWaveArchives;
+
+        /// <summary>A replacement for one sample of the ROM's sound archive, checked and held until the
+        /// editor saves.</summary>
+        public sealed class PendingSample
+        {
+            public int WaveArc { get; init; }
+            public int Index { get; init; }
+            public SwavSample Sample { get; init; }
+        }
+
+        /// <summary>Checks a WAV for a species' cry without writing anything. Null, with the same reason
+        /// ImportCry gives, when it can't go in.</summary>
+        public static PendingSample PrepareCry(int species, string path, out string problem)
         {
             problem = null;
-            note = null;
+            if (CriesLiveInWaveArchives)
+            {
+                problem = "On hg-engine a cry is saved to the checkout with the editor's Save.";
+                return null;
+            }
+
+            var sdat = Load();
+            string sdatPath = PathFor();
+            if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return null; }
+            if (RefusedByHgEngine(sdatPath, out problem)) return null;
+
+            int arc = CryWaveArchive(species);
+            if (arc < 0 || sdat.WaveArcs[arc] == null) { problem = "This ROM has no cry for that Pokemon to replace."; return null; }
+
+            var pcm = ReadImport(path, out int rate, out problem);
+            if (pcm == null) return null;
+
+            var waves = sdat.GetWaveArchive(arc) ?? new List<SwavSample>();
+            var fresh = new SwavSample
+            {
+                SampleRate = rate, Loop = false, LoopStartSample = 0, Pcm = pcm,
+                Encoding = waves.Count > 0 ? waves[0].Encoding : 0,
+            };
+            return new PendingSample { WaveArc = arc, Index = 0, Sample = fresh };
+        }
+
+        /// <summary>Checks a WAV for one sample without writing anything. Null, with the same reason
+        /// ImportSample gives, when it can't go in.</summary>
+        public static PendingSample PrepareSample(int waveArc, int index, string path, out string problem)
+        {
+            problem = null;
+            var sdat = Load();
+            string sdatPath = PathFor();
+            if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return null; }
+            if (RefusedByHgEngine(sdatPath, out problem)) return null;
+            if (waveArc < 0 || waveArc >= sdat.WaveArcs.Count || sdat.WaveArcs[waveArc] == null)
+            { problem = "There is no such set of sounds in this ROM."; return null; }
+
+            List<SwavSample> waves;
+            try { waves = sdat.GetWaveArchive(waveArc); } catch { waves = null; }
+            if (waves == null || index < 0 || index >= waves.Count)
+            { problem = "There is no such sound in that set to replace."; return null; }
+
+            var pcm = ReadImport(path, out int rate, out problem);
+            if (pcm == null) return null;
+
+            // Looping and encoding stay the slot's own, as ImportSample explains.
+            var old = waves[index];
+            var fresh = new SwavSample
+            {
+                SampleRate = rate,
+                Loop = old.Loop,
+                LoopStartSample = old.Loop && old.LoopStartSample < pcm.Length ? old.LoopStartSample : 0,
+                Pcm = pcm,
+                Encoding = old.Encoding,
+            };
+            return new PendingSample { WaveArc = waveArc, Index = index, Sample = fresh };
+        }
+
+        private static short[] ReadImport(string path, out int rate, out string problem)
+        {
+            rate = 0;
+            byte[] file;
+            try { file = File.ReadAllBytes(path); }
+            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return null; }
+
+            var pcm = CryFiles.ReadWav(file, out rate, out problem);
+            if (pcm == null) return null;
+            if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return null; }
+            return pcm;
+        }
+
+        /// <summary>
+        /// The whole archive with every held sample put in, in memory. Each wave archive is rebuilt once
+        /// with all of its replacements, in the order they were first held.
+        /// </summary>
+        internal static byte[] ApplySamples(SdatArchive sdat, IReadOnlyList<PendingSample> pending, out string problem)
+        {
+            problem = null;
+            if (sdat == null) { problem = "This ROM has no sound archive to write to."; return null; }
+
+            var order = new List<int>();
+            var byArc = new Dictionary<int, List<PendingSample>>();
+            foreach (var p in pending ?? Array.Empty<PendingSample>())
+            {
+                if (p?.Sample == null) continue;
+                if (!byArc.TryGetValue(p.WaveArc, out var list))
+                {
+                    byArc[p.WaveArc] = list = new List<PendingSample>();
+                    order.Add(p.WaveArc);
+                }
+                list.Add(p);
+            }
+            if (order.Count == 0) { problem = "There is nothing to save."; return null; }
+
+            var current = sdat;
+            byte[] whole = null;
+            for (int k = 0; k < order.Count; k++)
+            {
+                int arc = order[k];
+                if (arc < 0 || arc >= current.WaveArcs.Count || current.WaveArcs[arc] == null)
+                { problem = "There is no such set of sounds in this ROM."; return null; }
+
+                List<SwavSample> waves;
+                try { waves = current.GetWaveArchive(arc); } catch { waves = null; }
+                var replaced = new List<SwavSample>(waves ?? new List<SwavSample>());
+                foreach (var p in byArc[arc])
+                {
+                    if (p.Index >= 0 && p.Index < replaced.Count) replaced[p.Index] = p.Sample;
+                    else if (p.Index == 0 && replaced.Count == 0) replaced.Add(p.Sample);
+                    else { problem = "There is no such sound in that set to replace."; return null; }
+                }
+
+                whole = current.ReplaceFile(current.WaveArcs[arc].FileId, CryFiles.BuildArchive(replaced));
+                if (whole == null) { problem = "The sound archive could not be rewritten."; return null; }
+                // The next replacement has to see where this one left the file table.
+                if (k + 1 < order.Count) current = SdatArchive.Parse(whole);
+            }
+            return whole;
+        }
+
+        /// <summary>The archive as it would read after saving the held samples, for listening before Save.
+        /// Null, with the reason, when they can't be put in.</summary>
+        public static SdatArchive WithSamples(IReadOnlyList<PendingSample> pending, out string problem)
+        {
+            byte[] whole = ApplySamples(Load(), pending, out problem);
+            return whole == null ? null : SdatArchive.Parse(whole);
+        }
+
+        /// <summary>Writes every held sample into the ROM's sound archive with one rewrite of the file.</summary>
+        public static bool WriteSamples(IReadOnlyList<PendingSample> pending, out string problem)
+        {
+            var sdat = Load();
+            string sdatPath = PathFor();
+            if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
+            if (RefusedByHgEngine(sdatPath, out problem)) return false;
+
+            byte[] whole = ApplySamples(sdat, pending, out problem);
+            if (whole == null) return false;
+
+            try { File.WriteAllBytes(sdatPath, whole); }
+            catch (Exception ex) { problem = "The sound archive could not be saved: " + ex.Message; return false; }
+
+            Reset();          // read it again next time, so what plays is what is now on disk
+            return true;
+        }
+
+        /// <summary>A cry checked and held for the checkout's sound/cries until the editor saves.</summary>
+        public sealed class PendingCry
+        {
+            public int Cry { get; init; }
+
+            /// <summary>Relative to the checkout, with forward slashes.</summary>
+            public string RelPath { get; init; }
+
+            public byte[] Wav { get; init; }
+        }
+
+        /// <summary>Checks a WAV for a species' cry on hg-engine without writing anything. Null, with the
+        /// reason, when it can't go in.</summary>
+        public static PendingCry PrepareCheckoutCry(int species, string path, out string problem)
+        {
+            problem = null;
 
             int cry = CryNumberFor(species);
             if (cry != species)
             {
                 problem = "That slot has no cry of its own in hg-engine; it falls back to another one.";
-                return false;
+                return null;
             }
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
+            catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return null; }
 
             // Parsed only to refuse a file its build would choke on; what gets written is the WAV itself,
             // since the build converts it with its own tool and settings.
             var pcm = CryFiles.ReadWav(file, out _, out problem);
-            if (pcm == null) return false;
-            if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return false; }
+            if (pcm == null) return null;
+            if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return null; }
 
-            string rel = Path.Combine("sound", "cries", cry.ToString("D3") + ".wav");
-            string full = Path.Combine(HgEngineProject.RepoPathUnc, rel);
+            return new PendingCry { Cry = cry, RelPath = "sound/cries/" + cry.ToString("D3") + ".wav", Wav = file };
+        }
+
+        /// <summary>Writes a held cry into the linked checkout, which is what its build reads.</summary>
+        public static bool WriteCheckoutCry(PendingCry cry, out string problem)
+            => WriteCheckoutCry(cry, HgEngineProject.RepoPathUnc, out problem);
+
+        internal static bool WriteCheckoutCry(PendingCry cry, string root, out string problem)
+        {
+            problem = null;
+            if (cry?.Wav == null || string.IsNullOrEmpty(cry.RelPath)) { problem = "There is no cry to save."; return false; }
+            if (string.IsNullOrEmpty(root)) { problem = "No hg-engine checkout is linked."; return false; }
+
+            string full = Path.Combine(root, cry.RelPath.Replace('/', Path.DirectorySeparatorChar));
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(full));
-                File.WriteAllBytes(full, file);
+                File.WriteAllBytes(full, cry.Wav);
             }
             catch (Exception ex) { problem = "That cry could not be saved to the checkout: " + ex.Message; return false; }
-
-            note = "Saved to " + rel.Replace(Path.DirectorySeparatorChar, '/')
-                 + ". Compile the ROM to hear it in game; the copy in the ROM is still the old one until then.";
             return true;
         }
 
         /// <summary>
         /// A Pokemon's cry, as sound ready to play, or null when this ROM has nothing for that species.
         /// </summary>
-        public static short[] RenderCry(int species, int sampleRate = 32000)
+        public static short[] RenderCry(int species, int sampleRate = 32000) => RenderCry(Load(), species, sampleRate);
+
+        /// <summary>The same, played from an archive that may hold replacements not saved yet.</summary>
+        public static short[] RenderCry(SdatArchive sdat, int species, int sampleRate = 32000)
         {
-            var sdat = Load();
             if (sdat == null || species <= 0) return null;
 
             int seq = CrySequence(sdat);
@@ -341,9 +534,11 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>One sample as it sits in the ROM, or null when there is no such sample.</summary>
-        public static SwavSample Sample(int waveArc, int index)
+        public static SwavSample Sample(int waveArc, int index) => Sample(Load(), waveArc, index);
+
+        /// <summary>The same, from an archive that may hold replacements not saved yet.</summary>
+        public static SwavSample Sample(SdatArchive sdat, int waveArc, int index)
         {
-            var sdat = Load();
             if (sdat == null || waveArc < 0 || waveArc >= sdat.WaveArcs.Count) return null;
             List<SwavSample> waves;
             try { waves = sdat.GetWaveArchive(waveArc); } catch { return null; }
@@ -360,8 +555,9 @@ namespace DSPRE.Avalonia.Data
             return true;
         }
 
-        /// <summary>Puts a WAV in over one sample, keeping the rest of its archive as it was. </summary>
-        public static bool ImportSample(int waveArc, int index, string path, out string problem)
+        /// <summary>Puts a WAV in over one sample, keeping the rest of its archive as it was, and writes at
+        /// once. Only the tests call it, as the reference for PrepareSample and WriteSamples.</summary>
+        internal static bool ImportSample(int waveArc, int index, string path, out string problem)
         {
             problem = null;
             var sdat = Load();

@@ -32,6 +32,10 @@
                   IsEnabled="{Binding CanSaveSoundFont}" ToolTip.Tip="{Binding SaveSoundFontHelp}"/>
           <Button Content="Import" Click="Import_Click" Width="66" IsEnabled="{Binding CanImport}"
                   ToolTip.Tip="{Binding ImportHelp}"/>
+          <Button Content="Save" Click="Save_Click" Width="66"
+                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Write what was imported."/>
+          <Button Content="Discard" Click="Discard_Click" Width="70"
+                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Forget what was imported."/>
           <Button Content="Close" Click="Close_Click" Width="66"/>
         </StackPanel>
       </Grid>

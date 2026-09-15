@@ -34,6 +34,7 @@ namespace DSPRE.Avalonia.Views.Audio
         {
             InitializeComponent();
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
             vm.PropertyChanged += OnViewModelChanged;
             _playhead.Tick += MovePlayhead;
             // Arriving from the Pokemon editor, the cry is already picked before this window exists, so
@@ -46,7 +47,9 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private void OnViewModelChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AudioEditorViewModel.Selected)) _ = DrawSelected();
+            // Staging, saving and discarding change what the picked row sounds like.
+            if (e.PropertyName == nameof(AudioEditorViewModel.Selected)
+             || e.PropertyName == nameof(AudioEditorViewModel.HasUnsavedChanges)) _ = DrawSelected();
         }
 
         private async Task DrawSelected()
@@ -256,7 +259,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 // Everything else has no sample of its own, so what is saved is how it sounds when played.
                 if (vm.Selected.IsCry)
                 {
-                    if (!SoundArchive.ExportCry(vm.Selected.Number, path))
+                    if (!vm.ExportSelectedSample(path))
                         await DialogHelper.ShowInfo("This ROM has no cry for that Pokémon.", "Save sound");
                     return;
                 }
@@ -265,7 +268,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 // once a tune has put volume and pitch on it.
                 if (vm.Selected.IsSample)
                 {
-                    if (!SoundArchive.ExportSample(vm.Selected.WaveArc, vm.Selected.SampleIndex, path))
+                    if (!vm.ExportSelectedSample(path))
                         await DialogHelper.ShowInfo("There is nothing in that one to save.", "Save sound");
                     return;
                 }
@@ -302,25 +305,33 @@ namespace DSPRE.Avalonia.Views.Audio
 
             try
             {
-                string note = null;
-                bool done = sample
-                    ? SoundArchive.ImportSample(vm.Selected.WaveArc, vm.Selected.SampleIndex, path, out string problem)
-                    : SoundArchive.ImportCry(vm.Selected.Number, path, out problem, out note);
-
-                if (done)
+                // Checked now so a bad file is refused at once, but nothing is written until Save.
+                var item = vm.Selected;
+                string why;
+                if (!sample && SoundArchive.CriesGoToCheckout)
                 {
-                    await DrawSelected();   // the picture has to show what is in the ROM now, not what was
-                    await DialogHelper.ShowInfo(
-                        note ?? (sample ? "The sound has been put in." : "The cry has been put in.")
-                                + " Press Play to hear it.", title);
+                    var cry = SoundArchive.PrepareCheckoutCry(item.Number, path, out why);
+                    if (cry != null) { vm.StageCry(item, cry); return; }
                 }
                 else
                 {
-                    await DialogHelper.ShowInfo(problem ?? "That could not be put in.", title);
+                    var held = sample
+                        ? SoundArchive.PrepareSample(item.WaveArc, item.SampleIndex, path, out why)
+                        : SoundArchive.PrepareCry(item.Number, path, out why);
+                    if (held != null) { vm.StageSample(item, held); return; }
                 }
+                await DialogHelper.ShowInfo(why ?? "That could not be put in.", title);
             }
             catch (Exception ex) { await DialogHelper.ShowError("It could not be put in:\n" + ex.Message, title); }
         }
+
+        private async void Save_Click(object sender, RoutedEventArgs e)
+        {
+            string problem = ViewModel?.Save();
+            if (problem != null) await DialogHelper.ShowError(problem, "Save", this);
+        }
+
+        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
     }
