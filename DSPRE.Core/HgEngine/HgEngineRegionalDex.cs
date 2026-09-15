@@ -38,7 +38,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, dexNumber.ToString()))
             { error = $"Could not locate or insert species {speciesId} in RegionalDex.c."; return false; }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

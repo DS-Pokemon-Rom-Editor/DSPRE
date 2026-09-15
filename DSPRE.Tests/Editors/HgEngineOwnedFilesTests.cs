@@ -267,24 +267,28 @@ namespace DSPRE.Tests
                 Assert.True(HgEngineOwnedFiles.TryReadLines(file, out List<string> read, out string readError), readError);
 
                 // A message that is blank or only spaces is still a message, and the row numbers after it
-                // depend on it surviving.
+                // depend on it surviving. msgenc only keeps an empty message between CRLF breaks.
                 Assert.Equal(written, read);
-                Assert.DoesNotContain("\r", File.ReadAllText(file.FullPath));
+                Assert.Equal("USE\r\nTRASH\r\n\r\n     \r\nCONFIRM\r\n", File.ReadAllText(file.FullPath));
             }
             finally { Directory.Delete(root, true); }
         }
 
         [Fact]
-        public void CrlfIsWrittenOutAsLf()
+        public void AScriptKeepsTheLineEndingsItAlreadyHas()
         {
             string root = MakeFakeCheckout("armips/scr_seq/scr_seq_00003_commonscript.s");
             try
             {
                 var file = ScanScripts(root)[3];
 
+                File.WriteAllText(file.FullPath, "");
                 Assert.True(HgEngineOwnedFiles.TryWriteText(file, ".nds\r\n.thumb\r\n", out string error), error);
-
                 Assert.Equal(".nds\n.thumb\n", File.ReadAllText(file.FullPath));
+
+                File.WriteAllText(file.FullPath, ".nds\r\n");
+                Assert.True(HgEngineOwnedFiles.TryWriteText(file, ".nds\n.arm\n", out error), error);
+                Assert.Equal(".nds\r\n.arm\r\n", File.ReadAllText(file.FullPath));
             }
             finally { Directory.Delete(root, true); }
         }

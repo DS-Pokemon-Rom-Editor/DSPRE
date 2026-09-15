@@ -72,7 +72,7 @@ namespace DSPRE.HgEngine
                 { error = $"Could not insert a new FollowerProperties entry for species {speciesId}."; return false; }
             }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

@@ -40,7 +40,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, valueLiteral))
             { error = $"Could not locate or insert species {speciesId} in BabyMons.c."; return false; }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

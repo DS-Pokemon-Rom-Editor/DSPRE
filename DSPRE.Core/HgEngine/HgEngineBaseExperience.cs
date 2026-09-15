@@ -36,7 +36,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineFlatArrayField.TrySetRawValue(ref text, designator, baseExp.ToString()))
             { error = $"Could not locate or insert species {speciesId} in BaseExperienceTable.c."; return false; }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

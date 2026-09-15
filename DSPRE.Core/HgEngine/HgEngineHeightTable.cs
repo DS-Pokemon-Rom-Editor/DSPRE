@@ -58,7 +58,7 @@ namespace DSPRE.HgEngine
                 return false;
             }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

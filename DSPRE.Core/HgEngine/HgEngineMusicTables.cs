@@ -184,7 +184,7 @@ namespace DSPRE.HgEngine
             string text = Read(SourceRelPath, out string path);
             var (edited, err) = change(text);
             if (edited == null) { error = err; return false; }
-            if (edited != text) File.WriteAllText(path, edited);
+            if (edited != text) HgEngineFileCache.WriteText(path, edited);
             return true;
         }
 

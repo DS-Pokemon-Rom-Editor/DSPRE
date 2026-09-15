@@ -210,18 +210,21 @@ namespace DSPRE.HgEngine
             }
         }
 
+        /// <summary>Always CRLF: msgenc splits messages on "\r\n" and merges the two breaks around an empty
+        /// message when they are bare LF, shifting every later message id (data/text/.gitattributes).</summary>
         public static bool TryWriteLines(HgEngineOwnedFile file, IEnumerable<string> lines, out string error)
-            => TryWriteText(file, string.Join("\n", lines) + "\n", out error);
+            => TryWriteText(file, string.Join("\n", lines) + "\n", out error, crlf: true);
 
-        public static bool TryWriteText(HgEngineOwnedFile file, string text, out string error)
+        public static bool TryWriteText(HgEngineOwnedFile file, string text, out string error) => TryWriteText(file, text, out error, crlf: false);
+
+        private static bool TryWriteText(HgEngineOwnedFile file, string text, out string error, bool crlf)
         {
             error = null;
             if (file?.FullPath == null) { error = "This file has no hg-engine source to write."; return false; }
 
             try
             {
-                // The toolchain reads these under POSIX, so they stay LF whatever the editor produced.
-                File.WriteAllText(file.FullPath, text.Replace("\r\n", "\n"));
+                HgEngineFileCache.WriteText(file.FullPath, text, crlf: crlf);
                 HgEngineFileCache.ClearCache();
                 return true;
             }

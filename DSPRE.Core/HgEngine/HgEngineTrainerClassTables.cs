@@ -56,7 +56,7 @@ namespace DSPRE.HgEngine
                 string newEntry = $"    {{ .class = {designator}, .multiplier = {multiplier} }},\n";
                 text = text.Insert(close, newEntry);
             }
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 
@@ -98,7 +98,7 @@ namespace DSPRE.HgEngine
                 string newEntry = $"    [{designator}] = {genderName},\n";
                 text = text.Insert(close, newEntry);
             }
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 

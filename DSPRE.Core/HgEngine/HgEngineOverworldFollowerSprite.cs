@@ -99,7 +99,7 @@ namespace DSPRE.HgEngine
 
             var g2 = m.Groups[2];
             text = text.Substring(0, g2.Index) + sizeClassName + text.Substring(g2.Index + g2.Length);
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 
@@ -118,7 +118,7 @@ namespace DSPRE.HgEngine
             if (text == null) { error = $"Source file not found: {path}"; return false; }
             if (!TryInsertEntry(ref text, designator, "OVERWORLD_SIZE_SMALL"))
             { error = "Could not locate the overworld table's terminator entry to insert next to."; return false; }
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
 
             var table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
@@ -164,7 +164,7 @@ namespace DSPRE.HgEngine
                 var m = PalFileNameFieldRegex.Match(jsonText);
                 if (m.Success)
                     jsonText = jsonText.Substring(0, m.Groups[1].Index) + newPalFileName + jsonText.Substring(m.Groups[1].Index + m.Groups[1].Length);
-                File.WriteAllText(targetJson, jsonText);
+                HgEngineFileCache.WriteText(targetJson, jsonText);
 
                 string dir = Path.GetDirectoryName(templatePalPath);
                 File.Copy(templatePalPath, Path.Combine(dir!, newPalFileName), overwrite: true);
