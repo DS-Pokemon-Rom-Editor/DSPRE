@@ -106,8 +106,8 @@ namespace DSPRE.ROMFiles {
 
         public byte eggGroup1;    
         public byte eggGroup2;    
-        public byte firstAbility; 
-        public byte secondAbility;
+        public ushort firstAbility;
+        public ushort secondAbility;
 
         public byte escapeRate;
         public PokemonDexColor color;// : 7;           // Color (used in Pokedex)
@@ -143,15 +143,17 @@ namespace DSPRE.ROMFiles {
                 growthCurve = (PokemonGrowthCurve)reader.ReadByte();
                 eggGroup1 = reader.ReadByte();
                 eggGroup2 = reader.ReadByte();
-                firstAbility = reader.ReadByte();
-                secondAbility = reader.ReadByte();
+                // hg-engine widens both abilities to u16 and moves the second past the flee rate and colour.
+                firstAbility = RomInfo.isHGE ? reader.ReadUInt16() : reader.ReadByte();
+                if (!RomInfo.isHGE) secondAbility = reader.ReadByte();
                 escapeRate = reader.ReadByte();
 
                 byte colorAndFlip = reader.ReadByte();
                 color = (PokemonDexColor)(colorAndFlip & 0b01111111);
                 flip = ((colorAndFlip >> 7) & 0b00000001) == 1;
 
-                reader.BaseStream.Position += 2; //Alignment
+                if (RomInfo.isHGE) secondAbility = reader.ReadUInt16();
+                else reader.BaseStream.Position += 2; //Alignment
 
                 uint tm1 = reader.ReadUInt32();
                 uint tm2 = reader.ReadUInt32();
@@ -194,14 +196,15 @@ namespace DSPRE.ROMFiles {
                     writer.Write((byte)growthCurve);
                     writer.Write(eggGroup1);
                     writer.Write(eggGroup2);
-                    writer.Write(firstAbility);
-                    writer.Write(secondAbility);
+                    if (RomInfo.isHGE) writer.Write(firstAbility);
+                    else { writer.Write((byte)firstAbility); writer.Write((byte)secondAbility); }
                     writer.Write(escapeRate);
                     byte colorAndFlipflag = (byte)(((byte)color & 0b01111111) |
                                                   (((flip ? 1 : 0) & 0b00000001) << 7));
                     writer.Write(colorAndFlipflag);
 
-                    writer.BaseStream.Position += 2; //Alignment
+                    if (RomInfo.isHGE) writer.Write(secondAbility);
+                    else writer.BaseStream.Position += 2; //Alignment
 
                     uint[] bfs = SetToBitField(machines);
                     int l = Math.Min(bfs.Length, 4);
