@@ -127,11 +127,40 @@ namespace DSPRE.Avalonia.ViewModels.Text
             set
             {
                 if (value == _selectedIndex) return;
-                if (!_suppress && _dirty) SaveSourceOnly(false);
+                if (!_suppress && _dirty && value >= 0 && _selectedIndex >= 0)
+                {
+                    // Snap the list back to the file still loaded until the user has answered.
+                    OnPropertyChanged(nameof(SelectedScriptIndex));
+                    _ = SelectScriptAsync(value);
+                    return;
+                }
                 if (!Set(ref _selectedIndex, value)) return;
                 OnEditorStateChanged();
                 if (!_suppress) LoadSelectedFile();
             }
+        }
+
+        /// <summary>Loads the file at <paramref name="index"/> once unsaved edits are saved or discarded.
+        /// False when the user stayed on the current file.</summary>
+        private async Task<bool> SelectScriptAsync(int index)
+        {
+            if (index < 0 || index >= _sourceFiles.Count) return false;
+            if (index == _selectedIndex) return true;
+            string path = _sourceFiles[index];
+
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "script")) return false;
+
+            int at = _sourceFiles.FindIndex(p => SamePath(p, path));
+            if (at < 0) return false;
+            SetClean();
+            if (at != _selectedIndex)
+            {
+                _selectedIndex = at;
+                OnPropertyChanged(nameof(SelectedScriptIndex));
+                OnEditorStateChanged();
+            }
+            LoadSelectedFile();
+            return true;
         }
 
         public string ScriptText
@@ -451,7 +480,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             OnPropertyChanged(nameof(CanSearchProject));
         }
 
-        public bool OpenSearchResult(ScriptSearchResult result)
+        public async Task<bool> OpenSearchResultAsync(ScriptSearchResult result)
         {
             if (result == null) return false;
 
@@ -462,12 +491,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return false;
             }
 
-            SelectedScriptIndex = index;
+            if (!await SelectScriptAsync(index)) return false;
             StatusText = "Opened " + result.Display + ".";
             return true;
         }
 
-        public bool OpenDiagnostic(ScriptDiagnostic diagnostic)
+        public async Task<bool> OpenDiagnosticAsync(ScriptDiagnostic diagnostic)
         {
             if (diagnostic == null) return false;
 
@@ -478,7 +507,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return false;
             }
 
-            SelectedScriptIndex = index;
+            if (!await SelectScriptAsync(index)) return false;
             StatusText = "Opened " + diagnostic.Display + ".";
             return true;
         }
@@ -535,7 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     return null;
                 }
 
-                SelectedScriptIndex = index;
+                if (!await SelectScriptAsync(index)) return null;
                 StatusText = "Opened definition at " + DisplayPath(target.Path) + ":" + target.Line + ":" + target.Column + ".";
                 return new ScriptNavigationTarget(target.Line, target.Column, target.SelectionLength);
             }
@@ -832,10 +861,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             try
             {
+                // Stays in the editor until Save, so Discard can still take it back.
                 ScriptText = System.IO.File.ReadAllText(path);
-                SaveSourceOnly(true);
-                StatusText = "Imported into " + DisplayPath(_currentPath) + ".";
-                if (ManagedSource != null) await ShowManagedSaveNoticeAsync(ManagedSource);
+                StatusText = "Imported into " + (ManagedSource?.RelPath ?? DisplayPath(_currentPath)) + ". Not saved yet.";
             }
             catch (Exception ex)
             {
@@ -985,6 +1013,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     : DisplayPath(file));
             }
 
+            // Clearing the names resets the list's selection, and an added file can shift the rest.
+            if (_currentPath != null)
+            {
+                int current = _sourceFiles.FindIndex(p => SamePath(p, _currentPath));
+                if (current >= 0 && current != _selectedIndex)
+                {
+                    _selectedIndex = current;
+                    OnPropertyChanged(nameof(SelectedScriptIndex));
+                    OnEditorStateChanged();
+                }
+            }
+
             SearchResults.Clear();
             SelectedSearchResult = null;
             OnPropertyChanged(nameof(CanSearchProject));
@@ -1059,10 +1099,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void SaveSourceOnly(bool showStatus)
         {
             if (_currentPath == null) return;
-            System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
+            HgEngineOwnedFile managed = ManagedSource;
+            if (managed != null)
+            {
+                // The checkout's writer keeps its line endings and the shared source cache in step.
+                if (!HgEngineOwnedFiles.TryWriteText(managed, ScriptText ?? "", out string error))
+                    throw new IOException(error);
+            }
+            else
+            {
+                System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
+            }
             SetClean();
-            if (showStatus) StatusText = "Saved " + DisplayPath(_currentPath) + ".";
-            _ = SendCurrentDocumentSavedToLsp();
+            if (showStatus) StatusText = "Saved " + (managed?.RelPath ?? DisplayPath(_currentPath)) + ".";
+            // rotom-lsp never opens hg-engine's own sources.
+            if (managed == null) _ = SendCurrentDocumentSavedToLsp();
         }
 
         private async Task OpenCurrentDocumentInLsp()

@@ -680,18 +680,20 @@ namespace DSPRE.Avalonia.Views.Text
             }
         }
 
-        private void OpenSelectedSearchResult()
+        private async void OpenSelectedSearchResult()
         {
             if (ProjectSearchResultsList.SelectedItem is not ScriptSearchResult result) return;
-            if (VM?.OpenSearchResult(result) != true) return;
+            var vm = VM;
+            if (vm == null || !await vm.OpenSearchResultAsync(result)) return;
 
             SelectEditorRange(result.Line, result.Column, result.SelectionLength);
         }
 
-        private void OpenSelectedDiagnostic()
+        private async void OpenSelectedDiagnostic()
         {
             if (DiagnosticsList.SelectedItem is not ScriptDiagnostic diagnostic) return;
-            if (VM?.OpenDiagnostic(diagnostic) != true) return;
+            var vm = VM;
+            if (vm == null || !await vm.OpenDiagnosticAsync(diagnostic)) return;
 
             SelectEditorRange(diagnostic.Line, diagnostic.Column, diagnostic.SelectionLength);
         }
