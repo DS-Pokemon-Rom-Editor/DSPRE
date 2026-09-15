@@ -98,7 +98,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private decimal _extraPp4; public decimal ExtraPp4 { get => _extraPp4; set => Set(ref _extraPp4, value); }
 
         private bool _extraNicknameEnabled; public bool ExtraNicknameEnabled { get => _extraNicknameEnabled; set => Set(ref _extraNicknameEnabled, value); }
-        private string _extraNickname = ""; public string ExtraNickname { get => _extraNickname; set => Set(ref _extraNickname, value ?? ""); }
+        private string _extraNickname = "";
+        public string ExtraNickname
+        {
+            get => _extraNickname;
+            set
+            {
+                string kept = HgEngineTrainerSource.ToEncodableNickname(value);
+                Set(ref _extraNickname, kept);
+                if (kept != (value ?? "")) global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(ExtraNickname)));
+            }
+        }
 
         public TrainerPartyMonHgeExtras()
         {
@@ -190,27 +200,42 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HgeAdditionalFlagsEnabled { get => _hgeAdditionalFlagsEnabled; set => Set(ref _hgeAdditionalFlagsEnabled, value); }
 
         // ── Fields ──────────────────────────────────────────────────────────────────
+        // A ComboBox reports -1 while its list refills; only a load may clear a choice.
+        private bool _rebuildingAbilities;
+        private bool RejectCleared(int value, string name)
+        {
+            if (value >= 0 || (_suppress && !_rebuildingAbilities)) return false;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(name));
+            return true;
+        }
+
         private int _speciesIndex = -1;
         public int SpeciesIndex
         {
             get => _speciesIndex;
-            set { if (Set(ref _speciesIndex, value)) { RebuildAbilities(); UpdateIcon(); Touch(); } }
+            set { if (RejectCleared(value, nameof(SpeciesIndex))) return; if (Set(ref _speciesIndex, value)) { RebuildAbilities(); UpdateIcon(); Touch(); } }
         }
 
         private decimal _formId;
-        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) Touch(); } }
+        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) { if (HgEngineProject.IsActive) RebuildAbilities(); Touch(); } } }
+
+        /// <summary>The species id this slot's form reads its abilities and learnset from.</summary>
+        public int DataSpeciesId => HgEngineProject.IsActive ? HgEngineFormRegistry.ResolveFormSpecies(_speciesIndex, (int)_formId) : _speciesIndex;
+
+        // hg-engine keeps the form in the top five bits of the species word; vanilla allows six.
+        public decimal FormMaximum => HgEngineProject.IsActive ? 31 : 63;
 
         private decimal _level = 1;
         public decimal Level { get => _level; set { if (Set(ref _level, value)) Touch(); } }
 
-        private int _move1 = -1; public int Move1 { get => _move1; set { if (Set(ref _move1, value)) Touch(); } }
-        private int _move2 = -1; public int Move2 { get => _move2; set { if (Set(ref _move2, value)) Touch(); } }
-        private int _move3 = -1; public int Move3 { get => _move3; set { if (Set(ref _move3, value)) Touch(); } }
-        private int _move4 = -1; public int Move4 { get => _move4; set { if (Set(ref _move4, value)) Touch(); } }
+        private int _move1 = -1; public int Move1 { get => _move1; set { if (RejectCleared(value, nameof(Move1))) return; if (Set(ref _move1, value)) Touch(); } }
+        private int _move2 = -1; public int Move2 { get => _move2; set { if (RejectCleared(value, nameof(Move2))) return; if (Set(ref _move2, value)) Touch(); } }
+        private int _move3 = -1; public int Move3 { get => _move3; set { if (RejectCleared(value, nameof(Move3))) return; if (Set(ref _move3, value)) Touch(); } }
+        private int _move4 = -1; public int Move4 { get => _move4; set { if (RejectCleared(value, nameof(Move4))) return; if (Set(ref _move4, value)) Touch(); } }
 
-        private int _itemIndex = -1; public int ItemIndex { get => _itemIndex; set { if (Set(ref _itemIndex, value)) Touch(); } }
-        private int _genderIndex; public int GenderIndex { get => _genderIndex; set { if (Set(ref _genderIndex, value)) Touch(); } }
-        private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (Set(ref _abilityIndex, value)) Touch(); } }
+        private int _itemIndex = -1; public int ItemIndex { get => _itemIndex; set { if (RejectCleared(value, nameof(ItemIndex))) return; if (Set(ref _itemIndex, value)) Touch(); } }
+        private int _genderIndex; public int GenderIndex { get => _genderIndex; set { if (RejectCleared(value, nameof(GenderIndex))) return; if (Set(ref _genderIndex, value)) Touch(); } }
+        private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (RejectCleared(value, nameof(AbilityIndex))) return; if (Set(ref _abilityIndex, value)) Touch(); } }
         private decimal _difficulty; public decimal Difficulty { get => _difficulty; set { if (Set(ref _difficulty, value)) Touch(); } }
         private decimal _ballSeals;
         public decimal BallSeals
@@ -282,23 +307,122 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RebuildAbilities()
         {
-            AbilityItems.Clear();
-            if (_speciesIndex < 0 || _speciesIndex >= _abilities.Length) return;
-            var ab = _abilities[_speciesIndex];
-            string a1 = ab.abi1 >= 0 && ab.abi1 < _abilityNames.Length ? _abilityNames[ab.abi1] : "?";
-            string a2 = ab.abi2 >= 0 && ab.abi2 < _abilityNames.Length ? _abilityNames[ab.abi2] : "?";
+            _rebuildingAbilities = true;
+            try
+            {
+                AbilityItems.Clear();
+                int species = DataSpeciesId;
+                if (species < 0 || species >= _abilities.Length) return;
+                var ab = _abilities[species];
+                string a1 = AbilityName(ab.abi1);
+                string a2 = AbilityName(ab.abi2);
 
-            if (!_abilityEditable)
-            {
-                // DPPt: ability not editable, show ability 1 three times (matches WinForms padding).
-                AbilityItems.Add(a1); AbilityItems.Add(a1); AbilityItems.Add(a1);
+                if (HgEngineProject.IsActive)
+                {
+                    // Rows follow HgeAbilitySlotNames.
+                    AbilityItems.Add(a1);
+                    AbilityItems.Add(a2);
+                    AbilityItems.Add(HgEngineHiddenAbility.TryGetAbilityId(species, out int hidden) && hidden > 0
+                        ? $"{AbilityName(hidden)} (hidden)" : "Hidden ability");
+                }
+                else if (!_abilityEditable)
+                {
+                    // DPPt: ability not editable, show ability 1 three times (matches WinForms padding).
+                    AbilityItems.Add(a1); AbilityItems.Add(a1); AbilityItems.Add(a1);
+                }
+                else
+                {
+                    AbilityItems.Add("Default Ability");
+                    AbilityItems.Add(a1);
+                    AbilityItems.Add(a2);
+                }
             }
-            else
+            finally { _rebuildingAbilities = false; }
+            RepushAbilityIndex();
+        }
+
+        // The ComboBox clears its selection when its rows refill, and re-raising the same value is ignored
+        // by the binding, so blank it on one frame and restore it on a later one.
+        // One pending repush at a time: a second one queued behind it would save the -1 and restore that.
+        private bool _abilityRepushPending;
+        private void RepushAbilityIndex()
+        {
+            if (_abilityRepushPending) return;
+            _abilityRepushPending = true;
+            var dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
+            dispatcher.Post(() =>
             {
-                AbilityItems.Add("Default Ability");
-                AbilityItems.Add(a1);
-                AbilityItems.Add(a2);
-            }
+                int keep = _abilityIndex;
+                _abilityIndex = -1; OnPropertyChanged(nameof(AbilityIndex));
+                dispatcher.Post(() => { _abilityIndex = keep; _abilityRepushPending = false; OnPropertyChanged(nameof(AbilityIndex)); },
+                    global::Avalonia.Threading.DispatcherPriority.Background);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        private string AbilityName(int id) => id >= 0 && id < _abilityNames.Length ? _abilityNames[id] : "?";
+
+        /// <summary>hg-engine abilitySlot names, in the order of the ability rows.</summary>
+        public static readonly string[] HgeAbilitySlotNames = { "TRAINER_POKEMON_ABILITY_1", "TRAINER_POKEMON_ABILITY_2", "TRAINER_POKEMON_ABILITY_HIDDEN" };
+
+        /// <summary>The ability the chosen hg-engine slot gives this species.</summary>
+        public int SlotAbilityId()
+        {
+            int species = DataSpeciesId;
+            if (species < 0 || species >= _abilities.Length) return 0;
+            var ab = _abilities[species];
+            if (_abilityIndex == 1 && ab.abi2 > 0) return ab.abi2;
+            if (_abilityIndex == 2 && HgEngineHiddenAbility.TryGetAbilityId(species, out int hidden) && hidden > 0) return hidden;
+            return ab.abi1;
+        }
+
+        /// <summary>Everything a party slot holds, so a reorder can move it whole.</summary>
+        public sealed class State
+        {
+            internal int Species, Form, Level, Item, Gender, Ability, Difficulty, BallSeals;
+            internal int[] Moves;
+            internal int AbilityId, BallId, Nature, Status;
+            internal int[] Ivs, Evs;
+            internal bool Shiny, StatusOn, HpOn, AtkOn, DefOn, SpeOn, SpAOn, SpDOn, PpOn, NickOn;
+            internal decimal Hp, Atk, Def, Spe, SpA, SpD, Pp1, Pp2, Pp3, Pp4;
+            internal string Nick;
+        }
+
+        public State Capture()
+        {
+            var x = HgeExtras;
+            static int[] Stats(StatBlockViewModel s) => new[] { (int)s.Hp, (int)s.Attack, (int)s.Defense, (int)s.Speed, (int)s.SpAttack, (int)s.SpDefense };
+            return new State
+            {
+                Species = _speciesIndex, Form = (int)_formId, Level = (int)_level, Item = _itemIndex, Gender = _genderIndex,
+                Ability = _abilityIndex, Difficulty = (int)_difficulty, BallSeals = (int)_ballSeals,
+                Moves = new[] { _move1, _move2, _move3, _move4 },
+                AbilityId = x.AbilityId, BallId = x.BallId, Nature = x.NatureIndex, Status = x.ExtraStatus,
+                Ivs = Stats(x.SetIvs), Evs = Stats(x.SetEvs), Shiny = x.ShinyLocked,
+                StatusOn = x.ExtraStatusEnabled, HpOn = x.ExtraHpEnabled, AtkOn = x.ExtraAttackEnabled, DefOn = x.ExtraDefenseEnabled,
+                SpeOn = x.ExtraSpeedEnabled, SpAOn = x.ExtraSpAtkEnabled, SpDOn = x.ExtraSpDefEnabled, PpOn = x.ExtraPpCountsEnabled, NickOn = x.ExtraNicknameEnabled,
+                Hp = x.ExtraHp, Atk = x.ExtraAttack, Def = x.ExtraDefense, Spe = x.ExtraSpeed, SpA = x.ExtraSpAtk, SpD = x.ExtraSpDef,
+                Pp1 = x.ExtraPp1, Pp2 = x.ExtraPp2, Pp3 = x.ExtraPp3, Pp4 = x.ExtraPp4, Nick = x.ExtraNickname,
+            };
+        }
+
+        public void Restore(State s)
+        {
+            Load(s.Species, s.Form, s.Level, s.Moves, s.Item, s.Gender, s.Ability, s.Difficulty, s.BallSeals);
+            _suppress = true;
+            var x = HgeExtras;
+            x.AbilityId = s.AbilityId; x.BallId = s.BallId; x.NatureIndex = s.Nature; x.ShinyLocked = s.Shiny;
+            x.SetIvs.Load(s.Ivs[0], s.Ivs[1], s.Ivs[2], s.Ivs[3], s.Ivs[4], s.Ivs[5]);
+            x.SetEvs.Load(s.Evs[0], s.Evs[1], s.Evs[2], s.Evs[3], s.Evs[4], s.Evs[5]);
+            x.ExtraStatusEnabled = s.StatusOn; x.ExtraStatus = s.Status;
+            x.ExtraHpEnabled = s.HpOn; x.ExtraHp = s.Hp;
+            x.ExtraAttackEnabled = s.AtkOn; x.ExtraAttack = s.Atk;
+            x.ExtraDefenseEnabled = s.DefOn; x.ExtraDefense = s.Def;
+            x.ExtraSpeedEnabled = s.SpeOn; x.ExtraSpeed = s.Spe;
+            x.ExtraSpAtkEnabled = s.SpAOn; x.ExtraSpAtk = s.SpA;
+            x.ExtraSpDefEnabled = s.SpDOn; x.ExtraSpDef = s.SpD;
+            x.ExtraPpCountsEnabled = s.PpOn; x.ExtraPp1 = s.Pp1; x.ExtraPp2 = s.Pp2; x.ExtraPp3 = s.Pp3; x.ExtraPp4 = s.Pp4;
+            x.ExtraNicknameEnabled = s.NickOn; x.ExtraNickname = s.Nick;
+            _suppress = false;
         }
 
         // Mirrors PokemonEditorViewModel.LoadMon's icon handling: hg-engine doesn't keep icons in

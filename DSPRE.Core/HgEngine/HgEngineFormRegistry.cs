@@ -13,6 +13,8 @@ namespace DSPRE.HgEngine
     public static class HgEngineFormRegistry
     {
         private const string RelPath = "data/PokeFormDataTbl.c";
+        // The table is u16[][32]; src/pokemon.c reads slot (form - 1) of 32.
+        internal const int MaxFormSlots = 32;
 
         public readonly struct FormSlot
         {
@@ -81,10 +83,41 @@ namespace DSPRE.HgEngine
             return spans;
         }
 
+        /// <summary>The species id a form's personal data, learnset and hidden ability are read from, as
+        /// PokeOtherFormMonsNoGet in src/pokemon.c resolves it. A form with no entry uses the species itself.</summary>
+        public static int ResolveFormSpecies(int speciesId, int form)
+        {
+            if (form <= 0 || !HgEngineProject.IsActive) return speciesId;
+            return ResolveFormSpecies(speciesId, form, (baseId, formNo) =>
+            {
+                var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+                if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) return 0;
+                if (!LoadAll().TryGetValue(designator, out var slots) || formNo - 1 >= slots.Count) return 0;
+                return speciesTable.TryGetValue(slots[formNo - 1].SpeciesSymbol, out int id) ? id : 0;
+            });
+        }
+
+        internal static int ResolveFormSpecies(int speciesId, int form, Func<int, int, int> tableSlot)
+        {
+            if (form <= 0) return speciesId;
+            // The engine still sends the vanilla form species to their fixed personal files.
+            switch (speciesId)
+            {
+                case DSPRE.ROMFiles.SpeciesFile.DEOXYS_ID_NUM: return form <= 3 ? 495 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.WORMADAM_ID_NUM: return form <= 2 ? 498 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.GIRATINA_ID_NUM: return form <= 1 ? 500 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.SHAYMIN_ID_NUM: return form <= 1 ? 501 + form : speciesId;
+                case DSPRE.ROMFiles.SpeciesFile.ROTOM_ID_NUM: return form <= 5 ? 502 + form : speciesId;
+            }
+            int target = form <= MaxFormSlots ? tableSlot(speciesId, form) : 0;
+            return target > 0 ? target : speciesId;
+        }
+
         /// <summary>Replaces (or inserts) one base species' entire form-slot list in one shot.</summary>
         public static bool TrySaveSpeciesForms(int baseSpeciesId, IReadOnlyList<FormSlot> desiredSlots, out string error)
         {
             error = null;
+            if (desiredSlots.Count > MaxFormSlots) { error = $"A species can have at most {MaxFormSlots} forms."; return false; }
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
             var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
@@ -110,7 +143,7 @@ namespace DSPRE.HgEngine
                 text = string.Concat(text.AsSpan(0, insertAt), newEntry, text.AsSpan(insertAt));
             }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
     }
