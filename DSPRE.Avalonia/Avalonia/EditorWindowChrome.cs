@@ -97,7 +97,9 @@ namespace DSPRE.Avalonia
 
                 e.Cancel = true;
 
-                bool proceed = await UnsavedChangesDialog.ShowIfNeededAsync(window, vm, baseTitle);
+                // Read when asking: editors such as the Pokémon Editor retitle the window for each record.
+                string name = (window.Title ?? "").TrimStart('●', ' ');
+                bool proceed = await UnsavedChangesDialog.ShowIfNeededAsync(window, vm, name.Length > 0 ? name : baseTitle);
                 if (proceed)
                 {
                     confirmed = true;
