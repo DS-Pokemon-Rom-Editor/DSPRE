@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
 using global::Avalonia.Media;
@@ -73,16 +74,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private struct Entry { public int messageID; public uint trainerId; public ushort triggerId; }
 
         // ── hg-engine source-backed state ───────────────────────────────────────────────
-        // hg-engine embeds each trainer's messages directly in its own `.text = { { .type = TRMSG_X,
-        // .text = "..." }, ... }` array in data/Trainers.c, no shared ROM-wide archive/ID indirection
-        // at all, unlike the vanilla model above. So instead of reusing Entry/_archive/_byTrainer (which
-        // only make sense for a shared, position-keyed binary table), hg-engine mode keeps its own
-        // simple per-trainer (triggerId, text) list and reads/writes it straight through
-        // HgEngineTrainerSource, as text, never a hardcoded binary layout.
+        // hg-engine keeps each trainer's messages in its own `.text` array in data/Trainers.c, and its
+        // build makes the message table only for trainers listed in sTrainerTextOrder.
         private const string TrainerDataHeader = "include/trainer_data.h";
+        private const string TrainerClassHeader = "include/constants/trainerclass.h";
         public bool IsHgeActive => HgEngineProject.IsActive;
         private (int value, string name)[] _hgeTriggers = Array.Empty<(int, string)>();
-        private List<(int triggerId, string text)> _hgeCurrent = new List<(int, string)>();
+
+        // Token is the trigger as the source spells it, so a name the headers don't define is written back as it was.
+        private sealed class HgeMessage { public string Token; public int Value; public string Text; }
+        private List<HgeMessage> _hgeCurrent = new List<HgeMessage>();
+        private string _hgeLoadError;
+        private HashSet<int> _hgeTextOrder;
+        private int _hgeMaxMessages;
 
         // ── State ────────────────────────────────────────────────────────────────────
         private Window _owner;
@@ -164,7 +168,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             await SaveAsync();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            // Edits live only in memory until saved, so discarding reloads the trainer from source.
+            if (IsHgeActive && _selectedTrainerIndex >= 0) LoadTrainer(_currentTrainerId);
+        }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -180,35 +190,40 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StatusText = "Loading trainer messages…";
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> {
-                    DirNames.textArchives, DirNames.trainerProperties, DirNames.trainerGraphics,
-                    DirNames.trainerTextTable, DirNames.trainerTextOffset });
-
                 if (IsHgeActive)
                 {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
                     var table = HgEngineSymbolTable.Load(TrainerDataHeader);
                     _hgeTriggers = table == null ? Array.Empty<(int, string)>()
                         : table.ByName.Where(kv => kv.Key.StartsWith("TRMSG_", StringComparison.Ordinal))
                             .Select(kv => (kv.Value, kv.Key)).OrderBy(t => t.Item1).ToArray();
+                    _hgeMaxMessages = table != null && table.TryGetValue("TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT", out int max) ? max : 0;
                     TriggerTypes.Clear();
                     foreach (var t in _hgeTriggers) TriggerTypes.Add(t.name);
+                    ReadHgeTextOrder();
+                    foreach (string entry in DSPRE.TrainerNames.GetAll()) Trainers.Add(entry);
                 }
                 else
                 {
+                    DSUtils.TryUnpackNarcs(new List<DirNames> {
+                        DirNames.textArchives, DirNames.trainerProperties, DirNames.trainerGraphics,
+                        DirNames.trainerTextTable, DirNames.trainerTextOffset });
                     _archive = new TextArchive(trainerMessageTextNumber);
                     ReadTable();
+
+                    var trainerNames = GetSimpleTrainerNames();
+                    var classArchive = new TextArchive(trainerClassMessageNumber);
+                    for (int i = 0; i < trainerNames.Length; i++)
+                    {
+                        int classId = GetTrainerClassOf(i);
+                        string className = classId >= 0 && classId < classArchive.messages.Count ? classArchive.messages[classId] : "?";
+                        Trainers.Add($"[{i}]: {className} {trainerNames[i]}");
+                    }
                 }
 
-                var trainerNames = GetSimpleTrainerNames();
-                var classArchive = new TextArchive(trainerClassMessageNumber);
-                for (int i = 0; i < trainerNames.Length; i++)
-                {
-                    int classId = GetTrainerClassOf(i);
-                    string className = classId >= 0 && classId < classArchive.messages.Count ? classArchive.messages[classId] : "?";
-                    Trainers.Add($"[{i}]: {className} {trainerNames[i]}");
-                }
-
-                StatusText = $"Loaded messages for {Trainers.Count} trainers.";
+                StatusText = IsHgeActive && _hgeTriggers.Length == 0
+                    ? "No TRMSG_ message triggers were found in include/trainer_data.h."
+                    : $"Loaded messages for {Trainers.Count} trainers.";
                 int start = _initialTrainerId >= 0 && _initialTrainerId < Trainers.Count ? _initialTrainerId : 0;
                 if (Trainers.Count > 0) SelectedTrainerIndex = start;
             }
@@ -238,6 +253,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _byTrainer = entries.GroupBy(e => e.trainerId).ToDictionary(g => g.Key, g => g.ToList());
         }
 
+        private void ReadHgeTextOrder()
+        {
+            if (HgEngineTrainerSource.TryReadTextOrder(out var listed, out string error)) _hgeTextOrder = listed;
+            else { _hgeTextOrder = null; AppLogger.Error("Battle messages: " + error); }
+        }
+
         private static int GetTrainerClassOf(int trainerId)
         {
             try
@@ -256,36 +277,59 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsHgeActive && _current != null) _byTrainer[(uint)_currentTrainerId] = _current;
 
             _currentTrainerId = trainerId;
-            try
+            if (IsHgeActive)
             {
-                string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
-                using var s = File.OpenRead(path);
-                var trp = new TrainerProperties((ushort)trainerId, s);
-                _currentIsDouble = trp.doubleBattle;
-
-                FrameMax = _sprite.Load(trp.trainerClass);
-                OnPropertyChanged(nameof(HasSprite));
-                if (_frame > FrameMax) { _frame = 0; OnPropertyChanged(nameof(Frame)); }
-                ClassImage = _sprite.Render((int)_frame, 96, 96);
+                LoadHgeTrainer(trainerId);
             }
-            catch (Exception ex) { AppLogger.Error("LoadTrainer: " + ex.Message); }
-
-            if (IsHgeActive) _hgeCurrent = LoadHgeMessages(trainerId);
-            else _current = _byTrainer.TryGetValue((uint)trainerId, out var list) ? list : new List<Entry>();
+            else
+            {
+                try
+                {
+                    string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
+                    using var s = File.OpenRead(path);
+                    var trp = new TrainerProperties((ushort)trainerId, s);
+                    _currentIsDouble = trp.doubleBattle;
+                    ShowSprite(trp.trainerClass);
+                }
+                catch (Exception ex) { AppLogger.Error("LoadTrainer: " + ex.Message); }
+                _current = _byTrainer.TryGetValue((uint)trainerId, out var list) ? list : new List<Entry>();
+            }
             RefreshEntries();
         }
 
-        private static List<(int triggerId, string text)> LoadHgeMessages(int trainerId)
+        private void ShowSprite(int trainerClass)
         {
-            var result = new List<(int, string)>();
-            if (!HgEngineTrainerSource.TryLoad(trainerId, out var block, out _)) return result;
+            FrameMax = _sprite.Load(trainerClass);
+            OnPropertyChanged(nameof(HasSprite));
+            if (_frame > FrameMax) { _frame = 0; OnPropertyChanged(nameof(Frame)); }
+            ClassImage = _sprite.Render((int)_frame, 96, 96);
+        }
+
+        private void LoadHgeTrainer(int trainerId)
+        {
+            _hgeCurrent = new List<HgeMessage>();
+            _hgeLoadError = null;
+            if (!HgEngineTrainerSource.TryLoad(trainerId, out var block, out string error)) { _hgeLoadError = error; return; }
+
+            var data = FieldPathSegment.Field("data");
+            ShowSprite(block.TryGetSymbol(new[] { data, FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int trainerClass) ? trainerClass : 0);
+            // An absent battle type is 0, a single battle.
+            _currentIsDouble = block.TryGetSymbol(new[] { data, FieldPathSegment.Field("battleType") }, TrainerDataHeader, out int battleType) && battleType != 0;
+
+            int number = 0;
             foreach (var msg in block.GetArrayElements(new[] { FieldPathSegment.Field("text") }))
             {
-                int typeValue = msg.TryGetSymbol(new[] { FieldPathSegment.Field("type") }, TrainerDataHeader, out int t) ? t : -1;
-                string text = msg.TryGetString(new[] { FieldPathSegment.Field("text") }, out string s) ? s : "";
-                result.Add((typeValue, text));
+                number++;
+                string token = msg.TryGetRaw(new[] { FieldPathSegment.Field("type") }, out string raw) ? raw : null;
+                // C leaves a missing .type at 0.
+                int value = token == null ? 0 : HgEngineSourceBlock.TryResolveToken(token, TrainerDataHeader, out int resolved) ? resolved : -1;
+                if (!msg.TryGetString(new[] { FieldPathSegment.Field("text") }, out string text))
+                {
+                    _hgeLoadError ??= $"Message {number} of trainer {trainerId} has no text that can be read.";
+                    text = "";
+                }
+                _hgeCurrent.Add(new HgeMessage { Token = token, Value = value, Text = text });
             }
-            return result;
         }
 
         private void RefreshEntries()
@@ -294,7 +338,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Entries.Clear();
             if (IsHgeActive)
             {
-                foreach (var (triggerId, text) in _hgeCurrent) Entries.Add($"[{HgeTriggerName(triggerId)}] {text}");
+                foreach (var m in _hgeCurrent) Entries.Add($"[{HgeLabel(m)}] {m.Text}");
             }
             else
             {
@@ -321,8 +365,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private string HgeTriggerName(int value)
         {
             foreach (var t in _hgeTriggers) if (t.value == value) return t.name;
-            return $"UNKNOWN({value})";
+            return null;
         }
+
+        private string HgeLabel(HgeMessage m) => m.Token ?? HgeTriggerName(m.Value) ?? m.Value.ToString();
 
         private int HgeTriggerComboIndex(int value)
         {
@@ -337,9 +383,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (index >= 0 && index < _hgeCurrent.Count)
                 {
-                    var (triggerId, text) = _hgeCurrent[index];
-                    SelectedTriggerIndex = HgeTriggerComboIndex(triggerId);
-                    MessageText = DisplayText(text);
+                    var m = _hgeCurrent[index];
+                    SelectedTriggerIndex = HgeTriggerComboIndex(m.Value);
+                    MessageText = DisplayText(m.Text);
                 }
             }
             else if (index >= 0 && index < _current.Count)
@@ -357,15 +403,42 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var b in new[] { "\\n", "\\r", "\\f" }) raw = raw.Replace(b, b + Environment.NewLine);
             return raw;
         }
-        private static string RawText(string display) => display.Replace(Environment.NewLine, "");
+
+        // A line break shown after \n, \r or \f markup is only for display; one typed anywhere else becomes \n.
+        private static string RawText(string display)
+        {
+            string s = display.Replace("\r\n", "\n").Replace('\r', '\n');
+            var sb = new StringBuilder(s.Length);
+            foreach (char c in s)
+            {
+                if (c != '\n') { sb.Append(c); continue; }
+                bool afterMarkup = sb.Length >= 2 && sb[^2] == '\\' && (sb[^1] == 'n' || sb[^1] == 'r' || sb[^1] == 'f');
+                if (!afterMarkup) sb.Append("\\n");
+            }
+            return sb.ToString();
+        }
 
         // ── Commands ────────────────────────────────────────────────────────────────────
+        private bool HgeRefusesEdit(string title)
+        {
+            string why = _hgeLoadError != null ? "This trainer's messages could not be read from Trainers.c:\n" + _hgeLoadError
+                : _hgeTriggers.Length == 0 ? "No TRMSG_ message triggers were found in include/trainer_data.h."
+                : null;
+            if (why == null) return false;
+            _ = DialogHelper.ShowError(why, title);
+            return true;
+        }
+
         public void AddEntry()
         {
             if (_selectedTriggerIndex < 0) { _ = DialogHelper.ShowError("Select a message trigger type first.", "Add message"); return; }
             if (IsHgeActive)
             {
-                _hgeCurrent.Add((_hgeTriggers[_selectedTriggerIndex].value, RawText(_messageText)));
+                if (HgeRefusesEdit("Add message") || _selectedTriggerIndex >= _hgeTriggers.Length) return;
+                if (_hgeMaxMessages > 0 && _hgeCurrent.Count >= _hgeMaxMessages)
+                { _ = DialogHelper.ShowError($"A trainer can have at most {_hgeMaxMessages} messages.", "Add message"); return; }
+                var t = _hgeTriggers[_selectedTriggerIndex];
+                _hgeCurrent.Add(new HgeMessage { Token = t.name, Value = t.value, Text = RawText(_messageText) });
             }
             else
             {
@@ -381,6 +454,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (IsHgeActive)
             {
+                if (HgeRefusesEdit("Delete message")) return;
                 if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _hgeCurrent.Count) return;
                 _hgeCurrent.RemoveAt(_selectedEntryIndex);
             }
@@ -398,8 +472,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_selectedTriggerIndex < 0) return;
             if (IsHgeActive)
             {
+                if (HgeRefusesEdit("Change trigger") || _selectedTriggerIndex >= _hgeTriggers.Length) return;
                 if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _hgeCurrent.Count) return;
-                _hgeCurrent[_selectedEntryIndex] = (_hgeTriggers[_selectedTriggerIndex].value, _hgeCurrent[_selectedEntryIndex].text);
+                var t = _hgeTriggers[_selectedTriggerIndex];
+                _hgeCurrent[_selectedEntryIndex].Token = t.name;
+                _hgeCurrent[_selectedEntryIndex].Value = t.value;
             }
             else
             {
@@ -416,8 +493,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (IsHgeActive)
             {
+                if (HgeRefusesEdit("Save message")) return;
                 if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _hgeCurrent.Count) { _ = DialogHelper.ShowError("Select a message to overwrite.", "Save message"); return; }
-                _hgeCurrent[_selectedEntryIndex] = (_hgeCurrent[_selectedEntryIndex].triggerId, RawText(_messageText));
+                _hgeCurrent[_selectedEntryIndex].Text = RawText(_messageText);
                 RefreshEntries();
                 SetDirty();
                 return;
@@ -432,26 +510,58 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
-        // ── hg-engine save: this ONE trainer's .text field only, via the same anchored-patch
-        // mechanism every other curated field goes through, not a "rewrite everything" operation, since
-        // hg-engine's per-trainer message storage has no shared/global structure to keep in sync at all.
+        // ── hg-engine save: this one trainer's `.text` field, plus its place in sTrainerTextOrder ─────────
         private async Task SaveHgeMessagesAsync()
         {
-            string block = "{ " + string.Join(", ", _hgeCurrent.Select(m =>
-                $"{{ .type = {HgeTriggerName(m.triggerId)}, .text = {HgEngineTrainerSource.ToCStringLiteral(m.text)} }}")) + " }";
-            var fields = new List<HgEngineFieldWrite> { new(new[] { FieldPathSegment.Field("text") }, block) };
+            int trainerId = _currentTrainerId;
+            string problem = _hgeLoadError != null ? "Its messages could not be read from Trainers.c:\n" + _hgeLoadError
+                : _hgeMaxMessages <= 0 ? "TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT was not found in include/trainer_data.h."
+                : _hgeCurrent.Count > _hgeMaxMessages ? $"A trainer can have at most {_hgeMaxMessages} messages."
+                : null;
+            if (problem != null) { await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved. {problem}", "Save Error"); return; }
 
-            // allowInsert: true, since a trainer with no messages at all simply omits `.text` from source
-            // entirely (matching hg-engine's sparse designated-initializer style), so adding its first
-            // message needs to INSERT the field, not just replace an existing one.
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _currentTrainerId, fields, out var unresolved, out string error, allowInsert: true))
-            { await DialogHelper.ShowError($"Error writing trainer messages:\n{error}", "Save Error"); return; }
+            var messages = _hgeCurrent.Select(m => new HgeMessage { Token = HgeLabel(m), Value = m.Value, Text = m.Text }).ToList();
+            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            {
+                var textPath = new[] { FieldPathSegment.Field("text") };
+                HgEngineFieldWrite write;
+                if (messages.Count == 0)
+                {
+                    write = HgEngineFieldWrite.Remove(textPath);
+                }
+                else
+                {
+                    if (!HgEngineTrainerSource.TryAddToTextOrder(trainerId, out string orderError)) return orderError;
+                    write = new HgEngineFieldWrite(textPath, TextLiteral(messages));
+                }
+                return HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, trainerId, new[] { write }, out _, out string writeError,
+                    allowInsert: true, allOrNothing: true) ? null : writeError;
+            });
+            if (!saved)
+            {
+                if (error != null) await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved:\n{error}", "Save Error");
+                return;
+            }
 
+            ReadHgeTextOrder();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
-            StatusText = $"Trainer {_currentTrainerId} messages saved to hg-engine source.";
-            if (unresolved.Count > 0)
-                AppLogger.Info($"hg-engine message write for trainer {_currentTrainerId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+            StatusText = $"Trainer {trainerId} messages saved to hg-engine source.";
+            RefreshEntries();
+        }
+
+        // Laid out like the rest of Trainers.c.
+        private static string TextLiteral(IEnumerable<HgeMessage> messages)
+        {
+            var sb = new StringBuilder("{");
+            foreach (var m in messages)
+            {
+                sb.Append("\n            {");
+                sb.Append("\n                .type = ").Append(m.Token).Append(',');
+                sb.Append("\n                .text = ").Append(HgEngineTrainerSource.ToCStringLiteral(m.Text)).Append(',');
+                sb.Append("\n            },");
+            }
+            return sb.Append("\n        }").ToString();
         }
 
         // ── Global save (rewrites table + offset + archive) ────────────────────────────
@@ -513,6 +623,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Validation warnings (ported) ────────────────────────────────────────────────
         private void CheckForMistakes()
         {
+            if (IsHgeActive) { CheckHgeMistakes(); return; }
             if (_current == null || _archive == null) { Info("", Brushes.Gray); return; }
 
             if (_current.Any(e => e.trainerId != (uint)_currentTrainerId)) { Info("Error: Some entries have a trainer ID that does not match the selected trainer.", StatusBrushes.Bad); return; }
@@ -526,6 +637,30 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             bool HasDoubleTriggers() => _current.Any(e => e.triggerId >= (ushort)TrainerMessageType.PRE_DOUBLE_BATTLE_1 && e.triggerId <= (ushort)TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2);
             if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: Single-battle trainer has double-battle message triggers.", StatusBrushes.Warn); return; }
             if (_currentIsDouble && _current.Count > 0 && !HasDoubleTriggers()) { Info("Warning: Double-battle trainer has no double-battle message triggers.", StatusBrushes.Warn); return; }
+
+            Info("", Brushes.Gray);
+        }
+
+        private void CheckHgeMistakes()
+        {
+            if (_hgeLoadError != null) { Info("Error: " + _hgeLoadError, StatusBrushes.Bad); return; }
+            if (_hgeMaxMessages > 0 && _hgeCurrent.Count > _hgeMaxMessages)
+            { Info($"Error: A trainer can have at most {_hgeMaxMessages} messages.", StatusBrushes.Bad); return; }
+
+            if (_hgeCurrent.Count > 0 && _hgeTextOrder != null && !_hgeTextOrder.Contains(_currentTrainerId))
+            { Info("Warning: This trainer is not in sTrainerTextOrder, so the build leaves its messages out. Saving adds it.", StatusBrushes.Warn); return; }
+
+            var unknown = _hgeCurrent.Where(m => m.Value < 0).Select(HgeLabel).Distinct().ToList();
+            if (unknown.Any()) { Info($"Warning: {string.Join(", ", unknown)} is not defined in trainer_data.h.", StatusBrushes.Warn); return; }
+
+            var dups = _hgeCurrent.GroupBy(m => m.Value).Where(g => g.Count() > 1).Select(g => HgeLabel(g.First())).ToList();
+            if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
+
+            if (_hgeCurrent.Any(m => string.IsNullOrWhiteSpace(m.Text))) { Info("Warning: One or more messages are empty.", StatusBrushes.Warn); return; }
+
+            bool HasDoubleTriggers() => _hgeCurrent.Any(m => (HgeTriggerName(m.Value) ?? "").StartsWith("TRMSG_DBL_", StringComparison.Ordinal));
+            if (!_currentIsDouble && HasDoubleTriggers()) { Info("Warning: Single-battle trainer has double-battle message triggers.", StatusBrushes.Warn); return; }
+            if (_currentIsDouble && _hgeCurrent.Count > 0 && !HasDoubleTriggers()) { Info("Warning: Double-battle trainer has no double-battle message triggers.", StatusBrushes.Warn); return; }
 
             Info("", Brushes.Gray);
         }

@@ -26,6 +26,38 @@ namespace DSPRE.HgEngine
             return TryResolveToken(raw, headerRelPath, out value);
         }
 
+        /// <summary>Resolves a field against the first of several headers that defines its name.</summary>
+        public bool TryGetSymbolIn(IReadOnlyList<FieldPathSegment> path, IReadOnlyList<string> headers, out int value)
+        {
+            value = 0;
+            return TryGetRaw(path, out string raw) && TryResolveTokenIn(raw, headers, out value);
+        }
+
+        /// <summary>An OR of names, each resolved against several headers. Fails on any unknown term.</summary>
+        public bool TryGetFlagsValueIn(IReadOnlyList<FieldPathSegment> path, IReadOnlyList<string> headers, out int value)
+        {
+            value = 0;
+            if (!TryGetRaw(path, out string raw)) return false;
+            foreach (string part in raw.Split('|'))
+            {
+                string token = part.Trim();
+                if (token.Length == 0) continue;
+                if (!TryResolveTokenIn(token, headers, out int term)) { value = 0; return false; }
+                value |= term;
+            }
+            return true;
+        }
+
+        public static bool TryResolveTokenIn(string token, IReadOnlyList<string> headers, out int value)
+        {
+            if (TryResolveToken(token, (string)null, out value)) return true;
+            if (headers != null)
+                foreach (string header in headers)
+                    if (TryResolveToken(token, header, out value)) return true;
+            value = 0;
+            return false;
+        }
+
         /// <summary>Shorthand for <see cref="TryGetSymbol"/> with no header, for fields that are always plain literals.</summary>
         public bool TryGetInt(IReadOnlyList<FieldPathSegment> path, out int value) => TryGetSymbol(path, null, out value);
 
@@ -135,6 +167,135 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        private static readonly System.Text.RegularExpressions.Regex TextOrderStart =
+            new(@"\bsTrainerTextOrder\s*\[\s*\]\s*=\s*\{");
+
+        /// <summary>The trainers trainerdatagen builds messages for: only those listed in sTrainerTextOrder.</summary>
+        public static bool TryReadTextOrder(out HashSet<int> listed, out string error)
+        {
+            listed = new HashSet<int>();
+            if (!TryFindTextOrder(out _, out string text, out int open, out int close, out error)) return false;
+            foreach (string token in ElementScanner.SplitElementValues(text, open, close))
+            {
+                if (!HgEngineSourceBlock.TryResolveToken(token, (string)null, out int id))
+                { error = $"sTrainerTextOrder lists \"{token.Trim()}\", which is not a trainer number."; return false; }
+                listed.Add(id);
+            }
+            return true;
+        }
+
+        /// <summary>Appends a trainer to sTrainerTextOrder when it is missing. Appending keeps every listed
+        /// trainer's message numbers where they were.</summary>
+        public static bool TryAddToTextOrder(int trainerId, out string error)
+        {
+            if (!TryReadTextOrder(out var listed, out error)) return false;
+            if (listed.Contains(trainerId)) return true;
+            TryFindTextOrder(out string path, out string text, out int open, out int close, out _);
+
+            var spans = ElementScanner.ElementSpans(text, open, close);
+            if (spans.Count > 0)
+            {
+                string line = "\n" + HgEngineSourcePatcher.IndentOfLine(text, spans[0].Start) + trainerId + ",";
+                HgEngineSourcePatcher.InsertAfterLastElement(ref text, spans[^1].End, close, line);
+            }
+            else text = text.Insert(open + 1, "\n    " + trainerId + ",\n");
+
+            HgEngineFileCache.WriteText(path, text);
+            return true;
+        }
+
+        private static bool TryFindTextOrder(out string path, out string text, out int open, out int close, out string error)
+        {
+            text = null;
+            open = close = -1;
+            error = null;
+            path = null;
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
+
+            path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
+
+            text = HgEngineFileCache.GetText(path);
+            var m = TextOrderStart.Match(text);
+            if (!m.Success || !BraceScanner.TryFindMatchingBrace(text, m.Index + m.Length - 1, out close))
+            { error = "sTrainerTextOrder was not found in Trainers.c."; return false; }
+            open = m.Index + m.Length - 1;
+            return true;
+        }
+
+        /// <summary>Every trainer entry from 0 up to the first missing id, in one pass over the file.</summary>
+        public static List<HgEngineSourceBlock> LoadAll()
+        {
+            var blocks = new List<HgEngineSourceBlock>();
+            if (!HgEngineProject.IsActive) return blocks;
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            if (!File.Exists(path)) return blocks;
+
+            string text = HgEngineFileCache.GetText(path);
+            int pos = 0;
+            for (int id = 0; ; id++)
+            {
+                var m = new System.Text.RegularExpressions.Regex(@"\[\s*" + id + @"\s*\]\s*=\s*\{").Match(text, pos);
+                if (!m.Success) break;
+                int open = m.Index + m.Length - 1;
+                if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) break;
+                blocks.Add(new HgEngineSourceBlock(text.Substring(open, close - open + 1)));
+                pos = close + 1;
+            }
+            return blocks;
+        }
+
+        /// <summary>Reads a party species value: a name or number, <c>MON_WITH_FORM(species, form)</c>, or
+        /// <c>species | (form &lt;&lt; 11)</c>. The form sits in the top five bits of the species word.</summary>
+        public static bool TryParseSpecies(string raw, string speciesHeader, out int species, out int form)
+        {
+            species = form = 0;
+            if (raw == null) return false;
+            raw = raw.Trim();
+            string speciesToken = raw, formToken = null;
+
+            var macro = System.Text.RegularExpressions.Regex.Match(raw, @"^MON_WITH_FORM\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$");
+            var shifted = System.Text.RegularExpressions.Regex.Match(raw, @"^\(?\s*([^|()]+?)\s*\|\s*\(\s*([^<()]+?)\s*<<\s*11\s*\)\s*\)?$");
+            if (macro.Success) { speciesToken = macro.Groups[1].Value; formToken = macro.Groups[2].Value; }
+            else if (shifted.Success) { speciesToken = shifted.Groups[1].Value; formToken = shifted.Groups[2].Value; }
+
+            if (!HgEngineSourceBlock.TryResolveToken(speciesToken, speciesHeader, out int value)) return false;
+            if (formToken != null && !HgEngineSourceBlock.TryResolveToken(formToken, null, out form)) return false;
+            if (formToken == null && value > 0x7FF) form = value >> 11;
+            species = value & 0x7FF;
+            return true;
+        }
+
+        /// <summary>The species source value, wrapped in hg-engine's own macro when a form is set.</summary>
+        public static string FormatSpecies(string speciesLiteral, int form) =>
+            form > 0 ? $"MON_WITH_FORM({speciesLiteral}, {form})" : speciesLiteral;
+
+        /// <summary>The build encodes only 0-9, A-Z and a-z and stops at 10 bytes.</summary>
+        public static string ToEncodableNickname(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            var sb = new StringBuilder(10);
+            foreach (char c in value)
+            {
+                if (sb.Length == 10) break;
+                if (c is >= '0' and <= '9' or >= 'A' and <= 'Z' or >= 'a' and <= 'z') sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Reads 0/1 style fields that the source may also spell TRUE or FALSE.</summary>
+        public static bool TryParseBool(string raw, out bool value)
+        {
+            value = false;
+            if (raw == null) return false;
+            raw = raw.Trim();
+            if (raw == "TRUE") { value = true; return true; }
+            if (raw == "FALSE") return true;
+            if (!HgEngineSourceBlock.TryResolveToken(raw, null, out int n)) return false;
+            value = n != 0;
+            return true;
+        }
+
         /// <summary>Formats a plain string as a quoted C string literal, escaping `\` and `"` only.</summary>
         public static string ToCStringLiteral(string value)
         {
@@ -142,6 +303,9 @@ namespace DSPRE.HgEngine
             sb.Append('"');
             foreach (char c in value)
             {
+                // A typed line break becomes the game's \n markup; a raw newline would break the C literal.
+                if (c == '\r') continue;
+                if (c == '\n') { sb.Append(@"\\n"); continue; }
                 if (c == '\\' || c == '"') sb.Append('\\');
                 sb.Append(c);
             }
