@@ -233,7 +233,8 @@ namespace DSPRE.Tests
                                               RegexOptions.Singleline))
             {
                 string tag = m.Value;
-                var key = Regex.Match(tag, @"Beta(?:Note)?\[(\w+)\]");
+                // BlockedNote gives the hg-engine reason first and the beta reason second.
+                var key = Regex.Match(tag, @"(?:Beta|BetaNote|BlockedNote)\[(\w+)\]");
                 if (!key.Success) continue;
                 seen++;
                 if (!tag.Contains("IsEnabled=")) loose.Add(key.Groups[1].Value);

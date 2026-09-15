@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void SetSpawn_Click(object sender, RoutedEventArgs e)
         {
-            if (VM == null || !VM.InBounds) return;
+            if (VM == null || !VM.InBounds || AvaloniaEditorLauncher.BlockedForUnlinkedHge("The Spawn Point Editor")) return;
             var names = HeaderLists.GetHeaderListBoxNames();
             new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).ShowManaged();
         }

@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia
         /// hg-engine checkout (<paramref name="ownedDomain"/>) are unblocked once that link is active;
         /// everything else stays blocked, since DSPRE would otherwise write to a ROM copy hg-engine's
         /// next build silently overwrites.</summary>
-        private static bool BlockedForHge(string editorName, HgEngineDomain? ownedDomain = null)
+        internal static bool BlockedForHge(string editorName, HgEngineDomain? ownedDomain = null)
         {
             if (!RomInfo.isHGE) return false;
             if (ownedDomain.HasValue && HgEngineProject.IsActive) return false;
@@ -41,6 +41,16 @@ namespace DSPRE.Avalonia
                 "data itself and would overwrite any changes made here on its next build." +
                 (ownedDomain.HasValue ? " Link your hg-engine checkout (File > Link hg-engine checkout…) to edit it from source instead." : ""),
                 "Not available with hg-engine");
+            return true;
+        }
+
+        /// <summary>hg-engine changes data formats and tables the vanilla readers assume, so without a linked
+        /// checkout only the map, event, script and text editors are safe to open.</summary>
+        internal static bool BlockedForUnlinkedHge(string editorName)
+        {
+            if (!RomInfo.isHGE || HgEngineProject.IsActive) return false;
+            AppMessages.Info(editorName + " is not available for this hg-engine project until its checkout is linked " +
+                "(File > Link hg-engine checkout…).", "Link hg-engine checkout");
             return true;
         }
 
@@ -84,7 +94,7 @@ namespace DSPRE.Avalonia
         /// Zero opens on nothing in particular.</param>
         public static async System.Threading.Tasks.Task OpenAudioEditorAsync(int showCryFor = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Audio Editor")) return;
 
             try
             {
@@ -168,7 +178,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTMEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The TM Editor")) return;
             var view = new TMEditorView();
             if (initialIndex > 0 && view.DataContext is TMEditorViewModel vm)
                 vm.SelectedMachineIndex = initialIndex;   // setter loads the machine
@@ -177,7 +187,8 @@ namespace DSPRE.Avalonia
 
         public static void OpenEggMoveEditor()
         {
-            if (!IsRomLoaded) return;
+            // hg-engine rebuilds egg moves (a/2/2/9) from data/learnsets/learnsets.json.
+            if (!IsRomLoaded || BlockedForHge("The Egg Move Editor")) return;
             new EggMoveEditorView().ShowManaged();
         }
 
@@ -186,7 +197,7 @@ namespace DSPRE.Avalonia
         /// straight to that move's script.</summary>
         public static void OpenBattleScriptEditor(int archive = 0, int entryIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Battle Script Editor")) return;
             // waza/be/sub and the WEST animations are edited from the checkout's own sources instead of
             // being refused; only the particle archive has no source view yet.
             if (BlockedForHgeArchive("The Battle Script Editor", DirNames.wazaParticle)) return;
@@ -224,7 +235,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenItemTableEditor()
         {
-            if (!IsRomLoaded || !IsItemTableEditorAvailable()) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Item Tables editor") || !IsItemTableEditorAvailable()) return;
             new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
@@ -259,7 +270,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenTradeEditorAsync(int initialIndex = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Trade Editor")) return;
 
             try
             {
@@ -320,7 +331,8 @@ namespace DSPRE.Avalonia
         public static void OpenTableEditor()
         {
             // Diamond and Pearl have only the effect combos, and only on supported ROMs.
-            if (!IsRomLoaded || (gameFamily == GameFamilies.DP && !DSPRE.ROMFiles.BattleMusicTables.IsSupported)) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("Music & Battle Tables")
+                || (gameFamily == GameFamilies.DP && !DSPRE.ROMFiles.BattleMusicTables.IsSupported)) return;
             new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
@@ -332,7 +344,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenHeadbuttEncounterEditor(int initialIndex = 0)
         {
-            if (!IsRomLoaded || gameFamily != GameFamilies.HGSS) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Headbutt Editor") || gameFamily != GameFamilies.HGSS) return;
             new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
@@ -340,7 +352,8 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenTmHmBulkEditorAsync()
         {
-            if (!IsRomLoaded || BlockedForHge("The TM/HM Bulk Editor", HgEngineDomain.Species)) return;
+            // It writes personal data, but hg-engine takes machine compatibility from data/learnsets/learnsets.json.
+            if (!IsRomLoaded || BlockedForHge("The TM/HM Bulk Editor")) return;
 
             try
             {
@@ -357,6 +370,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenBattleTowerEditor()
         {
+            if (IsRomLoaded && BlockedForUnlinkedHge("The Battle Tower Editor")) return;
             if (!IsRomLoaded || !BattleTowerTrainerFile.IsAvailable() || !BattleTowerPokemonSetFile.IsAvailable())
             {
                 if (IsRomLoaded) AppMessages.Warning("Battle Tower data was not found for this game.", "Not Available");
@@ -369,7 +383,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTrophyGardenEditor()
         {
-            if (!IsRomLoaded || !TrophyGardenEncounterFile.IsAvailable()) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Trophy Garden Editor") || !TrophyGardenEncounterFile.IsAvailable()) return;
             new EditorHostWindow("Trophy Garden Editor",
                 new TrophyGardenEditorView(new TrophyGardenEditorViewModel()),
                 700, 500).ShowManaged();
@@ -422,7 +436,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenCameraEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Camera Editor")) return;
             new EditorHostWindow("Camera Editor", new CameraEditorView(new CameraEditorViewModel(true))).ShowManaged();
         }
 
@@ -468,7 +482,8 @@ namespace DSPRE.Avalonia
         // thread behind the busy overlay, since neither this VM nor VsSeeker's touches any UI type.
         public static async System.Threading.Tasks.Task OpenTrainerFlagBulkEditorAsync()
         {
-            if (!IsRomLoaded || BlockedForHge("The Trainer Flag Bulk Editor", HgEngineDomain.Trainers)) return;
+            // It edits the trainer files directly; hg-engine rebuilds those from Trainers.c on every build.
+            if (!IsRomLoaded || BlockedForHge("The Trainer Flag Bulk Editor")) return;
 
             TrainerFlagBulkEditorViewModel vm = null;
             await RunBusyAsync("Opening Trainer Flag Bulk Editor…",
@@ -488,7 +503,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenVsSeekerRematchEditorAsync(int initialRowIndex = -1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Vs. Seeker Rematch Editor")) return;
             if (!VsSeekerRematchTable.IsSupported)
             {
                 AppMessages.Info("The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English).",
@@ -524,7 +539,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenPokegearRematchEditorAsync(int initialRowIndex = -1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Pokégear Rematch Editor")) return;
             if (!PokegearRematchTable.IsSupported)
             {
                 AppMessages.Info("The Pokégear Rematch Editor only supports HeartGold and SoulSilver.",
@@ -546,7 +561,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenPokegearPhoneBookAsync(int initialEntry = -1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Pokégear Phone Book")) return;
             if (!PokegearPhoneBook.IsSupported)
             {
                 AppMessages.Info("The Pokégear Phone Book only exists in HeartGold and SoulSilver.", "Not Supported");
@@ -592,13 +607,13 @@ namespace DSPRE.Avalonia
         // ── World / data editors ───────────────────────────────────────────────
         public static void OpenFlyWarpEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Fly / Warp Editor")) return;
             new FlyEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
         }
 
         public static void OpenDungeonCutinEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Dungeon Cut-in Editor")) return;
             if (!RomInfo.IsDungeonCutinEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
@@ -616,7 +631,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTitleScreenEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Title Screen Editor")) return;
             if (!RomInfo.IsTitleScreenEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
@@ -637,7 +652,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenCellAnimationPickerAsync()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Cell Animations list")) return;
             if (!BetaEditors.Allows("CellAnimationEditorView"))
             {
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("CellAnimationEditorView")!, "Cell Animations");
@@ -685,7 +700,7 @@ namespace DSPRE.Avalonia
                                                    int sprites, int palette, int paletteRow, string what,
                                                    int sharedSheet = -1, int poketchApp = -1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Cell Animation Editor")) return;
             if (animation < 0)
             {
                 _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell Animation");
@@ -717,7 +732,7 @@ namespace DSPRE.Avalonia
         /// </param>
         public static void OpenBottomScreenEditor(int poketchApp = -1)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Bottom Screen Editor")) return;
             if (!RomInfo.IsBottomScreenEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
@@ -763,7 +778,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenTrainerCardEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Trainer Card Editor")) return;
             if (!RomInfo.IsTrainerCardEditorAvailable())
             {
                 _ = DialogHelper.ShowInfo(
@@ -783,7 +798,7 @@ namespace DSPRE.Avalonia
         public static void OpenParticleEditor(DirNames archive, int entry, string what, System.Action<int> changed,
                                               bool orthographic = false)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Particle Editor")) return;
             if (gameDirs.ContainsKey(archive)) DSUtils.TryUnpackNarcs(new List<DirNames> { archive });
             OpenParticleEditor(Data.ArchiveFiles.Mapped(archive), entry, what, changed, orthographic);
         }
@@ -792,7 +807,7 @@ namespace DSPRE.Avalonia
         public static void OpenParticleEditor(Data.ArchiveFiles source, int entry, string what, System.Action<int> changed,
                                               bool orthographic = false)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Particle Editor")) return;
             if (!BetaEditors.Allows("ParticleEditorView"))
             {
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("ParticleEditorView")!, "Particles");
@@ -815,7 +830,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenParticleLibraryAsync()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Particle Library")) return;
             if (!BetaEditors.Allows("ParticleLibraryView"))
             {
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("ParticleLibraryView")!, "Particles");
@@ -848,7 +863,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenBallCapsuleEditorAsync(int trainerCapsule = 0)
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Ball Capsule Editor")) return;
             if (!BetaEditors.Allows("BallCapsuleEditorView"))
             {
                 _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("BallCapsuleEditorView")!, "Ball Capsules");
@@ -882,7 +897,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenBannerEditorAsync()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Game Icon & Banner editor")) return;
             if (!RomInfo.IsDsRomProject)
             {
                 await DialogHelper.ShowInfo(
@@ -896,7 +911,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenSpawnEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Spawn Point Editor")) return;
             new SpawnEditorView(new SpawnEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
@@ -961,7 +976,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenOverlayEditor()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Overlay Editor")) return;
             new OverlayEditorView().ShowManaged();
         }
 
@@ -969,7 +984,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenOverworldEditorAsync()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Overworld Editor")) return;
 
             try
             {
@@ -1026,7 +1041,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenProjectChecks()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("Validation & Where-Used")) return;
             new ProjectChecksView().ShowManaged();
         }
 
@@ -1034,7 +1049,7 @@ namespace DSPRE.Avalonia
         {
             // Writes to the ROM binary (ARM9 / overlays / NARCs). Native Avalonia UI over the shared
             // PatchToolboxDialog apply-logic, so it runs identical code to the WinForms dialog.
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The ROM Patch Toolbox")) return;
             new PatchToolboxView().ShowManaged();
         }
 
@@ -1049,6 +1064,7 @@ namespace DSPRE.Avalonia
         public static void OpenGlTest()
         {
             // No ROM required; verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
+            if (BlockedForUnlinkedHge("The 3D Model Viewer")) return;
             new GlTestView().ShowManaged();
         }
 
@@ -1112,6 +1128,8 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenGraphicsBrowserAsync()
         {
+            if (BlockedForUnlinkedHge("The graphics list")) return;
+
             try
             {
                 var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
@@ -1132,6 +1150,8 @@ namespace DSPRE.Avalonia
 
         private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex, bool preferAssembled)
         {
+            if (BlockedForUnlinkedHge("The graphics list")) return;
+
             try
             {
                 var a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
@@ -1240,6 +1260,8 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the window that turns a picture into a background.</summary>
         public static void OpenTilesetBuilder()
         {
+            if (BlockedForUnlinkedHge("Picture to Background")) return;
+
             try
             {
                 new Views.Graphics.TilesetBuilderView().ShowManaged();
@@ -1253,7 +1275,7 @@ namespace DSPRE.Avalonia
 
         public static void OpenFontEditor()
         {
-            if (BlockedForHgeArchive("The Font Editor", DirNames.fonts)) return;
+            if (BlockedForUnlinkedHge("The Font Editor") || BlockedForHgeArchive("The Font Editor", DirNames.fonts)) return;
 
             try
             {
@@ -1271,7 +1293,7 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenBattleScreenEditorAsync()
         {
-            if (!IsRomLoaded) return;
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Battle Screen Editor")) return;
 
             if (!BetaEditors.Allows("BattleScreenEditorView"))
             {
@@ -1298,6 +1320,8 @@ namespace DSPRE.Avalonia
 
         public static void OpenBattleSceneBrowser()
         {
+            if (BlockedForUnlinkedHge("The battle scenes list")) return;
+
             try
             {
                 new Views.Battle.BattleSceneBrowserView(new ViewModels.Battle.BattleSceneBrowserViewModel()).ShowManaged();
@@ -1315,6 +1339,8 @@ namespace DSPRE.Avalonia
 
         public static async System.Threading.Tasks.Task OpenModelBrowserAsync()
         {
+            if (BlockedForUnlinkedHge("The models list")) return;
+
             try
             {
                 // Listing means reading every 3D archive to see what is in it, which is far too much
