@@ -52,6 +52,9 @@
     <Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
       <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
     </Border>
+    <Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#9B2226" IsVisible="{Binding HasSourceLoadError}">
+      <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
+    </Border>
     <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>

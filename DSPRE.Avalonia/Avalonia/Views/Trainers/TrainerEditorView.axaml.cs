@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             // The Classes tab is a separate ViewModel (trainer classes aren't per-trainer data),
             // give it its own instance now that the ROM/trainer data is actually loaded, starting
             // on whichever class the current trainer uses.
-            ClassesTabView.DataContext = new TrainerClassesViewModel(vm.TrainerClassIndex);
+            ClassesTabView.DataContext = vm.Classes = new TrainerClassesViewModel(vm.TrainerClassIndex);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
@@ -53,8 +53,8 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
-            if (AvaloniaEditorLauncher.BlockedForHgeArchive("The Battle Message Editor",
-                RomInfo.DirNames.trainerTextTable)) return;
+            // hg-engine builds the message table from Trainers.c, which only a linked checkout can edit.
+            if (AvaloniaEditorLauncher.BlockedForHge("The Battle Message Editor", DSPRE.HgEngine.HgEngineDomain.Trainers)) return;
 
             int trainerId = VM?.SelectedTrainerIndex ?? 0;
             new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).ShowManaged();

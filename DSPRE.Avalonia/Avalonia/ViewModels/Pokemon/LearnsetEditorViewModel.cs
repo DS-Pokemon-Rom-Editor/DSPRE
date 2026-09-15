@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _entryCount;
         public int EntryCount { get => _entryCount; private set => Set(ref _entryCount, value); }
 
-        public bool ExceedsVanillaLimit => EntryCount > LearnsetData.VanillaLimit;
+        public bool ExceedsVanillaLimit => !DSPRE.HgEngine.HgEngineProject.IsActive && EntryCount > LearnsetData.VanillaLimit;
 
         // ─── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
@@ -135,10 +135,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ─── Load ─────────────────────────────────────────────────────────────────
+        // Set when learnsets.json couldn't be read for this species; saving would write the shown list over it.
+        private string _loadError;
+
         public void LoadMon(int id)
         {
             _currentId = id;
-            _current = id >= 0 ? new LearnsetData(id) : null;
+            _loadError = null;
+            _current = id >= 0 ? LoadLearnset(id, out _loadError) : null;
+            StatusText = _loadError ?? "";
 
             Entries.Clear();
             if (_current != null)
@@ -159,6 +164,36 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
+        /// <summary>On hg-engine the list comes from learnsets.json, not the last built copy.</summary>
+        private static LearnsetData LoadLearnset(int id, out string error)
+        {
+            error = null;
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive) return new LearnsetData(id);
+
+            var bytes = new System.Collections.Generic.List<byte>();
+            bool read = DSPRE.HgEngine.HgEngineLearnsets.TryGetLevelMoves(id, out var moves, out error);
+            if (read)
+            {
+                foreach (var (level, move) in moves)
+                {
+                    if (level < 0 || level > byte.MaxValue || move < 0 || move >= 0xFFFF)
+                    {
+                        error = $"Level {level} move {move} is out of range.";
+                        break;
+                    }
+                    bytes.AddRange(System.BitConverter.GetBytes(((uint)level << 16) | (uint)move));
+                }
+            }
+            if (error != null) bytes.Clear();
+            bytes.AddRange(System.BitConverter.GetBytes(DSPRE.HgEngine.HgEngineLearnsets.Terminator));
+
+            var data = new LearnsetData(new System.IO.MemoryStream(bytes.ToArray()), wide: true);
+            // The list drops repeated rows, so a save would silently remove them.
+            if (error == null && data.list.Count != moves.Count)
+                error = "learnsets.json repeats a level and move.";
+            return data;
+        }
+
         // ─── Add / Delete / Move ──────────────────────────────────────────────────
         public void AddEntry()
         {
@@ -172,7 +207,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             RefreshEntries();
             SetDirty();
-            StatusText = "";
+            StatusText = _loadError ?? "";
         }
 
         public void DeleteEntry()
@@ -203,7 +238,33 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_currentId < 0 || _current == null) return;
+
+            if (DSPRE.HgEngine.HgEngineProject.IsActive)
+            {
+                if (_loadError != null)
+                {
+                    StatusText = "Not saved: " + _loadError;
+                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + _loadError, "Save Error");
+                    return;
+                }
+                var entries = new System.Collections.Generic.List<(int level, int move)>(_current.list.Count);
+                foreach (var (level, move) in _current.list) entries.Add((level, move));
+                string error;
+                bool ok;
+                try { ok = DSPRE.HgEngine.HgEngineLearnsets.TrySaveLevelMoves(_currentId, entries, out error); }
+                catch (System.Exception ex) { ok = false; error = ex.Message; }
+
+                if (!ok)
+                {
+                    StatusText = "Not saved: " + error;
+                    _ = DialogHelper.ShowError("The learnset could not be saved.\n" + error, "Save Error");
+                    return;
+                }
+            }
+
+            // Readers of the unpacked copy see the edit before the next sync replaces it.
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
+            StatusText = "";
             _dirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));

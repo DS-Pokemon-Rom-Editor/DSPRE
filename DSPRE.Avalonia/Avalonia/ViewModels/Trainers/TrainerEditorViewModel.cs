@@ -76,8 +76,44 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int BattleTypeIndex
         {
             get => _battleTypeIndex;
-            set { if (Set(ref _battleTypeIndex, value) && !_suppress) SetDirty(); }
+            set
+            {
+                if (value < 0 && !_suppress)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(BattleTypeIndex)));
+                    return;
+                }
+                if (Set(ref _battleTypeIndex, value) && !_suppress) SetDirty();
+            }
         }
+
+        // The ComboBox can drop its selection while its rows fill, and the binding ignores an unchanged value,
+        // so blank it on one frame and restore it on a later one.
+        // One pending repush at a time: a second one queued behind it would save the -1 and restore that.
+        private bool _battleTypeRepushPending;
+        private void RepushBattleTypeIndex()
+        {
+            if (_battleTypeRepushPending) return;
+            _battleTypeRepushPending = true;
+            var dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
+            dispatcher.Post(() =>
+            {
+                int keep = _battleTypeIndex;
+                bool wasSuppressed = _suppress;
+                _suppress = true;
+                _battleTypeIndex = -1; OnPropertyChanged(nameof(BattleTypeIndex));
+                _suppress = wasSuppressed;
+                dispatcher.Post(() => { _battleTypeIndex = keep; _battleTypeRepushPending = false; OnPropertyChanged(nameof(BattleTypeIndex)); },
+                    global::Avalonia.Threading.DispatcherPriority.Background);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        // hg-engine trainers may have no party at all.
+        public decimal PartyCountMinimum => IsHgeActive ? 0 : 1;
+
+        // What Trainers.c held that the editor could not read; saving leaves those values alone.
+        private bool _hgeTrainerTypeKnown, _hgeAiFlagsKnown;
+        private readonly string[] _hgeItemRaw = new string[TrainerProperties.TRAINER_ITEMS];
 
         private bool TrainerDataTypeChecked(string flagName) =>
             TrainerDataTypeFlags.FirstOrDefault(f => f.Label == flagName)?.Checked == true;
@@ -183,11 +219,31 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int TrainerClassIndex
         {
             get => _trainerClassIndex;
-            set { if (Set(ref _trainerClassIndex, value)) { if (!_suppress) SetDirty(); UpdateTrainerSprite(); } }
+            set
+            {
+                // The ComboBox reports -1 while its list refills; only a load may clear the class.
+                if (value < 0 && !_suppress)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(TrainerClassIndex)));
+                    return;
+                }
+                if (Set(ref _trainerClassIndex, value)) { if (!_suppress) SetDirty(); UpdateTrainerSprite(); }
+            }
         }
 
         private bool _doubleBattle; public bool DoubleBattle { get => _doubleBattle; set { if (Set(ref _doubleBattle, value) && !_suppress) SetDirty(); } }
-        private bool _chooseMoves; public bool ChooseMoves { get => _chooseMoves; set { if (Set(ref _chooseMoves, value)) { ApplyMovesEnabled(); if (!_suppress) SetDirty(); } } }
+        private bool _chooseMoves;
+        public bool ChooseMoves
+        {
+            get => _chooseMoves;
+            set
+            {
+                if (!Set(ref _chooseMoves, value)) return;
+                if (value && !_suppress) FillLevelUpMoves();
+                ApplyMovesEnabled();
+                if (!_suppress) SetDirty();
+            }
+        }
         private bool _chooseItems; public bool ChooseItems { get => _chooseItems; set { if (Set(ref _chooseItems, value)) { ApplyItemsEnabled(); if (!_suppress) SetDirty(); } } }
 
         private decimal _partyCount = 1;
@@ -206,10 +262,41 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Trainer Editor (Trainer {_loadedTrainerId})";
-        public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedTrainerIndex >= 0) LoadTrainer(_selectedTrainerIndex); }
+        public bool HasUnsavedChanges => _dirty || _classes?.HasUnsavedChanges == true;
+        public string UnsavedChangesDescription =>
+            _dirty && _classes?.HasUnsavedChanges == true ? $"Trainer Editor (Trainer {_loadedTrainerId}, {_classes.UnsavedChangesDescription})"
+            : _dirty || _classes == null ? $"Trainer Editor (Trainer {_loadedTrainerId})"
+            : _classes.UnsavedChangesDescription;
+        public void SaveChanges()
+        {
+            if (_dirty) Save();
+            if (_classes?.HasUnsavedChanges == true) _classes.SaveChanges();
+        }
+        public void DiscardChanges()
+        {
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (_selectedTrainerIndex >= 0) LoadTrainer(_selectedTrainerIndex);
+            _classes?.DiscardChanges();
+        }
+
+        /// <summary>The Classes tab shares this window, so its unsaved edits are this editor's too.</summary>
+        public TrainerClassesViewModel Classes
+        {
+            get => _classes;
+            set
+            {
+                if (_classes != null) _classes.PropertyChanged -= OnClassesChanged;
+                _classes = value;
+                if (_classes != null) _classes.PropertyChanged += OnClassesChanged;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
+        }
+        private TrainerClassesViewModel _classes;
+        private void OnClassesChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(HasUnsavedChanges)) OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
         // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
         private void SetDirty() { if (_suppress) return; RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -280,9 +367,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, new System.Collections.Generic.List<string>(DSPRE.TrainerNames.GetAll()));
-
             string[] classNames = GetTrainerClassNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, TrainerListEntries(classNames));
+
             var formatted = new System.Collections.Generic.List<string>(classNames.Length);
             for (int i = 0; i < classNames.Length; i++) formatted.Add($"[{i:D3}] {classNames[i]}");
             DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassItems, formatted);
@@ -325,10 +412,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _abilityNames = GetAbilityNames();
                 LoadAbilities();
 
-                foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
+                string[] classNames = GetTrainerClassNames();
+                foreach (var n in TrainerListEntries(classNames)) TrainerNames.Add(n);
                 AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
 
-                string[] classNames = GetTrainerClassNames();
                 for (int i = 0; i < classNames.Length; i++) TrainerClassItems.Add($"[{i:D3}] {classNames[i]}");
 
                 if (IsHgeActive)
@@ -336,13 +423,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     foreach (var flag in HgEngineTrainerFieldSchema.GetAiFlags())
                     {
                         var f = new AiFlagViewModel(flag.Name, flag.Bit);
-                        f.Changed += (s, e) => SetDirty();
+                        f.Changed += (s, e) => { if (!_suppress) _hgeAiFlagsKnown = true; SetDirty(); };
                         AiFlags.Add(f);
                     }
                     foreach (var flag in HgEngineTrainerFieldSchema.GetTrainerDataTypeFlags())
                     {
                         var f = new AiFlagViewModel(flag.Name, flag.Bit);
-                        f.Changed += (s, e) => { ApplyHgeGatingToParty(); RaiseHgeFlagCheckedChanged(); SetDirty(); };
+                        f.Changed += (s, e) =>
+                        {
+                            if (!_suppress) _hgeTrainerTypeKnown = true;
+                            if (f.Checked && !_suppress) FillHgeDefaults(f.Label);
+                            ApplyHgeGatingToParty();
+                            RaiseHgeFlagCheckedChanged();
+                            SetDirty();
+                        };
                         TrainerDataTypeFlags.Add(f);
                     }
                     var battleTypes = HgEngineTrainerFieldSchema.GetBattleTypes();
@@ -397,7 +491,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadAbilities()
         {
-            int count = PokemonNames.Count;
+            // Form species sit past the name list.
+            int count = Math.Max(PokemonNames.Count, GetPersonalFilesCount());
             _abilities = new (int, int)[count];
             string dir = gameDirs[DirNames.personalPokeData].unpackedDir;
             for (int i = 0; i < count; i++)
@@ -406,11 +501,25 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 {
                     string path = Path.Combine(dir, i.ToString("D4"));
                     if (!File.Exists(path)) { _abilities[i] = (0, 0); continue; }
-                    using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-                    var sp = new SpeciesFile(fs);
-                    _abilities[i] = (sp.Ability1, sp.Ability2);
+                    // hg-engine widens both abilities to u16 at other offsets.
+                    var personal = new PokemonPersonalData(new FileStream(path, FileMode.Open, FileAccess.Read));
+                    _abilities[i] = (personal.firstAbility, personal.secondAbility);
                 }
                 catch { _abilities[i] = (0, 0); }
+            }
+
+            // The built copies trail Species.c until the next make.
+            if (!IsHgeActive) return;
+            if (!HgEngineSpeciesPersonalFields.TryLoadAllAbilities(out var fromSource, out string error))
+            {
+                AppLogger.Error("Trainer Editor abilities could not be read from Species.c: " + error);
+                return;
+            }
+            foreach (var pair in fromSource)
+            {
+                if (pair.Key < 0 || pair.Key >= count) continue;
+                var (first, second) = pair.Value;
+                _abilities[pair.Key] = (first >= 0 ? first : _abilities[pair.Key].abi1, second >= 0 ? second : _abilities[pair.Key].abi2);
             }
         }
 
@@ -460,6 +569,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private const string AbilityHeader = "include/constants/ability.h";
         private const string MovesHeader = "include/constants/moves.h";
         private const string TrainerDataHeader = "include/trainer_data.h";
+        private const string PokemonConstantsHeader = "include/constants/pokemon.h";
+        private const string BattleConstantsHeader = "include/constants/battle_constants.h";
 
         private void LoadTrainerFromSource(int index)
         {
@@ -489,32 +600,38 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             TrainerName = block.TryGetString(new[] { FieldPathSegment.Field("name") }, out string name) ? name : "";
 
-            if (block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int classId))
-                TrainerClassIndex = classId;
+            // An unresolved class stays blank and unwritten rather than inheriting the previous trainer's.
+            TrainerClassIndex = block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int classId)
+                ? classId : -1;
 
             bool gotTrainerType = block.TryGetFlagsValue(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerType") }, TrainerDataHeader, out int trainerTypeValue);
+            _hgeTrainerTypeKnown = gotTrainerType;
             foreach (var f in TrainerDataTypeFlags) f.Checked = gotTrainerType && (trainerTypeValue & f.Value) != 0;
             RaiseHgeFlagCheckedChanged();
             ChooseMoves = HgeMovesFlagChecked;
             ChooseItems = HgeItemsFlagChecked;
 
             bool gotAiFlags = block.TryGetFlagsValue(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("aiFlags") }, TrainerDataHeader, out int aiFlagsValue);
+            _hgeAiFlagsKnown = gotAiFlags;
             foreach (var f in AiFlags) f.Checked = gotAiFlags && (aiFlagsValue & f.Value) != 0;
 
-            BattleTypeIndex = 0;
-            if (block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") }, TrainerDataHeader, out int battleTypeValue))
-            {
-                int idx = Array.IndexOf(_battleTypeValues, battleTypeValue);
-                if (idx >= 0) BattleTypeIndex = idx;
-            }
+            // A battle type with no row stays -1 so saving leaves it alone.
+            var battleTypePath = new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") };
+            BattleTypeIndex = block.TryGetSymbol(battleTypePath, TrainerDataHeader, out int battleTypeValue)
+                ? Array.IndexOf(_battleTypeValues, battleTypeValue)
+                : block.TryGetRaw(battleTypePath, out _) ? -1 : 0;   // absent means 0, SINGLE_BATTLE
             DoubleBattle = BattleTypeIndex > 0;   // kept loosely in sync for display only; save uses BattleTypeIndex
+            RepushBattleTypeIndex();
 
             var itemsRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") });
             for (int i = 0; i < TrainerItems.Count; i++)
-                TrainerItems[i].ItemIndex = i < itemsRaw.Count && HgEngineSourceBlock.TryResolveToken(itemsRaw[i].Raw, ItemHeader, out int itemVal) ? itemVal : -1;
+            {
+                _hgeItemRaw[i] = i < itemsRaw.Count ? itemsRaw[i].Raw.Trim() : null;
+                TrainerItems[i].ItemIndex = _hgeItemRaw[i] != null && HgEngineSourceBlock.TryResolveToken(_hgeItemRaw[i], ItemHeader, out int itemVal) ? itemVal : -1;
+            }
 
             var partyRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("party") });
-            PartyCount = Math.Max(1, partyRaw.Count);
+            PartyCount = partyRaw.Count;
             for (int i = 0; i < Party.Count; i++)
             {
                 if (i < partyRaw.Count) LoadMonFromSource(Party[i], partyRaw[i]);
@@ -530,7 +647,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadMonFromSource(TrainerPartyMonViewModel mon, HgEngineSourceBlock monBlock)
         {
             monBlock.TryGetInt(new[] { FieldPathSegment.Field("ivs") }, out int ivs);
-            monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("species") }, SpeciesHeader, out int species);
+            // Unreadable species stays -1 so saving leaves the source value alone.
+            int species = -1, form = 0;
+            if (monBlock.TryGetRaw(new[] { FieldPathSegment.Field("species") }, out string speciesRaw)
+                && HgEngineTrainerSource.TryParseSpecies(speciesRaw, SpeciesHeader, out int parsedSpecies, out int parsedForm))
+            { species = parsedSpecies; form = parsedForm; }
             monBlock.TryGetInt(new[] { FieldPathSegment.Field("level") }, out int level);
             monBlock.TryGetInt(new[] { FieldPathSegment.Field("ballSeal") }, out int ballSeal);
 
@@ -545,16 +666,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("moves"), FieldPathSegment.At(j) }, MovesHeader, out moves[j]);
             }
 
+            // A slot value with no row stays -1 so saving leaves it alone.
             int abilityIndex = 0;
             if (monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("abilitySlot") }, TrainerDataHeader, out int slotValue))
             {
-                var slots = HgEngineTrainerFieldSchema.GetAbilitySlots();
-                for (int i = 0; i < slots.Count; i++) if (slots[i].Bit == slotValue) { abilityIndex = i; break; }
+                var slot = HgEngineTrainerFieldSchema.GetAbilitySlots().FirstOrDefault(s => s.Bit == slotValue && s.Name != null);
+                abilityIndex = slot.Name == null ? -1 : Array.IndexOf(TrainerPartyMonViewModel.HgeAbilitySlotNames, slot.Name);
             }
 
             // hg-engine's TrainerPokemonData has no gender field at all, nowhere to read a forced
             // gender from, so it's always "Default" here (the Gender selector is hidden in the UI too).
-            mon.Load(species, 0, Math.Max(1, level), moves, itemVal, 0, abilityIndex, ivs, ballSeal);
+            mon.Load(species, form, Math.Max(1, level), moves, itemVal, 0, abilityIndex, ivs, ballSeal);
 
             var extras = mon.HgeExtras;
             extras.AbilityId = HgeAbilityFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("ability") }, AbilityHeader, out int abilityId) ? abilityId : -1;
@@ -575,8 +697,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 extras.SetEvs.Load(0, 0, 0, 0, 0, 0);
             }
 
-            extras.NatureIndex = HgeNatureFlagChecked && monBlock.TryGetInt(new[] { FieldPathSegment.Field("nature") }, out int nature) ? nature : 0;
-            extras.ShinyLocked = HgeShinyLockFlagChecked && monBlock.TryGetInt(new[] { FieldPathSegment.Field("shinyLock") }, out int shiny) && shiny != 0;
+            extras.NatureIndex = HgeNatureFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("nature") }, PokemonConstantsHeader, out int nature) ? nature : 0;
+            extras.ShinyLocked = HgeShinyLockFlagChecked && monBlock.TryGetRaw(new[] { FieldPathSegment.Field("shinyLock") }, out string shinyRaw)
+                && HgEngineTrainerSource.TryParseBool(shinyRaw, out bool shiny) && shiny;
 
             int extraFlagsValue = 0;
             bool gotExtraFlags = HgeAdditionalFlagsFlagChecked &&
@@ -585,7 +708,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int ExtraBit(string suffix) { foreach (var f in extraFlagBits) if (f.Name.EndsWith(suffix)) return f.Bit; return 0; }
 
             extras.ExtraStatusEnabled = gotExtraFlags && (extraFlagsValue & ExtraBit("STATUS")) != 0;
-            extras.ExtraStatus = extras.ExtraStatusEnabled && monBlock.TryGetInt(new[] { FieldPathSegment.Field("status") }, out int status) ? status : 0;
+            extras.ExtraStatus = extras.ExtraStatusEnabled && monBlock.TryGetFlagsValue(new[] { FieldPathSegment.Field("status") }, BattleConstantsHeader, out int status) ? status : 0;
 
             extras.ExtraHpEnabled = gotExtraFlags && (extraFlagsValue & ExtraBit("HP")) != 0;
             extras.ExtraHp = extras.ExtraHpEnabled ? GetInt(monBlock, null, "hp") : 0;
@@ -679,8 +802,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (_chooseMoves)
                     p.moves = new ushort[] { (ushort)Math.Max(0, mon.Move1), (ushort)Math.Max(0, mon.Move2), (ushort)Math.Max(0, mon.Move3), (ushort)Math.Max(0, mon.Move4) };
 
-                if (_chooseItems)
-                    p.heldItem = (ushort)Math.Max(0, mon.ItemIndex);
+                // The party file only has room for an item when the trainer says it does.
+                p.heldItem = _chooseItems ? (ushort)Math.Max(0, mon.ItemIndex) : null;
 
                 p.difficulty = (byte)mon.Difficulty;
 
@@ -746,12 +869,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (IsHgeActive)
             {
-                UpdateTrainerName(_trainerName);   // keeps the in-app trainer-list dropdown in sync; the real name lives in source (below)
-                WriteHgEngineSource();
-                SetClean();
-                _history.MarkSaved();
-                RaiseUndoState();
-                StatusText = $"Trainer {_selectedTrainerIndex} saved to hg-engine source.";
+                _ = SaveHgEngineAsync();
                 return;
             }
 
@@ -771,22 +889,70 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StatusText = $"Trainer {_selectedTrainerIndex} saved.";
         }
 
-        // Optional per-mon fields are only written when their gating trainer-data-type flag is checked;
-        // partySize/partyMonCount/textCount are never written (trainerdatagen derives them).
-        private void WriteHgEngineSource()
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            if (!HgEngineProject.IsActive) return;
+            if (IsHgeActive) await SaveHgEngineAsync();
+            else Save();
+            return !HasUnsavedChanges;
+        }
+
+        private async Task SaveHgEngineAsync()
+        {
+            int trainer = _selectedTrainerIndex;
+            if (trainer < 0) return;
+            var (saved, error) = await HgEngineSave.RunAsync(WriteHgEngineSource);
+            if (!saved)
+            {
+                if (error == null) return;
+                StatusText = $"Trainer {trainer} was not saved: {error}";
+                await DialogHelper.ShowError($"Trainer {trainer} was not saved:\n{error}", "Trainer Editor");
+                return;
+            }
+
+            RefreshTrainerListEntry(trainer);
+            AppEvents.RaiseNamesChanged();   // other editors list trainer names from Trainers.c too
+            if (trainer != _selectedTrainerIndex) return;
+            SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            _history.MarkSaved();
+            RaiseUndoState();
+            StatusText = $"Trainer {trainer} saved to hg-engine source.";
+        }
+
+        // partySize/partyMonCount/textCount are never written (trainerdatagen derives them).
+        /// <summary>Writes the loaded trainer into Trainers.c. Returns why it could not, or null.</summary>
+        private string WriteHgEngineSource()
+        {
+            if (!HgEngineProject.IsActive) return "No hg-engine checkout is linked.";
+
+            // trainerdatagen stops the build at a gap in the party.
+            for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
+                if (Party[i].SpeciesIndex == 0) return $"Party slot {i + 1} has no Pokémon.";
+
+            if (HgeAbilityFlagChecked) FillHgeDefaults("TRAINER_DATA_TYPE_ABILITY");
+            if (HgeBallFlagChecked) FillHgeDefaults("TRAINER_DATA_TYPE_BALL");
+            if (HgeMovesFlagChecked)
+            {
+                FillLevelUpMoves();
+                // The game sets exactly these moves, so four empty ones leave the Pokémon with none.
+                for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
+                    if (Party[i].Move1 <= 0 && Party[i].Move2 <= 0 && Party[i].Move3 <= 0 && Party[i].Move4 <= 0)
+                        return $"Party slot {i + 1} has no moves.";
+            }
 
             string ClassSymbol(int classIndex) =>
                 HgEngineSymbolTable.Load(TrainerClassHeader)?.TryGetNameWithPrefix(classIndex, "TRAINERCLASS_", out string n) == true ? n : classIndex.ToString();
             string SpeciesSymbol(int speciesId) =>
                 HgEngineSymbolTable.Load(SpeciesHeader)?.TryGetNameWithPrefix(speciesId, "SPECIES_", out string n) == true ? n : speciesId.ToString();
-            string ItemSymbol(int itemId) =>
+            // -1 as a u16 is 0xFFFF, which the game takes as a real id.
+            string ItemSymbol(int itemId) => itemId <= 0 ? "ITEM_NONE" :
                 HgEngineSymbolTable.Load(ItemHeader)?.TryGetNameWithPrefix(itemId, "ITEM_", out string n) == true ? n : itemId.ToString();
-            string AbilitySymbol(int abilityId) =>
+            string AbilitySymbol(int abilityId) => abilityId <= 0 ? "ABILITY_NONE" :
                 HgEngineSymbolTable.Load(AbilityHeader)?.TryGetNameWithPrefix(abilityId, "ABILITY_", out string n) == true ? n : abilityId.ToString();
-            string MoveSymbol(int moveId) =>
+            string MoveSymbol(int moveId) => moveId <= 0 ? "MOVE_NONE" :
                 HgEngineSymbolTable.Load(MovesHeader)?.TryGetNameWithPrefix(moveId, "MOVE_", out string n) == true ? n : moveId.ToString();
+            string NatureSymbol(int nature) =>
+                HgEngineSymbolTable.Load(PokemonConstantsHeader)?.TryGetNameWithPrefix(nature, "NATURE_", out string n) == true ? n : nature.ToString();
             string FlagsExpr(string header, string prefix, int value) =>
                 HgEngineSymbolTable.Load(header)?.TryGetFlagsExpression(value, prefix, out string expr) == true ? expr : value.ToString();
 
@@ -798,14 +964,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             var fields = new List<HgEngineFieldWrite>
             {
                 new(new[] { FieldPathSegment.Field("name") }, HgEngineTrainerSource.ToCStringLiteral(_trainerName ?? "")),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, ClassSymbol(_trainerClassIndex)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("aiFlags") }, FlagsExpr(TrainerDataHeader, "F_", aiFlagsValue)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerType") }, FlagsExpr(TrainerDataHeader, "TRAINER_DATA_TYPE_", trainerTypeValue)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") }, battleTypeLiteral),
             };
+            if (_hgeAiFlagsKnown)
+                fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("aiFlags") }, FlagsExpr(TrainerDataHeader, "F_", aiFlagsValue)));
+            if (_hgeTrainerTypeKnown)
+                fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerType") }, FlagsExpr(TrainerDataHeader, "TRAINER_DATA_TYPE_", trainerTypeValue)));
+            if (BattleTypeIndex >= 0 && BattleTypeIndex < BattleTypeOptions.Count)
+                fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") }, battleTypeLiteral));
+
+            if (_trainerClassIndex >= 0)
+                fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") }, ClassSymbol(_trainerClassIndex)));
 
             fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") },
-                "{ " + string.Join(", ", TrainerItems.Select(t => ItemSymbol(t.ItemIndex))) + " }"));
+                "{ " + string.Join(", ", TrainerItems.Select((t, i) => t.ItemIndex >= 0 ? ItemSymbol(t.ItemIndex) : _hgeItemRaw[i] ?? "ITEM_NONE")) + " }"));
 
             var abilitySlots = HgEngineTrainerFieldSchema.GetAbilitySlots();
 
@@ -822,45 +993,51 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return full;
                 }
 
-                fields.Add(new(Path(FieldPathSegment.Field("species")), SpeciesSymbol(mon.SpeciesIndex)));
+                if (mon.SpeciesIndex >= 0)
+                    fields.Add(new(Path(FieldPathSegment.Field("species")), HgEngineTrainerSource.FormatSpecies(SpeciesSymbol(mon.SpeciesIndex), Math.Min(31, (int)mon.FormId))));
                 fields.Add(new(Path(FieldPathSegment.Field("level")), mon.Level.ToString()));
                 fields.Add(new(Path(FieldPathSegment.Field("ivs")), mon.Difficulty.ToString()));
                 fields.Add(new(Path(FieldPathSegment.Field("ballSeal")), mon.BallSeals.ToString()));
 
-                string abilitySlotName = mon.AbilityIndex >= 0 && mon.AbilityIndex < abilitySlots.Count
-                    ? abilitySlots[mon.AbilityIndex].Name : abilitySlots.Count > 0 ? abilitySlots[0].Name : "0";
-                fields.Add(new(Path(FieldPathSegment.Field("abilitySlot")), abilitySlotName));
+                string slotName = mon.AbilityIndex >= 0 && mon.AbilityIndex < TrainerPartyMonViewModel.HgeAbilitySlotNames.Length
+                    ? TrainerPartyMonViewModel.HgeAbilitySlotNames[mon.AbilityIndex] : null;
+                if (slotName != null && abilitySlots.Any(s => s.Name == slotName))
+                    fields.Add(new(Path(FieldPathSegment.Field("abilitySlot")), slotName));
 
-                if (HgeItemsFlagChecked)
-                    fields.Add(new(Path(FieldPathSegment.Field("item")), ItemSymbol(mon.ItemIndex)));
-
-                if (HgeMovesFlagChecked)
+                // A field whose flag is off is removed, so values left from a slot's previous Pokémon
+                // don't come back when the flag is turned on again. Unreadable flags leave every field alone.
+                void Put(bool on, string field, Func<string> literal)
                 {
-                    string movesLiteral = "{ " + string.Join(", ", MoveSymbol(mon.Move1), MoveSymbol(mon.Move2), MoveSymbol(mon.Move3), MoveSymbol(mon.Move4)) + " }";
-                    fields.Add(new(Path(FieldPathSegment.Field("moves")), movesLiteral));
+                    if (!_hgeTrainerTypeKnown) return;
+                    fields.Add(on ? new(Path(FieldPathSegment.Field(field)), literal()) : HgEngineFieldWrite.Remove(Path(FieldPathSegment.Field(field))));
                 }
 
-                if (HgeAbilityFlagChecked)
-                    fields.Add(new(Path(FieldPathSegment.Field("ability")), AbilitySymbol(extras.AbilityId)));
+                Put(HgeItemsFlagChecked, "item", () => ItemSymbol(mon.ItemIndex));
+                Put(HgeMovesFlagChecked, "moves", () => "{ " + string.Join(", ", MoveSymbol(mon.Move1), MoveSymbol(mon.Move2), MoveSymbol(mon.Move3), MoveSymbol(mon.Move4)) + " }");
+                Put(HgeAbilityFlagChecked, "ability", () => AbilitySymbol(extras.AbilityId));
+                Put(HgeBallFlagChecked, "ball", () => ItemSymbol(extras.BallId));
 
-                if (HgeBallFlagChecked)
-                    fields.Add(new(Path(FieldPathSegment.Field("ball")), ItemSymbol(extras.BallId)));
+                string StatBlock(StatBlockViewModel s) =>
+                    $"{{ .hp = {s.Hp}, .attack = {s.Attack}, .defense = {s.Defense}, .speed = {s.Speed}, .spAttack = {s.SpAttack}, .spDefense = {s.SpDefense} }}";
+                Put(HgeIvEvFlagChecked, "setIvs", () => StatBlock(extras.SetIvs));
+                Put(HgeIvEvFlagChecked, "setEvs", () => StatBlock(extras.SetEvs));
+                Put(HgeNatureFlagChecked, "nature", () => NatureSymbol(extras.NatureIndex));
+                Put(HgeShinyLockFlagChecked, "shinyLock", () => extras.ShinyLocked ? "1" : "0");
 
-                if (HgeIvEvFlagChecked)
-                {
-                    string StatBlock(StatBlockViewModel s) =>
-                        $"{{ .hp = {s.Hp}, .attack = {s.Attack}, .defense = {s.Defense}, .speed = {s.Speed}, .spAttack = {s.SpAttack}, .spDefense = {s.SpDefense} }}";
-                    fields.Add(new(Path(FieldPathSegment.Field("setIvs")), StatBlock(extras.SetIvs)));
-                    fields.Add(new(Path(FieldPathSegment.Field("setEvs")), StatBlock(extras.SetEvs)));
-                }
+                bool extra = HgeAdditionalFlagsFlagChecked;
+                Put(extra && extras.ExtraStatusEnabled, "status", () => extras.ExtraStatus.ToString());
+                Put(extra && extras.ExtraHpEnabled, "hp", () => extras.ExtraHp.ToString());
+                Put(extra && extras.ExtraAttackEnabled, "attack", () => extras.ExtraAttack.ToString());
+                Put(extra && extras.ExtraDefenseEnabled, "defense", () => extras.ExtraDefense.ToString());
+                Put(extra && extras.ExtraSpeedEnabled, "speed", () => extras.ExtraSpeed.ToString());
+                Put(extra && extras.ExtraSpAtkEnabled, "spAttack", () => extras.ExtraSpAtk.ToString());
+                Put(extra && extras.ExtraSpDefEnabled, "spDefense", () => extras.ExtraSpDef.ToString());
+                Put(extra && extras.ExtraPpCountsEnabled, "ppCounts", () => "{ " + string.Join(", ", extras.ExtraPp1, extras.ExtraPp2, extras.ExtraPp3, extras.ExtraPp4) + " }");
+                Put(extra && extras.ExtraNicknameEnabled, "nicknameStr", () => HgEngineTrainerSource.ToCStringLiteral(extras.ExtraNickname ?? ""));
 
-                if (HgeNatureFlagChecked)
-                    fields.Add(new(Path(FieldPathSegment.Field("nature")), extras.NatureIndex.ToString()));
-
-                if (HgeShinyLockFlagChecked)
-                    fields.Add(new(Path(FieldPathSegment.Field("shinyLock")), extras.ShinyLocked ? "1" : "0"));
-
-                if (HgeAdditionalFlagsFlagChecked)
+                if (_hgeTrainerTypeKnown && !extra)
+                    fields.Add(HgEngineFieldWrite.Remove(Path(FieldPathSegment.Field("additionalFlags"))));
+                else if (_hgeTrainerTypeKnown)
                 {
                     int extraFlagsValue = 0;
                     if (extras.ExtraStatusEnabled) extraFlagsValue |= ExtraBit("STATUS");
@@ -874,29 +1051,35 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     if (extras.ExtraNicknameEnabled) extraFlagsValue |= ExtraBit("NICKNAME");
 
                     fields.Add(new(Path(FieldPathSegment.Field("additionalFlags")), FlagsExpr(TrainerDataHeader, "TRAINER_DATA_EXTRA_TYPE_", extraFlagsValue)));
-
-                    if (extras.ExtraStatusEnabled) fields.Add(new(Path(FieldPathSegment.Field("status")), extras.ExtraStatus.ToString()));
-                    if (extras.ExtraHpEnabled) fields.Add(new(Path(FieldPathSegment.Field("hp")), extras.ExtraHp.ToString()));
-                    if (extras.ExtraAttackEnabled) fields.Add(new(Path(FieldPathSegment.Field("attack")), extras.ExtraAttack.ToString()));
-                    if (extras.ExtraDefenseEnabled) fields.Add(new(Path(FieldPathSegment.Field("defense")), extras.ExtraDefense.ToString()));
-                    if (extras.ExtraSpeedEnabled) fields.Add(new(Path(FieldPathSegment.Field("speed")), extras.ExtraSpeed.ToString()));
-                    if (extras.ExtraSpAtkEnabled) fields.Add(new(Path(FieldPathSegment.Field("spAttack")), extras.ExtraSpAtk.ToString()));
-                    if (extras.ExtraSpDefEnabled) fields.Add(new(Path(FieldPathSegment.Field("spDefense")), extras.ExtraSpDef.ToString()));
-                    if (extras.ExtraPpCountsEnabled)
-                    {
-                        string ppLiteral = "{ " + string.Join(", ", extras.ExtraPp1, extras.ExtraPp2, extras.ExtraPp3, extras.ExtraPp4) + " }";
-                        fields.Add(new(Path(FieldPathSegment.Field("ppCounts")), ppLiteral));
-                    }
-                    if (extras.ExtraNicknameEnabled)
-                        fields.Add(new(Path(FieldPathSegment.Field("nicknameStr")), HgEngineTrainerSource.ToCStringLiteral(extras.ExtraNickname ?? "")));
                 }
             }
 
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _selectedTrainerIndex, fields, out var unresolved, out string error, allowInsert: true))
-            { AppLogger.Error($"hg-engine write failed for trainer {_selectedTrainerIndex}: {error}"); return; }
-
+            var partyPath = new[] { FieldPathSegment.Field("party") };
+            var arrayCounts = new List<HgEngineArrayCount>();
+            if ((int)_partyCount == 0) fields.Add(HgEngineFieldWrite.Remove(partyPath));
+            else arrayCounts.Add(new HgEngineArrayCount(partyPath, (int)_partyCount, NewPartyEntry));
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _selectedTrainerIndex, fields, out var unresolved, out string error,
+                    allowInsert: true, arrayCounts: arrayCounts, allOrNothing: true))
+            {
+                AppLogger.Error($"hg-engine write failed for trainer {_selectedTrainerIndex}: {error}");
+                return error;
+            }
             if (unresolved.Count > 0)
-                AppLogger.Info($"hg-engine write for trainer {_selectedTrainerIndex}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+            {
+                string missing = string.Join(", ", unresolved);
+                AppLogger.Error($"hg-engine write for trainer {_selectedTrainerIndex} could not place {missing}");
+                return $"Trainers.c has no place for {missing}.";
+            }
+            return null;
+
+            static string NewPartyEntry(int index, string indent) =>
+                "{\n" +
+                indent + "    .ivs = 0,\n" +
+                indent + "    .abilitySlot = TRAINER_POKEMON_ABILITY_1,\n" +
+                indent + "    .level = 1,\n" +
+                indent + "    .species = SPECIES_NONE,\n" +
+                indent + "    .ballSeal = 0,\n" +
+                indent + "}";
 
             static int ExtraBit(string suffix)
             {
@@ -1141,20 +1324,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             int count = newOrder.Count;
             if (count == 0) return;
-            var snap = new List<(int sp, int form, int lvl, int[] moves, int item, int gen, int ab, int diff, int ball)>();
-            for (int i = 0; i < count && i < Party.Count; i++)
-            {
-                var m = Party[i];
-                snap.Add((m.SpeciesIndex, (int)m.FormId, (int)m.Level,
-                    new[] { m.Move1, m.Move2, m.Move3, m.Move4 }, m.ItemIndex,
-                    m.GenderIndex, m.AbilityIndex, (int)m.Difficulty, (int)m.BallSeals));
-            }
+            var snap = new List<TrainerPartyMonViewModel.State>();
+            for (int i = 0; i < count && i < Party.Count; i++) snap.Add(Party[i].Capture());
             for (int i = 0; i < count && i < Party.Count; i++)
             {
                 int from = newOrder[i];
                 if (from < 0 || from >= snap.Count) continue;
-                var s = snap[from];
-                Party[i].Load(s.sp, s.form, s.lvl, s.moves, s.item, s.gen, s.ab, s.diff, s.ball);
+                Party[i].Restore(snap[from]);
             }
             SetDirty();
         }
@@ -1172,7 +1348,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int i = 0; i < count && i < Party.Count; i++)
             {
                 var m = Party[i];
-                list.Add((m.SpeciesIndex, (int)m.Level, m.GenderIndex, m.AbilityIndex, (int)m.Difficulty));
+                // The calculator speaks vanilla flags. hg-engine passes abilitySlot to the same personality
+                // routine, where its hidden value 0x02 is the force-female bit.
+                int ability = m.AbilityIndex, gender = m.GenderIndex;
+                if (IsHgeActive)
+                {
+                    ability = m.AbilityIndex == 1 ? 2 : 0;
+                    gender = m.AbilityIndex == 2 ? 2 : 0;
+                }
+                list.Add((m.SpeciesIndex, (int)m.Level, gender, ability, (int)m.Difficulty));
             }
             ushort tid = _trainer?.trp.trainerID ?? (ushort)Math.Max(0, _selectedTrainerIndex);
             return (tid, (byte)Math.Max(0, _trainerClassIndex), list);
@@ -1185,13 +1369,93 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 var m = Party[i];
                 m.Difficulty = results[i].dv;
                 m.GenderIndex = results[i].gender;
-                m.AbilityIndex = results[i].ability;
+                if (!IsHgeActive) m.AbilityIndex = results[i].ability;
+                else if (results[i].ability == 2) m.AbilityIndex = 1;
+                else if (m.AbilityIndex != 2) m.AbilityIndex = 0;
             }
             SetDirty();
         }
 
+        // ── Defaults for newly enabled fields ─────────────────────────────────────────
+        // Ticking custom moves otherwise saves four empty moves, which the game gives the Pokémon.
+        private void FillLevelUpMoves()
+        {
+            if (!IsHgeActive)
+            {
+                try { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets }); }
+                catch (Exception ex) { AppLogger.Error("Learnsets could not be unpacked: " + ex.Message); return; }
+            }
+            for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
+            {
+                var mon = Party[i];
+                // Vanilla learnset files are per species only, so a vanilla form is left for the user to fill.
+                if (mon.SpeciesIndex <= 0 || (mon.FormId > 0 && !IsHgeActive) || mon.Move1 > 0 || mon.Move2 > 0 || mon.Move3 > 0 || mon.Move4 > 0) continue;
+                try
+                {
+                    ushort[] moves = IsHgeActive
+                        ? HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level)
+                        : new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
+                    if (moves == null) continue;
+                    mon.Move1 = moves[0]; mon.Move2 = moves[1]; mon.Move3 = moves[2]; mon.Move4 = moves[3];
+                }
+                catch (Exception ex) { AppLogger.Error($"Level-up moves for species {mon.SpeciesIndex} could not be read: {ex.Message}"); }
+            }
+        }
+
+        // The same pick as a learnset file, taken from learnsets.json rather than the last build.
+        private static ushort[] HgeLevelUpMoves(int speciesId, int level)
+        {
+            if (!HgEngineLearnsets.TryGetLevelMoves(speciesId, out var list, out string error))
+            {
+                AppLogger.Error($"Level-up moves for species {speciesId} could not be read: {error}");
+                return null;
+            }
+            var stream = new MemoryStream();
+            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                foreach (var (moveLevel, move) in list) writer.Write((uint)((moveLevel << 16) | move));
+                writer.Write(0x0000FFFFu);
+            }
+            stream.Position = 0;
+            return new LearnsetData(stream, wide: true).GetLearnsetAtLevel(level);
+        }
+
+        // An unset ability or ball would be written as 0xFFFF.
+        private void FillHgeDefaults(string flagName)
+        {
+            if (flagName == "TRAINER_DATA_TYPE_MOVES") { FillLevelUpMoves(); return; }
+            int pokeBall = HgEngineSymbolTable.Load(ItemHeader)?.TryGetValue("ITEM_POKE_BALL", out int ball) == true ? ball : 4;
+            for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
+            {
+                var extras = Party[i].HgeExtras;
+                if (flagName == "TRAINER_DATA_TYPE_ABILITY" && extras.AbilityId <= 0) extras.AbilityId = Party[i].SlotAbilityId();
+                if (flagName == "TRAINER_DATA_TYPE_BALL" && extras.BallId <= 0) extras.BallId = pokeBall;
+            }
+        }
+
+        // ── Trainer list ──────────────────────────────────────────────────────────────
+        private static List<string> TrainerListEntries(string[] classNames) => new List<string>(DSPRE.TrainerNames.GetAll());
+
+        private void RefreshTrainerListEntry(int id)
+        {
+            if (id < 0 || id >= TrainerNames.Count || !HgEngineTrainerSource.TryLoad(id, out var block, out _)) return;
+            string entry = DSPRE.TrainerNames.HgEngineEntry(id, block, GetTrainerClassNames());
+            if (TrainerNames[id] == entry) return;
+            // Replacing the selected row can clear the list's selection.
+            bool wasSuppressed = _suppress;
+            _suppress = true;
+            try
+            {
+                TrainerNames[id] = entry;
+                _selectedTrainerIndex = id;
+                OnPropertyChanged(nameof(SelectedTrainerIndex));
+            }
+            finally { _suppress = wasSuppressed; }
+        }
+
         private void UpdateTrainerName(string newName)
         {
+            if (_trainer == null) return;
             try
             {
                 _trainer.name = newName;

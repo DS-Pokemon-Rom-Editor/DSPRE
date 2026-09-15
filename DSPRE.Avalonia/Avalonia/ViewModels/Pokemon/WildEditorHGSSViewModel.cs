@@ -25,6 +25,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
         public bool ShowHgEngineBanner => HgEngineBanner != null;
 
+        // Set when the table's Encounters.c entry couldn't be read; saving would write the shown values over it.
+        private string _sourceLoadError;
+        public string SourceLoadError { get => _sourceLoadError; private set { if (Set(ref _sourceLoadError, value)) OnPropertyChanged(nameof(HasSourceLoadError)); } }
+        public bool HasSourceLoadError => _sourceLoadError != null;
+
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
@@ -216,73 +221,48 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task SaveCommand()
         {
             if (_current == null) return;
+            if (HgEngineProject.IsActive && SourceLoadError != null)
+            {
+                await DialogHelper.ShowError($"Encounter table {_selectedEncounterIndex} was not saved.\n{SourceLoadError}", "Wild Pokémon Editor");
+                return;
+            }
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
-            _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: true);
-            WriteHgEngineSource();
+            // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+            if (HgEngineProject.IsActive)
+            {
+                int table = _selectedEncounterIndex;
+                var encounters = _current;
+                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineEncounterSource.TryWrite(table, encounters, out string writeError) ? null : writeError);
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError($"Encounter table {table} was not saved.\n{error}", "Wild Pokémon Editor");
+                    return;
+                }
+            }
+            _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: !HgEngineProject.IsActive);
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();
             RaiseUndoState();
         }
 
-        // Curated v1 scope: every EncounterFileHGSS field this editor already exposes. Water/rod slots
-        // are undesignated "{ min, max, SPECIES_X }" structs in hg-engine's source (no field names at
-        // all); At(0)/At(1)/At(2) locate them positionally, the same mechanism used for named fields.
-        private void WriteHgEngineSource()
+        /// <summary>On hg-engine the table comes from Encounters.c; the built copy only fills a field the entry
+        /// lacks, which the save then reports.</summary>
+        private static EncounterFileHGSS LoadRecord(string path, int id, out string error)
         {
-            if (!HgEngineProject.IsActive || _current == null) return;
-
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
-            string SpeciesSymbol(int id) => species?.TryGetNameWithPrefix(id, "SPECIES_", out string n) == true ? n : id.ToString();
-
-            var fields = new List<HgEngineFieldWrite>
+            error = null;
+            if (HgEngineProject.IsActive && !File.Exists(path))
             {
-                new(new[] { FieldPathSegment.Field("rateWalk") }, _current.walkingRate.ToString()),
-                new(new[] { FieldPathSegment.Field("rateSurf") }, _current.surfRate.ToString()),
-                new(new[] { FieldPathSegment.Field("rateRockSmash") }, _current.rockSmashRate.ToString()),
-                new(new[] { FieldPathSegment.Field("rateOldRod") }, _current.oldRodRate.ToString()),
-                new(new[] { FieldPathSegment.Field("rateGoodRod") }, _current.goodRodRate.ToString()),
-                new(new[] { FieldPathSegment.Field("rateSuperRod") }, _current.superRodRate.ToString()),
-                new(new[] { FieldPathSegment.Field("landSwarm") }, SpeciesSymbol(_current.swarmPokemon[0])),
-                new(new[] { FieldPathSegment.Field("surfSwarm") }, SpeciesSymbol(_current.swarmPokemon[1])),
-                new(new[] { FieldPathSegment.Field("nightFish") }, SpeciesSymbol(_current.swarmPokemon[2])),
-                new(new[] { FieldPathSegment.Field("fishSwarm") }, SpeciesSymbol(_current.swarmPokemon[3])),
-            };
-
-            for (int i = 0; i < 12; i++)
-            {
-                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("levels"), FieldPathSegment.At(i) }, _current.walkingLevels[i].ToString()));
-                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesMorning"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.morningPokemon[i])));
-                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesDay"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.dayPokemon[i])));
-                fields.Add(new(new[] { FieldPathSegment.Field("landSlots"), FieldPathSegment.Field("speciesNight"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.nightPokemon[i])));
+                var fresh = new EncounterFileHGSS();
+                HgEngineEncounterSource.TryLoad(id, fresh, out error);
+                return fresh;
             }
-            for (int i = 0; i < 2; i++)
-            {
-                fields.Add(new(new[] { FieldPathSegment.Field("hoennSoundSpecies"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.hoennMusicPokemon[i])));
-                fields.Add(new(new[] { FieldPathSegment.Field("sinnohSoundSpecies"), FieldPathSegment.At(i) }, SpeciesSymbol(_current.sinnohMusicPokemon[i])));
-                AddSlot("rockSmashSlots", i, _current.rockSmashMinLevels[i], _current.rockSmashMaxLevels[i], _current.rockSmashPokemon[i]);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                AddSlot("surfSlots", i, _current.surfMinLevels[i], _current.surfMaxLevels[i], _current.surfPokemon[i]);
-                AddSlot("oldRodSlots", i, _current.oldRodMinLevels[i], _current.oldRodMaxLevels[i], _current.oldRodPokemon[i]);
-                AddSlot("goodRodSlots", i, _current.goodRodMinLevels[i], _current.goodRodMaxLevels[i], _current.goodRodPokemon[i]);
-                AddSlot("superRodSlots", i, _current.superRodMinLevels[i], _current.superRodMaxLevels[i], _current.superRodPokemon[i]);
-            }
-
-            void AddSlot(string arrayName, int i, byte min, byte max, ushort speciesId)
-            {
-                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(0) }, min.ToString()));
-                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(1) }, max.ToString()));
-                fields.Add(new(new[] { FieldPathSegment.Field(arrayName), FieldPathSegment.At(i), FieldPathSegment.At(2) }, SpeciesSymbol(speciesId)));
-            }
-
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Encounters, _selectedEncounterIndex, fields, out var unresolved, out string error))
-            { AppLogger.Error($"hg-engine write failed for encounter table {_selectedEncounterIndex}: {error}"); return; }
-
-            if (unresolved.Count > 0)
-                AppLogger.Info($"hg-engine write for encounter table {_selectedEncounterIndex}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+            EncounterFileHGSS file;
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                file = new EncounterFileHGSS(stream);
+            if (HgEngineProject.IsActive) HgEngineEncounterSource.TryLoad(id, file, out error);
+            return file;
         }
 
 
@@ -340,9 +320,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void LoadFile(int id)
         {
-            string path = Path.Combine(_dirPath, id.ToString("D4"));
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            _current = new EncounterFileHGSS(stream);
+            _current = LoadRecord(Path.Combine(_dirPath, id.ToString("D4")), id, out string loadError);
+            SourceLoadError = loadError;
             PopulateRows();
             SetClean();
 

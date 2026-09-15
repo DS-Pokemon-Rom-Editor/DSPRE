@@ -784,6 +784,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int FrontHeightUnified { get => _frontHeightM; set { FrontHeightM = value; FrontHeightF = value; } }
         public int BackHeightUnified { get => _backHeightM; set { BackHeightM = value; BackHeightF = value; } }
 
+        // HeightTable.c stores s8 and uses -1; the vanilla height narc is read as unsigned bytes.
+        public decimal HeightMinimum => HgEngineProject.IsActive ? -128 : 0;
+        public decimal HeightMaximum => HgEngineProject.IsActive ? 127 : 255;
+
         // Alt-form heights (height_o.narc), indexed by the form's otherpoke sprite index.
         private OffsetNarc _formHeightNarc;
         private bool _formNarcTried;
@@ -956,7 +960,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, backWait.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, _animBackCryDelay.ToString()),
                 };
-                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+                WriteSpriteOffsets(fields);
                 return;
             }
 
@@ -1070,7 +1074,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var fields = new List<HgEngineFieldWrite>();
                 fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", front));
                 fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("backFrames", back));
-                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
+                WriteSpriteOffsets(fields);
                 return;
             }
 
@@ -2081,6 +2085,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             HasSpriteData = true;
         }
 
+        // WriteAll turns the throw into the save's error, so the tab stays unsaved.
+        private void WriteSpriteOffsets(IEnumerable<HgEngineFieldWrite> fields)
+        {
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out string error, allOrNothing: true))
+                throw new InvalidOperationException(error);
+        }
+
         private void SaveSpriteData()
         {
             if (!IsAvailable || !_hasSpriteData) return;
@@ -2095,9 +2106,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowXOffset") }, _shadowX.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowSize") }, _shadowSize.ToString()),
                 };
-                HgEngineWriter.TryWriteFields(HgEngineDomain.SpriteOffsets, _currentHgeSpeciesId, fields, out _, out _);
-                if (_hasHeights)
-                    HgEngineHeightTable.TrySet(_currentHgeSpeciesId, _backHeightF, _backHeightM, _frontHeightF, _frontHeightM, out _);
+                WriteSpriteOffsets(fields);
+                if (_hasHeights && !HgEngineHeightTable.TrySet(_currentHgeSpeciesId, _backHeightF, _backHeightM, _frontHeightF, _frontHeightM, out string heightError))
+                    throw new InvalidOperationException(heightError);
                 return;
             }
 
@@ -2369,34 +2380,66 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void Save()
         {
             if (!IsAvailable || _currentId < 0) return;
+            if (HgEngineProject.IsActive) { _ = SaveHgEngineAsync(); return; }
+            AfterWrite(WriteAll());
+        }
+
+        async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            if (HgEngineProject.IsActive) await SaveHgEngineAsync();
+            else Save();
+            return !HasUnsavedChanges;
+        }
+
+        private async System.Threading.Tasks.Task SaveHgEngineAsync()
+        {
+            if (!IsAvailable || _currentId < 0) return;
+            int species = _currentId;
+            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(WriteAll);
+            if (species != _currentId || (!saved && error == null)) return;
+            AfterWrite(saved ? null : error);
+        }
+
+        /// <summary>Writes every part of the tab. Returns why it stopped, or null.</summary>
+        private string WriteAll()
+        {
             try
             {
-                // Personal Data writes this table as soon as it changes; an untouched value here would undo that.
+                // Personal Data also writes this table; an untouched value here would undo its save.
                 if (_partyPaletteIndex != _savedPartyPaletteIndex)
                 {
                     if (HgEngineProject.IsActive)
                     {
                         if (!HgEngineIconPalette.TrySetPaletteId(_currentId, _partyPaletteIndex, out string paletteError))
-                            throw new InvalidOperationException(paletteError);
+                            return paletteError;
                     }
                     else
                         DSPRE.DSUtils.SetMonIconPaletteId(IconIdFor(_currentId), (byte)_partyPaletteIndex);
-                    _savedPartyPaletteIndex = _partyPaletteIndex;
                 }
                 if (_pendingIconGraphic != null)
-                {
                     DSPRE.DSUtils.SetMonIconGraphic(IconIdFor(_currentId), _partyPaletteIndex, _pendingIconGraphic);
-                    _pendingIconGraphic = null;
-                }
-                SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames(); SetClean();
-                SaveNotice.Saved(UnsavedChangesDescription);
-                RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
+                SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames();
+                return null;
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Battle Display save failed: " + ex.Message);
-                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + ex.Message, "Save Error");
+                return ex.Message;
             }
+        }
+
+        private void AfterWrite(string error)
+        {
+            if (error != null)
+            {
+                AppLogger.Error("Battle Display save failed: " + error);
+                _ = DSPRE.Avalonia.DialogHelper.ShowError("The Battle Display tab could not be saved: " + error, "Save Error");
+                return;
+            }
+            _savedPartyPaletteIndex = _partyPaletteIndex;
+            _pendingIconGraphic = null;
+            SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            RefreshPreview();   // now reflects what was actually written (disk read), not the staged import
         }
     }
 

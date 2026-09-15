@@ -127,7 +127,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        public void SaveChanges()
+        public void SaveChanges() => _ = SaveAsync();
+
+        async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveAsync();
+            return !HasUnsavedChanges;
+        }
+
+        public async System.Threading.Tasks.Task SaveAsync()
         {
             if (_selectedSpeciesIndex < 0 || _species == null) return;
             string SymbolFor(int id) => _species.TryGetNameWithPrefix(id, "SPECIES_", out string n) ? n : null;
@@ -140,10 +148,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 desired.Add(new HgEngineFormRegistry.FormSlot(row.NeedsReversion, symbol));
             }
 
-            if (!HgEngineFormRegistry.TrySaveSpeciesForms(_selectedSpeciesIndex, desired, out string error))
+            int species = _selectedSpeciesIndex;
+            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+                HgEngineFormRegistry.TrySaveSpeciesForms(species, desired, out string writeError) ? null : writeError);
+            if (!saved)
             {
+                if (error == null) return;
                 StatusText = $"Save failed: {error}";
-                AppLogger.Error($"hg-engine form registry write failed for species {_selectedSpeciesIndex}: {error}");
+                AppLogger.Error($"hg-engine form registry write failed for species {species}: {error}");
                 return;
             }
 

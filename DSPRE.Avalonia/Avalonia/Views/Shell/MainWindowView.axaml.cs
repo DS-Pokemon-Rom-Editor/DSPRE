@@ -544,7 +544,20 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (emulator == null) return;
 
                 string rom;
-                if (HgEngineProject.IsActive && (SettingsManager.Settings?.buildAndRunCompiles ?? true))
+                bool compile = HgEngineProject.IsActive && (SettingsManager.Settings?.buildAndRunCompiles ?? true);
+                // make packs test.nds from the checkout's own base folder, which a separate project never writes to.
+                if (compile && !RomInfo.IsHgEngineBaseProject)
+                {
+                    var choice = await DialogHelper.AskThreeWay(
+                        "hg-engine builds its ROM from the checkout's base folder, not from this project, so maps, scripts, events and text edited here are not in it.\n\n" +
+                        "Compile builds your hg-engine source without this project's edits. Run this project packs this project, with the hg-engine data it last synced.\n\n" +
+                        "To get both, open the checkout's base folder as your project.",
+                        "Build and Run", "Compile", "Run this project");
+                    if (choice == DialogHelper.MsgResult.Cancel) return;
+                    compile = choice == DialogHelper.MsgResult.Yes;
+                }
+
+                if (compile)
                 {
                     rom = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, "test.nds");
                     if (!await new CompileRomView().BuildAsync(this)) return;
@@ -777,7 +790,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void ExportDocs_Click(object sender, RoutedEventArgs e)
         {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+            if (!AvaloniaEditorLauncher.IsRomLoaded || AvaloniaEditorLauncher.BlockedForUnlinkedHge("Export Docs")) return;
             string folder = await DialogHelper.OpenFolder(this, "Choose where to export the docs");
             if (string.IsNullOrEmpty(folder)) return;
             string error = null;
@@ -792,7 +805,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void TrainerUsageCsv_Click(object sender, RoutedEventArgs e)
         {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
+            if (!AvaloniaEditorLauncher.IsRomLoaded || AvaloniaEditorLauncher.BlockedForUnlinkedHge("The trainer usage report")) return;
             string path = await DialogHelper.SaveFile(this, "Save trainer usage report",
                 new[] { DialogHelper.CsvFilter }, "TrainerUsage.csv");
             if (string.IsNullOrEmpty(path)) return;

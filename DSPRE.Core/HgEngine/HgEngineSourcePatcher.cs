@@ -51,8 +51,44 @@ namespace DSPRE.HgEngine
         {
             if (!TryFindEntry(text, designatorToken, out int open, out int close)) return false;
             if (!ElementScanner.TryLocateValueSpan(text, open, close, path, out int vs, out int ve)) return false;
+            // An unchanged value keeps its own layout and comments; a multi-line block would otherwise be
+            // flattened onto one line every save.
+            if (SameTokens(text.Substring(vs, ve - vs), newValueLiteral)) return true;
             text = string.Concat(text.AsSpan(0, vs), newValueLiteral, text.AsSpan(ve));
             return true;
+        }
+
+        /// <summary>True when two values are the same C tokens, ignoring whitespace, comments and a trailing comma
+        /// before a closing brace or bracket.</summary>
+        internal static bool SameTokens(string a, string b) => Tokens(a) == Tokens(b);
+
+        private static string Tokens(string s)
+        {
+            var sb = new System.Text.StringBuilder(s.Length);
+            int i = 0;
+            while (i < s.Length)
+            {
+                char c = s[i];
+                if (c == '/' && i + 1 < s.Length && (s[i + 1] == '/' || s[i + 1] == '*'))
+                {
+                    BraceScanner.SkipNonCode(s, ref i);
+                    continue;
+                }
+                if (c == '"' || c == '\'')
+                {
+                    int start = i;
+                    BraceScanner.SkipNonCode(s, ref i);
+                    sb.Append(s, start, i - start);
+                    continue;
+                }
+                if (!char.IsWhiteSpace(c))
+                {
+                    if ((c == '}' || c == ']') && sb.Length > 0 && sb[^1] == ',') sb.Length--;
+                    sb.Append(c);
+                }
+                i++;
+            }
+            return sb.ToString();
         }
 
         /// <summary>Like <see cref="TryReplaceField"/>, but if the field isn't declared yet, INSERTS
@@ -66,13 +102,155 @@ namespace DSPRE.HgEngine
             if (!TryFindEntry(text, designatorToken, out int open, out int close)) return false;
             if (!ElementScanner.TryLocateParentBlock(text, open, close, path, out int parentOpen, out int parentClose)) return false;
 
+            var fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
+            if (fields.Count > 0)
+            {
+                // New field goes on its own line after the last one, at the same indent.
+                string line = "\n" + IndentOfLine(text, fields[0].Start) + $".{path[^1].Name} = {newValueLiteral},";
+                InsertAfterLastElement(ref text, fields[^1].End, parentClose, MatchNewlines(text, line));
+                return true;
+            }
+
             // Only add a leading comma if the prior field doesn't already end with one.
             int checkPos = parentClose - 1;
             while (checkPos > parentOpen && char.IsWhiteSpace(text[checkPos])) checkPos--;
             bool needsLeadingComma = checkPos > parentOpen && text[checkPos] != ',';
             string newField = (needsLeadingComma ? "," : "") + $"\n            .{path[^1].Name} = {newValueLiteral},";
-            text = string.Concat(text.AsSpan(0, parentClose), newField, text.AsSpan(parentClose));
+            text = string.Concat(text.AsSpan(0, parentClose), MatchNewlines(text, newField), text.AsSpan(parentClose));
             return true;
+        }
+
+        /// <summary>Deletes a named field and its comma. An absent field counts as removed; false only when
+        /// the entry or the field's parent block can't be found.</summary>
+        public static bool TryRemoveField(ref string text, string designatorToken, IReadOnlyList<FieldPathSegment> path)
+        {
+            if (path.Count == 0 || path[^1].IsIndex) return false;
+            if (!TryFindEntry(text, designatorToken, out int open, out int close)) return false;
+            if (!ElementScanner.TryLocateParentBlock(text, open, close, path, out int parentOpen, out int parentClose)) return false;
+
+            var fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
+            var named = new Regex(@"\G\.\s*" + Regex.Escape(path[^1].Name) + @"\s*=(?!=)");
+            for (int i = 0; i < fields.Count; i++)
+            {
+                if (!named.IsMatch(text, fields[i].Start)) continue;
+                int cutStart = PastLineComment(text, i == 0 ? parentOpen + 1 : AfterComma(text, fields[i - 1].End, parentClose), parentClose);
+                int cutEnd = PastLineComment(text, AfterComma(text, fields[i].End, parentClose), parentClose);
+                text = string.Concat(text.AsSpan(0, cutStart), text.AsSpan(cutEnd));
+                return true;
+            }
+            return true;
+        }
+
+        /// <summary>Makes the array at <paramref name="arrayPath"/> hold exactly <paramref name="count"/>
+        /// elements: drops the tail, or appends <paramref name="newElement"/>(index, indent) blocks.</summary>
+        public static bool TrySetArrayCount(ref string text, string designatorToken, IReadOnlyList<FieldPathSegment> arrayPath,
+            int count, Func<int, string, string> newElement)
+        {
+            if (count < 0 || !TryFindEntry(text, designatorToken, out int entryOpen, out int entryClose)) return false;
+
+            if (!ElementScanner.TryLocateValueSpan(text, entryOpen, entryClose, arrayPath, out int vs, out int ve))
+            {
+                if (count == 0) return true;
+                string indent = IndentOfLine(text, entryOpen) + "        ";
+                var literal = new System.Text.StringBuilder("{");
+                for (int i = 0; i < count; i++) literal.Append('\n').Append(indent).Append(newElement(i, indent)).Append(',');
+                literal.Append('\n').Append(indent, 0, indent.Length - 4).Append('}');
+                return TryUpsertField(ref text, designatorToken, arrayPath, literal.ToString());
+            }
+
+            while (vs < ve && char.IsWhiteSpace(text[vs])) vs++;
+            if (vs >= ve || text[vs] != '{' || !BraceScanner.TryFindMatchingBrace(text, vs, out int close)) return false;
+
+            var spans = ElementScanner.ElementSpans(text, vs, close);
+            int n = spans.Count;
+            if (count == n) return true;
+
+            if (count < n)
+            {
+                int cutStart = PastLineComment(text, count == 0 ? vs + 1 : AfterComma(text, spans[count - 1].End, close), close);
+                int cutEnd = PastLineComment(text, AfterComma(text, spans[n - 1].End, close), close);
+                text = string.Concat(text.AsSpan(0, cutStart), text.AsSpan(cutEnd));
+                return true;
+            }
+
+            string elementIndent = n > 0 ? IndentOfLine(text, spans[0].Start) : IndentOfLine(text, vs) + "    ";
+            var added = new System.Text.StringBuilder();
+            for (int i = n; i < count; i++) added.Append('\n').Append(elementIndent).Append(newElement(i, elementIndent)).Append(',');
+            if (n > 0)
+            {
+                InsertAfterLastElement(ref text, spans[n - 1].End, close, MatchNewlines(text, added.ToString()));
+                return true;
+            }
+            added.Append('\n').Append(IndentOfLine(text, vs));
+            text = string.Concat(text.AsSpan(0, vs + 1), MatchNewlines(text, added.ToString()), text.AsSpan(vs + 1));
+            return true;
+        }
+
+        // A cut starting or ending at j moves past a comment that finishes j's line, so the comment goes
+        // with the element on that line: kept for the element before a cut, removed with a cut element.
+        private static int PastLineComment(string text, int j, int limit)
+        {
+            int k = j;
+            while (k < limit && (text[k] == ' ' || text[k] == '\t')) k++;
+            if (k + 1 >= limit || text[k] != '/') return j;
+            if (text[k + 1] == '/')
+            {
+                int nl = text.IndexOf('\n', k);
+                if (nl < 0 || nl > limit) return limit;
+                return text[nl - 1] == '\r' ? nl - 1 : nl;
+            }
+            if (text[k + 1] == '*')
+            {
+                int end = text.IndexOf("*/", k + 2, StringComparison.Ordinal);
+                int nl = text.IndexOf('\n', k);
+                if (end >= 0 && end + 2 <= limit && (nl < 0 || end < nl)) return PastLineComment(text, end + 2, limit);
+            }
+            return j;
+        }
+
+        // Adds the comma the last element lacks right after its value, and the new lines after any
+        // comment on that line, so the comment stays with the element it describes.
+        internal static void InsertAfterLastElement(ref string text, int valueEnd, int limit, string lines)
+        {
+            int afterComma = AfterComma(text, valueEnd, limit);
+            string comma = afterComma == valueEnd ? "," : "";
+            int insertAt = afterComma;
+            int i = afterComma;
+            while (i < limit && (text[i] == ' ' || text[i] == '\t')) i++;
+            if (i + 1 < limit && text[i] == '/' && text[i + 1] == '/')
+            {
+                int nl = text.IndexOf('\n', i);
+                insertAt = nl < 0 || nl > limit ? limit : (nl > 0 && text[nl - 1] == '\r' ? nl - 1 : nl);
+            }
+            text = text.Substring(0, valueEnd) + comma + text.Substring(valueEnd, insertAt - valueEnd) + lines + text.Substring(insertAt);
+        }
+
+        // A CRLF file must not gain bare LF lines.
+        private static string MatchNewlines(string text, string inserted)
+        {
+            string lf = inserted.Replace("\r\n", "\n");
+            return text.Contains("\r\n") ? lf.Replace("\n", "\r\n") : lf;
+        }
+
+        // Past the comma after a value, even with a comment before it; the value's end when no comma follows.
+        private static int AfterComma(string text, int pos, int limit)
+        {
+            int i = pos;
+            while (i < limit)
+            {
+                if (char.IsWhiteSpace(text[i])) { i++; continue; }
+                if (text[i] == '/' && i + 1 < limit && (text[i + 1] == '/' || text[i + 1] == '*')) { BraceScanner.SkipNonCode(text, ref i); continue; }
+                break;
+            }
+            return i < limit && text[i] == ',' ? i + 1 : pos;
+        }
+
+        internal static string IndentOfLine(string text, int pos)
+        {
+            int lineStart = text.LastIndexOf('\n', Math.Max(0, pos - 1)) + 1;
+            int i = lineStart;
+            while (i < pos && (text[i] == ' ' || text[i] == '\t')) i++;
+            return text.Substring(lineStart, i - lineStart);
         }
 
         /// <summary>Reads a field's raw value directly from an already-isolated "{ ... }" block (e.g. one
@@ -240,6 +418,34 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        /// <summary>Where each top-level element starts (designator included) and where its value ends.</summary>
+        internal static List<(int Start, int End)> ElementSpans(string text, int openBrace, int closeBrace)
+        {
+            var spans = new List<(int, int)>();
+            int i = openBrace + 1, elemStart = i, depth = 0;
+
+            void Flush(int elemEnd)
+            {
+                int s = elemStart, e = elemEnd;
+                while (s < e && char.IsWhiteSpace(text[s])) s++;
+                SkipLeadingComments(text, ref s, e);
+                TrimTrailingComments(text, s, ref e);
+                if (s < e) spans.Add((s, e));
+            }
+
+            while (i < closeBrace)
+            {
+                if (BraceScanner.SkipNonCode(text, ref i)) continue;
+                char c = text[i];
+                if (c == '{' || c == '(' || c == '[') depth++;
+                else if (c == '}' || c == ')' || c == ']') depth--;
+                else if (c == ',' && depth == 0) { Flush(i); elemStart = i + 1; }
+                i++;
+            }
+            Flush(closeBrace);
+            return spans;
+        }
+
         /// <summary>Wraps <see cref="Split"/> for callers that just need each element's raw value text.</summary>
         internal static List<string> SplitElementValues(string text, int openBrace, int closeBrace)
         {
@@ -276,7 +482,7 @@ namespace DSPRE.HgEngine
                 int s = elemStart, e = elemEnd;
                 while (s < e && char.IsWhiteSpace(text[s])) s++;
                 SkipLeadingComments(text, ref s, e);
-                while (e > s && char.IsWhiteSpace(text[e - 1])) e--;
+                TrimTrailingComments(text, s, ref e);
                 if (s >= e) return;   // empty (trailing comma before closing brace, or a trailing comment with no value after it)
 
                 var (name, idx, valueStart) = ParseDesignator(text, s, e, autoIndex);
@@ -346,6 +552,29 @@ namespace DSPRE.HgEngine
         // them), which BraceScanner.SkipNonCode only protects depth-tracking from, it doesn't advance where
         // an element starts. Skip any run of leading "//"/"/* */" comments (and the whitespace around them)
         // so they never end up prepended to the next real value.
+        // The last element before '}' has no comma, so a "// note" after it would otherwise count as its value.
+        private static void TrimTrailingComments(string text, int s, ref int e)
+        {
+            int i = s, lastCode = s - 1;
+            while (i < e)
+            {
+                char c = text[i];
+                bool comment = c == '/' && i + 1 < e && (text[i + 1] == '/' || text[i + 1] == '*');
+                if (comment || c == '"' || c == '\'')
+                {
+                    int j = i;
+                    BraceScanner.SkipNonCode(text, ref j);
+                    j = Math.Min(j, e);
+                    if (!comment) lastCode = j - 1;
+                    i = j;
+                    continue;
+                }
+                if (!char.IsWhiteSpace(c)) lastCode = i;
+                i++;
+            }
+            e = lastCode + 1;
+        }
+
         private static void SkipLeadingComments(string text, ref int s, int end)
         {
             while (s < end && text[s] == '/' && s + 1 < end && (text[s + 1] == '/' || text[s + 1] == '*'))

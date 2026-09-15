@@ -431,7 +431,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             finally { _suppress = false; }
         }
 
-        public void SaveEffectCombo()
+        public void SaveEffectCombo() => _ = SaveEffectComboAsync();
+
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            if (_condDirty) SaveConditionalMusic();
+            if (_effectsDirty) await SaveEffectComboAsync();
+            if (_vsTrainerDirty) await SaveVsTrainerAsync();
+            return !HasUnsavedChanges;
+        }
+
+        public async Task SaveEffectComboAsync()
         {
             int index = _comboSelectedIndex;
             if (_effectsComboTable == null || index < 0 || index >= _effectsComboTable.Count) return;
@@ -442,7 +452,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             if (_fromSource)
             {
-                if (!HgEngineMusicTables.TrySetCombo(index, effect, music, out string error)) { StatusText = error; return; }
+                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TrySetCombo(index, effect, music, out string e) ? null : e);
+                if (!saved) { if (error != null) StatusText = error; return; }
             }
             else
             {
@@ -479,7 +490,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             finally { _suppress = false; }
         }
 
-        public void SaveVsTrainer()
+        public void SaveVsTrainer() => _ = SaveVsTrainerAsync();
+
+        public async Task SaveVsTrainerAsync()
         {
             int index = _vsTrainerSelectedIndex;
             if (_vsTrainerList == null || index < 0 || index >= _vsTrainerList.Count) return;
@@ -490,7 +503,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             if (_fromSource)
             {
-                if (!HgEngineMusicTables.TrySetClassCombo(index, trainerClass, comboID, out string error)) { StatusText = error; return; }
+                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TrySetClassCombo(index, trainerClass, comboID, out string e) ? null : e);
+                if (!saved) { if (error != null) StatusText = error; return; }
             }
             else
             {

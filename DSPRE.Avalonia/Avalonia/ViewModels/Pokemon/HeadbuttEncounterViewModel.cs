@@ -511,22 +511,43 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null || _selFile < 0) return;
+            if (HgEngineProject.IsActive) { _ = SaveHgEngineAsync(); return; }
             try
             {
-                bool ok;
-                if (HgEngineProject.IsActive)
-                {
-                    ok = HgEngineHeadbutt.TrySave(_selFile, _file, out string err);
-                    if (!ok) AppLogger.Error($"hg-engine headbutt write failed (file {_selFile}): {err}");
-                }
-                else
-                {
-                    ok = _file.SaveToFile(_selFile);
-                }
-                if (ok) { SetClean(); StatusText = $"Saved headbutt file {_selFile}."; SaveNotice.Saved(UnsavedChangesDescription); }
+                if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);
                 else StatusText = "Save failed (see log).";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Headbutt Editor"); }
+        }
+
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            if (HgEngineProject.IsActive) await SaveHgEngineAsync();
+            else Save();
+            return !HasUnsavedChanges;
+        }
+
+        private async Task SaveHgEngineAsync()
+        {
+            if (_file == null || _selFile < 0) return;
+            int fileId = _selFile;
+            var file = _file;
+            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineHeadbutt.TrySave(fileId, file, out string err) ? null : err);
+            if (saved)
+            {
+                if (fileId == _selFile) MarkSaved(fileId);
+                return;
+            }
+            if (error == null) return;
+            StatusText = "Save failed.";
+            await DialogHelper.ShowError($"Headbutt file {fileId} was not saved.\n{error}", "Headbutt Editor");
+        }
+
+        private void MarkSaved(int fileId)
+        {
+            SetClean();
+            StatusText = $"Saved headbutt file {fileId}.";
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
     }
 }

@@ -158,14 +158,41 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Save / import ──────────────────────────────────────────────────────────
         public async Task SaveAsync()
         {
+            if (UseHgEngineSource) { await SaveHgEngineAsync(); return; }
             if (!SaveCore(out string failure))
                 await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + failure, "Save Error");
         }
 
         public void Save()
         {
+            if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
             if (!SaveCore(out string failure))
                 AppLogger.Error("Safari Zone save failed: " + failure);
+        }
+
+        private async Task SaveHgEngineAsync()
+        {
+            var groups = new List<(DSPRE.HgEngine.HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)>
+            {
+                (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land, GrassVM.CurrentGroup),
+                (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf, SurfVM.CurrentGroup),
+                (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod, OldRodVM.CurrentGroup),
+                (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod, GoodRodVM.CurrentGroup),
+                (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod, SuperRodVM.CurrentGroup),
+            };
+            int area = _selectedFileIndex;
+            // One pass for the whole area, so a failure can't leave some rods written and others not.
+            var (saved, error) = await HgEngineSave.RunAsync(() =>
+                DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroups(area, groups, out string sourceError) ? null : sourceError);
+            if (saved)
+            {
+                SetClean();
+                SaveNotice.Saved(UnsavedChangesDescription);
+            }
+            else if (error != null)
+            {
+                await DialogHelper.ShowError("Could not save the Safari Zone data:\n" + error, "Save Error");
+            }
         }
 
         /// <summary>Writes everything and says what went wrong. Only a save that wrote every group
@@ -175,30 +202,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             failure = null;
             try
             {
-                if (UseHgEngineSource)
-                {
-                    var failed = new List<string>();
-                    var rods = new (SafariZoneGroupViewModel Vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType Type)[]
-                    {
-                        (GrassVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land),
-                        (SurfVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf),
-                        (OldRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.OldRod),
-                        (GoodRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.GoodRod),
-                        (SuperRodVM, DSPRE.HgEngine.HgEngineSafariEncounters.RodType.SuperRod),
-                    };
-                    foreach (var rod in rods)
-                        if (!SaveOne(rod.Vm, rod.Type)) failed.Add(rod.Type.ToString());
-
-                    if (failed.Count > 0)
-                    {
-                        failure = "these groups could not be written to the hg-engine sources: "
-                                + string.Join(", ", failed);
-                        return false;
-                    }
-                    SetClean();
-                    return true;
-                }
-
                 if (_file == null) return true;
                 if (!_file.SaveToFile())
                 {
@@ -214,16 +217,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 failure = ex.Message;
                 return false;
             }
-        }
-
-        private bool SaveOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
-        {
-            var group = vm.CurrentGroup;
-            if (group == null) return true;
-            if (DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroup(_selectedFileIndex, type, group, out string error))
-                return true;
-            AppLogger.Error($"hg-engine safari zone write failed ({type}, area {_selectedFileIndex}): {error}");
-            return false;
         }
 
         public async Task SaveAsAsync()

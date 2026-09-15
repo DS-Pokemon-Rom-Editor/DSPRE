@@ -738,6 +738,35 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (_rockSmashDirty && ShowRockSmashTab) SaveRockSmash();
         }
 
+        async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            if (_pickupDirty && ShowPickupTab) SavePickupTable();
+            if (_hiddenDirty && ShowHiddenItemsTab)
+            {
+                if (HgEngineProject.IsActive) await SaveHiddenItemsToSourceAsync();
+                else SaveHiddenItems();
+            }
+            if (_rockSmashDirty && ShowRockSmashTab) SaveRockSmash();
+            return !HasUnsavedChanges;
+        }
+
+        private async System.Threading.Tasks.Task SaveHiddenItemsToSourceAsync()
+        {
+            var entries = new List<HgEngineHiddenItems.Entry>(HiddenItems.Count);
+            foreach (var e in HiddenItems)
+                entries.Add(new HgEngineHiddenItems.Entry { ItemId = e.ItemID, Quantity = e.Amount, Index = e.ScriptID });
+            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
+            if (!saved)
+            {
+                if (error != null) await DialogHelper.ShowError($"Hidden items were not saved.\n{error}", "Item Tables");
+                return;
+            }
+
+            _hiddenDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
         private void SavePickupTable()
         {
             string path = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
@@ -764,14 +793,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (HgEngineProject.IsActive)
             {
-                var entries = new List<HgEngineHiddenItems.Entry>(HiddenItems.Count);
-                foreach (var e in HiddenItems)
-                    entries.Add(new HgEngineHiddenItems.Entry { ItemId = e.ItemID, Quantity = e.Amount, Index = e.ScriptID });
-                if (!HgEngineHiddenItems.TrySave(entries, out string err))
-                    AppLogger.Error($"hg-engine hidden items write failed: {err}");
-
-                _hiddenDirty = false;
-                OnPropertyChanged(nameof(HasUnsavedChanges));
+                _ = SaveHiddenItemsToSourceAsync();
                 return;
             }
 

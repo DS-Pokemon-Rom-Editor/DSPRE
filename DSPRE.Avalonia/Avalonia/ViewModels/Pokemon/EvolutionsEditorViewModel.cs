@@ -88,6 +88,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (string.IsNullOrEmpty(name) || name == "EVO_NONE") return EvolutionParamMeaning.Ignored;
             if (name.Contains("LEVEL")) return EvolutionParamMeaning.FromLevel;
             if (name.Contains("ITEM") || name.Contains("STONE")) return EvolutionParamMeaning.ItemName;
+            // EVO_HAS_MOVE_TYPE's param is a type id, not a move.
+            if (name.Contains("MOVE_TYPE")) return EvolutionParamMeaning.CustomNumber;
             if (name.Contains("MOVE")) return EvolutionParamMeaning.MoveName;
             if (name.Contains("PARTY_MON") || name.Contains("TRADE_SPECIFIC_MON")) return EvolutionParamMeaning.PokemonName;
             if (name.Contains("BEAUTY")) return EvolutionParamMeaning.BeautyValue;
@@ -96,7 +98,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         /// <summary>The target-species dropdown is disabled for a CustomNumber method: its parameter is a
         /// raw value and the evolution target is handled by the hack's own code, not a picked species.</summary>
-        public bool IsTargetEnabled => Meaning != EvolutionParamMeaning.CustomNumber;
+        // hg-engine reads the target for every method except EVO_NONE.
+        public bool IsTargetEnabled => UseHgEngineNames ? Meaning != EvolutionParamMeaning.Ignored : Meaning != EvolutionParamMeaning.CustomNumber;
 
         /// <summary>Re-raises the parameter-display properties after the param meaning was customised.</summary>
         public void RefreshParam()
@@ -341,6 +344,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        private string _hgLoadError;
+
         // ─── Load ─────────────────────────────────────────────────────────────────
         public void LoadMon(int id)
         {
@@ -354,7 +359,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     // Evolutions isn't synced from a packed NARC, so the vanilla read path below would
                     // show stale ROM data instead of the checkout's real data/Evolutions.c.
-                    DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvolutionFile.numEvolutions, out var hgEntries, out _);
+                    _hgLoadError = null;
+                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvolutionFile.numEvolutions, out var hgEntries, out string loadError))
+                        _hgLoadError = loadError;
                     for (int i = 0; i < EvolutionFile.numEvolutions; i++)
                     {
                         var row = EvoRows[i];
@@ -362,9 +369,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                         {
                             var e = hgEntries[i];
                             int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
+                            bool targetListed = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count;
+                            if (e.Unresolved) _hgLoadError ??= $"Evolution {i + 1} could not be read: {e.RawText}";
+                            if (idx < 0) _hgLoadError ??= $"Evolution {i + 1} uses method {e.MethodValue}, which this checkout doesn't name.";
+                            if (!targetListed) _hgLoadError ??= $"Evolution {i + 1} targets species {e.TargetSpeciesId}, which isn't in the species list.";
                             row.MethodIndex = idx >= 0 ? idx : 0;
                             row.Param       = e.Param;
-                            row.TargetIndex = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count ? e.TargetSpeciesId : 0;
+                            row.TargetIndex = targetListed ? e.TargetSpeciesId : 0;
                             row.HgTargetFormId = e.TargetFormId;
                         }
                         else
@@ -403,42 +414,70 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_currentId < 0) return;
+            if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
+            if (_current == null) return;
 
-            if (UseHgEngineSource)
+            var newFile = new EvolutionFile();
+            var data = new System.Collections.Generic.List<EvolutionData>();
+
+            foreach (var row in EvoRows)
             {
-                var uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
-                foreach (var row in EvoRows)
+                var method = (EvolutionMethod)row.MethodIndex;
+                var ed = new EvolutionData
                 {
-                    string methodName = row.MethodIndex >= 0 && row.MethodIndex < _hgMethodOptions.Count
-                        ? _hgMethodOptions[row.MethodIndex].Name : "EVO_NONE";
-                    uiEntries.Add((methodName, row.Param, row.TargetIndex, row.HgTargetFormId));
-                }
-                if (!DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(_currentId, uiEntries, out string error))
-                    AppLogger.Error($"hg-engine evolutions write failed for species {_currentId}: {error}");
-            }
-            else
-            {
-                if (_current == null) return;
-                var newFile = new EvolutionFile();
-                var data = new System.Collections.Generic.List<EvolutionData>();
-
-                foreach (var row in EvoRows)
-                {
-                    var method = (EvolutionMethod)row.MethodIndex;
-                    var ed = new EvolutionData
-                    {
-                        method = method,
-                        param  = (short)row.Param,
-                        target = (short)row.TargetIndex
-                    };
-                    if (ed.isValid()) data.Add(ed);
-                }
-
-                newFile.data = data.ToArray();
-                newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
-                _current = newFile;
+                    method = method,
+                    param  = (short)row.Param,
+                    target = (short)row.TargetIndex
+                };
+                if (ed.isValid()) data.Add(ed);
             }
 
+            newFile.data = data.ToArray();
+            newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
+            _current = newFile;
+            MarkSaved();
+        }
+
+        async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            if (UseHgEngineSource) await SaveHgEngineAsync();
+            else Save();
+            return !HasUnsavedChanges;
+        }
+
+        private async System.Threading.Tasks.Task SaveHgEngineAsync()
+        {
+            if (_currentId < 0) return;
+            int species = _currentId;
+
+            // Saving rows that didn't load faithfully would overwrite the real entries.
+            if (_hgLoadError != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions");
+                return;
+            }
+            var uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
+            foreach (var row in EvoRows)
+            {
+                string methodName = row.MethodIndex >= 0 && row.MethodIndex < _hgMethodOptions.Count
+                    ? _hgMethodOptions[row.MethodIndex].Name : "EVO_NONE";
+                uiEntries.Add((methodName, row.Param, row.TargetIndex, row.HgTargetFormId));
+            }
+
+            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+                DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(species, uiEntries, out string writeError) ? null : writeError);
+            if (!saved)
+            {
+                if (error == null) return;
+                AppLogger.Error($"hg-engine evolutions write failed for species {species}: {error}");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{error}", "Evolutions");
+                return;
+            }
+            if (species == _currentId) MarkSaved();
+        }
+
+        private void MarkSaved()
+        {
             _dirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
