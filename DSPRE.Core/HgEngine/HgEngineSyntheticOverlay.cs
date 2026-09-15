@@ -7,18 +7,18 @@ using System.Text.RegularExpressions;
 namespace DSPRE.HgEngine
 {
     /// <summary>
-    /// The synthetic overlay archive both tools keep tables in. hg-engine extracts it once into
-    /// build/a028, generates its own members there from data/*.c, and repacks the whole archive from
-    /// that directory on every build.
-    ///
-    /// So the archive in the ROM tree is not where a lasting edit goes: anything DSPRE writes there is
-    /// replaced by the next repack. The member files in build/a028 are, and the two tools only collide
-    /// if they want the same member.
+    /// The synthetic overlay archive DSPRE expands ARM9 into. hg-engine extracts it once into build/a028,
+    /// generates its own members there from data/*.c, and repacks the whole archive from that directory on
+    /// every build. Its ARM9 hook loads overlay 129 instead of DSPRE's member, and its overlay 131 sits at
+    /// the address DSPRE's expansion is linked for.
     /// </summary>
     public static class HgEngineSyntheticOverlay
     {
         public const string BuildDirRelPath = "build/a028";
         public const string CodeTablesRelPath = "data/codetables.mk";
+
+        /// <summary>Why the Patch Toolbox lists an expansion patch as unavailable.</summary>
+        public const string ToolboxReason = "hg-engine uses this space for its own code";
 
         /// <summary>Where the checkout keeps the members it repacks the archive from.</summary>
         public static string BuildDir =>
@@ -98,26 +98,13 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// Why an expansion into the synthetic overlay will not survive, or null when it will. The
-        /// archive in the ROM tree is repacked from build/a028 on every build, so the edit has to be
-        /// made there to last.
+        /// Why DSPRE must not expand into the synthetic overlay, or null when it may. On any hg-engine ROM,
+        /// linked or not, the game never loads the expansion, and code that branches to its address runs
+        /// hg-engine's overlay 131 instead.
         /// </summary>
-        public static string RefusalFor(uint dspreMemberId)
-        {
-            if (!HgEngineProject.IsActive) return null;
-
-            string member = Members().FirstOrDefault(n => MemberIndexOf(n) == dspreMemberId);
-            string named = member ?? $"member {dspreMemberId}";
-
-            if (GeneratesMemberFor(dspreMemberId))
-            {
-                return $"hg-engine generates {named} of the synthetic overlay from its own data, so an "
-                     + "expansion here is replaced on the next compile.";
-            }
-
-            return "hg-engine repacks the synthetic overlay from its own build directory on every "
-                 + $"compile, so an expansion written into the ROM's copy is lost. It keeps {named} in "
-                 + BuildDirRelPath + ".";
-        }
+        public static string ExpansionRefusal() => RomInfo.isHGE
+            ? "hg-engine loads its own code where DSPRE's ARM9 expansion would go, so the game never reads the "
+              + "expansion, and anything pointing into it would run hg-engine's code instead."
+            : null;
     }
 }

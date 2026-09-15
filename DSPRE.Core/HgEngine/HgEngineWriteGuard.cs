@@ -17,7 +17,17 @@ namespace DSPRE.HgEngine
 
         public static bool Refuses(string filePath, long offset, int length)
         {
-            if (!HgEngineProject.IsActive || string.IsNullOrEmpty(filePath)) return false;
+            if (string.IsNullOrEmpty(filePath)) return false;
+            // Refused with or without a checkout: nothing on an hg-engine ROM loads this archive's expansion.
+            string synthetic = HgEngineSyntheticOverlay.ExpansionRefusal();
+            if (synthetic != null && IsSyntheticOverlayMember(filePath))
+            {
+                AppLogger.Warn($"Refused write to the synthetic overlay at 0x{offset:X}: {filePath}");
+                OnRefused?.Invoke(synthetic);
+                return true;
+            }
+
+            if (!HgEngineProject.IsActive) return false;
             if (!TryIdentify(filePath, out int overlayNumber)) return false;
 
             HgEngineClaim claim = HgEngineClaimedRanges.Claiming(overlayNumber, offset, length);
@@ -31,6 +41,22 @@ namespace DSPRE.HgEngine
             AppLogger.Warn($"Refused write to {binary} at 0x{offset:X}: {claim}");
             OnRefused?.Invoke(message);
             return true;
+        }
+
+        internal static bool IsSyntheticOverlayMember(string filePath)
+        {
+            try
+            {
+                string dir = Filesystem.synthOverlay;
+                string parent = Path.GetDirectoryName(Path.GetFullPath(filePath));
+                return !string.IsNullOrEmpty(dir) && parent != null
+                    && string.Equals(parent.TrimEnd('\\', '/'), Path.GetFullPath(dir).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException
+                || ex is NullReferenceException || ex is System.Collections.Generic.KeyNotFoundException)
+            {
+                return false;
+            }
         }
 
         /// <summary>Whether a path is the open project's arm9 or one of its overlays.</summary>

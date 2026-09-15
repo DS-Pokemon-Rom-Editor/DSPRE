@@ -1151,6 +1151,7 @@ namespace DSPRE
                 "Add ~88 KB of usable ARM9 memory. Required by the BDHCam / script-command patches. Advanced, can break the game if misused.",
                 () =>
                 {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
                         return Unsupported("Unsupported language");
                     bool applied = RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
@@ -1161,6 +1162,7 @@ namespace DSPRE
                 "Install the BDHCam camera subroutine (Platinum / HGSS, EN or ES). Requires the ARM9 expansion patch first.",
                 () =>
                 {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!ScrcmdLikeLangOk()) return Unsupported("Unsupported version/language");
                     if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
@@ -1172,6 +1174,7 @@ namespace DSPRE
                 "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!BuildingRotationPatchData.SupportsCurrentRom()) return Unsupported("Unsupported version");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
@@ -1203,6 +1206,7 @@ namespace DSPRE
                 "Move the script command table into the expanded ARM9 file so custom commands can be installed (HGSS, EN or ES). Requires the ARM9 expansion patch.",
                 () =>
                 {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("Unsupported version/language");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return IsScrcmdRepointApplied() ? PatchState.Applied : PatchState.Available;
@@ -1294,6 +1298,13 @@ namespace DSPRE
         /// <summary>Applies the patch identified by <paramref name="key"/>. Returns whether it was applied.</summary>
         public static bool ApplyByKey(string key)
         {
+            string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
+            if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint")
+            {
+                ShowError(hgEngineRefusal, "Not available on hg-engine");
+                return false;
+            }
+
             switch (key)
             {
                 case "sentenceCase": return ApplySentenceCasePatch();
