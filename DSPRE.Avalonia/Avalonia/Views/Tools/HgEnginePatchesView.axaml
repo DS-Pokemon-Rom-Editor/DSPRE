@@ -19,6 +19,8 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Show:" VerticalAlignment="Center"/>
         <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Reload" Click="Reload_Click"/>
       </StackPanel>
     </Border>

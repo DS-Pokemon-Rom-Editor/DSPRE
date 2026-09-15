@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
-            string error = VM?.Save();
+            string error = VM?.SaveAll();
             if (error != null)
                 await DialogHelper.ShowError($"Save failed: {error}", owner: this);
         }

@@ -70,7 +70,10 @@
           <Button Content="Enable eye-contact music for this class" Click="EnableMusic_Click"
                   IsVisible="{Binding !MusicEnabled}" IsEnabled="{Binding CanEnableMusic}" HorizontalAlignment="Left"/>
 
-          <Button Content="Save trainer class" Click="Save_Click" HorizontalAlignment="Left"/>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Save trainer class" Click="Save_Click"/>
+            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>

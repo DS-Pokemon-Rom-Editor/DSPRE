@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using DSPRE.Editors;
 using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.ViewModels.Tools
@@ -24,6 +26,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string Size { get; init; }
         public string Does => Entry.Describes;
 
+        /// <summary>Added here and not written to its list yet.</summary>
+        public bool IsPending { get; init; }
+
         /// <summary>Set when another entry writes over the same bytes, which is nearly always a mistake.</summary>
         public string Clash { get; set; }
         public bool HasClash => !string.IsNullOrEmpty(Clash);
@@ -31,9 +36,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
     /// <summary>
     /// hg-engine's own patch lists, shown as what they do rather than as four columns of hex. The lists
-    /// are the checkout's, so this reads and writes them in place and leaves every comment alone.
+    /// are the checkout's, so an added patch stays here until Save, which writes the list in place and
+    /// leaves every comment alone.
     /// </summary>
-    public class HgEnginePatchesViewModel : INotifyPropertyChanged
+    public class HgEnginePatchesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -41,13 +47,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
+        private readonly Func<List<HgEnginePatchList>> _readAll;
         private List<HgEnginePatchList> _lists = new();
+
+        // Entries added since the lists were last read, held only in memory.
+        private readonly HashSet<HgEnginePatchEntry> _pending = new();
 
         public ObservableCollection<PatchRow> Rows { get; } = new();
         public ObservableCollection<string> Binaries { get; } = new();
         public ObservableCollection<string> ListNames { get; } = new();
 
-        public bool IsAvailable => HgEngineProject.IsActive;
+        public bool IsAvailable => _readAll != null;
 
         private string _statusText = "";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
@@ -80,14 +90,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string NewBytes { get => _newBytes; set => Set(ref _newBytes, value); }
 
         public HgEnginePatchesViewModel()
+            : this(HgEngineProject.IsActive ? new Func<List<HgEnginePatchList>>(HgEnginePatchList.ReadAll) : null) { }
+
+        internal HgEnginePatchesViewModel(Func<List<HgEnginePatchList>> readAll)
         {
+            _readAll = readAll;
             if (!IsAvailable)
             {
                 StatusText = "Link an hg-engine checkout to see the patches it applies.";
                 return;
             }
 
-            _lists = HgEnginePatchList.ReadAll();
+            _lists = _readAll();
             foreach (var l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
             if (_lists.Count > 0) _newList = 0;
 
@@ -109,19 +123,22 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 .OrderBy(x => x.Entry.OverlayNumber).ThenBy(x => x.Entry.Address))
             {
                 long offset = entry.FileOffset(OverlayRam);
+                bool pending = _pending.Contains(entry);
                 Rows.Add(new PatchRow
                 {
                     Entry = entry,
-                    List = list.FileName,
+                    List = pending ? list.FileName + " (not saved)" : list.FileName,
                     Offset = offset < 0 ? "" : $"0x{offset:X}",
                     Size = entry.Length.ToString(),
+                    IsPending = pending,
                 });
             }
 
             MarkClashes();
             int clashes = Rows.Count(r => r.HasClash);
             StatusText = $"{Rows.Count} patch(es)" +
-                (clashes > 0 ? $", {clashes} running into another" : "") + ".";
+                (clashes > 0 ? $", {clashes} running into another" : "") +
+                (_pending.Count > 0 ? $", {_pending.Count} not saved" : "") + ".";
         }
 
         private void RebuildBinaryChoices(List<int> overlays)
@@ -198,27 +215,80 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return "Name the routine or table this points at.";
             }
 
-            int register = -1;
-            if (list.Kind is HgEnginePatchKind.Hook or HgEnginePatchKind.ArmHook)
+            if (!HgEnginePatchList.TryParseRegister(list.Kind, NewRegister, out int register, out string registerError))
+                return registerError;
+
+            var added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
+            // Refused now rather than when Save writes the list.
+            string problem = HgEnginePatchList.Problem(added);
+            if (problem != null)
             {
-                if (!int.TryParse((NewRegister ?? "").Trim(), out register)) register = -1;
+                list.Entries.Remove(added);
+                return problem;
             }
 
-            list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
-            if (!list.Save(out string error)) return error;
-
-            _lists = HgEnginePatchList.ReadAll();
+            _pending.Add(added);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             Rebuild();
-            StatusText = $"Added to {list.FileName}. {StatusText}";
+            StatusText = $"Added to {list.FileName}, not saved yet. {StatusText}";
+            return null;
+        }
+
+        /// <summary>Writes every list holding added patches. Null on success, otherwise why not.</summary>
+        public string Save()
+        {
+            if (!IsAvailable) return "No hg-engine checkout is linked.";
+            if (_pending.Count == 0) return null;
+
+            foreach (var list in _lists.Where(l => l.Entries.Any(_pending.Contains)).ToList())
+            {
+                if (!list.Save(out string error))
+                {
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
+                    Rebuild();
+                    return error;
+                }
+                _pending.ExceptWith(list.Entries);
+            }
+
+            _lists = _readAll();
+            _pending.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            Rebuild();
             return null;
         }
 
         public string Reload()
         {
             if (!IsAvailable) return "No hg-engine checkout is linked.";
-            _lists = HgEnginePatchList.ReadAll();
-            Rebuild();
+            DiscardChanges();
             return null;
+        }
+
+        // ── Unsaved changes ─────────────────────────────────────────────────
+        public bool HasUnsavedChanges => _pending.Count > 0;
+
+        public string UnsavedChangesDescription => _pending.Count == 1
+            ? "1 added hg-engine patch"
+            : $"{_pending.Count} added hg-engine patches";
+
+        public void SaveChanges() => Save();
+
+        public Task<bool> SaveChangesAsync()
+        {
+            string error = Save();
+            return error != null
+                ? Task.FromException<bool>(new InvalidOperationException(error))
+                : Task.FromResult(!HasUnsavedChanges);
+        }
+
+        public void DiscardChanges()
+        {
+            if (!IsAvailable) return;
+            _lists = _readAll();
+            _pending.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            Rebuild();
         }
     }
 }

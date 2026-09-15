@@ -289,9 +289,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public DirNames Archive => _set.Archive;
         public void SaveChanges()
         {
-            Save();
-            if (AnimJsonDirty) SaveAnimJson();
+            if (SaveAll() == null) SaveNotice.Saved(UnsavedChangesDescription);
+        }
+
+        public Task<bool> SaveChangesAsync()
+        {
+            string error = SaveAll();
+            if (error != null) return Task.FromException<bool>(new InvalidOperationException(error));
             SaveNotice.Saved(UnsavedChangesDescription);
+            return Task.FromResult(!HasUnsavedChanges);
+        }
+
+        /// <summary>Saves whichever of the sprite and its animation JSON have edits. Null on success.</summary>
+        public string SaveAll()
+        {
+            if (_dirty)
+            {
+                string error = Save();
+                if (error != null) return error;
+            }
+            return AnimJsonDirty ? SaveAnimJson() : null;
         }
 
         /// <summary>Edits are applied straight into the in-memory <see cref="_tile"/>/<see cref="_flatIndices"/>
@@ -303,6 +320,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // source (this is the raw-text half; the structured sequence/frame editor further down keeps
         // this text in sync both ways).
         private string _animJsonPath;
+
+        // Created in the editor and not written yet.
+        private bool _animJsonCreated;
 
         private string _animJsonText = "";
         public string AnimJsonText
@@ -329,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool CanEditAnimJson => HgEngineProject.IsActive;
         public bool HasAnimJsonFile => _animJsonPath != null && File.Exists(_animJsonPath);
         /// <summary>True when there is an animation to show, from hg-engine's JSON or read from the ROM.</summary>
-        public bool HasAnimation => HasAnimJsonFile || (!CanEditAnimJson && !string.IsNullOrEmpty(AnimJsonText));
+        public bool HasAnimation => HasAnimJsonFile || _animJsonCreated || (!CanEditAnimJson && !string.IsNullOrEmpty(AnimJsonText));
 
         private void SetAnimJsonTextSilent(string text)
         {
@@ -340,6 +360,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadAnimJson(int trClassID)
         {
+            _animJsonCreated = false;
             _animJsonPath = HgEngineProject.IsActive
                 ? HgEngineTrainerGraphicsSource.Stem(_set.IsBack, trClassID) + "_anim.json"
                 : null;
@@ -369,6 +390,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetAnimJsonTextSilent("");
                 AnimJsonStatusText = "";
             }
+            AnimJsonDirty = false;
             OnPropertyChanged(nameof(HasAnimation));
             OnPropertyChanged(nameof(CanCreateAnimJson));
         }
@@ -396,7 +418,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AppLogger.Error("TrainerSpriteEditorViewModel: animation could not be read: " + ex.Message);
                 return null;
             }
-            AnimJsonDirty = false;
         }
 
         /// <summary>Returns null on success, error message on failure. Validates the text parses as JSON
@@ -414,10 +435,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             try
             {
-                File.WriteAllText(_animJsonPath, AnimJsonText);
+                // The shared writer replaces the file atomically and keeps its line endings and cached text.
+                HgEngineFileCache.WriteText(_animJsonPath, AnimJsonText);
+                _animJsonCreated = false;
                 AnimJsonDirty = false;
                 AnimJsonStatusText = "Saved.";
                 OnPropertyChanged(nameof(HasAnimJsonFile));
+                OnPropertyChanged(nameof(HasAnimation));
+                OnPropertyChanged(nameof(CanCreateAnimJson));
                 return null;
             }
             catch (Exception ex)
@@ -457,19 +482,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 	"labelCount":	1
                 }
                 """;
-            try
-            {
-                File.WriteAllText(_animJsonPath, template);
-                SetAnimJsonTextSilent(template);
-                AnimJsonDirty = false;
-                AnimJsonStatusText = "";
-                OnPropertyChanged(nameof(HasAnimJsonFile));
-                return null;
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
+            // Held in the editor like any other edit, so Discard can still take it back.
+            SetAnimJsonTextSilent(template);
+            _animJsonCreated = true;
+            AnimJsonDirty = true;
+            AnimJsonStatusText = "Not saved yet.";
+            OnPropertyChanged(nameof(HasAnimation));
+            OnPropertyChanged(nameof(CanCreateAnimJson));
+            return null;
         }
 
         // ── Structured animation editor: sequences/frames built from AnimJsonText, kept in sync with it
