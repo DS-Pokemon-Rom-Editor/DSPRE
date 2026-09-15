@@ -47,18 +47,44 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
         public bool ShowHgEngineBanner => HgEngineBanner != null;
 
+        // Set when the move's Moves.c entry couldn't be read; saving would write the shown values over it.
+        private string _sourceLoadError;
+        public string SourceLoadError { get => _sourceLoadError; private set { if (Set(ref _sourceLoadError, value)) OnPropertyChanged(nameof(HasSourceLoadError)); } }
+        public bool HasSourceLoadError => _sourceLoadError != null;
+
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        public bool HasUnsavedChanges => _dirty || _pendingMove != null || _pendingImports.Count > 0;
         public string UnsavedChangesDescription =>
-            _currentFile != null ? $"Move {_currentId} - {MoveNames[_currentId]}" : "Move Data Editor";
+            _pendingMove != null ? $"New move {_pendingMove.DisplayName}"
+            : _currentFile != null ? $"Move {_currentId} - {MoveNames[_currentId]}" : "Move Data Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => SetClean();
+        public void DiscardChanges()
+        {
+            if (_pendingMove == null && _pendingImports.Count == 0) { SetClean(); return; }
+            int back = _pendingMove != null ? _returnIndex : _currentId;
+            _pendingImports.Clear();
+            Status = "";
+            DropPendingMove();
+            _selectedMoveIndex = back;
+            OnPropertyChanged(nameof(SelectedMoveIndex));
+            LoadMove(back);
+        }
+
+        // A new move and imported moves exist only here until Save; Discard drops them.
+        private HgEngineMoveExpansion.PendingMove _pendingMove;
+        private int _returnIndex;
+        private readonly Dictionary<int, MoveData> _pendingImports = new();
+        // Set while the list itself changes, so the selector's own index updates aren't taken as picks.
+        private bool _syncingList;
+
+        private string _status = string.Empty;
+        public string Status { get => _status; private set => Set(ref _status, value); }
 
         // ── Move names / type names / battle sequences ─────────────────────────
         public ObservableCollection<string> MoveNames    { get; } = new();
@@ -76,8 +102,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedMoveIndex;
             set
             {
-                if (value == _selectedMoveIndex || value < 0 || value >= MoveNames.Count) return;
-                if (_dirty) { _ = ConfirmDiscardAsync(value); return; }
+                if (_syncingList || value == _selectedMoveIndex || value < 0 || value >= MoveNames.Count) return;
+                if (_dirty || _pendingMove != null) { _ = ConfirmDiscardAsync(value); return; }
                 _selectedMoveIndex = value;
                 OnPropertyChanged();
                 LoadMove(value);
@@ -160,8 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = false;
 
             _dirty = _history.IsDirty;
-            Title = _dirty ? "● Move Data Editor" : "Move Data Editor";
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RefreshDirty();
             RaiseUndoState();
         }
         private readonly string[] _moveDescriptions;
@@ -247,10 +272,34 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         private void OnNamesChanged(object sender, EventArgs e)
         {
-            // Move names live in a ROM text archive; refresh when the Text editor saves (the move list is a
-            // ListBox, which re-renders replaced items fine, so no combo re-poke needed here).
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+            // Move names live in a ROM text archive; refresh when the Text editor saves.
+            SyncNames();
         }
+
+        /// <summary>The ROM's move names, with an unsaved new move shown at its id.</summary>
+        private void SyncNames()
+        {
+            var names = RomInfo.GetAttackNames().ToList();
+            if (_pendingMove != null)
+            {
+                while (names.Count < _pendingMove.Id) names.Add("");
+                names.Insert(_pendingMove.Id, _pendingMove.DisplayName + " (not saved)");
+            }
+            _syncingList = true;
+            try { DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, names); }
+            finally { _syncingList = false; }
+            OnPropertyChanged(nameof(SelectedMoveIndex));
+        }
+
+        private void DropPendingMove()
+        {
+            if (_pendingMove == null) return;
+            _pendingMove = null;
+            SyncNames();
+        }
+
+        private static MoveData Copy(MoveData move) => new MoveData(new MemoryStream(move.ToByteArray()));
+
         private void Repoke(int current, string name, Action<int> set)
         {
             if (current < 0) return;
@@ -267,79 +316,112 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task SaveCommand()
         {
             if (_currentFile == null) return;
-            _currentFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
-            WriteHgEngineSource();
-            _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
+            if (HgEngineProject.IsActive && SourceLoadError != null)
+            {
+                await DialogHelper.ShowError($"Move {_currentId} was not saved.\n{SourceLoadError}", "Move Data Editor");
+                return;
+            }
+            int id = _currentId;
+            var move = _currentFile;
+            var pending = _pendingMove;
+            // The shown record wins over an import staged for the same move.
+            var records = new Dictionary<int, MoveData>(_pendingImports) { [id] = move };
+            string subject = pending != null ? pending.DisplayName : records.Count > 1 ? $"{records.Count} moves" : $"Move {id}";
+
+            // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+            if (HgEngineProject.IsActive)
+            {
+                var (saved, error) = await HgEngineSave.RunAsync(() => pending != null
+                    ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? null : addError)
+                    : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? null : writeError));
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError($"{subject} not saved.\n{error}", "Move Data Editor");
+                    return;
+                }
+            }
+
+            _pendingImports.Clear();
+            Status = string.Empty;
+            if (pending != null)
+            {
+                HgEngineMoveExpansion.CompleteAdd(pending);
+                _pendingMove = null;
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
+                move.SaveToFileDefaultDir(id, showSuccessMessage: false);
+                SyncNames();
+                AppEvents.RaiseNamesChanged();
+                _selectedMoveIndex = id;
+                OnPropertyChanged(nameof(SelectedMoveIndex));
+                LoadMove(id);   // reads back through the new define
+            }
+            else
+            {
+                foreach (var (importId, imported) in records)
+                    if (importId != id) imported.SaveToFileDefaultDir(importId, showSuccessMessage: false);
+                move.SaveToFileDefaultDir(id, showSuccessMessage: !HgEngineProject.IsActive);
+                _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
+            }
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
         }
 
-        // Curated v1 scope: every MoveData field this editor already exposes. .battle.flags is a bit-OR'd
-        // combo in hg-engine's source (FLAG_CONTACT | FLAG_PROTECT | ...); TryGetFlagsExpression
-        // decomposes it back into that same "NAME | NAME | ..." form; only a combination with a bit no
-        // FLAG_* name covers falls back to a raw number (compiles to the same bits either way).
-        private void WriteHgEngineSource()
+        /// <summary>On hg-engine the move comes from Moves.c; the built copy only fills a field the entry lacks,
+        /// which the save then reports.</summary>
+        private static MoveData LoadRecord(int id, out string error)
         {
-            if (!HgEngineProject.IsActive || _currentFile == null) return;
-
-            string EffectSymbol(int effect) =>
-                HgEngineSymbolTable.Load("include/constants/move_effects.h")?.TryGetNameWithPrefix(effect, "MOVE_EFFECT_", out string n) == true ? n : effect.ToString();
-            string SplitSymbol(int split) =>
-                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(split, "SPLIT_", out string n) == true ? n : split.ToString();
-            string TypeSymbol(int type) =>
-                HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix(type, "TYPE_", out string n) == true ? n : type.ToString();
-            string RangeSymbol(int range) =>
-                HgEngineSymbolTable.Load("include/constants/battle_constants.h")?.TryGetNameWithPrefix(range, "RANGE_", out string n) == true ? n : range.ToString();
-            string FlagsSymbol(int flags) =>
-                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetFlagsExpression(flags, "FLAG_", out string n) == true ? n : flags.ToString();
-            string AppealSymbol(int appeal) =>
-                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(appeal, "APPEAL_", out string n) == true ? n : appeal.ToString();
-            string ContestSymbol(int contest) =>
-                HgEngineSymbolTable.Load("include/move_data.h")?.TryGetNameWithPrefix(contest, "CONTEST_", out string n) == true ? n : contest.ToString();
-
-            var fields = new List<HgEngineFieldWrite>
-            {
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("effect") }, EffectSymbol(_currentFile.battleeffect)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("split") }, SplitSymbol((int)_currentFile.split)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("power") }, _currentFile.damage.ToString()),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("type") }, TypeSymbol((int)_currentFile.movetype)),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("accuracy") }, _currentFile.accuracy.ToString()),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("pp") }, _currentFile.pp.ToString()),
-                new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("effectChance") }, _currentFile.sideEffectProbability.ToString()),
-                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("target") }, RangeSymbol(_currentFile.target)),
-                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("priority") }, _currentFile.priority.ToString()),
-                new(new[] { FieldPathSegment.Field("battle"), FieldPathSegment.Field("flags") }, FlagsSymbol(_currentFile.flagField)),
-                new(new[] { FieldPathSegment.Field("contest"), FieldPathSegment.Field("appeal") }, AppealSymbol(_currentFile.contestAppeal)),
-                new(new[] { FieldPathSegment.Field("contest"), FieldPathSegment.Field("contestType") }, ContestSymbol((int)_currentFile.contestConditionType)),
-            };
-
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Moves, _currentId, fields, out var unresolved, out string error))
-            { AppLogger.Error($"hg-engine write failed for move {_currentId}: {error}"); return; }
-
-            if (unresolved.Count > 0)
-                AppLogger.Info($"hg-engine write for move {_currentId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+            error = null;
+            if (!HgEngineProject.IsActive) return new MoveData(id);
+            string built = Path.Combine(gameDirs[DirNames.moveData].unpackedDir, id.ToString("D4"));
+            var move = File.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
+            HgEngineMoveSource.TryLoad(id, move, out error);
+            return move;
         }
 
-        /// <summary>hg-engine-only: mints a brand new move (define + Moves.c entry + name) and jumps
-        /// straight to editing it.</summary>
+        /// <summary>hg-engine-only: shapes a brand new move and opens it for editing. Nothing is written
+        /// until Save, and Discard drops it.</summary>
         public async Task AddNewMoveAsync(Window owner)
         {
             if (!HgEngineProject.IsActive) return;
+            if (_pendingMove != null || _pendingImports.Count > 0)
+            {
+                string first = _pendingMove != null ? "Save or discard the new move first." : "Save or discard the imported moves first.";
+                await DialogHelper.ShowError(first, "Add New Move", owner);
+                return;
+            }
+            if (_dirty && !await DialogHelper.AskYesNo("There are unsaved changes to the current move. Discard and proceed?", "Unsaved Changes", owner))
+                return;
+
             string name = await DialogHelper.PromptText("New move's display name:", "Add New Move", owner: owner);
             if (name == null) return;
 
-            if (!HgEngineMoveExpansion.TryAddMove(name, out int newMoveId, out string error))
+            var move = new MoveData(new MemoryStream(new byte[16]));
+            if (!HgEngineMoveExpansion.TryPrepareMove(name, out var pending, out string error)
+                || !HgEngineMoveExpansion.TryReadTemplate(pending, move, out error))
             {
                 await DialogHelper.ShowError($"Could not add the move:\n{error}", "Add New Move", owner);
                 return;
             }
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData });
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
-            AppEvents.RaiseNamesChanged();
+            _returnIndex = _selectedMoveIndex;
+            _pendingMove = pending;
+            SyncNames();
 
-            SelectedMoveIndex = newMoveId;
+            _loading = true;
+            _currentId = pending.Id;
+            _currentFile = move;
+            SourceLoadError = null;
+            PopulateFromCurrentFile();
+            _loading = false;
+            _selectedMoveIndex = pending.Id;
+            OnPropertyChanged(nameof(SelectedMoveIndex));
+
+            _dirty = false;
+            _history.Reset(move.ToByteArray());
+            _lastCaptureUtc = System.DateTime.MinValue;
+            RefreshDirty();
+            RaiseUndoState();
         }
 
         public async Task ExportCommand(Window owner)
@@ -351,16 +433,41 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 string[] typeNames = GetTypeNames();
-                using var writer = new StreamWriter(path);
-                writer.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range");
-                for (int i = 0; i < MoveNames.Count; i++)
+                // What is on disk, without this editor's unsaved moves.
+                string[] names = RomInfo.GetAttackNames();
+                var moves = new SortedDictionary<int, MoveData>();
+                var skipped = new List<string>();
+                if (HgEngineProject.IsActive)
                 {
-                    MoveData move = new MoveData(i);
-                    string typeStr  = (int)move.movetype < typeNames.Length ? typeNames[(int)move.movetype] : $"UnknownType_{(int)move.movetype}";
-                    string rangeStr = MoveData.GetAttackRangeName(move.target);
-                    writer.WriteLine($"{i},{MoveNames[i]},{typeStr},{move.split},{move.damage},{move.accuracy},{move.priority},{move.sideEffectProbability},{move.pp},{rangeStr}");
+                    string builtDir = gameDirs[DirNames.moveData].unpackedDir;
+                    MoveData BuiltOrEmpty(int id) => File.Exists(Path.Combine(builtDir, id.ToString("D4"))) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
+                    if (!HgEngineMoveSource.TryLoadMany(Enumerable.Range(0, names.Length), BuiltOrEmpty, out moves, out skipped, out string loadError))
+                    {
+                        await DialogHelper.ShowError($"Error exporting: {loadError}", "Export Error");
+                        return;
+                    }
                 }
-                await DialogHelper.ShowInfo($"Move data exported to:\n{path}", "Export Complete");
+                else
+                {
+                    for (int i = 0; i < names.Length; i++) moves[i] = new MoveData(i);
+                }
+
+                using (var writer = new StreamWriter(path))
+                {
+                    writer.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range");
+                    foreach (var (i, move) in moves)
+                    {
+                        string typeStr  = (int)move.movetype < typeNames.Length ? typeNames[(int)move.movetype] : $"UnknownType_{(int)move.movetype}";
+                        string rangeStr = MoveData.GetAttackRangeName(move.target);
+                        writer.WriteLine($"{i},{names[i]},{typeStr},{move.split},{move.damage},{move.accuracy},{move.priority},{move.sideEffectProbability},{move.pp},{rangeStr}");
+                    }
+                }
+
+                string message = $"Move data exported to:\n{path}";
+                if (skipped.Count > 0)
+                    message += $"\n\n{skipped.Count} move(s) skipped:\n" + string.Join("\n", skipped.Take(10))
+                             + (skipped.Count > 10 ? $"\n...and {skipped.Count - 10} more" : "");
+                await DialogHelper.ShowInfo(message, "Export Complete");
             }
             catch (Exception ex)
             {
@@ -370,6 +477,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task ImportCommand(Window owner)
         {
+            if (_pendingMove != null)
+            {
+                await DialogHelper.ShowError("Save or discard the new move first.", "Import CSV", owner);
+                return;
+            }
             string path = await DialogHelper.OpenFile(owner, "Import Move Data from CSV",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return;
@@ -401,34 +513,34 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            sb.AppendLine($"\n{result.ValidCount} move(s) will be updated. Proceed?");
+            sb.AppendLine($"\n{result.ValidCount} move(s) will be imported. Save writes them. Proceed?");
             bool proceed = await DialogHelper.AskYesNo(sb.ToString(), "Confirm Import");
             if (!proceed) return;
 
-            ApplyImportedData(result.ValidEntries, typeNamesArr);
-
-            // Refresh current move if it was changed
-            if (result.ValidEntries.Any(e => e.MoveID == _currentId))
-            {
-                _loading = true;
-                LoadMove(_currentId);
-                _loading = false;
-            }
+            await StageImportedData(result.ValidEntries);
         }
 
 
 
         // ── Private helpers ────────────────────────────────────────────────────
-        private void SetDirty() { if (_loading) return; _dirty = true; Title = "● Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); RecordUndoSnapshot(); }
-        private void SetClean() { _dirty = false; Title = "Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { if (_loading) return; _dirty = true; RefreshDirty(); RecordUndoSnapshot(); }
+        private void SetClean() { _dirty = false; RefreshDirty(); }
+        private void RefreshDirty() { Title = HasUnsavedChanges ? "● Move Data Editor" : "Move Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmDiscardAsync(int newIndex)
         {
             bool discard = await DialogHelper.AskYesNo(
-                "There are unsaved changes to the current move. Discard and proceed?",
+                _pendingMove != null ? "The new move is not saved. Discard it and proceed?" : "There are unsaved changes to the current move. Discard and proceed?",
                 "Unsaved Changes");
             if (!discard) { OnPropertyChanged(nameof(SelectedMoveIndex)); return; }
             _dirty = false;
+            if (_pendingMove != null)
+            {
+                // The list held the new move at its id, so a later pick sits one lower once it is gone.
+                if (newIndex > _pendingMove.Id) newIndex--;
+                DropPendingMove();
+                newIndex = Math.Min(newIndex, MoveNames.Count - 1);
+            }
             _selectedMoveIndex = newIndex;
             OnPropertyChanged(nameof(SelectedMoveIndex));
             LoadMove(newIndex);
@@ -438,7 +550,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _loading = true;
             _currentId   = id;
-            _currentFile = new MoveData(id);
+            string loadError = null;
+            _currentFile = _pendingImports.TryGetValue(id, out var imported) ? Copy(imported) : LoadRecord(id, out loadError);
+            SourceLoadError = loadError;
             PopulateFromCurrentFile();
             SetClean();
             _loading = false;
@@ -462,7 +576,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Priority        = _currentFile.priority;
             SideEffectPct   = _currentFile.sideEffectProbability;
             ContestAppeal   = _currentFile.contestAppeal;
-            Description     = _currentId < _moveDescriptions.Length ? _moveDescriptions[_currentId] : string.Empty;
+            Description     = _pendingMove == null && _currentId < _moveDescriptions.Length ? _moveDescriptions[_currentId] : string.Empty;
 
             // Range
             int rangeIdx = 0;
@@ -596,28 +710,67 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return res;
         }
 
-        private void ApplyImportedData(List<MoveDataImportEntry> entries, string[] typeNames)
+        /// <summary>Imported values wait in memory, keyed by move id, until Save or Discard. The current move takes
+        /// them directly and its undo history restarts from them.</summary>
+        private async Task StageImportedData(List<MoveDataImportEntry> entries)
         {
-            int saved = 0;
+            int staged = 0;
+            bool currentChanged = false;
+            var failures = new List<string>();
             foreach (var e in entries)
             {
-                try
+                MoveData move;
+                if (e.MoveID == _currentId && _currentFile != null)
                 {
-                    MoveData move  = new MoveData(e.MoveID);
-                    move.movetype  = e.MoveType;
-                    move.split     = e.Split;
-                    move.damage    = e.Power;
-                    move.accuracy  = e.Accuracy;
-                    move.priority  = e.Priority;
-                    move.sideEffectProbability = e.SideEffectProbability;
-                    move.pp        = e.PP;
-                    move.target    = e.Range;
-                    move.SaveToFileDefaultDir(e.MoveID, showSuccessMessage: false);
-                    saved++;
+                    if (SourceLoadError != null) { failures.Add($"Move {e.MoveID}: {SourceLoadError}"); continue; }
+                    move = _currentFile;
+                    currentChanged = true;
                 }
-                catch (Exception ex) { AppLogger.Error($"Failed to save move {e.MoveID}: {ex.Message}"); }
+                else if (!_pendingImports.TryGetValue(e.MoveID, out move))
+                {
+                    try
+                    {
+                        // Effect, flags and contest aren't in the CSV, so on hg-engine they come from Moves.c.
+                        move = LoadRecord(e.MoveID, out string loadError);
+                        if (loadError != null) { failures.Add($"Move {e.MoveID}: {loadError}"); continue; }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Error($"Failed to read move {e.MoveID}: {ex.Message}");
+                        failures.Add($"Move {e.MoveID}: {ex.Message}");
+                        continue;
+                    }
+                }
+                move.movetype  = e.MoveType;
+                move.split     = e.Split;
+                move.damage    = e.Power;
+                move.accuracy  = e.Accuracy;
+                move.priority  = e.Priority;
+                move.sideEffectProbability = e.SideEffectProbability;
+                move.pp        = e.PP;
+                move.target    = e.Range;
+                if (!ReferenceEquals(move, _currentFile)) _pendingImports[e.MoveID] = move;
+                staged++;
             }
-            _ = DialogHelper.ShowInfo($"Successfully imported and saved {saved} move(s).", "Import Complete");
+
+            if (currentChanged)
+            {
+                _pendingImports[_currentId] = Copy(_currentFile);
+                _loading = true;
+                PopulateFromCurrentFile();
+                _loading = false;
+                _dirty = false;
+                _history.Reset(_currentFile.ToByteArray());
+                _lastCaptureUtc = System.DateTime.MinValue;
+                RaiseUndoState();
+            }
+            Status = _pendingImports.Count == 0 ? string.Empty
+                : _pendingImports.Count == 1 ? "1 move imported, not saved" : $"{_pendingImports.Count} moves imported, not saved";
+            RefreshDirty();
+
+            if (failures.Count == 0) return;
+            string listed = string.Join("\n", failures.Take(10)) + (failures.Count > 10 ? $"\n...and {failures.Count - 10} more" : "");
+            await DialogHelper.ShowError($"{staged} move(s) imported. {failures.Count} were not:\n{listed}", "Import Incomplete");
         }
     }
 }

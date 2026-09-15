@@ -343,9 +343,24 @@ namespace DSPRE.ROMFiles
 
         public int ID;
 
-        public ItemData(Stream stream, int ID)
+        /// <summary>hg-engine's price_high, bits 16-19 of the price. include/item.h puts it in the low nibble of
+        /// byte 0x22, which vanilla leaves as padding.</summary>
+        public byte priceHigh;
+        public const int MaxHgEnginePrice = 0xFFFFF;
+        private readonly bool hgEngineLayout;
+
+        public int FullPrice
+        {
+            get => price | (priceHigh << 16);
+            set { price = (ushort)(value & 0xFFFF); priceHigh = (byte)((value >> 16) & 0xF); }
+        }
+
+        public ItemData(Stream stream, int ID) : this(stream, ID, RomInfo.isHGE) { }
+
+        public ItemData(Stream stream, int ID, bool hgEngineLayout)
         {
             this.ID = ID;
+            this.hgEngineLayout = hgEngineLayout;
             using (BinaryReader reader = new BinaryReader(stream))
             {
                 price = reader.ReadUInt16();
@@ -371,7 +386,8 @@ namespace DSPRE.ROMFiles
 
                 PartyUseParam = new ItemPartyUseParam(reader);
 
-                reader.ReadBytes(2); // skip padding_22
+                byte[] tail = reader.ReadBytes(2); // padding_22, price_high on hg-engine
+                if (hgEngineLayout && tail.Length > 0) priceHigh = (byte)(tail[0] & 0xF);
             }
         }
 
@@ -407,7 +423,8 @@ namespace DSPRE.ROMFiles
 
                 PartyUseParam.WriteTo(writer);
 
-                writer.Write(new byte[2]); // padding
+                writer.Write(hgEngineLayout ? (byte)(priceHigh & 0xF) : (byte)0); // padding, price_high on hg-engine
+                writer.Write((byte)0);
 
                 return stream.ToArray();
             }

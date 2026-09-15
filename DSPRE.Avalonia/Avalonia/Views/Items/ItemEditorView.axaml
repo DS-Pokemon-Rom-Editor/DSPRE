@@ -39,6 +39,9 @@
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
             <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
         </Border>
+        <Border DockPanel.Dock="Top" Padding="8,3" Background="#9B2226" IsVisible="{Binding HasSourceLoadError}">
+            <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
+        </Border>
 
         <!-- ── Main Content ── -->
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -146,7 +149,7 @@
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
                                     <TextBlock Grid.Column="0" VerticalAlignment="Center">Buy Price:</TextBlock>
                                     <NumericUpDown Grid.Column="1" Value="{Binding Price}"
-                                                   Minimum="0" Maximum="65535" FormatString="0" Width="100"/>
+                                                   Minimum="0" Maximum="{Binding PriceMaximum}" FormatString="0" Width="100"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

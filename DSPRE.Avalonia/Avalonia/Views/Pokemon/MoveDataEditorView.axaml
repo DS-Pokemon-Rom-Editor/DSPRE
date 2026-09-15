@@ -31,6 +31,9 @@
 	<Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
 	  <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
 	</Border>
+	<Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#9B2226" IsVisible="{Binding HasSourceLoadError}">
+	  <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
+	</Border>
 
 	<!-- Move selector bar -->
 	<Border DockPanel.Dock="Top" Margin="0,0,0,8">
@@ -46,7 +49,9 @@
 
 	<!-- Bottom toolbar -->
 	<Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
-	  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+	  <Grid ColumnDefinitions="*,Auto">
+	  <TextBlock Grid.Column="0" Text="{Binding Status}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+	  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
 		<Button Content="↶ Undo"      Click="Undo_Click"    Width="80"  IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
 		<Button Content="↷ Redo"      Click="Redo_Click"    Width="80"  IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
 		<Button Content="Export CSV"   Click="Export_Click"  Width="110"/>
@@ -55,6 +60,7 @@
 		<Button Content="+ Add New Move…" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
 				ToolTip.Tip="Mint a brand new move in the linked hg-engine checkout"/>
 	  </StackPanel>
+	  </Grid>
 	</Border>
 
 	<!-- Main editing area -->

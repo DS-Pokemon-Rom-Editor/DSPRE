@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,6 +34,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ─── hg-engine source banner ──────────────────────────────────────────────
         public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
         public bool ShowHgEngineBanner => HgEngineBanner != null;
+
+        // Set when the item's itemdata.c entry couldn't be read; saving would write the shown values over it.
+        private string _sourceLoadError;
+        public string SourceLoadError { get => _sourceLoadError; private set { if (Set(ref _sourceLoadError, value)) OnPropertyChanged(nameof(HasSourceLoadError)); } }
+        public bool HasSourceLoadError => _sourceLoadError != null;
 
         // ── Design-time constructor ──────────────────────────────────────────
         public ItemEditorViewModel()
@@ -102,7 +108,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _selectedItemIndex;
             set
             {
-                if (_selectedItemIndex == value) return;
+                if (_selectedItemIndex == value || _syncingList) return;
+                if (_pendingItem != null && !_isLoading && value >= 0 && value < ItemNames.Count) { _ = ConfirmDropPendingAsync(value); return; }
                 _selectedItemIndex = value;
                 OnPropertyChanged();
                 if (!_isLoading && value >= 0 && value < ItemNames.Count)
@@ -145,6 +152,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _itemDataId;
             set
             {
+                // A new item's data is its own template until it is saved, so the box can't point it elsewhere.
+                if (_pendingItem != null && !_isLoading && value != _itemDataId) { OnPropertyChanged(); return; }
                 if (!Set(ref _itemDataId, value)) return;
                 if (_isLoading || value < 0 || value > MaxItemDataId) return;
                 _currentEntry.itemData = (uint)value;
@@ -258,8 +267,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public int Price
         {
             get => _price;
-            set { if (Set(ref _price, value) && !_isLoading && _currentData != null) { _currentData.price = (ushort)value; SetDataDirty(); } }
+            set { if (Set(ref _price, value) && !_isLoading && _currentData != null) { _currentData.FullPrice = value; SetDataDirty(); } }
         }
+        // hg-engine's item record adds price_high, so prices there run to 20 bits.
+        public int PriceMaximum => RomInfo.isHGE ? ItemData.MaxHgEnginePrice : ushort.MaxValue;
 
         // ── Move Related ─────────────────────────────────────────────────────
         private int _naturalGiftTypeIndex;
@@ -373,13 +384,34 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── IEditorWithUnsavedChanges ────────────────────────────────────────
         private bool _dataDirty;
         private bool _entryDirty;
-        public bool HasUnsavedChanges       => _dataDirty || _entryDirty;
-        public string UnsavedChangesDescription => $"Item Editor (item {_selectedItemIndex})";
+        public bool HasUnsavedChanges       => _dataDirty || _entryDirty || _pendingItem != null;
+        public string UnsavedChangesDescription =>
+            _pendingItem != null ? $"New item {_pendingItem.DisplayName}" : $"Item Editor (item {_selectedItemIndex})";
 
-        public void SaveChanges()
+        // A new item exists only here until Save; Discard drops it.
+        private HgEngineItemExpansion.PendingItem _pendingItem;
+        private int _returnIndex;
+        // Set while the list itself changes, so the selector's own index updates aren't taken as picks.
+        private bool _syncingList;
+
+        public void SaveChanges() => _ = SaveAsync();
+
+        async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
+            await SaveAsync();
+            return !HasUnsavedChanges;
+        }
+
+        public async System.Threading.Tasks.Task SaveAsync()
+        {
+            if (_pendingItem != null)
+            {
+                await SavePendingItemAsync();
+                RaiseUndoState();
+                return;
+            }
             if (_entryDirty) SaveTableEntry();
-            if (_dataDirty)  SaveItemData();
+            if (_dataDirty && !await SaveItemDataAsync()) { RaiseUndoState(); return; }
             _history.MarkSaved();
             RaiseUndoState();
         }
@@ -387,7 +419,83 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void DiscardChanges()
         {
             _dataDirty = _entryDirty = false;
+            if (_pendingItem != null)
+            {
+                int back = _returnIndex;
+                DropPendingItem();
+                _selectedItemIndex = back;
+                OnPropertyChanged(nameof(SelectedItemIndex));
+                LoadFile(back);
+            }
             OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        /// <summary>The ROM's item names, with an unsaved new item shown at its id.</summary>
+        private void SyncNames()
+        {
+            var names = RomInfo.GetItemNames().ToList();
+            if (_pendingItem != null)
+            {
+                while (names.Count <= _pendingItem.Id) names.Add("");
+                names[_pendingItem.Id] = _pendingItem.DisplayName + " (not saved)";
+            }
+            // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
+            // resets the FusionAutoCompleteBox's bound SelectedIndex.
+            _syncingList = true;
+            try { DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, names); }
+            finally { _syncingList = false; }
+            MaxItemIndex = ItemNames.Count - 1;
+            OnPropertyChanged(nameof(MaxItemIndex));
+            OnPropertyChanged(nameof(SelectedItemIndex));
+        }
+
+        private void DropPendingItem()
+        {
+            if (_pendingItem == null) return;
+            _pendingItem = null;
+            SyncNames();
+        }
+
+        private async Task ConfirmDropPendingAsync(int newIndex)
+        {
+            if (!await DialogHelper.AskYesNo("The new item is not saved. Discard it and proceed?", "Unsaved Changes"))
+            {
+                OnPropertyChanged(nameof(SelectedItemIndex));
+                return;
+            }
+            _dataDirty = _entryDirty = false;
+            DropPendingItem();
+            newIndex = Math.Min(newIndex, ItemNames.Count - 1);
+            _selectedItemIndex = newIndex;
+            OnPropertyChanged(nameof(SelectedItemIndex));
+            LoadFile(newIndex);
+        }
+
+        /// <summary>Writes the new item's define, entry, fields and text in one save, then shows it as saved.</summary>
+        private async Task<bool> SavePendingItemAsync()
+        {
+            var pending = _pendingItem;
+            var data = _currentData;
+            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineItemExpansion.TryCommitItem(pending, data, out string commitError) ? null : commitError);
+            if (!saved)
+            {
+                if (error != null) await DialogHelper.ShowError($"{pending.DisplayName} was not saved.\n{error}", "Item Editor");
+                return false;
+            }
+
+            HgEngineItemExpansion.CompleteAdd(pending);
+            _pendingItem = null;
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
+            data.SaveToFileDefaultDir(pending.Id, false);
+            MaxItemDataId = GetItemDataFileCount() - 1;
+            OnPropertyChanged(nameof(MaxItemDataId));
+            SyncNames();
+            AppEvents.RaiseNamesChanged();
+            _selectedItemIndex = pending.Id;
+            OnPropertyChanged(nameof(SelectedItemIndex));
+            LoadFile(pending.Id);   // reads back through the new define
+            SaveNotice.Saved(UnsavedChangesDescription);
+            return true;
         }
 
         /// <summary>Export the current item's data to a file (WinForms "Save to file").</summary>
@@ -396,30 +504,54 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _currentData?.SaveToFileExplorePath($"itemdata_{_itemDataId:D4}", showSuccessMessage: true);
         }
 
-        /// <summary>hg-engine-only: mints a brand new item (define + itemdata.c entry + name) and jumps
-        /// straight to editing it.</summary>
+        /// <summary>hg-engine-only: shapes a brand new item and opens it for editing. Nothing is written
+        /// until Save, and Discard drops it.</summary>
         public async Task AddNewItemAsync(Window owner)
         {
             if (!HgEngineProject.IsActive) return;
+            if (_pendingItem != null)
+            {
+                await DialogHelper.ShowError("Save or discard the new item first.", "Add New Item", owner);
+                return;
+            }
+            if ((_dataDirty || _entryDirty) && !await DialogHelper.AskYesNo("There are unsaved changes to the current item. Discard and proceed?", "Unsaved Changes", owner))
+                return;
+
             string name = await DialogHelper.PromptText("New item's display name:", "Add New Item", owner: owner);
             if (name == null) return;
 
-            if (!HgEngineItemExpansion.TryAddItem(name, out int newItemId, out string error))
+            var data = new ItemData(new MemoryStream(new byte[ItemDataSize]), 0);
+            if (!HgEngineItemExpansion.TryPrepareItem(name, out var pending, out string error)
+                || !HgEngineItemExpansion.TryReadTemplate(pending, data, out error))
             {
                 await DialogHelper.ShowError($"Could not add the item:\n{error}", "Add New Item", owner);
                 return;
             }
+            data.ID = pending.Id;
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData });
+            _returnIndex = _selectedItemIndex;
+            _pendingItem = pending;
+            SyncNames();
 
-            // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
-            // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the assignment below.
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, RomInfo.GetItemNames());
-            MaxItemIndex = ItemNames.Count - 1;
-            OnPropertyChanged(nameof(MaxItemIndex));
-            AppEvents.RaiseNamesChanged();
-
-            SelectedItemIndex = newItemId;
+            _isLoading = true;
+            try
+            {
+                _selectedItemIndex = pending.Id;
+                OnPropertyChanged(nameof(SelectedItemIndex));
+                // hg-engine's table entry follows from the id, so the add sets none of its fields.
+                _currentEntry = ReadTableEntry(pending.Id);
+                RefreshEntryBoundProps();
+                _currentData = data;
+                SourceLoadError = null;
+                PopulateFromCurrentData();
+                UpdateIcon();
+                _dataDirty = _entryDirty = false;
+                _history.Reset(Snapshot());
+                _lastCaptureUtc = DateTime.MinValue;
+            }
+            finally { _isLoading = false; }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseUndoState();
         }
 
         // RecordUndoSnapshot runs BEFORE the dirty-flag short-circuit, so EVERY edit is captured (not just the first).
@@ -517,12 +649,30 @@ namespace DSPRE.Avalonia.ViewModels.Items
             finally { _isLoading = false; }
         }
 
+        private const int ItemDataSize = 36;
+
         private void LoadItemData(int dataId)
         {
             string path = Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, dataId.ToString("D4"));
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            _currentData = new ItemData(stream, dataId);
+            string loadError = null;
+            if (HgEngineProject.IsActive)
+            {
+                // The built copy only fills a field the entry lacks, which the save then reports.
+                _currentData = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
+                HgEngineItemSource.TryLoad(dataId, _currentData, out loadError);
+            }
+            else
+            {
+                _currentData = ReadBuiltItemData(path, dataId);
+            }
+            SourceLoadError = loadError;
             PopulateFromCurrentData();
+        }
+
+        private static ItemData ReadBuiltItemData(string path, int dataId)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            return new ItemData(stream, dataId);
         }
 
         private void PopulateFromCurrentData()
@@ -563,7 +713,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(PartyParamsEnabled));
 
             // Price
-            _price = _currentData.price;
+            _price = _currentData.FullPrice;
             OnPropertyChanged(nameof(Price));
 
             // Move related
@@ -675,61 +825,32 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        private void SaveItemData()
+        /// <summary>False when hg-engine's source couldn't take the edit; the item then stays unsaved.</summary>
+        private async System.Threading.Tasks.Task<bool> SaveItemDataAsync()
         {
-            _currentData?.SaveToFileDefaultDir((int)_currentEntry.itemData, false);
-            WriteHgEngineSource();
+            if (_currentData == null) return true;
+            int item = (int)_currentEntry.itemData;
+            var data = _currentData;
+            if (HgEngineProject.IsActive)
+            {
+                if (SourceLoadError != null)
+                {
+                    await DialogHelper.ShowError($"Item {item} was not saved.\n{SourceLoadError}", "Item Editor");
+                    return false;
+                }
+                // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
+                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineItemSource.TryWrite(item, data, out string writeError) ? null : writeError);
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError($"Item {item} was not saved.\n{error}", "Item Editor");
+                    return false;
+                }
+            }
+            data.SaveToFileDefaultDir(item, false);
             _dataDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-
-        // Curated v1 scope: every top-level ITEMDATA field this editor exposes, except price (hg-engine
-        // sets it via an ITEM_PRICE(n) macro call, which the anchored patcher can't locate as a plain
-        // field, so it's left unresolved rather than guessed) and .partyUseParam's 30+ sub-fields, whose
-        // hg-engine names don't line up 1:1 with this editor's properties (left for a later pass).
-        private void WriteHgEngineSource()
-        {
-            if (!HgEngineProject.IsActive || _currentData == null) return;
-
-            string TypeSymbol(int type) =>
-                HgEngineSymbolTable.Load("include/constants/pokemon.h")?.TryGetNameWithPrefix(type, "TYPE_", out string n) == true ? n : type.ToString();
-            // item.h packs ITEM_*/POCKET_*/BATTLE_POCKET_* into one flat namespace, so a plain by-value
-            // lookup can return a same-valued name from the wrong family, filter by prefix (see
-            // TryGetNameWithPrefix's doc comment for the live bug this fixes).
-            string PocketSymbol(int pocket) =>
-                HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetNameWithPrefix(pocket, "POCKET_", out string n) == true ? n : pocket.ToString();
-            // battlePocket is itself a bit-OR of up to 5 checkboxes (Poké Balls/Battle Items/HP Restore/
-            // Status Healers/PP Restore); TryGetFlagsExpression handles both the common single-pocket
-            // case and any combination, falling back to a raw number only if some bit isn't covered.
-            string BattlePocketSymbol(int pocket) =>
-                HgEngineSymbolTable.Load("include/constants/item.h")?.TryGetFlagsExpression(pocket, "BATTLE_POCKET_", out string n) == true ? n : pocket.ToString();
-            string Bool(bool b) => b ? "TRUE" : "FALSE";
-
-            var fields = new List<HgEngineFieldWrite>
-            {
-                new(new[] { FieldPathSegment.Field("holdEffect") }, ((int)_currentData.holdEffect).ToString()),
-                new(new[] { FieldPathSegment.Field("holdEffectParam") }, _currentData.HoldEffectParam.ToString()),
-                new(new[] { FieldPathSegment.Field("pluckEffect") }, _currentData.PluckEffect.ToString()),
-                new(new[] { FieldPathSegment.Field("flingEffect") }, _currentData.FlingEffect.ToString()),
-                new(new[] { FieldPathSegment.Field("flingPower") }, _currentData.FlingPower.ToString()),
-                new(new[] { FieldPathSegment.Field("naturalGiftPower") }, _currentData.NaturalGiftPower.ToString()),
-                new(new[] { FieldPathSegment.Field("naturalGiftType") }, TypeSymbol((int)_currentData.naturalGiftType)),
-                new(new[] { FieldPathSegment.Field("prevent_toss") }, Bool(_currentData.PreventToss)),
-                new(new[] { FieldPathSegment.Field("selectable") }, Bool(_currentData.Selectable)),
-                new(new[] { FieldPathSegment.Field("fieldPocket") }, PocketSymbol((int)_currentData.fieldPocket)),
-                new(new[] { FieldPathSegment.Field("battlePocket") }, BattlePocketSymbol((int)_currentData.battlePocket)),
-                new(new[] { FieldPathSegment.Field("fieldUseFunc") }, ((int)_currentData.fieldUseFunc).ToString()),
-                new(new[] { FieldPathSegment.Field("battleUseFunc") }, ((int)_currentData.battleUseFunc).ToString()),
-                new(new[] { FieldPathSegment.Field("partyUse") }, _currentData.PartyUse.ToString()),
-            };
-
-            int itemId = (int)_currentEntry.itemData;
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Items, itemId, fields, out var unresolved, out string error))
-            { AppLogger.Error($"hg-engine write failed for item {itemId}: {error}"); return; }
-
-            if (unresolved.Count > 0)
-                AppLogger.Info($"hg-engine write for item {itemId}: source doesn't declare {string.Join(", ", unresolved)}, left unchanged.");
+            return true;
         }
 
         private void UpdateIcon()
