@@ -20,10 +20,11 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+
         private void TogglePlay_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
 
-        // Creates the entry with music = 0/0; the Main/Alt fields become editable immediately
-        // afterward so the user can set the real values before clicking Save.
+        // Adds the entry with music = 0/0 so the Main/Alt fields can be set before Save writes it.
         private void EnableMusic_Click(object sender, RoutedEventArgs e) => VM?.EnableMusic(0, 0);
 
         private void EditSprite_Click(object sender, RoutedEventArgs e)
@@ -41,6 +42,13 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void AddTrainerClass_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
+            if (!VM.CanAddClass)
+            {
+                await DialogHelper.ShowError("Save or discard the new trainer class first.", "Add Trainer Class");
+                return;
+            }
+            // The new class is selected once it is added, so the loaded class is settled first.
+            if (!await VM.ConfirmLeaveAsync()) return;
 
             var dlgVm = new AddTrainerClassViewModel();
             var dlg = new AddTrainerClassView(dlgVm);

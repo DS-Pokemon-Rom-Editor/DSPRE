@@ -310,16 +310,18 @@ namespace DSPRE
         }
 
         // ── Add a whole new trainer class ─────────────────────────────────────────────────────────
+        /// <summary>Why a class with this name can't be added, or null. Checked when the user adds it, before Save.</summary>
+        public static string AddRefusal(string name)
+        {
+            if (!IsSupportedForCurrentRom) return "Adding trainer classes is only supported for Platinum (English) right now.";
+            return string.IsNullOrWhiteSpace(name) ? "Enter a class name." : null;
+        }
+
         public static bool AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,
             bool addEncounterMusic, ushort musicMain, ushort musicNight, out string error)
         {
-            error = null;
-            if (!IsSupportedForCurrentRom)
-            {
-                error = "Adding trainer classes is only supported for Platinum (English) right now.";
-                return false;
-            }
-            if (string.IsNullOrWhiteSpace(name)) { error = "Enter a class name."; return false; }
+            error = AddRefusal(name);
+            if (error != null) return false;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives });
             EnsureOverlayDecompressed(PrizeMulOverlayNumber);

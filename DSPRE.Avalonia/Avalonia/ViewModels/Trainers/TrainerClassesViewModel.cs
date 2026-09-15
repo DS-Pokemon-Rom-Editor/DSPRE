@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using global::Avalonia.Controls;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
+using DSPRE.Editors;
 using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -18,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
     /// gets its own tab rather than crowding the main Trainer Editor window.
     /// </summary>
-    public class TrainerClassesViewModel : INotifyPropertyChanged
+    public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -71,17 +73,119 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int SelectedClassIndex
         {
             get => _selectedIndex;
-            set { if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadClass(value); }
+            set
+            {
+                if (value == _selectedIndex) return;
+                if (!_suppress && _pendingClass != null && _selectedIndex == PendingIndex) CapturePending();
+                if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
+                {
+                    // Snap the list back to the class still loaded until the user has answered.
+                    OnPropertyChanged(nameof(SelectedClassIndex));
+                    _ = SwitchClassAsync(value);
+                    return;
+                }
+                if (Set(ref _selectedIndex, value) && !_suppress && value >= 0) LoadClass(value);
+            }
+        }
+
+        private async Task SwitchClassAsync(int requested)
+        {
+            if (!await ConfirmLeaveAsync()) return;
+            if (Set(ref _selectedIndex, requested)) LoadClass(requested);
+        }
+
+        /// <summary>True once the loaded class has no unsaved edits, having asked to save or discard them.</summary>
+        public Task<bool> ConfirmLeaveAsync() => RecordSwitchGuard.ConfirmLeaveAsync(this, null, "trainer class");
+
+        // ── Unsaved changes ─────────────────────────────────────────────────
+        private bool _dirty;
+
+        // A music row added to the loaded class and not written yet.
+        private bool _musicAdded;
+
+        // A class added here and not written yet. It is the last list entry; Save adds it, Discard drops it.
+        private sealed class PendingClass
+        {
+            public string Name, Description;
+            public byte Gender, Prize;
+            public bool AddMusic;
+            public ushort MusicMain, MusicNight;
+        }
+        private PendingClass _pendingClass;
+        private int PendingIndex => _pendingClass == null ? -1 : ClassNames.Count - 1;
+        public bool CanAddClass => _pendingClass == null;
+
+        public bool HasUnsavedChanges => _dirty || _pendingClass != null;
+
+        public string UnsavedChangesDescription =>
+            _pendingClass != null ? "New trainer class " + _pendingClass.Name
+            : _selectedIndex >= 0 && _selectedIndex < ClassNames.Count ? "Trainer class " + ClassNames[_selectedIndex]
+            : "Trainer class";
+
+        public void SaveChanges() => Save();
+
+        public void DiscardChanges()
+        {
+            ReloadMusicTable();
+            SetClean();
+            if (_pendingClass != null) DropPendingClass();
+            if (_selectedIndex >= 0 && _selectedIndex < ClassNames.Count) LoadClass(_selectedIndex);
+        }
+
+        private void CapturePending()
+        {
+            _pendingClass.Name = ClassName;
+            _pendingClass.Gender = (byte)GenderIndex;
+            _pendingClass.Prize = (byte)PrizeMultiplier;
+            _pendingClass.AddMusic = MusicEnabled;
+            _pendingClass.MusicMain = (ushort)MusicMain;
+            _pendingClass.MusicNight = (ushort)MusicAlt;
+        }
+
+        private void DropPendingClass()
+        {
+            int pending = PendingIndex;
+            int keep = _selectedIndex == pending ? pending - 1 : _selectedIndex;
+            _pendingClass = null;
+            // Removing the selected row can clear the list's selection.
+            _suppress = true;
+            ClassNames.RemoveAt(pending);
+            _selectedIndex = keep;
+            _suppress = false;
+            OnPropertyChanged(nameof(SelectedClassIndex));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanAddClass));
+        }
+
+        private void MarkDirty()
+        {
+            if (_suppress || _dirty) return;
+            _dirty = true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void SetClean()
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void ReloadMusicTable()
+        {
+            _musicDict.Clear();
+            _musicAdded = false;
+            if (!isHGE || _musicFromSource) SetupEncounterMusicTable();
         }
 
         private string _className = "";
-        public string ClassName { get => _className; set => Set(ref _className, value); }
+        public string ClassName { get => _className; set { if (Set(ref _className, value)) MarkDirty(); } }
 
         private decimal _musicMain;
-        public decimal MusicMain { get => _musicMain; set => Set(ref _musicMain, value); }
+        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) MarkDirty(); } }
 
         private decimal _musicAlt;
-        public decimal MusicAlt { get => _musicAlt; set => Set(ref _musicAlt, value); }
+        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) MarkDirty(); } }
 
         private bool _musicEnabled;
         public bool MusicEnabled { get => _musicEnabled; private set => Set(ref _musicEnabled, value); }
@@ -108,10 +212,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool PrizeMulLoaded { get => _prizeMulLoaded; private set => Set(ref _prizeMulLoaded, value); }
 
         private int _genderIndex;
-        public int GenderIndex { get => _genderIndex; set => Set(ref _genderIndex, value); }
+        public int GenderIndex { get => _genderIndex; set { if (Set(ref _genderIndex, value)) MarkDirty(); } }
 
         private int _prizeMultiplier;
-        public int PrizeMultiplier { get => _prizeMultiplier; set => Set(ref _prizeMultiplier, value); }
+        public int PrizeMultiplier { get => _prizeMultiplier; set { if (Set(ref _prizeMultiplier, value)) MarkDirty(); } }
 
         public bool CanEnableMusic => (IsExpansionSupported || _musicFromSource) && !MusicEnabled && _selectedIndex >= 0;
 
@@ -185,6 +289,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadClass(int index)
         {
+            if (_pendingClass != null && index == PendingIndex) { LoadPendingClass(); return; }
+
             _suppress = true;
             ClassName = ClassNames[index].Substring(ClassNames[index].IndexOf(' ') + 1);
 
@@ -245,18 +351,84 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(HasSpritePreview));
         }
 
-        public void Save()
+        private void LoadPendingClass()
         {
-            if (_selectedIndex < 0) return;
+            _suppress = true;
+            ClassName = _pendingClass.Name;
+            MusicEnabled = _pendingClass.AddMusic;
+            MusicMain = _pendingClass.MusicMain;
+            MusicAlt = _pendingClass.MusicNight;
+            MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
+            // The add writes a gender and a prize multiplier for the new class.
+            GenderLoaded = true;
+            GenderIndex = _pendingClass.Gender;
+            PrizeMulLoaded = true;
+            PrizeMultiplier = _pendingClass.Prize;
+            IsPlaying = false;
+            SpritePreview = null;
+            OnPropertyChanged(nameof(HasSpritePreview));
+            OnPropertyChanged(nameof(CanEnableMusic));
+            OnPropertyChanged(nameof(CanPlayAnimation));
+            _suppress = false;
+        }
+
+        /// <summary>Writes the loaded class, then adds the new class if one is waiting. False when any part
+        /// failed, which stays unsaved.</summary>
+        public bool Save()
+        {
+            if (_pendingClass != null && _selectedIndex == PendingIndex) CapturePending();
+            if (_selectedIndex >= 0 && _selectedIndex != PendingIndex && !SaveLoadedClass()) return false;
+            return _pendingClass == null || SavePendingClass();
+        }
+
+        private bool SavePendingClass()
+        {
+            var p = _pendingClass;
+            if (!TrainerClassTableExpansion.AddTrainerClass(p.Name, p.Description, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, out string error))
+            {
+                StatusText = "The new trainer class was not added.";
+                _ = DialogHelper.ShowError(error, "Add Trainer Class");
+                return false;
+            }
+
+            _pendingClass = null;
+            string[] names = GetTrainerClassNames();
+            _suppress = true;
+            ClassNames.Clear();
+            for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
+            _selectedIndex = -1;
+            _suppress = false;
+
+            ReloadMusicTable();
+            _dirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanAddClass));
+            AppEvents.RaiseNamesChanged();
+            SelectedClassIndex = ClassNames.Count - 1;
+            StatusText = $"{ClassNames.Count} trainer classes.";
+            return true;
+        }
+
+        private bool SaveLoadedClass()
+        {
+            if (_selectedIndex < 0) return false;
             byte idx = (byte)_selectedIndex;
 
-            if (_musicDict.TryGetValue(idx, out var entry) && _musicFromSource)
+            var failures = new List<string>();
+            bool hasMusic = _musicDict.TryGetValue(idx, out var entry);
+            if (hasMusic && _musicAdded && !_musicFromSource)
+            {
+                // The ROM table has no row for this class until the add, so the add carries the values.
+                if (TrainerClassTableExpansion.AddEncounterMusicEntry(idx, (ushort)MusicMain, (ushort)MusicAlt, out string addErr)) ReloadMusicTable();
+                else failures.Add(addErr);
+            }
+            else if (hasMusic && _musicFromSource)
             {
                 ushort main = (ushort)MusicMain, alt = (ushort)MusicAlt;
-                if (HgEngineMusicTables.TrySetEncounterMusic(idx, main, alt, out string musicErr)) _musicDict[idx] = (0, main, alt);
-                else _ = DialogHelper.ShowError(musicErr, "Trainer Classes");
+                if (HgEngineMusicTables.TrySetEncounterMusic(idx, main, alt, out string musicErr)) { _musicDict[idx] = (0, main, alt); _musicAdded = false; }
+                else failures.Add(musicErr);
             }
-            else if (_musicDict.TryGetValue(idx, out entry))
+            else if (hasMusic)
             {
                 ushort main = (ushort)MusicMain;
                 ushort alt = (ushort)MusicAlt;
@@ -269,25 +441,30 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (HgEngineProject.IsActive)
             {
-                string hgeGenderErr = null, hgePrizeErr = null;
-                if (GenderLoaded) HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out hgeGenderErr);
-                if (PrizeMulLoaded) HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out hgePrizeErr);
-                if (hgeGenderErr != null || hgePrizeErr != null)
-                    _ = DialogHelper.ShowError($"Some fields failed to save:\n{hgeGenderErr}\n{hgePrizeErr}".Trim(), "Trainer Classes");
+                try
+                {
+                    if (GenderLoaded && !HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out string hgeGenderErr)) failures.Add(hgeGenderErr);
+                    if (PrizeMulLoaded && !HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out string hgePrizeErr)) failures.Add(hgePrizeErr);
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { failures.Add(ex.Message); }
             }
             else
             {
                 string genderErr = null, prizeErr = null;
                 if (GenderLoaded) TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out genderErr);
                 if (PrizeMulLoaded) TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out prizeErr);
-                if (genderErr != null || prizeErr != null)
-                    _ = DialogHelper.ShowError($"Some fields failed to save:\n{genderErr}\n{prizeErr}".Trim(), "Trainer Classes");
+                if (genderErr != null) failures.Add(genderErr);
+                if (prizeErr != null) failures.Add(prizeErr);
             }
 
             int savedIndex = _selectedIndex;
-            var ta = new TextArchive(trainerClassMessageNumber);
-            ta.messages[savedIndex] = ClassName;
-            ta.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
+            if (!TrySaveClassName(savedIndex, ClassName, out string nameError))
+            {
+                failures.Add(nameError);
+                StatusText = $"Trainer class {savedIndex} was not fully saved.";
+                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer Classes");
+                return false;
+            }
 
             // Replacing the currently-selected item's text can make the ListBox re-fire its selection
             // (some containers get regenerated), reentrantly resetting _selectedIndex to -1 through the
@@ -300,49 +477,89 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = false;
 
             AppEvents.RaiseNamesChanged();
+            if (failures.Count > 0)
+            {
+                StatusText = $"Trainer class {savedIndex} was not fully saved.";
+                _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer Classes");
+                return false;
+            }
+            SetClean();
             StatusText = $"Trainer class {savedIndex} saved.";
+            return true;
+        }
+
+        // hg-engine rebuilds the class name archive from its text source, so the name has to go there.
+        private static bool TrySaveClassName(int index, string name, out string error)
+        {
+            error = null;
+            HgEngineOwnedFile owned = HgEngineProject.IsActive
+                ? HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives), trainerClassMessageNumber) : null;
+            if (owned == null)
+            {
+                var ta = new TextArchive(trainerClassMessageNumber);
+                ta.messages[index] = name;
+                ta.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
+                return true;
+            }
+            if (owned.Ownership != HgEngineOwnership.EditableSource)
+            {
+                error = "hg-engine generates the class names, so they can't be renamed here.";
+                return false;
+            }
+            if (!HgEngineOwnedFiles.TryReadLines(owned, out var lines, out error)) return false;
+            if (index >= lines.Count) { error = $"The class name source has no line for class {index}."; return false; }
+            if (lines[index] == name) return true;
+            lines[index] = name;
+            if (!HgEngineOwnedFiles.TryWriteLines(owned, lines, out error)) return false;
+            // The same check the Text Editor runs, so a bad tag shows now rather than at build time.
+            if (HgEngineBuild.TryValidateTextArchive(owned.RelPath, out string problems) && problems != null)
+            {
+                error = $"Saved {owned.RelPath}, but its build will reject it:\n{problems}";
+                return false;
+            }
+            return true;
         }
 
         /// <summary>Adds an eye-contact music entry to the currently-selected class (which doesn't
-        /// have one yet) instead of it just staying permanently disabled.</summary>
+        /// have one yet). It is written on Save, like the class's other fields.</summary>
         public void EnableMusic(ushort musicMain, ushort musicNight)
         {
             if (!CanEnableMusic) return;
-            string error = null;
-            if (_musicFromSource ? !HgEngineMusicTables.TrySetEncounterMusic(_selectedIndex, musicMain, musicNight, out error)
-                                 : !TrainerClassTableExpansion.AddEncounterMusicEntry((byte)_selectedIndex, musicMain, musicNight, out error))
-            {
-                _ = DialogHelper.ShowError(error, "Trainer Classes");
-                return;
-            }
+            bool hgss = gameFamily == GameFamilies.HGSS;
+            _musicDict[(byte)_selectedIndex] = (0, musicMain, hgss ? musicNight : (ushort?)null);
+            _musicAdded = true;
 
-            _musicDict.Clear();
-            SetupEncounterMusicTable();
-            LoadClass(_selectedIndex);
-            StatusText = "Eye-contact music enabled for this class.";
+            MusicEnabled = true;
+            MusicAltEnabled = hgss;
+            MusicMain = musicMain;
+            MusicAlt = musicNight;
+            MarkDirty();
+            OnPropertyChanged(nameof(CanEnableMusic));
+            StatusText = "Eye-contact music added. Save to keep it.";
         }
 
-        /// <summary>Adds a whole new trainer class (name/description/gender/prize multiplier, plus
-        /// an optional initial music entry), then refreshes the list and selects it. Returns null on
-        /// success, or an error message.</summary>
+        /// <summary>Holds a new trainer class (name, description, gender, prize multiplier and an optional
+        /// music entry) as the last list entry and selects it. Nothing is written until Save. Returns null,
+        /// or why it can't be added.</summary>
         public string AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,
             bool addMusic, ushort musicMain, ushort musicNight)
         {
-            if (!TrainerClassTableExpansion.AddTrainerClass(name, description, gender, prizeMultiplier, addMusic, musicMain, musicNight, out string error))
-                return error;
+            if (_pendingClass != null) return "Save or discard the new trainer class first.";
+            string refusal = TrainerClassTableExpansion.AddRefusal(name);
+            if (refusal != null) return refusal;
 
-            string[] names = GetTrainerClassNames();
+            _pendingClass = new PendingClass
+            {
+                Name = name, Description = description ?? "", Gender = gender, Prize = prizeMultiplier,
+                AddMusic = addMusic, MusicMain = musicMain, MusicNight = musicNight,
+            };
             _suppress = true;
-            ClassNames.Clear();
-            for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
+            ClassNames.Add($"[{ClassNames.Count:D3}] {name} (not saved)");
             _suppress = false;
-
-            _musicDict.Clear();
-            SetupEncounterMusicTable();
-
-            StatusText = $"{ClassNames.Count} trainer classes.";
-            AppEvents.RaiseNamesChanged();
-            SelectedClassIndex = ClassNames.Count - 1;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanAddClass));
+            SelectedClassIndex = PendingIndex;
+            StatusText = "New trainer class added. Save to keep it.";
             return null;
         }
     }
