@@ -90,6 +90,11 @@ namespace DSPRE.HgEngine
         }
 
         public static bool TrySaveGroup(int areaId, RodType type, SafariZoneEncounterGroup group, out string error)
+            => TrySaveGroups(areaId, new[] { (type, group) }, out error);
+
+        /// <summary>Writes every given group of one area in a single pass: nothing is written unless every
+        /// field of every group was placed.</summary>
+        public static bool TrySaveGroups(int areaId, IEnumerable<(RodType Type, SafariZoneEncounterGroup Group)> groups, out string error)
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
@@ -97,15 +102,34 @@ namespace DSPRE.HgEngine
             if (areas == null || !areas.TryGetNameWithPrefix(areaId, AreaPrefix, out string areaDesignator))
             { error = $"Could not resolve a safari area designator for id {areaId}."; return false; }
 
+            string text = TryReadSource(out string path);
+            if (text == null) { error = $"Source file not found: {path}"; return false; }
+
+            var failed = new List<string>();
+            foreach (var (type, group) in groups)
+            {
+                if (group == null) continue;
+                foreach (string field in ApplyGroup(ref text, areaDesignator, type, group))
+                    failed.Add($"{FieldNameFor(type)}.{field}");
+            }
+            if (failed.Count > 0)
+            { error = $"{areaDesignator} has no {string.Join(", ", failed)}, so nothing was written."; return false; }
+
+            try { HgEngineFileCache.WriteText(path, text); }
+            catch (System.Exception ex) when (ex is IOException || ex is System.UnauthorizedAccessException)
+            { error = $"SafariEncounters.c couldn't be written: {ex.Message}"; return false; }
+            return true;
+        }
+
+        /// <summary>Patches one rod type's fields into <paramref name="text"/> and returns the ones it couldn't place.</summary>
+        private static List<string> ApplyGroup(ref string text, string areaDesignator, RodType type, SafariZoneEncounterGroup group)
+        {
             var header = HgEngineSymbolTable.Load(HeaderRelPath);
             if (header == null || !header.TryGetValue("NUM_ENCOUNTERS_SAFARI", out int mainCount)) mainCount = 10;
             if (header == null || !header.TryGetValue(BonusCountDefineFor(type), out int bonusCount)) bonusCount = 0;
 
             var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
-
-            string text = TryReadSource(out string path);
-            if (text == null) { error = $"Source file not found: {path}"; return false; }
 
             string SlotLiteral(BindingList<SafariZoneEncounter> list, int count)
             {
@@ -151,11 +175,7 @@ namespace DSPRE.HgEngine
                 if (!HgEngineSourcePatcher.TryReplaceField(ref text, areaDesignator, fieldPath, literal))
                     failedFields.Add(field);
             }
-
-            File.WriteAllText(path, text);
-            if (failedFields.Count > 0)
-            { error = $"Some fields could not be located and were left unchanged: {string.Join(", ", failedFields)}"; return false; }
-            return true;
+            return failedFields;
         }
 
         private static SafariZoneObjectRequirement ParseRequirement(string block, HgEngineSymbolTable objectTypes)

@@ -14,9 +14,8 @@ namespace DSPRE.HgEngine
     ///
     /// <c>target</c> is packed, per <c>GetMonEvolutionInternal.c</c>'s own <c>evoTable[i].target &amp;
     /// 0x7FF</c>/<c>&amp; 0xF800 &gt;&gt; 11</c>: bits 0-10 are the species id, bits 11-15 are a form to
-    /// switch to on evolution (written as <c>SPECIES_X | (form &lt;&lt; 11)</c>). No current entry in this
-    /// checkout uses a nonzero form, but the field is read/written losslessly so a hand-added one never
-    /// gets silently misread or dropped.</summary>
+    /// switch to on evolution. The checkout spells it <c>MON_WITH_FORM(SPECIES_X, form)</c>, which is
+    /// what a changed target is written as; an unchanged one keeps its own spelling.</summary>
     public static class HgEngineEvolutions
     {
         private const string SourceRelPath = "data/Evolutions.c";
@@ -24,9 +23,11 @@ namespace DSPRE.HgEngine
         private const string MethodHeaderRelPath = "include/pokemon.h";
         private const string ItemHeaderRelPath = "include/constants/item.h";
         private const string MoveHeaderRelPath = "include/constants/moves.h";
+        // EVO_HAS_MOVE_TYPE names a type, e.g. Sylveon's TYPE_FAIRY.
+        private const string TypeHeaderRelPath = "include/constants/battle_constants.h";
         private const string MethodPrefix = "EVO_";
         private static readonly FieldPathSegment[] EntriesPath = { FieldPathSegment.Field("entries") };
-        private static readonly Regex FormBitsExpr = new(@"^(.+?)\s*\|\s*\(?\s*(\d+)\s*<<\s*11\s*\)?\s*$");
+        private static readonly Regex Identifier = new(@"\b[A-Za-z_]\w*\b");
 
         public struct EvoEntry
         {
@@ -35,6 +36,9 @@ namespace DSPRE.HgEngine
             public int Param;
             public int TargetSpeciesId;
             public int TargetFormId;    // 0 = no form override; see class doc
+            // The method or target text didn't resolve, so the row isn't what the source says; saving it would erase the entry.
+            public bool Unresolved;
+            public string RawText;
         }
 
         /// <summary>The real EVO_* method names declared in this checkout, in ascending value order, for a
@@ -71,19 +75,26 @@ namespace DSPRE.HgEngine
             var methodTable = HgEngineSymbolTable.Load(MethodHeaderRelPath);
             var itemTable = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             var moveTable = HgEngineSymbolTable.Load(MoveHeaderRelPath);
+            var typeTable = HgEngineSymbolTable.Load(TypeHeaderRelPath);
 
             var raw = HgEngineSourcePatcher.SplitArrayValue(rawEntriesBlock);
             for (int i = 0; i < slotCount && i < raw.Count; i++)
             {
-                var parts = HgEngineSourcePatcher.SplitArrayValue(raw[i].Trim());
-                if (parts.Count < 3) { entries.Add(default); continue; }
+                string rawEntry = raw[i].Trim();
+                if (rawEntry.Length == 0) { entries.Add(default); continue; }
+                var parts = HgEngineSourcePatcher.SplitArrayValue(rawEntry);
+                if (parts.Count < 3) { entries.Add(new EvoEntry { Unresolved = true, RawText = rawEntry }); continue; }
 
-                int method = ResolveToken(parts[0], methodTable);
-                int param = ResolveToken(parts[1], itemTable, moveTable, species);
-                ResolveTarget(parts[2], species, out int target, out int targetForm);
+                bool methodOk = TryResolveToken(parts[0], out int method, methodTable);
+                int param = ResolveToken(parts[1], itemTable, moveTable, species, typeTable);
+                bool targetOk = ResolveTarget(parts[2], species, out int target, out int targetForm);
                 string methodName = methodTable != null && methodTable.TryGetNameWithPrefix(method, MethodPrefix, out string mn) ? mn : null;
 
-                entries.Add(new EvoEntry { MethodValue = method, MethodName = methodName, Param = param, TargetSpeciesId = target, TargetFormId = targetForm });
+                entries.Add(new EvoEntry
+                {
+                    MethodValue = method, MethodName = methodName, Param = param, TargetSpeciesId = target, TargetFormId = targetForm,
+                    Unresolved = !methodOk || !targetOk, RawText = rawEntry,
+                });
             }
             return true;
         }
@@ -107,6 +118,10 @@ namespace DSPRE.HgEngine
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, EntriesPath, out string rawEntriesBlock))
                 existingRaw = HgEngineSourcePatcher.SplitArrayValue(rawEntriesBlock);
 
+            var paramTables = new[]
+            {
+                HgEngineSymbolTable.Load(ItemHeaderRelPath), HgEngineSymbolTable.Load(MoveHeaderRelPath), species, HgEngineSymbolTable.Load(TypeHeaderRelPath),
+            };
             int totalSlots = existingRaw != null && existingRaw.Count > uiEntries.Count ? existingRaw.Count : uiEntries.Count;
             var built = new List<string>(totalSlots);
             for (int i = 0; i < totalSlots; i++)
@@ -114,9 +129,8 @@ namespace DSPRE.HgEngine
                 if (i < uiEntries.Count)
                 {
                     var e = uiEntries[i];
-                    string speciesToken = species.TryGetNameWithPrefix(e.TargetSpeciesId, "SPECIES_", out string tn) ? tn : e.TargetSpeciesId.ToString();
-                    string targetLiteral = e.TargetFormId != 0 ? $"{speciesToken} | ({e.TargetFormId} << 11)" : speciesToken;
-                    built.Add($"{{ {e.MethodName}, {e.Param}, {targetLiteral} }}");
+                    string existing = existingRaw != null && i < existingRaw.Count ? existingRaw[i] : null;
+                    built.Add(BuildEntryLiteral(e.MethodName, e.Param, e.TargetSpeciesId, e.TargetFormId, existing, species, paramTables));
                 }
                 else
                 {
@@ -137,43 +151,55 @@ namespace DSPRE.HgEngine
                 { error = $"Could not insert a new Evolutions entry for species {speciesId}."; return false; }
             }
 
-            File.WriteAllText(path, text);
+            HgEngineFileCache.WriteText(path, text);
             return true;
         }
 
-        private static int ResolveToken(string token, params HgEngineSymbolTable[] tables)
+        /// <summary>One <c>{ method, param, target }</c> literal. An unchanged param or target keeps the
+        /// spelling <paramref name="existingRaw"/> already has.</summary>
+        internal static string BuildEntryLiteral(string methodName, int param, int targetSpeciesId, int targetFormId, string existingRaw,
+            HgEngineSymbolTable species, HgEngineSymbolTable[] paramTables)
         {
-            token = token.Trim();
-            if (int.TryParse(token, out int v)) return v;
-            foreach (var t in tables)
-                if (t != null && t.TryGetValue(token, out int tv)) return tv;
-            return 0;
+            string speciesToken = species != null && species.TryGetNameWithPrefix(targetSpeciesId, "SPECIES_", out string tn) ? tn : targetSpeciesId.ToString();
+            string targetLiteral = HgEngineTrainerSource.FormatSpecies(speciesToken, targetFormId);
+            string paramLiteral = param.ToString();
+            if (existingRaw != null)
+            {
+                var parts = HgEngineSourcePatcher.SplitArrayValue(existingRaw.Trim());
+                if (parts.Count >= 3)
+                {
+                    // ITEM_, MOVE_, TYPE_ or a name DSPRE can't read.
+                    if (parts[0].Trim() == methodName && ResolveToken(parts[1], paramTables) == param)
+                        paramLiteral = parts[1].Trim();
+                    if (ResolveTarget(parts[2], species, out int oldTarget, out int oldForm) && oldTarget == targetSpeciesId && oldForm == targetFormId)
+                        targetLiteral = parts[2].Trim();
+                }
+            }
+            return $"{{ {methodName}, {paramLiteral}, {targetLiteral} }}";
         }
 
-        /// <summary>Splits a target token into species id + form override, handling all three shapes seen
-        /// or possible in source: a plain symbol (<c>SPECIES_X</c>, form 0), a plain packed number, or an
-        /// explicit <c>SPECIES_X | (form &lt;&lt; 11)</c> expression.</summary>
-        internal static void ResolveTarget(string token, HgEngineSymbolTable species, out int speciesId, out int formId)
+        private static int ResolveToken(string token, params HgEngineSymbolTable[] tables)
+            => TryResolveToken(token, out int v, tables) ? v : 0;
+
+        private static bool TryResolveToken(string token, out int value, params HgEngineSymbolTable[] tables)
         {
             token = token.Trim();
-            formId = 0;
+            if (int.TryParse(token, out value)) return true;
+            foreach (var t in tables)
+                if (t != null && t.TryGetValue(token, out value)) return true;
+            value = 0;
+            return false;
+        }
 
-            var m = FormBitsExpr.Match(token);
-            string speciesToken = token;
-            if (m.Success)
-            {
-                speciesToken = m.Groups[1].Value.Trim();
-                int.TryParse(m.Groups[2].Value, out formId);
-            }
-
-            if (int.TryParse(speciesToken, out int raw))
-            {
-                if (!m.Success) { speciesId = raw & 0x7FF; formId = (raw >> 11) & 0x1F; return; }
-                speciesId = raw;   // already just the species portion of an explicit OR expression
-                return;
-            }
-
-            speciesId = species != null && species.TryGetValue(speciesToken, out int sv) ? sv : 0;
+        /// <summary>Splits a target into species id + form override. Names are swapped for their values
+        /// first so the trainer parser handles every shape: <c>SPECIES_X</c>, a packed number,
+        /// <c>MON_WITH_FORM(SPECIES_X, n)</c> and <c>SPECIES_X | (n &lt;&lt; 11)</c>. False when a name
+        /// doesn't resolve.</summary>
+        internal static bool ResolveTarget(string token, HgEngineSymbolTable species, out int speciesId, out int formId)
+        {
+            string numeric = Identifier.Replace(token ?? "", m =>
+                m.Value != "MON_WITH_FORM" && species != null && species.TryGetValue(m.Value, out int v) ? v.ToString() : m.Value);
+            return HgEngineTrainerSource.TryParseSpecies(numeric, null, out speciesId, out formId);
         }
 
         private static string TryReadSource(out string path)

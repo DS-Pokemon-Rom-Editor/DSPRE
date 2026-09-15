@@ -125,9 +125,11 @@ namespace DSPRE.HgEngine
                 if (!TryReplaceMapField(ref text, fieldName, "treeCoords", treeCoordsLiteral)) failed.Add("treeCoords");
             }
 
-            File.WriteAllText(path, text);
             if (failed.Count > 0)
-            { error = $"Some fields could not be located and were left unchanged: {string.Join(", ", failed)}"; return false; }
+            { error = $"Headbutt.c has no {string.Join(", ", failed)} for .{fieldName}, so nothing was written."; return false; }
+            try { HgEngineFileCache.WriteText(path, text); }
+            catch (System.Exception ex) when (ex is IOException || ex is System.UnauthorizedAccessException)
+            { error = $"Headbutt.c couldn't be written: {ex.Message}"; return false; }
             return true;
         }
 
@@ -176,6 +178,7 @@ namespace DSPRE.HgEngine
             if (!TryFindDataBlock(text, out int open, out int close)) return false;
             var path = new[] { FieldPathSegment.Field(mapFieldName), FieldPathSegment.Field(subFieldName) };
             if (!ElementScanner.TryLocateValueSpan(text, open, close, path, out int vs, out int ve)) return false;
+            if (HgEngineSourcePatcher.SameTokens(text.Substring(vs, ve - vs), newLiteral)) return true;
             text = text.Substring(0, vs) + newLiteral + text.Substring(ve);
             return true;
         }

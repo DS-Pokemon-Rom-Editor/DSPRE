@@ -11,9 +11,9 @@ namespace DSPRE.HgEngine
     {
         public static bool TryGetRawValue(string text, string designator, out string rawValue)
         {
-            var m = Regex.Match(text, @"\[\s*" + Regex.Escape(designator) + @"\s*\]\s*=\s*([^,\r\n]+),");
-            if (!m.Success) { rawValue = null; return false; }
-            rawValue = m.Groups[1].Value.Trim();
+            rawValue = null;
+            if (!TryLocate(text, designator, out int start, out int end)) return false;
+            rawValue = text.Substring(start, end - start).Trim();
             return true;
         }
 
@@ -21,15 +21,38 @@ namespace DSPRE.HgEngine
         /// the file's final "};".</summary>
         public static bool TrySetRawValue(ref string text, string designator, string valueLiteral)
         {
-            var entryPattern = new Regex(@"(\[\s*" + Regex.Escape(designator) + @"\s*\]\s*=\s*)([^,\r\n]+)(\s*,)");
-            var m = entryPattern.Match(text);
-            if (m.Success)
+            if (TryLocate(text, designator, out int start, out int end))
             {
-                text = text.Substring(0, m.Index) + m.Groups[1].Value + valueLiteral + m.Groups[3].Value
-                    + text.Substring(m.Index + m.Length);
+                // Keep the spacing around the old value.
+                int valueStart = start;
+                while (valueStart < end && char.IsWhiteSpace(text[valueStart])) valueStart++;
+                int valueEnd = end;
+                while (valueEnd > valueStart && char.IsWhiteSpace(text[valueEnd - 1])) valueEnd--;
+                text = text.Substring(0, valueStart) + valueLiteral + text.Substring(valueEnd);
                 return true;
             }
             return HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, $"\n    [{designator}] = {valueLiteral},");
+        }
+
+        // The value runs to the next comma outside parentheses, or to the line end or closing brace when the
+        // last entry has no comma, so MON_WITH_FORM(a, b) and OR'd expressions stay whole.
+        private static bool TryLocate(string text, string designator, out int start, out int end)
+        {
+            start = end = -1;
+            var m = Regex.Match(text, @"\[\s*" + Regex.Escape(designator) + @"\s*\]\s*=");
+            if (!m.Success) return false;
+            int i = m.Index + m.Length, depth = 0;
+            start = i;
+            for (; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '/' && i + 1 < text.Length && text[i + 1] == '/') break;
+                if (c == '(') depth++;
+                else if (c == ')') depth--;
+                else if (depth == 0 && (c == ',' || c == '\n' || c == '\r' || c == '}')) break;
+            }
+            end = i;
+            return text.Substring(start, end - start).Trim().Length > 0;
         }
     }
 }

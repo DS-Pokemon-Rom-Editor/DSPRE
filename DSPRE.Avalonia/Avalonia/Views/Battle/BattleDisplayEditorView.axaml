@@ -230,22 +230,22 @@
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Front height ♂" VerticalAlignment="Center"
                                    ToolTip.Tip="Front-sprite height (male). ½ the distance from the sprite's bottom to the image's bottom. Signed −128…127."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightM}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightM}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Front height ♀" VerticalAlignment="Center"
                                    ToolTip.Tip="Front-sprite height (female). Signed −128…127."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightF}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightF}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height ♂" VerticalAlignment="Center"
                                    ToolTip.Tip="Back-sprite height (male). Signed −128…127."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightM}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightM}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height ♀" VerticalAlignment="Center"
                                    ToolTip.Tip="Back-sprite height (female). Signed −128…127."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightF}" Minimum="0" Maximum="255" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightF}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                     </StackPanel>
                   </StackPanel>

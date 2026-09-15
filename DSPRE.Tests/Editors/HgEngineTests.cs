@@ -51,6 +51,198 @@ const TrainerData sTrainerData[] = {
             Assert.Contains(".species = SPECIES_GASTLY", text);
         }
 
+        private static readonly FieldPathSegment[] PartyPath = { FieldPathSegment.Field("party") };
+
+        private static string NewMon(int index, string indent) => $"{{ .ivs = 0, .level = 1, .species = SPECIES_NONE, .ballSeal = {index} }}";
+
+        [Fact]
+        public void SourcePatcher_TrySetArrayCount_DropsPartyMembersPastTheCount()
+        {
+            string text = TrainersSnippet;
+
+            Assert.True(HgEngineSourcePatcher.TrySetArrayCount(ref text, "1", PartyPath, 1, NewMon));
+
+            var block = new HgEngineSourceBlock(text.Substring(text.IndexOf("[1] = {") + 6));
+            var party = block.GetArrayElements(PartyPath);
+            Assert.Single(party);
+            Assert.Contains("SPECIES_GASTLY", party[0].Raw);
+            Assert.DoesNotContain("SPECIES_ZUBAT", text);
+            Assert.Contains(".name = \"Silver\"", text);
+        }
+
+        [Fact]
+        public void SourcePatcher_TrySetArrayCount_AppendsMembersThatFieldWritesCanThenFill()
+        {
+            string text = TrainersSnippet;
+
+            Assert.True(HgEngineSourcePatcher.TrySetArrayCount(ref text, "1", PartyPath, 4, NewMon));
+            Assert.True(HgEngineSourcePatcher.TryUpsertField(ref text, "1",
+                new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(3), FieldPathSegment.Field("species") }, "SPECIES_ONIX"));
+
+            var block = new HgEngineSourceBlock(text.Substring(text.IndexOf("[1] = {") + 6));
+            var party = block.GetArrayElements(PartyPath);
+            Assert.Equal(4, party.Count);
+            Assert.Contains("SPECIES_ZUBAT", party[1].Raw);
+            Assert.Contains(".ballSeal = 2", party[2].Raw);
+            Assert.Contains("SPECIES_ONIX", party[3].Raw);
+        }
+
+        [Fact]
+        public void SourcePatcher_TryRemoveField_DropsOnlyThatFieldAndIgnoresAnAbsentOne()
+        {
+            string text = TrainersSnippet;
+            var ballSeal = new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(1), FieldPathSegment.Field("ballSeal") };
+            var moves = new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(1), FieldPathSegment.Field("moves") };
+
+            Assert.True(HgEngineSourcePatcher.TryRemoveField(ref text, "1", ballSeal));
+            string afterRemove = text;
+            Assert.True(HgEngineSourcePatcher.TryRemoveField(ref text, "1", moves));
+
+            Assert.Equal(afterRemove, text);
+            Assert.False(HgEngineSourcePatcher.TryGetFieldValue(text, "1", ballSeal, out _));
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "1", new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(0), FieldPathSegment.Field("ballSeal") }, out string first));
+            Assert.Equal("0", first);
+            Assert.True(HgEngineSourcePatcher.TryGetFieldValue(text, "1", new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(1), FieldPathSegment.Field("species") }, out string species));
+            Assert.Equal("SPECIES_ZUBAT", species);
+        }
+
+        [Fact]
+        public void SourcePatcher_TryUpsertField_PutsANewFieldOnItsOwnLineAfterTheLastOne()
+        {
+            string text = "const TrainerData d[] = {\n    [2] = {\n        .party = {\n            {\n                .level = 5,\n                .species = SPECIES_ONIX,\n            },\n        },\n    },\n};\n";
+            var path = new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(0), FieldPathSegment.Field("ball") };
+
+            Assert.True(HgEngineSourcePatcher.TryUpsertField(ref text, "2", path, "ITEM_POKE_BALL"));
+
+            Assert.Contains("                .species = SPECIES_ONIX,\n                .ball = ITEM_POKE_BALL,\n            },", text);
+
+            string crlf = text.Replace("\n", "\r\n");
+            Assert.True(HgEngineSourcePatcher.TrySetArrayCount(ref crlf, "2", new[] { FieldPathSegment.Field("party") }, 2, (i, indent) => "{\n" + indent + "    .level = 1,\n" + indent + "}"));
+            Assert.True(HgEngineSourcePatcher.TryUpsertField(ref crlf, "2",
+                new[] { FieldPathSegment.Field("party"), FieldPathSegment.At(1), FieldPathSegment.Field("species") }, "SPECIES_ZUBAT"));
+            Assert.DoesNotContain("\n", crlf.Replace("\r\n", ""));
+            Assert.Contains("SPECIES_ZUBAT", crlf);
+        }
+
+        [Fact]
+        public void SourcePatcher_ACommentAfterTheLastElementStaysAComment()
+        {
+            string text = "const TrainerData d[] = {\n    [3] = {\n        .party = {\n            { .level = 5, .species = SPECIES_ONIX } // the rock\n        },\n    },\n};\n";
+
+            Assert.True(HgEngineSourcePatcher.TrySetArrayCount(ref text, "3", new[] { FieldPathSegment.Field("party") }, 2,
+                (i, indent) => "{ .level = 1, .species = SPECIES_ZUBAT }"));
+
+            Assert.Contains("{ .level = 5, .species = SPECIES_ONIX }, // the rock", text);
+            var party = new HgEngineSourceBlock(text.Substring(text.IndexOf("[3] = {") + 6)).GetArrayElements(new[] { FieldPathSegment.Field("party") });
+            Assert.Equal(2, party.Count);
+            Assert.Contains("SPECIES_ZUBAT", party[1].Raw);
+        }
+
+        [Fact]
+        public void SourcePatcher_TryReplaceField_LeavesAnUnchangedMultiLineBlockAsItIs()
+        {
+            // Headbutt.c and SafariEncounters.c keep their slot lists one per line with comments.
+            string text = "const X d[] = {\r\n    [4] = {\r\n        .slots = {\r\n            { SPECIES_HOOTHOOT, 2, 3 }, // morning\r\n            { SPECIES_PINECO, 2, 3 },\r\n        },\r\n    },\r\n};\r\n";
+            string original = text;
+            var path = new[] { FieldPathSegment.Field("slots") };
+
+            Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "4", path, "{ { SPECIES_HOOTHOOT, 2, 3 }, { SPECIES_PINECO, 2, 3 } }"));
+            Assert.Same(original, text);
+
+            Assert.True(HgEngineSourcePatcher.TryReplaceField(ref text, "4", path, "{ { SPECIES_HOOTHOOT, 2, 3 }, { SPECIES_PINECO, 5, 6 } }"));
+            Assert.Contains("SPECIES_PINECO, 5, 6", text);
+            Assert.False(HgEngineSourcePatcher.SameTokens("\"a b\"", "\"ab\""));
+        }
+
+        [Fact]
+        public void SymbolTable_ResolvesACombinedFlagMacro()
+        {
+            // trainer_data.h spells F_TRAINER_EXPERT_AI this way.
+            var table = HgEngineSymbolTable.Parse(
+                "#define F_PRIORITIZE_SUPER_EFFECTIVE (1 << 0)\n#define F_EVALUATE_ATTACKS (1 << 1)\n#define F_EXPERT_ATTACKS (1 << 2)\n" +
+                "#define F_TRAINER_EXPERT_AI (F_PRIORITIZE_SUPER_EFFECTIVE | F_EVALUATE_ATTACKS | F_EXPERT_ATTACKS)\n");
+
+            Assert.True(table.TryGetValue("F_TRAINER_EXPERT_AI", out int value));
+            Assert.Equal(7, value);
+        }
+
+        [Fact]
+        public void SymbolTable_TakesTheBranchTheCompilerBuilds()
+        {
+            // move_data.h defines each marker in both branches of a DISALLOW_DEXIT_GEN test.
+            const string header =
+                "#if DISALLOW_DEXIT_GEN == 8\n#define FLAG_UNUSABLE_IN_GEN_8 0x20\n#else\n#define FLAG_UNUSABLE_IN_GEN_8 0\n#endif\n" +
+                "#if DISALLOW_DEXIT_GEN == 0\n#define FLAG_UNUSABLE_UNIMPLEMENTED 0x20\n#else\n#define FLAG_UNUSABLE_UNIMPLEMENTED 0\n#endif\n" +
+                "#ifdef MEGA_EVOLUTIONS\n#define MEGA_ONLY 1\n#endif\n";
+
+            var undefined = HgEngineSymbolTable.Parse(header);
+            Assert.True(undefined.TryGetValue("FLAG_UNUSABLE_IN_GEN_8", out int gen8));
+            Assert.True(undefined.TryGetValue("FLAG_UNUSABLE_UNIMPLEMENTED", out int unimplemented));
+            Assert.Equal(0, gen8);
+            Assert.Equal(0x20, unimplemented);
+            Assert.False(undefined.TryGetValue("MEGA_ONLY", out _));
+
+            var gen8Build = HgEngineSymbolTable.Parse(header, new System.Collections.Generic.Dictionary<string, int> { ["DISALLOW_DEXIT_GEN"] = 8, ["MEGA_EVOLUTIONS"] = 1 });
+            Assert.True(gen8Build.TryGetValue("FLAG_UNUSABLE_IN_GEN_8", out gen8));
+            Assert.True(gen8Build.TryGetValue("FLAG_UNUSABLE_UNIMPLEMENTED", out unimplemented));
+            Assert.Equal(0x20, gen8);
+            Assert.Equal(0, unimplemented);
+            Assert.True(gen8Build.TryGetValue("MEGA_ONLY", out _));
+        }
+
+        [Fact]
+        public void SymbolTable_ResolvesAChainOfAdditionsAndSubtractions()
+        {
+            var table = HgEngineSymbolTable.Parse("#define NUM_OF_MOVES 923\n#define MOVE_G_MAX_WILDFIRE (NUM_OF_MOVES - 1 + 1)\n");
+
+            Assert.True(table.TryGetValue("MOVE_G_MAX_WILDFIRE", out int value));
+            Assert.Equal(923, value);
+        }
+
+        [Fact]
+        public void FlatArrayField_KeepsAValueWithACommaWholeAndFindsALastEntryWithoutOne()
+        {
+            string text = "const u16 T[] = {\r\n    [SPECIES_A] = MON_WITH_FORM(SPECIES_B, 1), // note\r\n    [SPECIES_C] = 7\r\n};\r\n";
+
+            Assert.True(HgEngineFlatArrayField.TryGetRawValue(text, "SPECIES_A", out string a));
+            Assert.Equal("MON_WITH_FORM(SPECIES_B, 1)", a);
+            Assert.True(HgEngineFlatArrayField.TrySetRawValue(ref text, "SPECIES_A", "MON_WITH_FORM(SPECIES_B, 2)"));
+            Assert.True(HgEngineFlatArrayField.TrySetRawValue(ref text, "SPECIES_C", "8"));
+
+            Assert.Equal("const u16 T[] = {\r\n    [SPECIES_A] = MON_WITH_FORM(SPECIES_B, 2), // note\r\n    [SPECIES_C] = 8\r\n};\r\n", text);
+        }
+
+        [Fact]
+        public void ToCStringLiteral_TurnsATypedLineBreakIntoTheGamesMarkup()
+        {
+            string literal = HgEngineTrainerSource.ToCStringLiteral("Hi!\r\nBye");
+
+            Assert.Equal("\"Hi!\\\\nBye\"", literal);
+            Assert.Equal("Hi!\\nBye", new HgEngineSourceBlock("{ .text = " + literal + " }").TryGetString(new[] { FieldPathSegment.Field("text") }, out string back) ? back : null);
+        }
+
+        [Theory]
+        [InlineData("MON_WITH_FORM(479, 2)", 479, 2)]
+        [InlineData("479 | (3 << 11)", 479, 3)]
+        [InlineData("0x1DF", 479, 0)]
+        [InlineData("4575", 479, 2)]
+        public void TrainerSource_TryParseSpecies_ReadsTheFormInEverySpelling(string raw, int species, int form)
+        {
+            Assert.True(HgEngineTrainerSource.TryParseSpecies(raw, null, out int gotSpecies, out int gotForm));
+            Assert.Equal(species, gotSpecies);
+            Assert.Equal(form, gotForm);
+            Assert.Equal(form > 0 ? $"MON_WITH_FORM(SPECIES_ROTOM, {form})" : "SPECIES_ROTOM", HgEngineTrainerSource.FormatSpecies("SPECIES_ROTOM", gotForm));
+        }
+
+        [Theory]
+        [InlineData("Sparky", "Sparky")]
+        [InlineData("Señor Mime", "SeorMime")]
+        [InlineData("ABCDEFGHIJKL", "ABCDEFGHIJ")]
+        public void TrainerSource_ToEncodableNickname_KeepsOnlyWhatTheBuildCanEncode(string typed, string kept)
+        {
+            Assert.Equal(kept, HgEngineTrainerSource.ToEncodableNickname(typed));
+        }
+
         [Fact]
         public void SourcePatcher_SplitArrayValue_SkipsTrailingLineCommentsBetweenElements()
         {

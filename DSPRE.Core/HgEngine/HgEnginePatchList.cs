@@ -191,16 +191,74 @@ namespace DSPRE.HgEngine
             }
 
             if (f.Length < 3 || !TryHex(f[2], out long address)) return entry;
+
+            // make.py splits hooks into exactly 3 or 4 columns and armhooks into exactly 4, reading the
+            // fourth with int(). Anything else is kept as text rather than rewritten into a different line.
+            int register = -1;
+            if (kind == HgEnginePatchKind.Repoint) { if (f.Length != 3) return entry; }
+            else if (f.Length > 4) return entry;
+            else if (f.Length == 4)
+            {
+                if (!int.TryParse(f[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out register) || register < 0) return entry;
+            }
+            else if (kind == HgEnginePatchKind.ArmHook) return entry;
+
             entry.Symbol = f[1];
             entry.Address = address;
-            entry.Register = f.Length > 3
-                && int.TryParse(f[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out int reg) ? reg : -1;
+            entry.Register = register;
             entry.Parsed = true;
             return entry;
         }
 
         private static bool TryHex(string token, out long value) =>
             long.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
+
+        /// <summary>
+        /// Reads the register typed for a new hook. make.py branches a hook through r0 to r7, treats 255 as
+        /// replacing the whole routine, and loads an ARM hook's address through r0 to r12.
+        /// </summary>
+        public static bool TryParseRegister(HgEnginePatchKind kind, string text, out int register, out string error)
+        {
+            register = -1;
+            error = null;
+            if (kind is not (HgEnginePatchKind.Hook or HgEnginePatchKind.ArmHook)) return true;
+
+            string trimmed = (text ?? "").Trim();
+            bool isNumber = int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value);
+            bool valid = kind == HgEnginePatchKind.Hook
+                ? isNumber && ((value >= 0 && value <= 7) || value == 0xFF)
+                : isNumber && value >= 0 && value <= 12;
+            if (!valid)
+            {
+                error = kind == HgEnginePatchKind.Hook
+                    ? "The register has to be 0 to 7, or 255 to replace the whole routine."
+                    : "The register has to be 0 to 12.";
+                return false;
+            }
+            register = value;
+            return true;
+        }
+
+        /// <summary>Why this entry can't be written as a line make.py reads correctly, or null.</summary>
+        public static string Problem(HgEnginePatchEntry entry)
+        {
+            if (!entry.Parsed) return null;
+            string where = $"{entry.BinaryName} 0x{entry.Address:X8}";
+            switch (entry.Kind)
+            {
+                case HgEnginePatchKind.Hook when entry.Register < -1 || entry.Register > 0xFF:
+                    return $"The hook at {where} has register {entry.Register}; it has to be 0 to 7, or 255.";
+                case HgEnginePatchKind.ArmHook when entry.Register < 0 || entry.Register > 15:
+                    return $"The ARM hook at {where} has no usable register.";
+                case HgEnginePatchKind.Hook or HgEnginePatchKind.ArmHook or HgEnginePatchKind.Repoint
+                    when string.IsNullOrWhiteSpace(entry.Symbol) || entry.Symbol.Any(char.IsWhiteSpace):
+                    return $"The entry at {where} needs a routine or table name with no spaces.";
+                case HgEnginePatchKind.ByteReplacement when entry.Bytes.Count == 0:
+                    return $"The replacement at {where} has no bytes.";
+                default:
+                    return null;
+            }
+        }
 
         /// <summary>Adds an entry to the end, and returns it.</summary>
         public HgEnginePatchEntry Add(int overlayNumber, string symbol, long address, int register,
@@ -223,13 +281,14 @@ namespace DSPRE.HgEngine
 
         public bool Save(out string error)
         {
-            error = null;
+            error = Entries.Select(Problem).FirstOrDefault(p => p != null);
+            if (error != null) return false;
             try
             {
                 // Written back line for line: an entry that was never parsed keeps its own text, and one
                 // that was edited is rendered fresh.
                 var lines = Entries.Select(e => e.Parsed ? e.Render() : e.RawLine);
-                File.WriteAllText(FullPath, string.Join("\n", lines) + "\n");
+                HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + "\n");
                 HgEngineClaimedRanges.ClearCache();
                 return true;
             }
