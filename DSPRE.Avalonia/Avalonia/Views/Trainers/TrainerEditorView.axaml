@@ -20,23 +20,23 @@
                 BorderThickness="0,0,0,1" Padding="6,4">
           <WrapPanel Classes="toolbar">
             <Button Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-            <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+            <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+            <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-            <Button Content="+ Add Trainer" Click="AddTrainer_Click" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-            <Button Content="− Remove Last" Click="RemoveTrainer_Click" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
+            <Button Content="+ Add Trainer" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="− Remove Last" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
             <Button Content="Search…"        Click="Search_Click"/>
             <Button Content="Reorder party…" Click="Reorder_Click"/>
             <Button Content="DV Calc…"       Click="DVCalc_Click"/>
             <Button Content="Battle messages…" Click="BattleMessages_Click"/>
             <Button Content="Trainer classes…" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
-            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-            <Button Content="Export trainer…" Click="ExportTrainer_Click" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
-            <Button Content="Import trainer…" Click="ImportTrainer_Click" ToolTip.Tip="Load a .trf file into this trainer slot"/>
-            <Button Content="Export properties…" Click="ExportProperties_Click" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
-            <Button Content="Import properties…" Click="ImportProperties_Click" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
-            <Button Content="Export party…" Click="ExportParty_Click" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
-            <Button Content="Import party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
+            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2" IsVisible="{Binding !IsHgeActive}"/>
+            <Button Content="Export trainer…" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
+            <Button Content="Import trainer…" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
+            <Button Content="Export properties…" Click="ExportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
+            <Button Content="Import properties…" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
+            <Button Content="Export party…" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
+            <Button Content="Import party…" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
           </WrapPanel>
         </Border>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
@@ -79,7 +79,7 @@
                 <CheckBox Content="Custom moves"  IsChecked="{Binding ChooseMoves}" IsVisible="{Binding !IsHgeActive}"/>
                 <CheckBox Content="Held items"    IsChecked="{Binding ChooseItems}" IsVisible="{Binding !IsHgeActive}"/>
                 <TextBlock Text="Party size" VerticalAlignment="Center"/>
-                <NumericUpDown Width="90" Minimum="1" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
+                <NumericUpDown Width="90" Minimum="{Binding PartyCountMinimum}" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasClassSprite}">
                   <TextBlock Text="Frame" VerticalAlignment="Center"/>
                   <NumericUpDown Width="80" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"/>
@@ -165,8 +165,7 @@
                       <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,2">
                         <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding FormVisible}">
                           <TextBlock Text="Form" FontSize="10"/>
-                          <NumericUpDown Minimum="0" Maximum="63" Increment="1" Value="{Binding FormId}"
-                                         ToolTip.Tip="Which form the Pokemon takes. Six bits share the species word, so 63 is as high as it goes."/>
+                          <NumericUpDown Minimum="0" Maximum="{Binding FormMaximum}" Increment="1" Value="{Binding FormId}"/>
                         </StackPanel>
                         <StackPanel Width="120" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
                           <TextBlock Text="Gender" FontSize="10"/>

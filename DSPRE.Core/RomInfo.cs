@@ -2180,9 +2180,20 @@ namespace DSPRE
 
         public static List<string> GetLocationNames() => new TextArchive(locationNamesTextNumber).messages;
 
-        public static string[] GetSimpleTrainerNames() => new TextArchive(trainerNamesMessageNumber).GetSimpleTrainerNames().ToArray();
+        // hg-engine generates the trainer name archive from Trainers.c.
+        public static string[] GetSimpleTrainerNames() => HgEngine.HgEngineProject.IsActive
+            ? TrainerNames.HgEngineSimpleNames()
+            : new TextArchive(trainerNamesMessageNumber).GetSimpleTrainerNames().ToArray();
 
-        public static string[] GetTrainerClassNames() => new TextArchive(trainerClassMessageNumber).messages.ToArray();
+        public static string[] GetTrainerClassNames()
+        {
+            // hg-engine rebuilds this archive from its text source, which is newer than the ROM copy.
+            HgEngine.HgEngineOwnedFile owned = HgEngine.HgEngineProject.IsActive
+                ? HgEngine.HgEngineOwnedFiles.Get(HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives), trainerClassMessageNumber) : null;
+            if (owned?.Ownership == HgEngine.HgEngineOwnership.EditableSource && HgEngine.HgEngineOwnedFiles.TryReadLines(owned, out var lines, out _))
+                return lines.ToArray();
+            return new TextArchive(trainerClassMessageNumber).messages.ToArray();
+        }
 
         public static string[] GetItemNames()
         {
