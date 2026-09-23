@@ -377,12 +377,35 @@ namespace DSPRE.Avalonia.Views.Shell
                 GuidedTour.Start(this);
         }
 
+        /// <summary>
+        /// A build that repacked a/0/2/8 with members left over from an earlier one moves every
+        /// hg-engine table away from the index its code reads, which shows up as wrong icon colours,
+        /// missing hidden abilities and wrong TM learnsets rather than as a crash. Saying so on load is
+        /// the difference between finding it here and shipping it.
+        /// </summary>
+        private async System.Threading.Tasks.Task WarnIfCodeTablesShiftedAsync()
+        {
+            try
+            {
+                var layout = await System.Threading.Tasks.Task.Run(() => HgEngineCodeAddons.Describe());
+                if (layout == null || layout.IsHealthy || layout.TableBlockStart < 0) return;
+
+                await DialogHelper.ShowInfo(
+                    layout.Summary + "\n\nTools > hg-engine ROM Review shows which member holds what, and "
+                    + "can repair the order.",
+                    "hg-engine tables are out of place");
+            }
+            catch (System.Exception ex) { AppLogger.Error("WarnIfCodeTablesShiftedAsync: " + ex.Message); }
+        }
+
         /// <summary>Handles an hg-engine ROM on load: auto-links if the caller already picked a checkout
         /// (opened it directly), reminds silently if this project was already linked in an earlier
         /// session, otherwise offers to link one now: same "no source folder" behavior as before this
         /// feature existed if the user declines.</summary>
         private async System.Threading.Tasks.Task HandleHgEngineDetectedAsync(MainWindowViewModel vm, string autoLinkHgEnginePath)
         {
+            await WarnIfCodeTablesShiftedAsync();
+
             if (autoLinkHgEnginePath != null)
             {
                 // A checkout on a Windows drive builds with either MSYS2 or WSL, so ask rather than
@@ -832,6 +855,9 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void ResearchHelper_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenResearchHelper();
+
+        private void HgeRomReview_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHgeRomReview();
 
         private void CharMapManager_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCharMapManager();

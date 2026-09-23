@@ -22,10 +22,13 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Pulls one entry apart into its numbers and its colours, or says why it cannot be.</summary>
-        public static Indexed ReadIndexed(Archive a, int index, out string whynot, bool shiny = false)
+        /// <param name="source">Where to read the archive from, for a caller holding the ROM's own bytes
+        /// rather than the unpacked copy.</param>
+        public static Indexed ReadIndexed(Archive a, int index, out string whynot, bool shiny = false,
+                                          ScriptNarc source = null)
         {
             whynot = null;
-            var narc = new ScriptNarc(a.Dir);
+            var narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available) { whynot = "This game does not have this archive."; return null; }
 
             byte[] rawStored = narc.Get(index);

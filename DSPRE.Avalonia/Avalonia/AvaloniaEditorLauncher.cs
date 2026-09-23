@@ -1014,6 +1014,27 @@ namespace DSPRE.Avalonia
             new ResearchHelperView(new ResearchHelperViewModel(true)).ShowManaged();
         }
 
+        /// <summary>
+        /// Deliberately not gated on a linked checkout: this is how someone with only the ROM sees what
+        /// the game reads out of it, which is the case the gate leaves with nothing to look at.
+        /// </summary>
+        public static void OpenHgeRomReview()
+        {
+            if (!IsRomLoaded) return;
+            if (!RomInfo.isHGE)
+            {
+                AppMessages.Info("This review reads hg-engine's own archives, and this ROM is not an hg-engine build.",
+                    "hg-engine ROM Review");
+                return;
+            }
+            if (!BetaEditors.Allows("HgeRomReviewView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("HgeRomReviewView"), "hg-engine ROM Review");
+                return;
+            }
+            new HgeRomReviewView(new HgeRomReviewViewModel()).ShowManaged();
+        }
+
         public static void OpenCharMapManager()
         {
             if (!IsRomLoaded) return;
@@ -1417,6 +1438,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
+            new() { Name = "hg-engine ROM Review",  Keywords = "hge binary icons sprites palettes archive", Run = OpenHgeRomReview },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
             new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
             new() { Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },

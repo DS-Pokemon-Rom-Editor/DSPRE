@@ -870,9 +870,11 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>A picture of one entry of one archive, or why there is not one.</summary>
-        public static Preview Render(Archive a, int index, bool shiny = false)
+        /// <param name="source">Where to read the archive from, for a caller that wants the ROM's own
+        /// bytes rather than the unpacked copy. Defaults to the unpacked copy every editor uses.</param>
+        public static Preview Render(Archive a, int index, bool shiny = false, ScriptNarc source = null)
         {
-            var narc = new ScriptNarc(a.Dir);
+            var narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available)
                 return new Preview { Whynot = "This game does not have this archive." };
 
@@ -967,7 +969,7 @@ namespace DSPRE.Avalonia.Data
 
                 // Read it the same way the painter does, so the size shown here and the size you paint on
                 // are never different numbers.
-                var art = ReadIndexed(a, index, out string cannot, shiny);
+                var art = ReadIndexed(a, index, out string cannot, shiny, narc);
                 if (art != null)
                     return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };
 

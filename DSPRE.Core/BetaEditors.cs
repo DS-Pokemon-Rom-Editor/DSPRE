@@ -54,6 +54,7 @@ namespace DSPRE
                 ["ProjectChecksView"] = "Project checks",
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
+                ["HgeRomReviewView"] = "hg-engine ROM review",
                 ["MartEditorView"] = "Mart editor",
                 ["PokegearPhoneBookView"] = "Pokégear Phone Book",
             };

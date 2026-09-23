@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.HgeRomReviewView"
+        x:DataType="vm:HgeRomReviewViewModel"
+        Title="hg-engine ROM Review" Width="1100" Height="760">
+  <TabControl Margin="6">
+
+    <TabItem Header="Pokémon graphics">
+      <Grid ColumnDefinitions="260,*" Margin="0,6,0,0">
+        <DockPanel Grid.Column="0" Margin="0,0,6,0">
+          <TextBox DockPanel.Dock="Top" PlaceholderText="Search" Text="{Binding Search}" Margin="0,0,0,4"/>
+          <ListBox ItemsSource="{Binding Species}" SelectedIndex="{Binding SelectedSpeciesIndex}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:HgeRomReviewViewModel+SpeciesRow">
+                <TextBlock Text="{Binding Label}"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+
+        <ScrollViewer Grid.Column="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Party icon" FontWeight="Bold"/>
+            <TextBlock Text="{Binding PaletteNote}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Editor.Subtle}"
+                       IsVisible="{Binding !PaletteIsWrong}"/>
+            <TextBlock Text="{Binding PaletteNote}" TextWrapping="Wrap" Foreground="Orange"
+                       IsVisible="{Binding PaletteIsWrong}"/>
+            <ItemsControl ItemsSource="{Binding Icons}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:HgeRomReviewViewModel+SpriteTile">
+                  <StackPanel Margin="0,0,12,10" Width="150">
+                    <Border Width="96" Height="96" HorizontalAlignment="Left"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                      <Image Source="{Binding Picture}" Width="64" Height="64"
+                             RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
+                    </Border>
+                    <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasPicture}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Follower" FontWeight="Bold" Margin="0,6,0,0"/>
+            <TextBlock Text="{Binding FollowerNote}" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+            <ItemsControl ItemsSource="{Binding Followers}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:HgeRomReviewViewModel+SpriteTile">
+                  <StackPanel Margin="0,0,12,10" Width="120">
+                    <Border Width="96" Height="96" HorizontalAlignment="Left"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                      <Image Source="{Binding Picture}" Width="64" Height="64"
+                             RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
+                    </Border>
+                    <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasPicture}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Battle sprites" FontWeight="Bold" Margin="0,6,0,0"/>
+            <TextBlock Text="{Binding SpriteNote}" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+            <ItemsControl ItemsSource="{Binding Sprites}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:HgeRomReviewViewModel+SpriteTile">
+                  <StackPanel Margin="0,0,12,10" Width="180">
+                    <Border Width="170" Height="170"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                      <Image Source="{Binding Picture}" Width="160" Height="160"
+                             RenderOptions.BitmapInterpolationMode="None" IsVisible="{Binding HasPicture}"/>
+                    </Border>
+                    <TextBlock Text="{Binding Caption}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Whynot}" FontSize="10" Foreground="Orange" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasPicture}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </TabItem>
+
+    <TabItem Header="Archive check">
+      <DockPanel Margin="0,6,0,0">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <TextBlock Text="{Binding ArchiveSummary}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding ArchiveIsHealthy}"/>
+          <TextBlock Text="{Binding ArchiveSummary}" TextWrapping="Wrap" Foreground="Orange"
+                     IsVisible="{Binding !ArchiveIsHealthy}"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Repair member order" Click="Repair_Click" IsEnabled="{Binding CanRepair}"
+                    ToolTip.Tip="Drops the members earlier builds left behind. Written when you save."/>
+            <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding RepairNote}" TextWrapping="Wrap" FontSize="11"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+        </StackPanel>
+
+        <DataGrid ItemsSource="{Binding Members}" IsReadOnly="True" Margin="0,8,0,0"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Member" Binding="{Binding Index}" Width="80"/>
+            <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="120"/>
+            <DataGridTextColumn Header="Read as" Binding="{Binding ReadAs}" Width="200"/>
+            <DataGridTextColumn Header="Actually holds" Binding="{Binding Holds}" Width="200"/>
+            <DataGridTextColumn Header="" Binding="{Binding State}" Width="*"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </DockPanel>
+    </TabItem>
+
+  </TabControl>
+</Window>

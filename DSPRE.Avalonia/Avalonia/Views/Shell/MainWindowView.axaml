@@ -147,6 +147,8 @@
         <Separator/>
         <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"/>
         <MenuItem Header="Research Helper…" Click="ResearchHelper_Click"/>
+        <MenuItem Header="hg-engine ROM Review…" Click="HgeRomReview_Click" IsEnabled="{Binding CanUseHgeRomReview}"
+                  ToolTip.Tip="Pokémon graphics as an hg-engine ROM stores them, with a check of the archive its data tables live in"/>
         <MenuItem Header="Char Map Manager…" Click="CharMapManager_Click"/>
         <MenuItem Header="Validation &amp; Where-Used…" Click="ProjectChecks_Click" IsEnabled="{Binding CanUseProjectChecks}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Scan headers for broken references, and look up which headers use a matrix/event/script/…'}"/>
