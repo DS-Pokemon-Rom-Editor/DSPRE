@@ -73,12 +73,35 @@ namespace DSPRE
         /// <summary>Turns them on or off from code. Only for tests and for the settings screen.</summary>
         public static void Set(bool on) => Enabled = on;
 
+        /// <summary>
+        /// Editors let through because the ROM that is open needs them, whatever the switch says.
+        ///
+        /// An editor being tried out is still the only way to put something right, and DSPRE tells
+        /// people to go and use it. Naming a tool in a warning and then greying it out leaves somebody
+        /// with a broken ROM and nothing to do about it, so a fault that is actually there unlocks the
+        /// one editor that mends it and nothing else.
+        /// </summary>
+        private static readonly HashSet<string> Needed = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Lets one editor through for as long as this ROM is open, because it is needed.</summary>
+        public static void AllowBecauseNeeded(string window)
+        {
+            if (!string.IsNullOrEmpty(window)) Needed.Add(window);
+        }
+
+        /// <summary>Forgets what was let through, which a different ROM has to decide again.</summary>
+        public static void ForgetWhatWasNeeded() => Needed.Clear();
+
+        /// <summary>Whether an editor was let through because the ROM that is open needs it.</summary>
+        public static bool IsNeeded(string window) =>
+            !string.IsNullOrEmpty(window) && Needed.Contains(window);
+
         /// <summary>Whether this editor is one of the ones still being tried out.</summary>
         public static bool IsBeta(string window) =>
             !string.IsNullOrEmpty(window) && Testing.ContainsKey(window);
 
         /// <summary>Whether this editor may be opened at all in this run.</summary>
-        public static bool Allows(string window) => Enabled || !IsBeta(window);
+        public static bool Allows(string window) => Enabled || !IsBeta(window) || IsNeeded(window);
 
         /// <summary>What to say when it is greyed out, or null when it is not.</summary>
         public static string WhyNot(string window)

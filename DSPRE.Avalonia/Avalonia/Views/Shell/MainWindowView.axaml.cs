@@ -368,6 +368,11 @@ namespace DSPRE.Avalonia.Views.Shell
             }
 
             RefreshGameIcon();
+
+            // Whatever the last ROM needed switching on, this one has to earn for itself.
+            BetaEditors.ForgetWhatWasNeeded();
+            vm?.RefreshHgEngineState();
+
             if (RomInfo.isHGE)
                 await HandleHgEngineDetectedAsync(vm, autoLinkHgEnginePath);
             // The Maps workspace skipped its setup at boot (no ROM yet); run it now.
@@ -390,9 +395,15 @@ namespace DSPRE.Avalonia.Views.Shell
                 var layout = await System.Threading.Tasks.Task.Run(() => HgEngineCodeAddons.Describe());
                 if (layout == null || layout.IsHealthy || layout.TableBlockStart < 0) return;
 
+                // The review is the only thing that mends this, and it is one of the editors still
+                // being tried out, so an ordinary build would grey out the very tool this message
+                // sends somebody to. A fault that is really there switches it on.
+                BetaEditors.AllowBecauseNeeded("HgeRomReviewView");
+                (DataContext as MainWindowViewModel)?.RefreshHgEngineState();
+
                 await DialogHelper.ShowInfo(
                     layout.Summary + "\n\nTools > hg-engine ROM Review shows which member holds what, and "
-                    + "can repair the order.",
+                    + "can repair the order. It has been switched on for this ROM because it is needed.",
                     "hg-engine tables are out of place");
             }
             catch (System.Exception ex) { AppLogger.Error("WarnIfCodeTablesShiftedAsync: " + ex.Message); }
