@@ -11,7 +11,10 @@ namespace DSPRE.HgEngine
     /// other vanilla forms) are designated by number, e.g. `[499] = 0,`.</summary>
     public static class HgEngineIconPalette
     {
-        private const string SourceRelPath = "data/IconPaletteTable.c";
+        /// <summary>The file this reads, for anything that needs to name it on screen.</summary>
+        public const string SourceFile = "data/IconPaletteTable.c";
+
+        private const string SourceRelPath = SourceFile;
         private static readonly Regex EntryPattern = new(@"\[\s*(SPECIES_\w+|\d+)\s*\]\s*=\s*(\d+)\s*,");
 
         public static bool TryGetPaletteId(int speciesId, out int paletteId)

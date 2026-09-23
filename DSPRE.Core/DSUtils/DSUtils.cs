@@ -120,10 +120,7 @@ namespace DSPRE {
         // Requires RomInfo.SetMonIconsPalTableAddress() to have been called first.
         public static bool TryResolveMonIconPalTable(out string path, out int baseOffset) {
             path = null; baseOffset = 0;
-            if (RomInfo.isHGE) {
-                baseOffset = (int)(RomInfo.monIconPalTableAddress - OverlayUtils.OverlayTable.GetRAMAddress(129));
-                path = OverlayUtils.GetPath(129);
-            } else if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
+            if ((int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress) >= 0) {
                 baseOffset = (int)(RomInfo.monIconPalTableAddress - RomInfo.synthOverlayLoadAddress);
                 path = Filesystem.expArmPath;
             } else {
@@ -135,12 +132,22 @@ namespace DSPRE {
 
         /// <summary>Reads the party-icon palette id (0/1/2) for a species, or 0 if unavailable.</summary>
         public static int GetMonIconPaletteId(int species) {
+            // A linked checkout owns this table, so its source is what the next build will use. Failing
+            // that, an hg-engine build keeps it in a/0/2/8 and never writes the vanilla ARM9 one, so
+            // reading the member its code reads is the only way to show what the game shows.
+            if (RomInfo.isHGE) {
+                if (HgEngine.HgEngineIconPalette.TryGetPaletteId(species, out int fromSource)) return fromSource;
+                return HgEngine.HgEngineCodeAddons.ReadIconPaletteId(species, out int hgeId)
+                    == HgEngine.HgEngineCodeAddons.PaletteStatus.Ok ? hgeId : 0;
+            }
             if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return 0;
             using (EasyReader r = new EasyReader(path, baseOff + species)) return r.ReadByte();
         }
 
         /// <summary>Writes the party-icon palette id (0/1/2) for a species into the resolved table file.</summary>
         public static void SetMonIconPaletteId(int species, byte palId) {
+            // hg-engine owns its copy of this table, so the vanilla one is not the place to write it.
+            if (RomInfo.isHGE) return;
             if (!TryResolveMonIconPalTable(out string path, out int baseOff)) return;
             using (EasyWriter w = new EasyWriter(path, baseOff + species)) w.Write(palId);
         }
