@@ -378,9 +378,11 @@ namespace DSPRE.Avalonia.Gl
             public float HalfW, HalfH;   // half extents in normalized units
             public byte[] Rgba;          // top-row-first RGBA pixels
             public int Width, Height;
+
+            public float RollDegrees;
         }
 
-        private struct GpuSprite { public int Tex; public float Cx, Cy, Cz, HalfW, HalfH; }
+        private struct GpuSprite { public int Tex; public float Cx, Cy, Cz, HalfW, HalfH, Roll; }
 
         /// <summary>Sets the textured billboard sprites (or null to clear).</summary>
         private bool _spritesSeeThrough = true;
@@ -542,7 +544,7 @@ namespace DSPRE.Avalonia.Gl
                         _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
                         _spriteTexCache[s.Rgba] = id;
                     }
-                    _gpuSprites.Add(new GpuSprite { Tex = id, Cx = s.Cx, Cy = s.Cy, Cz = s.Cz, HalfW = s.HalfW, HalfH = s.HalfH });
+                    _gpuSprites.Add(new GpuSprite { Tex = id, Cx = s.Cx, Cy = s.Cy, Cz = s.Cz, HalfW = s.HalfW, HalfH = s.HalfH, Roll = s.RollDegrees });
                 }
             _spritesDirty = false;
         }
@@ -964,13 +966,20 @@ namespace DSPRE.Avalonia.Gl
             var buf = new float[6 * 8];
             foreach (var s in order)
             {
-                float ax = rx * s.HalfW, az = rz * s.HalfW;
-                float bx = ux * (s.HalfH * 2f), by = uy * (s.HalfH * 2f), bz = uz * (s.HalfH * 2f);
-                float footX = s.Cx - bx * 0.5f, footY = s.Cy - s.HalfH, footZ = s.Cz - bz * 0.5f;
-                float blx = footX - ax, bly = footY, blz = footZ - az;
-                float brx = footX + ax, bry = footY, brz = footZ + az;
-                float trx = footX + ax + bx, try_ = footY + by, trz = footZ + az + bz;
-                float tlx = footX - ax + bx, tly = footY + by, tlz = footZ - az + bz;
+                float turn = s.Roll * (float)(Math.PI / 180.0);
+                float ct = (float)Math.Cos(turn), st = (float)Math.Sin(turn);
+
+                float r3x = rx, r3y = 0f, r3z = rz;
+                float nrx = r3x * ct + ux * st, nry = r3y * ct + uy * st, nrz = r3z * ct + uz * st;
+                float nux = ux * ct - r3x * st, nuy = uy * ct - r3y * st, nuz = uz * ct - r3z * st;
+
+                float ax = nrx * s.HalfW, ay = nry * s.HalfW, az = nrz * s.HalfW;
+                float bx = nux * (s.HalfH * 2f), by = nuy * (s.HalfH * 2f), bz = nuz * (s.HalfH * 2f);
+                float footX = s.Cx - bx * 0.5f, footY = s.Cy - by * 0.5f, footZ = s.Cz - bz * 0.5f;
+                float blx = footX - ax, bly = footY - ay, blz = footZ - az;
+                float brx = footX + ax, bry = footY + ay, brz = footZ + az;
+                float trx = footX + ax + bx, try_ = footY + ay + by, trz = footZ + az + bz;
+                float tlx = footX - ax + bx, tly = footY - ay + by, tlz = footZ - az + bz;
                 int i = 0;
                 void V(float x, float y, float z, float u, float w)
                 { buf[i++] = x; buf[i++] = y; buf[i++] = z; buf[i++] = u; buf[i++] = w; buf[i++] = 1f; buf[i++] = 1f; buf[i++] = 1f; }

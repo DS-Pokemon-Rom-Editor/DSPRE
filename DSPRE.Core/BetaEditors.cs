@@ -55,6 +55,7 @@ namespace DSPRE
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
                 ["HgeRomReviewView"] = "hg-engine ROM review",
+                ["DistortionWorldView"] = "Distortion World editor",
                 ["MartEditorView"] = "Mart editor",
                 ["PokegearPhoneBookView"] = "Pokégear Phone Book",
             };

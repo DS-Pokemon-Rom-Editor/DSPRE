@@ -70,7 +70,16 @@ namespace DSPRE.Avalonia.Gl
         public static NsbmdRenderModel BuildFromLoaded(
             GameFamilies gameFamily,
             IEnumerable<(int cellX, int cellY, MapFile map, byte areaId, float altitudeY)> loadedCells,
-            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Grid)
+            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Grid,
+            IEnumerable<(int cellX, int cellY, PlacedBuilding placed)> extras = null)
+            => BuildFromPlaced(gameFamily,
+                loadedCells.Select(c => (c.cellX, c.cellY, c.map, c.areaId, c.altitudeY, 0f, 0f)), mode, extras);
+
+        public static NsbmdRenderModel BuildFromPlaced(
+            GameFamilies gameFamily,
+            IEnumerable<(int cellX, int cellY, MapFile map, byte areaId, float altitudeY, float shiftX, float shiftZ)> loadedCells,
+            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Grid,
+            IEnumerable<(int cellX, int cellY, PlacedBuilding placed)> extras = null)
         {
             var cells = new List<NsbmdGeometry.MatrixCellGeometry>();
             string mapTexDir = gameDirs[DirNames.mapTextures].unpackedDir;
@@ -79,16 +88,29 @@ namespace DSPRE.Avalonia.Gl
             string bldTexDir = gameDirs[DirNames.buildingTextures].unpackedDir;
             var areaCache = new Dictionary<byte, AreaData>();
 
-            foreach (var (cellX, cellY, map, areaId, altitudeY) in loadedCells)
+            foreach (var (cellX, cellY, map, areaId, altitudeY, shiftX, shiftZ) in loadedCells)
             {
                 try
                 {
                     var geo = BuildCellGeometry(map, areaId, gameFamily, cellX, cellY, altitudeY,
                         mapTexDir, extBldDir, intBldDir, bldTexDir, areaCache);
-                    if (geo != null) cells.Add(geo);
+                    if (geo != null) { geo.ShiftX = shiftX; geo.ShiftZ = shiftZ; cells.Add(geo); }
                 }
                 catch (Exception ex) { AppLogger.Error($"Loaded cell ({cellX},{cellY}) failed: {ex.Message}"); }
             }
+
+            if (extras != null)
+                foreach (var cell in cells)
+                {
+                    var standing = extras.Where(e => e.cellX == cell.CellX && e.cellY == cell.CellY)
+                                         .Select(e => e.placed).ToList();
+                    if (standing.Count == 0) continue;
+
+                    var all = new List<PlacedBuilding>(cell.Buildings ?? (IReadOnlyList<PlacedBuilding>)Array.Empty<PlacedBuilding>());
+                    all.AddRange(standing);
+                    cell.Buildings = all;
+                }
+
             return cells.Count > 0 ? NsbmdGeometry.BuildMatrixScene(cells, mode) : null;
         }
 

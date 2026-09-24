@@ -75,6 +75,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Buildings whose parts move, with the animation driving them.
         private readonly List<(NsbmdRenderModel.BuildingMaterials building, JointAnimation anim)> _jointed
             = new List<(NsbmdRenderModel.BuildingMaterials, JointAnimation)>();
+        private readonly List<(NsbmdRenderModel.BuildingMaterials building, BuildingAnimationSet.WholeModelMotion motion)> _moving
+            = new List<(NsbmdRenderModel.BuildingMaterials, BuildingAnimationSet.WholeModelMotion)>();
+
+        private readonly Dictionary<(int key, int x, int y, int z), Dictionary<int, float[]>> _movedCache
+            = new Dictionary<(int, int, int, int), Dictionary<int, float[]>>();
         private float _tileX, _tileZ;
 
         public NsbmdRenderModel Scene => _scene;
@@ -1075,6 +1080,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public FieldCameraEntry CameraEntry => FieldCamera.Entry(_cameraId, _family);
 
+        public Func<int, int, MoveFacing, (float pitch, float yaw, int steps)?> CameraAnglesAt;
+
         /// <summary>What the step-in camera is doing, for the toolbar.</summary>
         public string CameraDescription
         {
@@ -1495,12 +1502,25 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
+        public Action<int, int, int> PlayerArrivedOn;
+
+        public Func<int, int, float> PlayerRollAt;
+
+        public void PutPlayerOn(int tileX, int tileZ, MoveFacing facing)
+        {
+            if (Player == null) return;
+            Player.PlaceAt(tileX, tileZ, facing);
+            Rebuild();
+        }
+
         /// <summary>
         /// What happens by standing somewhere rather than pressing anything: a warp says where it goes, and
         /// a trigger runs its script once its watched variable holds the value it waits for.
         /// </summary>
         private void ArriveOnTile()
         {
+            PlayerArrivedOn?.Invoke(Player.TileX, Player.TileZ, _frame);
+
             var warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
@@ -1981,6 +2001,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _timeBuildings = 0;
             _fadedMaterials.Clear();
             _jointed.Clear();
+            _moving.Clear();
+            _movedCache.Clear();
             _playingOnce.Clear();
             _cameraTrail.Clear();
             _talkTarget = null;
@@ -2058,6 +2080,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     _jointed.Add((b, joint));
                     _jointBuildings++;
+                    moves = true;
+                }
+                var motion = BuildingAnimationSet.MotionFor(b.ModelId);
+                if (motion != null)
+                {
+                    _moving.Add((b, motion));
+                    if (!moves) _movingBuildings++;
                     moves = true;
                 }
             }
@@ -2360,6 +2389,28 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (moved.Count > 0) MovedParts = moved;
             }
 
+            if (_animateTerrain && _moving.Count > 0)
+            {
+                var moved = MovedParts != null ? new Dictionary<int, float[]>(MovedParts) : new Dictionary<int, float[]>();
+                float unit = NsbmdGeometry.TileSize / 16f;
+
+                foreach (var (building, motion) in _moving)
+                {
+                    var (ox, oy, oz) = motion.At(_frame);
+                    if (ox == 0f && oy == 0f && oz == 0f) continue;
+
+                    var at = (building.FirstKey, (int)Math.Round(ox * 64f), (int)Math.Round(oy * 64f), (int)Math.Round(oz * 64f));
+                    if (!_movedCache.TryGetValue(at, out var parts))
+                    {
+                        var elsewhere = Mat4.Multiply(Mat4.Translate(ox * unit, oy * unit, oz * unit), building.Transform);
+                        parts = NsbmdGeometry.RebuildBuilding(_scene, building, null, elsewhere);
+                        _movedCache[at] = parts;
+                    }
+                    foreach (var kv in parts) moved[kv.Key] = kv.Value;
+                }
+                if (moved.Count > 0) MovedParts = moved;
+            }
+
             // A door that is part-way through opening overrides whatever else drives its parts.
             if (_playingOnce.Count > 0)
             {
@@ -2439,6 +2490,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
                     float halfH = HalfHeightOf(pix);
+                    float roll = PlayerRollAt?.Invoke(Player.TileX, Player.TileZ) ?? 0f;
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
                         Cx = foot.x,
@@ -2449,6 +2501,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                         Rgba = pix.Rgba,
                         Width = pix.Width,
                         Height = pix.Height,
+                        RollDegrees = roll,
                     });
                 }
             }

@@ -26,6 +26,8 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private Gl3DPointerNavigation _nav;
 
+        public bool ShowPeopleThroughWalls { get; set; }
+
         /// <summary>The preview's view model, for whoever opens the window to hand it the ROM's lookups.</summary>
         public AnimatedPreviewViewModel ViewModel => _vm;
 
@@ -116,8 +118,7 @@ namespace DSPRE.Avalonia.Views.Battle
                      walkerFor, walkerStartId, scriptHome, actionsFor);
             _vm.PlaceNpcs(footFinder);
             GlView.SetModel(scene);
-            // This is a preview of the map running, so buildings hide whoever is behind them.
-            GlView.SpritesSeeThroughGeometry = false;
+            GlView.SpritesSeeThroughGeometry = ShowPeopleThroughWalls;
             Apply();
             _vm.FrameAdvanced += (_, _) => Apply();
             _vm.MapMusicChanged += (_, _) => MapMusicChanged();
@@ -170,6 +171,17 @@ namespace DSPRE.Avalonia.Views.Battle
             GlView.VerticalFieldOfViewDegrees = NsbmdGlControl.DefaultFovDegrees;
         }
 
+        private float _camYaw = FieldCamera.YawDegrees;
+        private float _camPitch;
+
+        private static float ShortestTurn(float from, float to)
+        {
+            float delta = (to - from) % 360f;
+            if (delta > 180f) delta -= 360f;
+            if (delta < -180f) delta += 360f;
+            return delta;
+        }
+
         private void PlaceCameraBehindPlayer()
         {
             var player = _vm.Player;
@@ -192,7 +204,24 @@ namespace DSPRE.Avalonia.Views.Battle
             GlView.Distance = cam.DistanceForScene(tile) * scene.Scale;
             GlView.Orthographic = cam.Orthographic;
             GlView.VerticalFieldOfViewDegrees = cam.FieldOfViewDegrees;
-            GlView.SetOrientation(FieldCamera.YawDegrees, _vm.CameraPitchDegrees);
+
+            float wantYaw = FieldCamera.YawDegrees, wantPitch = _vm.CameraPitchDegrees;
+            var own = _vm.CameraAnglesAt?.Invoke(player.TileX, player.TileZ, player.Facing);
+            if (own != null)
+            {
+                float part = 1f / Math.Max(1, own.Value.steps);
+                _camYaw += ShortestTurn(_camYaw, own.Value.yaw) * part;
+                _camPitch += (own.Value.pitch - _camPitch) * part;
+                wantYaw = _camYaw;
+                wantPitch = _camPitch;
+            }
+            else
+            {
+                _camYaw = wantYaw;
+                _camPitch = wantPitch;
+            }
+
+            GlView.SetOrientation(wantYaw, wantPitch);
         }
 
         // ── sound ────────────────────────────────────────────────────────────────────────

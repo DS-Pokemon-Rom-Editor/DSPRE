@@ -53,10 +53,124 @@ namespace DSPRE.ROMFiles
             return info;
         }
 
+        private static readonly Dictionary<int, List<TextureSrtAnimation>> ExtraScrolling
+            = new Dictionary<int, List<TextureSrtAnimation>>();
+        private static readonly Dictionary<int, List<JointAnimation>> ExtraJoints
+            = new Dictionary<int, List<JointAnimation>>();
+
+        public abstract class WholeModelMotion
+        {
+            public abstract (float x, float y, float z) At(int frame);
+        }
+
+        public sealed class CombinedMotion : WholeModelMotion
+        {
+            private readonly WholeModelMotion[] _parts;
+            public CombinedMotion(params WholeModelMotion[] parts) => _parts = parts ?? Array.Empty<WholeModelMotion>();
+
+            public override (float x, float y, float z) At(int frame)
+            {
+                float x = 0, y = 0, z = 0;
+                foreach (var part in _parts)
+                {
+                    if (part == null) continue;
+                    var (px, py, pz) = part.At(frame);
+                    x += px; y += py; z += pz;
+                }
+                return (x, y, z);
+            }
+        }
+
+        public sealed class TravelAnimation : WholeModelMotion
+        {
+            private readonly float _x, _y, _z;
+            private readonly int _travel;
+            private int _startedAt = -1;
+
+            public TravelAnimation(float x, float y, float z, int frames)
+            {
+                _x = x; _y = y; _z = z;
+                _travel = Math.Max(1, frames);
+            }
+
+            public int Frames => _travel;
+
+            public bool Running => _startedAt >= 0;
+
+            public void Start(int frame)
+            {
+                if (_startedAt < 0) { _startedAt = frame; Backwards = false; return; }
+                _startedAt = frame;
+                Backwards = !Backwards;
+            }
+
+            public bool Backwards { get; private set; }
+
+            public override (float x, float y, float z) At(int frame)
+            {
+                if (_startedAt < 0) return (0f, 0f, 0f);
+
+                float along = Math.Min(1f, Math.Max(0f, (frame - _startedAt) / (float)_travel));
+                if (Backwards) along = 1f - along;
+                return (_x * along, _y * along, _z * along);
+            }
+        }
+
+        public sealed class HoverAnimation : WholeModelMotion
+        {
+            public HoverAnimation(IReadOnlyList<float> offsets, float step)
+            {
+                Offsets = offsets;
+                Step = step > 0 ? step : 1f;
+            }
+
+            public IReadOnlyList<float> Offsets { get; }
+            public float Step { get; }
+
+            public override (float x, float y, float z) At(int frame)
+            {
+                if (Offsets == null || Offsets.Count == 0) return (0f, 0f, 0f);
+
+                int steps = Math.Max(1, (int)Math.Round(Offsets.Count / Step));
+                int t = ((frame % (steps * 2)) + steps * 2) % (steps * 2);
+                float progress = (t < steps ? t : steps * 2 - t) * Step;
+
+                int at = Math.Min((int)progress, Offsets.Count - 1);
+                int next = Math.Min(at + 1, Offsets.Count - 1);
+                float across = progress - at;
+
+                return (0f, Offsets[at] + (Offsets[next] - Offsets[at]) * across, 0f);
+            }
+        }
+
+        private static readonly Dictionary<int, WholeModelMotion> ExtraMotion = new Dictionary<int, WholeModelMotion>();
+
+        public static WholeModelMotion MotionFor(int modelId)
+            => ExtraMotion.TryGetValue(modelId, out var motion) ? motion : null;
+
+        public static void Register(int modelId, TextureSrtAnimation scrolling = null, JointAnimation joint = null,
+            WholeModelMotion motion = null)
+        {
+            if (motion != null) ExtraMotion[modelId] = motion;
+            if (scrolling != null)
+            {
+                if (!ExtraScrolling.TryGetValue(modelId, out var list)) ExtraScrolling[modelId] = list = new List<TextureSrtAnimation>();
+                if (!list.Contains(scrolling)) list.Add(scrolling);
+            }
+            if (joint != null && joint.Moves)
+            {
+                if (!ExtraJoints.TryGetValue(modelId, out var list)) ExtraJoints[modelId] = list = new List<JointAnimation>();
+                if (!list.Contains(joint)) list.Add(joint);
+            }
+        }
+
+        public static void ForgetRegistered() { ExtraScrolling.Clear(); ExtraJoints.Clear(); ExtraMotion.Clear(); }
+
         /// <summary>The texture-scrolling animations a building model plays. </summary>
         public static IReadOnlyList<TextureSrtAnimation> ScrollingFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
             var result = new List<TextureSrtAnimation>();
+            if (ExtraScrolling.TryGetValue(modelId, out var registered)) result.AddRange(registered);
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
                 var anim = LoadScrolling(code);
@@ -83,6 +197,7 @@ namespace DSPRE.ROMFiles
         public static IReadOnlyList<JointAnimation> JointsFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
             var result = new List<JointAnimation>();
+            if (ExtraJoints.TryGetValue(modelId, out var registered)) result.AddRange(registered);
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
                 var anim = LoadJoint(code);

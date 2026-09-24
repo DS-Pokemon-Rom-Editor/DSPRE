@@ -870,6 +870,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void HgeRomReview_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHgeRomReview();
 
+        private void DistortionWorld_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenDistortionWorldEditor();
+
         private void CharMapManager_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCharMapManager();
 

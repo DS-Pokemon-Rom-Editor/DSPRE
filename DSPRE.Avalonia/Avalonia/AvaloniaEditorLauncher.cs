@@ -1035,6 +1035,29 @@ namespace DSPRE.Avalonia
             new HgeRomReviewView(new HgeRomReviewViewModel()).ShowManaged();
         }
 
+        public static void OpenDistortionWorldEditor()
+        {
+            if (!IsRomLoaded) return;
+            if (gameFamily != GameFamilies.Plat)
+            {
+                AppMessages.Info("The Distortion World only exists in Platinum.", "Distortion World");
+                return;
+            }
+            if (!BetaEditors.Allows("DistortionWorldView"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("DistortionWorldView"), "Distortion World");
+                return;
+            }
+
+            var vm = new ViewModels.World.DistortionWorldViewModel();
+            if (!vm.Available)
+            {
+                AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
+                return;
+            }
+            new Views.World.DistortionWorldView(vm).ShowManaged();
+        }
+
         public static void OpenCharMapManager()
         {
             if (!IsRomLoaded) return;
@@ -1439,6 +1462,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "hg-engine ROM Review",  Keywords = "hge binary icons sprites palettes archive", Run = OpenHgeRomReview },
+            new() { Name = "Distortion World",      Keywords = "giratina platinum gravity platforms torn world", Run = OpenDistortionWorldEditor },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
             new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
             new() { Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },

@@ -1,0 +1,228 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+             xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        xmlns:rom="clr-namespace:DSPRE.ROMFiles;assembly=DSPRE.Core"
+        x:Class="DSPRE.Avalonia.Views.World.DistortionWorldView"
+        x:DataType="vm:DistortionWorldViewModel"
+        Title="Distortion World" Width="1150" Height="760">
+  <Grid RowDefinitions="*,Auto" Margin="8">
+
+    <Grid Grid.Row="0" ColumnDefinitions="230,*">
+      <DockPanel Grid.Column="0" Margin="0,0,8,0">
+        <TextBlock DockPanel.Dock="Top" Text="Floors" FontWeight="Bold" Margin="0,0,0,4"/>
+        <ListBox ItemsSource="{Binding Floors}" SelectedIndex="{Binding SelectedFloorIndex}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:DistortionWorldViewModel+FloorRow">
+              <TextBlock Text="{Binding Label}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="1">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FloorNote}" Margin="0,0,0,6"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+
+        <TabControl>
+          <TabItem Header="Map">
+            <Grid ColumnDefinitions="*,340" Margin="2">
+              <DockPanel Grid.Column="0">
+                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                  <ToggleButton Content="2D" IsChecked="{Binding Flat2D}" Padding="6,2" VerticalAlignment="Center"/>
+                  <Button Content="Top" Click="CamTop_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
+                  <Button Content="Iso" Click="CamIso_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
+                  <Button Content="Front" Click="CamFront_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
+                  <Button Content="Side" Click="CamSide_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
+                  <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+                  <RadioButton GroupName="Scope" Content="This floor" VerticalAlignment="Center"
+                               IsChecked="{Binding OneFloorOnly}"/>
+                  <RadioButton GroupName="Scope" Content="Whole world" VerticalAlignment="Center" Margin="8,0,0,0"
+                               IsChecked="{Binding WholeWorld}"/>
+                  <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+                  <CheckBox Content="Gravity" IsChecked="{Binding ShowGravity}" VerticalAlignment="Center"
+                            ToolTip.Tip="Walkable tiles by gravity direction"/>
+                  <Slider Width="90" Minimum="-4" Maximum="12" SmallChange="0.25" VerticalAlignment="Center"
+                          Value="{Binding OverlayHeight}" IsEnabled="{Binding ShowGravity}"
+                          ToolTip.Tip="Overlay height"/>
+                  <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+                  <Button Content="▶ Animate" Click="Animate_Click"/>
+                </WrapPanel>
+                <Border x:Name="GlHost" Background="Transparent">
+                  <gl:NsbmdGlControl x:Name="GlView"/>
+                </Border>
+              </DockPanel>
+
+              <DockPanel Grid.Column="1" Margin="8,0,0,0">
+                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+                  <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SurfaceRows}"
+                            SelectedIndex="{Binding SelectedPlatformIndex}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:DistortionWorldViewModel+SurfaceRow">
+                        <TextBlock Text="{Binding Label}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="{Binding PlatformNote}" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="{Binding HoverNote}" MinHeight="16" FontFamily="Consolas,monospace"/>
+                  <TextBlock Text="{Binding PaintedGroundWarning}" TextWrapping="Wrap"
+                             IsVisible="{Binding PaintedGroundWarning, Converter={x:Static ObjectConverters.IsNotNull}}"
+                             Foreground="{DynamicResource Editor.Warning}"/>
+                </StackPanel>
+
+                <TabControl>
+                  <TabItem Header="Collision">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="2">
+                      <ComboBox Grid.Row="0" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+                                SelectedIndex="{Binding CollisionPainterIndex}">
+                        <ComboBoxItem>Walkable</ComboBoxItem>
+                        <ComboBoxItem>Blocked</ComboBoxItem>
+                      </ComboBox>
+                      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Rectangle Width="11" Height="11" Fill="#3CA046" VerticalAlignment="Center"/>
+                          <TextBlock Text="walk" Foreground="{DynamicResource Editor.Subtle}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Rectangle Width="11" Height="11" Fill="#B43C3C" VerticalAlignment="Center"/>
+                          <TextBlock Text="blocked" Foreground="{DynamicResource Editor.Subtle}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Rectangle Width="11" Height="11" Fill="#202020" VerticalAlignment="Center"/>
+                          <TextBlock Text="outside" Foreground="{DynamicResource Editor.Subtle}"/>
+                        </StackPanel>
+                      </StackPanel>
+                      <gl:PermissionGridControl Grid.Row="2" x:Name="CollisionGrid" MinHeight="260"/>
+                      <TextBlock Grid.Row="3" Margin="0,4,0,0" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource Editor.Subtle}"
+                                 Text="{Binding GridNote}"/>
+                    </Grid>
+                  </TabItem>
+                  <TabItem Header="Tiles">
+                    <Grid RowDefinitions="Auto,*,Auto" Margin="2">
+                      <ComboBox Grid.Row="0" HorizontalAlignment="Stretch" Margin="0,0,0,6"
+                                ItemsSource="{Binding BehaviourPainters}"
+                                SelectedIndex="{Binding BehaviourPainterIndex}"/>
+                      <gl:PermissionGridControl Grid.Row="1" x:Name="BehaviourGrid" MinHeight="260"/>
+                      <TextBlock Grid.Row="2" Margin="0,4,0,0" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource Editor.Subtle}"
+                                 Text="{Binding GridNote}"/>
+                    </Grid>
+                  </TabItem>
+                </TabControl>
+              </DockPanel>
+            </Grid>
+          </TabItem>
+
+          <TabItem Header="Gravity">
+            <DataGrid ItemsSource="{Binding Platforms}" CellEditEnded="Edited" AutoGenerateColumns="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column" CanUserSortColumns="False">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Faces" Width="120">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate><TextBlock Text="{Binding Kind}" VerticalAlignment="Center" Margin="6,0"/></DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                  <DataGridTemplateColumn.CellEditingTemplate>
+                    <DataTemplate>
+                      <ComboBox SelectedIndex="{Binding KindIndex}" HorizontalAlignment="Stretch">
+                        <ComboBoxItem>Floor</ComboBoxItem>
+                        <ComboBoxItem>West wall</ComboBoxItem>
+                        <ComboBoxItem>East wall</ComboBoxItem>
+                        <ComboBoxItem>Ceiling</ComboBoxItem>
+                      </ComboBox>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Collision grid" Binding="{Binding AttributeId}" Width="100"/>
+                <DataGridTextColumn Header="X" Binding="{Binding Bounds.StartX}" Width="70"/>
+                <DataGridTextColumn Header="Y" Binding="{Binding Bounds.StartY}" Width="70"/>
+                <DataGridTextColumn Header="Z" Binding="{Binding Bounds.StartZ}" Width="70"/>
+                <DataGridTextColumn Header="Size X" Binding="{Binding Bounds.SizeX}" Width="70"/>
+                <DataGridTextColumn Header="Size Y" Binding="{Binding Bounds.SizeY}" Width="70"/>
+                <DataGridTextColumn Header="Size Z" Binding="{Binding Bounds.SizeZ}" Width="70"/>
+                <DataGridTextColumn Header="Tiles down" Binding="{Binding TilesVertical}" Width="90"/>
+                <DataGridTextColumn Header="Tiles across" Binding="{Binding TilesHorizontal}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </TabItem>
+
+          <TabItem Header="Gravity changes">
+            <DataGrid ItemsSource="{Binding JumpPoints}" CellEditEnded="Edited" AutoGenerateColumns="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column" CanUserSortColumns="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Facing" Binding="{Binding PlayerDirection}" Width="70"/>
+                <DataGridTextColumn Header="X" Binding="{Binding Bounds.StartX}" Width="60"/>
+                <DataGridTextColumn Header="Y" Binding="{Binding Bounds.StartY}" Width="60"/>
+                <DataGridTextColumn Header="Z" Binding="{Binding Bounds.StartZ}" Width="60"/>
+                <DataGridTextColumn Header="Move X" Binding="{Binding DisplacementX}" Width="70"/>
+                <DataGridTextColumn Header="Move Y" Binding="{Binding DisplacementY}" Width="70"/>
+                <DataGridTextColumn Header="Move Z" Binding="{Binding DisplacementZ}" Width="70"/>
+                <DataGridTextColumn Header="Sprite angle" Binding="{Binding SpriteRotationAngle}" Width="95"/>
+                <DataGridTextColumn Header="Steps" Binding="{Binding MovementSteps}" Width="70"/>
+                <DataGridTextColumn Header="Ends facing" Binding="{Binding FinalFacingDirection}" Width="95"/>
+                <DataGridTextColumn Header="Lands on kind" Binding="{Binding TargetKind}" Width="105"/>
+                <DataGridTextColumn Header="Lands on" Binding="{Binding TargetPlatformIndex}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </TabItem>
+
+          <TabItem Header="Camera">
+            <DataGrid ItemsSource="{Binding CameraRegions}" CellEditEnded="Edited" AutoGenerateColumns="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column" CanUserSortColumns="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Angle X" Binding="{Binding AngleX}" Width="90"/>
+                <DataGridTextColumn Header="Angle Y" Binding="{Binding AngleY}" Width="90"/>
+                <DataGridTextColumn Header="Angle Z" Binding="{Binding AngleZ}" Width="90"/>
+                <DataGridTextColumn Header="Facing" Binding="{Binding PlayerDirection}" Width="70"/>
+                <DataGridTextColumn Header="Steps" Binding="{Binding TransitionSteps}" Width="70"/>
+                <DataGridTextColumn Header="X" Binding="{Binding Bounds.StartX}" Width="60"/>
+                <DataGridTextColumn Header="Y" Binding="{Binding Bounds.StartY}" Width="60"/>
+                <DataGridTextColumn Header="Z" Binding="{Binding Bounds.StartZ}" Width="60"/>
+                <DataGridTextColumn Header="Size X" Binding="{Binding Bounds.SizeX}" Width="70"/>
+                <DataGridTextColumn Header="Size Y" Binding="{Binding Bounds.SizeY}" Width="70"/>
+                <DataGridTextColumn Header="Size Z" Binding="{Binding Bounds.SizeZ}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </TabItem>
+
+          <TabItem Header="Fading props">
+            <DataGrid ItemsSource="{Binding GhostProps}" CellEditEnded="Edited" AutoGenerateColumns="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column" CanUserSortColumns="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Group" Binding="{Binding GroupId}" Width="90"/>
+                <DataGridTextColumn Header="Prop kind" Binding="{Binding PropKind}" Width="100"/>
+                <DataGridTextColumn Header="X" Binding="{Binding TileX}" Width="80"/>
+                <DataGridTextColumn Header="Y" Binding="{Binding TileY}" Width="80"/>
+                <DataGridTextColumn Header="Z" Binding="{Binding TileZ}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </TabItem>
+
+          <TabItem Header="Prop triggers">
+            <DataGrid ItemsSource="{Binding GhostTriggers}" CellEditEnded="Edited" AutoGenerateColumns="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column" CanUserSortColumns="False">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Group" Binding="{Binding GroupId}" Width="90"/>
+                <DataGridTextColumn Header="Facing" Binding="{Binding PlayerDirection}" Width="70"/>
+                <DataGridTextColumn Header="Shows it" Binding="{Binding ShowProp}" Width="80"/>
+                <DataGridTextColumn Header="X" Binding="{Binding Bounds.StartX}" Width="60"/>
+                <DataGridTextColumn Header="Y" Binding="{Binding Bounds.StartY}" Width="60"/>
+                <DataGridTextColumn Header="Z" Binding="{Binding Bounds.StartZ}" Width="60"/>
+                <DataGridTextColumn Header="Size X" Binding="{Binding Bounds.SizeX}" Width="70"/>
+                <DataGridTextColumn Header="Size Y" Binding="{Binding Bounds.SizeY}" Width="70"/>
+                <DataGridTextColumn Header="Size Z" Binding="{Binding Bounds.SizeZ}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </TabItem>
+        </TabControl>
+      </DockPanel>
+    </Grid>
+
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+      <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <TextBlock Text="{Binding Status}" VerticalAlignment="Center"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </StackPanel>
+  </Grid>
+</Window>

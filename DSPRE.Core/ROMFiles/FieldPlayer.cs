@@ -9,6 +9,7 @@ namespace DSPRE.ROMFiles
     {
         Turned,      // wasn't facing that way, so it turned instead of moving
         Walked,      // moved one tile
+        Jumped,
         Blocked,     // faced that way already, but the tile ahead is closed off
         BlockedByEvent,   // someone is standing there
         Walking,     // still part way through the last step, so nothing new happened
@@ -73,7 +74,24 @@ namespace DSPRE.ROMFiles
         private bool _visible = true;
 
         /// <summary>How high off the ground the player is mid-hop, in tiles.</summary>
-        public float HopHeight => _script?.HopHeight ?? 0f;
+        public float HopHeight
+        {
+            get
+            {
+                if (_script != null) return _script.HopHeight;
+                if (!_hopping || _stepFramesLeft <= 0 || _hopFrames <= 0) return 0f;
+
+                float through = 1f - _stepFramesLeft / (float)_hopFrames;
+                return (float)System.Math.Sin(through * System.Math.PI) * HopTiles;
+            }
+        }
+
+        private const float HopTiles = 0.6f;
+
+        private bool _hopping;
+        private int _hopFrames;
+
+        private int _stepFrames;
 
         /// <summary>How many frames into an emote the player is, or -1.</summary>
         public int EmoteFrame => _script?.EmoteFrame ?? -1;
@@ -126,7 +144,8 @@ namespace DSPRE.ROMFiles
         private float Blend(int from, int to)
         {
             if (_stepFramesLeft <= 0) return to;
-            float gone = (WalkFrames - _stepFramesLeft) / (float)WalkFrames;
+            int whole = _stepFrames > 0 ? _stepFrames : WalkFrames;
+            float gone = (whole - _stepFramesLeft) / (float)whole;
             return from + (to - from) * gone;
         }
 
@@ -139,7 +158,7 @@ namespace DSPRE.ROMFiles
                 _cycle.Tick();
                 if (_stepFramesLeft <= 0) { _cycle.Rest(); continue; }
                 _cycle.Walk(WalkFrames);
-                if (--_stepFramesLeft == 0) { _fromX = TileX; _fromZ = TileZ; }
+                if (--_stepFramesLeft == 0) { _fromX = TileX; _fromZ = TileZ; _hopping = false; }
             }
         }
 
@@ -171,6 +190,23 @@ namespace DSPRE.ROMFiles
             var (dx, dz) = Step(dir);
             int nx = TileX + dx, nz = TileZ + dz;
 
+            if (_collision != null && !_collision.IsEmpty
+                && FieldTileBehaviors.JumpsWith(_collision.TypeAt(nx, nz), dx, dz)
+                && FieldTileBehaviors.TryJump(_collision.TypeAt(nx, nz), out _, out _, out int over))
+            {
+                int jx = TileX + dx * (over + 1), jz = TileZ + dz * (over + 1);
+                if (!_collision.IsBlocked(jx, jz) && (_occupied == null || !_occupied(jx, jz)))
+                {
+                    _fromX = TileX; _fromZ = TileZ;
+                    TileX = jx; TileZ = jz;
+                    _stepFramesLeft = WalkFrames * (over + 1);
+                    _stepFrames = _stepFramesLeft;
+                    _hopFrames = _stepFramesLeft;
+                    _hopping = true;
+                    return StepResult.Jumped;
+                }
+            }
+
             if (_collision != null && !_collision.IsEmpty && _collision.IsBlocked(nx, nz))
                 return StepResult.Blocked;
             if (_occupied != null && _occupied(nx, nz))
@@ -178,8 +214,20 @@ namespace DSPRE.ROMFiles
 
             _fromX = TileX; _fromZ = TileZ;
             TileX = nx; TileZ = nz;
-            _stepFramesLeft = WalkFrames;
+            _stepFramesLeft = _stepFrames = WalkFrames;
+            _hopping = false;
             return StepResult.Walked;
+        }
+
+        public void PlaceAt(int tileX, int tileZ, MoveFacing facing)
+        {
+            _script = null;
+            _stepFramesLeft = 0;
+            _hopping = false;
+            TileX = _fromX = tileX;
+            TileZ = _fromZ = tileZ;
+            Facing = facing;
+            _cycle.Face(facing);
         }
 
         /// <summary>Turns without trying to move, for looking at something next to you.</summary>

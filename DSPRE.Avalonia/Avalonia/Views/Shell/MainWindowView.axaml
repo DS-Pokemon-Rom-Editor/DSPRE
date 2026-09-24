@@ -106,6 +106,8 @@
         <MenuItem Header="Map Editor…"             Click="MapEditor_Click"/>
         <MenuItem Header="Building Editor…"        Click="BuildingEditor_Click"/>
         <MenuItem Header="Matrix Editor…"          Click="MatrixEditor_Click"/>
+        <MenuItem Header="Distortion World…"       Click="DistortionWorld_Click" IsEnabled="{Binding CanUseDistortionWorld}"
+                  ToolTip.Tip="Platinum's Distortion World"/>
         <MenuItem Header="Event Editor…"           Click="EventEditor_Click"/>
         <MenuItem Header="Fly / Warp Editor…"      Click="FlyWarpEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Overlay Editor…"         Click="OverlayEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>

@@ -99,6 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // The one editor that stays open on an hg-engine ROM with no checkout linked: it only reads,
         // and reading the ROM is the point of it.
         public bool CanUseHgeRomReview       => IsRomLoaded && RomInfo.isHGE && Beta["HgeRomReviewView"];
+        public bool CanUseDistortionWorld    => IsRomLoaded && gameFamily == GameFamilies.Plat && Beta["DistortionWorldView"];
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
@@ -286,6 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBannerEditor));
             OnPropertyChanged(nameof(CanUseDataExports));
             OnPropertyChanged(nameof(CanUseHgeRomReview));
+            OnPropertyChanged(nameof(CanUseDistortionWorld));
             RefreshRecents();
         }
 
@@ -321,6 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBannerEditor));
             OnPropertyChanged(nameof(CanUseDataExports));
             OnPropertyChanged(nameof(CanUseHgeRomReview));
+            OnPropertyChanged(nameof(CanUseDistortionWorld));
             OnPropertyChanged(nameof(CanUseBattleScreen));
             OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
             OnPropertyChanged(nameof(CanUsePokegearRematchEditor));

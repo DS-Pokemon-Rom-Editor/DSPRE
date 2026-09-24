@@ -253,6 +253,10 @@ namespace DSPRE
             synthOverlay,
             dynamicHeaders,
 
+            tornWorld,              // Pt only: Distortion World map data.
+            tornWorldAttributes,    // Pt only: platform collision grids.
+            fieldEffectModels,      // DP/Pt field effect models.
+
             textArchives,
             matrices,
 
@@ -2161,10 +2165,10 @@ namespace DSPRE
             }
 
             byte[] bytesAtOffset = ARM9.ReadBytes(0x0793B8, 4);
+
             // Vanilla Plat USA is F8 B5 9A B0 Backport by is F0 B5 93 B0 The tutorial is only for the USA
             // version, but it might be better to differentiate the different languages here
             AIBackportEnabled = bytesAtOffset.SequenceEqual(new byte[] { 0xF0, 0xB5, 0x93, 0xB0 });
-
 
             bytesAtOffset = ARM9.ReadBytes(0x0795A2, 4);
             // Original Backport by Lhea is 1D 1C 0F 23
@@ -2398,6 +2402,7 @@ namespace DSPRE
 
                         [DirNames.eventFiles] = $@"{dataFolderName}\fielddata\eventdata\zone_event" + suffix + ".narc",
                         [DirNames.OWSprites] = $@"{dataFolderName}\data\mmodel\mmodel.narc",
+                        [DirNames.fieldEffectModels] = $@"{dataFolderName}\data\mmodel\fldeff.narc",
 
                         [DirNames.scripts] = $@"{dataFolderName}\fielddata\script\scr_seq" + suffix + ".narc",
 
@@ -2512,6 +2517,9 @@ namespace DSPRE
                         [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
                         [DirNames.trainerCapsules] = $@"{dataFolderName}\application\custom_ball\edit\pl_cb_data.narc",
 
+                        [DirNames.tornWorld] = $@"{dataFolderName}\fielddata\tornworld\tw_arc.narc",
+                        [DirNames.tornWorldAttributes] = $@"{dataFolderName}\fielddata\tornworld\tw_arc_attr.narc",
+
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\pl_winframe.narc",
@@ -2533,6 +2541,7 @@ namespace DSPRE
 
                         [DirNames.eventFiles] = $@"{dataFolderName}\fielddata\eventdata\zone_event.narc",
                         [DirNames.OWSprites] = $@"{dataFolderName}\data\mmodel\mmodel.narc",
+                        [DirNames.fieldEffectModels] = $@"{dataFolderName}\data\mmodel\fldeff.narc",
 
                         [DirNames.scripts] = $@"{dataFolderName}\fielddata\script\scr_seq.narc",
 

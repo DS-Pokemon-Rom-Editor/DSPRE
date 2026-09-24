@@ -267,6 +267,8 @@ namespace DSPRE.Avalonia.Gl
             public int CellX, CellY;
             public BdhcFile Bdhc;
             public float AltitudeY;
+
+            public float ShiftX, ShiftZ;
         }
 
         public const int MapTiles = 32;
@@ -283,6 +285,7 @@ namespace DSPRE.Avalonia.Gl
             public float ColW, RowH;
             public BdhcFile Bdhc;
             public float AltitudeY;
+            public float ShiftX, ShiftZ;
         }
 
         /// <summary>How matrix cells are laid out in the stitched scene.</summary>
@@ -335,7 +338,7 @@ namespace DSPRE.Avalonia.Gl
                                 result.SwappableTextures[offset + k] = swaps;
                         offset += Math.Max(1, b.Model.Materials.Count);
                     }
-                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Bdhc = cell.Bdhc, AltitudeY = cell.AltitudeY });
+                stored.Add(new CellBuild { CellX = cell.CellX, CellY = cell.CellY, MapMats = mapMats, BldMats = bldMats, MinX = cMinX, MinZ = cMinZ, FpX = cFpX, FpZ = cFpZ, HasBounds = cHas, Bdhc = cell.Bdhc, AltitudeY = cell.AltitudeY, ShiftX = cell.ShiftX, ShiftZ = cell.ShiftZ });
                 minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
                 minCy = Math.Min(minCy, cell.CellY); maxCy = Math.Max(maxCy, cell.CellY);
             }
@@ -351,7 +354,7 @@ namespace DSPRE.Avalonia.Gl
             var mapSurf = new List<float>();   // map-only triangles (post-offset) for the permission overlay
             foreach (var cb in stored)
             {
-                float ox = colX[cb.CellX], oz = rowZ[cb.CellY];
+                float ox = colX[cb.CellX] + cb.ShiftX, oz = rowZ[cb.CellY] + cb.ShiftZ;
                 cb.ColW = MapStride; cb.RowH = MapStride;
                 cb.OffX = ox + MapStride / 2f; cb.OffY = cb.AltitudeY; cb.OffZ = oz + MapStride / 2f;
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
@@ -588,13 +591,14 @@ namespace DSPRE.Avalonia.Gl
         /// this frame, in the same space the rest of the scene already sits in.
         /// </summary>
         public static Dictionary<int, float[]> RebuildBuilding(NsbmdRenderModel scene,
-            NsbmdRenderModel.BuildingMaterials building, Func<int, NSBMDObject, float[]> jointMatrix)
+            NsbmdRenderModel.BuildingMaterials building, Func<int, NSBMDObject, float[]> jointMatrix,
+            float[] transform = null)
         {
             var result = new Dictionary<int, float[]>();
             if (scene == null || building?.Model == null) return result;
 
             var raw = new Dictionary<int, List<float>>();
-            Accumulate(building.Model, building.Transform, building.FirstKey, scene, raw, jointMatrix);
+            Accumulate(building.Model, transform ?? building.Transform, building.FirstKey, scene, raw, jointMatrix);
 
             foreach (var kv in raw)
             {
