@@ -312,6 +312,7 @@ namespace DSPRE
             poketch,                // Pt graphic/poketch.narc, the Pokétch on the bottom screen
             fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
+            fieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -2532,6 +2533,7 @@ namespace DSPRE
                         [DirNames.buildingConfigFiles] = $@"{dataFolderName}\fielddata\areadata\area_build_model\area_build.narc",
                         [DirNames.buildingTextures] = $@"{dataFolderName}\fielddata\areadata\area_build_model\areabm_texset.narc",
                         [DirNames.mapTextures] = $@"{dataFolderName}\fielddata\areadata\area_map_tex\map_tex_set.narc",
+                        [DirNames.fieldTextureAnimations] = $@"{dataFolderName}\data\fldtanime.narc",
                         [DirNames.areaData] = $@"{dataFolderName}\fielddata\areadata\area_data.narc",
 
                         // DP/Pt has no terrain animation (its area record uses that slot for the
@@ -2627,6 +2629,7 @@ namespace DSPRE
                         [DirNames.buildingConfigFiles] = $@"{dataFolderName}\a\0\4\3",
                         [DirNames.buildingTextures] = $@"{dataFolderName}\a\0\7\0",
                         [DirNames.mapTextures] = $@"{dataFolderName}\a\0\4\4",
+                        [DirNames.fieldTextureAnimations] = $@"{dataFolderName}\a\1\3\9",
                         [DirNames.areaData] = $@"{dataFolderName}\a\0\4\2",
 
                         [DirNames.groundAnimations] = $@"{dataFolderName}\a\1\4\0",

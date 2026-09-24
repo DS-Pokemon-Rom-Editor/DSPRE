@@ -62,6 +62,8 @@ namespace LibNDSFormats.NSBMD
         /// Copy data to other NSBMD material
         /// </summary>
         /// <param name="other">Other NSBMD material.</param>
+        public NSBMDMaterial Clone() => (NSBMDMaterial)MemberwiseClone();
+
         public NSBMDMaterial CopyTo(NSBMDMaterial other1)
         {
             NSBMDMaterial other = other1;

@@ -133,6 +133,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (map.mapModel?.models != null && map.mapModel.models.Length > 0)
                 BindNsbtx(map.mapModel, Path.Combine(mapTexDir, area.mapTileset.ToString("D4")));
+            var mapAnimations = FieldAnimationFrames(map.mapModel);
 
             var buildings = new List<PlacedBuilding>();
             var swappable = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
@@ -175,11 +176,72 @@ namespace DSPRE.Avalonia.Gl
                 Map = map.mapModel?.models?.Length > 0 ? map.mapModel.models[0] : null,
                 Buildings = buildings,
                 SwappableTextures = swappable,
+                MapAnimations = mapAnimations,
+                GroundScroll = GroundAnimationSet.ForArea(area),
                 CellX = cellX,
                 CellY = cellY,
                 Bdhc = bdhc,
                 AltitudeY = altitudeY,
             };
+        }
+
+        private static FieldTextureAnimations _fieldAnimations;
+        private static string _fieldAnimationsDir;
+
+        /// <summary>The field animation list, reread whenever the loaded game changes.</summary>
+        public static FieldTextureAnimations FieldAnimations(bool reload = false)
+        {
+            if (!FieldTextureAnimations.Available) return null;
+            string dir = gameDirs[DirNames.fieldTextureAnimations].unpackedDir;
+            if (reload || dir != _fieldAnimationsDir) { _fieldAnimations = FieldTextureAnimations.Load(); _fieldAnimationsDir = dir; }
+            return _fieldAnimations;
+        }
+
+        /// <summary>Decodes every frame of each animated map texture with that texture's own palette, as the game only copies texels.</summary>
+        public static Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> FieldAnimationFrames(NSBMD container)
+        {
+            var model = container?.models?.Length > 0 ? container.models[0] : null;
+            var list = model == null ? null : FieldAnimations();
+            if (list == null || list.Entries.Count == 0) return null;
+
+            var found = new Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)>();
+            var packs = new Dictionary<string, List<NSBMDTexture>>();
+            for (int k = 0; k < model.Materials.Count; k++)
+            {
+                var mat = model.Materials[k];
+                var entry = list.For(mat.texname);
+                if (entry?.FramePack == null || entry.Frames.Count == 0 || mat.texdata == null) continue;
+                try
+                {
+                    if (!packs.TryGetValue(entry.Name, out var frames))
+                    {
+                        NSBTXLoader.LoadNsbtx(new MemoryStream(entry.FramePack), out frames, out _);
+                        packs[entry.Name] = frames;
+                    }
+                    var decoded = new Dictionary<string, NsbmdTextureData>();
+                    var sequence = new List<(string, int)>();
+                    foreach (var (frame, duration) in entry.Frames)
+                    {
+                        if (frames == null || frame >= frames.Count) continue;
+                        string swap = "anim" + frame;
+                        if (!decoded.ContainsKey(swap))
+                        {
+                            var stand_in = mat.Clone();
+                            stand_in.texdata = frames[frame].texdata;
+                            stand_in.texoffset = frames[frame].texoffset;
+                            stand_in.texsize = frames[frame].texsize;
+                            stand_in.spdata = frames[frame].spdata;
+                            var data = NsbmdTextureDecoder.Decode(stand_in);
+                            if (data == null) continue;
+                            decoded[swap] = data;
+                        }
+                        sequence.Add((swap, Math.Max(1, (int)duration)));
+                    }
+                    if (sequence.Count > 0) found[k] = (decoded, sequence);
+                }
+                catch (Exception ex) { AppLogger.Error($"Field animation {entry.Name} failed: {ex.Message}"); }
+            }
+            return found.Count > 0 ? found : null;
         }
 
         private static byte ResolveAreaId(GameMatrix matrix, int x, int y, byte fallbackAreaId,

@@ -77,6 +77,14 @@ namespace DSPRE.Avalonia.Gl
         public Dictionary<int, Dictionary<string, NsbmdTextureData>> SwappableTextures
             = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
 
+        /// <summary>HGSS terrain scrolls, by the map material they move and its place in the animation.</summary>
+        public List<(int MaterialKey, DSPRE.ROMFiles.TextureSrtAnimation Anim, int Index)> GroundScrolls
+            = new List<(int, DSPRE.ROMFiles.TextureSrtAnimation, int)>();
+
+        /// <summary>Map materials the field animates (fldtanime): swap names in order, each held for its frames.</summary>
+        public List<(int MaterialKey, List<(string Swap, int Frames)> Sequence)> FieldAnimations
+            = new List<(int, List<(string, int)>)>();
+
         public int TotalVertices;
 
         // Normalization applied to fit the camera: normalized = (raw - Center) * Scale.
@@ -243,14 +251,16 @@ namespace DSPRE.Avalonia.Gl
         /// Builds a combined scene: the map model plus each building transformed into map
         /// space, with unique material keys per source model. Centred/scaled once at the end.
         /// </summary>
-        public static NsbmdRenderModel BuildScene(NSBMDModel map, IReadOnlyList<PlacedBuilding> buildings)
+        public static NsbmdRenderModel BuildScene(NSBMDModel map, IReadOnlyList<PlacedBuilding> buildings,
+            Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> mapAnimations = null,
+            DSPRE.ROMFiles.TextureSrtAnimation groundScroll = null)
         {
             // Build the single map as a 1×1 matrix cell so it gets the SAME fixed 32-tile CellPlacement and
             // per-tile height grid the matrix/event editor uses. That gives the permission overlay a real tile
             // grid (fixes oversized tiles on maps that don't fill all 32 tiles) and per-tile surface heights.
             var scene = BuildMatrixScene(new[]
             {
-                new MatrixCellGeometry { Map = map, Buildings = buildings, CellX = 0, CellY = 0 }
+                new MatrixCellGeometry { Map = map, Buildings = buildings, MapAnimations = mapAnimations, GroundScroll = groundScroll, CellX = 0, CellY = 0 }
             }, MatrixStitchMode.Grid);
             scene.IsMatrix = false;   // single-map view, nothing reads this, but keep it honest
             return scene;
@@ -264,6 +274,10 @@ namespace DSPRE.Avalonia.Gl
             public IReadOnlyList<PlacedBuilding> Buildings;
             /// <summary>Textures a building's swapping animation can show, by model id then name.</summary>
             public Dictionary<int, Dictionary<string, NsbmdTextureData>> SwappableTextures;
+            /// <summary>Field texture animation frames for the map's own materials, by material index.</summary>
+            public Dictionary<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> MapAnimations;
+            /// <summary>The area's terrain scroll animation, which moves map materials by name.</summary>
+            public DSPRE.ROMFiles.TextureSrtAnimation GroundScroll;
             public int CellX, CellY;
             public BdhcFile Bdhc;
             public float AltitudeY;
@@ -311,6 +325,18 @@ namespace DSPRE.Avalonia.Gl
                 float cMinX = 0, cMinZ = 0, cFpX = 0, cFpZ = 0; bool cHas = false;
                 if (cell.Map != null)
                 {
+                    if (cell.MapAnimations != null)
+                        foreach (var kv in cell.MapAnimations)
+                        {
+                            result.SwappableTextures[offset + kv.Key] = kv.Value.Frames;
+                            result.FieldAnimations.Add((offset + kv.Key, kv.Value.Sequence));
+                        }
+                    if (cell.GroundScroll != null)
+                        for (int k = 0; k < cell.Map.Materials.Count; k++)
+                        {
+                            int index = cell.GroundScroll.IndexOf(cell.Map.Materials[k].MaterialName);
+                            if (index >= 0 && !cell.GroundScroll.IsStatic(index)) result.GroundScrolls.Add((offset + k, cell.GroundScroll, index));
+                        }
                     Accumulate(cell.Map, MapVertexScale(cell.Map), offset, result, mapMats);
                     offset += Math.Max(1, cell.Map.Materials.Count);
                     if (ComputeRawBounds(mapMats, out float mnx, out float mxx, out float _, out float _, out float mnz, out float mxz))

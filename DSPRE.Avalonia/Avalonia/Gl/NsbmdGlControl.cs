@@ -624,8 +624,45 @@ namespace DSPRE.Avalonia.Gl
 
         private static int WrapGl(int w) => w == 2 ? GlFunctions.GL_MIRRORED_REPEAT : w == 1 ? GlFunctions.GL_REPEAT : GlFunctions.GL_CLAMP_TO_EDGE;
 
+        // Field texture animations run on their own clock at the field's 30 steps a second.
+        private readonly System.Diagnostics.Stopwatch _fieldClock = System.Diagnostics.Stopwatch.StartNew();
+        private Dictionary<int, string> _fieldFrame;
+        public bool PlayFieldAnimations { get; set; } = true;
+
+        private Dictionary<int, float[]> _groundMatrices;
+
+        private void StepFieldAnimations()
+        {
+            var scrolls = _model?.GroundScrolls;
+            if (!PlayFieldAnimations || scrolls == null || scrolls.Count == 0) _groundMatrices = null;
+            else
+            {
+                long tick = (long)(_fieldClock.Elapsed.TotalSeconds * 30);
+                _groundMatrices ??= new Dictionary<int, float[]>();
+                foreach (var (key, anim, index) in scrolls)
+                    _groundMatrices[key] = anim.Evaluate(index, (int)(tick % Math.Max(1, anim.FrameCount))).ToMatrix3();
+            }
+
+            var anims = _model?.FieldAnimations;
+            if (!PlayFieldAnimations || anims == null || anims.Count == 0) { _fieldFrame = null; return; }
+            long step = (long)(_fieldClock.Elapsed.TotalSeconds * 30);
+            _fieldFrame ??= new Dictionary<int, string>();
+            foreach (var (key, sequence) in anims)
+            {
+                int total = 0;
+                foreach (var s in sequence) total += s.Frames;
+                long at = total > 0 ? step % total : 0;
+                foreach (var s in sequence)
+                {
+                    if (at < s.Frames) { _fieldFrame[key] = s.Swap; break; }
+                    at -= s.Frames;
+                }
+            }
+        }
+
         protected override void OnOpenGlRender(GlInterface gl, int fb)
         {
+            StepFieldAnimations();
             if (_f == null || _program == 0) return;
             if (_uploadPending) Upload();
             if (_movedPartsDirty) UploadMovedParts();
@@ -696,8 +733,10 @@ namespace DSPRE.Avalonia.Gl
                 _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
 
                 int texId = part.TextureId;
-                if (_texSwaps != null && _texSwaps.TryGetValue(part.MaterialKey, out string swapName)
-                    && !string.IsNullOrEmpty(swapName))
+                string swapName = null;
+                if ((_fieldFrame != null && _fieldFrame.TryGetValue(part.MaterialKey, out swapName))
+                    || (_texSwaps != null && _texSwaps.TryGetValue(part.MaterialKey, out swapName)))
+                if (!string.IsNullOrEmpty(swapName))
                 {
                     int swapped = SwapTexture(part.MaterialKey, swapName);
                     if (swapped != 0) texId = swapped;
@@ -727,6 +766,8 @@ namespace DSPRE.Avalonia.Gl
                 float[] texMtx = IdentityTexMatrix;
                 if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out var m) && m != null && m.Length == 9)
                     texMtx = m;
+                else if (_groundMatrices != null && _groundMatrices.TryGetValue(part.MaterialKey, out var g) && g != null && g.Length == 9)
+                    texMtx = g;
                 if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, texMtx);
 
                 if (_matColorLoc >= 0)
@@ -760,6 +801,8 @@ namespace DSPRE.Avalonia.Gl
             RenderMarkers(stride);
             if (_showGizmos) RenderGizmos(stride);
             if (_editMode && _gizmoTargetVisible) RenderEditGizmo(stride);
+
+            if ((_fieldFrame != null && _fieldFrame.Count > 0) || (_groundMatrices != null && _groundMatrices.Count > 0)) RequestNextFrameRendering();
 
             if (_captureCb != null)
             {
