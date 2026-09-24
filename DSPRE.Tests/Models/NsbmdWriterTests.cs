@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using DSPRE.Avalonia.Data;
+using DSPRE.Models;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -106,7 +106,7 @@ namespace DSPRE.Tests
             File.WriteAllText(Path.Combine(dir, "cube.obj"), "v 0 0 0\nv 1 0 0\nv 0 1 0\n");
             var mesh = ObjMesh.Read(Path.Combine(dir, "cube.obj"), out string why);
             Assert.Null(mesh);
-            Assert.Contains("no faces", why);
+            Assert.Contains("No faces", why);
         }
 
         [Fact]
@@ -118,7 +118,7 @@ namespace DSPRE.Tests
             var mesh = ObjMesh.Read(Path.Combine(dir, "cube.obj"), out string why);
             Assert.Null(why);
             Assert.Single(mesh.Faces);
-            Assert.Contains(mesh.Notes, n => n.Contains("left out"));
+            Assert.Contains(mesh.Notes, n => n.Contains("skipped"));
         }
 
         // ── writing the model ─────────────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ namespace DSPRE.Tests
             var mesh = ObjMesh.Read(WriteObj(Scratch(), CubeObj(64f)), out _);
             var made = NsbmdWriter.Build(mesh, null);
             Assert.Null(made.Whynot);
-            Assert.Contains(made.Notes, n => n.Contains("times smaller"));
+            Assert.Contains(made.Notes, n => n.Contains("scaled by 1/"));
         }
 
         [Fact]
@@ -219,7 +219,7 @@ namespace DSPRE.Tests
             var rgba = new byte[20 * 30 * 4];
             var t = DsTexture.From(rgba, 20, 30, "odd");
             Assert.NotNull(t.Whynot);
-            Assert.Contains("32 by 32", t.Whynot);
+            Assert.Contains("nearest 32x32", t.Whynot);
         }
 
         [Theory]

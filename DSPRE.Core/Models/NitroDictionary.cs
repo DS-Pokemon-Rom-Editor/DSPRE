@@ -4,21 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.Models
 {
-    /// <summary>
-    /// The name lookup a Nitro 3D file carries. Every list inside a model, its nodes, its materials
-    /// and its shapes, is one of these: a little tree for finding a name, then one fixed-size entry
-    /// per thing, then the names themselves.
-    ///
-    /// The layout and the way the tree is walked were both read off HeartGold's own models. The walk
-    /// below resolves all 2,947 names across its 340 building models, and the tree this builds
-    /// resolves every name in all 1,020 of their name lists.
-    /// </summary>
+    /// <summary>Nitro 3D name dictionary.</summary>
     public static class NitroDictionary
     {
-        /// <summary>Names are exactly sixteen bytes, padded with zeros.</summary>
         public const int NameSize = 16;
+
+        /// <summary>Truncates a name to the 16 characters a dictionary stores.</summary>
+        public static string Fit(string name) => name == null ? null : name.Length > NameSize ? name.Substring(0, NameSize) : name;
 
         public struct Node
         {
@@ -35,10 +29,6 @@ namespace DSPRE.Avalonia.Data
 
         private static int Bit(byte[] name, int b) => (name[b >> 3] >> (b & 7)) & 1;
 
-        /// <summary>
-        /// Follows the tree for a name, the way the real files are read: step to the head's left
-        /// child, then keep stepping while each node's bit is lower than the one before it.
-        /// </summary>
         public static int Find(IReadOnlyList<Node> nodes, string name)
         {
             var key = Padded(name);
@@ -52,14 +42,11 @@ namespace DSPRE.Avalonia.Data
             return at.Entry;
         }
 
-        /// <summary>Builds the tree for a list of names. Returns the head first, then one node each.</summary>
         public static List<Node> BuildTree(IReadOnlyList<string> names)
         {
             var keys = names.Select(Padded).ToList();
             var nodes = new List<Node> { new Node { RefBit = 127, Left = 0, Right = 0, Entry = 0 } };
 
-            // The head stands for a name of all zeros, which no real name is, so the first name added
-            // splits on the highest bit it has set.
             var owner = new Dictionary<int, byte[]> { [0] = new byte[NameSize] };
 
             for (int entry = 0; entry < keys.Count; entry++)
@@ -69,7 +56,6 @@ namespace DSPRE.Avalonia.Data
                 int b = FirstDifferingBit(key, owner[landed]);
                 if (b < 0) throw new InvalidOperationException($"two things are both called {names[entry]}");
 
-                // Down again, stopping at the last step whose bit is still above the one being split on.
                 int parent = 0;
                 int at = nodes[0].Left;
                 while (nodes[at].RefBit < nodes[parent].RefBit && nodes[at].RefBit > b)
@@ -83,8 +69,8 @@ namespace DSPRE.Avalonia.Data
                 nodes.Add(new Node
                 {
                     RefBit = (byte)b,
-                    Left = one ? (byte)at : made,      // the side this name is on points at itself
-                    Right = one ? made : (byte)at,     // the other side keeps whatever was there
+                    Left = one ? (byte)at : made,
+                    Right = one ? made : (byte)at,
                     Entry = (byte)entry,
                 });
                 owner[made] = key;
@@ -115,10 +101,6 @@ namespace DSPRE.Avalonia.Data
             return -1;
         }
 
-        /// <summary>
-        /// Writes a whole dictionary: the tree, then one entry per thing, then the names.
-        /// </summary>
-        /// <param name="entries">One block of bytes per thing, all the same length.</param>
         public static byte[] Write(IReadOnlyList<string> names, IReadOnlyList<byte[]> entries)
         {
             if (names.Count != entries.Count)
@@ -133,7 +115,7 @@ namespace DSPRE.Avalonia.Data
             int total = ofsEntry + 4 + names.Count * unit + names.Count * NameSize;
 
             var d = new byte[total];
-            d[0] = 0;                                   // revision
+            d[0] = 0;
             d[1] = (byte)names.Count;
             Put16(d, 2, total);
             Put16(d, 4, 0);
@@ -148,7 +130,7 @@ namespace DSPRE.Avalonia.Data
 
             int eh = ofsEntry;
             Put16(d, eh, unit);
-            Put16(d, eh + 2, 4 + names.Count * unit);   // the names, from the entry header
+            Put16(d, eh + 2, 4 + names.Count * unit);
             for (int i = 0; i < entries.Count; i++)
                 Array.Copy(entries[i], 0, d, eh + 4 + i * unit, unit);
             int at = eh + 4 + names.Count * unit;
@@ -160,7 +142,25 @@ namespace DSPRE.Avalonia.Data
         private static void Put16(byte[] d, int at, int v)
         { d[at] = (byte)v; d[at + 1] = (byte)(v >> 8); }
 
-        /// <summary>How big <see cref="Write"/> will make it, without making it.</summary>
+        public static List<(string name, byte[] entry)> Read(byte[] d, int at)
+        {
+            int count = d[at + 1];
+            int ofsEntry = d[at + 6] | (d[at + 7] << 8);
+            int eh = at + ofsEntry;
+            int unit = d[eh] | (d[eh + 1] << 8);
+            var read = new List<(string, byte[])>();
+            int names = eh + 4 + count * unit;
+            for (int i = 0; i < count; i++)
+            {
+                var entry = new byte[unit];
+                Array.Copy(d, eh + 4 + i * unit, entry, 0, unit);
+                int n = 0;
+                while (n < NameSize && d[names + i * NameSize + n] != 0) n++;
+                read.Add((System.Text.Encoding.ASCII.GetString(d, names + i * NameSize, n), entry));
+            }
+            return read;
+        }
+
         public static int SizeFor(int count, int unit) =>
             8 + (count + 1) * 4 + 4 + count * unit + count * NameSize;
     }

@@ -4,87 +4,167 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.Models
 {
-    /// <summary>
-    /// A mesh read out of a Wavefront OBJ, with the materials its MTL names. Only what a DS model can
-    /// carry is kept: where each corner sits, which way it faces, where it lands on its picture, and
-    /// what colour and picture the face is drawn with.
-    /// </summary>
+    /// <summary>Wavefront OBJ mesh with its MTL materials.</summary>
     public sealed class ObjMesh
     {
         public struct Vec3 { public float X, Y, Z; }
         public struct Vec2 { public float U, V; }
 
-        /// <summary>One corner of one face.</summary>
         public struct Corner
         {
-            public int Position;    // into Positions
-            public int Normal;      // into Normals, or -1
-            public int TexCoord;    // into TexCoords, or -1
+            public int Position;
+            public int Normal;
+            public int TexCoord;
+
+            public int? Colour;
+
+            public bool ColourLast;
         }
 
         public sealed class Face
         {
             public List<Corner> Corners = new();
-            public int Material;    // into Materials
+            public int Material;
+
+            public int[] Colours;
+            public bool[] ColoursLast;
         }
 
         public sealed class Material
         {
             public string Name = "";
-            /// <summary>The picture this is painted with, as a path beside the OBJ. Null when none.</summary>
+
+            public string PaletteName;
             public string TexturePath;
-            /// <summary>The flat colour, when there is no picture. Nought to one each.</summary>
             public float Red = 1, Green = 1, Blue = 1;
-            /// <summary>How see-through it is, nought to one, where one is solid.</summary>
             public float Opacity = 1;
+
+            public MaterialLook Look;
+
+            public string PictureName;
         }
 
         public List<Vec3> Positions { get; } = new();
+
+        public List<int> PositionColours { get; } = new();
+
+        public HashSet<int> ColourLastAt { get; } = new();
         public List<Vec3> Normals { get; } = new();
         public List<Vec2> TexCoords { get; } = new();
         public List<Face> Faces { get; } = new();
+
+        public sealed class Group
+        {
+            public float[] Tileable;
+
+            public int[] Footprint;
+            public string Collision;
+
+            public string Name = "";
+            public int First;
+            public int Count;
+
+            public int Wide, Deep;
+        }
+
+        public List<Group> Groups { get; } = new();
         public List<Material> Materials { get; } = new();
 
-        /// <summary>What the OBJ called itself, which becomes the model's name.</summary>
         public string Name = "model";
 
-        /// <summary>Anything worth saying about what was read, or quietly left out.</summary>
         public List<string> Notes { get; } = new();
+
+        public List<string> SmartDrawings { get; } = new();
 
         public int Triangles => Faces.Sum(f => Math.Max(0, f.Corners.Count - 2));
 
-        /// <summary>Reads an OBJ and, when it names one, the MTL beside it. Returns why not, or null.</summary>
         public static ObjMesh Read(string path, out string whynot)
         {
             whynot = null;
             var m = new ObjMesh { Name = Path.GetFileNameWithoutExtension(path) };
             string[] lines;
             try { lines = File.ReadAllLines(path); }
-            catch (Exception ex) { whynot = "That file could not be read: " + ex.Message; return null; }
+            catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
 
             string dir = Path.GetDirectoryName(path) ?? ".";
             int material = -1, ignored = 0, badFaces = 0;
+            Group group = null;
+            int[] pendingColours = null;
+            bool[] pendingLast = null;
             var byName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string raw in lines)
             {
                 string line = raw.Trim();
+                if (line.StartsWith("# squares ", StringComparison.Ordinal))
+                {
+                    var said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    if (said.Length >= 2 && group != null
+                        && int.TryParse(said[0], out int w) && int.TryParse(said[1], out int d))
+                    { group.Wide = w; group.Deep = d; }
+                    continue;
+                }
+                if (line.StartsWith("# colours ", StringComparison.Ordinal))
+                {
+                    var said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    pendingColours = said.Select(v => int.TryParse(v.TrimEnd('!'), out int c) ? c : -1).ToArray();
+                    pendingLast = said.Select(v => v.EndsWith("!")).ToArray();
+                    continue;
+                }
+                if (line.StartsWith("# footprint ", StringComparison.Ordinal))
+                {
+                    if (group != null)
+                        group.Footprint = line.Substring(12).Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(v => int.TryParse(v, out int i) ? i : 0).ToArray();
+                    continue;
+                }
+                if (line.StartsWith("# collision ", StringComparison.Ordinal))
+                {
+                    if (group != null) group.Collision = line.Substring(12).Trim();
+                    continue;
+                }
+                if (line.StartsWith("# tileable ", StringComparison.Ordinal))
+                {
+                    if (group != null)
+                        group.Tileable = line.Substring(11).Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+                                             .Select(F).ToArray();
+                    continue;
+                }
+                if (line.StartsWith("# smart ", StringComparison.Ordinal))
+                {
+                    m.SmartDrawings.Add(line.Substring(8));
+                    continue;
+                }
+                if (line.StartsWith("# colourlast ", StringComparison.Ordinal))
+                {
+                    foreach (string n in line.Substring(13).Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+                        if (int.TryParse(n, out int at) && at > 0) m.ColourLastAt.Add(at - 1);
+                    continue;
+                }
                 if (line.Length == 0 || line[0] == '#') continue;
                 var bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 switch (bits[0])
                 {
                     case "v":
-                        if (bits.Length >= 4) m.Positions.Add(new Vec3
-                        { X = F(bits[1]), Y = F(bits[2]), Z = F(bits[3]) });
+                        if (bits.Length >= 4)
+                        {
+                            m.Positions.Add(new Vec3 { X = F(bits[1]), Y = F(bits[2]), Z = F(bits[3]) });
+                            int colour = -1;
+                            if (bits.Length >= 7)
+                            {
+                                int C(string v) => (int)Math.Round(Math.Clamp(F(v), 0f, 1f) * 31f);
+                                colour = C(bits[4]) | (C(bits[5]) << 5) | (C(bits[6]) << 10);
+                            }
+                            m.PositionColours.Add(colour);
+                        }
                         break;
                     case "vn":
                         if (bits.Length >= 4) m.Normals.Add(new Vec3
                         { X = F(bits[1]), Y = F(bits[2]), Z = F(bits[3]) });
                         break;
                     case "vt":
-                        // OBJ counts up the picture and the DS counts down it.
                         if (bits.Length >= 3) m.TexCoords.Add(new Vec2
                         { U = F(bits[1]), V = 1f - F(bits[2]) });
                         break;
@@ -97,8 +177,24 @@ namespace DSPRE.Avalonia.Data
                             if (c.Position < 0) { face = null; break; }
                             face.Corners.Add(c);
                         }
-                        if (face == null || face.Corners.Count < 3) { badFaces++; break; }
+                        if (face == null || face.Corners.Count < 3) { badFaces++; pendingColours = null; break; }
+                        if (pendingColours != null && pendingColours.Length == face.Corners.Count)
+                        { face.Colours = pendingColours; face.ColoursLast = pendingLast; }
+                        pendingColours = null;
                         m.Faces.Add(face);
+                        if (group != null) group.Count++;
+                        break;
+                    }
+                    case "o":
+                    case "g":
+                    {
+                        if (group != null && group.Count == 0) m.Groups.Remove(group);
+                        group = new Group
+                        {
+                            Name = bits.Length >= 2 ? string.Join(" ", bits.Skip(1)) : $"part{m.Groups.Count}",
+                            First = m.Faces.Count,
+                        };
+                        m.Groups.Add(group);
                         break;
                     }
                     case "mtllib":
@@ -116,9 +212,6 @@ namespace DSPRE.Avalonia.Data
                             }
                         }
                         break;
-                    case "o":
-                    case "g":
-                        break;      // groups are not kept; the DS groups by material instead
                     default:
                         ignored++;
                         break;
@@ -128,18 +221,19 @@ namespace DSPRE.Avalonia.Data
             if (m.Materials.Count == 0)
             {
                 m.Materials.Add(new Material { Name = "material" });
-                m.Notes.Add("No materials named, so everything went into one white one.");
+                m.Notes.Add("No materials; using a single white one.");
             }
             if (m.Faces.Count == 0)
             {
-                whynot = "That OBJ has no faces in it, so there would be nothing to draw.";
+                whynot = "No faces in OBJ.";
                 return null;
             }
+            if (group != null && group.Count == 0) m.Groups.Remove(group);
+
             if (badFaces > 0)
-                m.Notes.Add($"{badFaces} faces were left out: too few corners, or a corner that is "
-                          + "not there.");
+                m.Notes.Add($"{badFaces} invalid faces skipped.");
             if (m.TexCoords.Count == 0 && m.Materials.Any(x => x.TexturePath != null))
-                m.Notes.Add("A picture is named but nothing says where it goes, so it is unused.");
+                m.Notes.Add("Texture named but the OBJ has no UVs.");
             return m;
         }
 
@@ -147,8 +241,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (!File.Exists(path))
             {
-                Notes.Add($"The materials file {Path.GetFileName(path)} is not beside the OBJ, so its "
-                        + "colours and pictures could not be read.");
+                Notes.Add($"MTL not found: {Path.GetFileName(path)}");
                 return;
             }
             string dir = Path.GetDirectoryName(path) ?? ".";
@@ -156,6 +249,25 @@ namespace DSPRE.Avalonia.Data
             foreach (string raw in File.ReadAllLines(path))
             {
                 string line = raw.Trim();
+
+                if (line.StartsWith("# palette ", StringComparison.Ordinal))
+                {
+                    if (current != null) current.PaletteName = line.Substring(10).Trim();
+                    continue;
+                }
+
+                if (line.StartsWith("# look ", StringComparison.Ordinal))
+                {
+                    if (current != null)
+                        try { current.Look = MaterialLook.FromRecord(Convert.FromHexString(line.Substring(7).Trim())); }
+                        catch (FormatException) { }
+                    continue;
+                }
+                if (line.StartsWith("# picture ", StringComparison.Ordinal))
+                {
+                    if (current != null) current.PictureName = line.Substring(10).Trim();
+                    continue;
+                }
                 if (line.Length == 0 || line[0] == '#') continue;
                 var bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 switch (bits[0].ToLowerInvariant())
@@ -184,12 +296,10 @@ namespace DSPRE.Avalonia.Data
                     case "map_kd":
                     {
                         if (current == null || bits.Length < 2) break;
-                        // Some writers put switches before the file name; the last word is the file.
                         string file = bits[bits.Length - 1];
                         string full = Path.IsPathRooted(file) ? file : Path.Combine(dir, file);
                         if (File.Exists(full)) current.TexturePath = full;
-                        else Notes.Add($"{current.Name} names the picture {Path.GetFileName(file)}, which "
-                                     + "is not beside the model, so that material has no picture.");
+                        else Notes.Add($"{current.Name}: texture not found: {Path.GetFileName(file)}");
                         break;
                     }
                 }
@@ -206,7 +316,6 @@ namespace DSPRE.Avalonia.Data
             return c;
         }
 
-        /// <summary>OBJ counts from one, and counts backwards from the end when the number is negative.</summary>
         private static int Index(string s, int count)
         {
             if (string.IsNullOrEmpty(s) || !int.TryParse(s, out int v)) return -1;

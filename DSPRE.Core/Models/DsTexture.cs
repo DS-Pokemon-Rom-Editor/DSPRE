@@ -2,49 +2,35 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DSPRE.Avalonia.Data
+namespace DSPRE.Models
 {
-    /// <summary>
-    /// A picture in one of the shapes the DS's texture unit reads. Which shape is chosen by what the
-    /// picture actually needs: sixteen colours if it fits, then 256, then straight colour when it
-    /// holds more than a list can.
-    ///
-    /// The numbers packed into TexImageParam are the ones the NitroSystem headers name
-    /// (NNSG3dTexImageParam): the size fields at bits 20 and 23, the
-    /// format at 26, and the see-through flag at 29.
-    /// </summary>
+    /// <summary>A texture in a DS texture format.</summary>
     public sealed class DsTexture
     {
-        /// <summary>The shapes this writes. The numbers are the hardware's own.</summary>
         public enum Kind { SixteenColours = 3, TwoHundredFiftySix = 4, StraightColour = 7 }
 
         public string Name = "texture";
+
+        public List<string> PaletteNames = new List<string>();
         public int Width, Height;
         public Kind Format;
-        /// <summary>The picture itself, in whatever shape Format says.</summary>
         public byte[] Pixels;
-        /// <summary>Its colours, five bits a channel, or empty for straight colour.</summary>
         public ushort[] Colours = Array.Empty<ushort>();
-        /// <summary>Whether the first colour means see-through rather than a colour.</summary>
         public bool FirstColourIsClear;
 
         public string Whynot;
         public List<string> Notes = new();
 
-        /// <summary>How many colours a picture came in with, before anything was done to it.</summary>
         public int ColoursSeen;
 
-        /// <param name="rgba">Four bytes a pixel.</param>
         public static DsTexture From(byte[] rgba, int width, int height, string name)
         {
             var t = new DsTexture { Name = Clean(name), Width = width, Height = height };
             if (rgba == null || width <= 0 || height <= 0 || rgba.Length < width * height * 4)
-                return Fail(t, "That picture has no pixels in it.");
+                return Fail(t, "Empty image.");
             if (!IsPowerOfTwo(width) || !IsPowerOfTwo(height) || width < 8 || height < 8
                 || width > 1024 || height > 1024)
-                return Fail(t, $"A picture painted on a model has to be a power of two across and down, "
-                             + $"from 8 to 1024. That one is {width} by {height}. The nearest that would "
-                             + $"fit is {NearestPowerOfTwo(width)} by {NearestPowerOfTwo(height)}.");
+                return Fail(t, $"Texture size must be a power of two from 8 to 1024, got {width}x{height}, nearest {NearestPowerOfTwo(width)}x{NearestPowerOfTwo(height)}.");
 
             int n = width * height;
             var clear = new bool[n];
@@ -63,15 +49,12 @@ namespace DSPRE.Avalonia.Data
             t.ColoursSeen = distinct.Count;
             t.FirstColourIsClear = anyClear;
             if (full.Count > distinct.Count)
-                t.Notes.Add($"The screen keeps five bits of red, green and blue, so the {full.Count} "
-                          + $"colours in {t.Name} came out as {distinct.Count}.");
+                t.Notes.Add($"{t.Name}: {full.Count} colours reduced to {distinct.Count}.");
 
-            int room = anyClear ? 1 : 0;                    // the clear slot, when one is needed
+            int room = anyClear ? 1 : 0;
             if (distinct.Count + room <= 16) return t.AsPalette(Kind.SixteenColours, colour, clear, distinct);
             if (distinct.Count + room <= 256) return t.AsPalette(Kind.TwoHundredFiftySix, colour, clear, distinct);
 
-            // Too many for any list, so each pixel carries its own colour. It costs twice the room and
-            // the DS can only turn the whole picture see-through, not part of it.
             t.Format = Kind.StraightColour;
             t.Pixels = new byte[n * 2];
             for (int i = 0; i < n; i++)
@@ -80,9 +63,51 @@ namespace DSPRE.Avalonia.Data
                 t.Pixels[i * 2] = (byte)v;
                 t.Pixels[i * 2 + 1] = (byte)(v >> 8);
             }
-            t.Notes.Add($"{t.Name} uses {distinct.Count} colours, more than a list holds, so every pixel "
-                      + "carries its own. It takes twice the room of a listed picture.");
+            t.Notes.Add($"{t.Name}: {distinct.Count} colours, stored as direct colour.");
             return t;
+        }
+
+        /// <summary>Texels in an existing texture's format and palette, since animation frames copy only texels.</summary>
+        public static byte[] TexelsLike(byte[] rgba, int width, int height, int format, IReadOnlyList<ushort> palette,
+                                        bool firstColourIsClear, out string whynot)
+        {
+            whynot = null;
+            int n = width * height;
+            if (rgba == null || rgba.Length < n * 4) { whynot = "The picture is empty."; return null; }
+            int bits = format switch { 2 => 2, 3 => 4, 4 => 8, 7 => 16, _ => 0 };
+            if (bits == 0) { whynot = $"Frames in texture format {format} can't be written."; return null; }
+            if (bits < 16 && (palette == null || palette.Count == 0)) { whynot = "The texture has no palette."; return null; }
+
+            int Nearest(int r, int g, int b)
+            {
+                int best = firstColourIsClear ? 1 : 0, bestD = int.MaxValue;
+                int limit = Math.Min(palette.Count, 1 << bits);
+                for (int i = firstColourIsClear ? 1 : 0; i < limit; i++)
+                {
+                    int c = palette[i];
+                    int dr = ((c & 31) << 3) - r, dg = (((c >> 5) & 31) << 3) - g, db = (((c >> 10) & 31) << 3) - b;
+                    int d = dr * dr + dg * dg + db * db;
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                return best;
+            }
+
+            var texels = new byte[n * bits / 8];
+            for (int i = 0; i < n; i++)
+            {
+                int r = rgba[i * 4], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2];
+                bool clear = rgba[i * 4 + 3] < 128;
+                if (bits == 16)
+                {
+                    ushort v = clear ? (ushort)0 : (ushort)((r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10) | 0x8000);
+                    texels[i * 2] = (byte)v; texels[i * 2 + 1] = (byte)(v >> 8);
+                    continue;
+                }
+                int index = clear && firstColourIsClear ? 0 : Nearest(r, g, b);
+                int perByte = 8 / bits, shift = (i % perByte) * bits;
+                texels[i / perByte] |= (byte)(index << shift);
+            }
+            return texels;
         }
 
         private DsTexture AsPalette(Kind kind, ushort[] colour, bool[] clear, HashSet<ushort> distinct)
@@ -116,19 +141,14 @@ namespace DSPRE.Avalonia.Data
             return this;
         }
 
-        /// <summary>
-        /// The word the hardware is handed for this picture, with the place it sits in memory filled
-        /// in by whoever lays the textures out.
-        /// </summary>
         public uint ImageParam(int vramOffset) =>
             (uint)((vramOffset >> 3) & 0xFFFF)
-            | (1u << 16) | (1u << 17)                       // repeat both ways, as the games do
+            | (1u << 16) | (1u << 17)
             | ((uint)SizeCode(Width) << 20)
             | ((uint)SizeCode(Height) << 23)
             | ((uint)Format << 26)
             | (FirstColourIsClear ? 1u << 29 : 0u);
 
-        /// <summary>The hardware keeps a size as how many times it doubles up from eight.</summary>
         public static int SizeCode(int v)
         {
             int code = 0, at = 8;
@@ -148,7 +168,6 @@ namespace DSPRE.Avalonia.Data
             return Math.Clamp(at, 8, 1024);
         }
 
-        /// <summary>Names inside a model are sixteen bytes of plain letters.</summary>
         private static string Clean(string name)
         {
             name = (name ?? "").Trim();

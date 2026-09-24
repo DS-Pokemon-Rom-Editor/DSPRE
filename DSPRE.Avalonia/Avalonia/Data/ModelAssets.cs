@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DSPRE;
+using DSPRE.Models;
 using DSPRE.Avalonia;
 using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using DSPRE.Avalonia.Data;
+using DSPRE.Models;
 using Xunit;
 using Xunit.Abstractions;
 
