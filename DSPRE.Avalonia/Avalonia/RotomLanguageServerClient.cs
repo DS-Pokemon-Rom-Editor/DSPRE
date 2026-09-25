@@ -27,6 +27,17 @@ namespace DSPRE.Avalonia
 
         public bool IsRunning => _process != null && !_process.HasExited && _initialized;
 
+        // The server runs inside the project folder, which keeps that folder from being deleted while it lives.
+        private static readonly List<RotomLanguageServerClient> Running = new List<RotomLanguageServerClient>();
+
+        /// <summary>Stops every language server, for when the project folder is about to be deleted.</summary>
+        public static void StopAll()
+        {
+            RotomLanguageServerClient[] all;
+            lock (Running) all = Running.ToArray();
+            foreach (var client in all) client.Dispose();
+        }
+
         public async Task StartAsync()
         {
             if (!RotomTool.IsLspAvailable)
@@ -61,6 +72,7 @@ namespace DSPRE.Avalonia
             AppLogger.Info("Starting rotom-lsp: " + _process.StartInfo.FileName + " "
                 + _process.StartInfo.Arguments);
             _process.Start();
+            lock (Running) Running.Add(this);
             _process.BeginErrorReadLine();
             _readLoop = Task.Run(ReadLoopAsync);
 
@@ -448,7 +460,9 @@ namespace DSPRE.Avalonia
 
         public void Dispose()
         {
+            if (_disposed) return;
             _disposed = true;
+            lock (Running) Running.Remove(this);
             _cts.Cancel();
 
             lock (_pendingLock)
@@ -461,7 +475,10 @@ namespace DSPRE.Avalonia
             try
             {
                 if (_process != null && !_process.HasExited)
+                {
                     _process.Kill(true);
+                    _process.WaitForExit(3000);
+                }
             }
             catch { }
 

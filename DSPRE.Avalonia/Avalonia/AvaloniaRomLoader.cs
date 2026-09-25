@@ -37,6 +37,8 @@ namespace DSPRE.Avalonia
             else if (reExtract)
             {
                 AppLogger.Info($"Re-extracting {ndsPath}: deleting old data at {workDir}");
+                // The script editor's language server runs inside this folder and would keep it from being deleted.
+                RotomLanguageServerClient.StopAll();
                 try { Directory.Delete(workDir, true); }
                 catch (IOException)
                 {

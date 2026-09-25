@@ -79,6 +79,16 @@ namespace DSPRE.Avalonia.Views.World
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             var owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
+            // Tabs must unpack this ROM's archives before loading a new header, so header changes wait for setup.
+            _settingUp = true;
+            try { await SetUpTabsAsync(vm, owner); }
+            finally { _settingUp = false; }
+        }
+
+        private bool _settingUp;
+
+        private async System.Threading.Tasks.Task SetUpTabsAsync(HeaderEditorViewModel vm, Window owner)
+        {
             await vm.SetupAsync(owner);
 
             if (!_wiringDone)
@@ -87,6 +97,7 @@ namespace DSPRE.Avalonia.Views.World
                 owner.Activated += (_, _) => vm.ReloadLocationNames();
                 vm.PropertyChanged += (_, e) =>
                 {
+                    if (_settingUp) return;
                     switch (e.PropertyName)
                     {
                         case nameof(HeaderEditorViewModel.EventFileId): RetargetEvents(); break;
@@ -114,8 +125,6 @@ namespace DSPRE.Avalonia.Views.World
             EventVM.LevelScriptId = (int)vm.LevelScriptId;
             EventVM.TextArchiveId = (int)vm.TextArchiveId;
             TextVM.InitialIndex = (int)vm.TextArchiveId;
-            MapVM.HeaderId = -1;
-            MapVM.HeaderId = vm.CurrentHeaderId;
 
             // Tabs that latched their no-ROM state at boot get to set up now. Pass our own resolved
             // owner through explicitly: these controls live in non-selected TabItems (Header is the
@@ -129,6 +138,8 @@ namespace DSPRE.Avalonia.Views.World
             // that SetupAsync has unpacked everything BuildHeaderPreview needs. Reset first so this
             // always forces a rebuild even if it was already 2 from a previous ROM in this session.
             MapVM.ViewModeIndex = 0;
+            MapVM.HeaderId = -1;
+            MapVM.HeaderId = vm.CurrentHeaderId;
             MapVM.ViewModeIndex = 2;
             await MatrixEmbed.EnsureSetupAsync(owner);
             await AreaDataEmbed.EnsureSetupAsync(owner);
