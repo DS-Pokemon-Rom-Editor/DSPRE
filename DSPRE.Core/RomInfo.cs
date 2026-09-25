@@ -132,6 +132,13 @@ namespace DSPRE
         public static uint effectsComboTableOffsetToSizeLimiter { get; internal set; }
 
         public static uint OWTableOffset { get; internal set; }
+        /// <summary>
+        /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
+        /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
+        /// </summary>
+        public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : -1;
+        public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
+        public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
         public static string OWtablePath { get; private set; }
 
         public static uint monIconPalTableAddress { get; private set; }
@@ -282,6 +289,7 @@ namespace DSPRE
             encounterExtended,
             headbutt,
             rockSmash,
+            followerParams, // HGSS only
             safariZone,
             battleTowerTrainers,
             battleTowerPokemon,
@@ -2659,6 +2667,7 @@ namespace DSPRE
                         [DirNames.safariZone] = $@"{dataFolderName}\a\2\3\0",
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
                         [DirNames.rockSmash] = $@"{dataFolderName}\a\2\5\3", //odds+table-type per header; both versions use the same folder with different data
+                        [DirNames.followerParams] = $@"{dataFolderName}\a\1\4\1", // fielddata/tsurepoke/tp_param, 4 bytes per follower model
 
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",

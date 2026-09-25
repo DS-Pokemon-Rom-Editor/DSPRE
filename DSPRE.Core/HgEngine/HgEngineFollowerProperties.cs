@@ -6,9 +6,9 @@ namespace DSPRE.HgEngine
     /// <summary>Source-text read/write for data/FollowerProperties.c's <c>FollowerProperties[]</c>
     /// (<c>.size</c>, <c>.bounce</c>; <c>unk0</c>/<c>unk3</c> are never set, left alone). A real
     /// designated-initializer struct array, so this goes through <see cref="HgEngineSourcePatcher"/>
-    /// rather than <see cref="HgEngineFlatArrayField"/>. <c>.size</c> is exposed as a raw 0/1 instead of
-    /// resolving <c>OVERWORLD_CAN_ENTER</c>/<c>OVERWORLD_NO_ENTRY</c>, since those names describe an
-    /// unrelated door/area-entry concept this fork repurposed for size. <c>.bounce</c> resolves through
+    /// rather than <see cref="HgEngineFlatArrayField"/>. <c>.size</c> is exposed as a raw 0/1
+    /// (<c>OVERWORLD_CAN_ENTER</c>/<c>OVERWORLD_NO_ENTRY</c>): despite the name, 1 keeps the follower out
+    /// of maps that restrict tall followers. <c>.bounce</c> resolves through
     /// the real <c>OVERWORLD_BOUNCE_*</c> names, read dynamically from this file.</summary>
     public static class HgEngineFollowerProperties
     {

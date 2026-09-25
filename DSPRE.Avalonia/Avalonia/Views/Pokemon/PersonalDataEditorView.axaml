@@ -127,6 +127,27 @@
                 <CheckBox  Grid.Row="4" Grid.Column="1" IsChecked="{Binding FlipFlag}"/>
               </Grid>
             </GroupBox>
+            <GroupBox Header="Follower" IsVisible="{Binding ShowRetailFollower}">
+              <StackPanel Spacing="6" Margin="4">
+                <TextBlock Text="{Binding RetailFollowerNote}" IsVisible="{Binding HasRetailFollowerNote}" FontStyle="Italic" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" IsVisible="{Binding RetailFollowerEditable}">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Model:" Classes="label" IsVisible="{Binding HasFollowerModelChoice}"/>
+                  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding FollowerModelNames}" SelectedIndex="{Binding FollowerModelIndex}"
+                             IsVisible="{Binding HasFollowerModelChoice}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Size:" Classes="label"/>
+                  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding FollowerSizeOptions}" SelectedIndex="{Binding FollowerSizeIndex}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Raw bits:" Classes="label" Margin="12,0,6,0"/>
+                  <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding FollowerRawBits}" MaxLength="4" FontFamily="Consolas,monospace"
+                             Width="70" HorizontalAlignment="Left"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hover:" Classes="label"/>
+                  <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding FollowerMotionOptions}" SelectedIndex="{Binding FollowerMotionIndex}"/>
+                  <CheckBox  Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Content="Too tall" IsChecked="{Binding FollowerTooTall}" Margin="12,0,0,0"
+                             ToolTip.Tip="Stays in its ball on maps that keep tall followers out"/>
+                </Grid>
+                <TextBlock Text="{Binding FollowerArtWarning}" IsVisible="{Binding HasFollowerArtWarning}"
+                           Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+              </StackPanel>
+            </GroupBox>
           </StackPanel>
         </ScrollViewer>
       </TabItem>

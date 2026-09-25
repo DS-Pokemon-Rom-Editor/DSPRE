@@ -499,7 +499,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Composite snapshot: the personal-data file bytes + the hatch-result (which lives in a separate
         // table, not in the file) + the staged hg-engine side-table values. Edit bursts within CoalesceMs
         // collapse into one undo step.
-        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; }
+        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; }
         private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
         private PersonalSnapshot _savedSnapshot;   // UndoHistory doesn't expose it, and Discard restores it
         private DateTime _lastCaptureUtc = DateTime.MinValue;
@@ -512,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private PersonalSnapshot Snapshot() =>
-            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg() };
+            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone() };
 
         private void ApplyState(PersonalSnapshot snap)
         {
@@ -522,6 +522,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PopulateFromCurrent();
             _hatchResultIndex = snap.Hatch; OnPropertyChanged(nameof(HatchResultIndex));
             ApplyHg(snap.Hg);
+            if (snap.Followers != null) { _followers = (FollowerStaged[])snap.Followers.Clone(); ShowFollower(); }
             _loading = false;
 
             _dirty = _history.IsDirty;
@@ -677,6 +678,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (partlySaved) _history.Capture(Snapshot(), coalesce: true);
                 string lead = partlySaved ? $"Species {_currentId} was only partly saved:" : $"Species {_currentId} was not saved:";
                 await DSPRE.Avalonia.DialogHelper.ShowError($"{lead}\n{sourceError}", "Personal Data");
+                return;
+            }
+            string followerError = SaveRetailFollower();
+            if (followerError != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal Data");
                 return;
             }
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
@@ -927,6 +934,149 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
 
 
+        // ── Retail HGSS follower ──────────────────────────────────────────────
+        // Size lives in the overlay 1 object table, height and motion in a/1/4/1; one set per follower model.
+        internal sealed record FollowerStaged(ushort Bits, bool TooTall, byte Motion);
+
+        private string _followerWhyNot;
+        private HgssFollowers.Model[] _followerModels = Array.Empty<HgssFollowers.Model>();
+        private FollowerStaged[] _followers, _followersLoaded;
+
+        public bool ShowRetailFollower => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+        public bool RetailFollowerEditable => ShowRetailFollower && _followerWhyNot == null && _followerModels.Length > 0;
+        public string RetailFollowerNote => !ShowRetailFollower ? "" : _followerWhyNot ?? (_followerModels.Length == 0 ? "This Pokémon has no follower." : "");
+        public bool HasRetailFollowerNote => RetailFollowerNote.Length > 0;
+
+        public ObservableCollection<string> FollowerModelNames { get; } = new();
+        public bool HasFollowerModelChoice => FollowerModelNames.Count > 1;
+        public string[] FollowerSizeOptions { get; } = { "Small", "Small, no shadow", "Large" };
+        public string[] FollowerMotionOptions { get; } = { "No", "Hovers", "Flies" };
+
+        private int _followerModelIndex;
+        public int FollowerModelIndex
+        {
+            get => _followerModelIndex;
+            set { if (value >= 0 && value < _followerModels.Length && Set(ref _followerModelIndex, value)) ShowFollower(); }
+        }
+
+        private FollowerStaged Staged => _followers != null && _followerModelIndex < _followers.Length ? _followers[_followerModelIndex] : null;
+
+        private void Stage(FollowerStaged next)
+        {
+            if (_loading || Staged == null || next == Staged) return;
+            _followers[_followerModelIndex] = next;
+            ShowFollower();
+            SetDirty();
+        }
+
+        public int FollowerSizeIndex
+        {
+            get => Staged == null ? -1 : HgssFollowers.SizeOf(Staged.Bits) switch
+            {
+                HgssFollowers.Size.Small => 0, HgssFollowers.Size.SmallNoShadow => 1, HgssFollowers.Size.Large => 2, _ => -1,
+            };
+            set
+            {
+                if (Staged == null || value < 0 || value > 2) return;
+                var size = value == 0 ? HgssFollowers.Size.Small : value == 1 ? HgssFollowers.Size.SmallNoShadow : HgssFollowers.Size.Large;
+                Stage(Staged with { Bits = HgssFollowers.BitsOf(size, Staged.Bits) });
+            }
+        }
+
+        public string FollowerRawBits
+        {
+            get => Staged == null ? "" : Staged.Bits.ToString("X4");
+            set
+            {
+                if (Staged == null || !ushort.TryParse(value?.Trim(), System.Globalization.NumberStyles.HexNumber, null, out ushort bits)) return;
+                Stage(Staged with { Bits = bits });
+            }
+        }
+
+        public bool FollowerTooTall
+        {
+            get => Staged?.TooTall ?? false;
+            set { if (Staged != null) Stage(Staged with { TooTall = value }); }
+        }
+
+        public int FollowerMotionIndex
+        {
+            get => Staged?.Motion switch { HgssFollowers.Walks => 0, HgssFollowers.Hovers => 1, HgssFollowers.Flies => 2, _ => -1 };
+            set
+            {
+                if (Staged == null || value < 0 || value > 2) return;
+                Stage(Staged with { Motion = value == 0 ? HgssFollowers.Walks : value == 1 ? HgssFollowers.Hovers : HgssFollowers.Flies });
+            }
+        }
+
+        public string FollowerArtWarning
+        {
+            get
+            {
+                if (Staged == null || _followerModelIndex >= _followerModels.Length) return "";
+                var m = _followerModels[_followerModelIndex];
+                bool large = HgssFollowers.SizeOf(Staged.Bits) == HgssFollowers.Size.Large;
+                return large && m.TextureWidth > 0 && m.TextureWidth < 64 ? $"Its art is {m.TextureWidth}x{m.TextureHeight}; a large follower needs 64x64 art." : "";
+            }
+        }
+        public bool HasFollowerArtWarning => FollowerArtWarning.Length > 0;
+
+        private void ShowFollower()
+        {
+            foreach (var name in new[] { nameof(FollowerModelIndex), nameof(FollowerSizeIndex), nameof(FollowerRawBits), nameof(FollowerTooTall),
+                                         nameof(FollowerMotionIndex), nameof(FollowerArtWarning), nameof(HasFollowerArtWarning),
+                                         nameof(RetailFollowerEditable), nameof(RetailFollowerNote), nameof(HasRetailFollowerNote),
+                                         nameof(HasFollowerModelChoice) })
+                OnPropertyChanged(name);
+        }
+
+        private void LoadRetailFollower()
+        {
+            _followerModels = Array.Empty<HgssFollowers.Model>();
+            _followers = _followersLoaded = null;
+            FollowerModelNames.Clear();
+            _followerModelIndex = 0;
+            if (ShowRetailFollower)
+            {
+                try
+                {
+                    _followerWhyNot = HgssFollowers.WhyNot();
+                    if (_followerWhyNot == null)
+                        _followerModels = HgssFollowers.ModelsOf(_currentId)
+                            .Select(m => HgssFollowers.Read(m.index, m.label)).Where(m => m != null).ToArray();
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                {
+                    _followerWhyNot = e.Message;
+                }
+                foreach (var m in _followerModels) FollowerModelNames.Add(m.Label);
+                _followers = _followerModels.Select(m => new FollowerStaged(m.Bits, m.TooTall, m.Motion)).ToArray();
+                _followersLoaded = (FollowerStaged[])_followers.Clone();
+            }
+            ShowFollower();
+        }
+
+        private string SaveRetailFollower()
+        {
+            if (_followers == null || _followersLoaded == null) return null;
+            try
+            {
+                for (int i = 0; i < _followers.Length; i++)
+                {
+                    if (_followers[i] == _followersLoaded[i]) continue;
+                    var m = _followerModels[i];
+                    m.Bits = _followers[i].Bits; m.TooTall = _followers[i].TooTall; m.Motion = _followers[i].Motion;
+                    HgssFollowers.Write(m);
+                    _followersLoaded[i] = _followers[i];
+                }
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                return e.Message;
+            }
+            return null;
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private void SetDirty()  { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Personal Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -970,6 +1120,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             PopulateFromCurrent();
             LoadHgEngineExtras();
+            LoadRetailFollower();
             _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             // Load sprite icon
