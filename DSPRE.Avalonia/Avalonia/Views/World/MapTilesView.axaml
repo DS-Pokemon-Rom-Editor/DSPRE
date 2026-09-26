@@ -1,0 +1,367 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+             x:Class="DSPRE.Avalonia.Views.World.MapTilesView"
+             x:DataType="vm:MapTilesViewModel">
+  <UserControl.Styles>
+    <Style Selector="ListBox.strip ListBoxItem">
+      <Setter Property="Padding" Value="1"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Button.small">
+      <Setter Property="Padding" Value="6,2"/>
+      <Setter Property="MinWidth" Value="26"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <Button Content="From map" Click="TakeApart_Click"
+              ToolTip.Tip="Use this map's own tiles"/>
+      <Button Content="Import…" Click="BringIn_Click" Margin="4,0,0,0"
+              ToolTip.Tip=".pdsts, .pdsmap or .obj"/>
+      <Button Content="Export set…" Click="SaveSet_Click" Margin="4,0,0,0" IsEnabled="{Binding Ready}"/>
+      <Button Content="Add textures to ROM" Click="PutPictures_Click" Margin="4,0,0,0"
+              IsEnabled="{Binding HasOwnPictures}"
+              ToolTip.Tip="New texture pack for this area"/>
+      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+      <Button Content="Apply" Click="Apply_Click" IsEnabled="{Binding Ready}"/>
+      <CheckBox Content="Rebuild terrain" IsChecked="{Binding AlsoTerrain}"
+                VerticalAlignment="Center" Margin="6,0,0,0"/>
+      <CheckBox Content="Walls" IsChecked="{Binding AlsoWalls}"
+                VerticalAlignment="Center" Margin="6,0,0,0"
+                ToolTip.Tip="Where you changed a height"/>
+      <CheckBox Content="{Binding SavedNote}" IsChecked="{Binding AlsoSaved}"
+                VerticalAlignment="Center" Margin="6,0,0,0" IsVisible="{Binding HasSaved}"
+                ToolTip.Tip="Use the files PDSMS saved for this map"/>
+      <CheckBox Content="Auto collision" IsChecked="{Binding AlsoMovement}"
+                VerticalAlignment="Center" Margin="6,0,0,0" IsVisible="{Binding SetHasMovement}"
+                ToolTip.Tip="Collision defaults from the tileset"/>
+      <Button Content="Revert" Click="Undo_Click" IsEnabled="{Binding CanUndo}" Margin="4,0,0,0"
+              ToolTip.Tip="Undo the last Apply"/>
+      <ComboBox ItemsSource="{Binding ProjectMaps}" SelectedIndex="{Binding ProjectMap}" Margin="8,0,0,0"
+                IsVisible="{Binding HasProject}" MinWidth="170" ToolTip.Tip="Map in project"/>
+    </WrapPanel>
+
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <ListBox Classes="strip" ItemsSource="{Binding Tools}" SelectedIndex="{Binding ToolIndex}"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:MapTilesViewModel+ToolRow">
+            <TextBlock Text="{Binding Glyph}" ToolTip.Tip="{Binding Tip}" FontSize="16"
+                       Width="28" TextAlignment="Center"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+      <Button Classes="small" Content="↶" Click="UndoPaint_Click" IsEnabled="{Binding CanUndoPaint}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+      <Button Classes="small" Content="↷" Click="RedoPaint_Click" IsEnabled="{Binding CanRedoPaint}" ToolTip.Tip="Redo (Ctrl+Y)" Margin="2,0,0,0"/>
+      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+      <Button Classes="small" Content="Copy" Click="Copy_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+C"/>
+      <Button Classes="small" Content="Cut" Click="Cut_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+X" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="Paste" Click="Paste_Click" IsEnabled="{Binding HasClipboard}" ToolTip.Tip="Ctrl+V" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="Delete" Click="Delete_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Delete" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="Fill" Click="FillSel_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+F" Margin="2,0,0,0"/>
+      <Button x:Name="RampButton" Classes="small" Content="Ramp ▾" IsEnabled="{Binding HasSelection}" Margin="2,0,0,0"
+              ToolTip.Tip="Slope or stairs up to the higher side, built on Apply">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <StackPanel Spacing="6" Width="250">
+              <ComboBox ItemsSource="{Binding RampKinds}" SelectedIndex="{Binding RampKindIndex}" HorizontalAlignment="Stretch"/>
+              <TextBlock Text="Fill with" Foreground="{DynamicResource Editor.Subtle}"/>
+              <ComboBox ItemsSource="{Binding RampFills}" SelectedIndex="{Binding RampFillIndex}" HorizontalAlignment="Stretch"
+                        MaxDropDownHeight="320"/>
+              <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                <Button Content="Mark" Click="Ramp_Click"/>
+                <Button Content="Unmark" Click="Unramp_Click"/>
+              </StackPanel>
+            </StackPanel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+      <Button Classes="small" Content="⟳" Click="Rotate_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Rotate" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="⇆" Click="FlipAcross_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip horizontal" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="⇅" Click="FlipDown_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip vertical" Margin="2,0,0,0"/>
+      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+      <TextBlock Text="Rotation" VerticalAlignment="Center" Margin="0,0,4,0"/>
+      <NumericUpDown Value="{Binding Turn}" Minimum="-1" Maximum="4" Increment="1" Width="90"
+                     ToolTip.Tip="Brush rotation (R)"/>
+      <CheckBox Content="Smart tools" IsChecked="{Binding SmartTools}" Margin="10,0,0,0" VerticalAlignment="Center"
+                ToolTip.Tip="Join edges with the Smart tab's drawing"/>
+      <ToggleButton Content="Heights" IsChecked="{Binding ShowHeights}" Margin="10,0,0,0"
+                    ToolTip.Tip="Show and paint heights (H)"/>
+      <CheckBox Content="All layers" IsChecked="{Binding HeightsAllLayers}" Margin="6,0,0,0"
+                VerticalAlignment="Center" IsVisible="{Binding ShowHeights}"/>
+    </WrapPanel>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Warning}" TextWrapping="Wrap" Margin="0,6,0,0"
+               IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Foreground="{DynamicResource Editor.Warning}"/>
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Note}" TextWrapping="Wrap" Margin="0,4,0,0"
+               Foreground="{DynamicResource Editor.Subtle}"/>
+
+    <Grid ColumnDefinitions="272,*,300">
+      <TabControl Grid.Column="0" Padding="0">
+        <TabItem Header="Tiles">
+          <DockPanel>
+          <TextBox DockPanel.Dock="Top" Text="{Binding TileSearch}" PlaceholderText="Search tiles or textures"
+                   Margin="0,0,0,4" IsEnabled="{Binding Ready}"/>
+          <ListBox Classes="strip" ItemsSource="{Binding ShownTiles}" SelectedItem="{Binding ShownTile}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:MapTilesViewModel+TileRow">
+                <Border Width="46" Height="46" Background="#12141A" CornerRadius="2" Opacity="{Binding Fade}">
+                  <ToolTip.Tip>
+                    <StackPanel Spacing="4">
+                      <Image Source="{Binding Big}" Width="160" Height="160" RenderOptions.BitmapInterpolationMode="None"/>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Pictures}" TextWrapping="Wrap" MaxWidth="220"/>
+                      <TextBlock Text="{Binding UsesText}" Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
+                  </ToolTip.Tip>
+                  <Grid>
+                    <Image Source="{Binding Picture}" Width="44" Height="44"
+                           RenderOptions.BitmapInterpolationMode="None"/>
+                    <Rectangle Height="3" Fill="{Binding Swatch}" VerticalAlignment="Bottom"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Smart">
+          <StackPanel Spacing="4">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                <Button Classes="small" Content="+" Click="AddSmart_Click" IsEnabled="{Binding Ready}" ToolTip.Tip="New smart drawing"/>
+                <Button Classes="small" Content="−" Click="RemoveSmart_Click" IsEnabled="{Binding HasSmartDrawing}" ToolTip.Tip="Remove smart drawing"/>
+              </StackPanel>
+              <TextBlock Text="Smart drawings" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </DockPanel>
+            <ListBox Classes="strip" ItemsSource="{Binding SmartDrawings}" SelectedIndex="{Binding SmartIndex}"
+                     MaxHeight="300" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MapTilesViewModel+SmartRow">
+                  <Image Source="{Binding Picture}" Width="100" Height="60" RenderOptions.BitmapInterpolationMode="None"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <ItemsControl ItemsSource="{Binding Slots}" IsVisible="{Binding HasSmartDrawing}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="5" Rows="3" Width="250" HorizontalAlignment="Left"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MapTilesViewModel+SlotRow">
+                  <Border Width="48" Height="48" Margin="1" Background="#12141A" BorderThickness="1"
+                          BorderBrush="{DynamicResource Editor.Separator}" ToolTip.Tip="{Binding Tip}"
+                          Tag="{Binding Slot}" PointerPressed="Slot_PointerPressed">
+                    <Image Source="{Binding Picture}" Width="44" Height="44" RenderOptions.BitmapInterpolationMode="None"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </TabItem>
+
+        <TabItem Header="Tile">
+          <ScrollViewer>
+            <StackPanel Spacing="6" IsEnabled="{Binding HasChosen}">
+              <TextBox Text="{Binding TileName}"/>
+              <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto">
+                <TextBlock Text="Width" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <NumericUpDown Grid.Column="1" Value="{Binding TileWide}" Minimum="1" Maximum="6" Increment="1"/>
+                <TextBlock Grid.Column="2" Text="Height" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <NumericUpDown Grid.Column="3" Value="{Binding TileDeep}" Minimum="1" Maximum="6" Increment="1"/>
+              </Grid>
+              <TextBlock Text="Material" FontWeight="SemiBold"/>
+              <ComboBox ItemsSource="{Binding TilePictures}" SelectedItem="{Binding LookPicture}" HorizontalAlignment="Stretch"/>
+              <TextBlock Text="Offset" FontWeight="SemiBold"/>
+              <UniformGrid Columns="6">
+                <Button Classes="small" Content="←" Click="NudgeWest_Click" ToolTip.Tip="-X"/>
+                <Button Classes="small" Content="→" Click="NudgeEast_Click" ToolTip.Tip="+X"/>
+                <Button Classes="small" Content="↑" Click="NudgeNorth_Click" ToolTip.Tip="-Z"/>
+                <Button Classes="small" Content="↓" Click="NudgeSouth_Click" ToolTip.Tip="+Z"/>
+                <Button Classes="small" Content="▲" Click="NudgeUp_Click" ToolTip.Tip="+Y"/>
+                <Button Classes="small" Content="▼" Click="NudgeDown_Click" ToolTip.Tip="-Y"/>
+              </UniformGrid>
+              <UniformGrid Columns="2">
+                <Button Classes="small" Content="Rotate" Click="TurnShape_Click"/>
+                <Button Classes="small" Content="Mirror" Click="Mirror_Click"/>
+              </UniformGrid>
+              <TextBlock Text="Tileset" FontWeight="SemiBold"/>
+              <UniformGrid Columns="2">
+                <Button Classes="small" Content="Move up" Click="MoveEarlier_Click"/>
+                <Button Classes="small" Content="Move down" Click="MoveLater_Click"/>
+                <Button Classes="small" Content="Duplicate" Click="Duplicate_Click"/>
+                <Button Classes="small" Content="Remove" Click="RemoveTile_Click"/>
+              </UniformGrid>
+              <Button Classes="small" Content="Append tiles…" Click="AddTiles_Click" HorizontalAlignment="Stretch"
+                      IsEnabled="{Binding Ready}"/>
+              <TextBlock Text="Collision defaults" FontWeight="SemiBold"/>
+              <ItemsControl ItemsSource="{Binding CollisionCells}" HorizontalAlignment="Left">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding CollisionColumns}" Rows="{Binding CollisionRows}"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:MapTilesViewModel+CollisionCell">
+                    <Border Width="44" Height="36" Margin="1" Background="{Binding Fill}" BorderBrush="{Binding Edge}"
+                            BorderThickness="2" CornerRadius="2" Tag="{Binding Index}" ToolTip.Tip="{Binding Tip}"
+                            PointerPressed="CollisionCell_PointerPressed" Cursor="Hand">
+                      <TextBlock Text="{Binding Text}" FontSize="10" Foreground="White" TextAlignment="Center"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="4">
+                <TextBlock Text="Collision" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Grid.Column="1" ItemsSource="{Binding WalkChoices}" SelectedIndex="{Binding CellWalkIndex}"
+                          HorizontalAlignment="Stretch"/>
+                <TextBlock Grid.Row="1" Text="Type" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TypeChoices}" SelectedIndex="{Binding CellTypeIndex}"
+                          HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+              </Grid>
+              <Button Classes="small" Content="Save to tileset" Click="SaveCollision_Click" HorizontalAlignment="Stretch"
+                      IsVisible="{Binding ChosenFromTileset}" IsEnabled="{Binding CollisionUnsaved}"
+                      ToolTip.Tip="Save collision to the tileset's .pdsts.meta"/>
+              <Expander Header="Advanced" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Tileable" FontWeight="SemiBold"/>
+                  <UniformGrid Columns="2">
+                    <CheckBox Content="X" IsChecked="{Binding TileJoinsAcross}"/>
+                    <CheckBox Content="Y" IsChecked="{Binding TileJoinsDown}"/>
+                    <CheckBox Content="U" IsChecked="{Binding TileRepeatsAcross}"/>
+                    <CheckBox Content="V" IsChecked="{Binding TileRepeatsDown}"/>
+                  </UniformGrid>
+                  <CheckBox Content="Global texture mapping" IsChecked="{Binding TileAcrossTheMap}"/>
+                  <TextBlock Text="Look" FontWeight="SemiBold"/>
+                  <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock Text="Alpha" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding LookAlpha}" Minimum="0" Maximum="31" Increment="1"
+                                   ToolTip.Tip="0 to 31"/>
+                  </Grid>
+                  <CheckBox Content="Both faces" IsChecked="{Binding LookBothSides}"/>
+                  <CheckBox Content="Fog" IsChecked="{Binding LookFog}"/>
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Lights" VerticalAlignment="Center"/>
+                    <CheckBox Content="1" IsChecked="{Binding LookLight0}"/>
+                    <CheckBox Content="2" IsChecked="{Binding LookLight1}"/>
+                    <CheckBox Content="3" IsChecked="{Binding LookLight2}"/>
+                    <CheckBox Content="4" IsChecked="{Binding LookLight3}"/>
+                  </StackPanel>
+                </StackPanel>
+              </Expander>
+              <Expander Header="Animation" HorizontalAlignment="Stretch" IsVisible="{Binding CanAnimate}">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{Binding AnimationNote}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Steps per frame" VerticalAlignment="Center"/>
+                    <NumericUpDown Value="{Binding AnimationStep}" Minimum="1" Maximum="255" Increment="1" Width="110"
+                                   ToolTip.Tip="30 steps a second"/>
+                  </StackPanel>
+                  <UniformGrid Columns="2">
+                    <Button Content="Frames…" Click="AnimFrames_Click" Margin="0,0,2,0" ToolTip.Tip="PNGs the picture's size"/>
+                    <Button Content="Stop" Click="AnimStop_Click" IsEnabled="{Binding IsAnimated}"/>
+                  </UniformGrid>
+                </StackPanel>
+              </Expander>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="8,0">
+        <TextBlock Grid.Row="0" Text="{Binding Under}" FontFamily="Consolas,monospace" MinHeight="16"
+                   Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+        <Viewbox Grid.Row="1" Stretch="Uniform" StretchDirection="Both">
+          <Border AutomationProperties.Name="PaintingGrid" Width="640" Height="640"
+                  BorderThickness="1" BorderBrush="{DynamicResource Editor.Separator}">
+            <Panel>
+              <gl:TileGridControl x:Name="Painter" AutomationProperties.Name="Squares"/>
+              <TextBlock Text="Start with From map or Import…"
+                         IsVisible="{Binding !Ready}" TextWrapping="Wrap" MaxWidth="360" TextAlignment="Center"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
+                         IsHitTestVisible="False"/>
+            </Panel>
+          </Border>
+        </Viewbox>
+      </Grid>
+
+      <Grid Grid.Column="2" RowDefinitions="*,Auto,Auto">
+        <Border Grid.Row="0" x:Name="GlHost" Background="#0E1014" CornerRadius="3" MinHeight="200">
+          <gl:NsbmdGlControl x:Name="GlView"/>
+        </Border>
+        <Border Grid.Row="1" x:Name="TileHost" Height="110" Background="#12141A" CornerRadius="3" Margin="0,6,0,0">
+          <gl:NsbmdGlControl x:Name="TileView"/>
+        </Border>
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+          <StackPanel Grid.Column="0" Spacing="4">
+            <DockPanel>
+              <CheckBox DockPanel.Dock="Right" Content="Dim others" IsChecked="{Binding DimOtherLayers}" FontSize="11"/>
+              <CheckBox DockPanel.Dock="Right" Content="Buildings" IsChecked="{Binding ShowBuildings}" FontSize="11" Margin="0,0,6,0"/>
+              <TextBlock Text="Layers" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </DockPanel>
+            <ListBox Classes="strip" ItemsSource="{Binding Layers}" SelectedIndex="{Binding ActiveLayer}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MapTilesViewModel+LayerRow">
+                  <DockPanel>
+                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Visible}" MinWidth="0" Padding="0"
+                              ToolTip.Tip="Visible"/>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Said}" Foreground="{DynamicResource Editor.Subtle}"
+                               VerticalAlignment="Center" Margin="6,0,4,0"/>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <UniformGrid Columns="4">
+              <Button Classes="small" Content="↑" Click="ShiftUp_Click" ToolTip.Tip="Shift up"/>
+              <Button Classes="small" Content="↓" Click="ShiftDown_Click" ToolTip.Tip="Shift down"/>
+              <Button Classes="small" Content="←" Click="ShiftLeft_Click" ToolTip.Tip="Shift left"/>
+              <Button Classes="small" Content="→" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
+              <Button Classes="small" Content="▲" Click="RaiseUp_Click" ToolTip.Tip="Raise layer"/>
+              <Button Classes="small" Content="▼" Click="RaiseDown_Click" ToolTip.Tip="Lower layer"/>
+              <Button Classes="small" Content="⎘" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
+              <Button Classes="small" Content="⎀" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
+            </UniformGrid>
+            <Button Classes="small" Content="Clear layer" Click="ClearLayer_Click" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="4" IsVisible="{Binding ShowHeights}">
+            <TextBlock Text="Height" FontWeight="SemiBold"/>
+            <ComboBox SelectedIndex="{Binding HeightWayIndex}" Width="64" FontSize="11">
+              <ComboBoxItem Content="Set"/>
+              <ComboBoxItem Content="Raise"/>
+              <ComboBoxItem Content="Lower"/>
+            </ComboBox>
+            <ListBox Classes="strip" ItemsSource="{Binding HeightPalette}" SelectedIndex="{Binding HeightIndex}"
+                     IsEnabled="{Binding PaintsHeight}" Height="300" Width="64">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MapTilesViewModel+HeightRow">
+                  <Border Background="{Binding Swatch}" Width="52" Height="16" CornerRadius="2">
+                    <TextBlock Text="{Binding Said}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontSize="11" Foreground="#1A1A1E"/>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </Grid>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</UserControl>

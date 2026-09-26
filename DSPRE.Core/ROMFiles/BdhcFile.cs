@@ -36,6 +36,13 @@ namespace DSPRE.ROMFiles
                     if (magic.Length != 4 || magic[0] != 'B' || magic[1] != 'D' || magic[2] != 'H' || magic[3] != 'C')
                         return false;
 
+                    // Diamond and Pearl terrain is triangles; convert it to plates.
+                    if (Models.BdhcBuild.IsTriangles(data))
+                    {
+                        var plates = Models.BdhcBuild.Plates(Models.BdhcBuild.FromTriangles(data), out _);
+                        return plates != null && !Models.BdhcBuild.IsTriangles(plates) && TryParse(plates, out bdhc);
+                    }
+
                     int pointsCount = reader.ReadUInt16();
                     int normalsCount = reader.ReadUInt16();
                     int constantsCount = reader.ReadUInt16();
@@ -104,6 +111,24 @@ namespace DSPRE.ROMFiles
             {
                 bdhc = null;
                 return false;
+            }
+        }
+
+        public readonly record struct PlateShape(float MinX, float MinZ, float MaxX, float MaxZ, float Nx, float Ny, float Nz, float D)
+        {
+            public float HeightAt(float x, float z) => Math.Abs(Ny) < 1e-4f ? 0f : -(Nx * x + Nz * z + D) / Ny;
+        }
+
+        /// <summary>Plates in terrain units: the map spans -256 to 256, 16 per square.</summary>
+        public IEnumerable<PlateShape> Plates()
+        {
+            foreach (var plate in _plates)
+            {
+                if (plate.FirstPoint >= _points.Length || plate.SecondPoint >= _points.Length
+                    || plate.Normal >= _normals.Length || plate.Constant >= _constants.Length) continue;
+                var a = _points[plate.FirstPoint]; var b = _points[plate.SecondPoint]; var n = _normals[plate.Normal];
+                yield return new PlateShape(Math.Min(a.X, b.X), Math.Min(a.Z, b.Z), Math.Max(a.X, b.X), Math.Max(a.Z, b.Z),
+                                            n.X, n.Y, n.Z, _constants[plate.Constant]);
             }
         }
 

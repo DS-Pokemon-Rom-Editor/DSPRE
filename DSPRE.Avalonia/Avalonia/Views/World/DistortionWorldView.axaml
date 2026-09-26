@@ -48,6 +48,17 @@
                           ToolTip.Tip="Overlay height"/>
                   <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
                   <Button Content="▶ Animate" Click="Animate_Click"/>
+                  <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+                  <Button Content="✏ Edit map model" Click="EditModel_Click"
+                          />
+                  <ComboBox Width="200" Margin="4,0,0,0" ItemsSource="{Binding MapCells}"
+                            SelectedIndex="{Binding SelectedMapCell}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:DistortionWorldViewModel+MapCellRow">
+                        <TextBlock Text="{Binding Label}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
                 </WrapPanel>
                 <Border x:Name="GlHost" Background="Transparent">
                   <gl:NsbmdGlControl x:Name="GlView"/>

@@ -187,6 +187,44 @@ namespace DSPRE.Avalonia.Gl
             return true;
         }
 
+        public bool ScreenToRay(float px, float py,
+                                out float ox, out float oy, out float oz,
+                                out float dx, out float dy, out float dz)
+        {
+            ox = oy = oz = dx = dy = dz = 0f;
+            if (_lastMvp == null || _lastLogW <= 0 || _lastLogH <= 0) return false;
+
+            var inv = Mat4.Invert(_lastMvp);
+            if (inv == null) return false;
+
+            float nx = px / _lastLogW * 2f - 1f;
+            float ny = 1f - py / _lastLogH * 2f;
+
+            if (!Undo(inv, nx, ny, -1f, out float ax, out float ay, out float az)) return false;
+            if (!Undo(inv, nx, ny, 1f, out float bx, out float by, out float bz)) return false;
+
+            ox = ax; oy = ay; oz = az;
+            dx = bx - ax; dy = by - ay; dz = bz - az;
+
+            float len = (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            if (len < 1e-9f) return false;
+            dx /= len; dy /= len; dz /= len;
+            return true;
+        }
+
+        private static bool Undo(float[] inv, float x, float y, float z,
+                                 out float wx, out float wy, out float wz)
+        {
+            wx = wy = wz = 0f;
+            float cx = inv[0] * x + inv[4] * y + inv[8] * z + inv[12];
+            float cy = inv[1] * x + inv[5] * y + inv[9] * z + inv[13];
+            float cz = inv[2] * x + inv[6] * y + inv[10] * z + inv[14];
+            float cw = inv[3] * x + inv[7] * y + inv[11] * z + inv[15];
+            if (Math.Abs(cw) < 1e-9f) return false;
+            wx = cx / cw; wy = cy / cw; wz = cz / cw;
+            return true;
+        }
+
         /// <summary>Which gizmo axis (0=X,1=Y,2=Z) is under the given screen point, or -1.</summary>
         public int HitTestGizmoAxis(float px, float py, float threshold = 9f)
         {

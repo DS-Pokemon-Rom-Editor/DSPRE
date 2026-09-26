@@ -80,6 +80,14 @@ namespace DSPRE.Avalonia.Views.World
             BehaviourGrid.Marked = at;
         }
 
+        private async void EditModel_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            var window = new MapModelEditorView(VM.MapModel);
+            await window.ShowDialog(this);
+            VM.ShowFloorAgain();
+        }
+
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);
         private void CamFront_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 8f);

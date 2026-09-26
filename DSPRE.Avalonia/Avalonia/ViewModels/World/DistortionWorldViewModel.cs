@@ -47,6 +47,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) { AppLogger.Error("DistortionWorld.Unpack: " + ex.Message); }
 
+            MapModel.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(MapModelEditorViewModel.Changed) || !MapModel.Changed) return;
+                if (_selectedMapCell < 0 || _selectedMapCell >= MapCells.Count) return;
+                _shapeChanged.Add(MapCells[_selectedMapCell].MapId);
+                Raise(nameof(HasUnsavedChanges));
+            };
+
             FillPainters();
             Load();
         }
@@ -63,6 +71,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public ObservableCollection<MapCellRow> MapCells { get; } = new ObservableCollection<MapCellRow>();
 
+        public MapModelEditorViewModel MapModel { get; } = new MapModelEditorViewModel();
+
         private int _selectedMapCell = -1;
         public int SelectedMapCell
         {
@@ -74,6 +84,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_selectedMapCell < 0 || _selectedMapCell >= MapCells.Count)
             {
+                MapModel.Open(null, 0, gameFamily, null);
                 return;
             }
 
@@ -84,6 +95,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch (Exception ex) { AppLogger.Error("DistortionWorld.OpenShape: " + ex.Message); return; }
                 _shapeEdited[row.MapId] = map;
             }
+
+            MapModel.Open(map, row.AreaId, gameFamily, $"Map {row.MapId}");
         }
 
         private IEnumerable<KeyValuePair<int, MapFile>> ChangedShapes =>
@@ -1343,6 +1356,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             _shapeChanged.Clear();
             _shapeEdited.Clear();
+            MapModel.Open(null, 0, gameFamily, null);
             _gridCache.Clear();
             _shownGrids.Clear();
             _shownFloorIndex = -1;

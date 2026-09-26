@@ -1,3 +1,4 @@
+using System.Linq;
 ﻿using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -207,6 +208,26 @@ namespace DSPRE.Avalonia.Views.World
             var win = new AnimatedPreviewWindow();
             win.ShowFor(TopLevel.GetTopLevel(this) as Window, VM.Model3D, VM.Area, null, null, VM.Collision,
                         cameraId: VM.CameraId, musicDayId: VM.MusicDayId, musicNightId: VM.MusicNightId);
+        }
+
+        private async void EditModel_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as MapEditorViewModel;
+            if (vm == null || !vm.IsSingleMap) return;
+
+            if (TopLevel.GetTopLevel(this) is not Window owner) return;
+
+            vm.MapModel.Tiles.ImportedSinceOpen = false;
+            var permissionsBefore = vm.PermissionsNow();
+            var window = new MapModelEditorView(vm.MapModel);
+            await window.ShowDialog(owner);
+
+            vm.AfterMapModelEdited();
+            if (vm.MapModel.Tiles.ImportedSinceOpen)
+            {
+                var clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
+                if (clashes.Count > 0) await new EventsAfterImportView(vm, clashes).ShowDialog(owner);
+            }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();

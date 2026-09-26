@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
+        x:Class="DSPRE.Avalonia.Views.World.MapModelEditorView"
+        x:DataType="vm:MapModelEditorViewModel"
+        Title="Map model" Width="1280" Height="860"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="8">
+
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+      <TextBlock Text="{Binding Which}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+      <TextBlock Text="{Binding Shared}" IsVisible="{Binding Shared, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 ToolTip.Tip="{Binding SharedTip}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"/>
+      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,1"/>
+      <TextBlock Text="{Binding Note}" VerticalAlignment="Center"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+    </StackPanel>
+
+    <TabControl Grid.Row="1" SelectionChanged="Half_Changed">
+      <TabItem Header="Tiles">
+        <world:MapTilesView DataContext="{Binding Tiles}" Margin="2"/>
+      </TabItem>
+      <TabItem Header="Shape">
+        <world:MapGeometryView DataContext="{Binding Shape}" Margin="2"/>
+      </TabItem>
+    </TabControl>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"
+                Margin="0,8,0,0">
+      <TextBlock Text="{Binding Unsaved}" VerticalAlignment="Center"
+                 Foreground="{DynamicResource Editor.Warn}"
+                 IsVisible="{Binding Unsaved, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+      <Button Content="Done" Click="Done_Click" MinWidth="110"/>
+    </StackPanel>
+  </Grid>
+</Window>

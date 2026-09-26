@@ -71,6 +71,9 @@ namespace DSPRE.ROMFiles {
         public byte[,] types = new byte[mapSize, mapSize];
         public byte[] mapModelData;
         public byte[] bdhc;
+
+        /// <summary>Terrain plates the user made or edited while this map is open; rebuilds keep them.</summary>
+        public List<Models.BdhcBuild.Piece> KeptPlates = new List<Models.BdhcBuild.Piece>();
         public byte[] bgs = blankBGS;
         #endregion
 
@@ -172,6 +175,21 @@ namespace DSPRE.ROMFiles {
                 }
             }
         }
+
+        /// <summary>
+        /// Per-map model and terrain buffers (pokeplatinum MAP_MODEL_FILE_SIZE, BDHC_BUFFER_SIZE; HGSS matches).
+        /// A larger file overruns the next map's buffer.
+        /// </summary>
+        public const int ModelRoom = 0xF000, TerrainRoom = 0x9000;
+
+        /// <summary>Why the game could not load this map's model or terrain, or null when both fit.</summary>
+        public static string TooBigForTheGame(int modelBytes, int terrainBytes) =>
+            modelBytes > ModelRoom
+                ? $"The model is {modelBytes:n0} bytes; the game loads at most {ModelRoom:n0} per map, so the maps around it would fail to load."
+            : terrainBytes > TerrainRoom
+                ? $"The terrain is {terrainBytes:n0} bytes; the game loads at most {TerrainRoom:n0} per map."
+            : null;
+
         public bool LoadMapModel(byte[] newData, bool showMessages = true) {
             using (BinaryReader modelReader = new BinaryReader(new MemoryStream(newData))) {
 

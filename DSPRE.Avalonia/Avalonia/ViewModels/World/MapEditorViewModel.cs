@@ -12,6 +12,7 @@ using DSPRE.Avalonia;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Editors;
 using DSPRE.Resources;
+using DSPRE.Models;
 using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
@@ -64,6 +65,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         private Window _owner;
         private bool _suppress;
         private MapFile _map;
+
+        public MapModelEditorViewModel MapModel { get; } = new MapModelEditorViewModel();
+
+        private bool _watchingGeometry;
+
+        private void WatchGeometry()
+        {
+            if (_watchingGeometry) return;
+            _watchingGeometry = true;
+            MapModel.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MapModelEditorViewModel.Changed) && MapModel.Changed)
+                    MarkDirty();
+            };
+        }
         private Dictionary<int, byte> _mapToArea;   // map index → areaDataID (for the correct tileset)
 
         // ── "This header" view: every map belonging to the currently viewed header ──────
@@ -889,9 +905,485 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void DiscardChanges()
         {
             _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges));
+            _eventsToSave.Clear();
+
             if (IsHeaderView) BuildHeaderPreview();               // reloads every cell's map fresh from disk
             else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
+            else MapModel.Open(null, 0, gameFamily, null);
         }
+        /// <summary>Every header shown over a matrix cell that holds the map, with that cell.</summary>
+        public List<(ushort header, int x, int y)> HeadersUsingMap(int mapIndex)
+        {
+            var found = new List<(ushort, int, int)>();
+            if (mapIndex < 0) return found;
+            try
+            {
+                int headerCount = GetHeaderCount();
+                var byMatrix = new Dictionary<int, List<ushort>>();
+                for (ushort h = 0; h < headerCount; h++)
+                {
+                    try
+                    {
+                        var header = MapHeader.GetMapHeader(h);
+                        if (header == null) continue;
+                        if (!byMatrix.TryGetValue(header.matrixID, out var list)) byMatrix[header.matrixID] = list = new List<ushort>();
+                        list.Add(h);
+                    }
+                    catch { }
+                }
+                for (int mid = 0; mid < Filesystem.GetMatrixCount(); mid++)
+                {
+                    GameMatrix mtx;
+                    try { mtx = new GameMatrix(mid); } catch { continue; }
+                    for (int y = 0; y < mtx.height; y++)
+                        for (int x = 0; x < mtx.width; x++)
+                        {
+                            if (mtx.maps[y, x] != mapIndex) continue;
+                            if (mtx.hasHeadersSection) found.Add((mtx.headers[y, x], x, y));
+                            else if (byMatrix.TryGetValue(mid, out var l)) found.AddRange(l.Select(h => (h, x, y)));
+                        }
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("Header scan failed: " + ex.Message); }
+            return found;
+        }
+
+        /// <summary>Area data ids of every header that shows the map, the map's own area first.</summary>
+        public List<byte> AreasUsingMap(int mapIndex, out int headers)
+        {
+            var areas = new List<byte>();
+            if (AreaForMap(mapIndex) is byte own) areas.Add(own);
+            var ids = HeadersUsingMap(mapIndex).Select(h => h.header).Distinct().ToList();
+            headers = ids.Count;
+            foreach (ushort h in ids)
+            {
+                try
+                {
+                    var header = MapHeader.GetMapHeader(h);
+                    if (header != null && !areas.Contains(header.areaDataID)) areas.Add(header.areaDataID);
+                }
+                catch { }
+            }
+            return areas;
+        }
+
+        /// <summary>The map's permissions, to compare against after an import.</summary>
+        public (byte[,] collisions, byte[,] types) PermissionsNow()
+            => _map == null ? (null, null) : ((byte[,])_map.collisions.Clone(), (byte[,])_map.types.Clone());
+
+        /// <summary>An event an import left on a blocked or water square.</summary>
+        public sealed class EventClash : INotifyPropertyChanged
+        {
+            public string Kind { get; init; }
+            public int Index { get; init; }
+            public int File { get; init; }
+            public int X { get; init; }
+            public int Y { get; init; }
+            public bool Water { get; init; }
+            /// <summary>For a warp: why it no longer works where it stands, fixed by restoring its squares.</summary>
+            public string WarpTrouble { get; init; }
+            /// <summary>For a map edge: the squares the import closed where the neighbouring map is open.</summary>
+            public List<(int x, int y)> Squares { get; init; }
+            private bool _move = true;
+            public bool Move { get => _move; set { _move = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); } }
+            private string _result;
+            public string Result { get => _result; set { _result = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Result))); } }
+            public string Text => File < 0
+                ? $"{Kind}{(Squares != null ? "" : $" at {X},{Y}")} ({WarpTrouble})"
+                : $"{Kind} {Index} of event file {File} at {X},{Y} ({WarpTrouble ?? (Water ? "water" : "blocked")})";
+            public event PropertyChangedEventHandler PropertyChanged;
+        }
+
+        // Event files changed here, written with the map on Save.
+        private readonly Dictionary<int, EventFile> _eventsToSave = new Dictionary<int, EventFile>();
+
+        private HashSet<byte> WaterTypes()
+            => new HashSet<byte>(TypePainters.Where(t => t.Name?.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0).Select(t => t.Value));
+
+        private EventFile EventsOf(int file) => _eventsToSave.TryGetValue(file, out var had) ? had : new EventFile(file);
+
+        private static IEnumerable<(string kind, int index, Event e)> AllEvents(EventFile events)
+        {
+            for (int i = 0; i < events.overworlds.Count; i++) yield return ("Overworld", i, events.overworlds[i]);
+            for (int i = 0; i < events.warps.Count; i++) yield return ("Warp", i, events.warps[i]);
+            for (int i = 0; i < events.spawnables.Count; i++) yield return ("Sign/item", i, events.spawnables[i]);
+            for (int i = 0; i < events.triggers.Count; i++) yield return ("Trigger", i, events.triggers[i]);
+        }
+
+        /// <summary>Moves warps in a building's old footprint or the row in front of it along with the building. Written with the map on Save.</summary>
+        private int MoveWarpsWith(int mapIndex, (double x0, double z0, double x1, double z1) was, int dx, int dz)
+        {
+            int moved = 0, n = MapFile.mapSize;
+            var seen = new HashSet<(int file, int x, int y)>();
+            try
+            {
+                foreach (var (h, mx, my) in HeadersUsingMap(mapIndex))
+                {
+                    MapHeader header;
+                    try { header = MapHeader.GetMapHeader(h); } catch { continue; }
+                    if (header == null || !seen.Add((header.eventFileID, mx, my))) continue;
+                    EventFile events;
+                    try { events = EventsOf(header.eventFileID); } catch { continue; }
+                    bool any = false;
+                    foreach (var w in events.warps)
+                    {
+                        if (w.xMatrixPosition != mx || w.yMatrixPosition != my) continue;
+                        double cx = w.xMapPosition + 0.5, cz = w.yMapPosition + 0.5;
+                        if (cx < was.x0 || cx > was.x1 || cz < was.z0 || cz > was.z1 + 1) continue;
+                        w.xMapPosition = (short)Math.Clamp(w.xMapPosition + dx, 0, n - 1);
+                        w.yMapPosition = (short)Math.Clamp(w.yMapPosition + dz, 0, n - 1);
+                        any = true;
+                        moved++;
+                    }
+                    if (any) _eventsToSave[header.eventFileID] = events;
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("Moving warps with a building failed: " + ex.Message); }
+            return moved;
+        }
+
+        // Restoring a warp's squares copies them from here.
+        private (byte[,] collisions, byte[,] types) _beforeImport;
+        private HashSet<(int x, int y)> _beforeImportWarps;
+
+        /// <summary>Events on this map whose square became blocked or water since <paramref name="was"/>; doors and signs already sit on blocked squares.</summary>
+        public List<EventClash> EventsOnUnwalkableSquares((byte[,] collisions, byte[,] types) was)
+        {
+            var found = new List<EventClash>();
+            if (_map == null || _selectedMapIndex < 0) return found;
+            _beforeImport = was;
+            _beforeImportWarps = null;
+            var waterTypes = WaterTypes();
+            try
+            {
+                var seen = new HashSet<(int file, int x, int y)>();
+                foreach (var (h, x, y) in HeadersUsingMap(_selectedMapIndex))
+                {
+                    MapHeader header;
+                    try { header = MapHeader.GetMapHeader(h); } catch { continue; }
+                    if (header == null || !seen.Add((header.eventFileID, x, y))) continue;
+                    EventFile events;
+                    try { events = EventsOf(header.eventFileID); } catch { continue; }
+                    ArrivalsOf(h, header, x, y, events, was, waterTypes, found);
+                    foreach (var (kind, index, e) in AllEvents(events))
+                    {
+                        if (e.xMatrixPosition != x || e.yMatrixPosition != y) continue;
+                        int ex = e.xMapPosition, ey = e.yMapPosition;
+                        if (ex < 0 || ey < 0 || ex >= MapFile.mapSize || ey >= MapFile.mapSize) continue;
+                        bool blocked = (_map.collisions[ey, ex] & 0x80) != 0 && (was.collisions == null || (was.collisions[ey, ex] & 0x80) == 0);
+                        bool water = waterTypes.Contains(_map.types[ey, ex]) && (was.types == null || !waterTypes.Contains(was.types[ey, ex]));
+                        if (kind == "Warp") (_beforeImportWarps ??= new HashSet<(int x, int y)>()).UnionWith(WarpSquares(events, x, y));
+                        if (kind == "Warp" && WarpTrouble(ex, ey, was, waterTypes, WarpSquares(events, x, y)) is string trouble)
+                        {
+                            found.Add(new EventClash { Kind = kind, Index = index, File = header.eventFileID, X = ex, Y = ey, WarpTrouble = trouble });
+                            continue;
+                        }
+                        if (blocked || water)
+                            found.Add(new EventClash { Kind = kind, Index = index, File = header.eventFileID, X = ex, Y = ey, Water = !blocked });
+                    }
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("Import event check failed: " + ex.Message); }
+            return found;
+        }
+
+        /// <summary>Why a warp stopped working after an import (its door, stairs or mat painted over, or no way off it), or null.</summary>
+        private string WarpTrouble(int x, int y, (byte[,] collisions, byte[,] types) was, HashSet<byte> waterTypes,
+                                   HashSet<(int x, int y)> warps)
+        {
+            if (was.types != null && was.types[y, x] != 0 && _map.types[y, x] != was.types[y, x])
+                return $"its {BehaviourName(was.types[y, x])} is now {BehaviourName(_map.types[y, x])}";
+            if (DeadEnd(x, y, waterTypes, warps) is string stuck) return stuck;
+            bool Open(int a, int b) => a >= 0 && b >= 0 && a < MapFile.mapSize && b < MapFile.mapSize
+                                     && (_map.collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(_map.types[b, a]);
+            bool wasOpen = was.collisions == null || new[] { (0, 1), (0, -1), (1, 0), (-1, 0) }
+                .Any(d => x + d.Item1 >= 0 && y + d.Item2 >= 0 && x + d.Item1 < MapFile.mapSize && y + d.Item2 < MapFile.mapSize
+                          && (was.collisions[y + d.Item2, x + d.Item1] & 0x80) == 0);
+            if (wasOpen && !new[] { (0, 1), (0, -1), (1, 0), (-1, 0) }.Any(d => Open(x + d.Item1, y + d.Item2)))
+                return "nothing beside it can be walked onto";
+            return null;
+        }
+
+        // Fly and blackout arrivals, and entries from neighbouring maps, which an import can block or cut off.
+        private void ArrivalsOf(ushort h, MapHeader header, int mx, int my, EventFile events,
+                                (byte[,] collisions, byte[,] types) was, HashSet<byte> waterTypes, List<EventClash> found)
+        {
+            int n = MapFile.mapSize;
+            bool Open(byte[,] c, byte[,] t, int a, int b) => (c[b, a] & 0x80) == 0 && !waterTypes.Contains(t[b, a]);
+            var warps = WarpSquares(events, mx, my);
+            try
+            {
+                foreach (var point in SpawnPoints.Read().Where(pt => pt.Header == h))
+                {
+                    int px = point.Global ? point.X - mx * n : point.X, pz = point.Global ? point.Z - my * n : point.Z;
+                    if (px < 0 || pz < 0 || px >= n || pz >= n) continue;
+                    string trouble = !Open(_map.collisions, _map.types, px, pz)
+                        ? (was.collisions != null && !Open(was.collisions, was.types, px, pz) ? null : "now on a blocked or water square")
+                        : DeadEnd(px, pz, waterTypes, warps);
+                    if (trouble != null)
+                        found.Add(new EventClash { Kind = point.Kind, File = -1, X = px, Y = pz, WarpTrouble = trouble + "; change it in the Fly / Warp Editor", Move = false });
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("Import spawn point check failed: " + ex.Message); }
+
+            if (was.collisions == null) return;
+            try
+            {
+                var matrix = new GameMatrix(header.matrixID);
+                foreach (var (dx, dy, side) in new[] { (0, -1, "North"), (0, 1, "South"), (-1, 0, "West"), (1, 0, "East") })
+                {
+                    int nx = mx + dx, ny = my + dy;
+                    if (nx < 0 || ny < 0 || nx >= matrix.width || ny >= matrix.height) continue;
+                    int other = matrix.maps[ny, nx];
+                    if (other == 0xFFFF || other == _selectedMapIndex) continue;
+                    MapFile beside;
+                    try { beside = new MapFile(other, gameFamily, false, false); } catch { continue; }
+                    var closed = new List<(int x, int y)>();
+                    var crossing = new List<(int x, int y)>();
+                    for (int i = 0; i < n; i++)
+                    {
+                        var (ax, ay, bx, by) = side switch
+                        {
+                            "North" => (i, 0, i, n - 1),
+                            "South" => (i, n - 1, i, 0),
+                            "West" => (0, i, n - 1, i),
+                            _ => (n - 1, i, 0, i),
+                        };
+                        if (!Open(beside.collisions, beside.types, bx, by)) continue;
+                        if (Open(_map.collisions, _map.types, ax, ay)) crossing.Add((ax, ay));
+                        else if (Open(was.collisions, was.types, ax, ay)) { closed.Add((ax, ay)); crossing.Add((ax, ay)); }
+                    }
+                    // Whether walking in from there, once the closed squares are open again, reaches the rest of the map.
+                    string leadsNowhere = crossing.Count == 0 ? null : WalkedInFrom(crossing, side, waterTypes, warps);
+                    if (closed.Count == 0 && leadsNowhere != null)
+                        found.Add(new EventClash
+                        {
+                            Kind = $"{side} edge to map {other}", File = -1, Move = false,
+                            WarpTrouble = $"walking in from map {other}, {leadsNowhere}; paint a way through",
+                        });
+                    if (closed.Count > 0)
+                        found.Add(new EventClash
+                        {
+                            Kind = $"{side} edge to map {other}", File = -1, Squares = closed,
+                            WarpTrouble = $"{closed.Count} square{(closed.Count > 1 ? "s" : "")} that led on are now closed: "
+                                        + string.Join(" ", closed.Take(8).Select(c => $"{c.x},{c.y}")) + (closed.Count > 8 ? " ..." : "")
+                                        + (leadsNowhere != null ? $"; even open again, {leadsNowhere}" : ""),
+                        });
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("Import edge check failed: " + ex.Message); }
+        }
+
+        /// <summary>Why a player entering over these edge squares gets stuck, or null. The squares count as open since Fix restores them.</summary>
+        private string WalkedInFrom(List<(int x, int y)> edge, string side, HashSet<byte> waterTypes, HashSet<(int x, int y)> warps)
+        {
+            string now = WalkedInFrom(edge, side, waterTypes, warps, _map.collisions, _map.types);
+            if (now == null || _beforeImport.collisions == null) return now;
+            return WalkedInFrom(edge, side, waterTypes, warps, _beforeImport.collisions, _beforeImport.types) == null ? now : null;
+        }
+
+        private static string WalkedInFrom(List<(int x, int y)> edge, string side, HashSet<byte> waterTypes, HashSet<(int x, int y)> warps,
+                                           byte[,] collisions, byte[,] types)
+        {
+            const int Enough = 40;
+            int n = MapFile.mapSize;
+            bool Open(int a, int b) => a >= 0 && b >= 0 && a < n && b < n
+                                     && (collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(types[b, a]);
+            bool OtherEdge(int a, int b) => side switch
+            {
+                "North" => b == n - 1 || a == 0 || a == n - 1,
+                "South" => b == 0 || a == 0 || a == n - 1,
+                "West" => a == n - 1 || b == 0 || b == n - 1,
+                _ => a == 0 || b == 0 || b == n - 1,
+            };
+            var seen = new HashSet<(int, int)>(edge);
+            var queue = new Queue<(int x, int y)>(edge);
+            int reached = 0;
+            while (queue.Count > 0)
+            {
+                var (a, b) = queue.Dequeue();
+                reached++;
+                if (reached >= Enough + edge.Count || warps.Contains((a, b)) || (OtherEdge(a, b) && !edge.Contains((a, b)))) return null;
+                foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+                {
+                    int c = a + dx, d = b + dy;
+                    if (warps.Contains((c, d))) return null;
+                    if (Open(c, d) && seen.Add((c, d))) queue.Enqueue((c, d));
+                }
+            }
+            int inside = reached - edge.Count;
+            return $"only {inside} square{(inside == 1 ? "" : "s")} can be walked before water or walls stop you";
+        }
+
+        private static HashSet<(int x, int y)> WarpSquares(EventFile events, int mx, int my)
+            => new HashSet<(int, int)>(events.warps.Where(w => w.xMatrixPosition == mx && w.yMatrixPosition == my)
+                                                   .Select(w => ((int)w.xMapPosition, (int)w.yMapPosition)));
+
+        /// <summary>Why a player arriving by the warp at (x, y) cannot reach the map, its edge or another warp on dry land, or null.</summary>
+        private string DeadEnd(int x, int y, HashSet<byte> waterTypes, HashSet<(int x, int y)> warps)
+        {
+            // Some retail warps are only reached by Surf or a cutscene, so only a new dead end counts.
+            string now = DeadEnd(x, y, waterTypes, warps, _map.collisions, _map.types);
+            if (now == null || _beforeImport.collisions == null) return now;
+            return DeadEnd(x, y, waterTypes, warps, _beforeImport.collisions, _beforeImport.types) == null ? now : null;
+        }
+
+        private static string DeadEnd(int x, int y, HashSet<byte> waterTypes, HashSet<(int x, int y)> warps, byte[,] collisions, byte[,] types)
+        {
+            const int Enough = 40;
+            int n = MapFile.mapSize;
+            bool Open(int a, int b) => a >= 0 && b >= 0 && a < n && b < n
+                                     && (collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(types[b, a]);
+            var seen = new HashSet<(int, int)> { (x, y) };
+            var queue = new Queue<(int x, int y)>();
+            foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+                if (Open(x + dx, y + dy) && seen.Add((x + dx, y + dy))) queue.Enqueue((x + dx, y + dy));
+            int reached = 0;
+            while (queue.Count > 0)
+            {
+                var (a, b) = queue.Dequeue();
+                reached++;
+                if (reached >= Enough || a == 0 || b == 0 || a == n - 1 || b == n - 1 || warps.Contains((a, b))) return null;
+                foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+                {
+                    int c = a + dx, d = b + dy;
+                    if (warps.Contains((c, d)) && (c, d) != (x, y)) return null;
+                    if (Open(c, d) && seen.Add((c, d))) queue.Enqueue((c, d));
+                }
+            }
+            return reached == 0 ? "nothing beside it can be walked onto"
+                 : $"only {reached} square{(reached > 1 ? "s" : "")} beyond it can be walked, cut off by water or walls";
+        }
+
+        private string KeepWarpSquares(int x, int y, HashSet<byte> waterTypes, out bool leadsOn)
+        {
+            leadsOn = false;
+            var (collisions, types) = _beforeImport;
+            if (collisions == null || types == null) return "not kept: the map before the import is not known";
+            int n = MapFile.mapSize, restored = 0;
+            void Restore(int a, int b)
+            {
+                if (a < 0 || b < 0 || a >= n || b >= n) return;
+                if (_map.types[b, a] == types[b, a] && _map.collisions[b, a] == collisions[b, a]) return;
+                _map.types[b, a] = types[b, a];
+                _map.collisions[b, a] = collisions[b, a];
+                restored++;
+            }
+            Restore(x, y);
+            // Reopen the square the player stepped off the warp onto, if the import closed it.
+            foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+            {
+                int a = x + dx, b = y + dy;
+                if (a < 0 || b < 0 || a >= n || b >= n) continue;
+                bool wasOpen = (collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(types[b, a]);
+                bool isOpen = (_map.collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(_map.types[b, a]);
+                if (wasOpen && !isOpen) Restore(a, b);
+            }
+            _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges));
+            string kept = restored == 0 ? "already as it was" : $"kept: {restored} square{(restored > 1 ? "s" : "")} put back";
+            var others = new HashSet<(int x, int y)>(_beforeImportWarps ?? new HashSet<(int x, int y)>());
+            if (DeadEnd(x, y, waterTypes, others) is string stuck) return $"{kept}, but {stuck}; move the building or paint a way out";
+            leadsOn = true;
+            return kept;
+        }
+
+        private string BehaviourName(byte value)
+        {
+            string name = TypePainters.FirstOrDefault(t => t.Value == value)?.Name;
+            return string.IsNullOrEmpty(name) ? $"behaviour {value:X2}" : name;
+        }
+
+        /// <summary>Moves the ticked events to the nearest open, dry, free square. Written with the map on Save.</summary>
+        public int MoveEvents(IEnumerable<EventClash> clashes)
+        {
+            if (_map == null) return 0;
+            var waterTypes = WaterTypes();
+            int n = MapFile.mapSize, moved = 0;
+            foreach (var c in clashes.Where(c => c.Move && c.File < 0))
+            {
+                if (c.Squares == null) continue;
+                var (collisions, types) = _beforeImport;
+                if (collisions == null) { c.Result = "not kept: the map before the import is not known"; continue; }
+                foreach (var (x, y) in c.Squares) { _map.collisions[y, x] = collisions[y, x]; _map.types[y, x] = types[y, x]; }
+                _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges));
+                c.Result = $"{c.Squares.Count} put back";
+                moved++;
+            }
+            foreach (var group in clashes.Where(c => c.Move && c.File >= 0).GroupBy(c => c.File))
+            {
+                EventFile events;
+                try { events = EventsOf(group.Key); } catch (Exception ex) { foreach (var c in group) c.Result = "not moved: " + ex.Message; continue; }
+                foreach (var c in group)
+                {
+                    var list = c.Kind switch
+                    {
+                        "Overworld" => events.overworlds.Cast<Event>().ToList(),
+                        "Warp" => events.warps.Cast<Event>().ToList(),
+                        "Sign/item" => events.spawnables.Cast<Event>().ToList(),
+                        _ => events.triggers.Cast<Event>().ToList(),
+                    };
+                    if (c.Index >= list.Count) { c.Result = "not found"; continue; }
+                    if (c.WarpTrouble != null)
+                    {
+                        // A warp stays at its door; its squares are restored instead.
+                        c.Result = KeepWarpSquares(c.X, c.Y, waterTypes, out bool leadsOn);
+                        // A restored warp that still leads nowhere is not fixed.
+                        if (leadsOn) moved++;
+                        continue;
+                    }
+                    var e = list[c.Index];
+                    var taken = new HashSet<(int, int)>(AllEvents(events)
+                        .Where(o => o.e != e && o.e.xMatrixPosition == e.xMatrixPosition && o.e.yMatrixPosition == e.yMatrixPosition)
+                        .Select(o => ((int)o.e.xMapPosition, (int)o.e.yMapPosition)));
+                    bool Open(int x, int y) => (_map.collisions[y, x] & 0x80) == 0 && !waterTypes.Contains(_map.types[y, x]) && !taken.Contains((x, y));
+
+                    (int x, int y)? to = null;
+                    var queue = new Queue<(int x, int y)>();
+                    var visited = new bool[n, n];
+                    queue.Enqueue((c.X, c.Y)); visited[c.Y, c.X] = true;
+                    while (queue.Count > 0 && to == null)
+                    {
+                        var (qx, qy) = queue.Dequeue();
+                        if ((qx, qy) != (c.X, c.Y) && Open(qx, qy)) { to = (qx, qy); break; }
+                        foreach (var (dx, dy) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
+                        {
+                            int nx = qx + dx, ny = qy + dy;
+                            if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny, nx]) continue;
+                            visited[ny, nx] = true;
+                            queue.Enqueue((nx, ny));
+                        }
+                    }
+                    if (to is not (int tx, int ty)) { c.Result = "no open square on this map"; continue; }
+                    e.xMapPosition = (short)tx;
+                    e.yMapPosition = (short)ty;
+                    _eventsToSave[group.Key] = events;
+                    c.Result = $"moved to {tx},{ty}";
+                    c.Move = false;
+                    moved++;
+                }
+            }
+            if (moved > 0) MarkDirty();
+            return moved;
+        }
+
+        public void AfterMapModelEdited()
+        {
+            if (MapModel.Changed) MarkDirty();
+            RefreshBuildings();
+            if (MapModel.Tiles.SelectedBuilding is int picked && picked >= 0 && picked < Buildings.Count)
+                SelectedBuildingIndex = picked;
+
+            // Adding textures makes a new pack and points the area at it.
+            int packs = Filesystem.GetMapTexturesCount();
+            for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map Tileset " + i);
+            ResolveTilesetForMap(_selectedMapIndex);
+
+            RebuildPreview();
+            OnPropertyChanged(nameof(Collisions));
+            OnPropertyChanged(nameof(Types));
+            OnPropertyChanged(nameof(UnsavedChangesDescription));
+        }
+
         public void MarkDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -1004,11 +1496,21 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadMap(int index)
         {
+            _eventsToSave.Clear();
             try
             {
                 _map = new MapFile(index, gameFamily);
+                _map.KeptPlates = KeptPlatesFile.Load(index);
                 ResolveTilesetForMap(index);
                 RefreshBuildings();
+
+                WatchGeometry();
+                MapModel.Open(_map, AreaForMap(index) ?? 0, gameFamily, $"Map {index}");
+                MapModel.Tiles.AreasOfMap = () => AreasUsingMap(index, out _);
+                MapModel.Tiles.WarpsFollow = (was, dx, dz) => MoveWarpsWith(index, was, dx, dz);
+                MapModel.Tiles.SelectedBuilding = -1;
+                MapModel.HeadersOfMap = () => HeadersUsingMap(index).Select(h => h.header).Distinct().OrderBy(h => h).ToList();
+
                 SetClean();
                 StatusText = $"Loaded map {index}.";
                 OnPropertyChanged(nameof(Collisions));
@@ -1325,7 +1827,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                         });
                     }
 
-                Model3D = NsbmdGeometry.BuildScene(_map.mapModel?.models?.Length > 0 ? _map.mapModel.models[0] : null, buildings);
+                TextureSrtAnimation scroll = null;
+                try { if (AreaForMap(_selectedMapIndex) is byte aid) scroll = GroundAnimationSet.ForArea(new AreaData(aid)); } catch { }
+                Model3D = NsbmdGeometry.BuildScene(_map.mapModel?.models?.Length > 0 ? _map.mapModel.models[0] : null, buildings,
+                                                   MatrixSceneBuilder.FieldAnimationFrames(_map.mapModel), scroll);
             }
             catch (Exception ex) { AppLogger.Error("Map preview build failed: " + ex.Message); }
         }
@@ -1373,7 +1878,14 @@ namespace DSPRE.Avalonia.ViewModels.World
                 foreach (var cell in _headerCells)
                 {
                     if (!cell.Dirty) continue;
+                    if (MapFile.TooBigForTheGame(cell.Map.mapModelData?.Length ?? 0, cell.Map.bdhc?.Length ?? 0) is string cellTooBig)
+                    {
+                        StatusText = $"Map {cell.MapIndex} not saved. " + cellTooBig;
+                        _ = DialogHelper.ShowError($"Map {cell.MapIndex}: {cellTooBig}\n\nIt was not saved.", "Map too big");
+                        continue;
+                    }
                     cell.Map.SaveToFileDefaultDir(cell.MapIndex, showSuccessMessage: false);
+                    KeptPlatesFile.Save(cell.MapIndex, cell.Map.KeptPlates);
                     cell.Dirty = false;
                     saved++;
                 }
@@ -1382,7 +1894,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
             if (_map == null || _selectedMapIndex < 0) return;
+            // A map too big for the game's buffers blacks out the maps around it.
+            if (MapFile.TooBigForTheGame(_map.mapModelData?.Length ?? 0, _map.bdhc?.Length ?? 0) is string tooBig)
+            {
+                StatusText = "Not saved. " + tooBig;
+                _ = DialogHelper.ShowError(tooBig + "\n\nThe map was not saved.", "Map too big");
+                return;
+            }
             _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
+            KeptPlatesFile.Save(_selectedMapIndex, _map.KeptPlates);
+            foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
+            _eventsToSave.Clear();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved map {_selectedMapIndex}.";

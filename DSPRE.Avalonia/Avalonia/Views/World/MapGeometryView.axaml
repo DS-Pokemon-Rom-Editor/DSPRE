@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+             x:Class="DSPRE.Avalonia.Views.World.MapGeometryView"
+             x:DataType="vm:MapGeometryViewModel">
+  <Grid ColumnDefinitions="*,250">
+    <DockPanel Grid.Column="0">
+      <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+        <Button Content="Top" Click="CamTop_Click"/>
+        <Button Content="Corner" Click="CamIso_Click" Margin="4,0,0,0"/>
+        <Button Content="Front" Click="CamFront_Click" Margin="4,0,0,0"/>
+        <Button Content="Side" Click="CamSide_Click" Margin="4,0,0,0"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+        <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
+        <Button Content="Export" Click="Export_Click" Margin="4,0,0,0"
+                ToolTip.Tip="OBJ with textures"/>
+        <Button Content="Import" Click="Import_Click" Margin="4,0,0,0"
+                ToolTip.Tip="OBJ from DSPRE or PDSMS"/>
+
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
+        <TextBlock Text="{Binding SizeNote}" VerticalAlignment="Center"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+      </WrapPanel>
+      <Border x:Name="GlHost" Background="Transparent">
+        <gl:NsbmdGlControl x:Name="GlView"/>
+      </Border>
+    </DockPanel>
+
+    <DockPanel Grid.Column="1" Margin="8,0,0,0">
+      <StackPanel DockPanel.Dock="Top" Spacing="6">
+        <TextBlock Text="{Binding Note}" TextWrapping="Wrap" MinHeight="64"
+                   FontFamily="Consolas,monospace"/>
+
+        <TextBlock Text="{Binding Warning}" TextWrapping="Wrap"
+                   IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Foreground="{DynamicResource Editor.Warning}"/>
+
+        <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="Step" VerticalAlignment="Center"/>
+          <ComboBox x:Name="StepBox" Width="110" SelectedIndex="2" SelectionChanged="Step_Changed">
+            <ComboBoxItem>1 tile</ComboBoxItem>
+            <ComboBoxItem>1/2 tile</ComboBoxItem>
+            <ComboBoxItem>1/4 tile</ComboBoxItem>
+            <ComboBoxItem>1/8 tile</ComboBoxItem>
+          </ComboBox>
+        </StackPanel>
+
+        <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding TerrainNote}" TextWrapping="Wrap"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+          <CheckBox Content="Show plates" IsChecked="{Binding ShowPlates}" ToolTip.Tip="BDHC walking plates"/>
+          <StackPanel IsVisible="{Binding ShowPlates}" Spacing="3" Margin="22,0,0,4">
+            <ItemsControl ItemsSource="{Binding PlateLegend}" ToolTip.Tip="Plate height in tiles">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MapGeometryViewModel+Swatch">
+                  <Border Background="{Binding Brush}" Width="34" Height="16" CornerRadius="2">
+                    <TextBlock Text="{Binding Said}" FontSize="10" Foreground="#1A1A1E" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Stripes: slope · gold edge: yours · white edge: picked" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+          </StackPanel>
+          <Button Content="Propose plates" HorizontalAlignment="Stretch" Click="Terrain_Click"
+                  IsVisible="{Binding !HasProposal}" ToolTip.Tip="Where faces changed; your plates are kept"/>
+          <CheckBox Content="Whole map" IsChecked="{Binding ProposeWholeMap}" IsVisible="{Binding !HasProposal}"/>
+          <UniformGrid Columns="2" IsVisible="{Binding HasProposal}">
+            <Button Content="Use" Click="UseProposal_Click" Margin="0,0,2,0"/>
+            <Button Content="Discard" Click="DiscardProposal_Click"/>
+          </UniformGrid>
+          <TextBlock Text="{Binding PlateNote}" TextWrapping="Wrap" IsVisible="{Binding ShowPlates}"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+          <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" IsVisible="{Binding HasPickedPlate}">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Left" VerticalAlignment="Center" Margin="0,0,4,2"/>
+            <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding PlateLeft}" Increment="0.5" FormatString="0.##" Minimum="0" Maximum="32"/>
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="Right" VerticalAlignment="Center" Margin="6,0,4,2"/>
+            <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding PlateRight}" Increment="0.5" FormatString="0.##" Minimum="0" Maximum="32"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Top" VerticalAlignment="Center" Margin="0,0,4,2"/>
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding PlateTop}" Increment="0.5" FormatString="0.##" Minimum="0" Maximum="32"/>
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="Bottom" VerticalAlignment="Center" Margin="6,0,4,2"/>
+            <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding PlateBottom}" Increment="0.5" FormatString="0.##" Minimum="0" Maximum="32"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Height" VerticalAlignment="Center" Margin="0,0,4,2"/>
+            <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding PlateHeight}" Increment="0.125" FormatString="0.###"/>
+            <CheckBox Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Content="Keep" IsChecked="{Binding PlateKept}"
+                      Margin="6,0,0,0" ToolTip.Tip="Proposals leave it alone"/>
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Slope X" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding PlateSlopeX}" Increment="0.125" FormatString="0.###"/>
+            <TextBlock Grid.Row="3" Grid.Column="2" Text="Z" VerticalAlignment="Center" Margin="6,0,4,0"/>
+            <NumericUpDown Grid.Row="3" Grid.Column="3" Value="{Binding PlateSlopeZ}" Increment="0.125" FormatString="0.###"/>
+          </Grid>
+          <UniformGrid Columns="2" IsVisible="{Binding ShowPlates}">
+            <Button Content="Add plate" Click="AddPlate_Click" Margin="0,0,2,0" ToolTip.Tip="On the picked face"/>
+            <Button Content="Delete plate" Click="DeletePlate_Click" IsEnabled="{Binding HasPickedPlate}"/>
+          </UniformGrid>
+        </StackPanel>
+
+        <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
+
+        <StackPanel Spacing="4" IsEnabled="{Binding CanPaint}">
+          <TextBlock Text="Texture" Foreground="{DynamicResource Editor.Subtle}"/>
+          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AvailablePictures}"
+                    SelectedIndex="{Binding PickedPicture}"/>
+          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AvailableColours}"
+                    SelectedIndex="{Binding PickedColours}"/>
+          <Button Content="Paint" HorizontalAlignment="Stretch" Click="Paint_Click"/>
+        </StackPanel>
+
+        <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
+
+        <StackPanel Spacing="4">
+          <Button Content="Delete face" HorizontalAlignment="Stretch" Click="DeleteFace_Click"
+                  IsEnabled="{Binding HasPickedFace}"/>
+          <TextBlock Text="{Binding NewFaceNote}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+          <UniformGrid Columns="2">
+            <Button Content="Add face" Click="MakeFace_Click" IsEnabled="{Binding CanMakeFace}" Margin="0,0,2,0"/>
+            <Button Content="Clear" Click="ForgetCorners_Click"/>
+          </UniformGrid>
+        </StackPanel>
+
+        <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
+
+        <TextBlock Text="Move vertex" Foreground="{DynamicResource Editor.Subtle}"/>
+        <Grid ColumnDefinitions="Auto,*,*" RowDefinitions="Auto,Auto,Auto" >
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center" Margin="0,0,6,2"/>
+          <Button Grid.Row="0" Grid.Column="1" Content="&#x2212;" HorizontalAlignment="Stretch"
+                  Margin="0,0,2,2" Click="XLess_Click"/>
+          <Button Grid.Row="0" Grid.Column="2" Content="+" HorizontalAlignment="Stretch"
+                  Margin="0,0,0,2" Click="XMore_Click"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="Y" VerticalAlignment="Center" Margin="0,0,6,2"/>
+          <Button Grid.Row="1" Grid.Column="1" Content="&#x2212;" HorizontalAlignment="Stretch"
+                  Margin="0,0,2,2" Click="YLess_Click"/>
+          <Button Grid.Row="1" Grid.Column="2" Content="+" HorizontalAlignment="Stretch"
+                  Margin="0,0,0,2" Click="YMore_Click"/>
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Z" VerticalAlignment="Center" Margin="0,0,6,0"/>
+          <Button Grid.Row="2" Grid.Column="1" Content="&#x2212;" HorizontalAlignment="Stretch"
+                  Margin="0,0,2,0" Click="ZLess_Click"/>
+          <Button Grid.Row="2" Grid.Column="2" Content="+" HorizontalAlignment="Stretch"
+                  Margin="0,0,0,0" Click="ZMore_Click"/>
+        </Grid>
+      </StackPanel>
+      <Border/>
+    </DockPanel>
+  </Grid>
+</UserControl>

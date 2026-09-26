@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        x:Class="DSPRE.Avalonia.Views.World.EventsAfterImportView"
+        Title="Events after import" Width="560" Height="420"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+  <DockPanel Margin="12">
+    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+               Text="These no longer work after the import."/>
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
+      <TextBlock x:Name="Summary" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button x:Name="MoveButton" Content="Fix ticked" ToolTip.Tip="Move events to the nearest open square; restore warp squares" Click="Move_Click"/>
+        <Button Content="Close" Click="Close_Click"/>
+      </StackPanel>
+    </StackPanel>
+    <ScrollViewer>
+      <ItemsControl x:Name="List">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MapEditorViewModel+EventClash">
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+              <CheckBox IsChecked="{Binding Move}" Content="{Binding Text}"/>
+              <TextBlock Text="{Binding Result}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

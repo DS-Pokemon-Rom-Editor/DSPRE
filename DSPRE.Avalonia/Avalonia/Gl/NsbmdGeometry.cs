@@ -118,6 +118,28 @@ namespace DSPRE.Avalonia.Gl
             return CellPlacements != null && CellPlacements.TryGetValue(CellKey(cx, cy), out p);
         }
 
+        public float[] CellToScene(int cx, int cy, float modelScale)
+        {
+            float s = modelScale == 0f ? 1f : modelScale;
+            var m = Mat4.Scale(s / 64f, s / 64f, s / 64f);
+
+            float ox = 0f, oy = 0f, oz = 0f;
+            if (TryCellPlacement(cx, cy, out var placement))
+            {
+                ox = placement.OriginX + placement.Width / 2f;
+                oz = placement.OriginZ + placement.Height / 2f;
+            }
+            if (CellAltitudeY != null && CellAltitudeY.TryGetValue(CellKey(cx, cy), out float alt)) oy = alt;
+
+            m = Mat4.Multiply(Mat4.Translate(ox, oy, oz), m);
+
+            var normalize = Mat4.Scale(Scale, Scale, Scale);
+            normalize[12] = -Cx * Scale;
+            normalize[13] = -Cy * Scale;
+            normalize[14] = -Cz * Scale;
+            return Mat4.Multiply(normalize, m);
+        }
+
         public bool TryBdhcSurfaceY(int cx, int cy, float rawX, float rawZ, float preferredY, out float y)
         {
             y = 0f;

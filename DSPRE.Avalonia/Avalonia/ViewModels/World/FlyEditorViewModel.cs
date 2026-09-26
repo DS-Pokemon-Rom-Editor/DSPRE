@@ -81,62 +81,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        // ── ARM9 offsets ─────────────────────────────────────────────────────
-        private const uint DPjpOffset  = 0xF41D0, DPusOffset  = 0xF2224, DPfrOffset = 0xF2264;
-        private const uint DPdeOffset  = 0xF2234, DPitOffset  = 0xF21D8, DPspOffset = 0xF2270;
-        private const uint PTjpOffset  = 0xE8E88, PTusOffset  = 0xE97B4, PTfrOffset = 0xE983C;
-        private const uint PTdeOffset  = 0xE980C, PTitOffset  = 0xE97D0, PTspOffset = 0xE9848;
-        private const uint HGSSjpOffset = 0xF9630, HGSSusOffset = 0xF9E80, HGSSfrOffset = 0xF9E64;
-        private const uint HGSSdeOffset = 0xF9E34, HGSSitOffset = 0xF9DF8, HGSSspOffset = 0xF9E68;
-
-        private static uint FlyTableOffset
-        {
-            get
-            {
-                switch (gameFamily)
-                {
-                    case GameFamilies.DP:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return DPjpOffset;
-                            case GameLanguages.French:   return DPfrOffset;
-                            case GameLanguages.German:   return DPdeOffset;
-                            case GameLanguages.Italian:  return DPitOffset;
-                            case GameLanguages.Spanish:  return DPspOffset;
-                            default: return DPusOffset;
-                        }
-                    case GameFamilies.Plat:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return PTjpOffset;
-                            case GameLanguages.French:   return PTfrOffset;
-                            case GameLanguages.German:   return PTdeOffset;
-                            case GameLanguages.Italian:  return PTitOffset;
-                            case GameLanguages.Spanish:  return PTspOffset;
-                            default: return PTusOffset;
-                        }
-                    case GameFamilies.HGSS:
-                        switch (gameLanguage)
-                        {
-                            case GameLanguages.Japanese: return HGSSjpOffset;
-                            case GameLanguages.French:   return HGSSfrOffset;
-                            case GameLanguages.German:   return HGSSdeOffset;
-                            case GameLanguages.Italian:  return HGSSitOffset;
-                            case GameLanguages.Spanish:  return HGSSspOffset;
-                            default: return HGSSusOffset;
-                        }
-                    default: return DPusOffset;
-                }
-            }
-        }
-
-        private static int TableSize => gameFamily switch
-        {
-            GameFamilies.DP   => 20,
-            GameFamilies.Plat => 20,
-            GameFamilies.HGSS => 30,
-            _                 => 20,
-        };
+        private static uint FlyTableOffset => RomInfo.FlyTableOffset;
+        private static int TableSize => RomInfo.FlyTableRows;
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;

@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        x:Class="DSPRE.Avalonia.Views.World.AddTexturesDialogView"
+        x:DataType="vm:MapTilesViewModel+TexturePlan"
+        Title="Add textures" Width="620" Height="560"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+
+  <DockPanel Margin="12">
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Where}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="44,44,*,Auto" Margin="0,0,0,2">
+      <TextBlock Grid.Column="0" Text="New" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Grid.Column="1" Text="Area's" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+    </Grid>
+
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
+      <TextBlock Text="{Binding AlreadyThere}" IsVisible="{Binding HasAlreadyThere}" TextWrapping="Wrap" FontSize="12"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Text="{Binding Memory}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
+                 IsVisible="{Binding !TooBig}"/>
+      <TextBlock Text="{Binding Memory}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Bad}"
+                 IsVisible="{Binding TooBig}"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Add" Click="Add_Click" IsEnabled="{Binding !TooBig}"/>
+        <Button Content="Cancel" Click="Cancel_Click"/>
+      </StackPanel>
+    </StackPanel>
+
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Shown}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MapTilesViewModel+PictureChoice">
+            <Grid ColumnDefinitions="44,44,*,Auto" Margin="0,3">
+              <Border Grid.Column="0" Width="40" Height="40" Background="#202024" ToolTip.Tip="This tileset's">
+                <Image Source="{Binding Ours}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+              </Border>
+              <Border Grid.Column="1" Width="40" Height="40" Background="#202024" IsVisible="{Binding HasTheirs}" ToolTip.Tip="The area's">
+                <Image Source="{Binding Theirs}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+              </Border>
+              <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding Said}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+              <ComboBox Grid.Column="3" SelectedIndex="{Binding Choice}" IsVisible="{Binding Clash}" Width="170" VerticalAlignment="Center">
+                <ComboBoxItem Content="Keep the area's"/>
+                <ComboBoxItem Content="Add as a copy"/>
+                <ComboBoxItem Content="Replace the area's"/>
+              </ComboBox>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</Window>
