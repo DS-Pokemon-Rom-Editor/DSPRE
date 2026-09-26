@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -499,7 +499,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Composite snapshot: the personal-data file bytes + the hatch-result (which lives in a separate
         // table, not in the file) + the staged hg-engine side-table values. Edit bursts within CoalesceMs
         // collapse into one undo step.
-        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; }
+        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; public int[] ExtraTms; }
+
+        // PlatPatches' TM121 onwards (extra rows 28+) are kept in the synthetic overlay, not the personal file, so they
+        // are staged here by machine index and written on Save. TM93-TM120 live in the personal file's own bits.
+        private HashSet<int> _extraMaskTms = new HashSet<int>(), _extraMaskTmsSaved = new HashSet<int>();
+        private static int FirstMaskMachine => TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows;
         private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
         private PersonalSnapshot _savedSnapshot;   // UndoHistory doesn't expose it, and Discard restores it
         private DateTime _lastCaptureUtc = DateTime.MinValue;
@@ -512,13 +517,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private PersonalSnapshot Snapshot() =>
-            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone(), Athlon = _athlon?.Select(r => (byte[])r.Clone()).ToArray() };
+            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone(), Athlon = _athlon?.Select(r => (byte[])r.Clone()).ToArray(), ExtraTms = _extraMaskTms.OrderBy(i => i).ToArray() };
 
         private void ApplyState(PersonalSnapshot snap)
         {
             if (snap == null || _current == null) return;
             _loading = true;
             _current = new PokemonPersonalData(new MemoryStream(snap.Data));
+            if (snap.ExtraTms != null) _extraMaskTms = new HashSet<int>(snap.ExtraTms);
             PopulateFromCurrent();
             _hatchResultIndex = snap.Hatch; OnPropertyChanged(nameof(HatchResultIndex));
             ApplyHg(snap.Hg);
@@ -697,6 +703,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (athlonError != null)
             {
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal Data");
+                return;
+            }
+            string maskError = SaveExtraMaskTms();
+            if (maskError != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal Data");
                 return;
             }
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
@@ -912,8 +924,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddMachineCommand()
         {
             if (_current == null || _selectedAddableMachineIndex < 0 || _selectedAddableMachineIndex >= AddableMachines.Count) return;
-            int idx = ZeroBasedIndexFromMachineName(AddableMachines[_selectedAddableMachineIndex]);
-            _current.machines.Add((byte)idx);
+            int idx = TMEditor.MachineIndexFromLabel(AddableMachines[_selectedAddableMachineIndex]);
+            if (idx < 0) return;
+            SetMachine(idx, true);
             RebuildMachineLists();
             SetDirty();
         }
@@ -921,18 +934,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RemoveMachineCommand()
         {
             if (_current == null || _selectedAddedMachineIndex < 0 || _selectedAddedMachineIndex >= AddedMachines.Count) return;
-            int idx = ZeroBasedIndexFromMachineName(AddedMachines[_selectedAddedMachineIndex]);
-            _current.machines.Remove((byte)idx);
+            int idx = TMEditor.MachineIndexFromLabel(AddedMachines[_selectedAddedMachineIndex]);
+            if (idx < 0) return;
+            SetMachine(idx, false);
             RebuildMachineLists();
             SetDirty();
         }
 
+        // Both only touch the machines listed, so compatibility bits this ROM doesn't list survive.
         public void AddAllMachinesCommand()
         {
             if (_current == null) return;
-            byte tot = (byte)(PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount);
-            _current.machines = new SortedSet<byte>();
-            for (byte i = 0; i < tot; i++) _current.machines.Add(i);
+            for (int i = 0; i < TMEditor.MachineCount; i++) SetMachine(i, true);
             RebuildMachineLists();
             SetDirty();
         }
@@ -940,9 +953,44 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RemoveAllMachinesCommand()
         {
             if (_current == null) return;
-            _current.machines.Clear();
+            for (int i = 0; i < TMEditor.MachineCount; i++) SetMachine(i, false);
             RebuildMachineLists();
             SetDirty();
+        }
+
+        private bool HasMachine(int index) =>
+            index >= FirstMaskMachine ? _extraMaskTms.Contains(index) : _current.machines.Contains((byte)index);
+
+        private void SetMachine(int index, bool on)
+        {
+            if (index >= FirstMaskMachine) { if (on) _extraMaskTms.Add(index); else _extraMaskTms.Remove(index); return; }
+            if (on) _current.machines.Add((byte)index); else _current.machines.Remove((byte)index);
+        }
+
+        /// <summary>Reads the current Pokemon's TM121+ compatibility from the synthetic overlay.</summary>
+        private void LoadExtraMaskTms()
+        {
+            _extraMaskTms = new HashSet<int>();
+            var t = PlatPatches.Tms();
+            if (t != null && _currentId >= 0)
+                foreach (var (row, _) in PlatPatches.Compatibility(t, new[] { _currentId }, PlatPatches.PersonalMaskRows))
+                    _extraMaskTms.Add(TMEditor.VanillaMachineCount + row);
+            _extraMaskTmsSaved = new HashSet<int>(_extraMaskTms);
+        }
+
+        /// <summary>Writes TM121+ changes for the current Pokémon; returns why it couldn't, or null.</summary>
+        private string SaveExtraMaskTms()
+        {
+            var t = PlatPatches.Tms();
+            if (t == null || _extraMaskTms.SetEquals(_extraMaskTmsSaved)) return null;
+            var changes = _extraMaskTms.Union(_extraMaskTmsSaved)
+                .Where(i => _extraMaskTms.Contains(i) != _extraMaskTmsSaved.Contains(i))
+                .Select(i => (i - TMEditor.VanillaMachineCount, _currentId, _extraMaskTms.Contains(i)));
+            try { PlatPatches.SetCanLearn(t, changes); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
+            { return e.Message; }
+            _extraMaskTmsSaved = new HashSet<int>(_extraMaskTms);
+            return null;
         }
 
 
@@ -1337,6 +1385,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 AppLogger.Error($"hg-engine Species.c read failed for species {id}: {loadError}");
             HgLoadError = loadError == null ? null : $"Species.c could not be read, so this Pokémon can't be saved: {loadError}";
 
+            LoadExtraMaskTms();
             PopulateFromCurrent();
             LoadHgEngineExtras();
             LoadRetailFollower();
@@ -1395,23 +1444,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AddedMachines.Clear();
             AddableMachines.Clear();
             if (_current == null || _machineMoveNames == null) return;
-            byte tot = (byte)(PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount);
-            for (byte i = 0; i < tot; i++)
+            int tot = TMEditor.MachineCount;
+            for (int i = 0; i < tot; i++)
             {
                 string label = TMEditor.MachineLabelFromIndex(i);
                 string move  = _machineMoveNames.Length > i ? _machineMoveNames[i] : $"UNK_{i}";
                 string entry = $"{label} - {move}";
-                if (_current.machines.Contains(i)) AddedMachines.Add(entry);
+                if (HasMachine(i)) AddedMachines.Add(entry);
                 else                               AddableMachines.Add(entry);
             }
-        }
-
-        private static int ZeroBasedIndexFromMachineName(string name)
-        {
-            var label = name.Split('-')[0].Trim();
-            if (label.StartsWith("TM")) return int.Parse(label.Substring(2)) - 1;
-            if (label.StartsWith("HM")) return int.Parse(label.Substring(2)) + PokemonPersonalData.tmsCount - 1;
-            return -1;
         }
 
         private static string GetGenderText(int vec)

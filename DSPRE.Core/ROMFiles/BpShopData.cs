@@ -32,6 +32,10 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Where the lists were found, for the window's status line.</summary>
         public string Where { get; private set; } = "";
+        public bool InExpansion => _blockStart >= 0 && !_inPlace;
+        /// <summary>Moved by some other patch; saving refuses rather than guess where to write.</summary>
+        public bool MovedByPatch => IsPlatinum && !_inPlace && _blockStart < 0;
+        public bool InPlace => _inPlace;
 
         private readonly BpShopSites _sites;
         // Platinum: where each part lives now, as (file, offset) with -1 for "not in the synthetic overlay".
@@ -87,9 +91,10 @@ namespace DSPRE.ROMFiles
             var items = new List<ushort>();
             for (int o = at.offset; ; o += 2)
             {
-                if (o + 2 > at.data.Length || items.Count > MaxListItems) throw new InvalidDataException($"The {what} has no end marker.");
+                if (o + 2 > at.data.Length) throw new InvalidDataException($"The {what} has no end marker.");
                 ushort v = BitConverter.ToUInt16(at.data, o);
                 if (v == ListEnd) return items;
+                if (items.Count == MaxListItems) throw new InvalidDataException($"The {what} has no end marker.");
                 items.Add(v);
             }
         }

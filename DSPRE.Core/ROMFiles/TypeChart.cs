@@ -37,6 +37,7 @@ namespace DSPRE.ROMFiles
         private string _path;
         private int _offset;
         private string _ovPath;
+        private bool _countIsCompare;
 
         public const string Marker = "TYPECHARTXP1";
         /// <summary>Record slots a moved chart gets: Conversion 2's bound is a byte immediate.</summary>
@@ -95,7 +96,8 @@ namespace DSPRE.ROMFiles
                 _path = ovPath; _offset = (int)(ram - ovBase);
                 Where = ram - ovBase == spot.Offset ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
             }
-            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath))
+            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath)
+                     && ram - synthOverlayLoadAddress + (ulong)RecordSize < (ulong)new FileInfo(Filesystem.expArmPath).Length)
             {
                 _path = Filesystem.expArmPath; _offset = (int)(ram - synthOverlayLoadAddress);
                 Where = "in the expanded ARM9 area";
@@ -111,7 +113,8 @@ namespace DSPRE.ROMFiles
 
             // Conversion 2 walks the chart by count, so its `cmp rN, #count` is the room the game allows.
             byte imm = ov[sites.countCompare], op = ov[sites.countCompare + 1];
-            Capacity = (op & 0xF8) == 0x28 ? imm : 0;
+            _countIsCompare = (op & 0xF8) == 0x28;
+            Capacity = _countIsCompare ? imm : 0;
         }
 
         public static byte[] PoketchGrid(IEnumerable<Matchup> matchups)
@@ -167,6 +170,7 @@ namespace DSPRE.ROMFiles
             if (!SyntheticOverlaySpace.Available())
                 throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
             var sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            if (!_countIsCompare) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
             int oldCapacity = Capacity;
             Capacity = ExpandedCapacity;
             if (Problem() is string p) { Capacity = oldCapacity; throw new InvalidOperationException(p); }

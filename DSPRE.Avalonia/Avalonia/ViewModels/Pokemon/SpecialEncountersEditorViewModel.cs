@@ -9,9 +9,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// The Special Encounters Editor: one tab per special encounter system the game has.
-    ///   • DPPt : Honey Tree, Great Marsh, Trophy Garden
-    ///   • HGSS : Headbutt, Bug Contest, Bug Contest Opponents, Safari Zone
+    /// One tab per special encounter system: Honey Tree, Great Marsh and Trophy Garden in DPPt, Headbutt, Bug Contest
+    /// and Safari Zone in HGSS, and Swarms in both.
     /// </summary>
     public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -69,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             foreach (var c in Children)
                 if (c?.HasUnsavedChanges ?? false) await c.SaveChangesAsync();
-            // A tab can refuse to save (the opponents do when the game would crash), so only a full save is announced.
+            // A tab can refuse to save, so only a full save is announced.
             if (HasUnsavedChanges) return false;
             SaveNotice.Saved(Title);
             return true;

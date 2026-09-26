@@ -21,7 +21,10 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(path)) return $"{Path.GetFileName(path)} is missing from this project.";
             if (spot.Value.Overlay < 0 && !RomInfo.IsDsRomProject && ARM9.CheckCompressionMark())
                 return "arm9 is still compressed. Convert this project to ds-rom format first.";
-            if (new FileInfo(path).Length < spot.Value.Offset + length) return $"{Path.GetFileName(path)} is too short for this table.";
+            // A compressed overlay is shorter on disk than once it's decompressed for the read.
+            long size = spot.Value.Overlay >= 0 && OverlayUtils.IsCompressed(spot.Value.Overlay)
+                ? OverlayUtils.OverlayTable.GetUncompressedSize(spot.Value.Overlay) : new FileInfo(path).Length;
+            if (size < spot.Value.Offset + length) return $"{Path.GetFileName(path)} is too short for this table.";
             return null;
         }
 

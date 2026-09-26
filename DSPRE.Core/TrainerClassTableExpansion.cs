@@ -469,30 +469,7 @@ namespace DSPRE
         /// Rotation, the ScrCmd table repoint) don't have this problem: they write their real payload
         /// bytes immediately when applied, so a region only reads as zero while genuinely unclaimed.</summary>
         private static long FindFreeRegion(byte[] data, int length, int alignment)
-        {
-            // Detect() (not just IsApplied) so this is accurate even if nothing has touched
-            // OverworldSpriteTableExpansion yet this session (e.g. Trainer Editor opened first).
-            OverworldSpriteTableExpansion.Detect();
-            var owReserved = OverworldSpriteTableExpansion.GetReservedByteRange();
-
-            for (long offset = 0; offset + length <= data.Length; offset += alignment)
-            {
-                if (owReserved.HasValue && offset + length > owReserved.Value.Start && offset < owReserved.Value.End)
-                {
-                    // Skip straight past the reserved range instead of re-checking every aligned
-                    // offset inside it one at a time.
-                    offset = owReserved.Value.End - alignment;
-                    continue;
-                }
-
-                bool allZero = true;
-                for (int i = 0; i < length; i++)
-                {
-                    if (data[offset + i] != 0) { allZero = false; break; }
-                }
-                if (allZero) return offset;
-            }
-            return -1;
-        }
+            // The shared list covers the overworld headroom, DSPRE's marked blocks and PlatPatches' tables.
+            => DSPRE.ROMFiles.SyntheticOverlaySpace.FindFree(data, length, alignment, DSPRE.ROMFiles.SyntheticOverlaySpace.Reserved(data));
     }
 }

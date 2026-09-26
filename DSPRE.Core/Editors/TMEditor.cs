@@ -1,42 +1,62 @@
 ﻿using DSPRE.ROMFiles;
 using System;
+using System.Linq;
 using static DSPRE.RomInfo;
 
 namespace DSPRE
 {
-    /// <summary>
-    /// Static helper class for TM/HM ROM data.
-    /// The interactive editor UI has been moved to DSPRE.Avalonia.Views.TMEditorView
-    /// and DSPRE.Avalonia.ViewModels.TMEditorViewModel.
-    /// </summary>
+    /// <summary>Machine moves and disc colours. Indices 0-91 are TM01-TM92, 92-99 HM01-HM08, and 100 onwards
+    /// PlatPatches' extra TMs, so the HMs keep their indices whether or not that patch is installed.</summary>
     public static class TMEditor
     {
-        private static readonly int machineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
+        /// <summary>TM01-TM92 and HM01-HM08, the machines every retail game has, at indices 0-99.</summary>
+        public static readonly int VanillaMachineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
+        private const int FirstMachineItem = 328;
+
+        /// <summary>All machines, including PlatPatches' TM93 onwards at indices 100 and up.</summary>
+        public static int MachineCount => VanillaMachineCount + (PlatPatches.Tms()?.Count ?? 0);
+
+        /// <summary>The item a machine index is: TM01 is 328, and extra TMs use the item ids PlatPatches gave them.</summary>
+        public static int MachineItemId(int index)
+        {
+            if (index < VanillaMachineCount) return FirstMachineItem + index;
+            var t = PlatPatches.Tms();
+            return t == null ? -1 : t.ItemIds[index - VanillaMachineCount];
+        }
+
+        /// <summary>Parses "TM05", "HM03" or "TM93"; -1 when the label isn't a machine this ROM has.</summary>
+        public static int MachineIndexFromLabel(string label)
+        {
+            label = label.Split('-')[0].Trim();
+            if (label.Length < 3 || !int.TryParse(label.Substring(2), out int n) || n < 1) return -1;
+            if (label.StartsWith("HM")) return n <= PokemonPersonalData.hmsCount ? PokemonPersonalData.tmsCount + n - 1 : -1;
+            if (!label.StartsWith("TM")) return -1;
+            if (n <= PokemonPersonalData.tmsCount) return n - 1;
+            int row = n - PlatPatches.FirstExtraTmNumber;
+            return row < (PlatPatches.Tms()?.Count ?? 0) ? VanillaMachineCount + row : -1;
+        }
 
         #region Public Static Methods
 
-        /// <summary>
-        /// Reads the machine moves from the ARM9 memory and returns them as an array of integers.
-        /// </summary>
-        /// <remarks>This method reads 200 bytes from the ARM9 memory, interpreting them as 100 machine
-        /// moves, each represented by a 16-bit unsigned integer in little-endian format. Index 0 to 91 are TMs, 92 to 99 are HMs.</remarks>
-        /// <returns>An array of 100 integers representing the ids of the machine moves.</returns>
+        /// <summary>Every machine's move: the ARM9 table for TM01-HM08, then PlatPatches' extra TMs.</summary>
         public static int[] ReadMachineMoves()
         {
-
-            int[] moves = new int[machineCount];
+            int[] moves = new int[MachineCount];
 
             try
             {
-                // Read 200 bytes (100 moves x 2 bytes each little endian) from ARM9
                 var reader = new ARM9.Reader(RomInfo.GetMachineMoveOffset());
                 
-                for (int i = 0; i < moves.Length; i++)
+                for (int i = 0; i < VanillaMachineCount; i++)
                 {
                     moves[i] = reader.ReadUInt16();
                 }
 
                 reader.Close();
+
+                var extra = PlatPatches.Tms();
+                for (int i = VanillaMachineCount; i < moves.Length && extra != null; i++)
+                    moves[i] = extra.MoveIds[i - VanillaMachineCount];
             }
             catch (Exception ex)
             {
@@ -101,40 +121,54 @@ namespace DSPRE
             return GetMachineMoveNames(machineMoves);
         }
 
-        /// <summary>
-        /// Generates a machine label based on the specified index.
-        /// </summary>
-        /// <param name="index">The zero-based index used to determine the machine label. Must be a non-negative integer.</param>
-        /// <returns>A string representing the machine label. The label is in the format "TMXX" for indices less than 92, where
-        /// "XX" is the index incremented by 1 and zero-padded to two digits. For indices 92 and above, the label is in
-        /// the format "HMYY", where "YY" is the index minus 91.</returns>
+        /// <summary>"TM01"-"TM92" for 0-91, "HM01"-"HM08" for 92-99, "TM93" onwards for PlatPatches' extra TMs.</summary>
         public static string MachineLabelFromIndex(int index)
         {
+            if (index >= VanillaMachineCount) return PlatPatches.ExtraTms.Label(index - VanillaMachineCount);
             return (index < PokemonPersonalData.tmsCount) ? $"TM{index + 1:00}" : $"HM{index - PokemonPersonalData.tmsCount + 1:00}";
         }
 
+        /// <summary>Every machine's disc palette, or null when an item row can't be read (saving then leaves palettes alone).</summary>
         public static int[] ReadMachinePalettes()
         {
-            uint itemTableOffset = RomInfo.GetItemTableOffset();
-            int startIndex = 328; // TMs/HMs start at item ID 328
-
-            int[] paletteIds = new int[machineCount];
-
-            try
+            int count = MachineCount;
+            int[] paletteIds = new int[count];
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < machineCount; i++)
-                {
-                    paletteIds[i] = ARM9.ReadWordLE((uint)(itemTableOffset + (startIndex + i) * 8 + 4));
-                }
+                int item = MachineItemId(i);
+                if (!ItemTable.Exists(item)) { AppLogger.Error($"TM Editor: machine {i} has no item row."); return null; }
+                paletteIds[i] = (int)ItemTable.Read(item).itemPalette;
             }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"TM Editor: Failed to read palette IDs. Exception: {ex.Message}");
-                return new int[machineCount];
-            }
-
             return paletteIds;
+        }
 
+        /// <summary>Writes every machine's move and disc colour: the ARM9 move table for TM01-HM08, PlatPatches'
+        /// move list for extra TMs, and each machine item's palette wherever its item row lives.</summary>
+        /// <remarks>Everything is checked before anything is written. <paramref name="palettes"/> may be null.</remarks>
+        public static void WriteMachines(int[] moves, int[] palettes)
+        {
+            if (moves.Length != MachineCount || (palettes != null && palettes.Length != moves.Length))
+                throw new InvalidOperationException("The number of machines changed since the editor opened. Reopen it to edit them.");
+            for (int i = 0; i < moves.Length; i++)
+                if (!ItemTable.Exists(MachineItemId(i))) throw new InvalidOperationException($"{MachineLabelFromIndex(i)} has no item row, so nothing was saved.");
+
+            var writer = new ARM9.Writer(RomInfo.GetMachineMoveOffset());
+            for (int i = 0; i < VanillaMachineCount; i++) writer.Write((ushort)moves[i]);
+            writer.Close();
+
+            var extra = PlatPatches.Tms();
+            if (extra != null)
+                PlatPatches.SetExtraTmMoves(Enumerable.Range(VanillaMachineCount, moves.Length - VanillaMachineCount)
+                    .ToDictionary(i => i - VanillaMachineCount, i => (ushort)moves[i]));
+
+            for (int i = 0; palettes != null && i < palettes.Length; i++)
+            {
+                int item = MachineItemId(i);
+                var e = ItemTable.Read(item);
+                if (e.itemPalette == palettes[i]) continue;
+                e.itemPalette = (uint)palettes[i];
+                ItemTable.Write(item, e);
+            }
         }
 
         #endregion       

@@ -14,7 +14,7 @@
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
-                ToolTip.Tip="Move the chart to the expanded ARM9 area, where it holds up to 253 matchups"/>
+                ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
     </Border>

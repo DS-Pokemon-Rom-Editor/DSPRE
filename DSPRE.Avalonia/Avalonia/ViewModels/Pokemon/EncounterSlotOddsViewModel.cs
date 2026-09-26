@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public string Total => $"Total {Method.Percents.Sum()}%";
             public bool IsOff => Method.Percents.Sum() != 100;
             public string Note => Name == "Walking" && gameFamily != GameFamilies.HGSS
-                ? "The Poké Radar uses these odds too when it rolls a Pokémon without a chain." : "";
+                ? "The Poké Radar uses these odds too" : null;
 
             internal void Changed()
             {

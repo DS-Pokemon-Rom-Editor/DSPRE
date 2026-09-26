@@ -1112,9 +1112,10 @@ namespace DSPRE {
         /// failure, callers that want a fallback icon supply their own, same as PokemonIconCache.</summary>
         public static RawImage GetItemPicRaw(int itemId, int w, int h) {
             try {
-                uint entryOffset = (uint)(RomInfo.itemTableOffset + itemId * 8);
-                int itemIconId = ARM9.ReadWordLE(entryOffset + 2);
-                int itemPaletteId = ARM9.ReadWordLE(entryOffset + 4);
+                if (!DSPRE.ROMFiles.ItemTable.Exists(itemId)) return null;
+                var entry = DSPRE.ROMFiles.ItemTable.Read(itemId);   // PlatPatches' expanded items resolve through its overflow table
+                int itemIconId = (int)entry.itemIcon;
+                int itemPaletteId = (int)entry.itemPalette;
                 string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
 
                 string paletteFilename = itemPaletteId.ToString("D4");

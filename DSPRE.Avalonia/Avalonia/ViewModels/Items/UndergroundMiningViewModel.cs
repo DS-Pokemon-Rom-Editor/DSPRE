@@ -116,19 +116,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void DiscardChanges()
         {
             if (_table == null) return;
-            var back = new MiningTableSnapshot(_saved);
-            for (int r = 0; r < _table.Treasures.Count; r++) back.Restore(_table.Treasures[r], r);
+            _table.RestoreWeights(_saved);
             Changed();
-        }
-
-        private sealed class MiningTableSnapshot
-        {
-            private readonly byte[] _bytes;
-            public MiningTableSnapshot(byte[] bytes) { _bytes = bytes; }
-            public void Restore(MiningTable.Row row, int index)
-            {
-                for (int c = 0; c < 4; c++) row.Weights[c] = BitConverter.ToUInt16(_bytes, index * MiningTable.RowSize + 4 + c * 2);
-            }
         }
     }
 }

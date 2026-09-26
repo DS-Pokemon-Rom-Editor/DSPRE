@@ -27,6 +27,7 @@ namespace DSPRE.ROMFiles
         public List<Row> Rows { get; } = new List<Row>();
         public bool HasMethod => gameFamily == GameFamilies.HGSS;
         public string Where { get; private set; } = "";
+        public bool InExpansion => _path == Filesystem.expArmPath;
         /// <summary>Rows that fit where the table is now without moving it.</summary>
         public int Capacity { get; private set; }
 
@@ -46,7 +47,7 @@ namespace DSPRE.ROMFiles
             if (sites == null) return "This game version isn't supported yet. Only US HeartGold, Platinum Rev 1 and Diamond are checked.";
             if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             try { Load(); }
-            catch (Exception e) when (e is InvalidDataException || e is IOException) { return e.Message; }
+            catch (Exception e) when (e is InvalidDataException || e is IOException || e is ArgumentException) { return e.Message; }
             return null;
         }
 
@@ -79,7 +80,8 @@ namespace DSPRE.ROMFiles
                 table.Capacity = vanilla ? sites.Rows : count;
                 table.Where = vanilla ? "where the game keeps it" : "moved by a patch";
             }
-            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath))
+            else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath)
+                     && ram - synthOverlayLoadAddress + (ulong)(count * sites.RowSize) <= (ulong)new FileInfo(Filesystem.expArmPath).Length)
             {
                 byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
                 table._path = Filesystem.expArmPath; table._offset = (int)(ram - synthOverlayLoadAddress);
@@ -152,10 +154,23 @@ namespace DSPRE.ROMFiles
                 }
                 else
                 {
-                    byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+                    byte[] synth = File.ReadAllBytes(Filesystem.expArmPath), synthOld = (byte[])synth.Clone();
                     Array.Clear(synth, _offset, Capacity * _sites.RowSize);
                     rows.CopyTo(synth, _offset);
-                    File.WriteAllBytes(Filesystem.expArmPath, synth);
+                    if (_blockStart >= 0) BitConverter.GetBytes((uint)Rows.Count).CopyTo(synth, _blockStart + 0x14);
+                    foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
+                    try
+                    {
+                        File.WriteAllBytes(Filesystem.expArmPath, synth);
+                        File.WriteAllBytes(CodePath, code);
+                    }
+                    catch
+                    {
+                        File.WriteAllBytes(Filesystem.expArmPath, synthOld);
+                        File.WriteAllBytes(CodePath, codeBefore);
+                        throw;
+                    }
+                    return;
                 }
                 foreach (int o in _sites.CountSites) code[o] = (byte)Rows.Count;
                 File.WriteAllBytes(CodePath, code);

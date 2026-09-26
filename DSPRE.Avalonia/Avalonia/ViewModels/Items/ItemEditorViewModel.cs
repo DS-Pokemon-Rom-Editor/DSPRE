@@ -627,6 +627,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(ItemDataId));
         }
 
+        private string _sharedDataNote = "";
+        /// <summary>Set when other items read the same item data, which PlatPatches' expanded items often do.</summary>
+        public string SharedDataNote { get => _sharedDataNote; private set { _sharedDataNote = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSharedDataNote)); } }
+        public bool HasSharedDataNote => _sharedDataNote.Length > 0;
+
+        private void UpdateSharedDataNote(int id)
+        {
+            if (RomInfo.isHGE || PlatPatches.Items() == null) { SharedDataNote = ""; return; }
+            var others = ItemTable.SharingData(id, ItemNames.Count);
+            if (others.Count == 0) { SharedDataNote = ""; return; }
+            string names = string.Join(", ", others.Take(4).Select(i => i < ItemNames.Count ? ItemNames[i] : $"Item {i}"));
+            SharedDataNote = $"Shares its item data with {names}{(others.Count > 4 ? $" and {others.Count - 4} more" : "")}; editing it changes those too.";
+        }
+
         // ── Load ──────────────────────────────────────────────────────────────
         private void LoadFile(int id)
         {
@@ -635,6 +649,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 _currentEntry = ReadTableEntry(id);
                 RefreshEntryBoundProps();
+                UpdateSharedDataNote(id);
 
                 LoadItemData((int)_currentEntry.itemData);
                 UpdateIcon();
@@ -793,14 +808,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return new ItemNarcTableEntry { itemData = (uint)index, itemIcon = imageSlot, itemPalette = paletteSlot, itemAGB = 0 };
             }
 
-            uint offset = RomInfo.itemTableOffset;
-            return new ItemNarcTableEntry
-            {
-                itemData    = ARM9.ReadWordLE((uint)(offset + index * 8)),
-                itemIcon    = ARM9.ReadWordLE((uint)(offset + index * 8 + 2)),
-                itemPalette = ARM9.ReadWordLE((uint)(offset + index * 8 + 4)),
-                itemAGB     = ARM9.ReadWordLE((uint)(offset + index * 8 + 6))
-            };
+            // PlatPatches' expanded items resolve through its overflow table.
+            return DSPRE.ROMFiles.ItemTable.Read(index);
         }
 
         private void SaveTableEntry()
@@ -814,12 +823,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            uint offset = (uint)(_selectedItemIndex * 8);
-            uint base_  = RomInfo.itemTableOffset;
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemData),    base_ + offset);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemIcon),    base_ + offset + 2);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemPalette), base_ + offset + 4);
-            ARM9.WriteBytes(BitConverter.GetBytes((ushort)_currentEntry.itemAGB),     base_ + offset + 6);
+            DSPRE.ROMFiles.ItemTable.Write(_selectedItemIndex, _currentEntry);
             _entryDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));

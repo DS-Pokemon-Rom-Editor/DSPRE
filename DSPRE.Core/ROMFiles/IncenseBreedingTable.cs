@@ -4,9 +4,8 @@ using System.Collections.Generic;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Which babies need an incense (sIncenseBabyTable / sIncenseMons): when a parent that would hatch
-    /// <see cref="Row.Baby"/> holds neither parent <see cref="Row.Item"/>, the egg hatches <see cref="Row.Fallback"/>.
-    /// The game stops at the first row naming the baby, and the row count is compiled into its code.
+    /// Babies that need an incense: without <see cref="Row.Item"/> on either parent, <see cref="Row.Baby"/> hatches as
+    /// <see cref="Row.Fallback"/>. The game uses the first row naming the baby, and the row count is compiled in.
     /// </summary>
     public class IncenseBreedingTable
     {
@@ -61,6 +60,10 @@ namespace DSPRE.ROMFiles
 
         public static IncenseBreedingTable Load() => new IncenseBreedingTable(GameTableFile.Read(RomInfo.GameTable.IncenseBabies, Size));
 
-        public void Save() => GameTableFile.Write(RomInfo.GameTable.IncenseBabies, ToBytes());
+        public void Save(int speciesCount, int itemCount)
+        {
+            if (Problem(speciesCount, itemCount) is string p) throw new InvalidOperationException(p);
+            GameTableFile.Write(RomInfo.GameTable.IncenseBabies, ToBytes());
+        }
     }
 }

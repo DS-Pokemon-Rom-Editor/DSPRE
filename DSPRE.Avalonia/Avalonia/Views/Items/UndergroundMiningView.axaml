@@ -40,10 +40,10 @@
     <DockPanel Margin="8">
       <Grid DockPanel.Dock="Top" ColumnDefinitions="190,154,154,154,154" Margin="4,0,20,4">
         <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="1" Text="Odd trainer ID" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="Even trainer ID" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="3" Text="Odd, National Dex" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="4" Text="Even, National Dex" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="{Binding Columns[0]}" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="{Binding Columns[1]}" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="3" Text="{Binding Columns[2]}" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="4" Text="{Binding Columns[3]}" FontWeight="SemiBold"/>
       </Grid>
       <ListBox ItemsSource="{Binding Rows}">
         <ListBox.ItemTemplate>

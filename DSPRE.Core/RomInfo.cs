@@ -194,10 +194,6 @@ namespace DSPRE
         };
 
 
-        /// <summary>
-        /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
-        /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
-        /// </summary>
         /// <summary>Fixed-size game tables edited in place.</summary>
         public enum GameTable
         {
@@ -213,6 +209,7 @@ namespace DSPRE
             BpShopItems,           // Pt left corner list, 0xFFFF-terminated
             BpShopTms,             // Pt right corner list, 0xFFFF-terminated
             HeldItemSameItemBranch, // the BNE after `cmp item1, item2` in WildMonSetRandomHeldItem
+            FriendshipChanges,     // s8[10][3]: friendship change per event and friendship band
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -251,6 +248,9 @@ namespace DSPRE
             [("CPUE", 1, GameTable.BpShopItems)] = new(-1, 0xEAC20),
             [("CPUE", 1, GameTable.BpShopTms)] = new(-1, 0xEABB8),
             [("ADAE", 5, GameTable.BpShopPrices)] = new(-1, 0xF433E),
+            [("IPKE", 0, GameTable.FriendshipChanges)] = new(-1, 0xFF524),
+            [("CPUE", 1, GameTable.FriendshipChanges)] = new(-1, 0xF05A0),
+            [("ADAE", 5, GameTable.FriendshipChanges)] = new(-1, 0xF7ED4),
         };
 
         // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), and the
@@ -280,6 +280,73 @@ namespace DSPRE
             [("ADAE", 5)] = new(-1, -1, -1, 0xF433E, 0x42AEA),
         };
 
+        /// <summary>
+        /// One encounter method's slot roll: the `cmp r0, #boundary` sites for each boundary between slots, in the
+        /// selector's overlay. A boundary may be compared in two places. The land selector ends with an equality
+        /// test for its eleventh slot (see <see cref="LandLastSlotSite"/>).
+        /// </summary>
+        public sealed record SlotOddsMethod(string Name, int Overlay, int Slots, int[][] Boundaries);
+
+        /// <summary>Land's `cmp r0, #x` then branch for the last two slots, relative to the land selector's first compare.</summary>
+        public const int LandLastSlotSite = 0x72;
+
+        private static int[][] LandSites(int b) => new[]
+        {
+            new[] { b }, new[] { b + 0x0A, b + 0x12 }, new[] { b + 0x16, b + 0x1E }, new[] { b + 0x22, b + 0x2A },
+            new[] { b + 0x2E, b + 0x36 }, new[] { b + 0x3A, b + 0x42 }, new[] { b + 0x46, b + 0x4E },
+            new[] { b + 0x52, b + 0x5A }, new[] { b + 0x5E, b + 0x66 }, new[] { b + 0x6A },
+        };
+        private static int[][] SurfSites(int b) => new[] { new[] { b }, new[] { b + 0x0A, b + 0x12 }, new[] { b + 0x16, b + 0x1E }, new[] { b + 0x22 } };
+        private static int[][] StepSites(int b, int count) => Enumerable.Range(0, count).Select(i => new[] { b + 8 * i }).ToArray();
+
+        // Checked by disassembly against US HeartGold ov2, Platinum Rev 1 ov6 and Diamond v05 ov6.
+        private static readonly Dictionary<(string id, int rev), SlotOddsMethod[]> SlotOddsTable = new()
+        {
+            [("IPKE", 0)] = new[]
+            {
+                new SlotOddsMethod("Walking", 2, 12, LandSites(0x1B20)),
+                new SlotOddsMethod("Surfing", 2, 5, SurfSites(0x1BB4)),
+                new SlotOddsMethod("Fishing (all rods)", 2, 5, StepSites(0x1BF8, 4)),
+                new SlotOddsMethod("Rock Smash", 2, 2, StepSites(0x1C30, 1)),
+                new SlotOddsMethod("Headbutt", 2, 6, StepSites(0x1C54, 5)),
+            },
+            [("CPUE", 1)] = new[]
+            {
+                new SlotOddsMethod("Walking", 6, 12, LandSites(0x37E2)),
+                new SlotOddsMethod("Surfing", 6, 5, SurfSites(0x387E)),
+                new SlotOddsMethod("Old Rod", 6, 5, StepSites(0x38DC, 4)),
+                new SlotOddsMethod("Good Rod", 6, 5, StepSites(0x3900, 4)),
+                new SlotOddsMethod("Super Rod", 6, 5, StepSites(0x3924, 4)),
+            },
+            [("ADAE", 5)] = new[]
+            {
+                new SlotOddsMethod("Walking", 6, 12, LandSites(0x2F2A)),
+                new SlotOddsMethod("Surfing", 6, 5, SurfSites(0x2FC6)),
+                new SlotOddsMethod("Old Rod", 6, 5, StepSites(0x3024, 4)),
+                new SlotOddsMethod("Good Rod", 6, 5, StepSites(0x3048, 4)),
+                new SlotOddsMethod("Super Rod", 6, 5, StepSites(0x306C, 4)),
+            },
+        };
+
+        public static SlotOddsMethod[] SlotOddsMethods =>
+            romID != null && SlotOddsTable.TryGetValue((romID, romRevision), out var m) ? m : null;
+
+        /// <summary>
+        /// The swarm destination table. HGSS rows are u16 header + u16 method; DP/Pt rows are a u32 header. The
+        /// literals point at the table (HGSS also has one at +2) and the `movs r1, #count` sites give the row count.
+        /// </summary>
+        public sealed record SwarmSites(int Overlay, int Table, int Rows, int RowSize, int[] Literals, int[] LiteralsPlus2, int[] CountSites);
+
+        private static readonly Dictionary<(string id, int rev), SwarmSites> SwarmSiteTable = new()
+        {
+            [("IPKE", 0)] = new(-1, 0x108F4C, 20, 4, new[] { 0x97F94, 0x97FF0 }, new[] { 0x97F98 }, new[] { 0x97F70, 0x97FA2 }),
+            [("CPUE", 1)] = new(6, 0xAF50, 22, 4, new[] { 0x50E8, 0x5114 }, Array.Empty<int>(), new[] { 0x50DA, 0x50F2 }),
+            [("ADAE", 5)] = new(6, 0x17CA0, 28, 4, new[] { 0xC26C, 0xC298 }, Array.Empty<int>(), new[] { 0xC25E, 0xC276 }),
+        };
+
+        public static SwarmSites SwarmCodeSites =>
+            romID != null && SwarmSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
+
         public static BpShopSites BpShopCodeSites =>
             romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
 
@@ -304,6 +371,10 @@ namespace DSPRE
             return -1;
         }
 
+        /// <summary>
+        /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
+        /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
+        /// </summary>
         public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : -1;
         public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
         public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
@@ -594,6 +665,8 @@ namespace DSPRE
             }
 
             SetNarcDirs();
+            // The synthetic overlay's member (HGSS 0, DP/Pt 9) and the patch flags belong to this ROM, not the last one.
+            RomPatchState.ResetFlags();
             SetHeaderTableOffset();
             SetNullEncounterID();
             SetPickupTableOffsets();

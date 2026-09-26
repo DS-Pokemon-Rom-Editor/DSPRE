@@ -34,6 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_odds == null) return;
             change(_odds);
+            Status = "";
             RaiseAll();
         }
 

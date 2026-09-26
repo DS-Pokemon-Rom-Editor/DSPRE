@@ -108,8 +108,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseMoveTutors => IsRomLoaded && !isHGE && (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS) && Beta["MoveTutorEditorView"];
         public bool CanUseMining => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["UndergroundMiningView"];
         public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
-        public bool CanUseFriendship => IsRomLoaded && Beta["FriendshipChangesView"];
-        public bool CanUseSlotOdds => IsRomLoaded && Beta["EncounterSlotOddsView"];
+        public bool CanUseFriendship => IsRomLoaded && !isHGE && Beta["FriendshipChangesView"];
+        public bool CanUseSlotOdds => IsRomLoaded && !isHGE && Beta["EncounterSlotOddsView"];
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.

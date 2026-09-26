@@ -45,6 +45,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _pokemonNames = GetPokemonNames();
             _table = SwarmTable.Load();
             _saved = _table.Snapshot();
+            _speciesCache.Clear();
             Rebuild();
             foreach (var n in new[] { nameof(HeaderNames), nameof(HasMethod), nameof(Loaded) }) Raise(n);
             Changed();
@@ -139,9 +140,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string Status => _table == null ? "" :
-            _table.FitsWhereItIs
-                ? $"{Rows.Count} destinations, table {_table.Where}. Each is equally likely; list one twice to make it twice as likely."
-                : $"{Rows.Count} destinations; {_table.Capacity} fit where the table is, so saving moves it into the expanded ARM9 area.";
+            !_table.FitsWhereItIs ? $"{Rows.Count} destinations · saving moves the table to the expanded ARM9 area"
+            : _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
+            : $"{Rows.Count} destinations";
 
         public string Problem => _table?.Problem(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue) ?? "";
         public bool HasProblem => Problem.Length > 0;
@@ -167,6 +168,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return false;
             }
             _saved = _table.Snapshot();
+            _speciesCache.Clear();
+            foreach (var r in Rows) r.Refresh();
             Changed();
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
@@ -175,8 +178,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (_table == null) return;
-            _table = SwarmTable.Load();
+            try { _table = SwarmTable.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException || e is ArgumentException)
+            {
+                _ = DialogHelper.ShowError("The saved swarms couldn't be read back:\n" + e.Message, "Swarms");
+                return;
+            }
             _saved = _table.Snapshot();
+            _speciesCache.Clear();
             Selected = null;
             Rebuild();
             Changed();

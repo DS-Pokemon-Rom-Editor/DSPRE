@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private TypeChart _chart;
-        private byte[] _saved;
+
 
         public string[] TypeNames { get; } = Array.Empty<string>();
         public int TypeCount { get; }
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!load) return;
             _chart = TypeChart.Load();
-            _saved = _chart.ToBytes();
+            _savedKey = Key();
             TypeNames = GetTypeNames();
             int highest = _chart.Matchups.Count == 0 ? 0 : _chart.Matchups.Max(m => Math.Max(m.Attacker, m.Defender)) + 1;
             TypeCount = Math.Min(32, Math.Max(TypeNames.Length, highest));
@@ -137,7 +137,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             CellsChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool HasUnsavedChanges => _chart != null && !_chart.ToBytes().AsSpan().SequenceEqual(_saved);
+        // Compared as a set: undoing an edit re-adds a pair at the end of its section, which is the same chart.
+        private string Key() => _chart == null ? "" : string.Join(";", _chart.Matchups
+            .OrderBy(m => m.ForesightRemovable).ThenBy(m => m.Attacker).ThenBy(m => m.Defender)
+            .Select(m => $"{m.Attacker},{m.Defender},{m.Tenths},{m.ForesightRemovable}"));
+        private string _savedKey = "";
+
+        public bool HasUnsavedChanges => _chart != null && Key() != _savedKey;
         public string UnsavedChangesDescription => "Type chart";
 
         public void SaveChanges() => _ = SaveChangesAsync();
@@ -152,13 +158,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type Chart");
                 return false;
             }
-            _saved = _chart.ToBytes();
+            _savedKey = Key();
             Changed();
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
         }
 
         public bool CanMakeRoom => _chart != null && !_chart.InExpansion;
+        public string MakeRoomTip => $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
         /// <summary>Moves the chart, edits included, to the expanded ARM9 area so it can hold more matchups.</summary>
         public async Task MakeRoomAsync()
@@ -169,10 +176,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try { _chart.MoveToExpansion(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
-                await DialogHelper.ShowError("The type chart was not moved:\n" + e.Message, "Type Chart");
-                return;
+                // The Pokétch copy is written last, so the chart itself may already have moved.
+                await DialogHelper.ShowError(_chart.InExpansion
+                    ? "The type chart moved, but the Pokétch copy wasn't updated:\n" + e.Message
+                    : "The type chart was not moved:\n" + e.Message, "Type Chart");
+                if (!_chart.InExpansion) return;
             }
-            _saved = _chart.ToBytes();
+            _savedKey = Key();
             Raise(nameof(CanMakeRoom));
             Changed();
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -181,8 +191,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (_chart == null) return;
-            _chart = TypeChart.Load();
-            _saved = _chart.ToBytes();
+            try { _chart = TypeChart.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
+            {
+                _ = DialogHelper.ShowError("The saved type chart couldn't be read back:\n" + e.Message, "Type Chart");
+                return;
+            }
+            _savedKey = Key();
             Changed();
         }
     }

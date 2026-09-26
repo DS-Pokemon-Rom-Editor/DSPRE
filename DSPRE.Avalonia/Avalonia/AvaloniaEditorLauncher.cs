@@ -347,45 +347,50 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens a small editor for one of the fixed game tables, or says why this ROM can't.</summary>
-        private static void OpenTableEditor(string title, string whyNot, System.Func<global::Avalonia.Controls.Control> make, double width, double height)
+        /// <param name="whyNot">Run only after the ROM and hg-engine checks: some checks unpack or decompress files.</param>
+        private static void OpenTableEditor(string title, System.Func<string> whyNot, System.Func<global::Avalonia.Controls.Control> make, double width, double height)
         {
             if (!IsRomLoaded || BlockedForHge("The " + title + " editor")) return;
-            if (whyNot != null) { _ = DialogHelper.ShowInfo(whyNot, title); return; }
-            try { new EditorHostWindow(title, make(), width, height).ShowManaged(); }
-            catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException || ex is System.ArgumentException)
+            try
+            {
+                if (whyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
+                new EditorHostWindow(title, make(), width, height).ShowManaged();
+            }
+            catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException
+                                              || ex is System.ArgumentException || ex is System.UnauthorizedAccessException)
             {
                 _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
             }
         }
 
-        public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot(),
+        public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot,
             () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 560, 230);
 
-        public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot(),
+        public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot,
             () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680);
 
-        public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Changes", FriendshipTable.WhyNot(),
+        public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Changes", FriendshipTable.WhyNot,
             () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480);
 
-        public static void OpenEncounterSlotOdds() => OpenTableEditor("Encounter Slot Odds", EncounterSlotOdds.WhyNot(),
+        public static void OpenEncounterSlotOdds() => OpenTableEditor("Encounter Slot Odds", EncounterSlotOdds.WhyNot,
             () => new EncounterSlotOddsView(new EncounterSlotOddsViewModel(true)), 520, 620);
 
-        public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot(),
+        public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot,
             () => new BreedingItemsView(new BreedingItemsViewModel(true)), 680, 420);
 
-        public static void OpenBerryData() => OpenTableEditor("Berry Data", BerryData.WhyNot(),
+        public static void OpenBerryData() => OpenTableEditor("Berry Data", BerryData.WhyNot,
             () => new BerryDataEditorView(new BerryDataEditorViewModel(true)), 720, 520);
 
-        public static void OpenTypeChart() => OpenTableEditor("Type Chart", TypeChart.WhyNot(),
+        public static void OpenTypeChart() => OpenTableEditor("Type Chart", TypeChart.WhyNot,
             () => new TypeChartEditorView(new TypeChartEditorViewModel(true)), 1080, 780);
 
-        public static void OpenMoveTutors() => OpenTableEditor("Move Tutors", MoveTutorData.WhyNot(),
+        public static void OpenMoveTutors() => OpenTableEditor("Move Tutors", MoveTutorData.WhyNot,
             () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 900, 680);
 
-        public static void OpenBpShop() => OpenTableEditor("Battle Point Shop", BpShopData.WhyNot(),
+        public static void OpenBpShop() => OpenTableEditor("Battle Point Shop", BpShopData.WhyNot,
             () => new BpShopEditorView(new BpShopEditorViewModel(true)), 900, 640);
 
-        public static void OpenUndergroundMining() => OpenTableEditor("Underground Mining", MiningTable.WhyNot(),
+        public static void OpenUndergroundMining() => OpenTableEditor("Underground Mining", MiningTable.WhyNot,
             () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 900, 700);
 
         public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();

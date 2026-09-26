@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         public const int HeaderSize = 0x20;
 
         /// <summary>Markers of every block DSPRE places here. Add a new block's marker before allocating it.</summary>
-        public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1" };
+        public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1", "SWARMTABLEX1" };
 
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
@@ -54,7 +54,36 @@ namespace DSPRE.ROMFiles
             // A chart some other patch moved here has no marker, but the battle code still points at it.
             var chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
+            ranges.AddRange(PlatPatchesBlocks(data));
+            // PlatPatches installs its item-related payloads at fixed offsets (0x10000 to 0x15000) and refuses to
+            // when a slot is occupied, so Platinum keeps them free for it.
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat && data.Length > PlatPatchesFixedStart)
+                ranges.Add((PlatPatchesFixedStart, Math.Min(PlatPatchesFixedEnd, data.Length)));
             return ranges;
+        }
+
+        public const int PlatPatchesFixedStart = 0x10000, PlatPatchesFixedEnd = 0x16000;
+
+        // PlatPatches' blocks keep no length in their header and pre-reserve rows that stay zero until used, so each is
+        // reserved by its documented extent: Extra TMs to the end of a 4-byte mask per personal file (1024 assumed),
+        // Item Expansion to the end of the rows its header's capacity allows, and the older item layout generously.
+        private static readonly (string Marker, int Length)[] PlatPatchesLayouts =
+        {
+            ("EXTRATMSV1", 0x608 + 4 * 1024),
+            ("ITEMEXPV2", -1),
+            ("ITEMEXPV1", 0x1000),
+        };
+
+        public static IEnumerable<(long Start, long End)> PlatPatchesBlocks(byte[] data)
+        {
+            foreach (var (marker, fixedLength) in PlatPatchesLayouts)
+                foreach (int hit in DSUtils.SearchBytes(data, Encoding.ASCII.GetBytes(marker)))
+                {
+                    long length = fixedLength;
+                    if (length < 0)
+                        length = 0x298 + 8L * Math.Max((ushort)128, hit + 0x296 <= data.Length ? BitConverter.ToUInt16(data, hit + 0x294) : (ushort)128);
+                    yield return (hit, Math.Min(hit + length, data.Length));
+                }
         }
 
         /// <summary>The first all-zero, aligned run of <paramref name="length"/> bytes outside the reserved ranges, or -1.</summary>

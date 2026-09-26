@@ -47,7 +47,16 @@ namespace DSPRE.Avalonia.ViewModels.Items
             private readonly Action _changed;
             public EntryViewModel(BpShopData.Entry entry, Action changed) { Entry = entry; _changed = changed; }
 
-            public int Item { get => Entry.Item; set { if (value > 0 && value != Entry.Item) { Entry.Item = (ushort)value; _changed(); } } }
+            public int Item
+            {
+                get => Entry.Item;
+                set
+                {
+                    // "None" can't be sold; put the box back to the stored item.
+                    if (value <= 0) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Item))); return; }
+                    if (value != Entry.Item) { Entry.Item = (ushort)value; _changed(); }
+                }
+            }
             public decimal Price { get => Entry.Price; set { ushort v = (ushort)Math.Clamp(value, 0, ushort.MaxValue); if (v != Entry.Price) { Entry.Price = v; _changed(); } } }
         }
 
@@ -120,9 +129,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (_shop == null) return "";
                 if (!_shop.IsPlatinum) return "";
-                string where = $"Lists are {_shop.Where}.";
-                return _shop.FitsInPlace || _shop.Where != "where the game keeps them" ? where
-                    : where + $" Past {BpShopData.VanillaLeft} items, {BpShopData.VanillaRight} TMs or {BpShopData.ExchangeRows} prices, saving moves them into the expanded ARM9 area.";
+                if (_shop.InPlace) return _shop.FitsInPlace ? "" : "Saving moves the lists to the expanded ARM9 area.";
+                return _shop.InExpansion ? "In the expanded ARM9 area." : "Moved by a patch DSPRE doesn't follow, so saving is off.";
             }
         }
 

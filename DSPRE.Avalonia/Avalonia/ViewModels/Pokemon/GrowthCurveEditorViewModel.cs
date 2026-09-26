@@ -66,7 +66,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SetTotal(int level, decimal value)
         {
-            if (_table == null || level == 1) return;   // level 1 is always 0
+            if (_table == null) return;
+            if (level == 1) { if (Levels.Count > 0) Levels[0].Refresh(); return; }   // level 1 is always 0
             uint v = (uint)Math.Clamp(value, 0, uint.MaxValue);
             if (_table.Totals[_curve][level] == v) return;
             _table.Totals[_curve][level] = v;

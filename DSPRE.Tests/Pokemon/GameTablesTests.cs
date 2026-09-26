@@ -129,7 +129,7 @@ namespace DSPRE.Tests.Pokemon
             {
                 byte[] before = File.ReadAllBytes(path);
                 table.Rows[0].Fallback = 25;
-                table.Save();
+                table.Save(RomInfo.GetPokemonNames().Length, RomInfo.GetItemNames().Length);
                 Assert.Equal(25, IncenseBreedingTable.Load().Rows[0].Fallback);
                 byte[] after = File.ReadAllBytes(path);
                 var changed = Enumerable.Range(0, before.Length).Where(i => before[i] != after[i]).ToList();

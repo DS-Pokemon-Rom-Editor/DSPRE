@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_table == null) return true;
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Breeding Items"); return false; }
-            try { _table.Save(); }
+            try { _table.Save(SpeciesNames.Length, ItemNames.Length); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
                 await DialogHelper.ShowError("The breeding items were not saved:\n" + e.Message, "Breeding Items");

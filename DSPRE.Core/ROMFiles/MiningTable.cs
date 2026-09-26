@@ -85,6 +85,14 @@ namespace DSPRE.ROMFiles
             return data;
         }
 
+        /// <summary>Puts the weights back from bytes <see cref="ToBytes"/> produced.</summary>
+        public void RestoreWeights(byte[] bytes)
+        {
+            for (int r = 0; r < Treasures.Count; r++)
+                for (int c = 0; c < 4; c++)
+                    Treasures[r].Weights[c] = BitConverter.ToUInt16(bytes, r * RowSize + 4 + c * 2);
+        }
+
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);

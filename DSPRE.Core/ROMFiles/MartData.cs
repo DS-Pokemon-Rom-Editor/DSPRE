@@ -237,8 +237,9 @@ namespace DSPRE.ROMFiles
             }
 
             byte[] newOverlay = (byte[])syntheticOverlay.Clone();
-            if (blockOffset == _existingExpansionStart && _existingExpansionLength > 0)
-                Array.Clear(newOverlay, blockOffset, _existingExpansionLength);
+            // A block that moved leaves its old copy behind otherwise, which every allocator then treats as taken.
+            if (_existingExpansionStart >= 0 && _existingExpansionLength > 0)
+                Array.Clear(newOverlay, _existingExpansionStart, _existingExpansionLength);
             block.CopyTo(newOverlay, blockOffset);
             byte[] newArm9 = (byte[])_arm9.Clone();
             newArm9[_commonCountOffset] = (byte)CommonItems.Count;
@@ -361,9 +362,9 @@ namespace DSPRE.ROMFiles
             return ranges;
         }
 
-        // Every marked block, the Battle Point shop's included.
+        // Every block other features own, marked or not.
         private static void AddExistingExpansionRanges(byte[] data, List<(long Start, long End)> ranges)
-            => ranges.AddRange(SyntheticOverlaySpace.Blocks(data));
+            => ranges.AddRange(SyntheticOverlaySpace.Reserved(data));
 
         private static int FindFreeRegion(byte[] data, int length, int alignment,
             IReadOnlyList<(long Start, long End)> excluded)

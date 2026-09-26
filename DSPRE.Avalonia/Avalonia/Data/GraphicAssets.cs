@@ -246,10 +246,10 @@ namespace DSPRE.Avalonia.Data
                     var byPair = new Dictionary<(int, int), Icon>();
                     for (int item = 0; item < itemNames.Length; item++)
                     {
-                        uint at = (uint)(RomInfo.itemTableOffset + item * 8);
-                        int drawing = ARM9.ReadWordLE(at + 2);
-                        int colours = ARM9.ReadWordLE(at + 4);
-                        if (drawing < 0 || colours < 0) continue;
+                        if (!DSPRE.ROMFiles.ItemTable.Exists(item)) continue;
+                        var row = DSPRE.ROMFiles.ItemTable.Read(item);
+                        int drawing = (int)row.itemIcon;
+                        int colours = (int)row.itemPalette;
 
                         // Items with the same drawing and the same colours look identical, so they share a
                         // row. Items sharing only the drawing get a row each: four of the status healers
@@ -285,9 +285,7 @@ namespace DSPRE.Avalonia.Data
             {
                 try
                 {
-                    uint at = (uint)(RomInfo.itemTableOffset + itemId * 8);
-                    int drawing = ARM9.ReadWordLE(at + 2);
-                    return drawing >= 0 ? drawing : -1;
+                    return DSPRE.ROMFiles.ItemTable.Exists(itemId) ? (int)DSPRE.ROMFiles.ItemTable.Read(itemId).itemIcon : -1;
                 }
                 catch { return -1; }
             }

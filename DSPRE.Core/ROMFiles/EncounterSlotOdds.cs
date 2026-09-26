@@ -69,6 +69,7 @@ namespace DSPRE.ROMFiles
                 {
                     int tail = m.Boundaries[0][0] + LandLastSlotSite;
                     int imm = Imm(d, tail, m.Name);
+                    if (tail + 3 >= d.Length) throw new InvalidDataException($"The {m.Name} slot code runs past the end of its overlay.");
                     byte branch = d[tail + 3];
                     if (branch == Bne && imm == bounds[^1]) bounds.Add(imm + 1);
                     else if (branch == Bcs) bounds.Add(imm);
@@ -135,13 +136,16 @@ namespace DSPRE.ROMFiles
             {
                 var methods = SlotOddsMethods;
                 if (methods == null) return null;
+                // A label lookup never decompresses an overlay; that would write to the project.
+                if (methods.Any(m => OverlayUtils.IsCompressed(m.Overlay))) return null;
                 // Re-read only when a selector overlay changed on disk.
                 string key = romID + ":" + string.Join(",", methods.Select(m => m.Overlay).Distinct()
                     .Select(ov => OverlayUtils.GetPath(ov)).Select(p => p + File.GetLastWriteTimeUtc(p).Ticks));
                 if (_cache.key != key) _cache = (key, Load());
                 return _cache.odds.Methods.FirstOrDefault(m => m.Name == methodName)?.Percents;
             }
-            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return null; }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException
+                                      || e is UnauthorizedAccessException || e is IndexOutOfRangeException) { return null; }
         }
 
         /// <summary>A slot's label with its live chance: "20%" alone, or "Surf 1 · 60%" with a prefix.</summary>

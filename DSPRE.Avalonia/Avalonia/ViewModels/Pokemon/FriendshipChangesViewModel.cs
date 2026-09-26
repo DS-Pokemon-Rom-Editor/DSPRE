@@ -71,8 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 var risky = _table.Risky().ToList();
                 if (risky.Count == 0) return "";
                 string where = string.Join(", ", risky.Take(4).Select(r => $"{FriendshipTable.EventNames[r.Event]} ({FriendshipTable.BandNames[r.Band]})"));
-                return $"Above +{FriendshipTable.SafeMax}, a Luxury Ball, the met location and a Soothe Bell can push the change past +127, " +
-                       $"and the game then takes friendship away instead: {where}{(risky.Count > 4 ? "…" : "")}.";
+                return $"Above +{FriendshipTable.SafeMax}, ball, met-location and Soothe Bell bonuses can overflow into a loss: {where}{(risky.Count > 4 ? "…" : "")}";
             }
         }
         public bool HasWarning => Warning.Length > 0;

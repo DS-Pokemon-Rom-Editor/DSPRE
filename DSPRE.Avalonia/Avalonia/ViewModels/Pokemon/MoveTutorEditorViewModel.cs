@@ -33,7 +33,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public List<string> SpeciesNames => Species.Select(s => s.Name).ToList();
         public ObservableCollection<CheckRow> MovesOfSpecies { get; } = new ObservableCollection<CheckRow>();
         public ObservableCollection<CheckRow> SpeciesOfMove { get; } = new ObservableCollection<CheckRow>();
-        public List<string> TutorNames => _data?.Pool.Select((t, i) => $"{i + 1}. {Name(t.Move)}").ToList() ?? new List<string>();
+        // Built once per change: a new list on every read makes the ListBox drop its selection.
+        private List<string> _tutorNames;
+        public List<string> TutorNames => _tutorNames ??= _data?.Pool.Select((t, i) => $"{i + 1}. {Name(t.Move)}").ToList() ?? new List<string>();
 
         public MoveTutorEditorViewModel() { }
 
@@ -64,7 +66,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             private MoveTutorData.Tutor T => _o._data.Pool[_i];
 
             public int Number => _i + 1;
-            public int Move { get => T.Move; set { if (value > 0 && value != T.Move) { T.Move = (ushort)value; _o.Changed(true); } } }
+            public int Move
+            {
+                get => T.Move;
+                set
+                {
+                    // "None" isn't a tutor move; put the box back to the stored one.
+                    if (value <= 0) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); return; }
+                    if (value != T.Move) { T.Move = (ushort)value; _o.Changed(true); }
+                }
+            }
             public int Where { get => T.Where; set { if (value >= 0 && value != T.Where) { T.Where = value; _o.Changed(false); } } }
             public decimal Cost0 { get => T.Costs[0]; set => SetCost(0, value); }
             public decimal Cost1 { get => T.Costs.Length > 1 ? T.Costs[1] : 0; set => SetCost(1, value); }
@@ -133,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Changed(bool movesRenamed)
         {
-            if (movesRenamed) { Raise(nameof(TutorNames)); ShowSpecies(); }
+            if (movesRenamed) { _tutorNames = null; Raise(nameof(TutorNames)); ShowSpecies(); }
             Raise(nameof(Problem)); Raise(nameof(HasProblem)); Raise(nameof(HasUnsavedChanges));
         }
 
@@ -163,7 +174,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (_data == null) return;
-            _data = MoveTutorData.Load();
+            try { _data = MoveTutorData.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
+            {
+                _ = DialogHelper.ShowError("The saved tutors couldn't be read back:\n" + e.Message, "Move Tutors");
+                return;
+            }
+            _tutorNames = null;
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
             foreach (var row in Pool) row.Refresh();
