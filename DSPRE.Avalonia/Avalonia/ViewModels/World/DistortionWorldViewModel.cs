@@ -1315,6 +1315,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     if (!_shapeChanged.Contains(kv.Key)) continue;
                     kv.Value.SaveToFileDefaultDir(kv.Key, showSuccessMessage: false);
+                    AppEvents.RaiseMapSaved(this, kv.Key);
                 }
 
                 _editedMembers.Clear();

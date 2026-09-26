@@ -112,6 +112,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     OnPropertyChanged(nameof(IsStitchedView));
                     OnPropertyChanged(nameof(MeshToggleEnabled));
                     RefreshView();
+                    OnPropertyChanged(nameof(CanEditModel));
+                    OnPropertyChanged(nameof(FocusedMapIndex));
                 }
             }
         }
@@ -501,7 +503,59 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int SelectedBuildingIndex
         {
             get => _selectedBuildingIndex;
-            set { if (Set(ref _selectedBuildingIndex, value)) LoadBuildingDetail(); }
+            set
+            {
+                if (!Set(ref _selectedBuildingIndex, value)) return;
+                if (IsHeaderView && value >= 0 && value < _headerBuildingIndex.Count) SelectedHeaderMapIndex = _headerBuildingIndex[value].CellIndex;
+                LoadBuildingDetail();
+            }
+        }
+
+        /// <summary>The header's maps, in the order they were stitched, for the "This header" view's map picker.</summary>
+        public ObservableCollection<string> HeaderMapNames { get; } = new ObservableCollection<string>();
+
+        private int _selectedHeaderMap = -1;
+        /// <summary>The header map that model editing and "open in a window" act on; follows the last
+        /// building picked or square painted.</summary>
+        public int SelectedHeaderMapIndex
+        {
+            get => _selectedHeaderMap;
+            set
+            {
+                if (value < -1 || value >= _headerCells.Count || !Set(ref _selectedHeaderMap, value)) return;
+                OnPropertyChanged(nameof(CanEditModel));
+                OnPropertyChanged(nameof(FocusedMapIndex));
+            }
+        }
+
+        public bool CanEditModel => IsSingleMap ? _map != null
+            : IsHeaderView && _selectedHeaderMap >= 0 && _selectedHeaderMap < _headerCells.Count;
+
+        /// <summary>The map this view is about: the picked map, or the picked map of the header; -1 for none.</summary>
+        public int FocusedMapIndex => IsSingleMap ? _selectedMapIndex
+            : IsHeaderView && _selectedHeaderMap >= 0 && _selectedHeaderMap < _headerCells.Count ? _headerCells[_selectedHeaderMap].MapIndex : -1;
+
+        /// <summary>Points the map model editor at the map to edit; false when there is none.</summary>
+        public bool PrepareModelEdit()
+        {
+            if (IsSingleMap) return _map != null;
+            if (!CanEditModel) return false;
+            // The single-map fields follow the header map, so the import checks and warp moves read it.
+            var cell = _headerCells[_selectedHeaderMap];
+            _map = cell.Map;
+            _selectedMapIndex = cell.MapIndex;
+            OpenModelEditor(cell.MapIndex, cell.AreaId);
+            return true;
+        }
+
+        private void OpenModelEditor(int index, byte areaId)
+        {
+            WatchGeometry();
+            MapModel.Open(_map, areaId, gameFamily, $"Map {index}");
+            MapModel.Tiles.AreasOfMap = () => AreasUsingMap(index, out _);
+            MapModel.Tiles.WarpsFollow = (was, dx, dz) => MoveWarpsWith(index, was, dx, dz);
+            MapModel.Tiles.SelectedBuilding = -1;
+            MapModel.HeadersOfMap = () => HeadersUsingMap(index).Select(h => h.header).Distinct().OrderBy(h => h).ToList();
         }
 
         public bool HasBuildingSelected => ResolveSelectedBuilding() != null;
@@ -538,7 +592,23 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         /// <summary>Unsubscribe from app-wide events. Only for a standalone popup instance closing;
         /// the single long-lived Maps-workspace instance never calls this.</summary>
-        public void Detach() => AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+        public void Detach()
+        {
+            AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+            AppEvents.MapSaved -= OnMapSavedElsewhere;
+        }
+
+        /// <summary>Shows a map another editor saved, unless this one holds its own unsaved edits.</summary>
+        private void OnMapSavedElsewhere(object sender, int mapIndex)
+        {
+            if (ReferenceEquals(sender, this)) return;
+            bool shown = IsSingleMap ? _selectedMapIndex == mapIndex : IsHeaderView && _headerCells.Any(c => c.MapIndex == mapIndex);
+            if (!shown) return;
+            if (HasUnsavedChanges) { StatusText = $"Map {mapIndex} was saved in another window. Save or discard here to see it."; return; }
+            if (IsSingleMap) LoadMap(mapIndex);
+            else BuildHeaderPreview();
+            StatusText = $"Map {mapIndex} was saved in another window and reloaded.";
+        }
 
         private void LoadBuildingDetail()
         {
@@ -775,6 +845,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (cellIndex < 0 || cellIndex >= _headerCells.Count) return;
                 var cell = _headerCells[cellIndex];
+                SelectedHeaderMapIndex = cellIndex;
                 grid = collision ? cell.Map.collisions : cell.Map.types;
                 markDirty = () => { cell.Dirty = true; MarkDirty(); };
             }
@@ -1368,7 +1439,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void AfterMapModelEdited()
         {
-            if (MapModel.Changed) MarkDirty();
+            if (MapModel.Changed)
+            {
+                if (IsHeaderView && _selectedHeaderMap >= 0 && _selectedHeaderMap < _headerCells.Count) _headerCells[_selectedHeaderMap].Dirty = true;
+                MarkDirty();
+            }
             RefreshBuildings();
             if (MapModel.Tiles.SelectedBuilding is int picked && picked >= 0 && picked < Buildings.Count)
                 SelectedBuildingIndex = picked;
@@ -1421,6 +1496,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public MapEditorViewModel() { if (Design.IsDesignMode) MapNames.Add("Map 0"); }
         public MapEditorViewModel(bool _) { }
 
+        /// <summary>Map a standalone window opens on; -1 opens on the first.</summary>
+        public int InitialMapIndex { get; set; } = -1;
+
         // ── Setup ─────────────────────────────────────────────────────────────────────
         // Guards the AppEvents subscription below so re-running SetupAsync on a ROM switch doesn't
         // stack duplicate handlers (each firing once per prior ROM load).
@@ -1442,6 +1520,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     _romPatchHandlerSubscribed = true;
                     AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
+                    AppEvents.MapSaved += OnMapSavedElsewhere;
                 }
 
                 // All of the below are rebuilt fresh on every ROM load (including switching to a
@@ -1485,7 +1564,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (_headerId < 0 && HeaderNames.Count > 0) HeaderId = 0;
 
                 StatusText = $"{count} maps.";
-                if (count > 0) SelectedMapIndex = 0;
+                if (count > 0) SelectedMapIndex = InitialMapIndex >= 0 && InitialMapIndex < count ? InitialMapIndex : 0;
             }
             catch (Exception ex)
             {
@@ -1504,15 +1583,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ResolveTilesetForMap(index);
                 RefreshBuildings();
 
-                WatchGeometry();
-                MapModel.Open(_map, AreaForMap(index) ?? 0, gameFamily, $"Map {index}");
-                MapModel.Tiles.AreasOfMap = () => AreasUsingMap(index, out _);
-                MapModel.Tiles.WarpsFollow = (was, dx, dz) => MoveWarpsWith(index, was, dx, dz);
-                MapModel.Tiles.SelectedBuilding = -1;
-                MapModel.HeadersOfMap = () => HeadersUsingMap(index).Select(h => h.header).Distinct().OrderBy(h => h).ToList();
+                OpenModelEditor(index, AreaForMap(index) ?? 0);
 
                 SetClean();
                 StatusText = $"Loaded map {index}.";
+                OnPropertyChanged(nameof(CanEditModel));
+                OnPropertyChanged(nameof(FocusedMapIndex));
                 OnPropertyChanged(nameof(Collisions));
                 OnPropertyChanged(nameof(Types));
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
@@ -1553,6 +1629,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// them into one scene. Unlike Full Matrix, each map stays loaded with real (not discarded)
         /// move-permission data so it can be painted and its buildings edited, individually saved.
         /// </summary>
+        private void ShowHeaderMaps()
+        {
+            int keep = _selectedHeaderMap;
+            HeaderMapNames.Clear();
+            foreach (var c in _headerCells) HeaderMapNames.Add($"Map {c.MapIndex}");
+            _selectedHeaderMap = -1;
+            SelectedHeaderMapIndex = _headerCells.Count == 0 ? -1 : Math.Clamp(keep, 0, _headerCells.Count - 1);
+        }
+
         private void BuildHeaderPreview()
         {
             Model3D = null;
@@ -1593,6 +1678,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 Model3D = MatrixSceneBuilder.BuildFromLoaded(gameFamily,
                     _headerCells.Select(c => (c.CellX, c.CellY, c.Map, c.AreaId, c.AltitudeY)), StitchMode);
+                ShowHeaderMaps();
                 RefreshBuildings();
                 SetClean();
                 StatusText = Model3D != null
@@ -1888,7 +1974,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                     KeptPlatesFile.Save(cell.MapIndex, cell.Map.KeptPlates);
                     cell.Dirty = false;
                     saved++;
+                    AppEvents.RaiseMapSaved(this, cell.MapIndex);
                 }
+                foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
+                _eventsToSave.Clear();
                 SetClean();
                 StatusText = saved > 0 ? $"Saved {saved} map(s) for header {_headerId}." : "Nothing to save.";
                 return;
@@ -1903,6 +1992,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
             KeptPlatesFile.Save(_selectedMapIndex, _map.KeptPlates);
+            AppEvents.RaiseMapSaved(this, _selectedMapIndex);
             foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
             _eventsToSave.Clear();
             SetClean();

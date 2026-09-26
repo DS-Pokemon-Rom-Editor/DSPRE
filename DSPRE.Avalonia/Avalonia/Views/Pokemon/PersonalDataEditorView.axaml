@@ -151,6 +151,65 @@
           </StackPanel>
         </ScrollViewer>
       </TabItem>
+      <TabItem Header="Pokéathlon" IsVisible="{Binding ShowPokeathlon}">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="8" Margin="8">
+            <TextBlock Text="{Binding PokeathlonNote}" IsVisible="{Binding HasPokeathlonNote}" FontStyle="Italic" TextWrapping="Wrap"/>
+            <StackPanel Spacing="8" IsVisible="{Binding PokeathlonEditable}">
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPokeathlonFormChoice}">
+                <TextBlock Text="Form:" Classes="label"/>
+                <ComboBox ItemsSource="{Binding PokeathlonFormNames}" SelectedIndex="{Binding PokeathlonFormIndex}" MinWidth="140"/>
+              </StackPanel>
+              <GroupBox Header="Stats">
+                <StackPanel Spacing="4" Margin="4">
+                  <Grid ColumnDefinitions="80,120,120,120">
+                    <TextBlock Grid.Column="1" Text="Minimum" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="2" Text="Base" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="3" Text="Maximum" FontWeight="Bold"/>
+                  </Grid>
+                  <ItemsControl ItemsSource="{Binding PokeathlonStats}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PersonalDataEditorViewModel+PokeathlonStatRow">
+                        <Grid ColumnDefinitions="80,120,120,120" Margin="0,2">
+                          <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="label"/>
+                          <ComboBox Grid.Column="1" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MinIndex}"/>
+                          <ComboBox Grid.Column="2" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding BaseIndex}"/>
+                          <ComboBox Grid.Column="3" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MaxIndex}"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </GroupBox>
+              <GroupBox>
+                <GroupBox.Header>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="Event display" VerticalAlignment="Center"/>
+                    <Button Content="?" Click="PokeathlonDisplayHelp_Click" Padding="6,0" MinWidth="0"
+                            ToolTip.Tip="What these values do"/>
+                  </StackPanel>
+                </GroupBox.Header>
+                <Grid ColumnDefinitions="Auto,140,24,Auto,140" HorizontalAlignment="Left" RowDefinitions="Auto,8,Auto" Margin="4">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Cell (?):" Classes="label" Margin="0,0,10,0"/>
+                  <ComboBox  Grid.Row="0" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
+                             ItemsSource="{Binding AthlonCellOptions}" SelectedIndex="{Binding AthlonCellIndex}"/>
+                  <TextBlock Grid.Row="0" Grid.Column="3" Text="Hit (?):" Classes="label" Margin="0,0,10,0"/>
+                  <ComboBox  Grid.Row="0" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
+                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitIndex}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Touch (?):" Classes="label" Margin="0,0,10,0"/>
+                  <ComboBox  Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
+                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonTouchIndex}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="3" Text="Shadow (?):" Classes="label" Margin="0,0,10,0"/>
+                  <ComboBox  Grid.Row="2" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
+                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
+                </Grid>
+              </GroupBox>
+              <TextBlock Text="{Binding PokeathlonProblem}" IsVisible="{Binding HasPokeathlonProblem}"
+                         Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
       <!-- hg-engine takes machine moves from data/learnsets/learnsets.json, not personal data. -->
       <TabItem Header="TM/HM" IsVisible="{Binding !ShowHgEngineExtras}">
         <DockPanel Margin="8">

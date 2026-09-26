@@ -265,6 +265,54 @@ namespace DSPRE.Avalonia.Views.World
             }
         }
 
+        /// <summary>Opens the current tab's full editor on what the tab shows. Unsaved tab edits are
+        /// offered a save first, since the window reads from disk.</summary>
+        private async void PopOut_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = VM;
+            if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
+            string tab = (MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null;
+
+            IEditorWithUnsavedChanges editor = tab switch
+            {
+                "Header" => vm,
+                "Map" => MapVM,
+                "Events" => EventVM,
+                "Matrix" => MatrixVM,
+                "Area Data" => AreaDataVM,
+                "Encounters" => _encountersVm as IEditorWithUnsavedChanges,
+                "Scripts" => ScriptsVM,
+                "Level Scripts" => LevelScriptsVM,
+                "Text" => TextVM,
+                _ => null,
+            };
+            if (editor?.HasUnsavedChanges == true
+                && await DialogHelper.AskYesNo("Save this tab's changes first? The window opens what is saved.", "Open in window"))
+                editor.SaveChanges();
+
+            switch (tab)
+            {
+                case "Header": AvaloniaEditorLauncher.OpenHeaderEditor(vm.CurrentHeaderId); break;
+                case "Map": AvaloniaEditorLauncher.OpenMapEditor(MapVM.FocusedMapIndex); break;
+                case "Events": AvaloniaEditorLauncher.OpenEventEditor(EventVM.SelectedEventIndex); break;
+                case "Matrix": AvaloniaEditorLauncher.OpenMatrixEditor(MatrixVM.SelectedMatrixIndex); break;
+                case "Area Data": AvaloniaEditorLauncher.OpenAreaDataEditor(AreaDataVM.SelectedIndex); break;
+                case "Encounters":
+                    int table = _encountersVm switch
+                    {
+                        WildEditorDPPtViewModel dppt => dppt.SelectedEncounterIndex,
+                        WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
+                        _ => -1,
+                    };
+                    if (table >= 0) AvaloniaEditorLauncher.OpenWildEditor(table); else vm.OpenEncounters();
+                    break;
+                // Script lists can be ordered by source path, so the header's own file id is the reliable one.
+                case "Scripts": vm.OpenScripts(); break;
+                case "Level Scripts": AvaloniaEditorLauncher.OpenLevelScriptEditor(LevelScriptsVM.SelectedScriptIndex); break;
+                case "Text": AvaloniaEditorLauncher.OpenTextEditor(TextVM.SelectedArchiveIndex); break;
+            }
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
 

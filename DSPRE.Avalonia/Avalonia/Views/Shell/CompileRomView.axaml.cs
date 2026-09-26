@@ -4,7 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using DSPRE.Avalonia.ViewModels;
 
-namespace DSPRE.Avalonia.Views.Tools
+namespace DSPRE.Avalonia.Views.Shell
 {
     public partial class CompileRomView : Window
     {
@@ -27,9 +27,8 @@ namespace DSPRE.Avalonia.Views.Tools
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
-        /// <summary>Shows the window modally and kicks off the build; the window can't be closed until
-        /// the build finishes (see the Closing handler above), so by the time this returns, the build
-        /// (and any exception it raised) has already been fully observed.</summary>
+        /// <summary>Shows the window modally and runs the build; the window can't close until the build
+        /// finishes, so the build and any exception are observed when this returns.</summary>
         public async System.Threading.Tasks.Task ShowAndRunAsync(Window owner)
         {
             var runTask = VM.RunAsync();

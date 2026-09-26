@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 
-namespace DSPRE.Avalonia.ViewModels.Tools
+namespace DSPRE.Avalonia.ViewModels.Shell
 {
     /// <summary>
     /// Pokemon graphics for an hg-engine project, and a check of the archive its data tables live in.

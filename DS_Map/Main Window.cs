@@ -2278,7 +2278,7 @@ namespace DSPRE
         {
             Helpers.statusLabelMessage("Setting up Overlay Editor...");
             Update();
-            new DSPRE.Avalonia.Views.World.OverlayEditorView().ShowManaged();
+            new DSPRE.Avalonia.Views.Tools.OverlayEditorView().ShowManaged();
             Helpers.statusLabelMessage();
             Update();
         }

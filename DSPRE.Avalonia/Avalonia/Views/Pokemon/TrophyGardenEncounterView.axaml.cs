@@ -6,16 +6,16 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
-    public partial class TrophyGardenEditorView : UserControl
+    public partial class TrophyGardenEncounterView : UserControl
     {
-        private TrophyGardenEditorViewModel VM => DataContext as TrophyGardenEditorViewModel;
+        private TrophyGardenEncounterViewModel VM => DataContext as TrophyGardenEncounterViewModel;
 
-        public TrophyGardenEditorView()
+        public TrophyGardenEncounterView()
         {
             InitializeComponent();
         }
 
-        public TrophyGardenEditorView(TrophyGardenEditorViewModel vm) : this()
+        public TrophyGardenEncounterView(TrophyGardenEncounterViewModel vm) : this()
         {
             DataContext = vm;
         }

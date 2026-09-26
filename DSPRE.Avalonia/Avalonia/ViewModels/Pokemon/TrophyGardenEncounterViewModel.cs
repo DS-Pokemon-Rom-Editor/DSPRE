@@ -12,11 +12,9 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>TrophyGardenEncounterEditor</c>: the 16-species pool Trophy
-    /// Garden picks its daily-changing Pokémon from (Diamond/Pearl/Platinum). Which two are active
-    /// right now lives in the save file, not the ROM, so it isn't shown here.
+    /// The 16-species pool Trophy Garden picks its daily Pokémon from (DP/Pt); the active two live in the save file.
     /// </summary>
-    public class TrophyGardenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrophyGardenEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -73,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void SaveChanges() => Save();
         public void DiscardChanges() { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
-        public TrophyGardenEditorViewModel()
+        public TrophyGardenEncounterViewModel()
         {
             if (!IsAvailable)
             {

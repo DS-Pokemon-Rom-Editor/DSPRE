@@ -402,7 +402,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 (DataContext as MainWindowViewModel)?.RefreshHgEngineState();
 
                 await DialogHelper.ShowInfo(
-                    layout.Summary + "\n\nTools > hg-engine ROM Review shows which member holds what, and "
+                    layout.Summary + "\n\nFile > hg-engine > hg-engine ROM Review shows which member holds what, and "
                     + "can repair the order. It has been switched on for this ROM because it is needed.",
                     "hg-engine tables are out of place");
             }
@@ -454,7 +454,7 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 await DialogHelper.ShowInfo(
                     "Continuing without a linked checkout: the Pokémon, Move Data, Item, Trainer and " +
-                    "wild-encounter editors stay disabled. Link one later from File > Link hg-engine " +
+                    "wild-encounter editors stay disabled. Link one later from File > hg-engine > Link hg-engine " +
                     "checkout…\n\nAlso note: text or script files that hg-engine edits will be " +
                     "overwritten if you save the ROM; manage those through hg-engine.",
                     "hg-engine detected");
@@ -776,14 +776,8 @@ namespace DSPRE.Avalonia.Views.Shell
         private void OverworldEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverworldEditor();
 
-        private void EncountersEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenEncountersEditor();
-
-        private void HeadbuttEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenHeadbuttEncounterEditor();
-
-        private void TrophyGardenEditor_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenTrophyGardenEditor();
+        private void SpecialEncountersEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenSpecialEncountersEditor();
 
         private void WildEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenWildEditor();
@@ -899,8 +893,5 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void ToggleTheme_Click(object sender, RoutedEventArgs e)
             => DSPRE.Avalonia.ThemeManager.Toggle();
-
-        private void GlTest_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenGlTest();
     }
 }

@@ -499,7 +499,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Composite snapshot: the personal-data file bytes + the hatch-result (which lives in a separate
         // table, not in the file) + the staged hg-engine side-table values. Edit bursts within CoalesceMs
         // collapse into one undo step.
-        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; }
+        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; }
         private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
         private PersonalSnapshot _savedSnapshot;   // UndoHistory doesn't expose it, and Discard restores it
         private DateTime _lastCaptureUtc = DateTime.MinValue;
@@ -512,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private PersonalSnapshot Snapshot() =>
-            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone() };
+            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone(), Athlon = _athlon?.Select(r => (byte[])r.Clone()).ToArray() };
 
         private void ApplyState(PersonalSnapshot snap)
         {
@@ -523,6 +523,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _hatchResultIndex = snap.Hatch; OnPropertyChanged(nameof(HatchResultIndex));
             ApplyHg(snap.Hg);
             if (snap.Followers != null) { _followers = (FollowerStaged[])snap.Followers.Clone(); ShowFollower(); }
+            if (snap.Athlon != null) { _athlon = snap.Athlon.Select(r => (byte[])r.Clone()).ToArray(); ShowPokeathlonForm(); }
             _loading = false;
 
             _dirty = _history.IsDirty;
@@ -680,10 +681,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"{lead}\n{sourceError}", "Personal Data");
                 return;
             }
+            string athlonProblem = PokeathlonSaveProblem();
+            if (athlonProblem != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal Data");
+                return;
+            }
             string followerError = SaveRetailFollower();
             if (followerError != null)
             {
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal Data");
+                return;
+            }
+            string athlonError = SavePokeathlon();
+            if (athlonError != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal Data");
                 return;
             }
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
@@ -1077,6 +1090,212 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return null;
         }
 
+        // ── Retail HGSS Pokéathlon ───────────────────────────────────────────
+        // One a/1/6/9 record per form; every form of the species is staged so undo and Discard cover them all.
+        private string _athlonWhyNot;
+        private int _athlonSpecies;
+        private byte[][] _athlon, _athlonLoaded;
+
+        public bool ShowPokeathlon => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+        public bool PokeathlonEditable => ShowPokeathlon && _athlonWhyNot == null && _athlon != null && _athlon.Length > 0;
+        public string PokeathlonNote => !ShowPokeathlon ? "" : _athlonWhyNot ?? (_athlon == null || _athlon.Length == 0 ? "This Pokémon has no Pokéathlon stats." : "");
+        public bool HasPokeathlonNote => PokeathlonNote.Length > 0;
+
+        public ObservableCollection<string> PokeathlonFormNames { get; } = new();
+        public bool HasPokeathlonFormChoice => PokeathlonFormNames.Count > 1;
+        public ObservableCollection<PokeathlonStatRow> PokeathlonStats { get; } = new();
+        public string[] StarOptions { get; } = { "★", "★★", "★★★", "★★★★", "★★★★★" };
+        public string[] AthlonCellOptions { get; } = { "Small sprite", "Large sprite" };
+        public string[] AthlonSizeOptions { get; } = { "Small", "Medium", "Large" };
+
+        private int _athlonFormIndex;
+        public int PokeathlonFormIndex
+        {
+            get => _athlonFormIndex;
+            set { if (_athlon != null && value >= 0 && value < _athlon.Length && Set(ref _athlonFormIndex, value)) ShowPokeathlonForm(); }
+        }
+
+        private PokeathlonPerformance AthlonRecord =>
+            _athlon != null && _athlonFormIndex < _athlon.Length
+                ? new PokeathlonPerformance(PokeathlonPerformance.MemberOf(_athlonSpecies, _athlonFormIndex), _athlon[_athlonFormIndex]) : null;
+
+        private void StageAthlon(Action<PokeathlonPerformance> change)
+        {
+            var record = AthlonRecord;
+            if (_loading || record == null) return;
+            change(record);
+            byte[] next = record.ToBytes();
+            if (next.AsSpan().SequenceEqual(_athlon[_athlonFormIndex])) return;
+            _athlon[_athlonFormIndex] = next;
+            ShowPokeathlonForm();
+            SetDirty();
+        }
+
+        public int AthlonCellIndex
+        {
+            get => AthlonRecord == null ? -1 : AthlonRecord.Cell == 0 ? 0 : 1;
+            set { if (value is >= 0 and <= 1 && value != AthlonCellIndex) StageAthlon(r => r.Cell = (byte)value); }
+        }
+        public int AthlonHitIndex
+        {
+            get => (AthlonRecord?.Hit ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Hit = (byte)(value + 1)); }
+        }
+        public int AthlonTouchIndex
+        {
+            get => (AthlonRecord?.Touch ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Touch = (byte)(value + 1)); }
+        }
+        public int AthlonShadowIndex
+        {
+            get => (AthlonRecord?.Shadow ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Shadow = (byte)(value + 1)); }
+        }
+
+        public System.Threading.Tasks.Task ShowPokeathlonDisplayHelp() => DSPRE.Avalonia.DialogHelper.ShowInfo(
+            "These four values set how the Pokémon is drawn in Pokéathlon events. The names come from the game's code; " +
+            "what each one changes is only partly known, hence the (?).\n\n" +
+            "Cell: the sprite size. Steelix, the large legendaries and Arceus use Large.\n" +
+            "Hit: the hitbox each event gives it. Every Pokémon uses Small.\n" +
+            "Touch: raises the sweat mark in some events. Lugia, Ho-Oh, Wailord and Groudon use Large, all others Medium.\n" +
+            "Shadow: where its shadow and player marker sit. Every Pokémon uses Small.",
+            "Event display");
+
+        public string PokeathlonProblem => AthlonRecord?.Problem() ?? "";
+        public bool HasPokeathlonProblem => PokeathlonProblem.Length > 0;
+
+        /// <summary>One stat's base, minimum and maximum as star picker indices.</summary>
+        public class PokeathlonStatRow : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            private readonly PersonalDataEditorViewModel _owner;
+            private readonly int _stat;
+
+            public PokeathlonStatRow(PersonalDataEditorViewModel owner, int stat) { _owner = owner; _stat = stat; }
+
+            public string Name => PokeathlonPerformance.Stats[_stat];
+            public string[] StarOptions => _owner.StarOptions;
+
+            public int BaseIndex
+            {
+                get => _owner.AthlonRecord?.Base(_stat) ?? -1;
+                set { if (value is >= 0 and <= PokeathlonPerformance.HighestStar) _owner.StageAthlon(r => r.SetBase(_stat, (byte)value)); }
+            }
+            public int MinIndex
+            {
+                get => _owner.AthlonRecord?.Min(_stat) ?? -1;
+                set { if (value is >= 0 and <= PokeathlonPerformance.HighestStar) _owner.StageAthlon(r => r.SetMin(_stat, (byte)value)); }
+            }
+            public int MaxIndex
+            {
+                get => _owner.AthlonRecord?.Max(_stat) ?? -1;
+                set { if (value is >= 0 and <= PokeathlonPerformance.HighestStar) _owner.StageAthlon(r => r.SetMax(_stat, (byte)value)); }
+            }
+
+            public void Refresh()
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BaseIndex)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MinIndex)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxIndex)));
+            }
+        }
+
+        private void ShowPokeathlonForm()
+        {
+            foreach (var row in PokeathlonStats) row.Refresh();
+            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonCellIndex), nameof(AthlonHitIndex), nameof(AthlonTouchIndex),
+                                         nameof(AthlonShadowIndex), nameof(PokeathlonProblem), nameof(HasPokeathlonProblem),
+                                         nameof(PokeathlonEditable), nameof(PokeathlonNote), nameof(HasPokeathlonNote),
+                                         nameof(HasPokeathlonFormChoice) })
+                OnPropertyChanged(name);
+        }
+
+        // Form personal files follow the name list, in personalExtraFiles order (as DSUtils.ResolveBaseSpeciesId reads them).
+        internal static (int species, int form) AthlonSpeciesOf(int personalId)
+        {
+            if (personalId >= 1 && personalId <= PokeathlonPerformance.LastSpecies) return (personalId, 0);
+            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            int k = personalId - GetPokemonNames().Length;
+            if (k < 0 || k >= extras.Length) return (0, 0);
+            int form = Array.IndexOf(PokeathlonPerformance.FormNamesOf(extras[k].monId), extras[k].description);
+            return form < 0 ? (0, 0) : (extras[k].monId, form);
+        }
+
+        private void LoadPokeathlon()
+        {
+            _athlon = _athlonLoaded = null;
+            _athlonWhyNot = null;
+            PokeathlonFormNames.Clear();
+            _athlonFormIndex = 0;
+            if (PokeathlonStats.Count == 0)
+                for (int s = 0; s < PokeathlonPerformance.StatCount; s++) PokeathlonStats.Add(new PokeathlonStatRow(this, s));
+
+            if (ShowPokeathlon)
+            {
+                var (species, form) = AthlonSpeciesOf(_currentId);
+                _athlonSpecies = species;
+                try
+                {
+                    _athlonWhyNot = PokeathlonPerformance.WhyNot();
+                    if (_athlonWhyNot == null && species > 0)
+                    {
+                        var names = PokeathlonPerformance.FormNamesOf(species);
+                        var records = new List<byte[]>();
+                        for (int f = 0; f < PokeathlonPerformance.FormsOf(species); f++)
+                        {
+                            var record = PokeathlonPerformance.Read(PokeathlonPerformance.MemberOf(species, f));
+                            if (record == null) { _athlonWhyNot = $"Pokéathlon record {PokeathlonPerformance.MemberOf(species, f)} is missing."; break; }
+                            records.Add(record.ToBytes());
+                            PokeathlonFormNames.Add(f < names.Length ? names[f] : $"Form {f}");
+                        }
+                        if (_athlonWhyNot == null)
+                        {
+                            _athlon = records.ToArray();
+                            _athlonLoaded = records.Select(r => (byte[])r.Clone()).ToArray();
+                            _athlonFormIndex = Math.Min(form, _athlon.Length - 1);
+                        }
+                        else PokeathlonFormNames.Clear();
+                    }
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidDataException)
+                {
+                    _athlonWhyNot = e.Message;
+                    PokeathlonFormNames.Clear();
+                }
+            }
+            ShowPokeathlonForm();
+        }
+
+        private string PokeathlonSaveProblem()
+        {
+            if (_athlon == null) return null;
+            for (int f = 0; f < _athlon.Length; f++)
+            {
+                string problem = new PokeathlonPerformance(0, _athlon[f]).Problem();
+                if (problem != null) return PokeathlonFormNames.Count > 1 ? $"{PokeathlonFormNames[f]}: {problem}" : problem;
+            }
+            return null;
+        }
+
+        private string SavePokeathlon()
+        {
+            if (_athlon == null || _athlonLoaded == null) return null;
+            try
+            {
+                for (int f = 0; f < _athlon.Length; f++)
+                {
+                    if (_athlon[f].AsSpan().SequenceEqual(_athlonLoaded[f])) continue;
+                    new PokeathlonPerformance(PokeathlonPerformance.MemberOf(_athlonSpecies, f), _athlon[f]).Write();
+                    _athlonLoaded[f] = (byte[])_athlon[f].Clone();
+                }
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidDataException)
+            {
+                return e.Message;
+            }
+            return null;
+        }
+
         // ── Private helpers ───────────────────────────────────────────────────
 
         private void SetDirty()  { if (_loading) return; RecordUndoSnapshot(); _dirty = true;  Title = "● Personal Data Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -1121,6 +1340,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PopulateFromCurrent();
             LoadHgEngineExtras();
             LoadRetailFollower();
+            LoadPokeathlon();
             _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             // Load sprite icon

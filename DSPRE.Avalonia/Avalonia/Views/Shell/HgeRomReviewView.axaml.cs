@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using DSPRE.Avalonia.ViewModels.Tools;
+using DSPRE.Avalonia.ViewModels.Shell;
 
-namespace DSPRE.Avalonia.Views.Tools
+namespace DSPRE.Avalonia.Views.Shell
 {
     public partial class HgeRomReviewView : Window
     {

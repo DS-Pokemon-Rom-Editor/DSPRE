@@ -36,6 +36,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
             await ViewModel.ImportCommand(window);
         }
 
+        private async void PokeathlonDisplayHelp_Click(object sender, RoutedEventArgs e)
+            => await ViewModel.ShowPokeathlonDisplayHelp();
+
         private void AddMachine_Click(object sender, RoutedEventArgs e)
             => ViewModel.AddMachineCommand();
 

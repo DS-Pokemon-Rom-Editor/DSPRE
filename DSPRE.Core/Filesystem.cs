@@ -57,6 +57,11 @@ namespace DSPRE {
             return File.Exists(GetBugContestEncounterPath());
         }
 
+        /// <summary>data/mushi/mushi_trainer.bin (HGSS only): the Bug-Catching Contest opponents.</summary>
+        public static string GetBugContestTrainerPath() {
+            return Path.Combine(RomInfo.dataPath, "data", "mushi", "mushi_trainer.bin");
+        }
+
         public static string GetBuildingModelsDirPath(bool interior) {
             if (interior) {
                 return interiorBuildingModels;

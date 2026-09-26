@@ -102,8 +102,8 @@ namespace DSPRE.Tests
             var names = AvaloniaEditorLauncher.BuildCommands().Select(c => c.Name).ToHashSet();
             var expected = new[]
             {
-                "Battle screens", "Battle scenes", "Picture to Background", "Title Screen Editor",
-                "Dungeon Cutin Editor", "Trainer Card Editor", "Overworld Sprites (BTX)",
+                "Battle Screen", "Battle Scenes", "Picture to Background", "Title Screen Editor",
+                "Dungeon Cutin Editor", "Trainer Card Editor", "Overworld Editor",
                 "NSBTX Texture Editor", "Font Editor", "Audio Editor", "Trainer Sprite Editor",
                 "Game Icon & Banner",
             };

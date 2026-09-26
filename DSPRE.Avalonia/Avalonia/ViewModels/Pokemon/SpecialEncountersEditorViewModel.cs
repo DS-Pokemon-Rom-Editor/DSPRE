@@ -9,39 +9,42 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
-    /// Parent ViewModel for the Avalonia Encounters editor, a composite that hosts
-    /// the special-encounter sub-editors as tabs, gated by game family:
-    ///   • DPPt : Honey Tree, Great Marsh
-    ///   • HGSS : Headbutt, Safari Zone, Bug Contest
-    ///
-    /// Mirrors the WinForms <c>EncountersEditor</c> container. Sub-editors are ported
-    /// incrementally; <see cref="PendingNote"/> lists those not yet migrated.
+    /// The Special Encounters Editor: one tab per special encounter system the game has.
+    ///   • DPPt : Honey Tree, Great Marsh, Trophy Garden
+    ///   • HGSS : Headbutt, Bug Contest, Bug Contest Opponents, Safari Zone
     /// </summary>
-    public class EncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
+        public const string Title = "Special Encounters Editor";
+
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        // ── Ported sub-editors ─────────────────────────────────────────────────────
         public HoneyTreeEncounterViewModel HoneyTreeVM { get; }
         public GreatMarshEncounterViewModel GreatMarshVM { get; }
+        public TrophyGardenEncounterViewModel TrophyGardenVM { get; }
+        public HeadbuttEncounterViewModel HeadbuttVM { get; }
         public BugContestEncounterViewModel BugContestVM { get; }
+        public BugContestTrainersViewModel BugContestTrainersVM { get; }
         public SafariZoneEncounterViewModel SafariZoneVM { get; }
 
-        // ── Tab visibility (by family) ──────────────────────────────────────────────
         public bool ShowHoneyTree { get; }
         public bool ShowGreatMarsh { get; }
+        public bool ShowTrophyGarden { get; }
+        public bool ShowHeadbutt { get; }
         public bool ShowBugContest { get; }
         public bool ShowSafariZone { get; }
+
+        /// <summary>Open on the Headbutt tab, as a "Go to Headbutt file" jump does.</summary>
+        public bool StartOnHeadbutt { get; }
 
         private string _pendingNote = "";
         public string PendingNote { get => _pendingNote; private set { _pendingNote = value; OnPropertyChanged(); } }
         public bool HasPending => !string.IsNullOrEmpty(_pendingNote);
 
-        // ── Dirty aggregation ───────────────────────────────────────────────────────
         private IEditorWithUnsavedChanges[] Children => new IEditorWithUnsavedChanges[]
-        { HoneyTreeVM, GreatMarshVM, BugContestVM, SafariZoneVM };
+        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM };
 
         public bool HasUnsavedChanges
         {
@@ -54,33 +57,35 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 var parts = new List<string>();
                 foreach (var c in Children)
                     if (c?.HasUnsavedChanges ?? false) parts.Add(c.UnsavedChangesDescription);
-                return parts.Count > 0 ? string.Join(", ", parts) : "Encounters Editor";
+                return parts.Count > 0 ? string.Join(", ", parts) : Title;
             }
         }
         public void SaveChanges()
         {
             foreach (var c in Children) if (c?.HasUnsavedChanges ?? false) c.SaveChanges();
             // Announced after the children so the one visible notice names the whole save.
-            SaveNotice.Saved("Encounters Editor");
+            SaveNotice.Saved(Title);
         }
         public void DiscardChanges()
         {
             foreach (var c in Children) c?.DiscardChanges();
         }
 
-        // ── Design-time constructor ─────────────────────────────────────────────────
-        public EncountersEditorViewModel()
+        // Design-time constructor.
+        public SpecialEncountersEditorViewModel()
         {
             HoneyTreeVM = new HoneyTreeEncounterViewModel();
             GreatMarshVM = new GreatMarshEncounterViewModel();
             BugContestVM = new BugContestEncounterViewModel();
+            BugContestTrainersVM = new BugContestTrainersViewModel();
             SafariZoneVM = new SafariZoneEncounterViewModel();
             ShowHoneyTree = true;
             ShowGreatMarsh = true;
         }
 
-        // ── Runtime constructor ─────────────────────────────────────────────────────
-        public EncountersEditorViewModel(bool _)
+        /// <param name="headbuttOnly">A linked hg-engine project: only Headbutt reads its data safely.</param>
+        /// <param name="headbuttFile">Headbutt file to open first, or -1 to open on the first tab.</param>
+        public SpecialEncountersEditorViewModel(bool headbuttOnly, int headbuttFile = -1)
         {
             bool dppt = gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat;
             bool hgss = gameFamily == GameFamilies.HGSS;
@@ -94,22 +99,36 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 GreatMarshVM = new GreatMarshEncounterViewModel(true);
                 GreatMarshVM.PropertyChanged += OnChildChanged;
                 ShowGreatMarsh = true;
+
+                TrophyGardenVM = new TrophyGardenEncounterViewModel();
+                TrophyGardenVM.PropertyChanged += OnChildChanged;
+                ShowTrophyGarden = true;
             }
             else if (hgss)
             {
-                BugContestVM = new BugContestEncounterViewModel(true);
-                BugContestVM.PropertyChanged += OnChildChanged;
-                ShowBugContest = true;
+                // The tab sets it up when first shown; the 3D view is heavy.
+                HeadbuttVM = new HeadbuttEncounterViewModel(true) { InitialIndex = headbuttFile < 0 ? 0 : headbuttFile };
+                HeadbuttVM.PropertyChanged += OnChildChanged;
+                ShowHeadbutt = true;
+                StartOnHeadbutt = headbuttFile >= 0 || headbuttOnly;
 
-                SafariZoneVM = new SafariZoneEncounterViewModel(true);
-                SafariZoneVM.PropertyChanged += OnChildChanged;
-                ShowSafariZone = true;
+                if (!headbuttOnly)
+                {
+                    BugContestVM = new BugContestEncounterViewModel(true);
+                    BugContestVM.PropertyChanged += OnChildChanged;
+                    BugContestTrainersVM = new BugContestTrainersViewModel();
+                    BugContestTrainersVM.PropertyChanged += OnChildChanged;
+                    ShowBugContest = true;
 
-                PendingNote = "Headbutt trees live in their own editor, under Pokemon.";
+                    SafariZoneVM = new SafariZoneEncounterViewModel(true);
+                    SafariZoneVM.PropertyChanged += OnChildChanged;
+                    ShowSafariZone = true;
+                }
+                else PendingNote = "hg-engine builds the other special encounters from its own source.";
             }
             else
             {
-                PendingNote = "This ROM version has no special encounter editors.";
+                PendingNote = "This ROM version has no special encounters.";
             }
             OnPropertyChanged(nameof(HasPending));
         }
@@ -120,7 +139,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        // ── Setup ────────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
         {
             if (ShowHoneyTree && HoneyTreeVM != null)
@@ -129,6 +147,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await GreatMarshVM.SetupAsync(owner);
             if (ShowBugContest && BugContestVM != null)
                 await BugContestVM.SetupAsync(owner);
+            if (ShowBugContest && BugContestTrainersVM != null)
+                BugContestTrainersVM.Setup();
             if (ShowSafariZone && SafariZoneVM != null)
                 await SafariZoneVM.SetupAsync(owner);
         }

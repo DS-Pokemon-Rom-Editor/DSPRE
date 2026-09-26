@@ -2,14 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Pokemon"
-        x:Class="DSPRE.Avalonia.Views.Pokemon.EncountersEditorView"
-        x:DataType="vm:EncountersEditorViewModel"
-        Title="Encounters Editor"
-        Width="720" Height="520"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.SpecialEncountersEditorView"
+        x:DataType="vm:SpecialEncountersEditorViewModel"
+        Title="Special Encounters Editor"
+        Width="1200" Height="720" MinWidth="980" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
-    <vm:EncountersEditorViewModel/>
+    <vm:SpecialEncountersEditorViewModel/>
   </Design.DataContext>
 
   <DockPanel>
@@ -26,8 +26,17 @@
       <TabItem Header="Great Marsh" IsVisible="{Binding ShowGreatMarsh}">
         <views:GreatMarshEncounterView DataContext="{Binding GreatMarshVM}"/>
       </TabItem>
+      <TabItem Header="Trophy Garden" IsVisible="{Binding ShowTrophyGarden}">
+        <views:TrophyGardenEncounterView DataContext="{Binding TrophyGardenVM}"/>
+      </TabItem>
+      <TabItem x:Name="HeadbuttTab" Header="Headbutt" IsVisible="{Binding ShowHeadbutt}">
+        <views:HeadbuttEncounterView DataContext="{Binding HeadbuttVM}"/>
+      </TabItem>
       <TabItem Header="Bug Contest" IsVisible="{Binding ShowBugContest}">
         <views:BugContestEncounterView DataContext="{Binding BugContestVM}"/>
+      </TabItem>
+      <TabItem Header="Bug Contest Opponents" IsVisible="{Binding ShowBugContest}">
+        <views:BugContestTrainersView DataContext="{Binding BugContestTrainersVM}"/>
       </TabItem>
       <TabItem Header="Safari Zone" IsVisible="{Binding ShowSafariZone}">
         <views:SafariZoneEncounterView DataContext="{Binding SafariZoneVM}"/>

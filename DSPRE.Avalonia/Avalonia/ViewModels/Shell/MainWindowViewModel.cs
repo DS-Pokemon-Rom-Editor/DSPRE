@@ -161,11 +161,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return beta ?? (supported ? null : unsupported);
         }
         public bool CanUseWildEditors   => IsRomLoaded && HgAllows;
-        // Special Encounters (Safari/Great Marsh-style tables) isn't one of the 5 hg-engine domains
-        // DSPRE can read/write from source yet, so it stays blocked regardless of the link, unlike
-        // CanUseWildEditors, which covers the actual wild-encounter table hg-engine does own.
-        public bool CanUseSpecialEncountersEditor => IsRomLoaded && !isHGE;
-        public bool CanUseTrophyGardenEditor => IsRomLoaded && HgAllows && DSPRE.ROMFiles.TrophyGardenEncounterFile.IsAvailable();
+        // With a linked hg-engine checkout only its Headbutt tab is safe; hg-engine builds the rest itself.
+        public bool CanUseSpecialEncountersEditor => IsRomLoaded && (!isHGE || (IsHgssRom && HgEngineProject.IsActive));
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
         // hg-engine's real `make` build, not one of the 5 read/write-covered domains, so this only
         // needs the checkout link itself (like CanUseHgEngineFormEditor), not the HgAllows gate.
@@ -194,7 +191,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool IsHgssRom           => IsRomLoaded && gameFamily == GameFamilies.HGSS;
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
-        public bool CanUseHeadbuttEditor => IsHgssRom && HgAllows;
         // Diamond and Pearl only have the battle music table, where it is supported.
         public bool CanUseMiscTables    => IsRomLoaded && HgAllows && (gameFamily != GameFamilies.DP || DSPRE.ROMFiles.BattleMusicTables.IsSupported);
 
@@ -265,9 +261,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(BottomScreenEditorNote));
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
-            OnPropertyChanged(nameof(CanUseTrophyGardenEditor));
             OnPropertyChanged(nameof(IsHgssRom));
-            OnPropertyChanged(nameof(CanUseHeadbuttEditor));
             OnPropertyChanged(nameof(CanUseMiscTables));
             OnPropertyChanged(nameof(IsHgEngineLinked));
             OnPropertyChanged(nameof(CanCompileRom));
@@ -339,8 +333,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBottomScreenEditor));
             OnPropertyChanged(nameof(BottomScreenEditorNote));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
-            OnPropertyChanged(nameof(CanUseTrophyGardenEditor));
-            OnPropertyChanged(nameof(CanUseHeadbuttEditor));
             OnPropertyChanged(nameof(CanUseMiscTables));
         }
 

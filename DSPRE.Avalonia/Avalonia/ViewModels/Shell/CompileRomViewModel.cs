@@ -8,10 +8,9 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using DSPRE.HgEngine;
 
-namespace DSPRE.Avalonia.ViewModels.Tools
+namespace DSPRE.Avalonia.ViewModels.Shell
 {
-    /// <summary>Runs hg-engine's real `make` build (ASM hooks + every data domain, not just the isolated
-    /// per-domain targets Phases 1-2 use) and streams its output to a live log panel.</summary>
+    /// <summary>Runs hg-engine's full `make` build and streams its output to a live log panel.</summary>
     public class CompileRomViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;

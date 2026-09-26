@@ -213,9 +213,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void EditModel_Click(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as MapEditorViewModel;
-            if (vm == null || !vm.IsSingleMap) return;
+            if (vm == null) return;
 
-            if (TopLevel.GetTopLevel(this) is not Window owner) return;
+            if (TopLevel.GetTopLevel(this) is not Window owner || !vm.PrepareModelEdit()) return;
 
             vm.MapModel.Tiles.ImportedSinceOpen = false;
             var permissionsBefore = vm.PermissionsNow();

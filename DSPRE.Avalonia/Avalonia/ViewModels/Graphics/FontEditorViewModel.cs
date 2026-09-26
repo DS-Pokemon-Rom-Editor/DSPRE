@@ -435,7 +435,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string PreviewNote => _font == null ? null
             : FieldFontCharacters.Ready ? null
             : "The character map for this ROM is not loaded, so letters cannot be matched to pictures. "
-              + "Open Tools, Char Map Manager.";
+              + "Open Text, Char Map Manager.";
 
         // ── Saving ────────────────────────────────────────────────────────────────
         public bool HasUnsavedChanges => _dirty;

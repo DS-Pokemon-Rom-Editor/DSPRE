@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DSPRE.Avalonia.ViewModels;
 
-namespace DSPRE.Avalonia.Views.World
+namespace DSPRE.Avalonia.Views.Tools
 {
     public partial class OverlayEditorView : Window
     {

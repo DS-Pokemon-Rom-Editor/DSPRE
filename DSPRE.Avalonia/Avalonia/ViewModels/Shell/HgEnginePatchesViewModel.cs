@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using DSPRE.Editors;
 using DSPRE.HgEngine;
 
-namespace DSPRE.Avalonia.ViewModels.Tools
+namespace DSPRE.Avalonia.ViewModels.Shell
 {
     /// <summary>One patch shown in the table, with what it does and where it lands.</summary>
     public class PatchRow

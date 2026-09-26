@@ -9,7 +9,7 @@ using Avalonia.Media;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
 using DSPRE.Avalonia.Data;
-namespace DSPRE.Avalonia.ViewModels.World
+namespace DSPRE.Avalonia.ViewModels.Tools
 {
     public class OverlayRow : INotifyPropertyChanged
     {

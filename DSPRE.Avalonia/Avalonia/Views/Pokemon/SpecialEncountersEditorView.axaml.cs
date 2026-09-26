@@ -4,18 +4,18 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
-    public partial class EncountersEditorView : Window
+    public partial class SpecialEncountersEditorView : Window
     {
-        private EncountersEditorViewModel VM => DataContext as EncountersEditorViewModel;
+        private SpecialEncountersEditorViewModel VM => DataContext as SpecialEncountersEditorViewModel;
         private bool _setupDone;
 
-        public EncountersEditorView()
+        public SpecialEncountersEditorView()
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
         }
 
-        public EncountersEditorView(EncountersEditorViewModel vm) : this()
+        public SpecialEncountersEditorView(SpecialEncountersEditorViewModel vm) : this()
         {
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm);
@@ -29,6 +29,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             _setupDone = true;
             await vm.SetupAsync(this);
 
+            if (vm.StartOnHeadbutt) Tabs.SelectedItem = HeadbuttTab;
             TabDefault.SelectFirstVisible(Tabs);
         }
     }

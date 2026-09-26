@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia
             if (ownedDomain.HasValue && HgEngineProject.IsActive) return false;
             AppMessages.Info(editorName + " is disabled for hg-engine ROMs: hg-engine manages this " +
                 "data itself and would overwrite any changes made here on its next build." +
-                (ownedDomain.HasValue ? " Link your hg-engine checkout (File > Link hg-engine checkout…) to edit it from source instead." : ""),
+                (ownedDomain.HasValue ? " Link your hg-engine checkout (File > hg-engine > Link hg-engine checkout…) to edit it from source instead." : ""),
                 "Not available with hg-engine");
             return true;
         }
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia
         {
             if (!RomInfo.isHGE || HgEngineProject.IsActive) return false;
             AppMessages.Info(editorName + " is not available for this hg-engine project until its checkout is linked " +
-                "(File > Link hg-engine checkout…).", "Link hg-engine checkout");
+                "(File > hg-engine > Link hg-engine checkout…).", "Link hg-engine checkout");
             return true;
         }
 
@@ -336,16 +336,14 @@ namespace DSPRE.Avalonia
             new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
-        public static void OpenEncountersEditor()
+        /// <param name="headbuttFile">Opens on the Headbutt tab at this file; -1 opens on the first tab.</param>
+        public static void OpenSpecialEncountersEditor(int headbuttFile = -1)
         {
-            if (!IsRomLoaded || BlockedForHge("The Special Encounters editor")) return;
-            new EncountersEditorView(new EncountersEditorViewModel(true)).ShowManaged();
-        }
-
-        public static void OpenHeadbuttEncounterEditor(int initialIndex = 0)
-        {
-            if (!IsRomLoaded || BlockedForUnlinkedHge("The Headbutt Editor") || gameFamily != GameFamilies.HGSS) return;
-            new HeadbuttEncounterView(new HeadbuttEncounterViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+            if (!IsRomLoaded) return;
+            // A linked hg-engine checkout leaves only Headbutt safe to edit here.
+            bool headbuttOnly = RomInfo.isHGE;
+            if (headbuttOnly && (gameFamily != GameFamilies.HGSS || BlockedForUnlinkedHge("The " + SpecialEncountersEditorViewModel.Title))) return;
+            new SpecialEncountersEditorView(new SpecialEncountersEditorViewModel(headbuttOnly, headbuttFile)).ShowManaged();
         }
 
         public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();
@@ -379,14 +377,6 @@ namespace DSPRE.Avalonia
             new EditorHostWindow("Battle Tower Editor",
                 new BattleTowerEditorView(new BattleTowerEditorViewModel()),
                 1000, 700).ShowManaged();
-        }
-
-        public static void OpenTrophyGardenEditor()
-        {
-            if (!IsRomLoaded || BlockedForUnlinkedHge("The Trophy Garden Editor") || !TrophyGardenEncounterFile.IsAvailable()) return;
-            new EditorHostWindow("Trophy Garden Editor",
-                new TrophyGardenEditorView(new TrophyGardenEditorViewModel()),
-                700, 500).ShowManaged();
         }
 
         public static void OpenWildEditor(int initialIndex = 0) => _ = OpenWildEditorAsync(initialIndex);
@@ -532,7 +522,7 @@ namespace DSPRE.Avalonia
             }
 
             new EditorHostWindow("hg-engine Patches",
-                new Views.Tools.HgEnginePatchesView(new HgEnginePatchesViewModel()), 1150, 700).ShowManaged();
+                new Views.Shell.HgEnginePatchesView(new HgEnginePatchesViewModel()), 1150, 700).ShowManaged();
         }
 
         public static void OpenPokegearRematchEditor(int initialRowIndex = -1) => _ = OpenPokegearRematchEditorAsync(initialRowIndex);
@@ -921,10 +911,10 @@ namespace DSPRE.Avalonia
             new HeaderSearchView(new HeaderSearchViewModel(true)).ShowManaged();
         }
 
-        public static void OpenMapEditor()
+        public static void OpenMapEditor(int mapIndex = -1)
         {
             if (!IsRomLoaded) return;
-            var vm = new MapEditorViewModel(true);
+            var vm = new MapEditorViewModel(true) { InitialMapIndex = mapIndex };
             var window = new EditorHostWindow("Map Editor", new MapEditorView(vm), 1200, 720);
             window.Closed += (_, _) => vm.Detach();
             window.ShowManaged();
@@ -1105,13 +1095,6 @@ namespace DSPRE.Avalonia
             new CustomScrcmdManagerView(new CustomScrcmdManagerViewModel(true)).ShowManaged();
         }
 
-        public static void OpenGlTest()
-        {
-            // No ROM required; verifies the Avalonia OpenGL pipeline (3D rebuild slice 1).
-            if (BlockedForUnlinkedHge("The 3D Model Viewer")) return;
-            new GlTestView().ShowManaged();
-        }
-
         // ── Command palette (quick-open) ────────────────────────────────────────
         /// <summary>Opens the Ctrl+P quick-open palette over the given window.</summary>
         public static void OpenCommandPalette(global::Avalonia.Controls.Window owner)
@@ -1150,7 +1133,7 @@ namespace DSPRE.Avalonia
                 ($"Go to Trade #{n}",          "trade in-game",                () => OpenTradeEditor(n)),
                 ($"Go to Header #{n}",         "header map",                   () => OpenHeaderEditor(n)),
                 ($"Go to Building #{n}",       "building model",               () => OpenBuildingEditor(n)),
-                ($"Go to Headbutt file #{n}",  "headbutt tree",                () => OpenHeadbuttEncounterEditor(n)),
+                ($"Go to Headbutt file #{n}",  "headbutt tree",                () => OpenSpecialEncountersEditor(n)),
                 ($"Go to Event file #{n}",     "event warp trigger overworld", () => OpenEventEditor(n)),
                 ($"Go to Script #{n}",         "script",                       () => OpenScriptEditor(n)),
                 ($"Go to Level Script #{n}",   "level script",                 () => OpenLevelScriptEditor(n)),
@@ -1404,10 +1387,10 @@ namespace DSPRE.Avalonia
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
         public static List<CommandItem> BuildCommands() => new()
         {
-            new() { Name = "Graphics",              Keywords = "sprite picture image texture palette colour color icon font paint draw", Run = OpenGraphicsBrowser },
-            new() { Name = "Models and textures",   Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
-            new() { Name = "Battle screens",        Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
-            new() { Name = "Battle scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
+            new() { Name = "All graphics",          Keywords = "sprite picture image texture palette colour color icon font paint draw", Run = OpenGraphicsBrowser },
+            new() { Name = "All models and textures", Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
+            new() { Name = "Battle Screen",         Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
+            new() { Name = "Battle Scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
             new() { Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
             new() { Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
             new() { Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
@@ -1423,7 +1406,7 @@ namespace DSPRE.Avalonia
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
-            new() { Name = "Battle Script Editor",  Keywords = "move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
+            new() { Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
             new() { Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
             new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
@@ -1443,7 +1426,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Music & Battle Tables", Keywords = "table conditional music battle effects combo vs poster", Run = OpenTableEditor },
             new() { Name = "Header Editor",         Keywords = "map header", Run = () => OpenHeaderEditor() },
             new() { Name = "Camera Editor",         Keywords = "angle map header", Run = OpenCameraEditor },
-            new() { Name = "Map Editor",            Keywords = "3d model buildings", Run = OpenMapEditor },
+            new() { Name = "Map Editor",            Keywords = "3d model buildings", Run = () => OpenMapEditor() },
             new() { Name = "Building Editor",       Run = () => OpenBuildingEditor() },
             new() { Name = "Matrix Editor",         Keywords = "world grid", Run = () => OpenMatrixEditor() },
             new() { Name = "Event Editor",          Keywords = "overworld warp trigger spawn", Run = () => OpenEventEditor() },
@@ -1451,19 +1434,18 @@ namespace DSPRE.Avalonia
             new() { Name = "Spawn Point Editor",    Keywords = "start position new game", Run = OpenSpawnEditor },
             new() { Name = "Advanced Header Search", Keywords = "find filter query field", Run = OpenHeaderSearch },
             new() { Name = "Overlay Editor",        Run = OpenOverlayEditor },
-            new() { Name = "Overworld Sprites (BTX)", Run = OpenOverworldEditor },
+            new() { Name = "Overworld Editor",      Keywords = "overworld sprites btx npc", Run = OpenOverworldEditor },
             new() { Name = "NSBTX Texture Editor",  Keywords = "texture", Run = OpenNsbtxEditor },
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
-            new() { Name = "Special Encounters",    Keywords = "bug contest marsh honey safari", Run = OpenEncountersEditor },
-            new() { Name = "Headbutt Editor",       Keywords = "tree hgss", Run = () => OpenHeadbuttEncounterEditor() },
-            new() { Name = "Trophy Garden Editor",  Keywords = "daily pokemon backlot dp plat", Run = OpenTrophyGardenEditor },
+            new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily", Run = () => OpenSpecialEncountersEditor() },
             new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
             new() { Name = "hg-engine ROM Review",  Keywords = "hge binary icons sprites palettes archive", Run = OpenHgeRomReview },
             new() { Name = "Distortion World",      Keywords = "giratina platinum gravity platforms torn world", Run = OpenDistortionWorldEditor },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
+            new() { Name = "Custom Script Command Manager", Keywords = "scrcmd script commands database", Run = OpenCustomCommandManager },
             new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
             new() { Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },
             new() { Name = "Edit Dropdown Labels",  Keywords = "enum custom", Run = OpenLabelEditor },

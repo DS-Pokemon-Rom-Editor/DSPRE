@@ -198,6 +198,9 @@ namespace DSPRE
         public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : -1;
         public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
         public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
+
+        /// <summary>Text archive whose lines 78-87 name the ten Bug-Catching Contest opponents; -1 where unknown.</summary>
+        public static int BugContestTextNumber => gameFamily == GameFamilies.HGSS && gameLanguage != GameLanguages.Japanese ? 246 : -1;
         public static string OWtablePath { get; private set; }
 
         public static uint monIconPalTableAddress { get; private set; }
@@ -349,6 +352,7 @@ namespace DSPRE
             headbutt,
             rockSmash,
             followerParams, // HGSS only
+            pokeathlonPerformance, // HGSS only
             safariZone,
             battleTowerTrainers,
             battleTowerPokemon,
@@ -2727,6 +2731,7 @@ namespace DSPRE
                         [DirNames.headbutt] = $@"{dataFolderName}\a\2\5\2", //both versions use the same folder with different data
                         [DirNames.rockSmash] = $@"{dataFolderName}\a\2\5\3", //odds+table-type per header; both versions use the same folder with different data
                         [DirNames.followerParams] = $@"{dataFolderName}\a\1\4\1", // fielddata/tsurepoke/tp_param, 4 bytes per follower model
+                        [DirNames.pokeathlonPerformance] = $@"{dataFolderName}\a\1\6\9", // poketool/personal/performance, 20 bytes per species form
 
                         [DirNames.trainerTextOffset] = $@"{dataFolderName}\a\1\3\1",
                         [DirNames.trainerTextTable] = $@"{dataFolderName}\a\0\5\7",

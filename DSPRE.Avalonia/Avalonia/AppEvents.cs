@@ -33,5 +33,17 @@ namespace DSPRE.Avalonia
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseBannerChanged() => BannerChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseHgEngineLinkChanged() => HgEngineLinkChanged?.Invoke(null, EventArgs.Empty);
+
+        /// <summary>A map file was written; the sender is the editor that wrote it.</summary>
+        public static event EventHandler<int> MapSaved;
+        public static void RaiseMapSaved(object sender, int mapIndex) => MapSaved?.Invoke(sender, mapIndex);
+
+        /// <summary>A header, event file or matrix was written; the sender is the editor that wrote it.</summary>
+        public static event EventHandler<int> HeaderSaved, EventFileSaved, MatrixSaved;
+        public static void RaiseHeaderSaved(object sender, int id) => HeaderSaved?.Invoke(sender, id);
+        public static void RaiseEventFileSaved(object sender, int id) => EventFileSaved?.Invoke(sender, id);
+        public static void RaiseMatrixSaved(object sender, int id) => MatrixSaved?.Invoke(sender, id);
+        public static event EventHandler<int> AreaDataSaved;
+        public static void RaiseAreaDataSaved(object sender, int id) => AreaDataSaved?.Invoke(sender, id);
     }
 }
