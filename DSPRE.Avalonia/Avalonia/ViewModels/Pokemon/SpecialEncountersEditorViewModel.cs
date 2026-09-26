@@ -28,6 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public BugContestEncounterViewModel BugContestVM { get; }
         public BugContestTrainersViewModel BugContestTrainersVM { get; }
         public SafariZoneEncounterViewModel SafariZoneVM { get; }
+        public SwarmsViewModel SwarmsVM { get; }
 
         public bool ShowHoneyTree { get; }
         public bool ShowGreatMarsh { get; }
@@ -36,6 +37,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool ShowBugContest { get; }
         public bool ShowBugContestOpponents => ShowBugContest && BetaEditors.Enabled;
         public bool ShowSafariZone { get; }
+        public bool ShowSwarms { get; }
 
         /// <summary>Open on the Headbutt tab, as a "Go to Headbutt file" jump does.</summary>
         public bool StartOnHeadbutt { get; }
@@ -45,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasPending => !string.IsNullOrEmpty(_pendingNote);
 
         private IEditorWithUnsavedChanges[] Children => new IEditorWithUnsavedChanges[]
-        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM };
+        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM, SwarmsVM };
 
         public bool HasUnsavedChanges
         {
@@ -136,6 +138,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 PendingNote = "This ROM version has no special encounters.";
             }
+            if ((dppt || (hgss && !headbuttOnly)) && BetaEditors.Enabled)
+            {
+                SwarmsVM = new SwarmsViewModel();
+                SwarmsVM.PropertyChanged += OnChildChanged;
+                ShowSwarms = true;
+            }
             OnPropertyChanged(nameof(HasPending));
         }
 
@@ -157,6 +165,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 BugContestTrainersVM.Setup();
             if (ShowSafariZone && SafariZoneVM != null)
                 await SafariZoneVM.SetupAsync(owner);
+            if (ShowSwarms && SwarmsVM != null)
+                SwarmsVM.Setup();
         }
     }
 }

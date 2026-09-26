@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using DSPRE.HgEngine;
+using System.Linq;
 using DSPRE.ROMFiles;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
@@ -192,14 +193,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             WalkingRate = 25; SurfRate = 10; RockSmashRate = 5;
             OldRodRate = 25; GoodRodRate = 50; SuperRodRate = 75;
 
-            string[] walkLabels = { "20%", "20%", "10%", "10%", "10%", "10%", "5%", "5%", "4%", "4%", "1%", "1%" };
+            string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
             for (int i = 0; i < 12; i++)
             {
                 MorningRows.Add(new WildEncounterRow(PokemonNames, null) { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 5 });
                 DayRows.Add(new WildEncounterRow(PokemonNames, null) { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 6 });
                 NightRows.Add(new WildEncounterRow(PokemonNames, null) { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 7 });
             }
-            string[] dtSwarmLabels = { "Grass", "Surf", "Night Fish", "Rod" };
+            string[] dtSwarmLabels = { "Swarm, walking", "Swarm, surfing", "Night fishing", "Swarm, fishing" };
             for (int i = 0; i < 4; i++)
                 SwarmRows.Add(new WildEncounterRow(PokemonNames, null) { Label = dtSwarmLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 15 });
             for (int i = 0; i < 2; i++)
@@ -340,23 +341,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             GoodRodRate   = _current.goodRodRate;
             SuperRodRate  = _current.superRodRate;
 
-            string[] walkLabels = { "20%", "20%", "10%", "10%", "10%", "10%", "5%", "5%", "4%", "4%", "1%", "1%" };
+            string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
             SyncRows(MorningRows, 12, i => walkLabels[i], i => _current.morningPokemon[i], i => _current.walkingLevels[i], null, null, false);
             SyncRows(DayRows,     12, i => walkLabels[i], i => _current.dayPokemon[i],     i => _current.walkingLevels[i], null, null, false);
             SyncRows(NightRows,   12, i => walkLabels[i], i => _current.nightPokemon[i],   i => _current.walkingLevels[i], null, null, false);
 
-            string[] swarmLabels = { "Grass", "Surf", "Night Fish", "Rod" };
+            // Slot 2 is the night-only fishing Pokémon, not a swarm.
+            string[] swarmLabels = { "Swarm, walking", "Swarm, surfing", "Night fishing", "Swarm, fishing" };
             SyncRows(SwarmRows,       4, i => swarmLabels[i],       i => _current.swarmPokemon[i],       _ => 0,  null, null, false);
             string[] radioLabels = { "Slot 1", "Slot 2" };
             SyncRows(HoennRadioRows,  2, i => radioLabels[i],       i => _current.hoennMusicPokemon[i],  _ => 0,  null, null, false);
             SyncRows(SinnohRadioRows, 2, i => radioLabels[i],       i => _current.sinnohMusicPokemon[i], _ => 0,  null, null, false);
-            SyncRows(RockSmashRows,   2, i => $"Rock Smash {i+1}", i => _current.rockSmashPokemon[i],   _ => 0,
+            SyncRows(RockSmashRows,   2, i => EncounterSlotOdds.SlotLabel("Rock Smash", i, $"Rock Smash {i+1}"), i => _current.rockSmashPokemon[i],   _ => 0,
                 i => _current.rockSmashMinLevels[i], i => _current.rockSmashMaxLevels[i], true);
 
-            SyncRows(SurfRows,     5, i => $"Surf {i+1}",     i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
-            SyncRows(OldRodRows,   5, i => $"Old Rod {i+1}",  i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
-            SyncRows(GoodRodRows,  5, i => $"Good Rod {i+1}", i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
-            SyncRows(SuperRodRows, 5, i => $"Super Rod {i+1}",i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
+            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}"),     i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
+            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Fishing (all rods)", i, $"Old Rod {i+1}"),  i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
+            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Fishing (all rods)", i, $"Good Rod {i+1}"), i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
+            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Fishing (all rods)", i, $"Super Rod {i+1}"),i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
 
             _loading = false;
             HookRowsOnce();   // subscribe row edits → SetDirty (idempotent)

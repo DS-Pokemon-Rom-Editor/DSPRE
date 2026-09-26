@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Raise(n);
         }
 
-        public string Room => _chart == null ? "" : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used · chart in {_chart.Where}";
+        public string Room => _chart == null ? "" : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used · chart {_chart.Where}";
 
         public string Problem => _chart?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;
@@ -156,6 +156,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Changed();
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
+        }
+
+        public bool CanMakeRoom => _chart != null && !_chart.InExpansion;
+
+        /// <summary>Moves the chart, edits included, to the expanded ARM9 area so it can hold more matchups.</summary>
+        public async Task MakeRoomAsync()
+        {
+            if (!CanMakeRoom) return;
+            if (!await DialogHelper.AskYesNo($"Move the type chart to the expanded ARM9 area? It will hold up to {TypeChart.ExpandedCapacity - 2} matchups instead of {_chart.MaxMatchups}. " +
+                "This saves the chart, including any unsaved edits, and needs the ARM9 expansion from the ROM Patch Toolbox.", "Type Chart")) return;
+            try { _chart.MoveToExpansion(); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                await DialogHelper.ShowError("The type chart was not moved:\n" + e.Message, "Type Chart");
+                return;
+            }
+            _saved = _chart.ToBytes();
+            Raise(nameof(CanMakeRoom));
+            Changed();
+            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void DiscardChanges()

@@ -91,5 +91,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
         private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+        private async void MakeRoom_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.MakeRoomAsync(); }
     }
 }

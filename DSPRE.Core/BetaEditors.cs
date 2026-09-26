@@ -66,6 +66,8 @@ namespace DSPRE
                 ["MoveTutorEditorView"] = "Move tutor editor",
                 ["UndergroundMiningView"] = "Underground mining",
                 ["BpShopEditorView"] = "Battle Point shop editor",
+                ["FriendshipChangesView"] = "Friendship changes",
+                ["EncounterSlotOddsView"] = "Encounter slot odds",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>
@@ -149,6 +151,7 @@ namespace DSPRE
             new() { Name = "The tile boundary overlay", Where = "Map Editor" },
             new() { Name = "Bug Contest opponents", Where = "Special Encounters Editor" },
             new() { Name = "Pokéathlon stats", Where = "Pokémon Editor" },
+            new() { Name = "Swarm destinations", Where = "Special Encounters Editor" },
         };
 
         /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>
@@ -178,7 +181,8 @@ namespace DSPRE
                        or "BallCapsuleEditorView" or "ParticleEditorView"
                        or "ParticleLibraryView") return "Graphics";
             if (window is "WildHeldItemOddsView" or "GrowthCurveEditorView" or "BreedingItemsView"
-                       or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView") return "Pokémon";
+                       or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView"
+                       or "FriendshipChangesView" or "EncounterSlotOddsView") return "Pokémon";
             if (window is "BerryDataEditorView" or "UndergroundMiningView" or "BpShopEditorView" or "MartEditorView") return "Items";
             return "Tools";
         }

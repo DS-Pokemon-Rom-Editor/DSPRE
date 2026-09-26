@@ -36,6 +36,14 @@ namespace DSPRE.ROMFiles
 
         private string _path;
         private int _offset;
+        private string _ovPath;
+
+        public const string Marker = "TYPECHARTXP1";
+        /// <summary>Record slots a moved chart gets: Conversion 2's bound is a byte immediate.</summary>
+        public const int ExpandedCapacity = 255;
+
+        /// <summary>Whether the chart already lives in a block DSPRE placed in the expanded ARM9 area.</summary>
+        public bool InExpansion { get; private set; }
 
         public static string WhyNot()
         {
@@ -71,6 +79,7 @@ namespace DSPRE.ROMFiles
             var spot = SpotOf(GameTable.TypeChart).Value;
             var sites = TypeChartPointerSites.Value;
             string ovPath = GameTableFile.PathOf(spot);
+            _ovPath = ovPath;
             if (OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             byte[] ov = File.ReadAllBytes(ovPath);
             uint ovBase = OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
@@ -84,17 +93,19 @@ namespace DSPRE.ROMFiles
             if (ram >= ovBase && ram < ovBase + ov.Length)
             {
                 _path = ovPath; _offset = (int)(ram - ovBase);
-                Where = ram - ovBase == spot.Offset ? $"overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
+                Where = ram - ovBase == spot.Offset ? $"in overlay {spot.Overlay}" : $"moved within overlay {spot.Overlay}";
             }
             else if (ram >= synthOverlayLoadAddress && File.Exists(Filesystem.expArmPath))
             {
                 _path = Filesystem.expArmPath; _offset = (int)(ram - synthOverlayLoadAddress);
-                Where = "moved to the expanded ARM9 area";
+                Where = "in the expanded ARM9 area";
+                byte[] synth = File.ReadAllBytes(_path);
+                InExpansion = SyntheticOverlaySpace.Blocks(synth, Marker).Any(b => _offset == b.Start + SyntheticOverlaySpace.HeaderSize);
             }
             else if (ram >= ARM9.address && ram < ARM9.address + new FileInfo(arm9Path).Length)
             {
                 _path = arm9Path; _offset = (int)(ram - ARM9.address);
-                Where = "moved to arm9";
+                Where = "moved into arm9";
             }
             else throw new InvalidDataException($"The type chart was moved to 0x{ram:X8}, which DSPRE can't follow.");
 
@@ -143,6 +154,73 @@ namespace DSPRE.ROMFiles
             DSUtils.WriteToFile(_path, ToBytes(), (uint)_offset);
             if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
                 GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+        }
+
+        /// <summary>
+        /// Moves the chart, with its current edits, into its own block in the expanded ARM9 area with room for
+        /// <see cref="ExpandedCapacity"/> records, then points the battle code's ten references and Conversion 2's
+        /// bound at it. The old copy stays where it was, unused.
+        /// </summary>
+        public void MoveToExpansion()
+        {
+            if (InExpansion) return;
+            if (!SyntheticOverlaySpace.Available())
+                throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            var sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            int oldCapacity = Capacity;
+            Capacity = ExpandedCapacity;
+            if (Problem() is string p) { Capacity = oldCapacity; throw new InvalidOperationException(p); }
+
+            byte[] chart = ToBytes();
+            byte[] block = new byte[(SyntheticOverlaySpace.HeaderSize + chart.Length + 3) & ~3];
+            System.Text.Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
+            BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
+            BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
+            BitConverter.GetBytes((uint)ExpandedCapacity).CopyTo(block, 0x14);
+            chart.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
+
+            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            int at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, SyntheticOverlaySpace.Reserved(synth));
+            if (at < 0) { Capacity = oldCapacity; throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the type chart."); }
+            byte[] ov = File.ReadAllBytes(_ovPath);
+            byte[] ovBefore = (byte[])ov.Clone(), synthBefore = (byte[])synth.Clone();
+            block.CopyTo(synth, at);
+            uint ram = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
+            foreach (int o in sites.col0) BitConverter.GetBytes(ram).CopyTo(ov, o);
+            foreach (int o in sites.col1) BitConverter.GetBytes(ram + 1).CopyTo(ov, o);
+            foreach (int o in sites.col2) BitConverter.GetBytes(ram + 2).CopyTo(ov, o);
+            ov[sites.countCompare] = ExpandedCapacity;
+            try
+            {
+                File.WriteAllBytes(Filesystem.expArmPath, synth);
+                File.WriteAllBytes(_ovPath, ov);
+            }
+            catch
+            {
+                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
+                File.WriteAllBytes(_ovPath, ovBefore);
+                Capacity = oldCapacity;
+                throw;
+            }
+            _path = Filesystem.expArmPath;
+            _offset = at + SyntheticOverlaySpace.HeaderSize;
+            InExpansion = true;
+            Where = "in the expanded ARM9 area";
+            if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
+                GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+        }
+
+        /// <summary>The chart's bytes when it sits in the expanded ARM9 area without a DSPRE block, so allocators skip it.</summary>
+        internal static (long Start, long End)? UnmarkedRangeInExpansion()
+        {
+            try
+            {
+                if (WhyNot() != null) return null;
+                var chart = Load();
+                if (chart._path != Filesystem.expArmPath || chart.InExpansion) return null;
+                return (chart._offset, chart._offset + (long)chart.Capacity * RecordSize);
+            }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return null; }
         }
 
         public Matchup Find(int attacker, int defender) => Matchups.FirstOrDefault(m => m.Attacker == attacker && m.Defender == defender);

@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         public const int HeaderSize = 0x20;
 
         /// <summary>Markers of every block DSPRE places here. Add a new block's marker before allocating it.</summary>
-        public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0" };
+        public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1" };
 
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
@@ -51,6 +51,9 @@ namespace DSPRE.ROMFiles
             OverworldSpriteTableExpansion.Detect();
             var ow = OverworldSpriteTableExpansion.GetReservedByteRange();
             if (ow.HasValue) ranges.Add(ow.Value);
+            // A chart some other patch moved here has no marker, but the battle code still points at it.
+            var chart = TypeChart.UnmarkedRangeInExpansion();
+            if (chart.HasValue) ranges.Add(chart.Value);
             return ranges;
         }
 

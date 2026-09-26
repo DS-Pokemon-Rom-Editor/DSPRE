@@ -776,6 +776,12 @@ namespace DSPRE.Avalonia.Views.Shell
         private void OverworldEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverworldEditor();
 
+        private void FriendshipChanges_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenFriendshipChanges();
+
+        private void EncounterSlotOdds_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenEncounterSlotOdds();
+
         private void BreedingItems_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBreedingItems();
 

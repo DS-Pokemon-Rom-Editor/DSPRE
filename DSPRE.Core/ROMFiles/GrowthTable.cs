@@ -6,9 +6,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Total EXP needed for each level, one curve per growth rate (LoadGrowthTable): 8 members of 101 u32, level 0 to
-    /// 100. The game finds a level by scanning from level 1, so level 1 must stay 0 and totals must keep rising.
-    /// Members 6 and 7 are unused copies of Medium Fast.
+    /// Total EXP per level, one curve per growth rate: 8 members of 101 u32 (levels 0-100), 6 and 7 unused.
+    /// The game scans up from level 1, so level 1 must stay 0 and totals must keep rising.
     /// </summary>
     public class GrowthTable
     {
@@ -63,7 +62,7 @@ namespace DSPRE.ROMFiles
             File.WriteAllBytes(path, data);
         }
 
-        /// <summary>A copy of <paramref name="curve"/>'s totals, for undo and comparison.</summary>
+        /// <summary>A copy of <paramref name="curve"/>'s totals.</summary>
         public uint[] Copy(int curve) => (uint[])Totals[curve].Clone();
     }
 }

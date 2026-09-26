@@ -41,6 +41,9 @@
       <TabItem Header="Safari Zone" IsVisible="{Binding ShowSafariZone}">
         <views:SafariZoneEncounterView DataContext="{Binding SafariZoneVM}"/>
       </TabItem>
+      <TabItem Header="Swarms" IsVisible="{Binding ShowSwarms}">
+        <views:SwarmsView DataContext="{Binding SwarmsVM}"/>
+      </TabItem>
     </TabControl>
   </DockPanel>
 </Window>

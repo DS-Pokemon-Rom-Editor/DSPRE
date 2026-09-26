@@ -648,7 +648,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (e.pokemonID == 0) continue;
                 var key = (e.pokemonID, e.minLevel, e.maxLevel);
                 if (!chance.ContainsKey(key)) { chance[key] = 0; order.Add(key); }
-                chance[key] += HeadbuttRules.SlotChance[s];
+                chance[key] += (EncounterSlotOdds.CurrentPercents("Headbutt") ?? HeadbuttRules.SlotChance)[s];
             }
             var rows = new List<HoverSlot>();
             foreach (var (id, lo, hi) in order)

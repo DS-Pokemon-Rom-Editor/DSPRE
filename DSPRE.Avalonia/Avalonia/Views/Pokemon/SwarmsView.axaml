@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.SwarmsView"
+             x:DataType="vm:SwarmsViewModel">
+  <Design.DataContext>
+    <vm:SwarmsViewModel/>
+  </Design.DataContext>
+
+  <Panel>
+  <TextBlock IsVisible="{Binding !Loaded}" Text="{Binding WhyNotLoaded}" Margin="16" TextWrapping="Wrap"/>
+  <DockPanel IsVisible="{Binding Loaded}">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Add" Click="Add_Click" IsEnabled="{Binding Loaded}" ToolTip.Tip="Every destination is equally likely"/>
+        <Button Content="Remove" Click="Remove_Click" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
+      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <DockPanel Margin="8">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="320,Auto,*" Margin="6,0,24,4">
+        <TextBlock Grid.Column="0" Text="Header" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="Method" FontWeight="SemiBold" IsVisible="{Binding HasMethod}" Width="150"/>
+        <TextBlock Grid.Column="2" Text="Swarm Pokémon" FontWeight="SemiBold"/>
+      </Grid>
+      <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" KeyDown="List_KeyDown" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:SwarmsViewModel+RowViewModel">
+            <Grid ColumnDefinitions="320,Auto,*">
+              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="0" Margin="0,0,8,0"
+                  ItemsSource="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).HeaderNames}" SelectedIndex="{Binding Header}"/>
+              <ComboBox Grid.Column="1" Margin="0,0,8,0" Width="142"
+                  IsVisible="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).HasMethod}"
+                  ItemsSource="{Binding $parent[ListBox].((vm:SwarmsViewModel)DataContext).MethodNames}" SelectedIndex="{Binding Method}"/>
+              <DockPanel Grid.Column="2">
+                <ItemsControl DockPanel.Dock="Left" ItemsSource="{Binding SpeciesIds}" Margin="0,0,6,0">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding Species}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+              </DockPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+  </DockPanel>
+  </Panel>
+</UserControl>

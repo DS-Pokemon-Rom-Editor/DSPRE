@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
+using System.Linq;
 using DSPRE.ROMFiles;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
@@ -313,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             WalkingRate = 25; SurfRate = 10; OldRodRate = 25; GoodRodRate = 50; SuperRodRate = 75;
 
-            string[] walkLabels = { "20%", "20%", "10%", "10%", "10%", "10%", "5%", "5%", "4%", "4%", "1%", "1%" };
+            string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
             for (int i = 0; i < 12; i++)
                 WalkingRows.Add(new WildEncounterRow(PokemonNames, null) { Label = walkLabels[i], PokemonIndex = i % PokemonNames.Count, Level = 5 });
             for (int i = 0; i < 2; i++)
@@ -444,7 +445,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_unownTableIndex >= UnownTableNames.Count) _unownTableIndex = 0;
             OnPropertyChanged(nameof(UnownTableIndex));
 
-            string[] walkLabels = { "20%", "20%", "10%", "10%", "10%", "10%", "5%", "5%", "4%", "4%", "1%", "1%" };
+            string[] walkLabels = Enumerable.Range(0, 12).Select(i => EncounterSlotOdds.SlotLabel("Walking", i)).ToArray();
             SyncRows(WalkingRows,  12, i => walkLabels[i], i => (int)_current.walkingPokemon[i], i => _current.walkingLevels[i], null, null, false);
             SyncRows(DayRows,       2, i => $"Day {i+1}",   i => (int)_current.dayPokemon[i],     _ => 0,                         null, null, false);
             SyncRows(NightRows,     2, i => $"Night {i+1}", i => (int)_current.nightPokemon[i],   _ => 0,                         null, null, false);
@@ -455,10 +456,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SyncRows(EmeraldRows,   2, i => $"Emerald {i+1}",   i => (int)_current.emeraldPokemon[i],   _ => 0, null, null, false);
             SyncRows(FireRedRows,   2, i => $"FireRed {i+1}",   i => (int)_current.fireRedPokemon[i],   _ => 0, null, null, false);
             SyncRows(LeafGreenRows, 2, i => $"LeafGreen {i+1}", i => (int)_current.leafGreenPokemon[i], _ => 0, null, null, false);
-            SyncRows(SurfRows,     5, i => $"Surf {i+1}",     i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
-            SyncRows(OldRodRows,   5, i => $"Old Rod {i+1}",  i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
-            SyncRows(GoodRodRows,  5, i => $"Good Rod {i+1}", i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
-            SyncRows(SuperRodRows, 5, i => $"Super Rod {i+1}",i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
+            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}"),     i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
+            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Old Rod", i, $"Old Rod {i+1}"),  i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
+            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Good Rod", i, $"Good Rod {i+1}"), i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
+            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Super Rod", i, $"Super Rod {i+1}"),i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
 
             _loading = false;
             HookRowsOnce();   // subscribe row edits → SetDirty (idempotent)

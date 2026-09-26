@@ -364,6 +364,12 @@ namespace DSPRE.Avalonia
         public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot(),
             () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680);
 
+        public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Changes", FriendshipTable.WhyNot(),
+            () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480);
+
+        public static void OpenEncounterSlotOdds() => OpenTableEditor("Encounter Slot Odds", EncounterSlotOdds.WhyNot(),
+            () => new EncounterSlotOddsView(new EncounterSlotOddsViewModel(true)), 520, 620);
+
         public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot(),
             () => new BreedingItemsView(new BreedingItemsViewModel(true)), 680, 420);
 
@@ -1442,6 +1448,8 @@ namespace DSPRE.Avalonia
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
             new() { Name = "Growth Curve Editor",   Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
+            new() { Name = "Friendship Changes",    Keywords = "friendship happiness walking level up faint soothe bell luxury", Run = OpenFriendshipChanges },
+            new() { Name = "Encounter Slot Odds",   Keywords = "encounter slot odds chance percent wild rate fishing surf headbutt rock smash", Run = OpenEncounterSlotOdds },
             new() { Name = "Breeding Items",        Keywords = "incense baby egg hatch breeding wynaut azurill munchlax", Run = OpenBreedingItems },
             new() { Name = "Type Chart Editor",     Keywords = "type effectiveness matchup super effective resist immune weakness fairy", Run = OpenTypeChart },
             new() { Name = "Move Tutor Editor",     Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
