@@ -540,12 +540,24 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (IsSingleMap) return _map != null;
             if (!CanEditModel) return false;
-            // The single-map fields follow the header map, so the import checks and warp moves read it.
+            // The single-map fields follow the header map until EndModelEdit, so the import checks and warp moves read it.
             var cell = _headerCells[_selectedHeaderMap];
+            _borrowed = (_map, _selectedMapIndex);
             _map = cell.Map;
             _selectedMapIndex = cell.MapIndex;
             OpenModelEditor(cell.MapIndex, cell.AreaId);
             return true;
+        }
+
+        private (MapFile map, int index)? _borrowed;
+
+        /// <summary>Gives the single-map view back its own map after a header map's model edit.</summary>
+        public void EndModelEdit()
+        {
+            if (_borrowed is not var (map, index)) return;
+            _borrowed = null;
+            _map = map;
+            _selectedMapIndex = index;
         }
 
         private void OpenModelEditor(int index, byte areaId)
@@ -1445,13 +1457,19 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MarkDirty();
             }
             RefreshBuildings();
-            if (MapModel.Tiles.SelectedBuilding is int picked && picked >= 0 && picked < Buildings.Count)
-                SelectedBuildingIndex = picked;
+            // The tiles editor numbers buildings within its one map; the header view lists every map's.
+            if (MapModel.Tiles.SelectedBuilding is int picked && picked >= 0)
+            {
+                int shown = IsHeaderView
+                    ? _headerBuildingIndex.FindIndex(t => t.CellIndex == _selectedHeaderMap && t.BuildingIndex == picked)
+                    : picked;
+                if (shown >= 0 && shown < Buildings.Count) SelectedBuildingIndex = shown;
+            }
 
             // Adding textures makes a new pack and points the area at it.
             int packs = Filesystem.GetMapTexturesCount();
             for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map Tileset " + i);
-            ResolveTilesetForMap(_selectedMapIndex);
+            if (IsSingleMap) ResolveTilesetForMap(_selectedMapIndex);
 
             RebuildPreview();
             OnPropertyChanged(nameof(Collisions));
@@ -1629,9 +1647,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// them into one scene. Unlike Full Matrix, each map stays loaded with real (not discarded)
         /// move-permission data so it can be painted and its buildings edited, individually saved.
         /// </summary>
+        private int _headerMapsOf = -1;
+
         private void ShowHeaderMaps()
         {
-            int keep = _selectedHeaderMap;
+            int keep = _headerMapsOf == _headerId ? _selectedHeaderMap : 0;
+            _headerMapsOf = _headerId;
             HeaderMapNames.Clear();
             foreach (var c in _headerCells) HeaderMapNames.Add($"Map {c.MapIndex}");
             _selectedHeaderMap = -1;
@@ -1649,6 +1670,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapHeader hdr;
                 try { hdr = MapHeader.GetMapHeader((ushort)_headerId); } catch { hdr = null; }
                 if (hdr == null) { StatusText = $"Header {_headerId}: not found."; RefreshBuildings(); MapLoaded?.Invoke(this, EventArgs.Empty); return; }
+                if (_headerId == MapHeader.Everywhere)
+                {
+                    StatusText = "Header 0 is the game's catch-all header, not a place, so it has no maps of its own.";
+                    ShowHeaderMaps(); RefreshBuildings(); SetClean(); RebuildOverlay(); MapLoaded?.Invoke(this, EventArgs.Empty); return;
+                }
 
                 var matrix = new GameMatrix(hdr.matrixID);
                 for (int y = 0; y < matrix.height; y++)
@@ -1961,11 +1987,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (IsHeaderView)
             {
                 int saved = 0;
+                bool refused = false;
                 foreach (var cell in _headerCells)
                 {
                     if (!cell.Dirty) continue;
                     if (MapFile.TooBigForTheGame(cell.Map.mapModelData?.Length ?? 0, cell.Map.bdhc?.Length ?? 0) is string cellTooBig)
                     {
+                        refused = true;
                         StatusText = $"Map {cell.MapIndex} not saved. " + cellTooBig;
                         _ = DialogHelper.ShowError($"Map {cell.MapIndex}: {cellTooBig}\n\nIt was not saved.", "Map too big");
                         continue;
@@ -1976,6 +2004,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     saved++;
                     AppEvents.RaiseMapSaved(this, cell.MapIndex);
                 }
+                // Warps moved with a refused map's buildings wait for it, so events and maps stay in step on disk.
+                if (refused) return;
                 foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
                 _eventsToSave.Clear();
                 SetClean();

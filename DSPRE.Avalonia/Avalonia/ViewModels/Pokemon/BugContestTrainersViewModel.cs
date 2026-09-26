@@ -54,6 +54,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Bug Contest Opponents";
         public void SaveChanges() => _ = SaveAsync();
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        {
+            await SaveAsync();
+            return !HasUnsavedChanges;
+        }
         public void DiscardChanges() { if (_dirty) Load(); }
 
         private void SetDirty(bool dirty)

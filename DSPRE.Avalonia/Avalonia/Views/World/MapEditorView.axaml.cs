@@ -217,17 +217,21 @@ namespace DSPRE.Avalonia.Views.World
 
             if (TopLevel.GetTopLevel(this) is not Window owner || !vm.PrepareModelEdit()) return;
 
-            vm.MapModel.Tiles.ImportedSinceOpen = false;
-            var permissionsBefore = vm.PermissionsNow();
-            var window = new MapModelEditorView(vm.MapModel);
-            await window.ShowDialog(owner);
-
-            vm.AfterMapModelEdited();
-            if (vm.MapModel.Tiles.ImportedSinceOpen)
+            try
             {
-                var clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
-                if (clashes.Count > 0) await new EventsAfterImportView(vm, clashes).ShowDialog(owner);
+                vm.MapModel.Tiles.ImportedSinceOpen = false;
+                var permissionsBefore = vm.PermissionsNow();
+                var window = new MapModelEditorView(vm.MapModel);
+                await window.ShowDialog(owner);
+
+                vm.AfterMapModelEdited();
+                if (vm.MapModel.Tiles.ImportedSinceOpen)
+                {
+                    var clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
+                    if (clashes.Count > 0) await new EventsAfterImportView(vm, clashes).ShowDialog(owner);
+                }
             }
+            finally { vm.EndModelEdit(); }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();

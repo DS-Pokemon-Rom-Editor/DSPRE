@@ -60,11 +60,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return parts.Count > 0 ? string.Join(", ", parts) : Title;
             }
         }
-        public void SaveChanges()
+        public void SaveChanges() => _ = SaveChangesAsync();
+
+        public async Task<bool> SaveChangesAsync()
         {
-            foreach (var c in Children) if (c?.HasUnsavedChanges ?? false) c.SaveChanges();
-            // Announced after the children so the one visible notice names the whole save.
+            foreach (var c in Children)
+                if (c?.HasUnsavedChanges ?? false) await c.SaveChangesAsync();
+            // A tab can refuse to save (the opponents do when the game would crash), so only a full save is announced.
+            if (HasUnsavedChanges) return false;
             SaveNotice.Saved(Title);
+            return true;
         }
         public void DiscardChanges()
         {

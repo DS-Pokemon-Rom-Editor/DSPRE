@@ -323,6 +323,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_matrix == null) { MapInfo = "No header/matrix for this headbutt file."; MapLoaded?.Invoke(this, EventArgs.Empty); RefreshTreeMarkers(); return; }
 
                 var include = HeaderCells();
+                if (include.Count == 0 && _headerId == MapHeader.Everywhere)
+                {
+                    MapInfo = "Header 0 is the game's catch-all header, not a place, so there is no map to show.";
+                    MapLoaded?.Invoke(this, EventArgs.Empty);
+                    RefreshTreeMarkers();
+                    return;
+                }
                 Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include);
                 MapInfo = Model3D != null
                     ? $"Header {_headerId} · matrix {_matrixId} · {include.Count} maps · area {_areaDataId}"
@@ -339,13 +346,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             var set = new HashSet<(int x, int y)>();
             if (_matrix == null) return set;
-            for (int y = 0; y < _matrix.height; y++)
-                for (int x = 0; x < _matrix.width; x++)
-                {
-                    if (_matrix.maps[y, x] == GameMatrix.EMPTY) continue;
-                    if (_matrix.hasHeadersSection && _matrix.headers[y, x] != _headerId) continue;
-                    set.Add((x, y));
-                }
+            // The catch-all header owns no place of its own, only the cells its trees stand on.
+            if (_headerId != MapHeader.Everywhere)
+                for (int y = 0; y < _matrix.height; y++)
+                    for (int x = 0; x < _matrix.width; x++)
+                    {
+                        if (_matrix.maps[y, x] == GameMatrix.EMPTY) continue;
+                        if (_matrix.hasHeadersSection && _matrix.headers[y, x] != _headerId) continue;
+                        set.Add((x, y));
+                    }
             if (_file != null)
             {
                 void NoteTrees(HeadbuttTreeGroup g)

@@ -88,6 +88,9 @@ namespace DSPRE.ROMFiles {
         public static readonly byte length = 24;
         public static readonly string nameSeparator = " -   ";
         public const int HGSS_NULL_ENCOUNTER_FILE_ID = 0xff;
+
+        /// <summary>Header 0 is the catch-all, not a place: matrix cells no real header claims carry it.</summary>
+        public const ushort Everywhere = 0;
         public const int DPPT_NULL_ENCOUNTER_FILE_ID = 0xffff;
 
         public enum SearchableFields: byte {

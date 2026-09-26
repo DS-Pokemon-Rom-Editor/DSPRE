@@ -288,7 +288,10 @@ namespace DSPRE.Avalonia.Views.World
             };
             if (editor?.HasUnsavedChanges == true
                 && await DialogHelper.AskYesNo("Save this tab's changes first? The window opens what is saved.", "Open in window"))
-                editor.SaveChanges();
+            {
+                string failed = await UnsavedChangesDialog.TrySaveEditorAsync(editor);
+                if (failed != null) { await DialogHelper.ShowError("The tab was not saved:\n" + failed, "Open in window"); return; }
+            }
 
             switch (tab)
             {
