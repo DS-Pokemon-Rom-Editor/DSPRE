@@ -8,7 +8,7 @@ using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
-    public partial class HeadbuttEncounterView : Window
+    public partial class HeadbuttEncounterView : UserControl
     {
         private HeadbuttEncounterViewModel VM => DataContext as HeadbuttEncounterViewModel;
         private bool _setupDone;
@@ -51,6 +51,70 @@ namespace DSPRE.Avalonia.Views.Pokemon
             };
 
             Loaded += OnLoadedSetup;
+            GlHost.AddHandler(PointerMovedEvent, Host_Moved, RoutingStrategies.Bubble, handledEventsToo: true);
+            GlHost.PointerExited += (_, _) => HideCard();
+        }
+
+        private (bool Special, int Group)? _hovered;
+
+        private void HideCard()
+        {
+            _hovered = null;
+            TreeCard.IsOpen = false;
+        }
+
+        private void Host_Moved(object sender, PointerEventArgs e)
+        {
+            if (VM == null) return;
+            var pt = e.GetCurrentPoint(GlView);
+            var pr = pt.Properties;
+            if (pr.IsLeftButtonPressed || pr.IsRightButtonPressed || pr.IsMiddleButtonPressed) { HideCard(); return; }
+
+            (bool Special, int Group)? hit = null;
+            if (GlView.ScreenToRay((float)pt.Position.X, (float)pt.Position.Y,
+                                   out float ox, out float oy, out float oz, out float dx, out float dy, out float dz))
+                hit = VM.TreeAlong(ox, oy, oz, dx, dy, dz);
+            if (hit == _hovered) return;
+            _hovered = hit;
+            var card = hit is { } h ? VM.CardFor(h.Special, h.Group) : null;
+            TreeCard.IsOpen = false;
+            if (card == null) return;
+            FillCard(card);
+            TreeCard.HorizontalOffset = 16;
+            TreeCard.VerticalOffset = 16;
+            TreeCard.IsOpen = true;
+        }
+
+        private void FillCard(HeadbuttEncounterViewModel.HoverCard card)
+        {
+            var body = TreeCardBody;
+            body.Children.Clear();
+            body.Children.Add(new TextBlock { Text = card.Title, FontWeight = global::Avalonia.Media.FontWeight.SemiBold });
+            if (!string.IsNullOrEmpty(card.Rule))
+                body.Children.Add(new TextBlock { Text = card.Rule, FontSize = 11, Opacity = 0.75 });
+            var tables = new StackPanel { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Spacing = 16 };
+            body.Children.Add(tables);
+            foreach (var table in card.Tables)
+            {
+                var column = new StackPanel { Spacing = 2 };
+                tables.Children.Add(column);
+                column.Children.Add(new TextBlock { Text = table.Header, FontSize = 12, Margin = new Thickness(0, 4, 0, 0), Opacity = 0.85 });
+                if (table.Slots.Count == 0) { column.Children.Add(new TextBlock { Text = "No Pokémon", FontSize = 12, Opacity = 0.6 }); continue; }
+                var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("34,*,Auto,Auto") };
+                for (int r = 0; r < table.Slots.Count; r++)
+                {
+                    var slot = table.Slots[r];
+                    grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                    var icon = new Image { Source = slot.Icon, Width = 32, Height = 32 };
+                    var name = new TextBlock { Text = slot.Name, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center, Margin = new Thickness(4, 0, 12, 0) };
+                    var lv = new TextBlock { Text = slot.Levels, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), Opacity = 0.8 };
+                    var pc = new TextBlock { Text = slot.Chance, VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Right, FontWeight = global::Avalonia.Media.FontWeight.SemiBold };
+                    Grid.SetRow(icon, r); Grid.SetRow(name, r); Grid.SetRow(lv, r); Grid.SetRow(pc, r);
+                    Grid.SetColumn(name, 1); Grid.SetColumn(lv, 2); Grid.SetColumn(pc, 3);
+                    grid.Children.Add(icon); grid.Children.Add(name); grid.Children.Add(lv); grid.Children.Add(pc);
+                }
+                column.Children.Add(grid);
+            }
         }
 
         public HeadbuttEncounterView(HeadbuttEncounterViewModel vm) : this() { DataContext = vm; }
@@ -61,12 +125,15 @@ namespace DSPRE.Avalonia.Views.Pokemon
             var vm = VM;
             if (vm == null) return;
             _setupDone = true;
-            DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
-            vm.MarkersChanged += (_, _) => GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
+            vm.MarkersChanged += (_, _) =>
+            {
+                GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);
+                GlView.SetHighlight(VM.Highlight);
+            };
             vm.EditModeChanged += (_, _) => RefreshGizmo();
             vm.GizmoTargetChanged += (_, _) => RefreshGizmo();
-            await vm.SetupAsync(this);
+            await vm.SetupAsync(TopLevel.GetTopLevel(this) as Window);
         }
 
         private void RefreshGizmo()

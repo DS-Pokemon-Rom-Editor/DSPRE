@@ -46,6 +46,11 @@ namespace DSPRE.Avalonia.Gl
         // everything with the depth test disabled so markers stay visible through geometry.
         private float[] _markerMesh;
         private int _markerVbo, _markerCount;
+        /// <summary>Scene triangles to tint, per material so each keeps its own texture and cut-out.</summary>
+        public sealed class HighlightBatch { public int MaterialKey; public float[] Mesh; public float R, G, B; }
+        private IReadOnlyList<HighlightBatch> _highlight;
+        private readonly List<(int Vbo, int Count, int MaterialKey, float R, float G, float B)> _highlightGpu = new List<(int, int, int, float, float, float)>();
+        private bool _highlightDirty;
         private bool _markerDirty;
 
         // Debug gizmo lines (cell boundaries / geometry extents), 8 floats/vertex. Comes from the model.
@@ -399,6 +404,20 @@ namespace DSPRE.Avalonia.Gl
             RequestNextFrameRendering();
         }
 
+        /// <summary>Tints the visible parts of scene triangles (8 floats/vertex, the scene's own positions and uvs); null to clear.</summary>
+        public void SetHighlight(IReadOnlyList<HighlightBatch> batches)
+        {
+            _highlight = batches;
+            _highlightDirty = true;
+            RequestNextFrameRendering();
+        }
+
+        private void FreeHighlight()
+        {
+            foreach (var h in _highlightGpu) if (h.Vbo != 0) _f?.DeleteBuffers(1, new[] { h.Vbo });
+            _highlightGpu.Clear();
+        }
+
         /// <summary>Sets a marker mesh (8 floats/vertex: pos,uv,col) drawn on top of everything
         /// with the depth test disabled (e.g. event markers), or null to clear.</summary>
         public void SetMarkers(float[] mesh, int vertexCount)
@@ -522,6 +541,7 @@ namespace DSPRE.Avalonia.Gl
                 if (_collTex != 0) { _f?.DeleteTextures(1, new[] { _collTex }); _collTex = 0; _collDirty = true; }
                 if (_overlayVbo != 0) _f?.DeleteBuffers(1, new[] { _overlayVbo });
                 if (_markerVbo != 0) _f?.DeleteBuffers(1, new[] { _markerVbo });
+                FreeHighlight();
                 if (_spriteVbo != 0) _f?.DeleteBuffers(1, new[] { _spriteVbo });
                 if (_gizmoVbo != 0) _f?.DeleteBuffers(1, new[] { _gizmoVbo });
                 if (_haveEditVbo && _editVbo != 0) _f?.DeleteBuffers(1, new[] { _editVbo });
@@ -529,6 +549,7 @@ namespace DSPRE.Avalonia.Gl
             }
             catch { }
             _f = null; _program = _vao = _overlayVbo = _markerVbo = _spriteVbo = _gizmoVbo = 0;
+            _highlightDirty = true;
             _haveEditVbo = false; _editVbo = 0;
         }
 
@@ -834,6 +855,7 @@ namespace DSPRE.Avalonia.Gl
             _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
+            RenderHighlight(stride);
             RenderOverlay(stride);
             RenderSprites(stride);
             RenderMarkers(stride);
@@ -974,6 +996,59 @@ namespace DSPRE.Avalonia.Gl
             _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, _overlayCount);
 
             _f.DepthMask(true);
+            _f.Disable(GlFunctions.GL_BLEND);
+            _f.Uniform1f(_alphaLoc, 1f);
+        }
+
+        private void RenderHighlight(int stride)
+        {
+            if (_highlightDirty)
+            {
+                FreeHighlight();
+                if (_highlight != null)
+                    foreach (var batch in _highlight)
+                    {
+                        if (batch.Mesh == null || batch.Mesh.Length < 24) continue;
+                        var arr = new int[1]; _f.GenBuffers(1, arr);
+                        _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, arr[0]);
+                        var h = GCHandle.Alloc(batch.Mesh, GCHandleType.Pinned);
+                        try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(batch.Mesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
+                        finally { h.Free(); }
+                        _highlightGpu.Add((arr[0], batch.Mesh.Length / 8, batch.MaterialKey, batch.R, batch.G, batch.B));
+                    }
+                _highlightDirty = false;
+            }
+            if (_highlightGpu.Count == 0) return;
+
+            // Same triangles as the scene, so an equal depth passes and only the visible surface is tinted;
+            // the material's own texture keeps leaves leaf-shaped instead of tinting the whole quad.
+            _f.Enable(GlFunctions.GL_BLEND);
+            _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
+            _f.DepthFunc(GlFunctions.GL_LEQUAL);
+            _f.DepthMask(false);
+            _f.Disable(GlFunctions.GL_CULL_FACE);
+            _f.Uniform1f(_alphaLoc, 0.6f);
+            if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
+
+            foreach (var h in _highlightGpu)
+            {
+                int texId = 0;
+                foreach (var part in _parts) if (part.MaterialKey == h.MaterialKey) { texId = part.TextureId; break; }
+                if (texId != 0 && _showTextures) { _f.BindTexture(GlFunctions.GL_TEXTURE_2D, texId); _f.Uniform1i(_hasTexLoc, 1); }
+                else _f.Uniform1i(_hasTexLoc, 0);
+                if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, h.R, h.G, h.B);
+
+                _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, h.Vbo);
+                _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
+                _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
+                _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
+                _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, h.Count);
+            }
+
+            if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
+            _f.DepthMask(true);
+            _f.DepthFunc(GlFunctions.GL_LESS);
             _f.Disable(GlFunctions.GL_BLEND);
             _f.Uniform1f(_alphaLoc, 1f);
         }
