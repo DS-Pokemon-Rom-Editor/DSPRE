@@ -776,6 +776,30 @@ namespace DSPRE.Avalonia.Views.Shell
         private void OverworldEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverworldEditor();
 
+        private void BreedingItems_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBreedingItems();
+
+        private void BerryData_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBerryData();
+
+        private void TypeChart_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenTypeChart();
+
+        private void MoveTutors_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenMoveTutors();
+
+        private void BpShop_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenBpShop();
+
+        private void UndergroundMining_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenUndergroundMining();
+
+        private void GrowthCurves_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenGrowthCurves();
+
+        private void WildHeldItems_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenWildHeldItems();
+
         private void SpecialEncountersEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenSpecialEncountersEditor();
 

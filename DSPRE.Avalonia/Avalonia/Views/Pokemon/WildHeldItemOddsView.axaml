@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.WildHeldItemOddsView"
+             x:DataType="vm:WildHeldItemOddsViewModel">
+  <Design.DataContext>
+    <vm:WildHeldItemOddsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}" Margin="8,0,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <Grid Margin="12" ColumnDefinitions="Auto,110,110,80" RowDefinitions="Auto,8,Auto,8,Auto" HorizontalAlignment="Left">
+      <TextBlock Grid.Row="0" Grid.Column="1" Text="No item" FontWeight="SemiBold"/>
+      <TextBlock Grid.Row="0" Grid.Column="2" Text="Common item" FontWeight="SemiBold"/>
+      <TextBlock Grid.Row="0" Grid.Column="3" Text="Rare item" FontWeight="SemiBold"/>
+
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="Normal" VerticalAlignment="Center" Margin="0,0,12,0"/>
+      <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding NormalNone}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
+      <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding NormalCommon}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
+      <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding NormalRare}" VerticalAlignment="Center"/>
+
+      <TextBlock Grid.Row="4" Grid.Column="0" Text="Compound Eyes" VerticalAlignment="Center" Margin="0,0,12,0"
+                 ToolTip.Tip="When the lead Pokémon has Compound Eyes"/>
+      <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding EyesNone}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
+      <NumericUpDown Grid.Row="4" Grid.Column="2" Value="{Binding EyesCommon}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
+      <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding EyesRare}" VerticalAlignment="Center"/>
+    </Grid>
+  </DockPanel>
+</UserControl>

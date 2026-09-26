@@ -834,6 +834,30 @@ namespace DSPRE
             }
         }
 
+        // WildMonSetRandomHeldItem gives a species listing one item twice that item every time; turning its
+        // branch-if-different into an unconditional branch sends every species through the odds.
+        private static readonly byte[] SameItemBranchVanilla = { 0x09, 0xD1 }, SameItemBranchPatched = { 0x09, 0xE0 };
+
+        public static PatchState SameHeldItemOddsState()
+        {
+            if (ROMFiles.GameTableFile.WhyNot(GameTable.HeldItemSameItemBranch, 2) is string why) return Unsupported(why);
+            byte[] now = ROMFiles.GameTableFile.Read(GameTable.HeldItemSameItemBranch, 2);
+            if (now.AsSpan().SequenceEqual(SameItemBranchPatched)) return PatchState.Applied;
+            if (now.AsSpan().SequenceEqual(SameItemBranchVanilla)) return PatchState.Available;
+            return Unsupported("The code there has already been changed by something else.");
+        }
+
+        public static bool ApplySameHeldItemOddsPatch()
+        {
+            if (SameHeldItemOddsState() != PatchState.Available) return false;
+            if (!ConfirmYesNo("Wild Pokémon whose two held items are the same will hold it only as often as the " +
+                "held item odds say, instead of always.\n\nApply this patch?", "Confirm to proceed"))
+                return false;
+            ROMFiles.GameTableFile.Write(GameTable.HeldItemSameItemBranch, SameItemBranchPatched);
+            ShowInfo("Same held items now use the held item odds.", "Operation successful.");
+            return true;
+        }
+
         /// <summary>Set the Dynamic Textures field of every AreaData to 0xFFFF (HGSS).</summary>
         public static bool ApplyDisableDynamicTexturesPatch()
         {
@@ -1129,6 +1153,10 @@ namespace DSPRE
         {
             var list = new List<PatchInfo>();
 
+            list.Add(Status("sameHeldItemOdds", "Same held items use the odds",
+                "Wild Pokémon whose two held items are the same normally always hold it. With this patch they hold it only as often as the held item odds say.",
+                SameHeldItemOddsState));
+
             list.Add(Status("sentenceCase", "Sentence-case Pokémon names",
                 "Convert every Pokémon name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
@@ -1318,6 +1346,7 @@ namespace DSPRE
                 case "scrcmdRepoint": return ApplyScrcmdRepointPatch();
                 case "disableTextures": return ApplyDisableDynamicTexturesPatch();
                 case "trainerNames": return ApplyExpandTrainerNamesPatch();
+                case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
                 default: return false;
             }
         }

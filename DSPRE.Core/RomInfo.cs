@@ -36,6 +36,9 @@ namespace DSPRE
         public static void RefreshRotomProjectState() => hasRotomProject =
             !string.IsNullOrWhiteSpace(workDir) && File.Exists(Path.Combine(workDir, "rotom.toml"));
         public static string romID { get; private set; }
+
+        /// <summary>The cartridge revision (header byte 0x1E): US Platinum Rev 1 reads 1, US Diamond v05 reads 5; -1 when unknown.</summary>
+        public static int romRevision { get; private set; } = -1;
         public static string projectName { get; private set; }
         public static string workDir { get; private set; }
         public static string arm9Path { get; private set; }
@@ -195,6 +198,112 @@ namespace DSPRE
         /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
         /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
         /// </summary>
+        /// <summary>Fixed-size game tables edited in place.</summary>
+        public enum GameTable
+        {
+            WildHeldItemOdds,      // sItemOdds[2][2] u16: none-below, rare-from; row 1 is Compound Eyes
+            IncenseBabies,         // 9 x (u16 baby, u16 item, u16 fallback)
+            TypeChart,             // 112 x (u8 attacker, u8 defender, u8 multiplier x10)
+            PoketchTypeChart,      // s8[18][18], the Pokétch move tester's copy (DP/Pt)
+            TutorPool,             // Pt 38 x 12 bytes, HGSS 52 x 4 bytes
+            TutorCompatibility,    // Pt 505 x 5 bytes (HGSS keeps it in waza_oshie.bin)
+            MiningTreasures,       // 85 x 20 bytes (DP/Pt)
+            MiningItems,           // 49 u16: bag item for mining ids 11-59 (sMiningItems)
+            BpShopPrices,          // Pt 41 x (u16 item, u16 BP); DP 41-row item/price table
+            BpShopItems,           // Pt left corner list, 0xFFFF-terminated
+            BpShopTms,             // Pt right corner list, 0xFFFF-terminated
+            HeldItemSameItemBranch, // the BNE after `cmp item1, item2` in WildMonSetRandomHeldItem
+        }
+
+        /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
+        public readonly record struct TableSpot(int Overlay, int Offset);
+
+        // Checked byte for byte against US HeartGold (IPKE rev 0), Platinum Rev 1 (CPUE rev 1) and Diamond v05 (ADAE rev 5).
+        private static readonly Dictionary<(string id, int rev, GameTable table), TableSpot> TableSpots = new()
+        {
+            [("IPKE", 0, GameTable.WildHeldItemOdds)] = new(-1, 0xFF4E4),
+            [("CPUE", 1, GameTable.WildHeldItemOdds)] = new(-1, 0xF0574),
+            [("ADAE", 5, GameTable.WildHeldItemOdds)] = new(-1, 0xF7ECC),
+            [("IPKE", 0, GameTable.HeldItemSameItemBranch)] = new(-1, 0x721FE),
+            [("CPUE", 1, GameTable.HeldItemSameItemBranch)] = new(-1, 0x77F66),
+            [("ADAE", 5, GameTable.HeldItemSameItemBranch)] = new(-1, 0x6A0EE),
+
+            [("IPKE", 0, GameTable.IncenseBabies)] = new(-1, 0xFF4AE),
+            [("CPUE", 1, GameTable.IncenseBabies)] = new(5, 0x291EC),
+            [("ADAE", 5, GameTable.IncenseBabies)] = new(5, 0x20632),
+
+            [("IPKE", 0, GameTable.TypeChart)] = new(12, 0x353BC),
+            [("CPUE", 1, GameTable.TypeChart)] = new(16, 0x33B94),
+            [("ADAE", 5, GameTable.TypeChart)] = new(11, 0x30DB8),
+            [("CPUE", 1, GameTable.PoketchTypeChart)] = new(43, 0x8F0),
+            [("ADAE", 5, GameTable.PoketchTypeChart)] = new(38, 0x8F4),
+
+            [("IPKE", 0, GameTable.TutorPool)] = new(1, 0x23AE0),
+            [("CPUE", 1, GameTable.TutorPool)] = new(5, 0x2FF64),
+            [("CPUE", 1, GameTable.TutorCompatibility)] = new(5, 0x3012C),
+
+            [("CPUE", 1, GameTable.MiningItems)] = new(-1, 0x100920),
+            [("ADAE", 5, GameTable.MiningItems)] = new(-1, 0x105C74),
+            [("CPUE", 1, GameTable.MiningTreasures)] = new(23, 0x18D70),
+            [("ADAE", 5, GameTable.MiningTreasures)] = new(18, 0x17490),
+
+            [("CPUE", 1, GameTable.BpShopPrices)] = new(7, 0x5A98),
+            [("CPUE", 1, GameTable.BpShopItems)] = new(-1, 0xEAC20),
+            [("CPUE", 1, GameTable.BpShopTms)] = new(-1, 0xEABB8),
+            [("ADAE", 5, GameTable.BpShopPrices)] = new(-1, 0xF433E),
+        };
+
+        // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), and the
+        // `cmp rN, #count` Conversion 2 bounds its record walk with.
+        private static readonly Dictionary<(string id, int rev), (int[] col0, int[] col1, int[] col2, int countCompare)> TypeChartSites = new()
+        {
+            [("IPKE", 0)] = (new[] { 0x1A78C, 0x1A8B4, 0x1AD80, 0x1ADD4 }, new[] { 0x1A460, 0x1A900, 0x1AD84 }, new[] { 0x1A464, 0x1A904, 0x1AD88 }, 0x1AD54),
+            [("CPUE", 1)] = (new[] { 0x1A18C, 0x1A2B4, 0x1A780, 0x1A7D4 }, new[] { 0x19E60, 0x1A300, 0x1A784 }, new[] { 0x19E64, 0x1A304, 0x1A788 }, 0x1A754),
+            [("ADAE", 5)] = (new[] { 0x18FD8, 0x19100, 0x195D0, 0x19624 }, new[] { 0x18CAC, 0x1914C, 0x195D4 }, new[] { 0x18CB0, 0x19150, 0x195D8 }, 0x195A4),
+        };
+
+        public static (int[] col0, int[] col1, int[] col2, int countCompare)? TypeChartPointerSites =>
+            romID != null && TypeChartSites.TryGetValue((romID, romRevision), out var s) ? s : null;
+
+        /// <summary>
+        /// Battle Point exchange code sites. Platinum: the arm9 pointers to the right (TM) and left corner lists, the
+        /// overlay 7 literal holding the price table's address (the next literal is that address + 2), and the
+        /// <c>cmp r2, #rows</c> bounding the price lookup. Both games: the arm9 item/price rows the exchange script
+        /// command reads, and the <c>movs r1, #firstTmRow</c> in that command.
+        /// </summary>
+        public sealed record BpShopSites(int ListPointers, int PriceLiteral, int PriceCountCompare,
+            int ExchangeTable, int ExchangeSplit);
+
+        private static readonly Dictionary<(string id, int rev), BpShopSites> BpShopSiteTable = new()
+        {
+            [("CPUE", 1)] = new(0x100AF0, 0x4F8C, 0x4F82, 0xEBC82, 0x49CE6),
+            [("ADAE", 5)] = new(-1, -1, -1, 0xF433E, 0x42AEA),
+        };
+
+        public static BpShopSites BpShopCodeSites =>
+            romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
+
+        /// <summary>Where this ROM keeps <paramref name="table"/>, or null for a version not checked yet.</summary>
+        public static TableSpot? SpotOf(GameTable table) =>
+            romID != null && TableSpots.TryGetValue((romID, romRevision, table), out var spot) ? spot : null;
+
+        private static int ReadRomRevision(string dir)
+        {
+            try
+            {
+                string yaml = Path.Combine(dir, "header.yaml");
+                if (File.Exists(yaml)) return YamlUtils.ReadGameCodeFromHeaderYaml(yaml)?.revision ?? -1;
+                string bin = Path.Combine(dir, "header.bin");
+                if (File.Exists(bin))
+                {
+                    using var f = File.OpenRead(bin);
+                    if (f.Length > 0x1E) { f.Position = 0x1E; return f.ReadByte(); }
+                }
+            }
+            catch (IOException) { }
+            return -1;
+        }
+
         public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : -1;
         public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
         public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
@@ -285,6 +394,8 @@ namespace DSPRE
         public enum DirNames : byte
         {
             personalPokeData,
+            growthTable,            // EXP per level for each growth curve
+            berryData,              // berry size, firmness, growth and flavours
             pokemonBattleSprites,
             otherPokemonBattleSprites,
             pokemonSpriteOffsets,   // combined per-mon record: HGSS /a/1/8/0 (89 B/mon) · Plat pl_poke_data.narc, last 3 bytes = sprite Y/shadow X/shadow size
@@ -455,6 +566,7 @@ namespace DSPRE
             }
 
             romID = id;
+            romRevision = ReadRomRevision(workDir);
             isHGE = false;
             // Get the folder name and strip the _DSPRE_contents suffix to get the ROM name
             string folderName = Path.GetFileName(romFolderName);
@@ -2492,6 +2604,8 @@ namespace DSPRE
                         [DirNames.encounterExtended] = $@"{dataFolderName}\arc\encdata_ex.narc",
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
+                        [DirNames.growthTable] = $@"{dataFolderName}\poketool\personal\growtbl.narc",
+                        [DirNames.berryData] = $@"{dataFolderName}\itemtool\itemdata\nuts_data.narc",
 
                         [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_tower\btdtr.narc",
                         [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_tower\btdpm.narc",
@@ -2629,6 +2743,9 @@ namespace DSPRE
                         [DirNames.encounterExtended] = $@"{dataFolderName}\arc\encdata_ex.narc",
                         [DirNames.learnsets] = $@"{dataFolderName}\poketool\personal\wotbl.narc",
                         [DirNames.evolutions] = $@"{dataFolderName}\poketool\personal\evo.narc",
+                        // Platinum reads only pl_growtbl; its growtbl.narc has no reader.
+                        [DirNames.growthTable] = $@"{dataFolderName}\poketool\personal\pl_growtbl.narc",
+                        [DirNames.berryData] = $@"{dataFolderName}\itemtool\itemdata\nuts_data.narc",
 
                         [DirNames.battleTowerTrainers] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdtr.narc",
                         [DirNames.battleTowerPokemon] = $@"{dataFolderName}\battle\b_pl_tower\pl_btdpm.narc",
@@ -2723,6 +2840,8 @@ namespace DSPRE
                         [DirNames.interiorBuildingModels] = $@"{dataFolderName}\a\1\4\8",
                         [DirNames.learnsets] = $@"{dataFolderName}\a\0\3\3",
                         [DirNames.evolutions] = $@"{dataFolderName}\a\0\3\4",
+                        [DirNames.growthTable] = $@"{dataFolderName}\a\0\0\3",
+                        [DirNames.berryData] = $@"{dataFolderName}\a\0\6\6",
                         [DirNames.itemData] = $@"{dataFolderName}\a\0\1\7",
                         [DirNames.itemIcons] = $@"{dataFolderName}\a\0\1\8",
                         [DirNames.tradeData] = $@"{dataFolderName}\a\1\1\2",

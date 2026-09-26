@@ -1096,7 +1096,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _athlonSpecies;
         private byte[][] _athlon, _athlonLoaded;
 
-        public bool ShowPokeathlon => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+        public bool ShowPokeathlon => RomInfo.gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive && BetaEditors.Enabled;
         public bool PokeathlonEditable => ShowPokeathlon && _athlonWhyNot == null && _athlon != null && _athlon.Length > 0;
         public string PokeathlonNote => !ShowPokeathlon ? "" : _athlonWhyNot ?? (_athlon == null || _athlon.Length == 0 ? "This Pokémon has no Pokéathlon stats." : "");
         public bool HasPokeathlonNote => PokeathlonNote.Length > 0;

@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.TypeChartEditorView"
+             x:DataType="vm:TypeChartEditorViewModel">
+  <Design.DataContext>
+    <vm:TypeChartEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
+      <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="Auto,*" Margin="8">
+      <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Attacking type down, defending type across" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+          <Grid x:Name="Cells"/>
+        </StackPanel>
+      </ScrollViewer>
+
+      <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="8" MinWidth="220" MaxWidth="300" HorizontalAlignment="Left">
+        <TextBlock Text="{Binding SelectedTitle}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+        <ComboBox ItemsSource="{Binding Choices}" SelectedIndex="{Binding SelectedChoice}" HorizontalAlignment="Stretch"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsCustom}">
+          <NumericUpDown Value="{Binding Multiplier}" Minimum="0" Maximum="25.5" Increment="0.1" FormatString="0.0" Width="110"/>
+          <TextBlock Text="×" VerticalAlignment="Center"/>
+        </StackPanel>
+        <CheckBox Content="Foresight and Scrappy let it hit" IsChecked="{Binding Foresight}" IsEnabled="{Binding CanForesight}"/>
+      </StackPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

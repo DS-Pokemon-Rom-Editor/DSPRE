@@ -100,6 +100,14 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // and reading the ROM is the point of it.
         public bool CanUseHgeRomReview       => IsRomLoaded && RomInfo.isHGE && Beta["HgeRomReviewView"];
         public bool CanUseDistortionWorld    => IsRomLoaded && gameFamily == GameFamilies.Plat && Beta["DistortionWorldView"];
+        public bool CanUseWildHeldItems => IsRomLoaded && !isHGE && Beta["WildHeldItemOddsView"];
+        public bool CanUseGrowthCurves => IsRomLoaded && !isHGE && Beta["GrowthCurveEditorView"];
+        public bool CanUseBreedingItems => IsRomLoaded && !isHGE && Beta["BreedingItemsView"];
+        public bool CanUseBerryData => IsRomLoaded && !isHGE && Beta["BerryDataEditorView"];
+        public bool CanUseTypeChart => IsRomLoaded && !isHGE && Beta["TypeChartEditorView"];
+        public bool CanUseMoveTutors => IsRomLoaded && !isHGE && (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS) && Beta["MoveTutorEditorView"];
+        public bool CanUseMining => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["UndergroundMiningView"];
+        public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
@@ -282,6 +290,14 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseDataExports));
             OnPropertyChanged(nameof(CanUseHgeRomReview));
             OnPropertyChanged(nameof(CanUseDistortionWorld));
+            OnPropertyChanged(nameof(CanUseWildHeldItems));
+            OnPropertyChanged(nameof(CanUseGrowthCurves));
+            OnPropertyChanged(nameof(CanUseBreedingItems));
+            OnPropertyChanged(nameof(CanUseBerryData));
+            OnPropertyChanged(nameof(CanUseTypeChart));
+            OnPropertyChanged(nameof(CanUseMoveTutors));
+            OnPropertyChanged(nameof(CanUseMining));
+            OnPropertyChanged(nameof(CanUseBpShop));
             RefreshRecents();
         }
 
@@ -318,6 +334,14 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseDataExports));
             OnPropertyChanged(nameof(CanUseHgeRomReview));
             OnPropertyChanged(nameof(CanUseDistortionWorld));
+            OnPropertyChanged(nameof(CanUseWildHeldItems));
+            OnPropertyChanged(nameof(CanUseGrowthCurves));
+            OnPropertyChanged(nameof(CanUseBreedingItems));
+            OnPropertyChanged(nameof(CanUseBerryData));
+            OnPropertyChanged(nameof(CanUseTypeChart));
+            OnPropertyChanged(nameof(CanUseMoveTutors));
+            OnPropertyChanged(nameof(CanUseMining));
+            OnPropertyChanged(nameof(CanUseBpShop));
             OnPropertyChanged(nameof(CanUseBattleScreen));
             OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
             OnPropertyChanged(nameof(CanUsePokegearRematchEditor));

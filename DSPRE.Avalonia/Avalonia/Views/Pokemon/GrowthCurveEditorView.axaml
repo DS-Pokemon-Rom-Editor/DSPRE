@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.GrowthCurveEditorView"
+             x:DataType="vm:GrowthCurveEditorViewModel">
+  <Design.DataContext>
+    <vm:GrowthCurveEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBlock Text="Curve:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <ComboBox ItemsSource="{Binding CurveNames}" SelectedIndex="{Binding SelectedCurve}" MinWidth="150"/>
+        <TextBlock Text="{Binding Level100}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
+               Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+
+    <Grid ColumnDefinitions="320,*" Margin="8">
+      <DockPanel Grid.Column="0">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="60,150,*" Margin="4,0,20,4">
+          <TextBlock Grid.Column="0" Text="Level" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="1" Text="Total EXP" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="To next" FontWeight="SemiBold"/>
+        </Grid>
+        <ListBox ItemsSource="{Binding Levels}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:GrowthCurveEditorViewModel+LevelRow">
+              <Grid ColumnDefinitions="60,150,*">
+                <TextBlock Grid.Column="0" Text="{Binding Level}" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Column="1" Value="{Binding Total}" Minimum="0" Maximum="4294967295" FormatString="0"
+                               ShowButtonSpinner="False" Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding ToNext}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <Border Grid.Column="1" Margin="12,0,0,0" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3"
+              Background="{DynamicResource Editor.PanelBg}">
+        <Canvas x:Name="Chart" ClipToBounds="True"/>
+      </Border>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.BreedingItemsView"
+             x:DataType="vm:BreedingItemsViewModel">
+  <Design.DataContext>
+    <vm:BreedingItemsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
+               Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+
+    <StackPanel Margin="10" Spacing="4">
+      <Grid ColumnDefinitions="200,200,200" Margin="0,0,0,2">
+        <TextBlock Grid.Column="0" Text="Baby" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="Needs a parent holding" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Otherwise hatches" FontWeight="SemiBold"/>
+      </Grid>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:BreedingItemsViewModel+RowViewModel">
+            <Grid ColumnDefinitions="200,200,200" Margin="0,2">
+              <controls:FusionAutoCompleteBox Grid.Column="0" Margin="0,0,8,0"
+                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Baby}"/>
+              <controls:FusionAutoCompleteBox Grid.Column="1" Margin="0,0,8,0"
+                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
+              <controls:FusionAutoCompleteBox Grid.Column="2"
+                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Fallback}"/>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </DockPanel>
+</UserControl>

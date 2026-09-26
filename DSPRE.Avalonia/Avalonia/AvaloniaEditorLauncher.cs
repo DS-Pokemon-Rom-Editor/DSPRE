@@ -346,6 +346,42 @@ namespace DSPRE.Avalonia
             new SpecialEncountersEditorView(new SpecialEncountersEditorViewModel(headbuttOnly, headbuttFile)).ShowManaged();
         }
 
+        /// <summary>Opens a small editor for one of the fixed game tables, or says why this ROM can't.</summary>
+        private static void OpenTableEditor(string title, string whyNot, System.Func<global::Avalonia.Controls.Control> make, double width, double height)
+        {
+            if (!IsRomLoaded || BlockedForHge("The " + title + " editor")) return;
+            if (whyNot != null) { _ = DialogHelper.ShowInfo(whyNot, title); return; }
+            try { new EditorHostWindow(title, make(), width, height).ShowManaged(); }
+            catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException || ex is System.ArgumentException)
+            {
+                _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
+            }
+        }
+
+        public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot(),
+            () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 560, 230);
+
+        public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot(),
+            () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680);
+
+        public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot(),
+            () => new BreedingItemsView(new BreedingItemsViewModel(true)), 680, 420);
+
+        public static void OpenBerryData() => OpenTableEditor("Berry Data", BerryData.WhyNot(),
+            () => new BerryDataEditorView(new BerryDataEditorViewModel(true)), 720, 520);
+
+        public static void OpenTypeChart() => OpenTableEditor("Type Chart", TypeChart.WhyNot(),
+            () => new TypeChartEditorView(new TypeChartEditorViewModel(true)), 1080, 780);
+
+        public static void OpenMoveTutors() => OpenTableEditor("Move Tutors", MoveTutorData.WhyNot(),
+            () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 900, 680);
+
+        public static void OpenBpShop() => OpenTableEditor("Battle Point Shop", BpShopData.WhyNot(),
+            () => new BpShopEditorView(new BpShopEditorViewModel(true)), 900, 640);
+
+        public static void OpenUndergroundMining() => OpenTableEditor("Underground Mining", MiningTable.WhyNot(),
+            () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 900, 700);
+
         public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();
 
         public static async System.Threading.Tasks.Task OpenTmHmBulkEditorAsync()
@@ -1405,9 +1441,16 @@ namespace DSPRE.Avalonia
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
+            new() { Name = "Growth Curve Editor",   Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
+            new() { Name = "Breeding Items",        Keywords = "incense baby egg hatch breeding wynaut azurill munchlax", Run = OpenBreedingItems },
+            new() { Name = "Type Chart Editor",     Keywords = "type effectiveness matchup super effective resist immune weakness fairy", Run = OpenTypeChart },
+            new() { Name = "Move Tutor Editor",     Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
+            new() { Name = "Berry Data Editor",     Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
+            new() { Name = "Battle Point Shop",     Keywords = "battle point bp shop exchange frontier tower tm prize", Run = OpenBpShop },
+            new() { Name = "Underground Mining",    Keywords = "underground mining dig treasure sphere fossil plate wall", Run = OpenUndergroundMining },
             new() { Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
             new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
@@ -1438,6 +1481,7 @@ namespace DSPRE.Avalonia
             new() { Name = "NSBTX Texture Editor",  Keywords = "texture", Run = OpenNsbtxEditor },
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
+            new() { Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
             new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily", Run = () => OpenSpecialEncountersEditor() },
             new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },

@@ -58,6 +58,14 @@ namespace DSPRE
                 ["DistortionWorldView"] = "Distortion World editor",
                 ["MartEditorView"] = "Mart editor",
                 ["PokegearPhoneBookView"] = "Pokégear Phone Book",
+                ["WildHeldItemOddsView"] = "Wild held items",
+                ["GrowthCurveEditorView"] = "Growth curve editor",
+                ["BreedingItemsView"] = "Breeding items",
+                ["BerryDataEditorView"] = "Berry data editor",
+                ["TypeChartEditorView"] = "Type chart editor",
+                ["MoveTutorEditorView"] = "Move tutor editor",
+                ["UndergroundMiningView"] = "Underground mining",
+                ["BpShopEditorView"] = "Battle Point shop editor",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>
@@ -139,6 +147,8 @@ namespace DSPRE
             new() { Name = "The animated preview", Where = "Event Editor and Map Editor" },
             new() { Name = "Dragging events with a gizmo", Where = "Event Editor" },
             new() { Name = "The tile boundary overlay", Where = "Map Editor" },
+            new() { Name = "Bug Contest opponents", Where = "Special Encounters Editor" },
+            new() { Name = "Pokéathlon stats", Where = "Pokémon Editor" },
         };
 
         /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>
@@ -167,6 +177,9 @@ namespace DSPRE
                        or "BottomScreenEditorView" or "CellAnimationEditorView"
                        or "BallCapsuleEditorView" or "ParticleEditorView"
                        or "ParticleLibraryView") return "Graphics";
+            if (window is "WildHeldItemOddsView" or "GrowthCurveEditorView" or "BreedingItemsView"
+                       or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView") return "Pokémon";
+            if (window is "BerryDataEditorView" or "UndergroundMiningView" or "BpShopEditorView" or "MartEditorView") return "Items";
             return "Tools";
         }
     }

@@ -34,6 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool ShowTrophyGarden { get; }
         public bool ShowHeadbutt { get; }
         public bool ShowBugContest { get; }
+        public bool ShowBugContestOpponents => ShowBugContest && BetaEditors.Enabled;
         public bool ShowSafariZone { get; }
 
         /// <summary>Open on the Headbutt tab, as a "Go to Headbutt file" jump does.</summary>

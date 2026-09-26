@@ -361,17 +361,9 @@ namespace DSPRE.ROMFiles
             return ranges;
         }
 
+        // Every marked block, the Battle Point shop's included.
         private static void AddExistingExpansionRanges(byte[] data, List<(long Start, long End)> ranges)
-        {
-            byte[] marker = Encoding.ASCII.GetBytes(ExpansionMarker);
-            foreach (int hit in DSUtils.SearchBytes(data, marker))
-            {
-                if (hit + ExpansionHeaderSize > data.Length) continue;
-                uint length = BitConverter.ToUInt32(data, hit + 0x10);
-                if (length >= ExpansionHeaderSize && (long)hit + length <= data.Length)
-                    ranges.Add((hit, hit + length));
-            }
-        }
+            => ranges.AddRange(SyntheticOverlaySpace.Blocks(data));
 
         private static int FindFreeRegion(byte[] data, int length, int alignment,
             IReadOnlyList<(long Start, long End)> excluded)

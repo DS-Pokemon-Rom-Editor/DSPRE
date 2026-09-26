@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
+             x:Class="DSPRE.Avalonia.Views.Items.UndergroundMiningView"
+             x:DataType="vm:UndergroundMiningViewModel">
+  <Design.DataContext>
+    <vm:UndergroundMiningViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="NumericUpDown.w">
+      <Setter Property="Width" Value="80"/>
+      <Setter Property="FormatString" Value="0"/>
+      <Setter Property="ShowButtonSpinner" Value="False"/>
+      <Setter Property="Minimum" Value="0"/>
+      <Setter Property="Maximum" Value="65535"/>
+    </Style>
+    <Style Selector="TextBlock.p">
+      <Setter Property="Width" Value="56"/>
+      <Setter Property="Margin" Value="6,0,12,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
+      <TextBlock Text="{Binding Totals}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <DockPanel Margin="8">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="190,154,154,154,154" Margin="4,0,20,4">
+        <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="Odd trainer ID" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="Even trainer ID" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="3" Text="Odd, National Dex" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="4" Text="Even, National Dex" FontWeight="SemiBold"/>
+      </Grid>
+      <ListBox ItemsSource="{Binding Rows}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:UndergroundMiningViewModel+TreasureRow">
+            <Grid ColumnDefinitions="190,154,154,154,154">
+              <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <NumericUpDown Classes="w" Value="{Binding W0}"/><TextBlock Classes="p" Text="{Binding P0}"/>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <NumericUpDown Classes="w" Value="{Binding W1}"/><TextBlock Classes="p" Text="{Binding P1}"/>
+              </StackPanel>
+              <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <NumericUpDown Classes="w" Value="{Binding W2}"/><TextBlock Classes="p" Text="{Binding P2}"/>
+              </StackPanel>
+              <StackPanel Grid.Column="4" Orientation="Horizontal">
+                <NumericUpDown Classes="w" Value="{Binding W3}"/><TextBlock Classes="p" Text="{Binding P3}"/>
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Items.BpShopEditorView"
+             x:DataType="vm:BpShopEditorViewModel">
+  <Design.DataContext>
+    <vm:BpShopEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="NumericUpDown.bp">
+      <Setter Property="Width" Value="110"/>
+      <Setter Property="FormatString" Value="0"/>
+      <Setter Property="Minimum" Value="0"/>
+      <Setter Property="Maximum" Value="65535"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </StackPanel>
+    </Border>
+
+    <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
+      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="*,12,*" Margin="8">
+      <DockPanel x:Name="ItemCounter" Grid.Column="0">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding LeftHeader}" FontWeight="SemiBold" Margin="2,0,0,4"/>
+        <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
+          <Button Content="Add" Click="AddLeft_Click" IsVisible="{Binding CanResize}"/>
+          <Button Content="Remove" Click="RemoveLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="▲" Click="UpLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="▼" Click="DownLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="To TM counter →" Click="ToRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        </WrapPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,110" Margin="6,0,24,2">
+          <TextBlock Text="Item" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="1" Text="BP" Foreground="{DynamicResource Editor.Subtle}"/>
+        </Grid>
+        <ListBox ItemsSource="{Binding Left}" SelectedItem="{Binding SelectedLeft}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:BpShopEditorViewModel+EntryViewModel">
+              <Grid ColumnDefinitions="*,110">
+                <DockPanel Margin="0,0,8,0">
+                  <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" AllowsNone="False" ItemsSource="{Binding $parent[ListBox].((vm:BpShopEditorViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
+                </DockPanel>
+                <NumericUpDown Grid.Column="1" Classes="bp" Value="{Binding Price}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel x:Name="TmCounter" Grid.Column="2">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding RightHeader}" FontWeight="SemiBold" Margin="2,0,0,4"/>
+        <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
+          <Button Content="Add" Click="AddRight_Click" IsVisible="{Binding CanResize}"/>
+          <Button Content="Remove" Click="RemoveRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="▲" Click="UpRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="▼" Click="DownRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="← To item counter" Click="ToLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        </WrapPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,110" Margin="6,0,24,2">
+          <TextBlock Text="Item" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Grid.Column="1" Text="BP" Foreground="{DynamicResource Editor.Subtle}"/>
+        </Grid>
+        <ListBox ItemsSource="{Binding Right}" SelectedItem="{Binding SelectedRight}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:BpShopEditorViewModel+EntryViewModel">
+              <Grid ColumnDefinitions="*,110">
+                <DockPanel Margin="0,0,8,0">
+                  <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" AllowsNone="False" ItemsSource="{Binding $parent[ListBox].((vm:BpShopEditorViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
+                </DockPanel>
+                <NumericUpDown Grid.Column="1" Classes="bp" Value="{Binding Price}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -18,10 +18,12 @@ namespace DSPRE.Avalonia
         {
             // Every editor window opens through here, whether from a menu, the command palette, or a
             // button inside another editor, so this is the one place a beta editor has to be stopped.
-            if (w != null && !BetaEditors.Allows(w.GetType().Name))
+            // A hosted editor is known by its view, since every host window shares one class.
+            string editorName = w is EditorHostWindow { Content: Control hosted } ? hosted.GetType().Name : w?.GetType().Name;
+            if (w != null && !BetaEditors.Allows(editorName))
             {
-                string why = BetaEditors.WhyNot(w.GetType().Name);
-                AppLogger.Info("Beta editor not opened: " + w.GetType().Name);
+                string why = BetaEditors.WhyNot(editorName);
+                AppLogger.Info("Beta editor not opened: " + editorName);
                 _ = DialogHelper.ShowInfo(why, "Not available yet");
                 return;
             }
