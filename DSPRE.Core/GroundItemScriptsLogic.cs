@@ -102,8 +102,15 @@ namespace DSPRE
         }
 
         // Entries after the removed one shifted down a slot, so references past it must shift too.
-        private static void ShiftOverworldReferencesAfterRemoval(int removedScriptNumber)
+        private static void ShiftOverworldReferencesAfterRemoval(int removedScriptNumber) =>
+            ShiftOverworldReferences(new[] { removedScriptNumber });
+
+        /// <summary>Shifts item events (and Platinum's overlay 9 reference) down past removed entries' original script numbers.</summary>
+        private static void ShiftOverworldReferences(IReadOnlyCollection<int> removed)
         {
+            if (removed.Count == 0) return;
+            int Shifted(int n) { int k = 0; foreach (int r in removed) if (r < n) k++; return n - k; }
+
             int fileCount = Filesystem.GetEventFileCount();
             for (int i = 0; i < fileCount; i++)
             {
@@ -113,11 +120,9 @@ namespace DSPRE
                 foreach (Overworld ow in ev.overworlds)
                 {
                     bool isItem = ow.type == (ushort)Overworld.OwType.ITEM || (ow.scriptNumber >= ItemScrMin && ow.scriptNumber <= ItemScrMax);
-                    if (isItem && ow.scriptNumber > removedScriptNumber)
-                    {
-                        ow.scriptNumber--;
-                        dirty = true;
-                    }
+                    if (!isItem) continue;
+                    int moved = Shifted(ow.scriptNumber);
+                    if (moved != ow.scriptNumber) { ow.scriptNumber = (ushort)moved; dirty = true; }
                 }
 
                 if (dirty)
@@ -137,13 +142,89 @@ namespace DSPRE
                     currentValue = reader.ReadUInt16();
                 }
 
-                if (currentValue > removedScriptNumber)
+                int moved = Shifted(currentValue);
+                if (moved != currentValue)
                 {
                     using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(ow9path, ow9offs))
                     {
-                        writer.Write((ushort)(currentValue - 1));
+                        writer.Write((ushort)moved);
                     }
                 }
+            }
+        }
+
+        /// <summary>Holds ground-item adds and removes until <see cref="Save"/> writes the script and renumbers events together.</summary>
+        public sealed class Session
+        {
+            private readonly ScriptFile _script;
+            private readonly List<int?> _origin = new List<int?>();   // each container's original index, null when added here
+            private readonly HashSet<int> _used;
+            private readonly List<int> _removed = new List<int>();
+
+            public Session()
+            {
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts, RomInfo.DirNames.eventFiles });
+                _script = new ScriptFile(RomInfo.itemScriptFileNumber);
+                for (int i = 0; i < _script.allScripts.Count; i++) _origin.Add(i);
+                _used = GetUsedScriptNumbers();
+            }
+
+            public bool HasChanges { get; private set; }
+
+            public List<Entry> Entries()
+            {
+                var result = new List<Entry>();
+                foreach (var e in DSUtils.GetGroundItemScriptEntries(_script))
+                {
+                    int? origin = _origin[e.scriptIndex];
+                    result.Add(new Entry
+                    {
+                        ScriptIndex = e.scriptIndex, ItemId = e.itemId, Quantity = e.quantity,
+                        InUse = origin != null && _used.Contains(ItemScrMin + origin.Value),
+                    });
+                }
+                return result;
+            }
+
+            public void Add(int itemId, int quantity)
+            {
+                int insertAt = _script.allScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
+                var cmdList = new List<ScriptCommand>
+                {
+                    new ScriptCommand("SetVar 0x8008 " + itemId),
+                    new ScriptCommand("SetVar 0x8009 " + quantity),
+                    new ScriptCommand("Jump Function_#1")
+                };
+                _script.allScripts.Insert(insertAt, new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList));
+                _origin.Insert(insertAt, null);
+                HasChanges = true;
+            }
+
+            /// <returns>null on success, or why the entry can't go.</returns>
+            public string Remove(int scriptIndex)
+            {
+                if (scriptIndex < 0 || scriptIndex >= _script.allScripts.Count) return null;
+                int? origin = _origin[scriptIndex];
+                if (origin != null && _used.Contains(ItemScrMin + origin.Value))
+                    return "An item event on the map still uses this entry. Change or delete that event first.";
+                _script.allScripts.RemoveAt(scriptIndex);
+                _origin.RemoveAt(scriptIndex);
+                if (origin != null) _removed.Add(ItemScrMin + origin.Value);
+                HasChanges = true;
+                return null;
+            }
+
+            public void Save()
+            {
+                if (!HasChanges) return;
+                _script.RenumberContainers();
+                _script.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+                ShiftOverworldReferences(_removed);
+                _removed.Clear();
+                for (int i = 0; i < _origin.Count; i++) _origin[i] = i;
+                _used.Clear();
+                foreach (int n in GetUsedScriptNumbers()) _used.Add(n);
+                HasChanges = false;
             }
         }
     }

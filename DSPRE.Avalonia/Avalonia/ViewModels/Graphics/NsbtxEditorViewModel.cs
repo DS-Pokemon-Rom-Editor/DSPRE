@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// palettes and renders a preview of the chosen texture+palette (via the shared
     /// <see cref="NsbmdTextureDecoder"/>). Whole packs can be imported / exported.
     /// </summary>
-    public class NsbtxEditorViewModel : INotifyPropertyChanged
+    public class NsbtxEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up NSBTX Editor:\n{ex.Message}", "NSBTX Editor");
+                await DialogHelper.ShowError($"Failed to set up NSBTX Editor:\n{ex.Message}", "Map & Building Textures");
             }
         }
 
@@ -247,23 +247,59 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return wb;
         }
 
+        // ── Save / Discard ───────────────────────────────────────────────────────────────
+        // Adds, removes and imports change the unpacked files at once so the lists and previews show them; each
+        // file's state from before its first change is kept (null when it didn't exist), and Discard or closing
+        // without saving puts that back.
+        private readonly Dictionary<string, byte[]> _originals = new();
+        private void Keep(string path)
+        {
+            if (!_originals.ContainsKey(path)) _originals[path] = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        public bool HasUnsavedChanges => _originals.Count > 0;
+        public string UnsavedChangesDescription => "Texture packs";
+        public void SaveChanges()
+        {
+            if (_originals.Count == 0) return;
+            _originals.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SaveNotice.Saved(UnsavedChangesDescription);
+        }
+        public void DiscardChanges()
+        {
+            foreach (var (path, bytes) in _originals)
+            {
+                try { if (bytes == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, bytes); }
+                catch (Exception ex) { AppLogger.Error("Texture pack discard: " + ex.Message); }
+            }
+            _originals.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            ReloadPacks();
+        }
+
         // ── Add / remove texture packs ───────────────────────────────────────────────────
         public void AddPack()
         {
             try
             {
                 int newId = PackNames.Count;
+                Keep(PackPath(newId));
                 File.Copy(PackPath(0), PackPath(newId));
                 if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
                 {
                     string cfg = gameDirs[DirNames.buildingConfigFiles].unpackedDir;
-                    if (File.Exists(Path.Combine(cfg, "0000"))) File.Copy(Path.Combine(cfg, "0000"), Path.Combine(cfg, newId.ToString("D4")));
+                    if (File.Exists(Path.Combine(cfg, "0000")))
+                    {
+                        Keep(Path.Combine(cfg, newId.ToString("D4")));
+                        File.Copy(Path.Combine(cfg, "0000"), Path.Combine(cfg, newId.ToString("D4")));
+                    }
                 }
                 PackNames.Add("Texture Pack " + newId);
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "NSBTX Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "Map & Building Textures"); }
         }
 
         public async Task RemoveLastPackAsync()
@@ -273,17 +309,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!await DialogHelper.AskYesNo($"Delete the last texture pack ({last})?", "Confirm deletion")) return;
             try
             {
+                Keep(PackPath(last));
                 File.Delete(PackPath(last));
                 if (!_mapTextures && gameDirs.ContainsKey(DirNames.buildingConfigFiles))
                 {
                     string cfg = Path.Combine(gameDirs[DirNames.buildingConfigFiles].unpackedDir, last.ToString("D4"));
-                    if (File.Exists(cfg)) File.Delete(cfg);
+                    if (File.Exists(cfg)) { Keep(cfg); File.Delete(cfg); }
                 }
                 if (_packIndex == last) PackIndex = last - 1;
                 PackNames.RemoveAt(last);
                 StatusText = $"Removed texture pack {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "NSBTX Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "Map & Building Textures"); }
         }
 
         // ── Import / export whole packs ─────────────────────────────────────────────────
@@ -326,9 +363,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!await DialogHelper.AskYesNo(question, "Import")) return;
             try
             {
+                Keep(PackPath(_packIndex));
                 File.Copy(path, PackPath(_packIndex), true);
                 LoadPack(_packIndex);
-                StatusText = "Imported (written to ROM working dir).";
+                StatusText = "Imported. Save to keep it.";
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }

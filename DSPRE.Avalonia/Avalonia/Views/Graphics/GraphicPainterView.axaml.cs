@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         public GraphicPainterView(GraphicPainterViewModel vm)
         {
             InitializeComponent();
-            if (vm != null) DataContext = vm;
+            if (vm != null) { DataContext = vm; EditorWindowChrome.Attach(this, vm, manageTitle: false); }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -31,10 +31,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null)
             {
                 vm.Status = err;
-                await DialogHelper.ShowInfo(err, "Save into the game");
+                await DialogHelper.ShowInfo(err, "Save");
                 return;
             }
-            vm.Status = "Saved into the game. Save the ROM to keep it.";
+            vm.Status = "Saved. Save the ROM to keep it.";
         }
 
         // ── painting ───────────────────────────────────────────────────────────────────────────────

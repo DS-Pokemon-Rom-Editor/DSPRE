@@ -228,10 +228,72 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string MatrixInfo { get => _matrixInfo; set => Set(ref _matrixInfo, value); }
 
         private int _mapTilesetIndex = -1;
-        public int MapTilesetIndex { get => _mapTilesetIndex; set { if (Set(ref _mapTilesetIndex, value) && !_suppress && _map != null) RebuildPreview(); } }
+        public int MapTilesetIndex { get => _mapTilesetIndex; set { if (Set(ref _mapTilesetIndex, value) && !_suppress && _map != null) { EditArea(a => a.mapTileset = (ushort)value); RebuildPreview(); } } }
 
         private int _buildingTilesetIndex;
-        public int BuildingTilesetIndex { get => _buildingTilesetIndex; set { if (Set(ref _buildingTilesetIndex, value) && !_suppress && _map != null) RebuildPreview(); } }
+        public int BuildingTilesetIndex { get => _buildingTilesetIndex; set { if (Set(ref _buildingTilesetIndex, value) && !_suppress && _map != null) { EditArea(a => a.buildingsTileset = (ushort)(value - 1)); RebuildPreview(); } } }
+
+        // ── Area data: the texture packs, terrain animation and light of the shown map's area ──
+        // Edited here rather than in a separate window, held with the map's edits and written by the same Save.
+        private AreaData _area;
+        private byte _areaId;
+        private bool _areaDirty;
+
+        public bool HasArea => _area != null;
+        public bool IsHgssGame => gameFamily == GameFamilies.HGSS;
+        public string AreaLabel
+        {
+            get
+            {
+                if (!HasArea) return "";
+                int users = 0;
+                try { for (int h = 0; h < GetHeaderCount(); h++) if (MapHeader.GetMapHeader((ushort)h)?.areaDataID == _areaId) users++; } catch { }
+                return users > 1 ? $"Area {_areaId} · used by {users} headers" : $"Area {_areaId}";
+            }
+        }
+        public decimal AreaGroundAnimation { get => _area?.groundAnimation ?? 0; set => EditArea(a => a.groundAnimation = (ushort)value); }
+        public decimal AreaLightType { get => _area?.lightType ?? 0; set => EditArea(a => a.lightType = (ushort)value); }
+        public bool AreaIndoor { get => _area?.areaType == AreaData.TYPE_INDOOR; set => EditArea(a => a.areaType = value ? AreaData.TYPE_INDOOR : AreaData.TYPE_OUTDOOR); }
+
+        private void EditArea(Action<AreaData> change)
+        {
+            if (_area == null || _suppress) return;
+            change(_area);
+            _areaDirty = true;
+            MarkDirty();
+            RaiseArea();
+        }
+
+        private void LoadArea(byte id)
+        {
+            try { _area = new AreaData(id); _areaId = id; }
+            catch (Exception ex) { _area = null; AppLogger.Error("Area data load failed: " + ex.Message); }
+            _areaDirty = false;
+            RaiseArea();
+        }
+
+        private void RaiseArea()
+        {
+            foreach (var n in new[] { nameof(HasArea), nameof(AreaLabel), nameof(AreaGroundAnimation), nameof(AreaLightType), nameof(AreaIndoor) })
+                OnPropertyChanged(n);
+        }
+
+        private void SaveArea()
+        {
+            if (!_areaDirty || _area == null) return;
+            _area.SaveToFileDefaultDir(_areaId, showSuccessMessage: false);
+            _areaDirty = false;
+            AppEvents.RaiseAreaDataSaved(this, _areaId);
+        }
+
+        // Another editor saved this area: show its textures, unless this one holds its own edits.
+        private void OnAreaSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || !HasArea || id != _areaId) return;
+            if (HasUnsavedChanges) { StatusText = $"Area {id} was saved in another window. Save or discard here to see it."; return; }
+            if (IsHeaderView) BuildHeaderPreview();
+            else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
+        }
         public ObservableCollection<PainterOption> CollisionPainters { get; } = new ObservableCollection<PainterOption>();
         public ObservableCollection<PainterOption> TypePainters { get; } = new ObservableCollection<PainterOption>();
 
@@ -608,6 +670,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
             AppEvents.MapSaved -= OnMapSavedElsewhere;
+            AppEvents.AreaDataSaved -= OnAreaSavedElsewhere;
         }
 
         /// <summary>Shows a map another editor saved, unless this one holds its own unsaved edits.</summary>
@@ -989,6 +1052,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges));
             _eventsToSave.Clear();
+            _areaDirty = false;
 
             if (IsHeaderView) BuildHeaderPreview();               // reloads every cell's map fresh from disk
             else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
@@ -1539,6 +1603,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     _romPatchHandlerSubscribed = true;
                     AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                     AppEvents.MapSaved += OnMapSavedElsewhere;
+                    AppEvents.AreaDataSaved += OnAreaSavedElsewhere;
                 }
 
                 // All of the below are rebuilt fresh on every ROM load (including switching to a
@@ -1676,6 +1741,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     ShowHeaderMaps(); RefreshBuildings(); SetClean(); RebuildOverlay(); MapLoaded?.Invoke(this, EventArgs.Empty); return;
                 }
 
+                LoadArea(hdr.areaDataID);
                 var matrix = new GameMatrix(hdr.matrixID);
                 for (int y = 0; y < matrix.height; y++)
                     for (int x = 0; x < matrix.width; x++)
@@ -1796,7 +1862,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         private void ResolveTilesetForMap(int mapIndex)
         {
-            if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId)) return;
+            if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId)) { _area = null; RaiseArea(); return; }
+            LoadArea(areaId);
             try
             {
                 var area = new AreaData(areaId);
@@ -2008,8 +2075,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (refused) return;
                 foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
                 _eventsToSave.Clear();
+                bool areaSaved = _areaDirty;
+                SaveArea();
                 SetClean();
-                StatusText = saved > 0 ? $"Saved {saved} map(s) for header {_headerId}." : "Nothing to save.";
+                StatusText = saved > 0 || areaSaved ? $"Saved {saved} map(s){(areaSaved ? " and the area" : "")} for header {_headerId}." : "Nothing to save.";
                 return;
             }
             if (_map == null || _selectedMapIndex < 0) return;
@@ -2023,6 +2092,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _map.SaveToFileDefaultDir(_selectedMapIndex, showSuccessMessage: false);
             KeptPlatesFile.Save(_selectedMapIndex, _map.KeptPlates);
             AppEvents.RaiseMapSaved(this, _selectedMapIndex);
+            SaveArea();
             foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
             _eventsToSave.Clear();
             SetClean();

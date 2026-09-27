@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         public BannerEditorView(BannerEditorViewModel vm) : this()
         {
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
         }
 
         private async void ImportIcon_Click(object sender, RoutedEventArgs e)
@@ -28,6 +29,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (VM != null) await VM.ExportIconAsync(this);
         }
 
-        private void SaveTitles_Click(object sender, RoutedEventArgs e) => VM?.SaveTitles();
+        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
     }
 }

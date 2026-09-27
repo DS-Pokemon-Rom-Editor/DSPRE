@@ -347,7 +347,19 @@ namespace DSPRE.Avalonia.ViewModels.World
             TreeFolders.Add(folder);
         }
 
-        public HeaderEditorViewModel(bool _) { }
+        public HeaderEditorViewModel(bool _) { AppEvents.HeaderSaved += OnSavedElsewhere; }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach() => AppEvents.HeaderSaved -= OnSavedElsewhere;
+
+        // Another open copy of this header saved: show it, unless this copy holds its own edits.
+        private void OnSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || _header == null || _header.ID != id) return;
+            if (HasUnsavedChanges) { StatusText = $"Header {id} was saved in another window. Save or discard here to see it."; return; }
+            LoadHeader((ushort)id);
+            StatusText = $"Header {id} was saved in another window and reloaded.";
+        }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
@@ -1082,6 +1094,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _history.MarkSaved();
             RaiseUndoState();
             StatusText = $"Header {_header.ID} saved.";
+            AppEvents.RaiseHeaderSaved(this, _header.ID);
         }
 
         // ── Copy / paste / reset / import / export / go-to / quick-open ──────────────────
@@ -1149,6 +1162,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (n < 0 || n >= _headerListNames.Count) return;
             if (!string.IsNullOrWhiteSpace(TreeFilterText)) TreeFilterText = "";   // reveal it if a search is active
             SelectHeader((ushort)n);
+        }
+
+        /// <summary>Shows a header asked for from another editor.</summary>
+        public void GoToHeader(int id)
+        {
+            if (id < 0 || id >= _headerListNames.Count) return;
+            if (!string.IsNullOrWhiteSpace(TreeFilterText)) TreeFilterText = "";
+            SelectHeader((ushort)id);
         }
 
         // Jump to the related editor at this header's referenced file.

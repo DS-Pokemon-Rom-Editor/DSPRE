@@ -190,7 +190,7 @@
                     <TextBlock Text="Item" FontWeight="Bold"/>
                     <Grid ColumnDefinitions="*,Auto">
                       <ComboBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
-                      <Button Grid.Column="1" Content="Manage…" Click="ManageGroundItems_Click" Margin="4,0,0,0"/>
+                      <Button Grid.Column="1" Content="Edit item list…" Click="ManageGroundItems_Click" Margin="4,0,0,0" ToolTip.Tip="Add or remove the item and quantity pairs item events can give"/>
                     </Grid>
                     <!-- No warning here: the dropdown itself shows whether the item resolved, and the
                          raw Script field appears below when it didn't. -->

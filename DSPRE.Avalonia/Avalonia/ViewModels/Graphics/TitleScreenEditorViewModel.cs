@@ -7,7 +7,7 @@ using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    public class TitleScreenEditorViewModel : INotifyPropertyChanged
+    public class TitleScreenEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 LogoPreview = BackgroundPreview = CopyrightPreview = null;
                 StatusText = "Title screen graphics are not available for this ROM.";
-                OnPropertyChanged(nameof(HasChanges));
+                OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
                 return;
             }
             var logo = _graphics.ComposeLogo();
@@ -63,12 +63,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             CopyrightPreview = ImageConverter.ToAvaloniaBitmap(copyright);
             StatusText = (logo == null || background == null || copyright == null)
                 ? "Could not decode the current title screen graphics." : string.Empty;
-            OnPropertyChanged(nameof(HasChanges));
+            OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         /// <summary>Undoes every import made this session (either version's logo/background/palette, and
         /// the shared copyright), restoring each touched archive member to what it was when this editor
         /// was opened. Does not touch anything not edited this session.</summary>
+        // Imports land in the unpacked archive at once; Save keeps them, Discard or closing without saving puts the old bytes back.
+        public bool HasUnsavedChanges => HasChanges;
+        public string UnsavedChangesDescription => "Title screen";
+        public void SaveChanges() { _graphics.AcceptAll(); OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); }
+        public void DiscardChanges() => RevertChanges();
+
         public void RevertChanges()
         {
             _graphics.RevertAll();

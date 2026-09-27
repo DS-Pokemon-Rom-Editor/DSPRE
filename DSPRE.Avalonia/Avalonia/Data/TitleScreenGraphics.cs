@@ -61,6 +61,9 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Restores every archive member touched by an import this session back to its bytes from
         /// before the first edit, then forgets the backup (so importing again starts a fresh checkpoint).</summary>
+        /// <summary>Keeps every change made so far: Save. Later changes start a new checkpoint.</summary>
+        public void AcceptAll() => _backup.Clear();
+
         public void RevertAll()
         {
             foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);

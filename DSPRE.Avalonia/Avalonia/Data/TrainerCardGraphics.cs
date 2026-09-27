@@ -37,6 +37,9 @@ namespace DSPRE.Avalonia.Data
             return raw;
         }
 
+        /// <summary>Keeps every change made so far: Save. Later changes start a new checkpoint.</summary>
+        public void AcceptAll() => _backup.Clear();
+
         public void RevertAll()
         {
             foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);

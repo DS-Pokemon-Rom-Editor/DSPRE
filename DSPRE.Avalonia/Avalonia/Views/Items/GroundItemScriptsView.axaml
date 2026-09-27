@@ -3,7 +3,8 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
         x:Class="DSPRE.Avalonia.Views.Items.GroundItemScriptsView"
         x:DataType="vm:GroundItemScriptsViewModel"
-        Title="Manage Ground Items"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        Title="Ground Item List"
         Width="620" Height="560"
         MinWidth="520" MinHeight="420"
         WindowStartupLocation="CenterOwner">
@@ -13,8 +14,14 @@
   </Design.DataContext>
 
   <DockPanel Margin="12">
-    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" TextWrapping="Wrap" FontSize="12"
-               Text="These are the item + quantity combinations Overworld Item events can pick from. Entries still in use by an Overworld event can't be removed."/>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4" Margin="-12,-12,-12,8">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:HelpTip Text="The item and quantity pairs an item event on the map can give. An entry an event still uses can't be removed. Saving renumbers the item events to match."/>
+      </StackPanel>
+    </Border>
 
     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
       <StackPanel Spacing="6">
@@ -28,7 +35,7 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
           <Button Content="Remove Selected" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>
-          <Button Content="Close" Click="Close_Click" IsDefault="True" IsCancel="True"/>
+          <Button Content="Close" Click="Close_Click" IsCancel="True"/>
         </StackPanel>
       </StackPanel>
     </Border>

@@ -6,7 +6,7 @@ using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    public class TrainerCardEditorViewModel : INotifyPropertyChanged
+    public class TrainerCardEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 CardFrontPreview = CardBackPreview = null;
                 StatusText = "Trainer card graphics are not available for this ROM.";
-                OnPropertyChanged(nameof(HasChanges));
+                OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
                 return;
             }
             var front = _graphics.ComposeCardFront(SelectedRankIndex);
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             CardFrontPreview = ImageConverter.ToAvaloniaBitmap(front);
             CardBackPreview = ImageConverter.ToAvaloniaBitmap(back);
             StatusText = (front == null || back == null) ? "Could not decode the current card design." : string.Empty;
-            OnPropertyChanged(nameof(HasChanges));
+            OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private void RefreshTrainerPreviews()
@@ -130,6 +130,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try { System.IO.File.WriteAllBytes(nclrPath, bytes); return null; }
             catch (Exception ex) { return ex.Message; }
         }
+
+        // Imports land in the unpacked archive at once; Save keeps them, Discard or closing without saving puts the old bytes back.
+        public bool HasUnsavedChanges => HasChanges;
+        public string UnsavedChangesDescription => "Trainer card";
+        public void SaveChanges() { _graphics.AcceptAll(); OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); }
+        public void DiscardChanges() => RevertChanges();
 
         public void RevertChanges()
         {

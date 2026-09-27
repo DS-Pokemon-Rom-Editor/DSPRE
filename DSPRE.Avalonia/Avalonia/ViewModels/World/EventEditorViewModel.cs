@@ -447,6 +447,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
+        /// <summary>For a standalone window closing; the Maps workspace's instance keeps listening while its tab is hidden.</summary>
+        public void DetachSaves() => AppEvents.EventFileSaved -= OnSavedElsewhere;
+
         private void PopulateOwItemEntries()
         {
             OwItemEntries.Clear();
@@ -728,6 +731,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             AvaloniaEditorLauncher.OpenScriptEditor(_pairedScriptFileId);
         }
 
+        /// <summary>Shows one overworld of one event file, asked for from another editor.</summary>
+        public void GoToOverworld(int eventFile, int owIndex)
+        {
+            SelectedEventIndex = eventFile;
+            // The switch waits on a prompt when this file has unsaved edits; only pick the overworld once it's loaded.
+            if (_selectedIndex == eventFile && owIndex >= 0 && owIndex < (_file?.overworlds.Count ?? 0)) SelectedOverworldIndex = owIndex;
+        }
+
         public void GoToOverworldScript() { if (_ow != null) GoToScript(_ow.scriptNumber); }
         public void GoToTriggerScript()   { if (_trig != null) GoToScript(_trig.scriptNumber); }
         public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.scriptNumber); }
@@ -934,7 +945,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
 
         public EventEditorViewModel() { if (Design.IsDesignMode) EventNames.Add("Event 0"); }
-        public EventEditorViewModel(bool _) { }
+        public EventEditorViewModel(bool _) { AppEvents.EventFileSaved += OnSavedElsewhere; }
+
+        // Another open copy of this event file saved: show it, unless this copy holds its own edits.
+        private void OnSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
+            if (_dirty) { StatusText = $"Event file {id} was saved in another window. Save or discard here to see it."; return; }
+            LoadFile(id);
+            StatusText = $"Event file {id} was saved in another window and reloaded.";
+        }
 
         public async Task SetupAsync(Window owner)
         {
@@ -2043,6 +2063,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved event file {_selectedIndex}.";
+            AppEvents.RaiseEventFileSaved(this, _selectedIndex);
         }
 
         public async Task ImportAsync()

@@ -93,6 +93,8 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Play_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
 
+        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
 
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();

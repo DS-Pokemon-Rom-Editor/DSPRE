@@ -11,7 +11,7 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>Painting one graphic, by the numbers it is really made of.</summary>
-    public sealed class GraphicPainterViewModel : INotifyPropertyChanged
+    public sealed class GraphicPainterViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -285,11 +285,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Remember()
         {
             _undo.Push(((byte[])_pixels.Clone(), (uint[])_colours.Clone()));
-            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(UndoHelp));
         }
 
         public bool CanUndo => _undo.Count > 0;
+        public bool CanRedo => false;
+        public void Redo() { }
+
+        // Every stroke and colour change pushes an undo step, and Save clears them, so the steps are the unsaved edits.
+        public bool HasUnsavedChanges => _undo.Count > 0;
+        public string UnsavedChangesDescription => Title;
+        public void SaveChanges()
+        {
+            string err = Save();
+            Status = err ?? "Saved. Save the ROM to keep it.";
+        }
+        public void DiscardChanges() { while (_undo.Count > 0) Undo(); }
 
         public string UndoHelp => _art == null
             ? "There is nothing here to paint."
@@ -304,7 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _pixels = p; _colours = c;
             BuildSwatches();
             Redraw();
-            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(UndoHelp));
             Status = "Put back the way it was.";
         }
@@ -358,7 +370,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return "The picture went in, but the colours did not: " + perr;
             }
             _undo.Clear();
-            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(UndoHelp));
             return null;
         }

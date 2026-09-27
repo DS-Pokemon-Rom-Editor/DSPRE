@@ -128,6 +128,21 @@ namespace DSPRE
         /// <c>palette.png</c> pair (palette slot 0 = transparent, then the opaque colors in
         /// first-seen order). Returns null on success, or a user-displayable error message.
         /// </summary>
+        /// <summary>Why an image can't be the game icon, or null.</summary>
+        public static string IconProblem(RawImage img)
+        {
+            if (img == null) return "The image could not be decoded.";
+            if (img.Width != IconSize || img.Height != IconSize)
+                return $"The icon must be exactly {IconSize}×{IconSize} pixels (got {img.Width}×{img.Height}).";
+            var colours = new HashSet<int>();
+            byte[] src = img.Bgra;
+            for (int i = 0; i < src.Length; i += 4)
+                if (src[i + 3] >= 128) colours.Add((src[i + 2] << 16) | (src[i + 1] << 8) | src[i]);
+            return colours.Count > MaxOpaqueColors
+                ? $"Too many colors: DS icons allow at most {MaxOpaqueColors} opaque colors plus transparency. Reduce the color count and try again."
+                : null;
+        }
+
         public static string ValidateAndWriteDsRomIcon(RawImage img)
         {
             if (img == null) return "The image could not be decoded.";

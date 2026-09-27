@@ -17,8 +17,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
     }
 
     /// <summary>
-    /// Backing model for the "Manage Ground Items" dialog (Event Editor's Overworld Item panel).
-    /// All actual reads/writes go through the shared, UI-agnostic <see cref="GroundItemScriptsLogic"/>.
+    /// Backing model for the ground item list dialog (Event Editor's Overworld Item panel). Edits stay in a
+    /// <see cref="GroundItemScriptsLogic.Session"/> until Save, which also renumbers the item events.
     /// </summary>
     public class GroundItemScriptsViewModel : INotifyPropertyChanged
     {
@@ -48,21 +48,26 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private string _statusText = "";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        /// <summary>Set once anything is actually added/removed, so the owning Event Editor knows to
+        /// <summary>Set once a save has written anything, so the owning Event Editor knows to
         /// re-sync its own Item dropdown (indices may have shifted).</summary>
         public bool Changed { get; private set; }
+
+        private GroundItemScriptsLogic.Session _session;
+        public bool HasUnsavedChanges => _session?.HasChanges == true;
 
         public GroundItemScriptsViewModel()
         {
             if (Design.IsDesignMode) return;
             foreach (string name in RomInfo.GetItemNames()) ItemNames.Add(name);
+            _session = new GroundItemScriptsLogic.Session();
             Refresh();
         }
 
         private void Refresh()
         {
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             Entries.Clear();
-            foreach (var e in GroundItemScriptsLogic.GetEntries())
+            foreach (var e in _session.Entries())
             {
                 string name = e.ItemId >= 0 && e.ItemId < ItemNames.Count ? ItemNames[e.ItemId] : ("Item " + e.ItemId);
                 Entries.Add(new GroundItemRow { ScriptIndex = e.ScriptIndex, ItemName = name, Quantity = e.Quantity, InUse = e.InUse });
@@ -77,8 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            GroundItemScriptsLogic.AddEntry(_newItemIndex, (int)_newQuantity);
-            Changed = true;
+            _session.Add(_newItemIndex, (int)_newQuantity);
             StatusText = "";
             Refresh();
         }
@@ -87,16 +91,32 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_selectedEntry == null) return;
 
-            string error = GroundItemScriptsLogic.RemoveEntry(_selectedEntry.ScriptIndex);
+            string error = _session.Remove(_selectedEntry.ScriptIndex);
             if (error != null)
             {
                 StatusText = error;
                 return;
             }
 
-            Changed = true;
             StatusText = "";
             SelectedEntry = null;
+            Refresh();
+        }
+
+        public void Save()
+        {
+            if (!HasUnsavedChanges) return;
+            _session.Save();
+            Changed = true;
+            StatusText = "";
+            Refresh();
+        }
+
+        public void Discard()
+        {
+            _session = new GroundItemScriptsLogic.Session();
+            SelectedEntry = null;
+            StatusText = "";
             Refresh();
         }
     }

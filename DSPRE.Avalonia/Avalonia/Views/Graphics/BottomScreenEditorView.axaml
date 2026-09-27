@@ -36,6 +36,8 @@
       <StackPanel Spacing="6">
         <DockPanel>
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+            <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" Click="Undo_Click"
                     IsEnabled="{Binding CanUndo}" ToolTip.Tip="{Binding UndoWhat}"/>
             <Button Content="Redo" Click="Redo_Click"

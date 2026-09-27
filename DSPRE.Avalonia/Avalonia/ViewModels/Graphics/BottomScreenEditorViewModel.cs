@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// every piece of it editable. The top screen beside it is a picture of the game, not something this
     /// window changes; it is there so the bottom screen is seen the way a player sees it.
     /// </summary>
-    public sealed class BottomScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class BottomScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -299,12 +299,34 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _status = "";
         public string StatusText { get => _status; private set => Set(ref _status, value); }
 
-        // Edits go straight into the unpacked files, which is where every other editor writes too. The
-        // ROM save packs them, so there is nothing held back in here.
-        public bool HasUnsavedChanges => false;
+        // Edits hit the unpacked files at once, so each file's prior bytes are kept for Discard to write back.
+        private readonly Dictionary<(DirNames Dir, int Member), byte[]> _originals = new();
+
+        public bool HasUnsavedChanges => _originals.Count > 0;
         public string UnsavedChangesDescription => "Bottom screen";
-        public void SaveChanges() { }
-        public void DiscardChanges() { }
+
+        public void SaveChanges()
+        {
+            if (_originals.Count == 0) return;
+            _originals.Clear();
+            RaiseSteps();
+            SaveNotice.Saved(UnsavedChangesDescription);
+        }
+
+        public void DiscardChanges()
+        {
+            foreach (var ((dir, member), bytes) in _originals)
+            {
+                try { new ScriptNarc(dir).Put(member, bytes); }
+                catch (Exception ex) { AppLogger.Error("Bottom screen discard: " + ex.Message); }
+            }
+            _originals.Clear();
+            _undo.Clear();
+            _redo.Clear();
+            LoadScreens();
+            Refresh();
+            RaiseSteps();
+        }
 
         // ── Building and drawing ──────────────────────────────────────────────────────
 
@@ -890,8 +912,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 BuildSwatches();
                 Draw();
                 StatusText = p.SharedWith == null
-                    ? "Colour saved."
-                    : "Colour saved. " + p.SharedWith;
+                    ? "Colour changed."
+                    : "Colour changed. " + p.SharedWith;
             }
             catch (Exception ex)
             {
@@ -927,6 +949,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 byte[] before = new ScriptNarc(dir).Get(member);
                 if (before == null) return;
+                _originals.TryAdd((dir, member), (byte[])before.Clone());
                 _undo.Push(new Step(dir, member, before, what));
                 _redo.Clear();
                 RaiseSteps();
@@ -970,6 +993,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(CanRedo));
             OnPropertyChanged(nameof(UndoWhat));
             OnPropertyChanged(nameof(RedoWhat));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         public void Say(string what) => StatusText = what;

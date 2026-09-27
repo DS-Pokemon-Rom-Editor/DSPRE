@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// <c>dsrom build</c> re-encodes into the ROM on Save ROM. Legacy ndstool projects are
     /// display-only (the main window still shows their icon; this editor refuses to open).
     /// </summary>
-    public class BannerEditorViewModel : INotifyPropertyChanged
+    public class BannerEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -40,16 +40,54 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             public event PropertyChangedEventHandler PropertyChanged;
             public string Key { get; init; }          // yaml key, e.g. "english"
             public string Label { get; init; }        // display, e.g. "English"
+            internal Action Edited;
             private string _text;
             public string Text
             {
                 get => _text;
-                set { if (_text == value) return; _text = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text))); }
+                set { if (_text == value) return; _text = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text))); Edited?.Invoke(); }
             }
         }
-        public List<TitleEntry> Titles { get; } = new();
+        public System.Collections.ObjectModel.ObservableCollection<TitleEntry> Titles { get; } = new();
 
         public BannerEditorViewModel() { if (Design.IsDesignMode) return; Load(); }
+
+        // A picked icon and edited titles wait here until Save.
+        private RawImage _pendingIcon;
+        private bool _titlesEdited;
+        public bool HasUnsavedChanges => _pendingIcon != null || _titlesEdited;
+        public string UnsavedChangesDescription => "Game icon and titles";
+        private void RaiseUnsaved() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasUnsavedChanges)));
+
+        public void SaveChanges()
+        {
+            if (_pendingIcon != null)
+            {
+                string error = GameBanner.ValidateAndWriteDsRomIcon(_pendingIcon);
+                if (error != null) { _ = DialogHelper.ShowError(error, "Game Icon & Banner"); return; }
+                _pendingIcon = null;
+            }
+            if (_titlesEdited && _yaml?.title != null)
+            {
+                foreach (var entry in Titles) _yaml.title[entry.Key] = entry.Text ?? "";
+                GameBanner.WriteDsRomYaml(_yaml);
+                _titlesEdited = false;
+            }
+            AppEvents.RaiseBannerChanged();
+            RefreshIconPreview();
+            RaiseUnsaved();
+            StatusText = "Saved. The ROM gets it on the next Save ROM.";
+        }
+
+        public void DiscardChanges()
+        {
+            _pendingIcon = null;
+            _titlesEdited = false;
+            Titles.Clear();
+            Load();
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Titles)));
+            RaiseUnsaved();
+        }
 
         private void Load()
         {
@@ -62,6 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         Key = kv.Key,
                         Label = char.ToUpperInvariant(kv.Key[0]) + kv.Key.Substring(1),
                         Text = kv.Value,
+                        Edited = () => { _titlesEdited = true; RaiseUnsaved(); },
                     });
             }
             RefreshIconPreview();
@@ -106,25 +145,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             using (var fs = File.OpenRead(src))
                 raw = ImageConverter.DecodeRawImage(fs);
 
-            string error = GameBanner.ValidateAndWriteDsRomIcon(raw);
+            string error = GameBanner.IconProblem(raw);
             if (error != null)
             {
                 await DialogHelper.ShowError(error, "Cannot import icon");
                 return;
             }
-            RefreshIconPreview();
-            AppEvents.RaiseBannerChanged();
-            StatusText = "Icon imported.";
-        }
-
-        public void SaveTitles()
-        {
-            if (_yaml?.title == null) return;
-            foreach (var entry in Titles)
-                _yaml.title[entry.Key] = entry.Text ?? "";
-            GameBanner.WriteDsRomYaml(_yaml);
-            AppEvents.RaiseBannerChanged();
-            StatusText = "Titles saved. They are written into the ROM on the next Save ROM.";
+            _pendingIcon = raw;
+            IconPreview = ImageConverter.ToAvaloniaBitmap(raw);
+            RaiseUnsaved();
+            StatusText = "Icon picked. Save to keep it.";
         }
     }
 

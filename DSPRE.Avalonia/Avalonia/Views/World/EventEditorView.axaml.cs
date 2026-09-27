@@ -381,6 +381,13 @@ namespace DSPRE.Avalonia.Views.World
         private async void ManageGroundItems_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
+            // Saving the list renumbers item events on disk; an unsaved copy here would put the old numbers back.
+            if (VM.HasUnsavedChanges)
+            {
+                if (!await DialogHelper.AskYesNo("Save this event file first? The ground item list can renumber item events.", "Event Editor")) return;
+                VM.SaveChanges();
+                if (VM.HasUnsavedChanges) return;
+            }
 
             var dlgVm = new GroundItemScriptsViewModel();
             var dlg = new GroundItemScriptsView(dlgVm);
@@ -388,7 +395,7 @@ namespace DSPRE.Avalonia.Views.World
             if (owner != null) await dlg.ShowDialog(owner);
             else dlg.Show();
 
-            if (dlgVm.Changed) VM.RefreshOwItemEntries();
+            if (dlgVm.Changed) { VM.DiscardChanges(); VM.RefreshOwItemEntries(); }
         }
 
         // Diagnostic dump: text report (matrix layout, per-cell map placements, event world positions)

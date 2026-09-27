@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// list (via <see cref="WazaSeqScript"/> / <see cref="WestScript"/> against the version's opcode table), and
     /// writes it back to the unpacked NARC (repacked on the normal ROM save). HGSS + Platinum only.
     /// </summary>
-    public sealed class BattleScriptEditorViewModel : INotifyPropertyChanged
+    public sealed class BattleScriptEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -80,7 +80,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int ArchiveIndex
         {
             get => _archiveIndex;
-            set { if (value != _archiveIndex) SelectArchive(value); }
+            set
+            {
+                if (value == _archiveIndex) return;
+                if (Dirty && _fileIndex >= 0)
+                {
+                    int requested = value;
+                    OnPropertyChanged(nameof(ArchiveIndex));
+                    _ = SwitchEntryAsync(() => SelectArchive(requested));
+                    return;
+                }
+                SelectArchive(value);
+            }
         }
 
         /// <summary>Whether the move-animation archive is the one open. The three views are for it.</summary>
@@ -389,8 +400,32 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int SelectedFileIndex
         {
             get => _fileIndex;
-            set { if (Set(ref _fileIndex, value)) LoadEntry(); }
+            set
+            {
+                if (value == _fileIndex) return;
+                if (Dirty && _fileIndex >= 0)
+                {
+                    // Snap the list back to the entry still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    _ = SwitchEntryAsync(() => { if (Set(ref _fileIndex, requested, nameof(SelectedFileIndex))) LoadEntry(); });
+                    return;
+                }
+                if (Set(ref _fileIndex, value)) LoadEntry();
+            }
         }
+
+        private async System.Threading.Tasks.Task SwitchEntryAsync(Action go)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "script")) return;
+            Dirty = false;
+            go();
+        }
+
+        public bool HasUnsavedChanges => Dirty;
+        public string UnsavedChangesDescription => _fileIndex < 0 ? "Battle script" : $"{ArchiveOptions[_archiveIndex]} #{_fileIndex}";
+        public void SaveChanges() => Save();
+        public void DiscardChanges() { Dirty = false; if (_fileIndex >= 0) LoadEntry(); }
 
         public string EntryHeader =>
             _fileIndex < 0 ? "(no entry selected)"
@@ -404,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool Dirty
         {
             get => _dirty;
-            private set { if (Set(ref _dirty, value)) OnPropertyChanged(nameof(SaveHint)); }
+            private set { if (Set(ref _dirty, value)) { OnPropertyChanged(nameof(SaveHint)); OnPropertyChanged(nameof(HasUnsavedChanges)); } }
         }
 
         private void LoadEntry()
