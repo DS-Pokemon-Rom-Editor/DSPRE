@@ -64,7 +64,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public IEnumerable<string> PokemonNames { get; }
 
-        public string Label { get; set; }
+        private string _label;
+        public string Label { get => _label; set { if (_label == value) return; _label = value; OnPropertyChanged(); } }
         public string RateLabel { get; set; }
 
         private int _pokemonIndex;
@@ -283,7 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                                          SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows,
                                          SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
                 foreach (var row in coll)
-                    row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon)) SetDirty(); };
+                    row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon) && e.PropertyName != nameof(WildEncounterRow.Label)) SetDirty(); };
         }
 
         // ── Constructor ───────────────────────────────────────────────────
@@ -421,6 +422,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this file
             _lastCaptureUtc = DateTime.MinValue;
             RaiseUndoState();
+        }
+
+        /// <summary>Re-reads the slot chances into the row labels, for after the Slot Odds editor saved. Keeps unsaved edits.</summary>
+        public void RefreshSlotLabels()
+        {
+            for (int i = 0; i < WalkingRows.Count; i++) WalkingRows[i].Label = EncounterSlotOdds.SlotLabel("Walking", i);
+            for (int i = 0; i < SurfRows.Count; i++) SurfRows[i].Label = EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}");
+            for (int i = 0; i < OldRodRows.Count; i++) OldRodRows[i].Label = EncounterSlotOdds.SlotLabel("Old Rod", i, $"Old Rod {i+1}");
+            for (int i = 0; i < GoodRodRows.Count; i++) GoodRodRows[i].Label = EncounterSlotOdds.SlotLabel("Good Rod", i, $"Good Rod {i+1}");
+            for (int i = 0; i < SuperRodRows.Count; i++) SuperRodRows[i].Label = EncounterSlotOdds.SlotLabel("Super Rod", i, $"Super Rod {i+1}");
         }
 
         private void PopulateRows()

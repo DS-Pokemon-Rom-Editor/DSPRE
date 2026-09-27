@@ -7,10 +7,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The chance of each encounter slot, compiled into the slot selectors as `cmp r0, #boundary` instructions on a
-    /// roll of 0 to 99. Slot i covers [boundary i-1, boundary i); the last slot takes the rest. Walking's eleventh slot
-    /// is an equality test (`cmp r0, #b9; bne`), so it is exactly one roll; any other width switches that test to
-    /// `cmp r0, #b10; bcs`, which reads the same when the width is one.
+    /// Encounter slot chances, compiled into the slot selectors as `cmp r0, #boundary` on a roll of 0 to 99. Walking's
+    /// eleventh slot is an equality test (`bne`), so any width other than one switches it to `cmp r0, #b10; bcs`.
     /// </summary>
     public sealed class EncounterSlotOdds
     {
@@ -136,8 +134,8 @@ namespace DSPRE.ROMFiles
             {
                 var methods = SlotOddsMethods;
                 if (methods == null) return null;
-                // A label lookup never decompresses an overlay; that would write to the project.
-                if (methods.Any(m => OverlayUtils.IsCompressed(m.Overlay))) return null;
+                // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.
+                if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return null;
                 // Re-read only when a selector overlay changed on disk.
                 string key = romID + ":" + string.Join(",", methods.Select(m => m.Overlay).Distinct()
                     .Select(ov => OverlayUtils.GetPath(ov)).Select(p => p + File.GetLastWriteTimeUtc(p).Ticks));
