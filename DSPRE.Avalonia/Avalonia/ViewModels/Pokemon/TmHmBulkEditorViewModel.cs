@@ -62,6 +62,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string SelectAllLabel => IsByMachineMode ? "Enable All" : "Select All";
         public string SelectNoneLabel => IsByMachineMode ? "Disable All" : "Select None";
 
+        private readonly int[] _order = TMEditor.DisplayOrder();
+        /// <summary>The machine the "By TM/HM" box shows; <see cref="CurrentMachineIndex"/> is its place in the list.</summary>
+        private int CurrentMachine => _currentMachineIndex >= 0 && _currentMachineIndex < _order.Length ? _order[_currentMachineIndex] : -1;
+
         private int _currentMachineIndex;
         public int CurrentMachineIndex
         {
@@ -100,11 +104,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // lists Platinum-introduced forms (501-507) DP never got data files for.
             _speciesCount = Math.Min(pokemonNames.Length, GetPersonalFilesCount());
             for (int i = 0; i < _speciesCount; i++) _personalData[i] = new PokemonPersonalData(i);
+            LoadExtraMaskTms();
 
             _families = BuildFamilies();
 
-            for (int i = 0; i < MachineNamesList.Length; i++)
-                MachineChecklist.Add(new FlagChecklistItem { Index = i, Name = MachineNamesList[i] });
+            for (int p = 0; p < MachineNamesList.Length; p++)
+                MachineChecklist.Add(new FlagChecklistItem { Index = _order[p], Name = MachineNamesList[p] });
 
             RebuildTree();
             RefreshMachineChecklistFromSelection();
@@ -116,10 +121,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Per-machine move names (which move TM/HM slot i actually teaches), not the raw move-name
             // list indexed by slot; those are unrelated (slot i's move ID is rarely i itself).
             string[] machineMoveNames = TMEditor.ReadMachineMoveNames();
-            var labels = new string[machineMoveNames.Length];
-            for (int i = 0; i < labels.Length; i++)
-                labels[i] = $"{TMEditor.MachineLabelFromIndex(i)} - {machineMoveNames[i]}";
-            return labels;
+            return TMEditor.DisplayOrder().Where(i => i < machineMoveNames.Length)
+                .Select(i => $"{TMEditor.MachineLabelFromIndex(i)} - {machineMoveNames[i]}").ToArray();
         }
 
         // Species with no evolution link of their own become singleton families.
@@ -195,7 +198,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private SpeciesLeafNode MakeLeafNode(int id)
         {
             var leaf = new SpeciesLeafNode { SpeciesId = id, DisplayName = SpeciesLabel(id), OnCheckedChanged = OnLeafChecked };
-            leaf.SetCheckedSilent(IsByMachineMode ? _personalData[id].machines.Contains((byte)CurrentMachineIndex) : _selectedSpeciesIds.Contains(id));
+            leaf.SetCheckedSilent(IsByMachineMode ? _personalData[id].machines.Contains((byte)CurrentMachine) : _selectedSpeciesIds.Contains(id));
             return leaf;
         }
 
@@ -253,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SetMachineCompat(int speciesId, bool enabled)
         {
             var data = _personalData[speciesId];
-            bool changed = enabled ? data.machines.Add((byte)CurrentMachineIndex) : data.machines.Remove((byte)CurrentMachineIndex);
+            bool changed = enabled ? data.machines.Add((byte)CurrentMachine) : data.machines.Remove((byte)CurrentMachine);
             if (changed) { _isDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
@@ -286,8 +289,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Right-hand machine checklist (By Pokémon mode) ──────────────────
         private void RefreshMachineChecklistFromSelection()
         {
-            for (int m = 0; m < MachineChecklist.Count; m++)
+            foreach (var item in MachineChecklist)
             {
+                int m = item.Index;
                 bool? state;
                 if (_selectedSpeciesIds.Count == 0)
                 {
@@ -298,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     int haveCount = _selectedSpeciesIds.Count(id => _personalData[id].machines.Contains((byte)m));
                     state = haveCount == 0 ? false : haveCount == _selectedSpeciesIds.Count ? true : (bool?)null;
                 }
-                MachineChecklist[m].SetChecked(state);
+                item.SetChecked(state);
             }
         }
 
@@ -310,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            bool enable = MachineChecklist[machineIndex].IsChecked != true;
+            bool enable = MachineChecklist.FirstOrDefault(c => c.Index == machineIndex)?.IsChecked != true;
             foreach (var id in _selectedSpeciesIds)
             {
                 var data = _personalData[id];
@@ -373,8 +377,41 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Save ─────────────────────────────────────────────────────────
+        // PlatPatches' TM121+ live in a synthetic-overlay mask; they share the machine sets at indices 128+, which the
+        // personal file never writes, and go to the mask on save.
+        private HashSet<(int Row, int PersonalId)> _maskLoaded = new();
+
+        private void LoadExtraMaskTms()
+        {
+            var t = PlatPatches.Tms();
+            if (t == null) return;
+            _maskLoaded = PlatPatches.Compatibility(t, _personalData.Keys, PlatPatches.PersonalMaskRows);
+            foreach (var (row, id) in _maskLoaded) _personalData[id].machines.Add((byte)(TMEditor.VanillaMachineCount + row));
+        }
+
+        /// <summary>Writes only the TM121+ bits changed here, so edits saved elsewhere since opening survive.</summary>
+        private void SaveExtraMaskTms()
+        {
+            var t = PlatPatches.Tms();
+            if (t == null) return;
+            var now = new HashSet<(int Row, int PersonalId)>();
+            foreach (var (id, data) in _personalData)
+                foreach (byte m in data.machines)
+                    if (m >= TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows) now.Add((m - TMEditor.VanillaMachineCount, id));
+            var changes = now.Except(_maskLoaded).Select(c => (c.Item1, c.Item2, true))
+                .Concat(_maskLoaded.Except(now).Select(c => (c.Row, c.PersonalId, false))).ToList();
+            if (changes.Count > 0) PlatPatches.SetCanLearn(t, changes);
+            _maskLoaded = now;
+        }
+
         public void SaveAllChanges()
         {
+            try { SaveExtraMaskTms(); }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
+            {
+                _ = DialogHelper.ShowError("Nothing was saved: the TM121+ compatibility couldn't be written.\n" + e.Message, "TM/HM Bulk Editor");
+                return;
+            }
             foreach (var kvp in _personalData)
                 kvp.Value.SaveToFileDefaultDir(kvp.Key, false);
 
@@ -397,7 +434,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string machineLabel = CurrentMachineIndex >= 0 && CurrentMachineIndex < MachineNamesList.Length
                     ? MachineNamesList[CurrentMachineIndex] : "?";
-                int compatCount = _personalData.Count(kvp => kvp.Value.machines.Contains((byte)CurrentMachineIndex));
+                int compatCount = _personalData.Count(kvp => kvp.Value.machines.Contains((byte)CurrentMachine));
                 StatusText = $"{machineLabel}: {compatCount} of {_speciesCount} Pokémon compatible." +
                     (_isDirty ? " [Unsaved Changes]" : "");
             }

@@ -16,6 +16,16 @@ namespace DSPRE
         /// <summary>All machines, including PlatPatches' TM93 onwards at indices 100 and up.</summary>
         public static int MachineCount => VanillaMachineCount + (PlatPatches.Tms()?.Count ?? 0);
 
+        /// <summary>Machine indices in the order people read them: every TM by number, then the HMs.</summary>
+        public static int[] DisplayOrder()
+        {
+            int total = MachineCount;
+            return Enumerable.Range(0, PokemonPersonalData.tmsCount)
+                .Concat(Enumerable.Range(VanillaMachineCount, total - VanillaMachineCount))
+                .Concat(Enumerable.Range(PokemonPersonalData.tmsCount, PokemonPersonalData.hmsCount))
+                .ToArray();
+        }
+
         /// <summary>The item a machine index is: TM01 is 328, and extra TMs use the item ids PlatPatches gave them.</summary>
         public static int MachineItemId(int index)
         {

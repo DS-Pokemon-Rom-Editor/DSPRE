@@ -133,6 +133,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Changed();
         }
 
+        /// <summary>Re-reads each destination's Pokémon, which the Wild editor may have changed.</summary>
+        public void RefreshSpecies()
+        {
+            if (_table == null) return;
+            _speciesCache.Clear();
+            foreach (var r in Rows) r.Refresh();
+        }
+
         public void Remove()
         {
             if (_table == null || Selected == null) return;

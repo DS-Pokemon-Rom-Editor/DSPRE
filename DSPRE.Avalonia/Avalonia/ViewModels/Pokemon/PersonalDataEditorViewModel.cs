@@ -1435,8 +1435,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AddedMachines.Clear();
             AddableMachines.Clear();
             if (_current == null || _machineMoveNames == null) return;
-            int tot = TMEditor.MachineCount;
-            for (int i = 0; i < tot; i++)
+            foreach (int i in TMEditor.DisplayOrder())
             {
                 string label = TMEditor.MachineLabelFromIndex(i);
                 string move  = _machineMoveNames.Length > i ? _machineMoveNames[i] : $"UNK_{i}";

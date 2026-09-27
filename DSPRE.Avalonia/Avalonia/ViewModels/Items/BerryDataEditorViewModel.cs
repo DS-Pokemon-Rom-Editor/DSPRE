@@ -28,6 +28,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Redo() => _undo?.Redo();
 
         public List<string> BerryNames { get; } = new List<string>();
+        public List<BerryRow> BerryRows { get; } = new List<BerryRow>();
+
+        /// <summary>A berry in the list, marked while it has unsaved edits.</summary>
+        public sealed class BerryRow : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            public string Name { get; init; }
+            private bool _changed;
+            public bool Changed
+            {
+                get => _changed;
+                set { if (_changed == value) return; _changed = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Changed))); }
+            }
+        }
         public string[] FirmnessNames => BerryData.Firmness;
         public bool LooksUnread => !BerryData.GameReadsLooks;
 
@@ -44,6 +58,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 int item = BerryData.FirstBerryItem + b;
                 BerryNames.Add(item < items.Length ? items[item] : $"Berry {b + 1}");
+                BerryRows.Add(new BerryRow { Name = BerryNames[b] });
             }
             _selected = 0;
         }
@@ -83,6 +98,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                                       nameof(Drain), nameof(Spicy), nameof(Dry), nameof(Sweet), nameof(Bitter), nameof(Sour),
                                       nameof(Smoothness), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) })
                 Raise(n);
+            for (int b = 0; b < BerryRows.Count && b < _berries.Count; b++) BerryRows[b].Changed = BerryChanged(b);
         }
 
         private bool BerryChanged(int b) => !_berries[b].ToBytes().AsSpan().SequenceEqual(_saved[b]);
@@ -103,10 +119,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
+                RaiseFields();   // berries saved before the failure lose their mark
                 await DialogHelper.ShowError("The berry data was not saved:\n" + e.Message, "Berry Data");
                 return false;
             }
-            Raise(nameof(HasUnsavedChanges));
+            RaiseFields();
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
         }

@@ -37,7 +37,7 @@ namespace DSPRE
             !string.IsNullOrWhiteSpace(workDir) && File.Exists(Path.Combine(workDir, "rotom.toml"));
         public static string romID { get; private set; }
 
-        /// <summary>The cartridge revision (header byte 0x1E): US Platinum Rev 1 reads 1, US Diamond v05 reads 5; -1 when unknown.</summary>
+        /// <summary>The cartridge revision (header byte 0x1E), or -1 when unknown.</summary>
         public static int romRevision { get; private set; } = -1;
         public static string projectName { get; private set; }
         public static string workDir { get; private set; }
@@ -215,7 +215,7 @@ namespace DSPRE
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
         public readonly record struct TableSpot(int Overlay, int Offset);
 
-        // Checked byte for byte against US HeartGold (IPKE rev 0), Platinum Rev 1 (CPUE rev 1) and Diamond v05 (ADAE rev 5).
+        // Offsets for US HeartGold (IPKE rev 0), Platinum Rev 1 (CPUE rev 1) and Diamond v05 (ADAE rev 5) only.
         private static readonly Dictionary<(string id, int rev, GameTable table), TableSpot> TableSpots = new()
         {
             [("IPKE", 0, GameTable.WildHeldItemOdds)] = new(-1, 0xFF4E4),
@@ -266,10 +266,8 @@ namespace DSPRE
             romID != null && TypeChartSites.TryGetValue((romID, romRevision), out var s) ? s : null;
 
         /// <summary>
-        /// Battle Point exchange code sites. Platinum: the arm9 pointers to the right (TM) and left corner lists, the
-        /// overlay 7 literal holding the price table's address (the next literal is that address + 2), and the
-        /// <c>cmp r2, #rows</c> bounding the price lookup. Both games: the arm9 item/price rows the exchange script
-        /// command reads, and the <c>movs r1, #firstTmRow</c> in that command.
+        /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
+        /// and row-count compare, plus both games' exchange command table and its <c>movs r1, #firstTmRow</c>.
         /// </summary>
         public sealed record BpShopSites(int ListPointers, int PriceLiteral, int PriceCountCompare,
             int ExchangeTable, int ExchangeSplit);
@@ -281,9 +279,8 @@ namespace DSPRE
         };
 
         /// <summary>
-        /// One encounter method's slot roll: the `cmp r0, #boundary` sites for each boundary between slots, in the
-        /// selector's overlay. A boundary may be compared in two places. The land selector ends with an equality
-        /// test for its eleventh slot (see <see cref="LandLastSlotSite"/>).
+        /// One encounter method's `cmp r0, #boundary` sites per slot boundary in the selector's overlay; a boundary
+        /// may be compared in two places.
         /// </summary>
         public sealed record SlotOddsMethod(string Name, int Overlay, int Slots, int[][] Boundaries);
 
@@ -299,7 +296,7 @@ namespace DSPRE
         private static int[][] SurfSites(int b) => new[] { new[] { b }, new[] { b + 0x0A, b + 0x12 }, new[] { b + 0x16, b + 0x1E }, new[] { b + 0x22 } };
         private static int[][] StepSites(int b, int count) => Enumerable.Range(0, count).Select(i => new[] { b + 8 * i }).ToArray();
 
-        // Checked by disassembly against US HeartGold ov2, Platinum Rev 1 ov6 and Diamond v05 ov6.
+        // Offsets for US HeartGold ov2, Platinum Rev 1 ov6 and Diamond v05 ov6 only.
         private static readonly Dictionary<(string id, int rev), SlotOddsMethod[]> SlotOddsTable = new()
         {
             [("IPKE", 0)] = new[]
@@ -350,7 +347,7 @@ namespace DSPRE
         public static BpShopSites BpShopCodeSites =>
             romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
 
-        /// <summary>Where this ROM keeps <paramref name="table"/>, or null for a version not checked yet.</summary>
+        /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
         public static TableSpot? SpotOf(GameTable table) =>
             romID != null && TableSpots.TryGetValue((romID, romRevision, table), out var spot) ? spot : null;
 
@@ -1937,17 +1934,18 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 341 : 344;
-                    itemDescriptionsTextNumber = 0;
+                    // The bank before the names; the Japanese bank is unknown.
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 343;
                     break;
 
                 case GameFamilies.Plat:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 390 : 392;
-                    itemDescriptionsTextNumber = 0;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 391;
                     break;
 
                 default:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 219 : 222;
-                    itemDescriptionsTextNumber = 221;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 221;
                     break;
             }
         }

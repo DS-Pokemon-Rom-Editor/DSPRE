@@ -58,7 +58,10 @@
 
       <TabItem Header="By Pokémon">
         <Grid ColumnDefinitions="240,*" Margin="4">
-          <ListBox Grid.Column="0" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SelectedSpecies}" Margin="0,0,8,0"/>
+          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+            <TextBox DockPanel.Dock="Top" Text="{Binding SpeciesFilter}" PlaceholderText="Filter" Margin="0,0,0,4"/>
+            <ListBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SelectedSpecies}"/>
+          </DockPanel>
           <ListBox Grid.Column="1" ItemsSource="{Binding MovesOfSpecies}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+CheckRow">

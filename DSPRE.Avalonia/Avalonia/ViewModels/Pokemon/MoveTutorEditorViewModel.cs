@@ -47,7 +47,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         /// <summary>Every Pokémon with a tutor row: species 1-493, then the forms with their own personal file.</summary>
         public List<(string Name, int Row)> Species { get; } = new List<(string, int)>();
-        public List<string> SpeciesNames => Species.Select(s => s.Name).ToList();
+        // Rows of Species the filter lets through; built once per filter so the ListBox keeps its selection.
+        private List<int> _shown;
+        private List<string> _shownNames;
+        private List<int> Shown => _shown ??= Enumerable.Range(0, Species.Count)
+            .Where(i => _speciesFilter.Length == 0 || Species[i].Name.Contains(_speciesFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        public List<string> SpeciesNames => _shownNames ??= Shown.Select(i => Species[i].Name).ToList();
+
+        private string _speciesFilter = "";
+        public string SpeciesFilter
+        {
+            get => _speciesFilter;
+            set
+            {
+                value ??= "";
+                if (value == _speciesFilter) return;
+                _speciesFilter = value;
+                _shown = null; _shownNames = null;
+                Raise(); Raise(nameof(SpeciesNames)); Raise(nameof(SelectedSpecies));
+            }
+        }
         public ObservableCollection<CheckRow> MovesOfSpecies { get; } = new ObservableCollection<CheckRow>();
         public ObservableCollection<CheckRow> SpeciesOfMove { get; } = new ObservableCollection<CheckRow>();
         // Built once per change: a new list on every read makes the ListBox drop its selection.
@@ -128,7 +147,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private int _species = -1;
-        public int SelectedSpecies { get => _species; set { if (value >= 0 && value < Species.Count && value != _species) { _species = value; Raise(); ShowSpecies(); } } }
+        /// <summary>The selected row of the filtered list; <c>_species</c> is the row of Species it shows.</summary>
+        public int SelectedSpecies
+        {
+            get => Shown.IndexOf(_species);
+            set
+            {
+                if (value < 0 || value >= Shown.Count || Shown[value] == _species) return;
+                _species = Shown[value];
+                Raise(); ShowSpecies();
+            }
+        }
 
         private int _tutor = -1;
         public int SelectedTutor { get => _tutor; set { if (value >= 0 && _data != null && value < _data.Pool.Count && value != _tutor) { _tutor = value; Raise(); ShowTutor(); } } }
